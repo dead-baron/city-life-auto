@@ -102,8 +102,12 @@ test('one name on a front, every board (the owner, 11-15: Canvas Savings Bank - 
   assert.deepEqual(texts(oneName({ w: 360, portico: { x: 40, w: 280, cols: 6, text: 'CANVAS SAVINGS' }, plaques: [{ text: 'CANVAS SAVINGS BANK', x: 6, v: 70 }] })), ['portico:CANVAS SAVINGS']);
   // a portico too narrow for its words draws none: the plaque stays the name
   assert.deepEqual(texts(oneName({ w: 200, portico: { x: 40, w: 60, cols: 4, text: 'CANVAS SAVINGS' }, plaques: [{ text: 'CANVAS SAVINGS BANK', x: 6, v: 70 }] })), ['plaque:CANVAS SAVINGS BANK']);
-  // BANK in the stone with the name beside it: two different words, both stay
-  assert.equal(frontNames(oneName({ w: 300, portico: { x: 70, w: 140, cols: 4, text: 'BANK' }, plaques: [{ text: 'CANVAS SAVINGS BANK', x: 6, v: 70 }] })).length, 2);
+  // BANK in the stone over the FIRST PIXEL BANK board (the owner, 11-15: "it is also the duplicate"): a word of the name
+  // is the name again - the board keeps it, the portico its columns
+  assert.deepEqual(texts(oneName({ w: 300, portico: { x: 70, w: 140, cols: 4, text: 'BANK' }, plaques: [{ text: 'FIRST PIXEL BANK', x: 6, v: 70 }] })), ['plaque:FIRST PIXEL BANK']);
+  assert.deepEqual(texts(oneName({ w: 300, portico: { x: 70, w: 140, cols: 4, text: 'COURTHOUSE' }, plaques: [{ text: 'EMERGENCY', x: 6, v: 70 }] })), ['portico:COURTHOUSE', 'plaque:EMERGENCY'], 'another word stays');
+  // a portico running off its front's edge: no letters (they'd be cut)
+  assert.deepEqual(texts(oneName({ w: 300, portico: { x: 200, w: 160, cols: 4, text: 'MUSEUM' } })), []);
   // the shop's sign first; a plaque, a neon name, a second plaque saying it again go; EMERGENCY stays
   const sp = oneName({ w: 300, shop: { sign: { text: 'Old Town Infirmary' } }, plaques: [{ text: 'OLD TOWN INFIRMARY', cx: 150, v: 66 }, { text: 'EMERGENCY', cx: 150, v: 58 }, { text: 'TOPAZ', face: 'neon', v: 72 }, { text: 'TOPAZ', v: 90 }] });
   assert.deepEqual(texts(sp), ['sign:Old Town Infirmary', 'plaque:EMERGENCY', 'plaque:TOPAZ']);

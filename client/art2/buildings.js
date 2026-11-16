@@ -1220,11 +1220,45 @@ function signBoard(G, sign, x0, yBot, w, night) {
   const mode = sign.lit === false ? false : sign.glow || (sign.neon ? 'neon' : 'ink');
   const box = paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, paletteOf(sign), Math.floor(x0 / 2) * 2, y0, { lit: mode, night, bulbs: sign.bulbs });
   G.signBox = { ...box, lay: L };   // (where it went: test/signs.test.js reads it back through the bake)
+  audit(G, 'sign', sign.text, box.x, box.y, box.x + box.w, box.y + box.h, !!mode);
 }
 
+// The lettering on a front, whole and clear (the placement lint's textClipped: tools/placementlint.mjs; the owner, 11-15:
+// First Pixel Bank's BANK read BAN, then ANK - a lit window's glow behind the portico's letters). textAudit(spec) draws
+// the facade and says, for each lettered board or inscription, whether it ran off the facade's edge, was painted over
+// by something drawn after it, or (unlit stone lettering) has a glow showing through: [{ k, t, why }] (none: [])
+let TXT = null;
+function audit(G, k, t, x0, y0, x1, y1, lit = false) {
+  if (!TXT) return;
+  const out = x0 < 0 || y0 < 0 || x1 > G.w || y1 > G.h, X0 = Math.max(0, x0), Y0 = Math.max(0, y0), X1 = Math.min(G.w, x1), Y1 = Math.min(G.h, y1);
+  const col = [], emi = [];
+  for (let y = Y0; y < Y1; y++) for (let x = X0; x < X1; x++) { const j = (y * G.w + x) * 4; col.push(G.col[j], G.col[j + 1], G.col[j + 2]); emi.push(G.emi[j + 3]); }
+  TXT.push({ G, k, t, X0, Y0, X1, Y1, out, col, emi, lit });
+}
+export function textAudit(spec) {
+  TXT = [];
+  try { makeBuilding(spec); } finally { var L = TXT; TXT = null; }
+  const bad = [];
+  for (const e of L) {
+    const { G } = e;
+    let over = 0, shine = 0, n = 0, i = 0;
+    for (let y = e.Y0; y < e.Y1; y++) for (let x = e.X0; x < e.X1; x++, i++) {
+      const j = (y * G.w + x) * 4;
+      n++;
+      if (G.col[j] !== e.col[i * 3] || G.col[j + 1] !== e.col[i * 3 + 1] || G.col[j + 2] !== e.col[i * 3 + 2]) over++;
+      if (!e.lit && G.emi[j + 3] > 0) shine++;
+    }
+    const why = e.out ? 'off the edge of its front' : over > n * 0.02 ? `${Math.round(100 * over / n)}% painted over` : shine > n * 0.02 ? `a glow through ${Math.round(100 * shine / n)}% of it` : null;
+    if (why) bad.push({ k: e.k, t: e.t, why });
+  }
+  return bad;
+}
 // a classical portico on the facade: columns standing proud of a shaded recess, an entablature with an
 // inscription and a pediment above (p: { x, w, cols, text })
 function portico(G, p, d, H, cornice) {
+  // (the stone painted over what's behind it - a lit upper window's glow included: setC kept it, and at night a window
+  // behind the entablature shone through its letters, BAN K at First Pixel Bank - the owner, 11-15; facePx clears it)
+  const setC = (G2, x, y, c) => facePx(G2, x, y, c, null);
   const yG = d + H, top = H - cornice, entH = p.text ? 20 : 16, pedH = Math.min(30, Math.floor(p.w * 0.16)), ent0 = top - pedH - entH;
   const S = ramp('#d8cfbc', 6, 3);
   // recess behind the columns
@@ -1246,7 +1280,7 @@ function portico(G, p, d, H, cornice) {
   // when even that won't fit
   if (p.text) {
     const fk = lineMask(p.text, 'serif').w * 2 <= p.w - 8 ? 'serif' : lineMask(p.text, 'civic').w * 2 <= p.w - 8 ? 'civic' : null;
-    if (fk) { const M = lineMask(p.text, fk); paintLine((x, y, c) => setC(G, x, y, c), p.text, fk, p.x + Math.floor((p.w - M.w * 2) / 2), yG - ent0 - entH + Math.floor((entH - M.h * 2) / 2), { 1: S[0], 5: S[5] }); }
+    if (fk) { const M = lineMask(p.text, fk), tx = p.x + Math.floor((p.w - M.w * 2) / 2), ty = yG - ent0 - entH + Math.floor((entH - M.h * 2) / 2); paintLine((x, y, c) => setC(G, x, y, c), p.text, fk, tx, ty, { 1: S[0], 5: S[5] }); audit(G, 'portico', p.text, tx, ty, tx + M.w * 2, ty + M.h * 2); }
   }
   // pediment
   for (let v = ent0 + entH; v < top; v++) { const t = (v - ent0 - entH) / pedH, half = (p.w / 2) * (1 - t); for (let x = Math.round(p.x + p.w / 2 - half); x < p.x + p.w / 2 + half; x++) { const edge = x < p.x + p.w / 2 - half + 3 || x > p.x + p.w / 2 + half - 3 || v === ent0 + entH; setC(G, x, yG - v, step(S, edge ? 0.75 : 0.45, x, v, 0.3)); } }
@@ -1263,7 +1297,8 @@ function plaqueLayout(p, W) {
 function plaque(G, p, yG, night) {
   const { fk, L, x0 } = plaqueLayout(p, G.w), y0 = Math.floor((yG - p.v - L.h * 2) / 2) * 2;
   const P = p.pal || (fk === 'neon' ? neonPal(p.fg || [255, 80, 200]) : paletteOf({ bg: p.bg || '#f4f2ea', fg: p.fg || [40, 36, 32] }));
-  paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, x0, y0, { lit: p.lit ? p.glow || (fk === 'neon' ? 'neon' : 'panel') : false, night, bulbs: p.bulbs });
+  const box = paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, x0, y0, { lit: p.lit ? p.glow || (fk === 'neon' ? 'neon' : 'panel') : false, night, bulbs: p.bulbs });
+  if (box) audit(G, 'plaque', p.text, box.x, box.y, box.x + box.w, box.y + box.h, !!p.lit);
 }
 // Where a facade's lettered boards stand on it, in its own px: [x0, v0, x1, v1] (v up from the pavement) - a plaque's
 // board (plaque above) and a blade sign (blade below; H the wall's height: the letters it has room for)

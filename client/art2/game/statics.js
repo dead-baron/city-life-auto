@@ -1114,6 +1114,12 @@ export function sameName(a, b) {
 // The boards on a front that say a name, in the order they win: the shop's sign, the portico's lettering (when it fits
 // in the stone: buildings.js portico draws none otherwise), then the plaques (a neon name is a plaque too) - each { t, k }
 const porticoFits = (p) => !!(p && p.text) && Math.min(lineMask(p.text, 'serif').w, lineMask(p.text, 'civic').w) * 2 <= p.w - 8;
+// the portico's word said again by a board on the same front - BANK cut in the stone over the FIRST PIXEL BANK board (the
+// owner, 11-15: "it is also the duplicate"): a word of the name, however short, is the name said twice
+const oneWord = (t) => !nameKey(t).includes(' ');   // (BANK, MUSEUM: the trade's word - a name cut in the stone, CANVAS SAVINGS, is the name and wins)
+const wordOf = (w, t) => { const p = nameKey(w), q = nameKey(t); return !!p && !!q && (' ' + q + ' ').includes(' ' + p + ' '); };
+// a portico that runs off its front's edge would show its letters cut (buildings.js draws it whole or not at all): none
+const porticoOn = (p, W) => !!p && p.x >= 0 && p.x + p.w <= W;
 export function frontNames(spec) {
   const L = [];
   if (spec.shop && spec.shop.sign && spec.shop.sign.text) L.push({ t: spec.shop.sign.text, k: 'sign' });
@@ -1135,7 +1141,10 @@ export function oneNameAcross(list) {
     for (const { spec, lights } of [...L.filter((e) => e.s.mid), ...L.filter((e) => !e.s.mid)]) {
       const sg = spec.shop && spec.shop.sign;
       if (sg && sg.text) { if (said.some((t) => sameName(t, sg.text))) { delete spec.shop.sign; if (lights) for (let j = lights.length - 1; j >= 0; j--) if (lights[j][6] === 'sign') lights.splice(j, 1); } else said.push(sg.text); }
-      if (porticoFits(spec.portico)) { if (said.some((t) => sameName(t, spec.portico.text))) spec.portico = { ...spec.portico, text: null }; else said.push(spec.portico.text); }
+      if (porticoFits(spec.portico)) {
+        const pt = spec.portico.text, face = L.flatMap((o) => [o.spec.shop && o.spec.shop.sign && o.spec.shop.sign.text, ...(o.spec.plaques || []).map((pq) => pq && pq.text)]).filter(Boolean);
+        if (said.some((t) => sameName(t, pt)) || (oneWord(pt) && face.some((t) => wordOf(pt, t)))) spec.portico = { ...spec.portico, text: null }; else said.push(pt);
+      }
       if (spec.plaques) spec.plaques = spec.plaques.filter((pq) => { if (!pq || !pq.text) return true; if (said.some((t) => sameName(t, pq.text))) return false; said.push(pq.text); return true; });
     }
   }
@@ -1147,8 +1156,12 @@ export function oneNameAcross(list) {
 // saying the shop sign's name loses its lettering. tools/placementlint.mjs nameTwice checks every front of the world.
 export function oneName(spec) {
   const said = [];
+  if (spec.portico && spec.portico.text && !porticoOn(spec.portico, spec.w)) spec.portico = { ...spec.portico, text: null };
   if (spec.shop && spec.shop.sign && spec.shop.sign.text) said.push(spec.shop.sign.text);
-  if (porticoFits(spec.portico)) { if (said.some((t) => sameName(t, spec.portico.text))) spec.portico = { ...spec.portico, text: null }; else said.push(spec.portico.text); }
+  if (porticoFits(spec.portico)) {
+    const pt = spec.portico.text, others = (spec.plaques || []).filter((pq) => pq && pq.text).map((pq) => pq.text);
+    if (said.some((t) => sameName(t, pt)) || (oneWord(pt) && [...said, ...others].some((t) => wordOf(pt, t)))) spec.portico = { ...spec.portico, text: null }; else said.push(pt);
+  }
   if (!spec.plaques || !spec.plaques.length) return spec;
   spec.plaques = spec.plaques.filter((pq) => {
     if (!pq || !pq.text) return true;
