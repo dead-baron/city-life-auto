@@ -24559,7 +24559,10 @@ shop's counter, and the custody panel over the whole screen with an escape that 
   what was drawn after them (a clinic's cross, a cup sign, a blade - Old Town Infirmary, St. Neon General, MediMart,
   Polaris Juice Bar, the PARKING signs...). The boards with words are now drawn last on a front, over everything else. Then
   15 plaques under the shop's sign (a hospital's EMERGENCY and HOSPITAL, the motels' VACANCY, RESTROOMS on the car
-  parks): a plaque where the shop's sign goes is lifted clear above it while the wall has room, else not drawn. Checked on main and on craft-combo (where the craft pass
+  parks): a plaque where the shop's sign goes is lifted clear above it while the wall has room, else not drawn.
+- **Budget:** the bake's code 1010 -> 1014 KB (tools/perf.mjs): the one-name pass and the lettering's order are part of
+  the chunk bake (statics.js, buildings.js); the lint's audit stays out of it (tools/textaudit.mjs) and the comments
+  were trimmed - 1012 KB, from main's 1010.0. Checked on main and on craft-combo (where the craft pass
   moved the bank). Rekeys the art hash (statics.js); the world hash is unchanged.
 - **Cops round the counter.** A walk-in's counter blocks people but not sight, so the foot chase's straight line
   (npc.js footWay: `m.los` clear) ran officers into it and sidestep only slid them along it. footWay now walks round

@@ -399,10 +399,8 @@ export function makeBuilding(spec) {
   for (const bl of spec.blades || []) blade(G, bl, d + H, night, H);
   if (spec.cross) medSign(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night, spec.cross.k);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
-  // the boards with the words last, over everything else on the front: a name is never cut by a clinic's cross, a cup
-  // sign or a blade drawn after it (the placement lint's textClipped - 21 shop signs a few % painted over, 11-15)
-  // (a plaque where the shop's sign goes - a hospital's EMERGENCY, a motel's VACANCY, RESTROOMS on a car park: up clear
-  // of it while the wall has room, else not drawn - the sign keeps the name whole: textClipped)
+  // (the boards with words last: never cut by a cross, a cup, a blade - textClipped)
+  // (a plaque where the shop's sign goes: up clear of it while there's room, else none)
   const sgn = shopAt && spec.shop.sign && spec.shop.sign.text ? spec.shop.sign : null;
   const sbox = sgn ? signBox(sgn, sgn.x ?? 4, shopAt.winTop - 2, sgn.w ?? w - 8) : null;
   for (const pq of spec.plaques || []) {
@@ -1236,44 +1234,17 @@ function signBoard(G, sign, x0, yBot, w, night) {
   const mode = sign.lit === false ? false : sign.glow || (sign.neon ? 'neon' : 'ink');
   const box = paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, paletteOf(sign), Math.floor(x0 / 2) * 2, y0, { lit: mode, night, bulbs: sign.bulbs });
   G.signBox = { ...box, lay: L };   // (where it went: test/signs.test.js reads it back through the bake)
-  audit(G, 'sign', sign.text, box.x, box.y, box.x + box.w, box.y + box.h, true);   // (its own glow, lit or not: a lit icon tile)
+  audit(G, 'sign', sign.text, box.x, box.y, box.x + box.w, box.y + box.h, true);
 }
 
-// The lettering on a front, whole and clear (the placement lint's textClipped: tools/placementlint.mjs; the owner, 11-15:
-// First Pixel Bank's BANK read BAN, then ANK - a lit window's glow behind the portico's letters). textAudit(spec) draws
-// the facade and says, for each lettered board or inscription, whether it ran off the facade's edge, was painted over
-// by something drawn after it, or (unlit stone lettering) has a glow showing through: [{ k, t, why }] (none: [])
-let TXT = null;
-function audit(G, k, t, x0, y0, x1, y1, lit = false) {
-  if (!TXT) return;
-  const out = x0 < 0 || y0 < 0 || x1 > G.w || y1 > G.h, X0 = Math.max(0, x0), Y0 = Math.max(0, y0), X1 = Math.min(G.w, x1), Y1 = Math.min(G.h, y1);
-  const col = [], emi = [];
-  for (let y = Y0; y < Y1; y++) for (let x = X0; x < X1; x++) { const j = (y * G.w + x) * 4; col.push(G.col[j], G.col[j + 1], G.col[j + 2]); emi.push(G.emi[j + 3]); }
-  TXT.push({ G, k, t, X0, Y0, X1, Y1, out, col, emi, lit });
-}
-export function textAudit(spec) {
-  TXT = [];
-  try { makeBuilding(spec); } finally { var L = TXT; TXT = null; }
-  const bad = [];
-  for (const e of L) {
-    const { G } = e;
-    let over = 0, shine = 0, n = 0, i = 0;
-    for (let y = e.Y0; y < e.Y1; y++) for (let x = e.X0; x < e.X1; x++, i++) {
-      const j = (y * G.w + x) * 4;
-      n++;
-      if (G.col[j] !== e.col[i * 3] || G.col[j + 1] !== e.col[i * 3 + 1] || G.col[j + 2] !== e.col[i * 3 + 2]) over++;
-      if (!e.lit && G.emi[j + 3] > 0) shine++;
-    }
-    const why = e.out ? 'off the edge of its front' : over > n * 0.02 ? `${Math.round(100 * over / n)}% painted over` : shine > n * 0.02 ? `a glow through ${Math.round(100 * shine / n)}% of it` : null;
-    if (why) bad.push({ k: e.k, t: e.t, why });
-  }
-  return bad;
-}
+// (the lint's ear on the lettering: tools/textaudit.mjs, textClipped)
+let TAP = null;
+export const tapText = (f) => { TAP = f; };
+const audit = (...a) => TAP && TAP(...a);
 // a classical portico on the facade: columns standing proud of a shaded recess, an entablature with an
 // inscription and a pediment above (p: { x, w, cols, text })
 function portico(G, p, d, H, cornice) {
-  // (the stone painted over what's behind it - a lit upper window's glow included: setC kept it, and at night a window
-  // behind the entablature shone through its letters, BAN K at First Pixel Bank - the owner, 11-15; facePx clears it)
+  // (over what's behind it, a lit window's glow too: BAN K at First Pixel Bank, 11-15)
   const setC = (G2, x, y, c) => facePx(G2, x, y, c, null);
   const yG = d + H, top = H - cornice, entH = p.text ? 20 : 16, pedH = Math.min(30, Math.floor(p.w * 0.16)), ent0 = top - pedH - entH;
   const S = ramp('#d8cfbc', 6, 3);

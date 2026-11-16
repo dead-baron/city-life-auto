@@ -1111,65 +1111,37 @@ export function sameName(a, b) {
   const p = nameKey(a), q = nameKey(b);
   return !!p && !!q && (p === q || (p.length >= 5 && (' ' + q + ' ').includes(' ' + p + ' ')) || (q.length >= 5 && (' ' + p + ' ').includes(' ' + q + ' ')));
 }
-// The boards on a front that say a name, in the order they win: the shop's sign, the portico's lettering (when it fits
-// in the stone: buildings.js portico draws none otherwise), then the plaques (a neon name is a plaque too) - each { t, k }
+// One name per front (11-12: OLD TOWN INFIRMARY twice; 11-15: Canvas Savings Bank, FreshHub Grocery along its sections,
+// BANK over the FIRST PIXEL BANK board - the lint's nameTwice): the shop's sign, the portico's lettering (when it fits),
+// the plaques - a later board saying a name again goes; a one-word portico (BANK) that's a word of a board's name too;
+// a portico off its front's edge has no letters. The middle section of a face first.
 const porticoFits = (p) => !!(p && p.text) && Math.min(lineMask(p.text, 'serif').w, lineMask(p.text, 'civic').w) * 2 <= p.w - 8;
-// the portico's word said again by a board on the same front - BANK cut in the stone over the FIRST PIXEL BANK board (the
-// owner, 11-15: "it is also the duplicate"): a word of the name, however short, is the name said twice
-const oneWord = (t) => !nameKey(t).includes(' ');   // (BANK, MUSEUM: the trade's word - a name cut in the stone, CANVAS SAVINGS, is the name and wins)
-const wordOf = (w, t) => { const p = nameKey(w), q = nameKey(t); return !!p && !!q && (' ' + q + ' ').includes(' ' + p + ' '); };
-// a portico that runs off its front's edge would show its letters cut (buildings.js draws it whole or not at all): none
-const porticoOn = (p, W) => !!p && p.x >= 0 && p.x + p.w <= W;
+const oneWord = (t) => !nameKey(t).includes(' '), wordOf = (w, t) => (' ' + nameKey(t) + ' ').includes(' ' + nameKey(w) + ' ');
 export function frontNames(spec) {
-  const L = [];
-  if (spec.shop && spec.shop.sign && spec.shop.sign.text) L.push({ t: spec.shop.sign.text, k: 'sign' });
+  const L = spec.shop && spec.shop.sign && spec.shop.sign.text ? [{ t: spec.shop.sign.text, k: 'sign' }] : [];
   if (porticoFits(spec.portico)) L.push({ t: spec.portico.text, k: 'portico' });
   for (const pq of spec.plaques || []) if (pq && pq.text) L.push({ t: pq.text, k: 'plaque' });
   return L;
 }
-// One name along a front drawn in several sections (a long building cut every few tiles, a mall's units): each section's
-// spec gives the building's shop its sign, so FreshHub Grocery said FRESHHUB GROCERY three times along one front (the
-// placement lint's nameTwice, 11-15). The middle section keeps the name, then the rest from the west; a board saying it
-// again on another section of the same face goes (a shop sign with its glow). list: [{ s, spec, lights }] -> list
+function names(L) {
+  const said = [], dup = (t) => said.some((q) => sameName(q, t));
+  const face = L.flatMap(({ spec: s }) => [s.shop && s.shop.sign && s.shop.sign.text, ...(s.plaques || []).map((q) => q && q.text)]).filter(Boolean);
+  for (const { spec: s, lights } of L) {
+    if (s.portico && s.portico.text && !(s.portico.x >= 0 && s.portico.x + s.portico.w <= s.w)) s.portico = { ...s.portico, text: null };
+    const sg = s.shop && s.shop.sign;
+    if (sg && sg.text) { if (dup(sg.text)) { delete s.shop.sign; if (lights) for (let j = lights.length - 1; j >= 0; j--) if (lights[j][6] === 'sign') lights.splice(j, 1); } else said.push(sg.text); }
+    const pt = porticoFits(s.portico) && s.portico.text;
+    if (pt) { if (dup(pt) || (oneWord(pt) && face.some((t) => wordOf(pt, t)))) s.portico = { ...s.portico, text: null }; else said.push(pt); }
+    if (s.plaques) s.plaques = s.plaques.filter((q) => !q || !q.text || (!dup(q.text) && said.push(q.text)));
+  }
+}
+export function oneName(spec) { names([{ spec }]); return spec; }
+// list: a building's sections [{ s, spec, lights }] -> list, one name along each face
 export function oneNameAcross(list) {
-  if (list.length < 2) return list;
   const faces = new Map();
   for (const e of list) { if (!e.spec || e.s.vox || e.s.frame) continue; const k = e.s.ty + e.s.th; let l = faces.get(k); if (!l) faces.set(k, (l = [])); l.push(e); }
-  for (const L of faces.values()) {
-    if (L.length < 2) continue;
-    const said = [];
-    for (const { spec, lights } of [...L.filter((e) => e.s.mid), ...L.filter((e) => !e.s.mid)]) {
-      const sg = spec.shop && spec.shop.sign;
-      if (sg && sg.text) { if (said.some((t) => sameName(t, sg.text))) { delete spec.shop.sign; if (lights) for (let j = lights.length - 1; j >= 0; j--) if (lights[j][6] === 'sign') lights.splice(j, 1); } else said.push(sg.text); }
-      if (porticoFits(spec.portico)) {
-        const pt = spec.portico.text, face = L.flatMap((o) => [o.spec.shop && o.spec.shop.sign && o.spec.shop.sign.text, ...(o.spec.plaques || []).map((pq) => pq && pq.text)]).filter(Boolean);
-        if (said.some((t) => sameName(t, pt)) || (oneWord(pt) && face.some((t) => wordOf(pt, t)))) spec.portico = { ...spec.portico, text: null }; else said.push(pt);
-      }
-      if (spec.plaques) spec.plaques = spec.plaques.filter((pq) => { if (!pq || !pq.text) return true; if (said.some((t) => sameName(t, pq.text))) return false; said.push(pq.text); return true; });
-    }
-  }
+  for (const L of faces.values()) if (L.length > 1) names([...L.filter((e) => e.s.mid), ...L.filter((e) => !e.s.mid)]);
   return list;
-}
-// One name on a front: the first board to say it keeps it, a later one saying it again goes (the owner, 11-12: "OLD TOWN
-// INFIRMARY" twice, one under the other; 11-15: Canvas Savings Bank's portico cut CANVAS SAVINGS and a CANVAS SAVINGS BANK
-// board under it - the bank archetype's name plaque, kept when the hand plan put its own name in the portico). A portico
-// saying the shop sign's name loses its lettering. tools/placementlint.mjs nameTwice checks every front of the world.
-export function oneName(spec) {
-  const said = [];
-  if (spec.portico && spec.portico.text && !porticoOn(spec.portico, spec.w)) spec.portico = { ...spec.portico, text: null };
-  if (spec.shop && spec.shop.sign && spec.shop.sign.text) said.push(spec.shop.sign.text);
-  if (porticoFits(spec.portico)) {
-    const pt = spec.portico.text, others = (spec.plaques || []).filter((pq) => pq && pq.text).map((pq) => pq.text);
-    if (said.some((t) => sameName(t, pt)) || (oneWord(pt) && [...said, ...others].some((t) => wordOf(pt, t)))) spec.portico = { ...spec.portico, text: null }; else said.push(pt);
-  }
-  if (!spec.plaques || !spec.plaques.length) return spec;
-  spec.plaques = spec.plaques.filter((pq) => {
-    if (!pq || !pq.text) return true;
-    if (said.some((t) => sameName(t, pq.text))) return false;
-    said.push(pq.text);
-    return true;
-  });
-  return spec;
 }
 // a plaque styled: its trade's face and palette when it has one (a clinic's white and green, the fire station's red), its
 // own colours made legible otherwise, in the small face

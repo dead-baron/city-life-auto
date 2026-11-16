@@ -58,7 +58,8 @@ import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy } from '../shared/parkcheck.js';
 import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName } from '../client/art2/game/statics.js';
-import { makeBuilding, buildingH, plaqueBox, bladeBox, textAudit } from '../client/art2/buildings.js';
+import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
+import { textAudit } from './textaudit.mjs';
 
 // what the test lets by, each explained (else what the lint found is fixed in the data)
 export const LINT_ALLOW = {

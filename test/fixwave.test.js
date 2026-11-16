@@ -161,7 +161,7 @@ test('the cinematic Showcase: 25-40 hand-crafted places, each with a camera spot
 });
 
 test('a sign\'s words whole on its front (the owner, 11-15: First Pixel Bank\'s portico read BAN, then ANK): the stone over a lit window, the boards over a cross or a cup, a plaque lifted clear of the shop\'s sign', async () => {
-  const { textAudit } = await import('../client/art2/buildings.js');
+  const { textAudit } = await import('../tools/textaudit.mjs');
   for (let seed = 1; seed <= 8; seed++) {
     const bank = { w: 512, d: 160, floors: 3, style: 'stone', parapet: 8, seed, night: 1, portico: { x: 176, w: 160, cols: 4, text: 'BANK' }, windows: [40, 80, 420] };
     assert.deepEqual(textAudit(bank), [], `no glow through the portico's letters (seed ${seed})`);
