@@ -74,7 +74,7 @@ svg.chart{display:block;max-width:100%}.chartbox{width:100%;min-height:140px}
 .tools a:hover{border-color:var(--gold)}
 .note{color:var(--dim);font-size:12px;margin-top:8px}
 .empty{color:var(--dim);padding:10px 0}
-@media (max-width:700px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.kpi:nth-child(n+4){display:none}.kpi b{font-size:20px}.players .hide-s{display:none}.grid{grid-template-columns:1fr}.brand{font-size:15px}}`;
+@media (max-width:700px){.cmp{font-size:12px}.cmp th,.cmp td{padding:5px 3px}.kpi span{font-size:11px}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.kpi:nth-child(n+4){display:none}.kpi b{font-size:20px}.players .hide-s{display:none}.grid{grid-template-columns:1fr}.brand{font-size:15px}}`;
 
 export function consolePage(w) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f1830"><title>Console - City Life Auto</title><style>${CSS}</style></head>
