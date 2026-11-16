@@ -393,14 +393,16 @@ export function makeBuilding(spec) {
   if (spec.mural) mural(G, spec.mural, d + H, seed);
   if (spec.dress) dressFacade(G, spec, WL, w, d, H, gH, fy, seed);
   // the shop's sign over the dirt, the ivy and the tags: the words stay clean and whole (signfont.js)
-  if (shopAt && spec.shop.sign && spec.shop.sign.text) signBoard(G, spec.shop.sign, spec.shop.sign.x ?? 4, shopAt.winTop - 2, spec.shop.sign.w ?? w - 8, night);
   if (spec.portico) portico(G, spec.portico, d, H, cornice);
   for (const a of spec.arches || []) arch(G, a, d + H, night, seed);
   if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
-  for (const pq of spec.plaques || []) plaque(G, pq, d + H, night);
   for (const bl of spec.blades || []) blade(G, bl, d + H, night, H);
   if (spec.cross) medSign(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night, spec.cross.k);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
+  // the boards with the words last, over everything else on the front: a name is never cut by a clinic's cross, a cup
+  // sign or a blade drawn after it (the placement lint's textClipped - 21 shop signs a few % painted over, 11-15)
+  for (const pq of spec.plaques || []) plaque(G, pq, d + H, night);
+  if (shopAt && spec.shop.sign && spec.shop.sign.text) signBoard(G, spec.shop.sign, spec.shop.sign.x ?? 4, shopAt.winTop - 2, spec.shop.sign.w ?? w - 8, night);
   if (!spec.pitch) return G;
   // (a roof raised over the face adds rows above it: an even number, so the face's letters stay on the art grid)
   let R = pitched(G, spec, w, d, H, seed);
