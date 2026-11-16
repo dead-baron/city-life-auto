@@ -1,6 +1,6 @@
 // People going about their lives (task #423, server/systems/activities.js), in the classic view: what they have by them
 // - the descriptor's pp (the painter's easel, the angler's cooler, the chess board, the car washer's sponge and bucket,
-// the picker's crate, the hunter's slung rifle, the neighbours' garden fence, a pool cue stood up, a skater's board) and the pool player's
+// the picker's crate, the hunter's slung rifle, the neighbours' garden fence, a pool cue stood up, a skater's board, a market shopper's trolley) and the pool player's
 // cue (gt 'cue'). Loaded with the first person at an activity (main.js drawUpright), not with the page. The poses: sat,
 // kneeling and bent over the table are drawn low there, like a kneel.
 // Drawn in world px after the figure, on the ground plane (y down) with heights lifted up the screen.
@@ -45,6 +45,11 @@ const PROPS = {
     const a = at(p, -9, 0, 0), b = at(p, 9, 0, 0);
     line(g, a, b, '#3a2e2a', 4); line(g, a, b, '#c8402e', 2);
     g.fillStyle = '#e8e4d8'; for (const q of [at(p, -6, -2, 0), at(p, -6, 2, 0), at(p, 6, -2, 0), at(p, 6, 2, 0)]) g.fillRect(q[0] - 1, q[1] - 1, 2, 2);
+  },
+  trolley(g, p) {   // a shopping trolley pushed in front (a market's shopper, Midtown): the wire basket on its frame, the wheels under it
+    const c = at(p, 13, 0, 8); box(g, c[0], c[1], 10, 8, '#d8dce4', '#8a8e98');
+    line(g, at(p, 7, -4, 14), at(p, 7, 4, 14), '#5a5e68', 1.2);
+    g.fillStyle = '#2a2a2e'; for (const q of [at(p, 9, -4, 0), at(p, 9, 4, 0), at(p, 17, -4, 0), at(p, 17, 4, 0)]) g.fillRect(q[0] - 1, q[1] - 1, 2, 2);
   },
   cueup(g, p) { const b = at(p, 2, 7, 0); line(g, b, [b[0] + 1, b[1] - 46], '#c08a4a', 1.4); g.fillStyle = '#3a6ad0'; g.fillRect(b[0], b[1] - 48, 2, 2); },
   // the people of the wilds (server/systems/wildfolk.js, Nature-C4)
