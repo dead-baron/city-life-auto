@@ -2708,7 +2708,7 @@ function propItems(c, p, pi, I) {
     case 'cattlegrid': V(`cgrid:${qa(p.a || 0, 4).toFixed(2)}`, 'cattleGrid', [64, 28], qa(p.a || 0, 4)); return;   // (a ranch track's, at the road: world3-stocktanks.js)
     case 'hayBale': V('hay:1', 'hayBale', [true], qa(u * PI, 2)); return;
     case 'festoon': {
-      // (shared/festoon.js: the world build made both ends fast and gave the run its slack; the art hangs it so)
+      // (shared/world3-festoons.js: the world build made both ends fast and gave the run its slack; the art hangs it so)
       const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40, k = p.k === 'lantern' ? 1 : p.k === 'cable' ? 2 : 0, en = p.ends || [], e = (en[0] === 'pole' ? 1 : 0) | (en[1] === 'pole' ? 2 : 0) | (en[0] === 'wall' ? 4 : 0) | (en[1] === 'wall' ? 8 : 0);
       const s = festoonSag(p), b = (Math.round(p.x) + Math.round(p.y)) & 1, bw = Math.ceil(s * 0.9 * Math.abs(ty) / (Math.hypot(tx, ty) || 1)) + 2;
       put(I, { key: `fest:${tx}:${ty}:${h}:${k}:${e}:${s}:${bw > 2 ? b : 0}`, recipe: { t: 'festoon', tx, ty, h, k, e, s, b: bw > 2 ? b : 0 }, x, y, ext: [Math.max(0, -tx) + 18 + bw, h + Math.max(0, -ty) + 24, Math.max(0, tx) + 18 + bw, Math.max(0, ty) + 16], pi });

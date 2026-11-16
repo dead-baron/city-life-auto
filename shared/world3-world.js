@@ -88,7 +88,7 @@ import { openBlocks3 } from './world3-openblocks.js';   // (the big plain footpr
 import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
 import { kerbStreets3, kerbBays3 } from './world3-kerbs.js';   // (notes 2: street parking in some neighbourhoods)
 import { streetGreens3, sightlines3 } from './world3-greens.js';   // (notes 2: trees off the signs, more than palms)
-import { hangLights3 } from './festoon.js';   // (the hanging lights' anchors and slack - the owner, 11-16)
+import { hangLights3 } from './world3-festoons.js';   // (the hanging lights' anchors and slack - the owner, 11-16)
 import { squareCrossings3, planStations3, stampStations3, underpassLeft } from './world3-stations.js';   // (2026-10-15: the level crossings square on, the stations' streets and car parks)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and

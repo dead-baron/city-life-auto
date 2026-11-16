@@ -24760,7 +24760,8 @@ across either it would be better if they had some slack and maybe larger light b
 more like bistro lights than Christmas lights. And lanterns could look more like lanterns, like the red lanterns in the
 concepts. Also not strung straight across but with a little slack in the line and larger lights/lanterns." A class fix,
 every run in the world (docs/DECISIONS.md, World and places).
-- One place says what a run hangs from and how it hangs: shared/festoon.js. Every run of lights is a 'festoon' prop
+- What a run hangs from: shared/world3-festoons.js; how it hangs (its slack): shared/festoon.js, read by the art too.
+  Every run of lights is a 'festoon' prop
   (the hand plans' `fest` / `string` / `canopy`, the parks', the camps', the harbors', the market lanes' ...). The world
   build's last word on the lights (`hangLights3`, the done hook after every pass that strings any): each end made fast
   to what stands there - a building's face or awning (a bracket, the end moved onto the face), a lamp post, a tree or
@@ -24789,6 +24790,10 @@ every run in the world (docs/DECISIONS.md, World and places).
   nothing, a bracket with no wall, a post in the road, no tree / lamp / stall where an end says one, a sag outside
   8-12%, a low point under a head, a span over 10 tiles with no post; allowed 0. test/festoon.test.js on a small map and
   the art (the line sags, a handful of big bulbs or lanterns, not a dense string).
+- Budget (the owner's rule: a raise is a decision, said here): the bake worker's code 1010 -> 1015 KB (tools/perf.mjs).
+  The bake stood at 1010.0 KB with no room; the new art (makeFestoon's bulbs, lanterns and posts, the slack shared
+  with the build in shared/festoon.js - the build's anchoring kept out of the bake in shared/world3-festoons.js) is
+  about 3 KB gzipped. Bakes cost the same: a run is still one sprite, fewer and larger bulbs on it.
 - Not changed: the fairy lights wound up the boulevards' palm trunks (SC4-B: not a hanging run), the old concept-sheet
   scenes (client/art2/districts2.js, roadscenes.js, props-park.js stringLights: not in the game). Re-keys the `world3`
   hash and the art hashes (`art`, `art3`: the bake's statics.js, props.js); chunks with no hanging lights in them carry over

@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TILE, T } from '../shared/constants.js';
-import { FESTOON, hangLights3, festoonWorld, festoonWhy, festoonSag, festoonSpan, festoonLow, festoonClear } from '../shared/festoon.js';
+import { FESTOON, hangLights3, festoonWorld, festoonWhy, festoonSag, festoonSpan, festoonLow, festoonClear } from '../shared/world3-festoons.js';
 
 // 40 x 20 tiles of plaza; a building in the top-left 6 x 4; a road across rows 12-14
 function world() {

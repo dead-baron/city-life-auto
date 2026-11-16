@@ -52,7 +52,7 @@ import { VEHICLES } from '../shared/vehicles.js';
 import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy } from '../shared/parkcheck.js';
-import { festoonWorld, festoonWhy } from '../shared/festoon.js';
+import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
 import { staticIndex, staticItems, makeStatic, STATIC_CHUNK } from '../client/art2/game/statics.js';
 import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
 
