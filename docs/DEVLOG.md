@@ -24433,6 +24433,8 @@ number in those lists moves):
   square, someone waiting at a bus stop. They fill like the other activities - out of sight, near a player, by day and
   by night as each kind says - counted apart from them (six groups round a player besides the other activities' four).
   A security guard's look (white shirt, navy waistcoat and trousers). test/tableau.test.js.
+- Buses keep off the roads the traffic keeps off (server/systems/transit.js busRoad: not a `notraffic` edge - a station's
+  own road, a wild track): the bank's new shelter on 12th Street joined a line that ran down Metro Central's station road.
 - Decisions: the owner's rule of 11-14 20:28 is in docs/DECISIONS.md (World and places).
 - Checked: the placement lint clean in Downtown (its totals as before), the arrival line laid at Greenfield Park, the
   FTUE's lot and alley as they were; the city 136 s to build here (as before); perf, world3server (the region index),

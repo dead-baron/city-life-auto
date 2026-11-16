@@ -37,7 +37,9 @@ export const BUS_ROADS = new Set(['ave', 'art', 'blvd', 'st', 'front', 'minor', 
 // street of the town at ground level - never one that leads only to a road's end (roadends.js deadWays: the dead ends
 // and the roads that lead only to them) nor a cul-de-sac, and the routes take no U-turns, so a bus never has to turn
 // round anywhere.
-export const busRoad = (net, e) => e.lvl === 0 && BUS_ROADS.has(e.kind) && !e.culdesac && !deadWays(net).has(e.id * 2) && !deadWays(net).has(e.id * 2 + 1);
+// (and never a road kept off by the traffic - a station's own road, a wild track: notraffic, shared/roads.js - a new
+// shelter in Downtown, 11-15, had a line routed down Metro Central's)
+export const busRoad = (net, e) => e.lvl === 0 && BUS_ROADS.has(e.kind) && !e.culdesac && !e.notraffic && !deadWays(net).has(e.id * 2) && !deadWays(net).has(e.id * 2 + 1);
 const REUSE = 2500;         // px: what a leg pays to run along a street the line already uses (a loop, not out and back)
 const TERMINAL_REACH = 12000;   // px: a ferry terminal's stop is on the nearest through street this near its pier (on land)
 // line names and liveries (PAINTS index) by the zone they serve (shared/citylayout.js Z)
