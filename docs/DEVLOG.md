@@ -24648,3 +24648,61 @@ number in those lists moves):
   captures of the arrival, the pond, the food-truck plaza, the jeweller and the bank, the hotel's drop-off at noon, dusk
   and night (the owner's folder of the job). Re-keys World v3's hashes (`world3`, `art3`) once; today's world and art
   hashes stay (chunks baked the same carry over: server/artcdn.js).
+
+## 2026-11-16 · The Inventory (was the Bag): your character, your clothes, your weapons, quick switching
+
+The owner (11-16, with two screenshots of the Bag): "The inventory system needs a huge overhaul. Too hard to navigate.
+Hard to see what I have. On desktop the inventory is all squished to the side. When I'm trying to play an instrument I
+can't see what I'm doing on the screen. I can't change my clothes or take off clothes ... It doesn't need to be called a
+bag, just Inventory." Built to the concepts U6, U14, U15, CC10 and UIC-19.
+
+- **The screen** (client/bag.js, style.css "the Inventory"): named INVENTORY everywhere you see it (the hub's head, the
+  pause list, Settings' controls, the Guide, the quick wheel, the server's "in your inventory" lines). On a desktop or a
+  phone on its side three columns that use the screen (the frame was 720 px wide, unzoomed - the "squished to the side"):
+  your character | the grid under its tabs with the quick bar | the details. Upright: the character on top, the grid under
+  it, the details a sheet from the bottom. The tabs are U14's seven - All, Clothes, Weapons, Tools, Food & Meds,
+  Materials, Valuables - and wrap rather than run off the edge ("Healin" cut off is gone); the weapon slots' labels are
+  short words in the UI face, never two on one tile (MELEE and THROWN ran together). The sort stays.
+- **Your character** (U6, U15): the game's own sprite of your look (client/art2/people.js through lookArt, as the city
+  draws you - not the close-up renderer), breathing, turned with the arrows or a drag. A vest you wear shows over it (it
+  draws your ped's own look code). The slots round it - Hat, Top, Jacket, Bottoms | Glasses, Accessory, Bag, Shoes (a
+  dress or a set fills the top's slot as OUTFIT, the bottoms' says "with the outfit") - each with an X to take it off;
+  TAKE IT ALL OFF; SAVED LOOKS (CC10) shows your saved looks as small figures, a tap puts that look's clothes on. Health,
+  armor and stamina bars under it.
+- **Clothes from the inventory, on the server** (server/systems/looks.js): `{ t: 'look', a: 'off', s: slot | 'all' }`,
+  `a: 'wear', id` (a piece you own, in its colors or the ones worn), `a: 'outfit', i` (a saved look's clothes over your
+  own body and hair). All three go through the creator's own `put()`: refused in cuffs, in uniform, and **while you're
+  wanted anywhere but inside your own home** - and only a change at home counts as a disguise (the home's "Change
+  outfit"), as before. So changing out in the street is never a free way to shed the police; the disguise benefit stays
+  where it was (home, the stores' fitting rooms). Everything off leaves the underwear the renderer draws under nothing (a
+  tank or a bare chest, briefs). A top or bottoms over a dress takes the dress off and puts on bottoms (or a top) of yours.
+  The clothes you own are in the grid too (the Clothes tab, and All), each with its colors; WEAR / TAKE OFF in the
+  details' third place.
+- **Weapons at a glance, switched without opening it** (shared/loadout.js - the server's arms.js reads it too): the quick
+  bar under the grid has eight slots - 1 GUN 1, 2 GUN 2, 3 MELEE, 4 THROWN (the guns and throwable that take a slot, the
+  melee slot the dear blade else a bat or a knife), then 5-8 the four things to use (pin one from its details, or drag a
+  tile onto the slot). In play the number keys 1-4 take those weapons out (again: put it away), 5-8 use the things, 9
+  your fists - the HUD's weapon plate shows the others of the four with their keys (was the n-th weapon you carried). Tab:
+  a tap the next weapon (on its release), held the weapon wheel - point with the mouse, let go (as RB on a pad). The
+  mouse wheel steps through them as before. On touch the weapon button's hold opens a ring of your weapons in the middle
+  of the screen (a tray only past twelve) - tap one. The pad's wheel (hold RB) and the quick wheel (hold View / X /
+  ITEMS) as they were. No new panel on the HUD.
+- **Instruments** (client/music/play.js): PLAY on an instrument puts the Inventory away; the pads are one see-through
+  strip along the foot of the screen (eight in a row, CHORD and GIG over them; 22% of the screen's height at most, never
+  over your character), the gig's track list and a set's result grow it upward while they show. Your character holds and
+  plays it in the city for everyone (the server's descriptor `pp`, as the buskers: sax, violin, bucket drums, guitar - the
+  keytar as a guitar), and the Inventory's figure plays the instrument you pick.
+- **A gamepad**: LT / RT change the Inventory's tabs (LB / RB stay the hub's screens, the rule since UI-3), the D-pad or
+  stick moves, A picks, X equips, wears or takes off, Y drops, B backs out of the details then the screen.
+- What I took from similar games: GTA V's weapon wheel (hold a button, point, let go - our Tab / RB / the ring on touch);
+  Stardew Valley's and Terraria's hotbar (the number keys and the scroll wheel switch without opening anything, the
+  inventory a grid with the hotbar along its foot, drag to the bar); Project Zomboid's equip slots (what you wear and hold
+  by slot round the body, each with its own way off) and its item details beside the grid.
+- The Guide: "Your Inventory" rewritten, new "Quick bar and weapon wheel" and "Playing an instrument" (controls by name:
+  [[bag]], [[invtab]], [[quick]], [[nextw]], [[wpnwheel]], [[use]], [[pads]], [[chord]], [[back]] - shared/controls.js
+  gains `quick` and `invtab`; the keyboard's `wpnwheel` is HOLD TAB). README's controls rows updated.
+- Tests: wardrobe.test.js (clothes off, all off, a piece of yours on, a saved look's clothes, a top over a dress; refused
+  while wanted in the street and the heat unchanged), invlayout.test.js (the Inventory measured in headless Chrome at
+  1920x1080, 1280x720, the owner's 1896x1927 window, 844x390, 740x360, 390x844, 360x740, 1024x768 and with a pad:
+  nothing off the screen, nothing cut off, no button on another), music (the pad strip's taps; the drums' pose on the
+  player's ped), hub / uiscreens / uitokens / guide / gamepad / arms updated.

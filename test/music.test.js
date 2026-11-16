@@ -383,3 +383,37 @@ test("the page's clock: the server's time from a music message's tick, even one 
   assert.equal(ev.tk, w.tick);
   assert.ok(Math.abs(ev.now - (1 + w.tick * 0.05)) < 0.01);
 });
+
+// The Inventory's PLAY (the owner, 11-16: "When I'm trying to play an instrument I can't see what I'm doing on the screen
+// ... If I equip something like an instrument I should see my character playing it"): the player's ped carries the
+// instrument on the wire for every page (pp, as the buskers), the people renderer draws it in the hands, the pads are one
+// compact strip, and the Inventory goes away (client/bag.js act 'use'; main.js closes the hub for a music game).
+test('an instrument from the Inventory: held and played in the city for everyone, a compact pad strip, the Inventory away', async () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  const { descriptor: describe } = await import('../server/net.js');
+  for (const [id, pp] of [['bucketdrum', 'drums'], ['violin', 'violin'], ['guitar', 'guitar'], ['sax', 'sax']]) {
+    prof.inventory[id] = 1;
+    economy.useItem(w, p, id);
+    assert.equal(p.ped.pp, pp, `${id} in the hands`);
+    assert.equal(describe(p.ped).pp, pp, `${id}: on the wire for every page`);
+    music.stopPerf(w, p);
+    assert.ok(!p.ped.pp, `${id} put away`);
+  }
+  // drawn: the figure with the drums differs from the one without (client/art2/people.js, as a busker's)
+  const LK = await import('../shared/look.js');
+  const { person } = await import('../client/art2/people.js');
+  const A = LK.lookArt(LK.STARTERS[0].look), sig = (g) => { let n = 0; for (let i = 3; i < g.col.length; i += 4) if (g.col[i]) n++; return `${g.w}x${g.h}:${n}`; };
+  assert.notEqual(sig(person({ ...A, pp: 'drums', carry: 'drums' }, 0, 'idle', 1, { tight: true })), sig(person(A, 0, 'idle', 1, { tight: true })), 'the drums drawn in front of them');
+  // the pads: eight in one row; a tap finds its pad, off the row nothing
+  const play = readFileSync(new URL('../client/music/play.js', import.meta.url), 'utf8');
+  assert.match(play, /const LAYOUT = \{ lanes: \[200, 240\], jam: \[400, 72\] \}/, 'a strip, wide and low');
+  assert.match(play, /#arcade\.mus #arc-cv\{width:min\(94vw,calc\(22vh\*400\/72\),720px\)/, 'at most 22% of the screen\'s height');
+  assert.match(play, /#arcade\.mus:not\(\.lanes\)\{pointer-events:none\}/, 'see-through to the city round it');
+  const { padAt, PAD_ROW } = await import('../client/music/play.js');
+  for (let i = 0; i < 8; i++) assert.equal(padAt(PAD_ROW.x0 + i * PAD_ROW.w + PAD_ROW.w / 2, PAD_ROW.y0 + PAD_ROW.h / 2), i);
+  assert.equal(padAt(200, 4), -1, 'the strip\'s head is CHORD and GIG, not a pad');
+  const bag = readFileSync(new URL('../client/bag.js', import.meta.url), 'utf8'), main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
+  assert.match(bag, /if \(ITEMS\[t\.id\] && ITEMS\[t\.id\]\.music === 'inst'\) \{ close\(\); return; \}/, 'PLAY puts the Inventory away');
+  assert.match(main, /if \(\(m\.game === 'jam' \|\| m\.game === 'rhythm'\) && inHub\(\)\) closeHub\(\);/, 'and the music game never opens over it');
+});

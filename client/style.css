@@ -1449,6 +1449,7 @@ body.touch .hub-frame, #hub[data-tab=map] .hub-frame { width: 100%; height: 100%
 #hub-foot > span { display: inline-flex; align-items: center; gap: var(--s1); }
 body:not(.pad) #hub-foot { display: none; }
 #hub[data-tab=pause] #hub-foot { display: none; }
+#hub:not([data-tab=bag]) #hub-foot .hub-inv { display: none; }   /* (the Inventory's own buttons: client/bag.js pad) */
 #hub-close { width: var(--tap-l); height: var(--tap-l); }
 #hub-close .pi24, #hub-back .pi24 { width: 24px; height: 24px; }
 #hub-body { position: relative; flex: 1; min-height: 0; }

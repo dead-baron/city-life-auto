@@ -1,6 +1,7 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, shop menus, death screen, radar + big map.
 import { logNote, noteLine, promptWords, promptFades, fitPrompt } from './notelog.js';
+import { loadout } from '../shared/loadout.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -335,9 +336,10 @@ export class HUD {
       const hg = document.querySelector('#tbtns [data-lbl="HIT"] svg.gl');
       if (hg) hg.outerHTML = monoGlyph(iconOf('fire', 'HIT'));
     }
-    // the quick weapons (UIC-11/12: under what you hold, the next ones you carry - their number keys on a keyboard; a
-    // click takes one out: client/main.js)
-    const qk = me.weapons.map((x, n) => [x, n]).filter(([x]) => x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');
+    // the quick weapons (UIC-11/12: under what you hold, the others of your weapon slots - Gun 1, Gun 2, Melee, Thrown:
+    // shared/loadout.js - with their number keys 1-4 on a keyboard, as the Inventory's quick bar; a click takes one out:
+    // client/main.js)
+    const qk = loadout(me.weapons.map((x) => x.id)).map((id, n) => [me.weapons.find((x) => x.id === id), n]).filter(([x]) => x && x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');
     if ($('w-quick').dataset.q !== qs) {
       $('w-quick').dataset.q = qs;
       $('w-quick').innerHTML = me.dead ? '' : qk.map(([x, n]) => { const d = WEAPON_BY_ID[x.id]; return d ? `<button type="button" class="wq" data-w="${esc(x.id)}" title="${esc(d.name)}${n < 9 ? ` (${n + 1})` : ''}" aria-label="${esc(d.name)}"><img alt="" src="${weaponThumb(d.i)}">${n < 9 ? `<span class="kchip kbm-only">${n + 1}</span>` : ''}</button>` : ''; }).join('');
