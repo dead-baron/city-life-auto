@@ -60,7 +60,8 @@ section{display:none}section.on{display:block}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
 .tile{background:#0b1226;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .tile b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.tile span{font-size:12px;color:var(--dim)}
-svg.chart{width:100%;height:auto;display:block}
+svg.chart{display:block;max-width:100%}.chartbox{width:100%;min-height:140px}
+@media (min-width:900px){.card.half{grid-column:span 1}.grid.tr{grid-template-columns:1fr 1fr}}
 .cmp{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 .cmp th,.cmp td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}.cmp th:first-child,.cmp td:first-child{text-align:left}
 .cmp thead th{color:var(--gold);font-size:12px}

@@ -22,14 +22,15 @@
     return `<div class="bars">${l.map(([k, v]) => `<span>${opt.label ? opt.label(k) : esc(k)}</span><i style="width:${Math.max(3, (v / max) * 100)}%;background:${opt.col || 'var(--gold)'}"></i><span class="v">${num(v)}</span>`).join('')}</div>`;
   }
   // a chart of one series: an area (line) or bars, with the scale on the left and a few times along the bottom
+  // (drawn at the box's own width in CSS px, so the type stays 11 px on a phone and a wide screen alike: fillCharts)
   function chart(series, key, opt = {}) {
-    const W = 640, H = 170, L = 34, B = 22, T = 10, R = 8, n = series.length;
+    const W = Math.max(260, Math.round(opt.w || 640)), H = opt.h || Math.round(Math.min(220, Math.max(140, W * 0.28))), L = 34, B = 22, T = 10, R = 8, n = series.length;
     if (!n) return '<div class="empty">No data yet.</div>';
     const max = Math.max(1, ...series.map((q) => q[key])), top = max <= 4 ? max : Math.ceil(max / 4) * 4;
     const x = (i) => L + (i + 0.5) * ((W - L - R) / n), y = (v) => T + (H - T - B) * (1 - v / top), bw = Math.max(1, ((W - L - R) / n) * 0.72);
     let g = '';
     for (let k = 0; k <= 4; k++) { const v = (top * k) / 4, yy = y(v); g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#ffffff14"/><text x="${L - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#a6aec4">${Number.isInteger(v) ? v : v.toFixed(1)}</text>`; }
-    const tick = Math.max(1, Math.round(n / 6)), fmt = opt.days ? (t) => new Date(t).toLocaleDateString([], { weekday: 'short', hour: '2-digit' }) : (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const tick = Math.max(1, Math.round(n / Math.max(2, Math.floor(W / 110)))), fmt = opt.days ? (t) => new Date(t).toLocaleDateString([], { weekday: 'short', hour: '2-digit' }) : (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     for (let i = 0; i < n; i += tick) g += `<text x="${x(i)}" y="${H - 5}" text-anchor="middle" font-size="11" fill="#a6aec4">${esc(fmt(series[i].t))}</text>`;
     const col = opt.col || '#e2bd57';
     if (opt.bars) g += series.map((q, i) => (q[key] ? `<rect x="${x(i) - bw / 2}" y="${y(q[key])}" width="${bw}" height="${H - B - y(q[key])}" rx="1.5" fill="${col}"><title>${esc(fmt(q.t))}: ${q[key]}</title></rect>` : '')).join('');
@@ -38,15 +39,25 @@
       g += `<path d="M${x(0)},${H - B} L${pts.join(' L')} L${x(n - 1)},${H - B} Z" fill="${col}" fill-opacity=".18"/><polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round"/>`;
       const i = n - 1; g += `<circle cx="${x(i)}" cy="${y(series[i][key])}" r="3.5" fill="${col}"/>`;
     }
-    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opt.label || key)}">${g}</svg>`;
+    return `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opt.label || key)}">${g}</svg>`;
   }
+  // a chart's box on the page (data-c: which one), filled once the page is laid out, at the box's width
+  const box = (c) => `<div class="chartbox" data-c="${c}"></div>`;
+  function fillCharts() {
+    const T = UI.data && UI.data.trends;
+    if (!T) return;
+    const days = T.win === '3d' || T.win === '7d', C = { on: ['on', { days, label: 'online' }], u: ['u', { bars: 1, days, col: '#5ab0ff', label: 'players' }], se: ['se', { bars: 1, days, col: '#6cd06c', label: 'sessions' }] };
+    for (const el of document.querySelectorAll('#trends .chartbox')) { const [k, o] = C[el.dataset.c]; el.innerHTML = chart(T.series, k, { ...o, w: el.clientWidth }); }
+  }
+  let rz = 0;
+  addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(fillCharts, 150); });
   const tile = (v, label, cls = '') => `<div class="tile ${cls}"><b>${v}</b><span>${esc(label)}</span></div>`;
 
   // ---- the tabs ----
   function drawKpis(d) {
     const day = (d.windows || []).find((q) => q.win === '24h');
     const k = (v, l, c = '') => `<div class="kpi ${c}"><b>${v}</b><span>${esc(l)}</span></div>`;
-    $('kpis').innerHTML = k(num(d.now.online), 'online now', 'gold') + k(`${num(d.now.online - d.now.guests)}<small style="font-size:14px;color:var(--dim)"> / ${num(d.now.guests)}</small>`, 'members / guests') + (day ? k(num(day.uniq), 'players, 24 h') + k(num(day.peak), 'peak online, 24 h') + k(num(day.nw), 'new players, 24 h') : k('…', 'players, 24 h') + k('…', 'peak, 24 h') + k('…', 'new, 24 h'));
+    $('kpis').innerHTML = k(num(d.now.online), 'online now', 'gold') + k(`${num(d.now.online - d.now.guests)}<small style="font-size:14px;color:var(--dim)"> / ${num(d.now.guests)}</small>`, 'members · guests') + (day ? k(num(day.uniq), 'players, 24 h') + k(num(day.peak), 'peak online, 24 h') + k(num(day.nw), 'new players, 24 h') : k('…', 'players, 24 h') + k('…', 'peak, 24 h') + k('…', 'new, 24 h'));
   }
   function drawNow(d) {
     const N = d.now;
@@ -63,14 +74,16 @@
     const W = d.windows || [];
     const cmpRow = (label, f, fmt = num) => `<tr><td>${label}</td>${W.map((q) => `<td>${fmt(f(q))}</td>`).join('')}</tr>`;
     $('trends').innerHTML = `<div class="chips" id="wins">${WINS.map(([k, l]) => `<button data-w="${k}" class="${k === UI.win ? 'on' : ''}">${l}</button>`).join('')}</div>
-<div class="grid"><div class="card wide"><h2>${esc((WINS.find((w) => w[0] === T.win) || [])[1] || T.win)}</h2><div class="tiles">${tile(num(T.uniq), 'players')}${tile(num(T.peak), 'peak online')}${tile(T.avg, 'average online')}${tile(num(T.nw), 'new players')}${tile(num(T.rt), 'came back')}${tile(num(T.se), 'sessions')}${tile(T.avgMin ? T.avgMin + ' min' : '-', 'average session')}${tile(num(T.su), 'sign-ups')}${tile(num(T.jb), 'jobs done')}${tile(num(T.cr), 'crimes')}${tile(num(T.de), 'deaths')}${tile(num(T.ch), 'chat lines')}</div></div>
-<div class="card wide"><h2>Online <small>most at once</small></h2>${chart(T.series, 'on', { days, label: 'online' })}</div>
-<div class="card"><h2>Players seen</h2>${chart(T.series, 'u', { bars: 1, days, col: '#5ab0ff', label: 'players' })}</div>
-<div class="card"><h2>Sessions begun</h2>${chart(T.series, 'se', { bars: 1, days, col: '#6cd06c', label: 'sessions' })}</div>
+<div class="grid tr"><div class="card wide"><h2>${esc((WINS.find((w) => w[0] === T.win) || [])[1] || T.win)}</h2><div class="tiles">${tile(num(T.uniq), 'players')}${tile(num(T.peak), 'peak online')}${tile(T.avg, 'average online')}${tile(num(T.nw), 'new players')}${tile(num(T.rt), 'came back')}${tile(num(T.se), 'sessions')}${tile(T.avgMin ? T.avgMin + ' min' : '-', 'average session')}${tile(num(T.su), 'sign-ups')}${tile(num(T.jb), 'jobs done')}${tile(num(T.cr), 'crimes')}${tile(num(T.de), 'deaths')}${tile(num(T.ch), 'chat lines')}</div></div>
+<div class="card wide"><h2>Online <small>most at once</small></h2>${box('on')}</div>
+<div class="card half"><h2>Players seen</h2>${box('u')}</div>
+<div class="card half"><h2>Sessions begun</h2>${box('se')}</div>
 <div class="card wide"><h2>Side by side</h2><div style="overflow-x:auto"><table class="cmp"><thead><tr><th></th>${W.map((q) => `<th>${esc((WINS.find((w) => w[0] === q.win) || [])[1] || q.win)}</th>`).join('')}</tr></thead><tbody>
 ${cmpRow('Players', (q) => q.uniq)}${cmpRow('Peak online', (q) => q.peak)}${cmpRow('New players', (q) => q.nw)}${cmpRow('Came back', (q) => q.rt)}${cmpRow('Sessions', (q) => q.se)}${cmpRow('Average session (min)', (q) => q.avgMin, (v) => v || '-')}${cmpRow('Sign-ups', (q) => q.su)}${cmpRow('Jobs done', (q) => q.jb)}${cmpRow('Crimes', (q) => q.cr)}${cmpRow('Deaths', (q) => q.de)}${cmpRow('Chat lines', (q) => q.ch)}${cmpRow('Page errors', (q) => q.er)}
 </tbody></table></div><div class="note">Minute by minute for the last 6 hours, hour by hour for 7 days; kept through restarts. The long view (retention, the first-time funnel, money) is on the full analytics page under Tools.</div></div></div>`;
     for (const b of $('wins').querySelectorAll('button')) b.onclick = () => { UI.win = b.dataset.w; keep(); poll(true); };
+    fillCharts();
+    void days;
   }
   function drawWhere(d) {
     const P = d.where;
@@ -91,7 +104,7 @@ ${cmpRow('Players', (q) => q.uniq)}${cmpRow('Peak online', (q) => q.peak)}${cmpR
     $('mod').innerHTML = `<div class="grid"><div class="card wide"><div class="tiles">${tile(num(rv.open), 'open on the review list', rv.open ? 'bad' : '')}${tile(num(rv.reports), 'player reports')}${bg ? tile(num(bg.open), 'open bug reports') + tile(num(bg.count), 'bug reports in all') : ''}</div></div>
 <div class="card"><h2>The review list <small><a href="/admin/reviews">all</a></small></h2>${rv.latest.length ? `<ul class="list">${rv.latest.map((r) => `<li><b>${esc(r.kind)}</b> · ${esc(r.n)}${r.times > 1 ? ` ×${r.times}` : ''}<br><small>${esc(r.note)}${r.by ? ` - by ${esc(r.by)}` : ''} · ${ago(r.at)}</small></li>`).join('')}</ul>` : '<div class="empty">Nothing open.</div>'}<div class="note">Resolve items in the game (the admin panel) or on the full list.</div></div>
 ${bg ? `<div class="card"><h2>Bug reports <small><a href="/admin/bugs?open=1">open ones</a></small></h2>${bg.latest.length ? `<ul class="list">${bg.latest.map((r) => `<li>${esc(r.t || '(' + r.kind + ')')}<br><small>${esc(r.n)}${r.gu ? ' (guest)' : ''} · ${esc(r.where)}${r.shot ? ' · screenshot' : ''} · ${ago(r.at)}</small></li>`).join('')}</ul>` : '<div class="empty">No open reports.</div>'}</div>` : ''}
-${M.log ? `<div class="card"><h2>Recent admin actions <small><a href="/admin/log">the log</a></small></h2><ul class="list">${M.log.map((e) => `<li><b>${esc(e.what)}</b>${e.t ? ` → ${esc(e.t)}` : ''} <span class="${e.ok ? 'ok' : 'bad'}">${e.ok ? '' : 'refused'}</span><br><small>${esc(e.who)}${e.note ? ' · ' + esc(e.note) : ''} · ${ago(e.at)}</small></li>`).join('')}</ul></div>` : ''}</div>`;
+${M.log ? `<div class="card"><h2>Recent admin actions <small><a href="/admin/log">the log</a></small></h2><ul class="list">${M.log.length ? '' : '<li class="empty">Nothing yet.</li>'}${M.log.map((e) => `<li><b>${esc(e.what)}</b>${e.t ? ` → ${esc(e.t)}` : ''} <span class="${e.ok ? 'ok' : 'bad'}">${e.ok ? '' : 'refused'}</span><br><small>${esc(e.who)}${e.note ? ' · ' + esc(e.note) : ''} · ${ago(e.at)}</small></li>`).join('')}</ul></div>` : ''}</div>`;
   }
   function drawServer(d) {
     const S = d.server;

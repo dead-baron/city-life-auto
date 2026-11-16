@@ -110,7 +110,7 @@ export function createGeo({ dir = null, fetch = null, now = Date.now, log = cons
     if (!a) return null;
     return a.v === 4 ? find(T.v4, T.c4, a.n) : find6(T, a.hi, a.lo);
   }
-  function byTz(tz) { const z = TZ.zones[String(tz || '')]; return z ? { c: z[0], r: z[1] } : null; }
+  function byTz(tz) { const z = TZ.zones[String(tz || '')]; return z ? { c: z[0], r: z[1] && z[1] !== names[z[0]] ? z[1] : undefined } : null; }   // (a region that's the whole country: none)
   function where(ip, tz) {
     const c = byIp(ip), t = byTz(tz);
     if (c) return { c, ...(t && t.c === c && t.r ? { r: t.r } : null), s: 'ip' };
