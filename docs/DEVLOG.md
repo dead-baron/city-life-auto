@@ -24555,7 +24555,9 @@ shop's counter, and the custody panel over the whole screen with an escape that 
   (CANVAS SAVINGS) still wins over a plaque. A portico running off its front's edge loses its letters. New lint row
   **textClipped**: every lettered board and inscription on every front, drawn as the bake draws it at night
   (buildings.js textAudit) - off the facade's edge, painted over by something drawn after it, or a glow through stone
-  lettering fails it (the old portico failed 7 of 8 seeds). Checked on main and on craft-combo (where the craft pass
+  lettering fails it (the old portico failed 7 of 8 seeds). Its first run found 21 more: shop signs a few % under
+  what was drawn after them (a clinic's cross, a cup sign, a blade - Old Town Infirmary, St. Neon General, MediMart,
+  Polaris Juice Bar, the PARKING signs...). The boards with words are now drawn last on a front, over everything else. Checked on main and on craft-combo (where the craft pass
   moved the bank). Rekeys the art hash (statics.js); the world hash is unchanged.
 - **Cops round the counter.** A walk-in's counter blocks people but not sight, so the foot chase's straight line
   (npc.js footWay: `m.los` clear) ran officers into it and sidestep only slid them along it. footWay now walks round
