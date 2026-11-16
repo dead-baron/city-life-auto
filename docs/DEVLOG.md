@@ -24457,5 +24457,25 @@ WC237, AL1 and the handcraft research's signature places.
 - Performance: the bake's code stays at its 1010 KB (the palm lights, the menu board prop and the wheel's lights paid for
   by trimming statics.js's header and roof-garden comments). The art hash moves (the palm lights): the chunks with lit
   palms rebake; the rest carry over (server/artcdn.js). The world map's picture rebaked (node tools/build-worldmap2.mjs).
-- Proof (before | after, live at street level, noon / dusk / night): the boulevard by Blossom Plaza, the crossroads,
-  Harbor Lights, the marina promenade, the Pink Mile by The Garter Room.
+- **Round two** (the lead's review: the open spaces still read as empty lots in the wide view):
+  - Harbor Lights: the stage's forecourt cut to a paved apron in front of the screen (the crowd, the lights strung over
+    it in rows, planters along its edge, banner poles, potted palms and tiki torches at the stage's wings), the rest a
+    picnic lawn with blankets in loose rows facing the stage and a pergola bar with tables at each side; the food-truck
+    court tighter, five trucks, eight long tables under the canopy, potted palms along its edge; shoppers down the
+    night-market street.
+  - Blossom Plaza: four planted beds inside the fountain's ring between the walks (flowers in drifts, a shrub at each
+    bed's heart), potted palms between the ring's cherry trees, a food cart and tables under a short canopy on each
+    arm of the cross walk, more people about the ring.
+  - Rose Plaza: a second terrace on its east side under a canopy, a flower market of four stalls with their sellers
+    between the basin and the promenade, a rose bed with a cherry in its south half, potted palms along the walks.
+  - Lantern Lane: shoppers down both aisles.
+  - People: the street-life kinds' caps round a player up (terraces 8, knots 10, stallholders 14) - the nightlife
+    streets fill as well as their diners and shops.
+- Proof (scratchpad/craft-neon/owner/): before | after live at street level, noon / dusk / night, art v2 baked and dry
+  (the capture waits for every chunk on screen and stops the rain before each frame): the boulevard by Blossom Plaza,
+  the crossroads, Harbor Lights, the marina promenade, the Pink Mile by The Garter Room; live wide shots of Harbor
+  Lights (the stage, the market street, the food trucks) and Lantern Lane; and before | after layouts of each open
+  space from above (area-shot): Harbor Lights, Lantern Lane, the Garden at Afterdark, Mile Beach, Blossom Plaza and
+  Rose Plaza.
+- test/prison.test.js (the weapon back after prison) and test/scenes.test.js (live events in the FTUE) fail on the
+  base commit too (6eb49506): not this pass's.
