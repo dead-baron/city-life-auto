@@ -459,12 +459,17 @@ export function duct(len = 64) {
   m.box(0, 1, 3, len, 9, 11, d);
   return m;
 }
-// festoon lights over a roof terrace: two poles and a sagging line of warm bulbs (they glow; no shadow)
+// bistro lights over a roof terrace or a garden's seats: two iron poles and a line slung between them with some slack
+// (about a tenth of its span), larger warm bulbs hung along it - off-white glass by day, glowing after dark (the owner,
+// 11-16: "more like bistro lights than Christmas lights"; no shadow)
 export function stringLights(len = 60, on = 1) {
-  const m = new Vox(len, 4, 30), p = m.mat({ ramp: MAT.metalDark, k: 2 }), w = m.mat({ ramp: R('#2a2a30'), k: 1, flag: F_NOCAST });
-  const b = m.mat({ ramp: R('#ffd890', 5, 3), k: 4, emi: on ? [255, 196, 110, 255] : null, flag: F_NOCAST });
-  m.box(0, 1, 0, 2, 3, 30, p); m.box(len - 2, 1, 0, len, 3, 30, p);
-  for (let x = 2; x < len - 2; x++) { const t = (x - 2) / (len - 5), z = 28 - Math.sin(t * Math.PI) * 7; m.box(x, 2, z, x + 1, 3, z + 1, w); if ((x - 2) % 6 === 3) m.box(x, 1.5, z - 2, x + 1, 3.5, z, b); }
+  const m = new Vox(len, 4, 32), p = m.mat({ ramp: MAT.metalDark, k: 2 }), w = m.mat({ ramp: R('#242226'), k: 1, flag: F_NOCAST });
+  const b = m.mat({ ramp: R('#f0e8d0', 5, 3), k: 4, emi: on ? [255, 198, 116, 255] : null, flag: F_NOCAST }), sk = m.mat({ ramp: R('#262424'), k: 1, flag: F_NOCAST });
+  m.box(0, 1, 0, 2, 3, 31, p); m.box(len - 2, 1, 0, len, 3, 31, p);
+  const sag = Math.max(4, Math.round(len * 0.1)), zAt = (x) => { const t = (x - 1) / (len - 2); return 28 - sag * 4 * t * (1 - t); };
+  for (let x = 2; x < len - 2; x++) { const z = Math.round(zAt(x)); m.box(x, 2, z, x + 1, 3, z + 1, w); }
+  const n = Math.max(2, Math.round(len / 14));
+  for (let i = 1; i < n; i++) { const x = Math.round(1 + (len - 2) * i / n), z = Math.round(zAt(x)); m.box(x, 2, z - 1, x + 1, 3, z, sk); m.box(x - 1, 1.5, z - 4, x + 2, 3.5, z - 1, b); }
   return m;
 }
 // a CCTV camera on a pole: the pole at model (3, 4), an arm along +x, the camera under its end looking +x

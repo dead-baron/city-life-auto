@@ -40,6 +40,9 @@
 //                across its lawn - or its door step (the owner, 11-14: shrubs and tall grass over a front path)
 //   atmStray     an ATM not set into a building's wall nor inside one (the owner, 11-14: "never standing alone
 //                mid-sidewalk")
+//   festoons     a run of hanging lights (bistro bulbs, paper lanterns) with an end made fast to nothing, a post in the
+//                road, a bracket with no wall, too straight or too slack, low over people's heads or one long span (the
+//                owner, 11-16: "okay when they had something to hang from ... some slack": shared/festoon.js)
 // spotWhy(M, e, def, want) is the same look for something put down while the game runs (a scene's vehicles and people)
 // lint(M) -> { rows: { kind: [{ what, x, y, why }] }, seen: { boats, signs, props } }
 //   node tools/placementlint.mjs   builds World v3 and prints the rows (the heavy lock)
@@ -49,6 +52,7 @@ import { VEHICLES } from '../shared/vehicles.js';
 import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy } from '../shared/parkcheck.js';
+import { festoonWorld, festoonWhy } from '../shared/festoon.js';
 import { staticIndex, staticItems, makeStatic, STATIC_CHUNK } from '../client/art2/game/statics.js';
 import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
 
@@ -92,7 +96,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [] };
+  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -273,6 +277,15 @@ export function lint(M) {
   }
   artRows(M, rows, seen);
   atmRows(M, rows, seen);
+  // the hanging lights: each run made fast at both ends, slack, over people's heads (shared/festoon.js)
+  const FW = festoonWorld(M);
+  seen.festoons = 0;
+  for (const f of M.props) {
+    if (!f || f.t !== 'festoon') continue;
+    seen.festoons++;
+    const why = festoonWhy(FW, f);
+    if (why) rows.festoons.push({ what: `${f.k === 'lantern' ? 'lanterns' : f.k === 'cable' ? 'a cable' : 'lights'} strung ${Math.round(Math.hypot(f.tx || 0, f.ty || 0) / TILE)} tiles`, x: f.x, y: f.y, why });
+  }
   return { rows, seen };
 }
 

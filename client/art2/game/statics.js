@@ -55,6 +55,7 @@ import { casinoFloorPx, casinoWallPx, drawCasino } from '../casinoart.js';
 import { casinoRoom } from '../../../shared/casinorooms.js';
 import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome, crossingGate, CANYON } from '../../../shared/mapcore.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
+import { festoonSag, FESTOON } from '../../../shared/festoon.js';   // (a run's slack: the world build's and the lint's look - the owner, 11-16)
 import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
 
 export const STATIC_CHUNK = 768;
@@ -1948,40 +1949,72 @@ function tikiTorch() {
 // a desert road's delineator (world3-roadside.js): a white post, a red reflector near its top
 function delineatorPost() { const m = new Vox(4, 4, 28), w = m.mat({ ramp: ramp('#ecebe6', 6, 3), k: 3, flag: F_THIN }), r = m.mat({ ramp: ramp('#d02a1e', 5, 2), k: 2, emi: [255, 60, 40, 60] }); m.box(0.5, 0.5, 0, 3.5, 3.5, 27, w); m.box(0.5, 0.5, 19, 3.5, 3.5, 24, r); return m; }
 function woodPost(h = 46) { const m = new Vox(6, 6, h + 2), w = m.mat({ ramp: ramp('#7a5434', 6, 3), k: 3, flag: F_THIN }); m.box(1, 1, 0, 5, 5, h, w); m.box(0, 0, h - 2, 6, 6, h, w); return m; }
-// lights strung between two points h px up (tx, ty: the far end, px). r.k: 0 bulbs, 1 red paper lanterns, 2 a bare
-// cable; r.e: what each end is made fast to - bit 0 / 1 a post of its own at the near / far end (from the ground up past
-// the string, a cap on top), bit 2 / 3 a bracket on a wall there (the owner, 10-25: "lantern (or hanging lights) don't
-// connect to anything")
+// lights strung between two points h px up (tx, ty: the far end, px) - the owner, 11-16: "more like bistro lights than
+// Christmas lights ... like the red lanterns in the concepts ... a little slack in the line". r.k: 0 bistro bulbs, 1 red
+// paper lanterns (concept WC422), 2 a bare cable; r.s: the sag at the middle (px: shared/festoon.js festoonSag, 8-12% of
+// the span); r.e: what each end is made fast to - bit 0 / 1 a post of its own at the near / far end (an iron pole from
+// the ground up past the line, a finial on top, the line's hook), bit 2 / 3 a bracket on a wall there (anything else -
+// a tree, a lamp post, a stall's frame - is drawn by itself). The slack is drawn in the view: the line drops on screen
+// as it sags, and a run going up the screen (whose drop would fall along itself) bows a little to one side instead.
 function makeFestoon(r) {
-  const { tx, ty, h } = r, k = r.k || 0, e = r.e || 0, sag = k === 1 ? 14 : k === 2 ? 18 : 10, G = new GBuf(Math.abs(tx) + 24, Math.abs(ty) + h + 30); G.ax = Math.max(0, -tx) + 12; G.ay = Math.max(0, -ty) + h + 18;
+  const { tx, ty, h } = r, k = r.k || 0, e = r.e || 0, len = Math.hypot(tx, ty) || 1;
+  const sag = r.s ?? Math.round(len * 0.1), bow = Math.round(sag * 0.9 * Math.abs(ty) / len) * (r.b ? -1 : 1), bw = Math.abs(bow);
+  const G = new GBuf(Math.abs(tx) + 28 + bw * 2, Math.abs(ty) + h + 34); G.ax = Math.max(0, -tx) + 14 + bw; G.ay = Math.max(0, -ty) + h + 20;
   const P = (x, y, z, c, em = null) => { const px = Math.round(G.ax + x), py = Math.round(G.ay + y - z); if (G.inside(px, py)) G.put(px, py, c, [0, 0.3, 0.95], z, em, F_NOCAST); };
+  // a point along the line (t 0..1): where it hangs
+  const at = (t) => { const u = 4 * t * (1 - t); return [tx * t + bow * u, ty * t, h - sag * u]; };
   // the posts and the brackets
   for (const [bit, x, y] of [[1, 0, 0], [2, tx, ty]]) {
     if (e & bit) {
-      for (let z = 0; z <= h + 5; z++) { P(x, y, z, [44, 46, 54]); P(x + 1, y, z, z % 11 === 0 ? [60, 62, 70] : [74, 78, 88]); }
-      for (let dx = -1; dx <= 2; dx++) P(x + dx, y, h + 6, [92, 96, 106]);
-      P(x - 1, y, 1, [36, 36, 42]); P(x + 2, y, 1, [36, 36, 42]);
+      for (let z = 0; z <= h + 4; z++) { P(x, y, z, [38, 40, 46]); P(x + 1, y, z, z % 13 === 0 ? [56, 58, 66] : [70, 74, 84]); }
+      P(x - 1, y, 1, [34, 34, 40]); P(x + 2, y, 1, [34, 34, 40]); P(x - 1, y, 0, [30, 30, 36]); P(x + 2, y, 0, [30, 30, 36]);
+      P(x, y, h + 5, [92, 96, 106]); P(x + 1, y, h + 5, [110, 114, 124]); P(x, y, h + 6, [120, 124, 132]);   // (the finial)
+      P(x - 1, y, h, [60, 62, 70]); P(x + 2, y, h, [60, 62, 70]);   // (the hook the line hangs from)
     }
     if (e & (bit << 2)) for (let i = 0; i < 4; i++) { P(x + (i - 1), y, h + 3, [58, 60, 68]); P(x, y, h + i, [70, 72, 80]); P(x + 1, y, h + i, [52, 54, 60]); }
   }
-  wireLine(G, 0, 0, h, tx, ty, h, sag, k === 2 ? [26, 24, 30] : [40, 36, 34]);
+  // the line: a dark wire (a bare cable a shade heavier)
+  const wcol = k === 2 ? [26, 24, 30] : [32, 28, 28], N = Math.ceil(len * 1.4 + sag * 2) + 2;
+  for (let i = 0; i <= N; i++) {
+    const [X, Y, Z] = at(i / N), px = Math.round(G.ax + X), py = Math.round(G.ay + Y - Z);
+    if (!G.inside(px, py)) continue;
+    const q = py * G.w + px;
+    if (G.col[q * 4 + 3] && G.z[q] > Z + 2) continue;
+    G.put(px, py, wcol, [0, 0.3, 0.95], Z, null, F_NOCAST);
+  }
   if (k === 2) return G;
-  const len = Math.hypot(tx, ty), n = Math.max(2, Math.round(len / (k === 1 ? 15 : 10)));
-  const cols = k === 1 ? [[232, 52, 40], [255, 120, 40], [232, 52, 40], [255, 70, 110]] : [[255, 214, 140], [255, 190, 110], [255, 232, 170]];
+  const gap = k === 1 ? FESTOON.LANTERN_GAP : FESTOON.BULB_GAP, n = Math.max(2, Math.round(len / gap));
   for (let i = 1; i < n; i++) {
-    const t = i / n, X = tx * t, Y = ty * t, Z = h - sag * 4 * t * (1 - t) - 2, c = cols[i % cols.length];
+    const [X, Y, Z] = at(i / n), x = Math.round(X), y = Math.round(Y), z = Math.round(Z);
     if (k === 1) {
-      // a paper lantern: a round body 5 wide, 7 tall, hanging from the line - its ribs, a gold cap and tassel, lit within
-      const hc = c.map((q) => Math.min(255, q + 60)), gold = [255, 200, 90];
-      for (let dz = 0; dz < 9; dz++) for (let dx = -2; dx <= 2; dx++) {
-        const zz = Z - 1 - dz;
-        if (dz === 0 || dz === 8) { if (Math.abs(dx) <= 1) P(X + dx, Y, zz, gold, [255, 190, 90, 140]); continue; }
-        if (Math.abs(dx) === 2 && (dz === 1 || dz === 7)) continue;
-        const rib = dz === 3 || dz === 5, core = Math.abs(dx) <= 1 && dz > 1 && dz < 7;
-        P(X + dx, Y, zz, rib ? c.map((q) => q * 0.7) : core ? hc : c, [c[0], c[1], c[2], core ? 230 : 150]);
+      // a red paper lantern (WC422): a short cord, a black-rimmed gold cap, the round red body 9 wide and 10 tall with
+      // darker ribs across it and its sides in shade, a gold cap under it and a short red tassel - lit within after dark
+      const red = [204, 36, 30], shade = [146, 22, 24], rib = [120, 16, 20], lite = [236, 78, 50], gold = [216, 164, 58], blk = [34, 26, 22];
+      const glow = (a, c = [255, 92, 44]) => [c[0], c[1], c[2], a];
+      P(x, y, z - 1, blk); P(x, y, z - 2, blk);
+      for (let dx = -1; dx <= 1; dx++) P(x + dx, y, z - 3, blk);
+      for (let dx = -2; dx <= 2; dx++) P(x + dx, y, z - 4, gold, [255, 180, 80, 60]);
+      const W = [2, 3, 4, 4, 4, 4, 4, 4, 3, 2];
+      for (let row = 0; row < W.length; row++) {
+        const zz = z - 5 - row, hw = W[row];
+        for (let dx = -hw; dx <= hw; dx++) {
+          const edge = Math.abs(dx) === hw, ribbed = row === 2 || row === 5 || row === 8, core = Math.abs(dx) <= 1 && row >= 3 && row <= 6;
+          const c = ribbed ? rib : edge ? shade : (dx === -2 || dx === -1) && row > 0 && row < 5 ? lite : red;
+          P(x + dx, y, zz, c, core && !ribbed ? glow(255, [255, 150, 70]) : glow(edge || ribbed ? 140 : 225));
+        }
       }
-      P(X, Y, Z - 11, gold, [255, 190, 90, 90]);
-    } else for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) P(X + dx, Y - dy, Z, c, [c[0], c[1], c[2], 255]);
+      for (let dx = -2; dx <= 2; dx++) P(x + dx, y, z - 15, gold, [255, 180, 80, 60]);
+      for (let dx = -1; dx <= 1; dx++) P(x + dx, y, z - 16, blk);
+      P(x, y, z - 17, [200, 44, 34]); P(x, y, z - 18, [176, 34, 30]); P(x, y, z - 19, [150, 28, 26]);   // (the tassel)
+    } else {
+      // a bistro bulb: a dark socket on the wire, a round glass bulb 4 wide hanging under it, off-white by day (a pale
+      // highlight), a warm glow after dark
+      const glass = [238, 232, 208], hi = [253, 251, 240], tip = [212, 202, 170], sock = [26, 24, 24];
+      const glow = (a) => [255, 198, 116, a];
+      P(x, y, z - 1, sock); P(x + 1, y, z - 1, sock); P(x, y, z - 2, sock); P(x + 1, y, z - 2, sock);
+      for (let r = 0; r < 3; r++) for (let dx = -1; dx <= 2; dx++) { const ed = dx === -1 || dx === 2; P(x + dx, y, z - 3 - r, r === 0 && dx === 0 ? hi : ed ? tip : glass, glow(ed ? 180 : 255)); }
+      P(x, y, z - 6, tip, glow(200)); P(x + 1, y, z - 6, tip, glow(200));
+    }
   }
   return G;
 }
@@ -2675,9 +2708,13 @@ function propItems(c, p, pi, I) {
     case 'cattlegrid': V(`cgrid:${qa(p.a || 0, 4).toFixed(2)}`, 'cattleGrid', [64, 28], qa(p.a || 0, 4)); return;   // (a ranch track's, at the road: world3-stocktanks.js)
     case 'hayBale': V('hay:1', 'hayBale', [true], qa(u * PI, 2)); return;
     case 'festoon': {
+      // (shared/festoon.js: the world build made both ends fast and gave the run its slack; the art hangs it so)
       const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40, k = p.k === 'lantern' ? 1 : p.k === 'cable' ? 2 : 0, en = p.ends || [], e = (en[0] === 'pole' ? 1 : 0) | (en[1] === 'pole' ? 2 : 0) | (en[0] === 'wall' ? 4 : 0) | (en[1] === 'wall' ? 8 : 0);
-      put(I, { key: `fest:${tx}:${ty}:${h}:${k}:${e}`, recipe: { t: 'festoon', tx, ty, h, k, e }, x, y, ext: [Math.max(0, -tx) + 16, h + Math.max(0, -ty) + 22, Math.max(0, tx) + 16, Math.max(0, ty) + 16], pi });
-      if (k !== 2) for (let q = 1; q < 4; q++) lightAt(I, x + tx * q / 4, y + ty * q / 4, h - 6, k ? 100 : 90, k ? [1, 0.42, 0.3] : [1, 0.8, 0.5], k ? 1.1 : 0.9, 'window');
+      const s = festoonSag(p), b = (Math.round(p.x) + Math.round(p.y)) & 1, bw = Math.ceil(s * 0.9 * Math.abs(ty) / (Math.hypot(tx, ty) || 1)) + 2;
+      put(I, { key: `fest:${tx}:${ty}:${h}:${k}:${e}:${s}:${bw > 2 ? b : 0}`, recipe: { t: 'festoon', tx, ty, h, k, e, s, b: bw > 2 ? b : 0 }, x, y, ext: [Math.max(0, -tx) + 18 + bw, h + Math.max(0, -ty) + 24, Math.max(0, tx) + 18 + bw, Math.max(0, ty) + 16], pi });
+      // the night glow: warm pools along the line where it hangs (red-orange under lanterns), one to three by its length
+      const len = Math.hypot(tx, ty), nl = k === 2 ? 0 : len < 110 ? 1 : len < 200 ? 2 : 3;
+      for (let q = 1; q <= nl; q++) { const t = q / (nl + 1); lightAt(I, x + tx * t, y + ty * t, h - s * 4 * t * (1 - t) - 4, k ? 100 : 92, k ? [1, 0.42, 0.28] : [1, 0.78, 0.48], k ? 1.15 : 0.95, 'window'); }
       return;
     }
     case 'cottage': V(`cot:${p.w || 84}:${p.d || 54}:${p.log ? 1 : 0}`, 'cottage', [p.w || 84, p.d || 54, 0.6, p.log ? 1 : 0]); lightAt(I, x, y + 6, 22, 110, [1, 0.8, 0.5], 1.4, 'window'); return;   // (p.log: the hunting lodge's log cabin)
