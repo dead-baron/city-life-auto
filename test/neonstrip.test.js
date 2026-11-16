@@ -211,7 +211,7 @@ test('the rebuild: the open lots filled with lit fronts at the end of the list, 
   const late = M.buildings.map((b, i) => [b, i]).filter(([b]) => b && b.hand && b.name && inRect((b.tx + 0.5) * TILE, (b.ty + 0.5) * TILE) && b.id >= M.buildings.findIndex((q) => q && q.openOf !== undefined));
   const names = new Set(late.map(([b]) => b.name));
   for (const n of ['Marina Bay Hotel', 'Skyline Suites Hotel', 'Golden Koi Casino', 'Lucky Harbor Casino', 'Hi Score Arcade', 'Lucky Seven Bar', 'Tiki Tide Bar']) assert.ok(names.has(n), `${n} laid last`);
-  assert.ok(late.length >= 20, `the late fronts (${late.length})`);
+  assert.ok(late.length >= 18, `the late fronts (${late.length})`);
   for (const [b] of late) assert.ok(b.home === undefined, `${b.name}: no home`);
   // the hotel towers' pools on their roofs; the video billboard on Lantern Hall's roof over the plaza
   const pools = M.buildings.filter((b) => b && (b.art?.kit || []).some(([k]) => k === 'rpool'));

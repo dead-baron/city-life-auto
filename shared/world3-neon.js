@@ -387,6 +387,7 @@ function build(m, api, K) {
   function lateBack(x, y, w, h, o) {
     const B = back(x, y, w, { floors: o.floors });
     if (o.kit) B.art.kit = o.kit;
+    delete B.art.neon.pics;   // (its roof's signs say it: no small back sign the back next door may share)
     used.add(o.name);
     return K.late({ x, y, w, h, ...B, name: o.name, home: null, face: 'N', poi: { kind: 'delivery', label: o.name } });
   }
@@ -436,13 +437,20 @@ function build(m, api, K) {
       if (w < 6) break;
       let top = yF - 13;
       for (let xx = x; xx < x + w; xx++) { let y = yF; while (y >= top && K.free(xx, y)) y--; top = Math.max(top, y + 1); }
-      if (yF - top + 1 < 7) { x += 2; continue; }   // (the shore comes in close: no lot here)
-      const B = lateLit(x, top, w, yF - top + 1, { ...L, kit: L.hotel ? hotelKit(w) : undefined, deck: rnd(x, yF, 4) < 0.6, floors: L.floors ?? 2 + (rnd(x, yF, 3) < 0.5 ? 1 : 0) });
+      if (yF - top + 1 < 5) { x += 2; continue; }   // (the shore comes in close: no lot here; a shallow one - a kiosk bar, a stand - one storey or two)
+      const B = lateLit(x, top, w, yF - top + 1, { ...L, kit: L.hotel ? hotelKit(w) : undefined, deck: rnd(x, yF, 4) < 0.6, floors: yF - top < 8 ? Math.min(2, L.floors ?? 2) : L.floors ?? 2 + (rnd(x, yF, 3) < 0.5 ? 1 : 0) });
       if (B) made.push({ ...B, kind: L.store, hotel: !!L.hotel });
       x += w;
     }
     // behind the row to the promenade: paved
     K.fill(x0, yF - 30, x1 - x0, 30, T.PLAZA);
+    // (where the shore cuts in across the lane's east end: a waterside terrace along the edge - tables at the rail)
+    for (let xx = x; xx < x1 - 2; xx += 3) {
+      let y = yL0; while (y <= yL1 && (m.tiles[m.idx(xx, y)] === T.WATER || m.tiles[m.idx(xx, y)] === T.DEEP || m.bld[m.idx(xx, y)] >= 0)) y++;
+      if (y > yL1 - 3 || m.tiles[m.idx(xx, y + 1)] !== T.PLAZA) continue;
+      prop('cafetable', xx + 0.5, y + 1.4, 0); (K.m.terraceSpots ||= []).push({ x: Math.round((xx + 0.5) * TILE), y: Math.round((y + 1.4) * TILE) });
+      if ((xx - x) % 6 === 0) prop('umbrella_r', xx + 0.5, y + 1.3, 0);
+    }
     dressLane(made, yL0, yL1, x0, x1);
     (out.places ||= []).push({ name: 'Marina Lane', x0, y0: yF - 14, x1, y1: yL1 + 1 });
     out.marina = made.length;
@@ -519,7 +527,7 @@ function waterfront(K, x0, x1, yS, out) {
     if (k === 1) m.marina.push({ x: (x + 4.2) * TILE, y: (y - len + 4) * TILE, a: -Math.PI / 2, kind: 'waterbus', party: true });
     // (the rebuild, 11-16 - WC421's lit marina with its yachts: a cruiser or a sailboat off the outer jetties' heads, a
     // yacht moored between each two jetties)
-    else m.marina.push({ x: (x - 2.4) * TILE, y: (y - len + 2) * TILE, a: -Math.PI / 2, kind: k === 0 ? 'cabincruiser' : 'sailboat' });
+    else m.marina.push({ x: (x + 0.5) * TILE, y: (y - len - 4) * TILE, a: -Math.PI / 2, kind: k === 0 ? 'cabincruiser' : 'sailboat' });
     if (k < 2) prop('yacht', x + 10.5, y - 7, 26, { a: -Math.PI / 2 });
     prop('lamp', x + 0.5, y - len + 1.5, 0);
   });

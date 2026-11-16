@@ -24801,3 +24801,60 @@ every run in the world (docs/DECISIONS.md, World and places).
 - Proof (scratchpad/lights/owner/): before | after live, noon and night, at the owner's zoom: Downtown's food-truck
   plaza and its tables, Harbor Lights' stage square, the Neon food trucks, Lantern Lane, Westport Center's food carts,
   Old Town's lane lights, Midtown's Market Square lanterns.
+
+## 2026-11-16 - The Neon Strip rebuilt to its concepts: the open lots filled, WC421's landmarks, the crossroads alive
+The owner (11-16, shown the concept beside our captures): "Not sure it's turning out like the concepts - just seemed
+like a large open area with one sign of the girl with the eye patch. Not sure it's looking very cyberpunk neon night
+life kind of vibe." On the crossroads before | after: "they look about the same but a street light is moved and a taxi
+sign went up." Built to WC421 (the Strip at night), WC422 (Lantern Lane), WC012 (the neon street) and D8's crossroads
+(shared/world3-neon.js; docs/DECISIONS.md, World and places).
+- **Fronts laid last** (shared/world3-hand.js `K.late` / `handLate`, called from shared/world3-world.js after the blocks
+  are opened up): the open lots are filled with lit fronts whose buildings go at the very end of the list, so no other
+  building's, home's or business's number moves - no WORLD_VERSION bump, nobody's home bought back. Their ground is
+  taken in the plan (kept free, sealed as lawn) and anything a later pass stood on it is cleared. Each is a lit front
+  (the plan's own `lit()` - its neon, picture signs, blade, dressing) with a delivery stop, no home and no walk-in (the
+  interiors are built before). 26 of them.
+- **Marina Lane** (the waterfront gardens' lawn grid behind the boulevard's east row, the Strip's biggest open ground
+  after Harbor Lights): a row of fronts facing south onto a lane ten tiles wide - the Marina Bay Hotel and Skyline Suites
+  (eight and nine storeys, glass, their rooftop pools lit - the bay behind them, so they hide no street), the Golden Koi
+  Casino's front, bars, a karaoke, food places, an arcade, a tattoo parlor; passages through to the promenade under
+  lanterns; bistro bulbs strung across the lane from the fronts every four tiles, terraces at the bars and food places,
+  friends at their doors, food carts with their queues, the hotels' doormen (activities.js tableau 'staff'). The
+  boulevard row in front of it is 16 deep and three storeys (Volt four) so the lane stays in view behind it.
+- **Harbor Lights** (the headland: "a huge dark lawn with a few lights round its edge and a big car park"):
+  - the bandstand's lawn is **the fair** (WC421's Ferris-wheel headland): the carousel in the middle (new art: a striped
+    tent roof, horses on brass poles, bulbs round the eave), four rows of game stalls with their keepers - two midways
+    under lights - the HARBOR LIGHTS FAIR gate off the walk, the queue at the carousel, friends about;
+  - the stage's screen is the **video billboard** (the palm-beach sunset), the picnic lawn behind its apron paved with
+    two carts and their queues between the pergola bars;
+  - **Dock Lane**: three lit fronts between the walk and Dock 9, lanterns across the lane to the club's wall;
+  - where the car park was, a row of fronts on a forecourt to the south - the Lucky Harbor Casino (its doormen), a bar,
+    a ramen bar, an arcade - with **roof bars** on their roofs (strings of lights over tables and umbrellas, planters, a
+    picture sign at the front edge: no plain dark decks);
+  - **the Pier Club** at the pier's end: a deck, the bar's kiosk, tables under the lights, PIER CLUB in neon, a cruiser
+    and a sailboat moored alongside; the Box Bar's yard paved, the container yard a second row of containers.
+- **The heart** (WC421): Lantern Hall's roof carries the **giant video billboard** over Blossom Plaza (new art: a
+  palm-beach sunset - violet to orange sky, a striped sun on the sea, two black palms - lit from within; a still: an
+  animated one needs the renderer's code budget, 409 of 410 KB); across the boulevard Lantern Alley is **the Glow
+  Arcade** - a lit arch over the walk every two tiles, a neon tube along each, cyan and pink by turns (new art: the
+  arcade's rib), so the walk under it and its people stay in view; shoppers and friends under it.
+- **Lantern Lane** (WC422): red lanterns ACROSS the lane at every stall - four runs end to end from the north row's wall
+  to the outer stall, across each aisle, on to the south row's wall - instead of every other stall over the aisles
+  only; the market now runs on across the plaza's mouth (an empty paved square), an aisle left open on the plaza's axis.
+- **The crossroads** (D8, boulevard x Park East Avenue): the south-west corner was the 24/7's car park (its mart never
+  stood: the bays' asphalt went down first, so the building failed its free-ground check). Now the taxi rank at the
+  corner (three taxis, two scooters), a corner pitch with a food cart and its line, and two fronts laid last - the Hi
+  Score Arcade (GAME ZONE and ARCADE on its roof over the crossing) and the Lucky Seven Bar; the back across the avenue
+  carries NIGHTCLUB and LIVE over the corner; The Violet Room's door moved to the corner, so its line and its bouncers
+  (server/systems/nightclubs.js) stand at the crossing after dark, Afterdark's across the avenue.
+- **Hotels' rooftop pools** (new kit: 'rpool', lit turquoise after dark, loungers and an umbrella by it): the Neon
+  Palms Hotel, Hotel Halo, the Marina Bay Hotel, Skyline Suites. **Neon Bay Marina**: a cruiser or a sailboat off each
+  outer jetty and a yacht moored between each two (WC421's lit marina).
+- Not done (choices): WC421's fountain *roundabout* - a real roundabout is a change to the road network and the traffic;
+  the median's fountain on Blossom Plaza's line stays. The billboard is a still (above). Station Plaza's bulbs not
+  glowing: the Strip's bulbs glow (emissive); the frame keeps the 96 strongest lights (engine.js `_packLights`) and the
+  bulbs' ground pools are the weakest, so where neon crowds the screen the pools drop out first - the bulbs themselves
+  still glow.
+- Tests: test/neonstrip.test.js - the rebuild (the late fronts at the end of the list with no home, the pools, the
+  billboard, Harbor Lights' lawn and asphalt under 12%, the carousel, Lantern Lane's lanterns across, the taxi rank, the
+  Violet Room's corner door), the Glow Arcade's arches, Harbor Lights' pieces.
