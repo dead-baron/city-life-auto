@@ -204,6 +204,7 @@ function composeShop(named, cat, r) {
 export const MIDTOWN = {
   key: 'midtown', d: D, rect: [2860, 1660, 3680, 1900],
   streets,
+  lamps: true,   // (its kerbs lit at a rhythm by streetDressing: the generator's scattered kerb lamps off here - map.js ownLamps)
   // the special businesses this plan places itself (shared/map.js SPECIALS of Midtown: placeSpecials leaves them)
   specials: ['Iron Sights Arms', 'FreshHub Grocery', 'MediMart Pharmacy', 'Bean Machine Coffee', 'Motor Row Dealership', 'Fresh Coat Garage'],
   build,
@@ -658,7 +659,7 @@ function rearYards(K, made, yEnd, o = {}) {
       if (r(31) < 0.65) { prop('cafetable', cx, y + ph / 2 + 0.2, 0); prop(pick(['umbrella_y', 'umbrella_b', 'umbrella_r', 'umbrella_g'], r(2)), cx, y + ph / 2 + 0.1, 0); prop('chair', cx - 0.9, y + ph / 2 + 0.3, 0, { v: Math.floor(r(3) * 4), a: 0 }); prop('chair', cx + 0.9, y + ph / 2 + 0.3, 0, { v: Math.floor(r(4) * 4), a: 3.1416 }); }
       else prop('bench_m', cx, y + ph - 0.6, 0);
       prop('potted', x + 0.7, y + 0.6, 0); if (w >= 6) prop(pick(['potted', 'planter_fl', 'acunit'], r(32)), x + w - 0.7, y + 0.6, 0);
-      if (w >= 6 && r(5) < 0.4) prop('festoon', x + 0.5, y + 0.4, 0, { tx: Math.round((w - 1) * TILE), ty: 0, h: 34 });
+      if (w >= 6 && r(5) < 0.4) prop('festoon', x + 0.5, y + 0.4, 0, { tx: Math.round((w - 1) * TILE), ty: 0, h: 34, ends: ['wall', 'wall'] });   // (along the back wall, on its brackets)
       if (r(6) < 0.25) prop('bikerack', x + wg - 1.6, y + ph - 0.5, 0);
     } else for (let i = 0; i < 3; i++) prop(pick(['tires', 'pallet', 'drum', 'crates', 'bags', 'dump_o'], r(17 + i)), x + 1 + r(19 + i) * Math.max(0, w - 2), y + 0.8 + r(21 + i) * Math.max(0, h - 1.6), 8);
     // the rest of it: a lawn (a tree, shrubs, flowers, a shed), a vegetable garden (raised beds, a shed), or paved
@@ -863,7 +864,8 @@ function marketSquare(K, x, y, w, h, ctx) {
   const { m, prop, rnd, pick } = K;
   const { shopLot, out } = ctx;
   if (!K.allFree(x, y, w, h)) return;
-  const sd = Math.min(24, h - 11), cx = x + w / 2, cy = y + sd / 2;
+  // (the craft pass, 11-15: the square 19 deep, not 24 - the cafes' back terrace takes the rest)
+  const sd = Math.min(19, h - 16), cx = x + w / 2, cy = y + sd / 2;
   // the row on Harbor Avenue (a building wants free ground: first)
   const SHOPS = [
     { name: 'Fontaine Cafe', store: 'cafe', w: 12, awning: ['#a8343a', '#f0ece4'], face: { style: 'brick', brickTone: '#9a4a36' } },
@@ -878,34 +880,77 @@ function marketSquare(K, x, y, w, h, ctx) {
     return { w: lw, depth: 9, ...shopLot(sx, y + h - 1, lw, { ...L, floors: 2, garden: false }) };
   });
   for (const b of row) if (b && !b.gap && b.tw !== undefined) { out.shops++; if (b.home) out.homes++; }
-  // the square
+  // the square (the craft pass, 11-15 - the owner: "big open spaces ... way too big and open", "the lights don't act like
+  // lanterns"; NE6, Midtown-A1): the north half a market of two lanes - a row of stalls along the kerb facing south into
+  // each lane, a row facing back north across it, the crates and chalkboards round them, the lane's strings of lanterns
+  // down the middle of it (each a catenary between its two posts, sagging evenly, the lanterns evenly along it); a clear
+  // aisle down the middle from Pier Street to the fountain. The south half the fountain's: benches facing it, plane
+  // trees and flower beds round it, the chess tables under the trees on its west, the food cart and the bikes on its east,
+  // iron lamps by the benches. Behind it, between it and the back walls of the cafes on Harbor Avenue, their terrace: a
+  // hedge along it with its ways in, a string of lights over it on posts, the tables under umbrellas. The stall keepers
+  // and the shoppers: activities.js 'market' (map.marketLanes); the diners at the tables: 'terrace' (map.terraceSpots)
   K.fill(x, y, w, sd, T.PLAZA); K.take(x, y, w, sd);
-  prop('fountain', cx, cy, 36); prop('statue', cx, cy + 0.2, 0);
-  for (const [dx, dy, a] of [[-5.6, 0.4, 0], [5.6, 0.4, Math.PI]]) prop('pbench', cx + dx, cy + dy, 0, { a });
-  for (const [dx, dy] of [[-3.4, -2.8], [3.4, -2.8], [-3.4, 3.2], [3.4, 3.2]]) prop('planter_fl', cx + dx, cy + dy, 6);
-  // the ring of stalls: the north four facing south to the fountain, the south four facing north to it
-  const RING = [[-9.5, -4, 0], [-3.5, -6, 0], [3.5, -6, 0], [9.5, -4, 0], [-9.5, 4.5, Math.PI], [-3.5, 6.5, Math.PI], [3.5, 6.5, Math.PI], [9.5, 4.5, Math.PI]];
-  RING.forEach(([dx, dy, a], j) => {
-    const sx = cx + dx, sy = cy + dy, north = dy < 0;
-    prop('mstall', sx, sy, 12, { v: j % 4, c: (j * 3 + 1) % 4, a });
-    prop(rnd(j, sy, 950) < 0.5 ? 'fruitcrate' : 'crates', sx + (dx < 0 ? -2.3 : 2.3), sy + (north ? 0.6 : -0.6), 6, { v: j });
-    if (j % 3 !== 2) prop('chalkboard', sx + (dx < 0 ? 1.8 : -1.8), sy + (north ? 1.8 : -1.8), 0);
-    // (the lights strung from stall to stall round each half of the ring)
-    if (j % 4 < 3) { const [ex, ey] = RING[j + 1]; prop('festoon', sx, sy - 1.6, 0, { tx: Math.round((ex - dx) * TILE), ty: Math.round((ey - dy) * TILE), h: 58 }); }
-  });
-  // plane trees in planters: the north corners and halfway down the sides
-  for (const [tx, ty] of [[x + 2.5, y + 2.5], [x + w - 2.5, y + 2.5], [x + 2.5, cy + 1], [x + w - 2.5, cy + 1]]) { prop('planter_g', tx, ty, 10); prop('tree_a', tx, ty - 0.2, 0, { sp: 'streetPl', k: 1.05 }); }
-  // bollards along the kerb (a gap in the middle) and down both sides; iron lamps
-  for (let bx = x + 5; bx < x + w - 4; bx += 2.5) if (Math.abs(bx - cx) > 3.5) prop('bollard', bx, y + 0.5, 5);
-  for (const bx of [x + 0.5, x + w - 0.5]) for (let by = y + 5; by < y + sd - 2; by += 3) prop('bollard', bx, by, 5);
-  for (const [lx, ly] of [[x + 7, y + 3], [x + w - 7, y + 3], [x + 7, y + sd - 3], [x + w - 7, y + sd - 3]]) prop('lamp', lx, ly, 5, { style: 'iron' });
-  // the cafe tables on the southern corners (clear of the shops' fronts' height); the food cart on the east side
-  for (const tx0 of [x + 3, x + w - 10]) for (let j = 0; j < 3; j++) { const tx = tx0 + j * 3, ty = y + sd - 5 + (j % 2) * 1.4; prop('cafetable', tx, ty, 0); prop(pick(['umbrella_g', 'umbrella_r', 'umbrella_y'], rnd(tx, ty, 951)), tx, ty - 0.1, 0); }
-  prop('foodcart', x + w - 3.5, cy - 1, 14);
-  prop('bikerack', x + 3.5, y + 5.5, 0);
-  prop('textsign', cx, y + sd - 4.5, 0, { text: 'MARKET SQUARE', bg: '#2f6a4e', fg: [250, 240, 200], z: 30, sx: 1 });   // (out in the square: at its south edge the shops' roofs south of it hid it - the 11-06 visibility pass)
+  const ROWN = y + 3.1, ROWS = y + 7.9, AISLE = 3.2, STEP = 2.6;
+  const lanes = [];
+  for (const side of [-1, 1]) {
+    const xs = [];
+    for (let k = 0; k < 4; k++) xs.push(side < 0 ? x + 4.3 + k * STEP : x + w - 4.3 - k * STEP);
+    if (Math.abs(xs[3] - cx) < AISLE + 1) xs.pop();
+    const stalls = [];
+    xs.forEach((sx, k) => {
+      const j = (side < 0 ? 0 : 4) + k;
+      prop('mstall', sx, ROWN, 12, { v: j % 4, c: (j * 3 + 1) % 4, a: 0 }); stalls.push({ x: Math.round(sx * TILE), y: Math.round(ROWN * TILE), a: 0 });
+      prop('mstall', sx, ROWS, 12, { v: (j + 2) % 4, c: (j * 3 + 2) % 4, a: Math.PI }); stalls.push({ x: Math.round(sx * TILE), y: Math.round(ROWS * TILE), a: Math.PI });
+      // (their stock: crates behind the north row along the kerb's bollards, a crate or a chalkboard at a south stall's end)
+      prop(k % 2 ? 'crates' : 'fruitcrate', sx + (k % 2 ? 0.9 : -0.9), ROWN - 1.4, 6, { v: j });
+      if (k % 2 === 0) prop('chalkboard', sx + side * 1.25, ROWS + 1.2, 0); else prop('fruitcrate', sx - side * 1.25, ROWS + 1.25, 6, { v: j + 1 });
+    });
+    // the lane's lanterns: two strings down its length, each hung between a post at the lane's outer end and one at the
+    // aisle (client/art2/game/statics.js makeFestoon k 'lantern': the paper lanterns evenly along a sag the same for
+    // every span, each lit)
+    const xa = side < 0 ? x + 2 : cx + AISLE, xb = side < 0 ? cx - AISLE : x + w - 2;
+    for (const ly of [y + 4.8, y + 6.2]) prop('festoon', xa, ly, 0, { tx: Math.round((xb - xa) * TILE), ty: 0, h: 64, k: 'lantern', ends: ['pole', 'pole'] });
+    lanes.push({ x: Math.round(((xa + xb) / 2) * TILE), y: Math.round((y + 5.5) * TILE), x0: Math.round(xa * TILE), x1: Math.round(xb * TILE), stalls });
+  }
+  (m.marketLanes ||= []).push(...lanes);
+  // the fountain's half: the fountain and its statue, the benches facing it, the beds, four plane trees round it
+  const fy = y + 13.6;
+  prop('fountain', cx, fy, 36); prop('statue', cx, fy + 0.2, 0);
+  for (const [dx, a] of [[-5.6, 0], [5.6, Math.PI]]) for (const dy of [-1.2, 1.4]) prop('pbench', cx + dx, fy + dy, 0, { a });
+  for (const [dx, dy] of [[-3.4, -2.8], [3.4, -2.8], [-3.4, 3.1], [3.4, 3.1]]) prop('planter_fl', cx + dx, fy + dy, 6);
+  for (const [tx, ty] of [[cx - 9, fy - 2.6], [cx + 9, fy - 2.6], [cx - 9, fy + 3.2], [cx + 9, fy + 3.2]]) { prop('planter_g', tx, ty, 10); prop('tree_a', tx, ty - 0.2, 0, { sp: 'streetPl', k: 1.05 }); }
+  // the chess tables under the trees on the west (activities.js 'chess': p.chess); the food cart, the bike rack and the
+  // flower beds on the east; a bin either side of the aisle
+  for (const ty of [fy - 0.6, fy + 2.2]) { const tx = x + 4; prop('cafetable', tx, ty, 0, { chess: 1, seat: 27 }); prop('chair', tx - 0.9, ty + 0.1, 0, { v: 2, a: 0 }); prop('chair', tx + 0.9, ty + 0.1, 0, { v: 2, a: 3.1416 }); }
+  prop('foodcart', x + w - 4, fy - 0.4, 14); prop('bikerack', x + w - 3.2, fy + 2.6, 0); prop('flowers_big', x + w - 1.4, fy + 1.2, 0);
+  prop('trashcan', cx - 2.4, y + 9.9, 0); prop('trashcan', cx + 2.4, y + 9.9, 0);
+  // bollards along the kerb (a gap at the aisle); iron lamps by the benches (Pier Street's kerb lamps light the market's
+  // front, its stalls their own bulbs, the lanes their lanterns)
+  for (let bx = x + 1.5; bx < x + w - 1; bx += 2.5) if (Math.abs(bx - cx) > AISLE) prop('bollard', bx, y + 0.5, 5);
+  for (const [lx, ly] of [[cx - 7, fy + 0.2], [cx + 7, fy + 0.2]]) prop('lamp', lx, ly, 5, { style: 'iron' });
+  prop('textsign', cx, y + 9.7, 0, { text: 'MARKET SQUARE', bg: '#2f6a4e', fg: [250, 240, 200], z: 30, sx: 1 });   // (at the aisle's end, the fountain behind: the shops' roofs south of the square would hide it there - the 11-06 visibility pass)
+  // the cafes' terrace behind the square, on what the row on Harbor Avenue left between it and their back walls
+  let ty0 = y + sd, ty1 = y + h - 1;
+  for (const b of row) if (b && !b.gap && b.ty !== undefined) ty1 = Math.min(ty1, b.ty - 1);
+  if (ty1 - ty0 >= 4 && K.allFree(x, ty0, w, ty1 - ty0 + 1)) {
+    K.fill(x, ty0, w, ty1 - ty0 + 1, T.PLAZA); K.take(x, ty0, w, ty1 - ty0 + 1);
+    // (a building stands up over what's north of it: the cafes' two floors hide the band's back half under their roofs -
+    // the terrace is its front: the hedge with its ways in at the ends and the aisle, the string of lights over it on its
+    // posts, one row of tables under umbrellas behind it)
+    for (const [hx0, hx1] of [[x + 2.5, cx - 2], [cx + 2, x + w - 2.5]]) {
+      prop('hedgerun', hx0, ty0 + 0.4, 0, { tx: Math.round((hx1 - hx0) * TILE), ty: 0, h: 14 });
+      prop('festoon', hx0, ty0 + 0.5, 0, { tx: Math.round((hx1 - hx0) * TILE), ty: 0, h: 50, ends: ['pole', 'pole'] });
+    }
+    for (let tx = x + 3.4; tx < x + w - 2; tx += 3.4) {
+      if (Math.abs(tx - cx) < 1.8) continue;
+      const tyy = ty0 + 1.8;
+      prop('cafetable', tx, tyy, 0); prop(pick(['umbrella_r', 'umbrella_g', 'umbrella_y', 'umbrella_b'], rnd(tx, tyy, 951)), tx, tyy - 0.1, 0);
+      (m.terraceSpots ||= []).push({ x: Math.round(tx * TILE), y: Math.round(tyy * TILE) });
+    }
+    (out.places ||= []).push({ name: 'Market Terrace', x0: x, y0: ty0, x1: x + w, y1: ty1 + 1 });
+  }
   // the stalls are Midtown Market: bread, fruit and honey to buy, fruit and honey bought (server/systems/economy.js)
-  m.pois.push({ id: m.pois.length, kind: 'market', label: 'Midtown Market', x: Math.round(cx * TILE), y: Math.round((cy - 6) * TILE), r: 48, counter: true });
+  m.pois.push({ id: m.pois.length, kind: 'market', label: 'Midtown Market', x: Math.round(cx * TILE), y: Math.round((y + 6.1) * TILE), r: 48, counter: true });
   m.squares ||= []; m.squares.push({ x: Math.round(cx) - 8, y: Math.round(cy) - 6, w: 16, h: 12, name: 'Market Square' });
   (m.landmarks ||= []).push({ name: 'Market Square', type: 'plaza', x: x * TILE, y: y * TILE, w: w * TILE, h: sd * TILE });
   (out.places ||= []).push({ name: 'Market Square', x0: x, y0: y, x1: x + w, y1: y + sd });
@@ -1130,6 +1175,11 @@ function stationPlaza(K, x, y, w, h) {
   prop('bikerack', x + 1.6, y + 1.2, 0); prop('mapboard', x + w * 0.75, y + 2.4, 6);
   prop('news_a', x + w - 1.2, y + 4.8, 0); prop('news_c', x + w - 1.2, y + 5.6, 0); prop('trashcan', x + 1, y + h - 1, 0);
   prop('planter_g', x + w * 0.45, y + h - 3.2, 10); prop('tree_a', x + w * 0.85, y + h - 2.2, 10, { sp: 'street', k: 1.1, grate: true });
+  // (RW2's concourse under the deck, the craft pass 11-15: the iron lamps either side of it, the drinks machine and the
+  // phone by the row's wall, bollards along its open side - clear of the stair tower's foot at its north-west corner)
+  prop('lamp', x + w - 0.6, y + 3, 5, { style: 'iron' }); prop('lamp', x + 0.6, y + 5.4, 5, { style: 'iron' });
+  prop('vend_cola', x + w - 0.8, y + h - 0.8, 9); prop('phonebox', x + 0.8, y + h - 2.6, 6);
+  for (let k = 0; k < 3; k++) prop('bollard', x + w - 0.4, y + 5 + k * 1.2, 5);
 }
 // a subway entrance's plaza (shared/map.js reserveSubwayPlazas) within r tiles of (x, y): kept clear and paved
 function onSubwayPlaza(m, x, y, r = 0) { return (m.subwayPlazas || []).some((q) => x >= q.x - r && x < q.x + q.w + r && y >= q.y - r && y < q.y + q.h + r); }
@@ -1193,7 +1243,8 @@ function wedge(K, out) {
       art: { spec: { floors: 4, ...f, parapet: 12, cornice: 'bracket', win: 'tall', roofMat: 'tar', lip: 10, rimW: 4, balconies: false, fireEscape: first ? [60, 50] : null, groundH: first ? undefined : 0 }, noShop: !first,
         shop: first ? { kind: 'cafe', door: 'right', open: true, people: 3, awning: ['#a8343a', '#f0ece4'], sign: { text: 'WEDGE CAFE', bg: '#7a1e2a', fg: [250, 232, 200], lit: true } } : undefined,
         kit: first ? [['cdome', (xe - xw + 1) * TILE - 52, 80], ['acs', 60, 60], ['vent', 140, 70]] : step === 2 ? [['tank', 80, 60], ['acs', 160, 60]] : [['acs', 60, 60], ['vent', 140, 70]] } });
-    if (first) for (let k = 0; k < 4; k++) { const tx = xw + 4 + k * 6; K.prop('cafetable', tx, yS + 2, 0); K.prop(k % 2 ? 'umbrella_r' : 'umbrella_y', tx, yS + 1.9, 0); }   // (its tables on the pavement)
+    if (first) out.wedgeProw = [xe - 1.5, yS + 1.6];
+    if (first) for (let k = 0; k < 4; k++) { const tx = xw + 4 + k * 6; K.prop('cafetable', tx, yS + 2, 0); K.prop(k % 2 ? 'umbrella_r' : 'umbrella_y', tx, yS + 1.9, 0); (K.m.terraceSpots ||= []).push({ x: Math.round(tx * TILE), y: Math.round((yS + 2) * TILE) }); }   // (its tables on the pavement, their diners: activities.js 'terrace')
     made++;
   }
   out.wedge = made;
@@ -1210,6 +1261,31 @@ function pocketPlaza(K, out) {
   }
   if (n < 30) return;
   const cx = sx / n, cy = sy / n;
+  // (the craft pass, 11-15 - the owner: "big open spaces ... way too big and open": the triangle was a sea of paving
+  // with trees on a grid) A park now: lawns, a paved edge along the pavements, three paths from the monument's round
+  // plaza - to the tip at the crossing (the Wedge across the street), east toward the diagonal, north to the boulevard -
+  // iron lamps and benches along them, the plane trees and the flower beds on the lawns
+  const isP = (x, y) => m.tiles[y * m.w + x] === T.PLAZA;
+  const set = [];
+  for (let y = y0; y <= y1; y++) for (let x = x0; x < x0 + 60; x++) if (isP(x, y) && southOfDiag(x, y) && m.bld[y * m.w + x] < 0) set.push([x, y]);
+  const inSet = new Set(set.map(([x, y]) => x * 4096 + y));
+  const PATHS = [[x0 + 1, y0 + 1], [Math.min(x0 + 58, cx + 30), cy + 1], [cx, y0]];
+  const segD = (px, py, [bx, by]) => { const ax = cx, ay = cy + 1, vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / L2)); return Math.hypot(px - ax - vx * t, py - ay - vy * t); };
+  for (const [x, y] of set) {
+    let edge = false;
+    for (let dy = -2; dy <= 2 && !edge; dy++) for (let dx = -2; dx <= 2; dx++) if (!inSet.has((x + dx) * 4096 + y + dy)) { edge = true; break; }
+    if (edge || Math.hypot((x + 0.5 - cx) / 1.25, y + 0.5 - cy - 1) < 6.5 || PATHS.some((q) => segD(x + 0.5, y + 0.5, q) < 1.1)) continue;
+    K.paint(x, y, 1, 1, T.GRASS);   // (paint: over the paving just laid - fill only lays on open ground)
+  }
+  for (const q of PATHS) {
+    const L = Math.hypot(q[0] - cx, q[1] - cy - 1), ux = (q[0] - cx) / L, uy = (q[1] - cy - 1) / L;
+    for (let t = 9; t < L - 3; t += 8) {
+      const px = cx + ux * t, py = cy + 1 + uy * t;
+      const lx = px - uy * 1.6, ly = py + ux * 1.6, bx = px + uy * 1.7, by = py - ux * 1.7;
+      if (isP(Math.floor(lx), Math.floor(ly))) prop('lamp', lx, ly, 5, { style: 'iron' });
+      if (m.tiles[Math.floor(by) * m.w + Math.floor(bx)] === T.GRASS) prop('bench_m', bx, by, 0, { a: Math.atan2(-ux, uy) });
+    }
+  }
   // (Midtown-A1: across from the flatiron a monument on its round plaza - the statue on its plinth in a ring of flowers,
   // benches facing it)
   prop('statue', cx, cy + 1, 14);
@@ -1218,12 +1294,21 @@ function pocketPlaza(K, out) {
   prop('tree_b', cx - 7, cy - 2, 12, { sp: 'magnolia', k: 1.2 });
   prop('flowers_big', cx + 6, cy, 0); prop('flowers_a', cx - 8, cy + 6, 0);
   prop('lamp', cx + 3, cy - 5, 0); prop('lamp', cx - 6, cy + 8, 0);
-  // the rest of the triangle: plane trees in rows, benches under them, a chess table or two
+  // (the craft pass, 11-15: the old men's chess on the monument's plaza - activities.js 'chess', p.chess)
+  const onPlaza = (x, y) => m.tiles[Math.floor(y) * m.w + Math.floor(x)] === T.PLAZA;
+  for (const [dx, dy] of [[5, 4.6], [-4.6, 5]]) {
+    const tx = cx + dx, ty = cy + dy;
+    if (!onPlaza(tx - 1.2, ty) || !onPlaza(tx + 1.2, ty) || !onPlaza(tx, ty - 1)) continue;
+    prop('cafetable', tx, ty, 0, { chess: 1, seat: 27 }); prop('chair', tx - 0.9, ty + 0.1, 0, { v: 2, a: 0 }); prop('chair', tx + 0.9, ty + 0.1, 0, { v: 2, a: 3.1416 });
+  }
+  // the lawns: plane trees, now and then a flower bed or a magnolia (clear of the paths and the monument's plaza)
   let k = 0;
-  for (let y = y0 + 2; y <= y1 - 1; y += 6) for (let x = x0 + 3; x < x0 + 58; x += 7) {
-    if (Math.hypot(x - cx, y - cy) < 9 || !southOfDiag(x, y - 3) || m.tiles[y * m.w + x] !== T.PLAZA) continue;
-    prop(k % 4 === 3 ? 'bench_m' : 'tree_b', x, y, k % 4 === 3 ? 0 : 12, k % 4 === 3 ? null : { sp: 'streetPl', k: 1.15 });
-    k++;
+  const lawn = (x, y) => m.tiles[y * m.w + x] === T.GRASS && m.tiles[y * m.w + x + 1] === T.GRASS && m.tiles[(y - 1) * m.w + x] === T.GRASS && m.tiles[(y + 1) * m.w + x] === T.GRASS;
+  for (let y = y0 + 3; y <= y1 - 2; y += 6) for (let x = x0 + 3 + ((y - y0) % 12 ? 3 : 0); x < x0 + 58; x += 7) {
+    if (Math.hypot(x - cx, y - cy) < 9 || !southOfDiag(x, y - 3) || !lawn(x, y)) continue;
+    const j = k++ % 5;
+    if (j === 2) prop('flowers_big', x + 0.5, y + 0.5, 0);
+    else prop('tree_b', x + 0.5, y + 0.5, 12, { sp: j === 4 ? 'magnolia' : 'streetPl', k: 1.15 });
   }
   m.squares ||= []; m.squares.push({ x: Math.round(cx) - 6, y: Math.round(cy) - 5, w: 12, h: 10, name: 'Wedge Plaza' });
   (out.places ||= []).push({ name: 'Wedge Plaza', x0: Math.round(cx) - 8, y0: Math.round(cy) - 8, x1: Math.round(cx) + 8, y1: Math.round(cy) + 8 });
@@ -1417,7 +1502,7 @@ function commons(K, x, y, w, h, out) {
   for (let ty = lawn.cy - 4; ty <= lawn.cy + 4; ty++) for (let tx = lawn.cx - 4; tx <= lawn.cx + 4; tx++) if (((tx + 0.5 - lawn.cx) / 3.6) ** 2 + ((ty + 0.5 - lawn.cy) / 3) ** 2 <= 1) pave(tx, ty);
   prop('gazebo', lawn.cx + 0.5, lawn.cy + 0.5, 30);
   for (let k = 0; k < 10; k++) { const a = k * 0.6283 + 0.3; prop(k % 2 ? 'flowers_big' : 'flowers_a', lawn.cx + 0.5 + Math.cos(a) * 5.4, lawn.cy + 0.5 + Math.sin(a) * 4.4, 0); }
-  prop('festoon', lawn.cx + 0.5, lawn.cy - lawn.ry + 1, 0, { tx: 0, ty: Math.round((lawn.ry - 5) * TILE), h: 40 });
+  prop('festoon', lawn.cx + 0.5, lawn.cy - lawn.ry + 1, 0, { tx: 0, ty: Math.round((lawn.ry - 5) * TILE), h: 40, ends: ['pole', 'wall'] });   // (from its post by the path to the bandstand's eaves)
   for (const [dx, dy, v] of [[-14, 2, 0], [-8, 9, 1], [8, 8, 2], [-12, -6, 1], [13, 4, 0], [11, -7, 2], [-2, 11, 0]]) prop('blanket', lawn.cx + dx, lawn.cy + dy, 0, { v });
   for (const [dx, dy] of [[-22, -6], [-23, 7], [20, 10]]) prop('picnic', lawn.cx + dx, lawn.cy + dy, 0);
   // --- the duck pond in the west: the water, its lilies, the ducks and a swan, benches looking on to it
@@ -1563,6 +1648,8 @@ function madisonCourt(K, x, y, w, h, ctx) {
   (out.places ||= []).push({ name: 'Madison Court Apartments', x0: x, y0: y, x1: x + w, y1: y + h });
 }
 
+// the bus stops: the boulevard (both ways), Main Avenue at Holly Street (R1-I's, with its planted strip and fence)
+const BUS_STOPS = [[3010, MY.blvd - EXT.blvd + 1], [3300, MY.blvd + EXT.blvd - 1], [3560, MY.blvd - EXT.blvd + 1], [MX.main + 6, MY.holly + 9]];
 // The main streets' furniture: street trees in grates every few lots, benches by the shops, bus shelters on the boulevard
 // and Main Avenue (R1-I's), the hot-dog cart at the hero corner, the iron fence and planted strip by R1-I's bus stop
 function streetDressing(K, out, poi0) {
@@ -1572,6 +1659,8 @@ function streetDressing(K, out, poi0) {
   const free = (x, y) => onWalk(x, y) && !taken.has(key(x, y)) && !onSubwayPlaza(m, x, y, 1);
   const put = (t, x, y, solid = 0, extra = null) => { if (!free(x, y)) return false; taken.add(key(x, y)); prop(t, x, y, solid, extra); return true; };
   const doors = new Set();
+  // (a cafe's table out on the pavement: its diners - server/systems/activities.js 'terrace')
+  const terrace = (x, y) => (m.terraceSpots ||= []).push({ x: Math.round(x * TILE), y: Math.round(y * TILE) });
   // the shop fronts: a cafe's or a diner's tables out under umbrellas, a florist's buckets, a grocer's crates and news
   // box, planters either side of a door, a bike rack
   for (let i = poi0; i < m.pois.length; i++) {
@@ -1584,7 +1673,7 @@ function streetDressing(K, out, poi0) {
     // (what each trade puts out on the pavement - the owner, 10-17: busier pavements, the shops' own stock outside)
     const inLot = (sx) => dx + sx > b.tx + 0.6 && dx + sx < b.tx + b.tw - 0.6, nm = p.label || '';
     if (st === 'cafe' || st === 'diner') {
-      for (const sx of [-2.2, 2.2]) if (r(sx > 0 ? 1 : 2) < 0.75 && inLot(sx) && put('cafetable', dx + sx, fy + 1.3)) prop(pick(['umbrella_y', 'umbrella_b', 'umbrella_r', 'umbrella_g'], r(3)), dx + sx, fy + 1.2, 0);
+      for (const sx of [-2.2, 2.2]) if (r(sx > 0 ? 1 : 2) < 0.75 && inLot(sx) && put('cafetable', dx + sx, fy + 1.3)) { prop(pick(['umbrella_y', 'umbrella_b', 'umbrella_r', 'umbrella_g'], r(3)), dx + sx, fy + 1.2, 0); terrace(dx + sx, fy + 1.3); }
       if (r(12) < 0.7) put('chalkboard', dx + (r(13) < 0.5 ? -1.2 : 1.2), fy + 0.6);
     } else if (st === 'florist') for (const sx of [-1.6, -2.6, 1.6, 2.6]) { if (inLot(sx)) put(pick(['flowers_big', 'potted', 'flowers_a', 'planter_fl'], r(sx + 5)), dx + sx, fy + 0.8); }
     else if (p.kind === 'grocery' || p.kind === 'convenience' || /Produce|Grocer|Deli|Bodega/.test(nm)) { put('fruitcrate', dx + 1.8, fy + 0.8); put('fruitcrate', dx + 2.7, fy + 0.8); if (inLot(-2.6)) put('fruitcrate', dx - 2.6, fy + 0.8); if (r(6) < 0.6) put('news_a', dx - 1.6, fy + 0.9); if (r(14) < 0.5) put('vend_cola', dx - 3.4, fy + 0.6, 8); }
@@ -1605,9 +1694,19 @@ function streetDressing(K, out, poi0) {
   // the corners: where two of the plan's streets cross, a hydrant at one corner, news boxes at another on the main
   // streets, a bin or two, a mailbox now and then
   const S = MIDTOWN.streets().filter((q) => q.kind !== 'alley' && q.pts.length === 2 && (q.pts[0][0] === q.pts[1][0] || q.pts[0][1] === q.pts[1][1])), EW = S.filter((q) => q.pts[0][1] === q.pts[1][1]), NS = S.filter((q) => q.pts[0][0] === q.pts[1][0]);
+  // where the other streets cross a straight street (along it, tiles) and how far either side of it their pavements reach:
+  // [[c, ext], ...], its two ends among them, Crosstown Way's slanting crossing too
+  const crossOf = (a) => {
+    const [[ax, ay], [bx, by]] = a.pts, horiz = ay === by, lo = horiz ? Math.min(ax, bx) : Math.min(ay, by), hi = horiz ? Math.max(ax, bx) : Math.max(ay, by);
+    const cross = (horiz ? NS : EW).filter((q) => { const c = horiz ? q.pts[0][0] : q.pts[0][1], r0 = horiz ? Math.min(q.pts[0][1], q.pts[1][1]) : Math.min(q.pts[0][0], q.pts[1][0]), r1 = horiz ? Math.max(q.pts[0][1], q.pts[1][1]) : Math.max(q.pts[0][0], q.pts[1][0]), me = horiz ? ay : ax; return c >= lo && c <= hi && me >= r0 - 1 && me <= r1 + 1; }).map((q) => [horiz ? q.pts[0][0] : q.pts[0][1], q.ext]);
+    cross.push([lo, 7], [hi, 7]);
+    if (horiz && ay > DIAG[0][1] && ay < DIAG[1][1]) cross.push([DIAG[0][0] + (ay - DIAG[0][1]) * (DIAG[1][0] - DIAG[0][0]) / (DIAG[1][1] - DIAG[0][1]), 12]);
+    return cross;
+  };
   for (const a of EW) for (const b of NS) {
     const y = a.pts[0][1], x = b.pts[0][0];
     if (x < Math.min(a.pts[0][0], a.pts[1][0]) || x > Math.max(a.pts[0][0], a.pts[1][0]) || y < Math.min(b.pts[0][1], b.pts[1][1]) || y > Math.max(b.pts[0][1], b.pts[1][1])) continue;
+    if (x === MX.madison && y === MY.holly) continue;   // (the hero corner: dressed as R1-A has it, below)
     const ex = b.ext - 1.4, ey = a.ext - 1.4, r = (k) => rnd(x, y, 500 + k), c0 = Math.floor(r(0) * 4);
     for (let c = 0; c < 4; c++) {
       const sx = c & 1 ? 1 : -1, sy = c & 2 ? 1 : -1, cx = x + sx * ex, cy = y + sy * ey, k = (c - c0 + 4) % 4;
@@ -1626,10 +1725,7 @@ function streetDressing(K, out, poi0) {
     if (a.kind !== 'st' || !a.park) continue;
     const [[ax, ay], [bx, by]] = a.pts, horiz = ay === by, lo = horiz ? Math.min(ax, bx) : Math.min(ay, by), hi = horiz ? Math.max(ax, bx) : Math.max(ay, by);
     const off = (a.w * TILE) / 2 - a.park / 2, run = Math.atan2(by - ay, bx - ax);
-    const cross = (horiz ? NS : EW).filter((q) => { const c = horiz ? q.pts[0][0] : q.pts[0][1], r0 = horiz ? Math.min(q.pts[0][1], q.pts[1][1]) : Math.min(q.pts[0][0], q.pts[1][0]), r1 = horiz ? Math.max(q.pts[0][1], q.pts[1][1]) : Math.max(q.pts[0][0], q.pts[1][0]), me = horiz ? ay : ax; return c >= lo && c <= hi && me >= r0 - 1 && me <= r1 + 1; }).map((q) => [horiz ? q.pts[0][0] : q.pts[0][1], q.ext]);
-    cross.push([lo, 7], [hi, 7]);
-    // (Crosstown Way crosses a street at an angle: its crossing kept clear too)
-    if (horiz && ay > DIAG[0][1] && ay < DIAG[1][1]) cross.push([DIAG[0][0] + (ay - DIAG[0][1]) * (DIAG[1][0] - DIAG[0][0]) / (DIAG[1][1] - DIAG[0][1]), 12]);
+    const cross = crossOf(a);
     for (let t = C(lo) + 40; t < C(hi) - 40; t += 150) {
       const tt = t / TILE - 0.5;
       if (cross.some(([c, e]) => Math.abs(tt - c) < e + 5)) continue;
@@ -1650,7 +1746,14 @@ function streetDressing(K, out, poi0) {
   for (const p of shops) {
     let best = null, bd = 6 * TILE;
     for (const q of kerbs) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd && !q.model) { bd = d; best = q; } }
-    if (best) best.model = /Market|Marlow/.test(p.label) ? 'boxtruck' : 'van';
+    if (!best) continue;
+    best.model = /Market|Marlow/.test(p.label) ? 'boxtruck' : 'van';
+    // (D3's van unloading: the driver carrying the crates in to the shop's door and his mate at the van - activities.js
+    // 'delivery'; the hand truck and a stack of crates on the kerb by its side door)
+    const hz = Math.abs(Math.sin(best.a)) < 0.5, sg = hz ? Math.sign(p.y - best.y) : Math.sign(p.x - best.x);
+    const wx = hz ? best.x - 18 : best.x + sg * 46, wy = hz ? best.y + sg * 46 : best.y - 18;
+    (m.deliverySpots ||= []).push({ x: Math.round(wx), y: Math.round(wy), dx: Math.round(hz ? p.x : p.x - sg * 24), dy: Math.round(hz ? p.y - sg * 24 : p.y), van: { x: best.x, y: best.y } });
+    if (put('handtruck', (wx + (hz ? 34 : 0)) / TILE, (wy + (hz ? 0 : 34)) / TILE)) put('crates', (wx + (hz ? 58 : 0)) / TILE, (wy + (hz ? 0 : 58)) / TILE);
   }
   // the road crew at a hole in Holly Street's pavement (activities.js 'roadcrew'): its cones, the broken paving, the
   // boards; their van in the nearest bay
@@ -1665,13 +1768,103 @@ function streetDressing(K, out, poi0) {
   }
   // the street trees in their grates along both pavements, clear of the doors and the corners
   const nearCross = (x, y, dir) => (dir ? EW : NS).some((q) => Math.abs((dir ? q.pts[0][1] : q.pts[0][0]) - (dir ? y : x)) < q.ext + 3 && (dir ? x >= Math.min(q.pts[0][0], q.pts[1][0]) - 1 && x <= Math.max(q.pts[0][0], q.pts[1][0]) + 1 : y >= Math.min(q.pts[0][1], q.pts[1][1]) - 1 && y <= Math.max(q.pts[0][1], q.pts[1][1]) + 1));
+  // the Pier Street Market's front (Midtown-A1, Shared-3; the craft pass 11-15): the hall's stock out under its windows
+  // between the piers - fruit and veg in crates, the florist's buckets, the fishmonger's and the baker's boards - and a
+  // newsstand at its east end, a bench by its west; the kerb row left to the lamps and the trees, the middle to walkers
+  for (const b of m.buildings) {
+    if (!b || !b.hand || b.name !== 'Pier Street Market') continue;
+    const fy = b.ty + b.th + 0.6, door = b.door ? b.door.tx : -99;
+    let k = 0;
+    for (let x = b.tx + 3.5; x < b.tx + b.tw - 3; x += 3.2, k++) {
+      if (Math.abs(x - door - 0.5) < 2.4) continue;
+      const j = k % 4;
+      if (j === 0 || j === 2) { put('fruitcrate', x - 0.5, fy, 6); put('fruitcrate', x + 0.5, fy, 6); }
+      else if (j === 1) { put('flowers_big', x - 0.4, fy); put('potted', x + 0.7, fy); }
+      else put('chalkboard', x, fy);
+    }
+    put('news_b', b.tx + b.tw - 1.4, fy); put('news_c', b.tx + b.tw - 0.6, fy + 0.1); put('bench_m', b.tx + 1.6, fy + 0.1);
+  }
+  // the Wedge's prow (MT1: the flower seller at the flatiron's sharp corner): buckets of flowers, the board, the news box
+  if (out.wedgeProw) { const [px, py] = out.wedgeProw; put('flowers_big', px - 1.2, py); put('planter_fl', px, py, 6); put('chalkboard', px + 1.1, py); put('news_a', px - 2.4, py + 0.1); }
+  // the hero corner's life (R1-A, R1-B, R1-C; the craft pass 11-15 - "intentional ... placements"): the Starlite's
+  // planters either side of its bench under the window; at the Corner Mart a potted palm at the corner, the news box, the
+  // bench and the drinks machine by its door, the hydrant and a bin at the kerb's corner, the hot-dog cart at the kerb;
+  // a bin and a bollard pair at the south corners; in the kerb's bays east of the crossing the red pickup and the
+  // scooter (traffic.js sp.model). The black iron lamps at the corners: the lamps below (IRON_ST)
+  {
+    const X = MX.madison, Y = MY.holly, fy = Y - EXT.st;   // (fy: the north pavement's first row, under the shop fronts)
+    put('planter_g', X - 13.8, fy + 0.5, 12); put('bench_m', X - 11.8, fy + 0.6, 0); put('planter_g', X - 9.8, fy + 0.5, 12); put('trashcan', X - 5.6, fy + 1.7, 7);
+    put('potted', X + 6.4, fy + 0.3, 10); put('news_a', X + 10.3, fy + 0.4, 0); put('bench_m', X + 12.2, fy + 0.5, 0); put('vend_cola', X + 14.4, fy + 0.3, 9);
+    put('hydrant', X + 6.3, Y - 4.6, 6); put('trashcan', X + 7.6, Y - 4.5, 7); put('foodcart', X + 11, Y - 4.7, 14);
+    put('trashcan', X - 5.6, Y + 6.4, 7); put('bollard', X - 6.4, Y + 5.5, 5); put('bollard', X + 6.4, Y + 5.5, 5); put('news_b', X + 6.6, Y + 6.6, 0);
+    const bay = (bx, model) => { let best = null, bd = 3 * TILE; for (const q of m.parking) if (q.kerb && !q.model) { const d = Math.hypot(q.x - bx * TILE, q.y - (Y + 3.6) * TILE); if (d < bd) { bd = d; best = q; } } if (best) best.model = model; };
+    bay(X + 20, 'pickup'); bay(X + 26, 'scooter');
+  }
+  // the street lamps (the craft pass, 11-15 - the owner: "the lights don't act like lanterns, they just look like random
+  // lights strung around"; D3, R1-A): a lamp on the kerb every LAMP_STEP tiles at most down both pavements, the two
+  // sides staggered half a step so the pools of light run on evenly, clear of the crossings, the bus stops and the subway's
+  // stairs - the generator's scattered kerb lamps are off in Midtown (MIDTOWN.lamps: map.js buildStreetProps). The high
+  // street, Pier Street, Madison Street and the mews have R1-A's black iron posts and their amber pools; the avenues and
+  // the boulevard the district's arm lamps out over the road. Under the El (Trestle Street) the viaduct's own lamps.
+  const lampAt = [], LAMP_STEP = 12, IRON_ST = new Set(['Holly Street', 'Pier Street', 'Madison Street', 'Holly Mews', 'Holly Place']);
+  const inPlan = (x, y) => x > MIDTOWN.rect[0] + 2 && y > MIDTOWN.rect[1] + 2 && x < MIDTOWN.rect[2] - 2 && y < MIDTOWN.rect[3] - 2;
+  for (const [x, y] of BUS_STOPS) for (let k = -2; k <= 2; k++) { taken.add(key(x + k, y)); taken.add(key(x + k, y - 1)); taken.add(key(x + k, y + 1)); }
+  // (each block face from one crossing to the next: a lamp a tile and a half past each corner - R1-A's corner posts - and
+  // the rest evenly between them, no gap over LAMP_STEP; the far kerb's halfway between; never two within 6 tiles)
+  for (const a of S) {
+    if (a.name === 'Trestle Street') continue;
+    const horiz = a.pts[0][1] === a.pts[1][1], c = horiz ? a.pts[0][1] : a.pts[0][0], lo = Math.min(horiz ? a.pts[0][0] : a.pts[0][1], horiz ? a.pts[1][0] : a.pts[1][1]), hi = Math.max(horiz ? a.pts[0][0] : a.pts[0][1], horiz ? a.pts[1][0] : a.pts[1][1]);
+    const kerb = (a.w - 1) / 2 + 1, iron = IRON_ST.has(a.name);
+    const cuts = crossOf(a).map(([q, e]) => [q - e - 1, q + e + 1]).sort((p, q) => p[0] - q[0]);
+    let t0 = lo;
+    for (const [c0, c1] of [...cuts, [hi, hi]]) {
+      const s0 = Math.max(t0, lo + 2), s1 = Math.min(c0, hi - 2);
+      t0 = Math.max(t0, c1);
+      if (s1 - s0 < 4) continue;
+      const n = Math.max(1, Math.ceil((s1 - s0 - 3) / LAMP_STEP));
+      for (let i = 0; i <= 2 * n; i++) {
+        // (the near kerb's lamps at the corners and evenly between; the far kerb's halfway between them - staggered)
+        const sd = i % 2 ? 1 : -1, t = s0 + 1.5 + (s1 - s0 - 3) * i / (2 * n);
+        {
+          const x = horiz ? t : c + sd * kerb + 0.5, y = horiz ? c + sd * kerb + 0.5 : t;
+          if (!inPlan(x, y) || !free(x, y) || lampAt.some(([lx, ly]) => Math.abs(lx - x) < 6 && Math.abs(ly - y) < 6)) continue;
+          put('lamp', x, y, 0, iron ? { style: 'iron' } : null);
+          lampAt.push([x, y]);
+        }
+      }
+    }
+  }
+  // (the slanting and curving streets - Crosstown Way, Garden Crescent: along their line every LAMP_STEP, out to either
+  // kerb, where that lands on the pavement - never within a street's width of where another street meets them)
+  for (const a of MIDTOWN.streets()) {
+    if (a.kind === 'alley' || S.includes(a) || a.pts.length < 2) continue;
+    const kerb = (a.w - 1) / 2 + 1;
+    let carry = 3;
+    for (let i = 1; i < a.pts.length; i++) {
+      const [ax, ay] = a.pts[i - 1], [bx, by] = a.pts[i], L = Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+      if (L < 1e-6) continue;
+      const ux = (bx - ax) / L, uy = (by - ay) / L;
+      for (let t = carry; t < L; t += LAMP_STEP) {
+        const px = ax + ux * t, py = ay + uy * t;
+        carry = t + LAMP_STEP - L;
+        if (MIDTOWN.streets().some((q) => q !== a && q.kind !== 'alley' && q.pts.length === 2 && (q.pts[0][0] === q.pts[1][0] ? Math.abs(px - q.pts[0][0]) < q.ext + 3 && py >= Math.min(q.pts[0][1], q.pts[1][1]) - 2 && py <= Math.max(q.pts[0][1], q.pts[1][1]) + 2 : q.pts[0][1] === q.pts[1][1] && Math.abs(py - q.pts[0][1]) < q.ext + 3 && px >= Math.min(q.pts[0][0], q.pts[1][0]) - 2 && px <= Math.max(q.pts[0][0], q.pts[1][0]) + 2))) continue;
+        for (const sd of [-1, 1]) {
+          const x = Math.floor(px - uy * sd * kerb) + 0.5, y = Math.floor(py + ux * sd * kerb) + 0.5;
+          if (!inPlan(x, y) || !free(x, y) || lampAt.some(([lx, ly]) => Math.abs(lx - x) < 6 && Math.abs(ly - y) < 6)) continue;
+          put('lamp', x, y, 0, null);
+          lampAt.push([x, y]);
+        }
+      }
+    }
+  }
+  const nearLamp = (x, y) => lampAt.some(([lx, ly]) => Math.abs(lx - x) < 2 && Math.abs(ly - y) < 2.5);
   const SP = { 'Holly Street': 'street', 'Central Avenue': 'maple', 'Midtown Boulevard': 'streetPl', 'Pier Street': 'street', 'Trestle Street': null, 'Holly Mews': null, 'Holly Place': null };
   for (const a of EW) {
     const sp = SP[a.name] === undefined ? 'street' : SP[a.name], y = a.pts[0][1];
     if (!sp) continue;
     for (const sy of [-1, 1]) for (let x = Math.min(a.pts[0][0], a.pts[1][0]) + 4; x < Math.max(a.pts[0][0], a.pts[1][0]) - 4; x += 7 + Math.floor(rnd(x, y + sy, 520) * 4)) {
       const yy = y + sy * (a.ext - 1);
-      if (nearCross(x, yy, false) || doors.has(Math.floor(x)) || doors.has(Math.floor(x) + 1)) continue;
+      if (nearCross(x, yy, false) || doors.has(Math.floor(x)) || doors.has(Math.floor(x) + 1) || nearLamp(x + 0.5, yy)) continue;
       put('tree_a', x + 0.5, yy, 10, { sp, k: 1.15, grate: true });
     }
   }
@@ -1680,7 +1873,7 @@ function streetDressing(K, out, poi0) {
     const x = b.pts[0][0];
     for (const sx of [-1, 1]) for (let y = Math.min(b.pts[0][1], b.pts[1][1]) + 4; y < Math.max(b.pts[0][1], b.pts[1][1]) - 4; y += 10 + Math.floor(rnd(x + sx, y, 521) * 4)) {
       const xx = x + sx * (b.ext - 1);
-      if (!nearCross(xx, y, true)) put('tree_a', xx + 0.5, y + 0.5, 10, { sp: 'street', k: 1.1, grate: true });
+      if (!nearCross(xx, y, true) && !nearLamp(xx + 0.5, y + 0.5)) put('tree_a', xx + 0.5, y + 0.5, 10, { sp: 'street', k: 1.1, grate: true });
     }
   }
   // the boulevard's median (the owner's WC325/330, and WC425/WC431/WC432 of 10-18: a lush planted strip): shrubs and
@@ -1696,10 +1889,7 @@ function streetDressing(K, out, poi0) {
     else prop(pick(['flowers_big', 'shrub_a', 'flowers_a', 'bush_c', 'flowers_big'], rnd(x, MY.blvd, 530)), x + 0.5, MY.blvd + 0.5 + (j % 2 ? -0.6 : 0.6), 0);
   }
   // the bus stops: the boulevard (both ways), Main Avenue at Holly Street (R1-I's, with its planted strip and fence)
-  for (const [x, y] of [[3010, MY.blvd - EXT.blvd + 1], [3300, MY.blvd + EXT.blvd - 1], [3560, MY.blvd - EXT.blvd + 1], [MX.main + 6, MY.holly + 9]]) if (onWalk(x, y)) prop('busstop', x, y, 0);
+  for (const [x, y] of BUS_STOPS) if (onWalk(x, y)) prop('busstop', x, y, 0);
   prop('flowers_a', MX.main + 6, MY.holly + 13, 0); prop('fenceline', MX.main + 4.5, MY.holly + 14.5, 0, { kind: 'iron', tx: 3 * TILE, ty: 0 });
-  // the hero corner's life (R1-A): the hot-dog cart, benches, a news box
-  prop('foodcart', MX.madison + 10, MY.holly - 5.6, 14);
-  prop('bench_m', MX.madison - 10, MY.holly - 6.2, 0); prop('news_b', MX.madison + 6, MY.holly - 6.4, 0); put('hydrant', MX.madison + 8.5, MY.holly - 5.2, 6);
   out.dressed = true;
 }

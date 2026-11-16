@@ -68,6 +68,7 @@ export const ACT_MAX = 4;         // groups round one player at most
 const GAP = 380;                  // never filled closer than this to anyone
 const FLOOR_FIRST = 640;          // a casino's floor or a bar's card table this close (px, round its room): filled first, past ACT_MAX and its kind's cap
 const CELL = 1024;
+const TERRACE_SEAT = 10;          // px either side of a cafe table's middle a diner sits (client/art2/props.js cafeTable: its two chairs)
 const KINDS = {   // day / night: the chance a spot is on when someone comes near
   anglers: { day: 0.75, night: 0.35 },
   chess: { day: 0.7, night: 0 },
@@ -88,6 +89,9 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   party: { day: 0.08, night: 0.55, cap: 1 },
   roadcrew: { day: 0.9, night: 0, cap: 1 },
   site: { day: 0.9, night: 0, cap: 1 },   // (a building site's crew out front - batch 8)
+  market: { day: 0.95, night: 0.75, cap: 2 },   // (a market lane's stall keepers and shoppers - the craft pass, 11-15)
+  terrace: { day: 0.8, night: 0.6, cap: 3 },   // (diners at a cafe's tables out on the pavement or a square)
+  delivery: { day: 0.8, night: 0.1, cap: 1 },   // (a van unloading at a shop's kerb)
   dice: { day: 0.3, night: 0.8, cap: 1 },   // (street dice down an alley: streetdice.js)   // (IN8: eating at a food place's tables, the cook at the line)
   ...WILD_KINDS,   // (the people of the wilds: wildfolk.js)
 };
@@ -242,6 +246,12 @@ export function spotsOf(map) {
   }
   for (const q of map.partySpots || []) { list.push({ k: 'party', x: q.x, y: q.y, a: 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
   for (const q of map.crewSpots || []) { list.push({ k: 'roadcrew', x: q.x, y: q.y, a: q.a || 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
+  // (the craft pass, 11-15 - NP3's street life, the owner: "alive with interesting things and details and NPCs"): a market
+  // lane's stall keepers and its shoppers (map.marketLanes: Midtown's Market Square), the diners at a cafe's tables out on
+  // a pavement or a square (map.terraceSpots), a van unloading at a shop's kerb (map.deliverySpots)
+  for (const q of map.marketLanes || []) { list.push({ k: 'market', x: q.x, y: q.y, a: 0, lane: q, wild: false }); taken.push({ x: q.x, y: q.y }); }
+  for (const q of map.terraceSpots || []) if (walkable(map, q.x - TERRACE_SEAT, q.y) && walkable(map, q.x + TERRACE_SEAT, q.y)) { list.push({ k: 'terrace', x: q.x, y: q.y, a: 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
+  for (const q of map.deliverySpots || []) if (walkable(map, q.x, q.y) && walkable(map, q.dx, q.dy)) { list.push({ k: 'delivery', x: q.x, y: q.y, a: Math.atan2(q.dy - q.y, q.dx - q.x), door: { x: q.dx, y: q.dy }, van: q.van || null, wild: false }); taken.push({ x: q.x, y: q.y }); }
   // the building sites (a building of kind 'construction': the frame going up) - a crew at work out front (batch 8)
   for (const b of map.buildings || []) {
     if (!b || b.kind !== 'construction') continue;
@@ -398,6 +408,27 @@ function members(s) {
     out.push({ x: s.x - 5, y: s.y, a: Math.PI / 2, arche: rng() < 0.35 ? 'senior' : 'casual', gt: 'sitlow' });
     if (rng() < 0.6) out.push({ x: s.x + 9, y: s.y + 1, a: Math.PI / 2, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sitlow' });
     if (rng() < 0.35) out.push({ x: s.x + 2, y: s.y + 22, a: -Math.PI / 2, arche: 'casual', chat: true });
+  } else if (s.k === 'market') {    // a keeper behind most stalls, facing the lane; two or three stood at a stall over its stock; a
+    // senior with a shopping trolley and another shopper strolling the lane, stopping to look
+    const L = s.lane, A = Math.PI / 2;
+    for (const st of L.stalls) {
+      if (rng() < 0.15) continue;
+      const fwd = Math.abs(st.a) < 1 ? 1 : -1;   // (a: 0 the stall faces south, PI north)
+      out.push({ x: st.x + (rng() - 0.5) * 16, y: st.y - fwd * 15, a: fwd * A, arche: 'casual', look: 'vendor' });
+    }
+    const ord = L.stalls.map((q, i) => [rng(), i]).sort((p, q) => p[0] - q[0]), n = 2 + Math.floor(rng() * 2);
+    for (let k = 0; k < n && k < ord.length; k++) { const st = L.stalls[ord[k][1]], fwd = Math.abs(st.a) < 1 ? 1 : -1, x = st.x + (rng() - 0.5) * 24, y = st.y + fwd * 24; out.push({ x, y, a: -fwd * A, arche: rng() < 0.3 ? 'senior' : 'casual', watch: { x: st.x, y: st.y } }); }
+    const l0 = { x: L.x0 + 40, y: L.y }, l1 = { x: L.x1 - 40, y: L.y };
+    out.push({ x: l0.x, y: l0.y, a: 0, arche: 'senior', pp: 'trolley', patrol: [l0, l1] });
+    if (rng() < 0.7) out.push({ x: l1.x, y: l1.y + 10, a: Math.PI, arche: 'casual', patrol: [{ x: l1.x, y: l1.y + 10 }, { x: l0.x, y: l0.y + 10 }] });
+  } else if (s.k === 'terrace') {   // one or two sat at the table, facing each other over it; now and then the waiter stood by
+    const two = rng() < 0.7;
+    out.push({ x: s.x - TERRACE_SEAT, y: s.y + 1, a: 0, arche: rng() < 0.25 ? 'senior' : rng() < 0.2 ? 'executive' : 'casual', gt: 'sit', chat: two });
+    if (two) out.push({ x: s.x + TERRACE_SEAT, y: s.y + 1, a: Math.PI, arche: rng() < 0.25 ? 'senior' : 'casual', gt: 'sit', chat: true });
+    if (rng() < 0.2) out.push({ x: s.x + 4, y: s.y + 20, a: -Math.PI / 2, arche: 'casual', look: 'server', watch: { x: s.x, y: s.y } });
+  } else if (s.k === 'delivery') {  // the driver carrying crates from the van to the shop's door and back; his mate at the van's side
+    out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: 'courier', pp: 'crate', patrol: [{ x: s.x, y: s.y }, s.door] });
+    if (rng() < 0.6) out.push({ x: s.x - 22, y: s.y - 4, a: s.a, arche: 'casual', look: 'courier', watch: s.van || { x: s.x, y: s.y + 40 } });
   } else if (s.k === 'cards') {     // the dealers at their tables, players in some of the seats, some at the slots
     out.push(...casinofloor.members(s.floor, rng));
   } else if (s.k === 'pool') {      // the breaker bent over the cue at the head of the table, the other off its far end, cue up; watchers
@@ -458,7 +489,7 @@ export function fill(world, s, opts = {}) {
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
     const n = ped.npc;
-    n.act = { g: s.id, k: s.k, cf: m.cf || null, x: m.ride ? s.x : m.x, y: m.ride ? s.y : m.y, a: m.a, ride: m.ride || null, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: m.leg ?? 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1, cv: m.cv ?? null, route: m.route || null, pace: m.pace || 0, kneel: !!m.kneel, ranger: !!m.ranger };
+    n.act = { g: s.id, k: s.k, cf: m.cf || null, x: m.ride ? s.x : m.x, y: m.ride ? s.y : m.y, a: m.a, ride: m.ride || null, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? (m.watch.x !== undefined ? { x: m.watch.x, y: m.watch.y } : { x: s.x, y: s.y }) : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: m.leg ?? 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1, cv: m.cv ?? null, route: m.route || null, pace: m.pace || 0, kneel: !!m.kneel, ranger: !!m.ranger };
     n.state = 'idle'; n.until = world.time + 9999; n.sway = false; n.umbrellaType = false;
     pose(ped, true);
     g.ids.push(ped.id);
@@ -542,7 +573,7 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
-export const RAIN_OFF = new Set(['dice', 'chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party', 'birders', 'climbers', 'kayakers']);
+export const RAIN_OFF = new Set(['terrace', 'dice', 'chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party', 'birders', 'climbers', 'kayakers']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;
@@ -580,6 +611,21 @@ export function steer(world, ped, now) {
     ped.a = a.a + (n.glance || 0);
   } else ped.a = a.a;
   return { inp: NO_INPUT, factor: 0.55 };
+}
+
+// A capture's shot comes alive as it starts (the craft pass, 11-15: tools/capture.mjs - server/capture.js start): the spots
+// round its place filled at once, in sight or not (the live world fills only what nobody can see - a shot's camera is
+// there from its first frame), nearest first, by the same chances as anywhere. Never in the live world.
+export function prefill(world, x, y, r = 900, max = 8) {
+  const A = (world.acts ||= new Map()), night = !!(world.clock && world.clock.isNight), rain = world.weather === WEATHER.RAIN;
+  let n = 0;
+  for (const s of spotsNear(world.map, x, y, r).sort((p, q) => Math.hypot(p.x - x, p.y - y) - Math.hypot(q.x - x, q.y - y))) {
+    if (n >= max) break;
+    const P = KINDS[s.k];
+    if (A.has(s.id) || !P || s.floor || s.k === 'pool' || (rain && RAIN_OFF.has(s.k)) || rng() >= (night ? P.night : P.day)) continue;
+    if (fill(world, s, { seen: true })) n++;
+  }
+  return n;
 }
 
 // ---- every second: fill the spots round people, empty the ones nobody's near --------------------------------------------

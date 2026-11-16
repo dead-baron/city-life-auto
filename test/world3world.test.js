@@ -143,10 +143,16 @@ test('World v3: the whole world in one build - every city district on its island
   assert.ok(slip && Math.abs(slip.shore[0] - 1601) <= 2 && Math.abs(slip.shore[1] - 3737) <= 2, `its slip on the village's quay (${slip && slip.shore})`);
   assert.ok(!(m.landmarks || []).some((l) => (l.name === 'Gull Harbor' && l.x < 1000 * TILE) || l.name === 'Coral Cay Cove'), 'none of today\'s Gull Isles');
   // Midtown's Market Square (2026-10-19, Midtown-A1 and Shared-3: shared/world3-midtown.js marketSquare): across Pier
-  // Street from the market hall, its eight stalls, the cafe on its south side
+  // Street from the market hall, its stalls, the cafe on its south side
   const ms = (m.landmarks || []).find((l) => l.name === 'Market Square'), hall = m.buildings.find((b) => b && b.hand && b.name === 'Pier Street Market');
   assert.ok(ms && hall && Math.abs((ms.x + ms.w / 2) / TILE - (hall.tx + hall.tw / 2)) <= 2 && ms.y / TILE > hall.ty + hall.th, 'the Market Square across Pier Street from the market hall');
-  assert.equal(m.props.filter((p) => p.t === 'mstall' && p.x > ms.x && p.x < ms.x + ms.w && p.y > ms.y && p.y < ms.y + ms.h).length, 8, 'its eight stalls');
+  // (the craft pass, 11-15: two market lanes of stalls facing each other across them, the garlands strung pole to pole
+  // down each lane - every string of lights between two anchors, none loose - the lanes' keepers and shoppers)
+  const inMs = (p) => p.x > ms.x && p.x < ms.x + ms.w && p.y > ms.y && p.y < ms.y + ms.h;
+  assert.equal(m.props.filter((p) => p.t === 'mstall' && inMs(p)).length, 16, 'its sixteen stalls');
+  const fest = m.props.filter((p) => p.t === 'festoon' && inMs(p));
+  assert.ok(fest.length >= 4 && fest.every((p) => p.ends && p.ends[0] === 'pole' && p.ends[1] === 'pole'), `the lanes' lights strung between posts (${fest.length})`);
+  assert.equal((m.marketLanes || []).length, 2, 'its two lanes, their keepers and shoppers (activities.js market)');
   assert.ok(m.pois.some((p) => p.kind === 'coffee' && p.label === 'Fontaine Cafe'), 'Fontaine Cafe');
   assert.ok(m.pois.some((p) => p.kind === 'market' && p.label === 'Midtown Market' && p.counter), 'the stalls a market to buy and sell at');
   // Westport International, handcrafted (2026-10-20: shared/world3-airport.js): its field registered by the plan (the

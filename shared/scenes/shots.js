@@ -34,7 +34,7 @@ export function move(kind, { z = 0.9, s = 16, dir = [1, 0], r = 420, a0 = -0.6, 
 // a place shot: no cast, the camera's move over a named place (q: the names to look it up by, the first found)
 const place = (id, g, n, q, kind, o = {}) => ({
   id, n, g, note: `${SPAN[kind]} · ${o.weather && o.weather !== 'clear' ? `${o.weather}, ` : ''}${o.tl ? 'time-lapse' : TOD(o.t ?? TIME.golden)}`,
-  len: (o.s || 16) + 1, linger: 0, place: { k: 'named', q, dx: o.dx, dy: o.dy, ...(o.open === false ? null : { open: 1 }) }, anchors: ['here'], time: o.t ?? TIME.golden, weather: o.weather || 'clear',
+  len: (o.s || 16) + 1, linger: 0, place: o.xy ? { k: 'xy', xy: [o.xy[0] * 32, o.xy[1] * 32] } : { k: 'named', q, dx: o.dx, dy: o.dy, ...(o.open === false ? null : { open: 1 }) }, anchors: ['here'], time: o.t ?? TIME.golden, weather: o.weather || 'clear',
   ...(o.tl ? { tl: o.tl } : null), ...(o.bio ? { bio: 1 } : null),
   cast: o.cast || [], beats: o.beats || [{ do: 'wait', s: o.s || 16 }], cam: o.cam || move(kind, o),
 });
@@ -49,6 +49,19 @@ export const SHOTS = [
   place('shottrestle', 'city', 'The El over Trestle Street', ['The Trestle Spot', 'Union Square', 'Midtown'], 'pan', { t: 1215, z: 0.9, dir: [0, 1], r: 560, s: 18 }),
   place('shotlanterns', 'city', 'Lantern Lane\'s lanterns', ['Lantern Lane', 'Old Quarter'], 'orbit', { t: 1380, z: 1.05, r: 300, s: 18, a0: -0.4, a1: 1.1 }),
   place('shotoceandrive', 'city', 'Ocean Drive after dark', ['The Bayside Ritz', 'Bayside Heights'], 'pan', { t: 1350, z: 0.9, r: 560, s: 18 }),
+  // Midtown's signature places at street level (the district craft pass, 11-15: R1-A/B/C the hero corner, NP3, the markets,
+  // MT1's wedge, RW1 under the El) - o.xy: the frame's middle in tiles, exactly there (no open-ground search)
+  place('shotherocorner', 'city', 'The hero corner at golden hour', ['Starlite Diner'], 'wide', { xy: [3256, 1749], t: TIME.golden, z: 1.0, s: 16, cast: [extras(5, 220)] }),
+  place('shotheronoon', 'city', 'The hero corner at noon', ['Starlite Diner'], 'wide', { xy: [3256, 1749], t: TIME.noon, z: 1.0, s: 16, cast: [extras(5, 220)] }),
+  place('shotherorain', 'city', 'The hero corner on a rainy night', ['Starlite Diner'], 'wide', { xy: [3256, 1749], t: TIME.night, weather: 'rain', z: 1.0, s: 16, cast: [extras(4, 220)] }),
+  place('shotmarketsq', 'city', 'Market Square', ['Market Square'], 'wide', { xy: [3242, 1867], t: TIME.noon, z: 1.0, s: 16, cast: [extras(6, 240)] }),
+  place('shotmarketsqnight', 'city', 'Market Square at night', ['Market Square'], 'wide', { xy: [3242, 1867], t: TIME.night, z: 1.0, s: 16, cast: [extras(5, 240)] }),
+  place('shotpiermarket', 'city', 'The Pier Street Market', ['Pier Street Market'], 'wide', { xy: [3232, 1846], t: TIME.afternoon, z: 1.0, s: 16, cast: [extras(5, 240)] }),
+  place('shotpiermarketnight', 'city', 'Pier Street at night', ['Pier Street Market'], 'wide', { xy: [3232, 1846], t: TIME.night, z: 1.0, s: 16, cast: [extras(4, 240)] }),
+  place('shotwedge', 'city', 'The Wedge at golden hour', ['The Wedge', 'Wedge Plaza'], 'wide', { xy: [3436, 1788], t: TIME.golden, z: 1.0, s: 16, cast: [extras(5, 240)] }),
+  place('shotwedgenight', 'city', 'The Wedge at night', ['The Wedge', 'Wedge Plaza'], 'wide', { xy: [3436, 1788], t: TIME.night, z: 1.0, s: 16, cast: [extras(4, 240)] }),
+  place('shotelstation', 'city', 'Under the El at Midtown Station', ['Platform Coffee'], 'wide', { xy: [3254, 1670], t: TIME.morning, z: 1.0, s: 16, cast: [extras(5, 240)] }),
+  place('shotelstationnight', 'city', 'Under the El at night', ['Platform Coffee'], 'wide', { xy: [3254, 1670], t: TIME.night, z: 1.0, s: 16, cast: [extras(4, 240)] }),
   // ---- Nature & Countryside ----
   place('showfalls', 'nature', 'Redwood Creek Falls', ['Redwood Creek Falls'], 'push', { t: 450, z: 1.14, r: 600, s: 18, dir: [0, 1] }),
   place('shotsilverfalls', 'nature', 'Silver Thread Falls', ['Silver Thread Falls', 'Silver Thread Lake'], 'crane', { t: 540, z: 1.0, r: 600, s: 18 }),

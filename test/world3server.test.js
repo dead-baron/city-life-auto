@@ -30,6 +30,7 @@ import { PED_BLOCK, isSwimming } from '../shared/mapcore.js';
 import * as economy from '../server/systems/economy.js';
 import * as biz from '../server/systems/biz.js';
 import { fenceGrid, waysOut } from './fenceaudit.js';
+import { spotsOf } from '../server/systems/activities.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 
@@ -169,6 +170,18 @@ test('nothing blocking on a street, a pavement, the track or a door (shared/worl
   const left = clutterOn(M);
   assert.deepEqual(left.slice(0, 12), [], `${left.length} props where they may not stand`);
   assert.ok(M.world3.clutter && Object.keys(M.world3.clutter.dropped).length, 'the guard ran');
+});
+
+test('Midtown, the craft pass (11-15): its kerbs lit at a rhythm, the market lanes, the cafe terraces, the vans unloading', () => {
+  // (the owner: "the lights don't act like lanterns, they just look like random lights strung around") Holly Street's
+  // north kerb from Main Avenue to Madison Street: R1-A's iron lamps evenly along it, a lamp by each corner
+  const ys = (1750 - 5 + 0.5) * TILE, xs = M.props.filter((p) => p.t === 'lamp' && Math.abs(p.y - ys) < 2 && p.x > 3192 * TILE && p.x < 3243 * TILE).map((p) => p.x).sort((a, b) => a - b);
+  assert.ok(xs.length >= 4, `lamps along Holly Street (${xs.length})`);
+  for (let i = 1; i < xs.length; i++) assert.ok(xs[i] - xs[i - 1] <= 12.5 * TILE, `no dark stretch (${(xs[i] - xs[i - 1]) / TILE} tiles)`);
+  assert.ok(xs[0] < 3197 * TILE && xs[xs.length - 1] > 3238 * TILE, 'a lamp by each corner');
+  assert.ok(M.props.filter((p) => p.t === 'lamp' && Math.abs(p.y - ys) < 2 && p.x > 3192 * TILE && p.x < 3243 * TILE).every((p) => p.style === 'iron'), 'the high street\'s black iron lamps');
+  const S = spotsOf(M).list, n = (k) => S.filter((q) => q.k === k).length;
+  assert.ok(n('market') >= 2 && n('terrace') >= 10 && n('delivery') >= 2, `the life of it: ${n('market')} market lanes, ${n('terrace')} terrace tables, ${n('delivery')} vans unloading`);
 });
 
 test(`its region files, as the server cuts them: the index and ${REGIONS_X} x ${REGIONS_Y} regions, read back into the same city`, () => {

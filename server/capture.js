@@ -11,7 +11,7 @@
 // Routes (GET, JSON): /capture/state - the tick, who's joined, the scenes running; /capture/step?n= - the world n ticks
 // on; /capture/start?id=&seed= - a scene now, every joined page its camera (seed: Math.random reseeded first, so the
 // take doesn't depend on how long the pages took to load; hold=1: held at its first moment until /capture/go);
-// /capture/go - the held scene's clock running from this tick; /capture/stop - every scene over.
+// /capture/go - the held scene's clock running from this tick (start's fill=0: the activity spots round it not filled at once); /capture/stop - every scene over.
 import { mulberry32 } from '../shared/rng.js';
 
 export const CAPTURE = process.env.CLA_CAPTURE === '1';
@@ -44,7 +44,10 @@ export async function captureHttp(world, req, res, url) {
       const r = director.start(world, String(q.get('id') || ''), { mode: 'capture', viewer: vs[0] || null, hold: q.get('hold') === '1' });
       if (r.err) return json(res, 400, { err: r.err }), true;
       for (const p of vs.slice(1)) director.watch(world, r.run, p);
-      return json(res, 200, { ok: true, seq: r.run.seq, tick0: r.run.tick0, len: r.run.sc.len, viewers: vs.length, anchors: r.run.anchors }), true;
+      // (the shot's place alive from its first frame: the activity spots round it filled now, in sight - activities.js prefill)
+      const at = r.run.anchors && (r.run.anchors.here || Object.values(r.run.anchors)[0]), acts = await import('./systems/activities.js');
+      const filled = at && q.get('fill') !== '0' ? acts.prefill(world, at.x, at.y) : 0;
+      return json(res, 200, { ok: true, seq: r.run.seq, tick0: r.run.tick0, len: r.run.sc.len, viewers: vs.length, anchors: r.run.anchors, filled }), true;
     }
     if (what === 'go') { director.go(world); return json(res, 200, { ok: true, tick: world.tick }), true; }
     if (what === 'stop') { director.stopAll(world); return json(res, 200, { ok: true }), true; }

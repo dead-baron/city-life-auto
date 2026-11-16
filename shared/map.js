@@ -4959,7 +4959,7 @@ function buildStreetProps(m) {
     if (skip) continue;
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
     if (nearRoad) {
-      if ((LX(tx) * 7 + LY(ty) * 13) % 9 === 0 && (LX(tx) + LY(ty)) % 2 === 0) addProp(m, 'lamp', x, y);
+      if ((LX(tx) * 7 + LY(ty) * 13) % 9 === 0 && (LX(tx) + LY(ty)) % 2 === 0) { if (!OPTS?.ownLamps?.(tx, ty)) addProp(m, 'lamp', x, y); }   // (a handcrafted district that lights its own kerbs at a rhythm: none of these - shared/world3-hand.js ownLamps)
       else if (h < 0.025) addProp(m, 'hydrant', x, y, 6);
       continue;
     }

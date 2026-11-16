@@ -24374,3 +24374,51 @@ names the arrow; test/emotes.test.js checks the two jabs, the hold, the balloon 
 The owner: a player might press Done before "Save look" and think the look was lost. Done (and the X, and Esc) always
 put the look on; "Save look" only kept a named copy in the Saved tab. It's "Add to Saved" now, and Done says so when the
 look changed: "New look on. (Add to Saved keeps a copy to switch back to.)" (client/creator.js; the Guide's Your look).
+
+## 2026-11-15 - Midtown's craft pass: the hero corner, the markets, the Wedge, under the El
+The owner (11-14 20:28): "Big open spaces ... are way too big and open and the lights don't act like lanterns, they just
+look like random lights strung around ... every place beautifully crafted ... alive with interesting things and details
+and NPCs and decorations ... the designs and placements of things should be intentional." Midtown first, back through
+its concepts (shared/world3-midtown.js unless said).
+**Lights belong to things (R1-A, D3).** The generator's scattered kerb lamps are off inside a plan that lights its own
+(`lamps: true` - shared/map.js buildStreetProps asks world3-world.js `ownLamps`); Midtown lights every block face from
+crossing to crossing: a lamp a tile and a half past each corner and the rest evenly between, never more than 12 tiles
+apart, the far kerb's staggered halfway between them, never two within 6 tiles - R1-A's black iron posts and their amber pools on Holly Street, Pier Street, Madison Street and the
+mews, the arm lamps over the road on the avenues and the boulevard, along Crosstown Way's slant and round Garden
+Crescent too; the street trees keep clear of them. Every string of lights hangs between two anchors: the Market
+Square's garlands from post to post down its lanes, a yard's along the back wall on brackets, the Commons' from its post
+to the bandstand's eaves (`ends`: client/art2/game/statics.js draws the posts and brackets).
+**Market Square (Midtown-A1, NE6).** No more ring of eight stalls round an open square of paving: the square is 19
+tiles deep, not 24, its north half a market of two lanes - a row of stalls along the kerb facing into each lane and a row
+facing back across it, 16 in all, crates and boards round them, two strings of paper lanterns down each lane hung post to
+post - with a clear aisle from Pier Street to the fountain. The south half is the fountain's: four benches facing it,
+beds, four plane trees round it, the chess tables under the trees on the west, the hot-dog cart, the bikes and the
+flowers on the east, iron lamps by the benches. Its south edge is the cafes' terrace (Fontaine Cafe, Market Bakery, Stem
+& Bloom back onto it): a hedge with its ways in, a string of lights over it on posts, a row of tables under umbrellas -
+only its front, as the cafes' two floors stand up over the rest of it.
+**The Pier Street Market's front.** The hall's stock out under its windows between the piers (fruit and veg, the
+florist's buckets, boards), a newsstand at its east end, a bench at its west; the box truck in its loading bay with the
+hand truck and a stack of crates beside it - and the same at the grocers' and the department store's bays (D3).
+**The hero corner (R1-A/B/C).** Dressed as the targets have it: the Starlite's two planters either side of its bench, the
+Corner Mart's potted palm, news box, bench and drinks machine by its door, the hydrant and a bin at the corner, the
+hot-dog cart at the kerb, bollards and a bin on the south corners, the red pickup and the scooter in the kerb's bays east
+of the crossing, the iron lamps by every corner.
+**The Wedge (MT1).** The flower seller at the flatiron's prow (buckets, a board, a news box). Wedge Plaza across the
+street, the triangle to the diagonal, was a sea of paving with plane trees on a grid: it is a park now - lawns, a paved
+edge along the pavements, three paths from the monument's round plaza (to the tip at the crossing, east toward the
+diagonal, north to the boulevard) with iron lamps and benches along them, the plane trees, magnolias and flower beds on
+the lawns, two chess tables on the monument's plaza. **Under the El (RW2).** The station's concourse plaza
+gets its iron lamps, the drinks machine and the phone by the wall, bollards along its open side.
+**Life (NP3).** Three new activities (server/systems/activities.js): `market` - a keeper behind most stalls of a lane,
+two or three shoppers stood at a stall over its stock, a senior with a shopping trolley and another shopper strolling the
+lane (map.marketLanes); `terrace` - one or two sat at a cafe's table out on the pavement or a square, facing each other,
+now and then the waiter by them (map.terraceSpots: every Midtown cafe's and diner's tables, the Wedge's, the market's;
+rained off); `delivery` - the van's driver carrying crates to the shop's door and back, his mate at the van
+(map.deliverySpots). The dog walkers now walk commercial and apartment streets too (personas.js), as R1-A and NP3 have.
+**Footage.** A capture's shot comes alive from its first frame: server/capture.js start fills the activity spots round
+its place at once, in sight (activities.js `prefill`; `fill=0` to skip) - the live world still fills only what nobody
+sees. Eleven Midtown shots on the camera panel's "More (unreviewed)" (shared/scenes/shots.js: the hero corner at golden
+hour, noon and on a rainy night, Market Square by day and night, the Pier Street Market, the Wedge, under the El), each a
+locked frame exactly there (`xy`).
+Tests: test/world3server.test.js (Holly Street's lamps even and iron, the market lanes, terraces and deliveries),
+test/world3world.test.js (the square's 16 stalls, every garland between two posts, its two lanes).
