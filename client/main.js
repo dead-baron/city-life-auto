@@ -289,7 +289,7 @@ function connect() {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     onText(m);
   };
-  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } if (ev && REFUSED.has(ev.code)) { refusedAtDoor(ev.code); return; } if (ev && ev.code === 4016) { loggedOff(S.offSummary); return; } scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
+  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } if (ev && REFUSED.has(ev.code)) { refusedAtDoor(ev.code); return; } if (ev && ev.code === 4016) { loggedOff(S.offSummary); return; } if (ev && ev.code === 4000) { takenOver(); return; } scheduleReconnect('Connection lost'); };
   ws.onerror = () => {};
 }
 
@@ -327,6 +327,23 @@ function idleOut() {
   const b = $('play');
   b.disabled = false; b.textContent = 'RECONNECT';
   b.onclick = () => location.reload();
+}
+// Another tab or device took this character over (server players.js: the newest connection wins, the old one closes with
+// 4000). This page stops here - no retrying, which took the character back every few seconds while the other was played
+// (the owner, 11-15) - and PLAY HERE takes it over in turn. connectFailed off: coming back into view doesn't either.
+function takenOver() {
+  clearTimeout(S.reconnectT);
+  S.ws = null; S.welcomed = false; S.connectFailed = false; S.refusedWhy = null; S.lostAt = 0;
+  reconnecting(false);
+  $('title').classList.remove('hidden');
+  $('hud').classList.add('hidden');
+  $('t-resume').classList.add('hidden');
+  $('play').disabled = true;
+  $('t-status').textContent = 'Playing in another tab or on another device.';
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = 'PLAY HERE'; b.className = 't-restore';
+  b.onclick = () => { b.remove(); $('t-status').textContent = 'Connecting...'; S.reconnectIn = 1000; connect(); };
+  $('t-status').append(' ', b);
 }
 function scheduleReconnect(why, toTitle = false) {
   if (S.practice) return;

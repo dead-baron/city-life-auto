@@ -300,3 +300,13 @@ test('10. the movement audit doesn\'t flag the server\'s own moves (seats, doors
   }
   void fakeConn;
 });
+
+test('another tab or device taking the character over (4000): this page stops - no retrying it back - and PLAY HERE takes it again', () => {
+  const src = read('client/main.js');
+  assert.match(src, /ev\.code === 4000\) \{ takenOver\(\); return; \}/);
+  const body = src.slice(src.indexOf('function takenOver()'), src.indexOf('function scheduleReconnect('));
+  assert.ok(body.length > 0 && !/setTimeout|scheduleReconnect/.test(body), 'no retry timer');
+  assert.match(body, /S\.connectFailed = false/, 'coming back into view doesn\'t reconnect either (update.js onVisible)');
+  assert.match(body, /PLAY HERE/);
+  assert.match(read('server/systems/players.js'), /close\(4000, 'replaced'\)/, 'the newest connection wins on the server');
+});

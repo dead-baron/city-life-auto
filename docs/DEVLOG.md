@@ -24518,3 +24518,12 @@ server for a while and we can undelete it for them manually but otherwise it wil
   pad glyphs) are CC0 - no credit needed; the LICENSE files in the code stay. The Create account note no longer says
   "(drafts)".
 - Also: launch-auth and launch-review pinned the old age (17) and the refusal codes - updated.
+
+## 2026-11-15 - Another tab took over: the old one stops, PLAY HERE takes it back
+The owner, on his phone: "Playing in another tab" every few seconds - a desktop tab left open kept taking the character
+back. The server already lets the newest connection win (players.js closes the old one with 4000), but the page it
+closed retried every few seconds (in the background too) and took it over again, back and forth.
+- **The page that's taken over stops** (main.js takenOver): no retry timer, and coming back into view doesn't reconnect
+  either (connectFailed off: update.js onVisible). The title says "Playing in another tab or on another device." with a
+  **PLAY HERE** button that takes the character over in turn - so the tab you're playing in is the one that plays.
+- Test: launch-review (4000 doesn't retry; PLAY HERE).
