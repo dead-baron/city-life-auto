@@ -45,6 +45,7 @@ test('the Inventory\'s parts: the slots round the figure, the X on each, the tab
   assert.match(bag, /send\(\{ t: 'look', a: 'outfit', i \}\)/, 'a saved look');
   assert.match(bag, /import \{ person \} from '\.\/art2\/people\.js';/, 'the game\'s own character art, not the close-up renderer');
   assert.doesNotMatch(bag, /peopleclose/);
+  assert.match(bag, /if \(sig === lastSig && force !== true\) \{ stats\(m\); return; \}/, 'no rebuild under the pointer for a me message that changes nothing shown');
   const { loadout } = await import('../shared/loadout.js');
   assert.deepEqual(loadout(['fists', 'bat', 'grenade', 'shotgun', 'pistol', 'rod']), ['pistol', 'shotgun', 'bat', 'grenade'], 'Gun 1, Gun 2, Melee, Thrown');
   assert.deepEqual(loadout(['fists', 'knife']), [null, null, 'knife', null]);

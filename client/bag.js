@@ -442,9 +442,16 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
     return box;
   }
 
-  function render() {
+  let lastSig = '';
+  function render(force) {
     const m = me();
     if (!open || !m) return;
+    // the server's 'me' comes many times a second: rebuild only when something shown changed (a button swapped under
+    // the pointer between press and release loses the click), else just the bars
+    const st0 = looks();
+    const sig = JSON.stringify([m.weapons, m.weapon, m.inv, m.quick, m.cash, m.crew && m.crew.ids, m.blade, m.light, m.creel, st0 && st0.cur, st0 && st0.own, st0 && st0.saved, look(), pp(), tab, sort, sel, armDrop, showLooks, input.device, portrait()]);
+    if (sig === lastSig && force !== true) { stats(m); return; }
+    lastSig = sig;
     const all = things(m);
     el.querySelector('.bag').classList.toggle('stack', portrait());
     const cb = $q('.bag-cats');
@@ -472,13 +479,13 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
   return {
     get open() { return open; },
     show() {
-      open = true; dir = 0; render();
+      open = true; dir = 0; render(true);
       send({ t: 'look', a: 'get' });   // (what you own and your saved looks, fresh)
       clearInterval(timer);
       timer = setInterval(() => { if (!open) return; fr = (fr + 1) % 4; paint(); }, 420);   // (the idle: breathing, an instrument played)
     },
     hide() { open = false; sel = null; armDrop = ''; showLooks = false; clearInterval(timer); timer = 0; },
-    refresh: render,
+    refresh: () => render(),
     // the pad's B with something picked: back to the grid first
     back() { if (sel || showLooks) { sel = null; armDrop = ''; showLooks = false; render(); return true; } return false; },
     // the pad (client/main.js overlayPad): LT / RT the tabs, X equips or wears (or takes off), Y drops
