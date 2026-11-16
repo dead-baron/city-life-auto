@@ -178,6 +178,7 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
   // /admin/api: what the page polls - now (who's on: no account ids, no addresses - each row a ref good for this session,
   // /admin/go?ref= opens their page), trends (the rolling buckets: analytics.js trends, every window's totals and the asked
   // window's chart), where (countries and regions), moderation (the review list, bug reports, the admin log's latest), server.
+  const NOFLAGS = new Map();
   const DEV = { phone: 'phone', tablet: 'tablet', desktop: 'desktop', console: 'console', touch: 'phone' };
   function refOf(w, pid) {
     const R = (w.s.refs ||= { by: new Map(), of: new Map() });
@@ -189,7 +190,7 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
     const list = [], doing = {}, dist = {}, devs = {};
     if (world) for (const q of world.players.values()) {
       if (!q.conn) continue;
-      const x = SP ? SP.info(q.pid) : null, ped = q.ped;
+      const x = SP ? SP.info(q.pid, NOFLAGS) : null, ped = q.ped;   // (no flags needed here: the review list isn't scanned per player)
       const dv = DEV[q.devKind] || (q.device ? String(q.device).split(' ')[0] : '') || '?';
       const what = x ? x.doing : '';
       const row = { ref: refOf(w, q.pid), n: q.name, gu: q.guest ? 1 : 0, role: accounts.role(q.pid) || '', fo: q.founder ? 1 : 0, d: x ? x.district : '', c: q.cc ? q.cc.c : '', r: q.cc && q.cc.r ? q.cc.r : '', doing: what, sess: q.anStart ? now() - q.anStart : 0, dev: dv, w: q.wanted || 0, hp: ped && ped.maxHp ? Math.round((ped.hp / ped.maxHp) * 100) : 0, dm: q.devMode ? 1 : 0 };
