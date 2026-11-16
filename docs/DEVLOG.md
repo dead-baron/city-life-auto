@@ -24541,9 +24541,12 @@ shop's counter, and the custody panel over the whole screen with an escape that 
   and the bank archetype's name plaque (CANVAS SAVINGS BANK, put up when the archetype's portico would say BANK) stayed
   under it. statics.js `oneName` now goes over every board that says a name on a front - the shop's sign, the portico's
   lettering (when it fits in the stone), the plaques and neon names - and keeps the first; a later one saying the same
-  name goes (a portico saying the shop sign's name keeps its columns, loses its words). The placement lint has a new
-  row, **nameTwice**, over every front of the built world (also across the sections of one face); test/fixwave.test.js
-  checks oneName itself. Rekeys the art hash (statics.js); the world hash is unchanged.
+  name goes (a portico saying the shop sign's name keeps its columns, loses its words). The lint then found 44 more:
+  long buildings drawn in sections (cut every few tiles, a mall's units) gave every section the building's shop sign -
+  FreshHub Grocery, Stadium Megastore, Westport Galleria three times along one front. `oneNameAcross` keeps the name on
+  the middle section of a face and drops it (with its sign glow) from the others. The placement lint has a new row,
+  **nameTwice**, over every front of the built world (one section, or several along the same face; allowed 0);
+  test/fixwave.test.js checks oneName and oneNameAcross themselves. Rekeys the art hash (statics.js); the world hash is unchanged.
 - **Cops round the counter.** A walk-in's counter blocks people but not sight, so the foot chase's straight line
   (npc.js footWay: `m.los` clear) ran officers into it and sidestep only slid them along it. footWay now walks round
   whatever stands in the room (npc.js `roomWay`: a breadth-first search over the walk-in's floor, the doorway row
@@ -24562,3 +24565,15 @@ shop's counter, and the custody panel over the whole screen with an escape that 
   and a 40% kick (4-5 stars unchanged in spirit: 5% / 1% at 60 px/s). test/custody.test.js: at 3 stars the window
   opens as it slows, stays open as it speeds off, a press in it gets out, and it closes after windowS; and hud.js has no
   IN CUSTODY bar. The Guide's Busted entry says the button turns red and for how long (BREAK_CAR.windowS).
+- **No fire from a blow.** Melee can't light anyone (burning.js's list: a blast, a fire arrow, the flamethrower, your
+  vehicle going up, walking into fire), and a fresh World v3 with a crowbar on ten corner stores' clerks and a cop's
+  baton and fists on you, in the rain, lit nobody (test/meleefire.test.js). What the live world had that a fresh one
+  doesn't: fire calls' spot fires. A kitchen fire's place is a food shop's counter spot - a corner store's is its floor
+  in front of the counter - and a dumpster's its bin; a spot fire grows and never burns out by itself, and nothing put
+  it out when its call ended unanswered: a shift given up, a call run out of time (FIRE.callS), the debug menu's
+  firefighter call dropped for the next. So it burned on, and anyone knocked or running across it caught (moving through
+  a burning tile lights you: firefighter.js stepFires), and someone alight lights whoever is knocked into them - the
+  clerk the crowbar sent running, the player the officer's baton put down beside them. Now a call takes its dumpster
+  or kitchen fire with it (firefighter.js outWith, from endCall and letGo), and a spot fire with no call left goes out
+  at its next step. Tests: firefighter.test.js (a shift given up, a call run out of time: no fire left), meleefire.test.js
+  (no stray fire survives, and a knockdown on that spot lights nobody).

@@ -122,6 +122,7 @@ function stepFires(world, st) {
         if (Math.hypot(nx - f.ox, ny - f.oy) <= G.maxR) light(world, nx, ny, 0, f.call, f);
       }
     } else {
+      if (!(world.fireCalls && world.fireCalls.has(f.call))) { putOut(world, f, false); continue; }   // (a spot fire is its call's: no call, no fire - outWith)
       f.h = Math.min(f.h0 * S.max, f.h + S.grow * f.h0 * st);   // (left alone it grows)
       if (f.h >= f.h0 * S.spreadAt && world.rand() < 0.3 * st) {
         const a = world.rand() * Math.PI * 2;

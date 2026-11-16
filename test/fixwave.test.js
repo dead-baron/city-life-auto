@@ -110,6 +110,12 @@ test('one name on a front, every board (the owner, 11-15: Canvas Savings Bank - 
   // a portico that says the shop sign's name loses its lettering, not its columns
   const pc = oneName({ w: 360, shop: { sign: { text: 'MUSEUM' } }, portico: { x: 40, w: 280, cols: 6, text: 'MUSEUM' } });
   assert.ok(pc.portico && !pc.portico.text, 'the columns stay, the words go');
+  // a long front drawn in sections, each given the building's sign (FreshHub Grocery three times): the middle one keeps it
+  const { oneNameAcross } = await import('../client/art2/game/statics.js');
+  const sec = (tx, mid, text) => ({ s: { tx, ty: 10, th: 8, mid }, spec: { w: 224, shop: { kind: 'grocery', sign: { text } } }, lights: [[0, 0, 0, 0, [1, 1, 1], 1, 'sign']] });
+  const L = oneNameAcross([sec(0, false, 'FRESHHUB GROCERY'), sec(7, true, 'FRESHHUB GROCERY'), sec(14, false, 'FreshHub Grocery'), sec(21, false, 'CORNER DELI')]);
+  assert.deepEqual(L.map((e) => e.spec.shop.sign ? e.spec.shop.sign.text : null), [null, 'FRESHHUB GROCERY', null, 'CORNER DELI'], 'one FRESHHUB GROCERY, on the middle section; another business keeps its own');
+  assert.equal(L[0].lights.length, 0, 'the dropped sign\'s glow goes with it');
 });
 
 test('a player\'s name tag rides on the vehicle they\'re in - an aircraft drawn up by its height carries it up there', () => {

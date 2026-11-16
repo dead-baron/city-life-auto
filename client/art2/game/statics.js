@@ -1121,6 +1121,26 @@ export function frontNames(spec) {
   for (const pq of spec.plaques || []) if (pq && pq.text) L.push({ t: pq.text, k: 'plaque' });
   return L;
 }
+// One name along a front drawn in several sections (a long building cut every few tiles, a mall's units): each section's
+// spec gives the building's shop its sign, so FreshHub Grocery said FRESHHUB GROCERY three times along one front (the
+// placement lint's nameTwice, 11-15). The middle section keeps the name, then the rest from the west; a board saying it
+// again on another section of the same face goes (a shop sign with its glow). list: [{ s, spec, lights }] -> list
+export function oneNameAcross(list) {
+  if (list.length < 2) return list;
+  const faces = new Map();
+  for (const e of list) { if (!e.spec || e.s.vox || e.s.frame) continue; const k = e.s.ty + e.s.th; let l = faces.get(k); if (!l) faces.set(k, (l = [])); l.push(e); }
+  for (const L of faces.values()) {
+    if (L.length < 2) continue;
+    const said = [];
+    for (const { spec, lights } of [...L.filter((e) => e.s.mid), ...L.filter((e) => !e.s.mid)]) {
+      const sg = spec.shop && spec.shop.sign;
+      if (sg && sg.text) { if (said.some((t) => sameName(t, sg.text))) { delete spec.shop.sign; if (lights) for (let j = lights.length - 1; j >= 0; j--) if (lights[j][6] === 'sign') lights.splice(j, 1); } else said.push(sg.text); }
+      if (porticoFits(spec.portico)) { if (said.some((t) => sameName(t, spec.portico.text))) spec.portico = { ...spec.portico, text: null }; else said.push(spec.portico.text); }
+      if (spec.plaques) spec.plaques = spec.plaques.filter((pq) => { if (!pq || !pq.text) return true; if (said.some((t) => sameName(t, pq.text))) return false; said.push(pq.text); return true; });
+    }
+  }
+  return list;
+}
 // One name on a front: the first board to say it keeps it, a later one saying it again goes (the owner, 11-12: "OLD TOWN
 // INFIRMARY" twice, one under the other; 11-15: Canvas Savings Bank's portico cut CANVAS SAVINGS and a CANVAS SAVINGS BANK
 // board under it - the bank archetype's name plaque, kept when the hand plan put its own name in the portico). A portico
@@ -1627,8 +1647,8 @@ function addBuildings(c, I) {
     const A = archOf(c, b);
     const D = c.dist((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE);
     const secs = sectionsOf(c, b, A);
-    for (const s of secs) {
-      const { spec, kit, lights, up } = specOf(c, b, A, s, D);
+    const built = oneNameAcross(secs.map((s) => ({ s, ...specOf(c, b, A, s, D) })));   // (one name along a front, however many sections it's drawn in)
+    for (const { s, spec, kit, lights, up } of built) {
       const x0 = s.tx * TILE, y1 = (s.ty + s.th) * TILE, w = s.tw * TILE, d = s.th * TILE;
       if (!s.vox && !s.frame && s.south) dressPlan(spec, { id: b.id, k: s.k, st: D.style, tier: D.tier, A, H: buildingH(spec), w, walkIn: !!s.walk });   // (the facade's dressing by the district: facadedress.js)
       let it;

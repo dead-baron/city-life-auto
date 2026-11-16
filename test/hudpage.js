@@ -110,7 +110,7 @@ const VST = { veh: 'drive', air: 'air', horse: 'horse', boat: 'boat', board: 'bo
 if (FL.inVeh) { $('vchip').innerHTML = '<b>' + (sc.st === 'air' ? 'Skylark Helicopter' : 'Police Cruiser') + '</b>' + (sc.st === 'air' ? '<span class="vc-alt">ALT 31 M</span>' : '') + '<span class="vc-spd">88 KM/H</span>'; $('vchip').classList.remove('hidden'); }
 if (VST) { $('hints').innerHTML = HI.hintHtml(HI.hintStrip(VST, sc.dev)); $('hints').classList.remove('off'); }
 if (sc.st === 'rob') { $('rob').classList.remove('hidden'); $('rob-take').textContent = 'HOT $1,250 · till $800'; $('rob-fill').style.width = '40%'; }
-if (sc.st === 'custody') { $('trainbar').classList.remove('hidden'); $('trainbar').classList.add('custody'); $('tb-where').textContent = 'IN CUSTODY'; $('tb-next').textContent = 'Held on the ground - a patrol car is on its way'; }
+if (sc.st === 'custody') { $('trainbar').classList.remove('hidden'); $('trainbar').classList.add('custody', 'fight'); $('tb-where').textContent = 'FIGHT BACK!'; $('tb-next').textContent = 'Mash or hold FIRE to throw them off · harder!'; }   // (the struggle's meter: custody itself has no bar since 11-15 - client/hud.js)
 // fishing (UI-7): the fight's meter in its spot (client/fishing.js draws it in #fishspot's box) and the big cue
 if (sc.st === 'fish') { $('fishspot').classList.add('on'); $('fishbar').innerHTML = 'STRIKE! ' + glyph; $('fishbar').classList.remove('hidden'); }
 if (sc.st === 'police') { $('cruiser-hint').textContent = T.cruiser; $('cruiser-hint').classList.remove('hidden'); }
