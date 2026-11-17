@@ -106,14 +106,23 @@ function taskMenu(world, p, poi, R) {
 // the job computer: the work near you, and the ad when ads are on
 function pcMenu(world, p, poi) {
   const opts = [];
-  let cards = [];
-  try { cards = whatsnext && whatsnext.appOn(p) ? whatsnext.refresh(world, p) || [] : []; } catch { cards = []; }
-  for (const c of cards) opts.push({ id: `jl:${c.id}`, label: c.title, note: [c.pay ? `about ${money(c.pay)}` : '', c.sub || ''].filter(Boolean).join(' · ').slice(0, 90) });
+  const cards = listings(world, p);
+  for (const c of cards) opts.push({ id: `jl:${c.id}`, label: c.title, note: [c.pay ? `about ${money(c.pay)}` : '', c.sub && !c.sub.startsWith('$') ? c.sub : ''].filter(Boolean).join(' · ').slice(0, 90) });
   const ad = adRow(world, p);
   if (ad) opts.push(ad);
   opts.push({ id: 'close', label: 'Log off' });
   const sub = cards.length ? 'Work in town that suits you - pick one to put it on your map. Your phone\'s Jobs app has the full board.' : 'Your phone\'s Jobs app has the full board of work in town.';
   return { t: 'menu', poi: poi.id, title: 'Job computer', sub, opts, ...cashOf(p), ...(ad && !ad.dis ? { ad: { mode: adsMode(world), client: world.ads.client || '', tk: p.adTk.tk } } : null) };
+}
+// the listings: the honest work among the "What's next" cards for you (no crime - this is the Employment Center; not
+// its own office work), nearest first, at most JOB_LIST
+const JOB_LIST = 4;
+function listings(world, p) {
+  if (!whatsnext || !whatsnext.appOn(p) || !p.ped) return [];
+  let all = [];
+  try { all = whatsnext.candidates(world, p); } catch { return []; }
+  const d = (c) => (Number.isFinite(c.x) ? Math.hypot(c.x - p.ped.x, c.y - p.ped.y) : 1e9);
+  return all.filter((c) => c.career !== 'crime' && c.src !== 'jobcenter' && (Number.isFinite(c.x) || (c.btn && c.btn.k === 'accept' && c.accept))).sort((a, b) => d(a) - d(b)).slice(0, JOB_LIST);
 }
 // the ad's row, or null (ads off, not yet - a first session, the day's all used)
 export function adState(world, p) {
@@ -156,9 +165,10 @@ export function onMenu(world, p, poiId, opt) {
   if (!near(world, p, poi)) { world.notify(p, 'You walked away from the desk.', 'warn'); if (p.office) end(world, p, 'away'); return true; }
   if (poi.kind === 'jobpc') {
     if (opt.startsWith('jl:')) {
-      const r = whatsnext ? whatsnext.handle(world, p, { a: 'nextgo', id: opt.slice(3) }) : null;
-      if (r && r.err) world.notify(p, r.err, 'warn');
-      else if (r && r.way) { send({ t: 'ftue', a: 'mark', x: r.way.x, y: r.way.y, label: r.way.label }); world.notify(p, `${r.way.label} - it's on your map.`, 'info'); }
+      const c = listings(world, p).find((q) => q.id === opt.slice(3));
+      const err = !c ? 'That one\'s gone - here\'s what\'s on now.' : c.btn && c.btn.k === 'accept' && c.accept ? c.accept(world, p) : null;
+      if (err) world.notify(p, err, 'warn');
+      else if (c && Number.isFinite(c.x)) { send({ t: 'ftue', a: 'mark', x: Math.round(c.x), y: Math.round(c.y), label: c.title }); world.notify(p, `${c.title} - it's on your map.`, 'info'); }
       send(menu(world, p, poi));
       return true;
     }

@@ -887,8 +887,12 @@ FIT.jobs = (c) => {
   wall(c, 'files', c.tillX + 60, Math.min(c.X1 - 6, c.tillX + 126), 0, 34);
   sign(c, ['NOW HIRING', 'JOBS'], '#ffd24a', c.tillX, 'civic');
   const regs = [...c.regs].sort((p, q) => p.side - q.side), [a, b] = regs.length > 1 ? regs : [regs[0], null];
-  if (a) aisles(c, a, 18, 26, (x0, y, x1, y1) => { const w = Math.min(44, x1 - x0); const p = put(c, 'desk', x0, y, x0 + w, y1, 18, { c: '#8a8e96', pc: 1, lampOn: false }); if (p && x1 - x0 >= 96) put(c, 'desk', x0 + 52, y, x0 + 96, y1, 18, { c: '#8a8e96', pc: 1 }); return p; });
+  // (someone at a few of the computers - never the first, the job computer you sit at)
+  const sit = (p, k) => { if (p && k > 0 && r() < 0.45) shopper(c, p.x0 + 20, p.y1 + 4, -Math.PI / 2, 'sit'); return p; };
+  let nd = 0;
+  if (a) aisles(c, a, 18, 26, (x0, y, x1, y1) => { const w = Math.min(44, x1 - x0); const p = sit(put(c, 'desk', x0, y, x0 + w, y1, 18, { c: '#8a8e96', pc: 1, lampOn: false }), nd++); if (p && x1 - x0 >= 96) sit(put(c, 'desk', x0 + 52, y, x0 + 96, y1, 18, { c: '#8a8e96', pc: 1 }), nd++); return p; });
   if (b) {
+    if (b.x1 - b.x0 >= 60 && b.y1 - b.y0 >= 50) { const x = b.side > 0 ? b.x1 - 62 : b.x0 + 2; put(c, 'rug', x, b.y0 + 14, x + 60, b.y0 + 44, 1, { c: '#2e4a6e', c2: '#c8a050', flat: true }); put(c, 'sofa', x + 10, b.y0 + 16, x + 50, b.y0 + 30, 16, { c: '#3a62a8' }); if (r() < 0.6) shopper(c, x + 24, b.y0 + 24, Math.PI / 2, 'sit'); }
     put(c, 'chairs', b.side > 0 ? b.x1 - 54 : b.x0, b.y1 - 12, b.side > 0 ? b.x1 : b.x0 + 54, b.y1, 18, { c: '#3a62a8' });
     if (r() < 0.7) shopper(c, b.side > 0 ? b.x1 - 46 : b.x0 + 8, b.y1 - 6, -Math.PI / 2, 'sit');
     const q = corner(b, 10, 8, false); put(c, 'box', q[0], b.y0, q[2], b.y0 + 8, 24, { c: '#e2e4e6', cooler: true });

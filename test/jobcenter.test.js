@@ -145,6 +145,8 @@ test('the job computer: the listings with ads off - no ad row, no ticket, no Goo
   assert.ok(!m.opts.some((o) => o.id.startsWith('ad:')), 'no ad with ads off');
   assert.equal(m.ad, undefined);
   assert.ok(m.opts.some((o) => o.id === 'close'));
+  assert.ok(!m.opts.some((o) => /steal|\brob|heist|fence/i.test(o.label)), 'honest work only on the Employment Center\'s computer');
+  assert.ok(m.opts.filter((o) => o.id.startsWith('jl:')).length <= 4);
   // a view reported anyway: nothing
   const c0 = p.profile.cash;
   jobcenter.onAd(w, p, { a: 'start', tk: 'x' }); run(w, JOBAD.minS + 1); jobcenter.onAd(w, p, { a: 'viewed', tk: 'x' });
