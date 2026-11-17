@@ -40,6 +40,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Start fresh on a signed-in account resets progress and keeps the account; kicked or banned pages stop reconnecting. (11-04; decisions-11-04)
 - /perf and /clienterrors behind the owner/admin login (clients can still post errors). (11-04; decisions-11-04)
 
+- App icon: the neon logo (City Life over Auto, the skyline) on a navy-to-magenta dusk, from the title art (assets/icons; option A of four). (11-17; chat)
 ## Accounts, sign-in and privacy
 - One account, many sign-ins; our own account record with providers linked. (11-03; launch-plan 11-03)
 - Sign-ins: Guest, Email + password, Google, Discord. Reddit and email magic links OUT. (11-12; DEVLOG 11-12) - SUPERSEDES the 11-03 lineup (Google, Discord, magic link).

@@ -25023,3 +25023,10 @@ avatar as a character he plays in admin mode, with his presence known; the admin
 - Tests: admin-console (the console's access, CSP, its JSON's privacy, the refs; the buckets, their bounds and a restart;
   the IP table and the time zones; the panel's commands - powers, limits, the log; the founder's crown, switch and art; the
   Beta plate off the tags); sinks and seasons updated for the card plate.
+
+## 2026-11-17 - The app icon: the neon logo at dusk
+- The owner picked option A of four candidates drawn from the title art: the neon logo (the skyline, "City Life" over
+  "Auto") on a navy sky fading to magenta. It replaces the old purple-circle logo in assets/icons (the favicon, the
+  home-screen and install icons, the maskable pair with the logo inside the safe circle, the Apple touch icon).
+- 256 colors, dithered (no banding in the dusk), the transparency kept: icon-512 153 -> 104 KB; the title's assets
+  budget holds (test/perf.test.js).
