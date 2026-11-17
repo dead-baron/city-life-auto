@@ -29,6 +29,7 @@ import { lint, LINT_ALLOW } from '../tools/placementlint.mjs';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const L = lint(M);
+console.log('lint rows', JSON.stringify(Object.fromEntries(Object.entries(L.rows).map(([k, l]) => [k, l.length]))));
 const say = (rows) => rows.slice(0, 10).map((r) => `${r.what} at ${Math.round(r.x / 32)}, ${Math.round(r.y / 32)}${r.why ? ` (${r.why})` : ''}`).join('; ');
 
 for (const k of Object.keys(L.rows)) {

@@ -951,7 +951,7 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   else if (L && fitsAt(sides[0])) oxAt = clearOf(sides[0]) ? sides[0] : fitsAt(sides[1]) && clearOf(sides[1]) ? sides[1] : null;
   if (L && oxAt !== null) {   // a neon OPEN in the window
     const col = shop.openSign.col || [255, 60, 70];
-    const ox = oxAt, oy = winTop + 4;
+    const ox = oxAt, oy = winTop + (shop.awning ? 15 : 4);   // (under an awning: below its scallops - it's painted after, over the window's head - 11-16, the charter office's OPEN cut in half)
     G.openBox = { x: ox, y: oy, w: bw, h: L.h * 2 };   // (where it went: the placement lint's signCovered)
     const P = { p: [20, 14, 26], i: col.map((v) => Math.min(255, Math.round(v * 0.5 + 128))), h: [70, 140, 255], f: [70, 140, 255], neon: true };
     paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, ox, oy, { lit: 'neon', night });

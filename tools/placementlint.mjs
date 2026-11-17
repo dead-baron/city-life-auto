@@ -97,15 +97,15 @@ export const LINT_ALLOW = {
   // the street's furniture standing in front of a shop's words - an el's piers, a shelter's or a stall's canopy, a phone
   // booth, a porch's posts, a lamp, a flag or power pole, a run of lights (shared/festoon.js's lint is its own) - and the
   // badge of a place at a wall over its window's OPEN
-  signCovered: SIGN_COVERED_N,
+  signCovered: 208,
   // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
   // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
   // the most part (West Hills', Southside's, Old Town's lots)
-  doorOnGrass: DOOR_ON_GRASS_N,
+  doorOnGrass: 372,
   // the places you'd walk into still served at the wall: a building too shallow for a room (Pelican Key Charters, a few
   // of World v3's added shop rows), a row shared with a place that isn't a shop (Egret Marsh Outfitters' and the Marsh
   // Bait & Tackle's), a lot building with a home or a bay behind the same front, the hand-built Greenfield Park shops
-  wallOnly: WALL_ONLY_N,
+  wallOnly: 17,
 };
 export const CANOPY_MAX = [4 * TILE, 2 * TILE], ALLEY_GAP = 26;
 const CANOPIES = new Set(['porte', 'canopy', 'pergola']);

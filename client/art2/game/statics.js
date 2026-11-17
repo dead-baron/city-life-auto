@@ -1128,7 +1128,7 @@ function stylePlaque(pq, A, seed) {
 // The cash machines set into the fronts (map.js wallAtm: an 'atmw' 5 px out from the wall's foot) and the planters stood
 // against them, by the row of the wall's foot -> a front's [x0, x1] spans of them (facade px from its section's west
 // edge, the thing's width and a margin)
-const ATM_ROWS = new WeakMap();
+const ATM_ROWS = new WeakMap(), PLANTER_REACH = 44;
 export function frontAtms(M, tx, footTy, tw) {
   let I = ATM_ROWS.get(M);
   if (!I) {
@@ -1137,9 +1137,9 @@ export function frontAtms(M, tx, footTy, tw) {
     for (const p of M.props || []) {
       if (!p) continue;
       if (p.t === 'atmw' && p.inside === undefined) add(Math.floor((p.y - 5) / TILE), p.x, 21);
-      // (and a flower box or a potted shrub stood against the front - plantFor: a planter on the paving - in its first
-      // 22 px: the OPEN not behind it either)
-      else if (POTTED.test(p.t) && p.y % TILE <= 22) add(Math.floor(p.y / TILE), p.x, 26);
+      // (and a flower box or a potted shrub stood in front - plantFor: a planter on the paving - within PLANTER_REACH px
+      // of the wall's foot, tall enough to reach the window: the OPEN not behind it either)
+      else if (POTTED.test(p.t) || /^planter_/.test(p.t)) for (let ty = Math.floor((p.y - PLANTER_REACH) / TILE); ty <= Math.floor(p.y / TILE); ty++) if (p.y >= ty * TILE) add(ty, p.x, 26);
     }
     ATM_ROWS.set(M, I);
   }
