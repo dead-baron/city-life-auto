@@ -14,18 +14,25 @@ import { IN } from '../shared/input.js';
 import { DT, T } from '../shared/constants.js';
 import { ugMapOf } from '../shared/underground.js';
 import { glyph } from './glyphs.js';
-import { drawFish } from './fishart.js';
+import { drawFish, fishSprite } from './fishart.js';
 
 const { PH } = FS;
 const wet = (t) => t === T.WATER || t === T.DEEP;
 const fmt = (n) => Math.round(n).toLocaleString('en-US');
-const SILHOUETTE = { shape: 'bass', col: null };
+export const ROD_TIP = [44, 40];   // (the rod's tip from the feet, world px: out ahead, up)
+const SILHOUETTE = FS.FISH_BY_ID.bass;   // (the fish on the line, a silhouette till it's landed)
 
 export class FishView {
   constructor(S) { this.S = S; this.F = null; this.prev = 0; this.bits = new Map(); this.lines = new Map(); this.cardAt = 0; this.card = null; this.phSeen = 0; this.land = null; }
   // what the server sent while this was loading
   drain() { const q = this.S.fishQ || []; while (q.length) { const x = q.shift(); if (x.t === 'fish') this.showCard(x); else this.onEvent(x); } }
   get P() { const m = this.S.me && this.S.me.fishing; return m && m.P ? m.P : null; }
+  // a line out from this person's rod (yours: cast and not yet done; another's: from the 'cast' event) - the page draws it,
+  // tip to bobber, so their sprite holds the rod out with none of its own (client/main.js fishFrame)
+  lineOut(id) {
+    if (id === this.S.myPedId) { const F = this.F; return !!F && F.ph >= PH.WAIT && F.ph < PH.DONE; }
+    return this.lines.has(id);
+  }
 
   // ---- your own line: predicted --------------------------------------------------------------------------------------
   // the snapshot: the server's fight at the input it last took, then the inputs it hasn't had, again
@@ -103,7 +110,9 @@ export class FishView {
   // a line from the rod's tip to the bobber (st 0 bobbing, 1 diving, 2 a fish on: taut, the fish thrashing about the
   // end - fy: where it is on its track, your own)
   line(g, e, bx, by, now, st, L, fy) {
-    const a = e.ra || 0, tx = e.rx + Math.cos(a) * 20, ty = e.ry + Math.sin(a) * 20 - 30;
+    // (from the rod's tip: held out over the water - the fishing pose's frame 2, client/main.js fishFrame - about 44 px out
+    // ahead of the feet and 40 up)
+    const a = e.ra || 0, tx = e.rx + Math.cos(a) * ROD_TIP[0], ty = e.ry + Math.sin(a) * ROD_TIP[0] * 0.85 - ROD_TIP[1];
     let ex = bx, ey = by;
     if (st === 2) {   // (the fish on: off to one side and back, as it runs)
       const k = fy === null ? Math.sin(now * 5 + e.id) * 0.5 : fy - 0.5, nx = -Math.sin(a), ny = Math.cos(a);
@@ -198,28 +207,75 @@ export class FishView {
     g.fillStyle = `hsl(${F.prog * 120},85%,52%)`; g.fillRect(mx + 1, y + th - mh, 10, mh);
     g.restore();
   }
-  showCard(m) { this.card = m; this.cardAt = performance.now() / 1000; }
-  // the catch card: the fish, its name and weight, the log's news, what it's worth
+  showCard(m) { this.card = m; this.cardAt = performance.now() / 1000; this.cardBox = null; }
+  // what the catch card keeps clear of, on the screen: the corners' HUD, the notices and the job card at the top (their
+  // boxes in the canvas's px), and how much of the bottom the thumbs' buttons hold
+  cardObstacles() {
+    const c = this.cv || (this.cv = document.getElementById('view')), o = c ? c.getBoundingClientRect() : { left: 0, top: 0 }, out = [];
+    // (the boxes themselves, not the corners' columns round them - those can run the screen's height)
+    for (const id of ['radar-wrap', 'rclock', 'status', 'hud-btns', 'hud-stat', 'toasts', 'job', 'trainbar', 'vchip']) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      for (const q of el.id === 'toasts' ? el.children : [el]) {
+        const r = q.getBoundingClientRect();
+        if (r.width > 2 && r.height > 2 && getComputedStyle(q).visibility !== 'hidden' && +getComputedStyle(q).opacity !== 0) out.push({ l: r.left - o.left, t: r.top - o.top, r: r.right - o.left, b: r.bottom - o.top });
+      }
+    }
+    return { obs: out, bottom: document.body.classList.contains('touch') ? (document.body.classList.contains('portrait') ? 0.3 : 0.22) : 0.06 };
+  }
+  // the catch card: the fish, its name and weight, the log's news, what it's worth - placed clear of the HUD (cardLayout)
   drawCard(g, W, H, now0) {
     const m = this.card, f = FS.FISH[m.f], t = performance.now() / 1000 - this.cardAt;
     if (!f || t > 4.2) { this.card = null; return; }
-    const a = t < 0.2 ? t / 0.2 : t > 3.7 ? (4.2 - t) / 0.5 : 1, leg = f.rare === 5;
-    const cw = Math.min(360, W - 32), ch = 200, cx = W / 2, cy = H * 0.3, x = cx - cw / 2, y = cy - ch / 2;
+    if (!this.cardBox || now0 - (this.cardBoxAt || 0) > 0.25 || this.cardBox.W !== W || this.cardBox.H !== H) { const ob = this.cardObstacles(); this.cardBox = { ...cardLayout(W, H, ob.obs, ob.bottom), W, H }; this.cardBoxAt = now0; }
+    const B = this.cardBox, a = t < 0.2 ? t / 0.2 : t > 3.7 ? (4.2 - t) / 0.5 : 1;
     g.save();
     g.globalAlpha = Math.max(0, a);
-    g.fillStyle = 'rgba(12,20,30,.9)'; rr(g, x, y, cw, ch, 12); g.fill();
-    g.strokeStyle = leg ? '#ffd34a' : f.rare >= 4 ? '#c890ff' : f.rare >= 3 ? '#58b8ff' : '#c8a060'; g.lineWidth = 3; rr(g, x, y, cw, ch, 12); g.stroke();
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    const banner = m.wr ? 'NEW RECORD!' : m.nw ? 'NEW SPECIES!' : m.pb ? 'PERSONAL BEST!' : leg ? 'LEGENDARY!' : '';
-    if (banner) { g.font = '700 14px "Barlow Condensed", sans-serif'; g.fillStyle = leg || m.wr ? '#ffd34a' : '#7fe07f'; g.fillText(banner, cx, y + 18); }
-    const L = Math.min(cw * 0.62, 70 + Math.min(1, Math.log10(1 + m.lb) / 3) * 160), sway = Math.sin(now0 * 3) * 0.04;
-    g.save(); g.translate(cx, y + 74); g.rotate(sway); drawFish(g, f, 0, 0, L, { glow: leg ? '#ffd34a' : null }); g.restore();
-    g.font = '700 20px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = '#fff'; g.fillText(f.name, cx, y + 128);
-    g.font = '700 16px "Barlow Condensed", sans-serif'; g.fillStyle = '#dde';
-    g.fillText(`${m.lb} lb · ${'★'.repeat(f.rare)}${'☆'.repeat(Math.max(0, 5 - f.rare))} ${FS.RARITY[f.rare]}`, cx, y + 152);
-    g.font = '600 14px "Barlow Condensed", sans-serif'; g.fillStyle = '#bcd';
-    g.fillText(`about $${fmt(m.v)} at the fish market · ${m.n} of ${m.of} kinds in your log`, cx, y + 176);
+    g.translate(B.x, B.y); g.scale(B.s, B.s);
+    drawCardBody(g, B.w, m, f, now0);
     g.restore();
   }
+}
+// The catch card's box: { x, y, w (its own width, unscaled), s (its scale) } - below whatever sits over its column at the
+// top (the corners' HUD, the notices, the job card: obs, boxes in screen px), in the clear between the corners when
+// there's room there (a phone held sideways), above the thumbs' share of the bottom (bottom: a fraction of H); scaled
+// down when the room is short, never cut (the owner's shot, 11-16: "NEW RECORD!" behind the notice)
+export const CARD_H = 206;
+export function cardLayout(W, H, obs, bottom = 0.06) {
+  const gap = 8, floor = H * (1 - bottom);
+  obs = obs.filter((q) => q.t < H * 0.45 && q.b - q.t < H * 0.6);   // (only what sits at the top)
+  // the clear column between the top corners' HUD, if it's wide enough for a card
+  const tl = obs.filter((q) => q.l < W * 0.35 && q.t < H * 0.5), tr = obs.filter((q) => q.r > W * 0.65 && q.t < H * 0.5);
+  const L = tl.length ? Math.max(...tl.map((q) => q.r)) + gap : gap, R = tr.length ? Math.min(...tr.map((q) => q.l)) - gap : W - gap;
+  let x0 = gap, x1 = W - gap;
+  if (R - L >= 280) { x0 = L; x1 = R; }
+  const w = Math.min(360, x1 - x0), cx = (x0 + x1) / 2;
+  const over = obs.filter((q) => q.r > cx - w / 2 && q.l < cx + w / 2 && q.t < H * 0.6);
+  const top = (over.length ? Math.max(...over.map((q) => q.b)) : 0) + gap;
+  const room = Math.max(60, floor - top), s = Math.min(1, room / CARD_H, (x1 - x0) / w);
+  return { x: Math.round(cx - (w * s) / 2), y: Math.round(top), w, h: CARD_H, s };
+}
+// the card itself, at (0, 0), w wide and CARD_H high: the rim in the fish's rarity, the news, the fish, its name, its
+// weight and stars, what it's worth - every line fitted to the card's width
+function drawCardBody(g, cw, m, f, now0) {
+  const leg = f.rare === 5, ch = CARD_H, cx = cw / 2;
+  g.fillStyle = 'rgba(12,20,30,.92)'; g.fillRect(0, 0, cw, ch);
+  g.strokeStyle = leg ? '#ffd34a' : f.rare >= 4 ? '#c890ff' : f.rare >= 3 ? '#58b8ff' : '#c8a060'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, cw - 3, ch - 3);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const font = (weight, z, family) => `${weight} ${z}px ${family}`;   // (the families below: CLA Pixel, Barlow Condensed)
+  const fit = (text, size, weight, family, max) => { let z = size; g.font = font(weight, z, family); while (z > 10 && g.measureText(text).width > max) { z--; g.font = font(weight, z, family); } return z; };
+  const banner = m.wr ? 'NEW RECORD!' : m.nw ? 'NEW SPECIES!' : m.pb ? 'PERSONAL BEST!' : leg ? 'LEGENDARY!' : '';
+  if (banner) { fit(banner, 16, 700, '"CLA Pixel", "Barlow Condensed", sans-serif', cw - 24); g.fillStyle = leg || m.wr ? '#ffd34a' : '#7fe07f'; g.fillText(banner, cx, 18); }
+  // the fish: bigger the heavier, in a box under the news (its pixels whole: client/fishart.js)
+  const sp = fishSprite(f), boxW = cw * 0.7, boxH = 74;
+  const want = 90 + Math.min(1, Math.log10(1 + m.lb) / 3) * 150, L = Math.min(want, boxW, boxH * sp.w / sp.h);
+  g.save(); g.translate(cx, 76); g.rotate(Math.sin(now0 * 3) * 0.03); drawFish(g, f, 0, 0, L, { glow: leg ? '#ffd34a' : null }); g.restore();
+  fit(f.name, 20, 700, '"CLA Pixel", "Barlow Condensed", sans-serif', cw - 20); g.fillStyle = '#fff'; g.fillText(f.name, cx, 134);
+  const stars = `${m.lb} lb · ${'★'.repeat(f.rare)}${'☆'.repeat(Math.max(0, 5 - f.rare))} ${FS.RARITY[f.rare]}`;
+  fit(stars, 16, 700, '"Barlow Condensed", sans-serif', cw - 20); g.fillStyle = '#dde'; g.fillText(stars, cx, 158);
+  g.fillStyle = '#bcd';
+  const worth = `about $${fmt(m.v)} at the fish market`, log = `${m.n} of ${m.of} kinds in your log`;
+  if (fit(`${worth} · ${log}`, 15, 600, '"Barlow Condensed", sans-serif', cw - 20) >= 13) g.fillText(`${worth} · ${log}`, cx, 182);
+  else { fit(worth, 14, 600, '"Barlow Condensed", sans-serif', cw - 20); g.fillText(worth, cx, 176); fit(log, 14, 600, '"Barlow Condensed", sans-serif', cw - 20); g.fillText(log, cx, 193); }
 }
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }

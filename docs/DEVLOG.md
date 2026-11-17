@@ -24914,3 +24914,48 @@ staff, and give players "Remove contact", "Who can text me" and a way to unblock
 - Tests: test/chatsafety.test.js (new: the filter both ways, the flags, friends, remove contact, who can text me, the
   Guide and the Terms), chatui (requests, the star, Blocked, who can text me, a thread's Add friend / Remove contact,
   Undo), launch-chat. No budget changed (chat.js loads after the page is up).
+
+## 2026-11-16 - Fishing polish: the rod first, one line, the fish drawn, the catch card clear; control hints capped
+
+The owner, from four phone shots: "You should have your fishing pole equipped before it prompts you to fish near water.
+Also the fishing pole has a line that goes out and a line that drops straight down. Also the fish art is still
+placeholder." And: "I don't think we need that hint for swimming either. And when we do hints like that I think they show
+up once or twice then don't need to keep going ... the font that left thumb uses isn't very good and doesn't fit."
+- **The rod first** (server/systems/players.js `fishHere`, fishing.js `rodInHand`, `spotFor`): "Fish here" / FISH only
+  with the rod in hand (the 'rod' weapon) and never while swimming - from the bank, a dock or a boat sitting still; the
+  server refuses a cast otherwise too (`begin`). A rod in the bag takes the rod's weapon slot (shared/fish.js `ownsRod`,
+  `takeable`: the weapon keys, the pad's wheel and the me record's weapons list it; the bag's Use on a rod takes it out -
+  economy.js `useItem`), and the rod the water wants still casts (`rodFor`). After a catch the rod stays in your hand
+  (no more switching back); with the last rod sold or lost it leaves your hand (`tick`). By the water with a rod in the
+  bag, no prompt: a first-time moment says once "Take your rod out to fish - it's with your weapons" (ftue.js
+  `MOMENTS.rod`, server-side, once a character). The FTUE's outdoors start puts its cane pole in your hand; its step
+  line says "Rod in hand, face the water". The debug menu's fishing kit puts the rod in hand.
+- **One line** (client/main.js `fishFrame`, art2/game/host.js in a boat, client/fishing.js `lineOut`): a player fishing
+  is drawn in the fishing pose's frames that have no hanging line of their own - the rod back while the cast charges,
+  out over the water once it's cast - so the only line is the page's, tip to bobber. NPC anglers (no cast line drawn
+  for them) keep the pose's own line. Nothing in art2/people.js changed: the art hash is untouched.
+- **The fish drawn** (client/fishart.js, rewritten): all 91 kinds as pixel art, made procedurally from shared/fish.js
+  and a look per species after FC12-FC20 / FC01-FC02 - the silhouette by shape (fins, tails, snouts, the bill, the
+  barbels), three tones dithered, a sheen row, rayed fins, the eye's catch-light, a coloured outline, and each kind's own
+  marks (the perch's bars, the striper's stripes, the brook trout's worm marks and haloed spots, the rainbow's band, the
+  koi's patches, the clownfish's bands, the lionfish's zebra, the tang's palette...). The legendaries carry a glow rim and
+  sparkles. No image file: the sprites are made when first drawn (about 4 ms each) and kept. Loaded with fishing or the
+  Fish log, never with the page (its budget unchanged).
+- **The Fish log** (new phone app, client/fishlog.js; server fishing.js `logInfo`, the phone's 'fishlog'): your cooler
+  (each fish drawn, its weight, its price) and every kind by its water - caught ones in colour with the count, your best
+  and the records board's, the rest dark shapes.
+- **The catch card** (client/fishing.js `cardLayout`, `drawCardBody`): placed below whatever sits over its column at the
+  top (the corners, the notes, the job card - their boxes read off the page), in the clear between the corners on a
+  phone held sideways, above the thumbs, scaled down rather than cut; every line fitted to the card ("NEW RECORD!" in the
+  pixel face). The catch's note is short ("Striped Bass, 35.1 lb - in your cooler (3/30)." - the card says the rest),
+  and notes wrap to a second line instead of cutting a word (style.css `.toast`).
+- **Control hints** (client/hudinfo.js): every hint strip (a device glyph + what it does) shows at most twice
+  (`HINT_TIMES` 2, was 3), then never - counted per device and character (the page's storage: the strips are the page's
+  own); no swimming strip. Glyph labels - keys, pad buttons, touch words, LEFT THUMB - on one line in the HUD's pixel face,
+  the chip as big as its words (no fixed 22 px height clipping a wrapped label).
+- Guide: Fishing (take the rod out first, not while swimming, the Fish log). Decisions: HUD and controls, Economy (the
+  owner, 11-16).
+- Tests: fishing (rod first - no offer with the rod in the bag or swimming, the weapon keys and the bag take it out, it
+  stays out, gone with the last rod; one line; every species' own pixel art; the card at three screen sizes), hudinfo
+  (the hint cap, only through hintDue, no swimming strip, glyph labels on one line), ftue (the rod's moment), core,
+  water, devplay updated for the rod in hand.

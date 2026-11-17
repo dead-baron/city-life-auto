@@ -106,7 +106,7 @@ for (const [i, n] of (sc.notes || T.notes).slice(-2).entries()) { const el = doc
 const JOBF = ['foot', 'air', 'rob', 'unarmed', 'board', 'swim', 'home'].includes(sc.st) ? 'big' : 'chip';
 $('job').className = JOBF; $('job').innerHTML = HI.jobHtml(T.job, { big: JOBF === 'big', dist: '640 M', time: sc.dev === 'touch' ? '9:58' : 'SHIFT 9:58' });
 // the vehicle chip in a vehicle; the hint strip for what you're doing
-const VST = { veh: 'drive', air: 'air', horse: 'horse', boat: 'boat', board: 'board', swim: 'swim' }[sc.st];
+const VST = { veh: 'drive', air: 'air', horse: 'horse', boat: 'boat', board: 'board' }[sc.st];
 if (FL.inVeh) { $('vchip').innerHTML = '<b>' + (sc.st === 'air' ? 'Skylark Helicopter' : 'Police Cruiser') + '</b>' + (sc.st === 'air' ? '<span class="vc-alt">ALT 31 M</span>' : '') + '<span class="vc-spd">88 KM/H</span>'; $('vchip').classList.remove('hidden'); }
 if (VST) { $('hints').innerHTML = HI.hintHtml(HI.hintStrip(VST, sc.dev)); $('hints').classList.remove('off'); }
 if (sc.st === 'rob') { $('rob').classList.remove('hidden'); $('rob-take').textContent = 'HOT $1,250 · till $800'; $('rob-fill').style.width = '40%'; }

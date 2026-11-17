@@ -16,6 +16,8 @@ import * as players from '../server/systems/players.js';
 import { store } from '../server/store.js';
 import { FishView } from '../client/fishing.js';
 import { drawFish } from '../client/fishart.js';
+import { readFileSync } from 'node:fs';
+import { isSwimming } from '../shared/mapcore.js';
 
 const W = makeWorld();
 const { PH } = FS;
@@ -155,7 +157,7 @@ test('fishing waters: the river and the creek, the lake and the pond, the pier, 
 
 test('a day at the river: hold to charge, let go, wait out the nibbles, strike on the bite, play the fish in; the cooler, the log, the records board, the fish market', () => {
   const { p, prof, conn } = joinPlayer(W, { cash: 0, bank: 0 });
-  prof.weapons.rod = 0; prof.inventory.worms = 5;
+  prof.weapons.rod = 0; prof.inventory.worms = 5; p.ped.weapon = 'rod';   // (the rod in hand: you fish with it out)
   const bank = bankOf(W, (h) => h.water === 'river' || h.water === 'lake');
   assert.ok(bank, 'a river bank');
   teleport(W, p.ped, bank[0], bank[1]); p.ped.a = bank[2];
@@ -206,7 +208,7 @@ test('a day at the river: hold to charge, let go, wait out the nibbles, strike o
 
 test('the strike: too soon reels in, too late it\'s gone, too heavy snaps the line; walking off reels in', () => {
   const { p, prof } = joinPlayer(W);
-  prof.weapons.rod = 0;
+  prof.weapons.rod = 0; p.ped.weapon = 'rod';   // (the rod in hand: you fish with it out)
   const bank = bankOf(W, (h) => h.water === 'river' || h.water === 'lake' || h.water === 'shore', 1);
   teleport(W, p.ped, bank[0], bank[1]); p.ped.a = bank[2];
   const send = inputs(W, p);
@@ -238,7 +240,7 @@ test('the strike: too soon reels in, too late it\'s gone, too heavy snaps the li
 
 test('the page plays your line as the server does: the charge, the bite and the fight from the same inputs, set back to each snapshot', () => {
   const { p, prof } = joinPlayer(W);
-  prof.weapons.rod = 0;
+  prof.weapons.rod = 0; p.ped.weapon = 'rod';   // (the rod in hand: you fish with it out)
   const bank = bankOf(W, (h) => h.water === 'river' || h.water === 'lake', 2);
   teleport(W, p.ped, bank[0], bank[1]); p.ped.a = bank[2];
   const rand = W.rand; W.rand = mulberry32(77);
@@ -278,7 +280,7 @@ test('the page plays your line as the server does: the charge, the bite and the 
 
 test('a deep-sea charter: offshore fish from a boat count; a legendary is news for everyone', () => {
   const { p, prof, conn } = joinPlayer(W);
-  prof.weapons.rod = 0; prof.inventory.gameRod = 1;
+  prof.weapons.rod = 0; prof.inventory.gameRod = 1; p.ped.weapon = 'rod';
   const desk = W.map.pois.find((q) => q.kind === 'charter');
   teleport(W, p.ped, desk.x, desk.y);
   economy.handleMenu(W, p, desk.id, 'deepsea');
@@ -326,7 +328,7 @@ test('a koi out of a park\'s pond is a crime (the owner: "if you get caught catc
   const b = fishing.bankNear(W, W.map.w * TILE / 2, W.map.h * TILE / 2, 700, (h) => h && h.spot === 'lily', null);
   assert.ok(b, 'a park pond on the test map (Greenfield Park\'s)');
   const { p, prof } = joinPlayer(W);
-  prof.weapons.rod = 0;
+  prof.weapons.rod = 0; p.ped.weapon = 'rod';   // (the rod in hand: you fish with it out)
   teleport(W, p.ped, b.x, b.y); p.ped.a = b.a;
   const catchOne = (f) => { p.devFish = { next: f, easy: true, now: true }; fishing.begin(W, p, fishing.spotFor(W, p.ped)); return playLine(W, p, { hold: 4 }); };
   const exp0 = prof.criminalExp || 0;
@@ -343,7 +345,7 @@ test('a koi out of a park\'s pond is a crime (the owner: "if you get caught catc
 // cant seem to be able to interact with it if you own a fishing pole since it automatically prompts you to fish")
 test('your own ride beside you beats "Fish here": your hire kayak at the bank; someone else\'s boat doesn\'t', () => {
   const { p, prof } = joinPlayer(W, { cash: 0, bank: 0 });
-  prof.weapons.rod = 0; prof.inventory.worms = 5;
+  prof.weapons.rod = 0; prof.inventory.worms = 5; p.ped.weapon = 'rod';
   const bank = bankOf(W, (h) => h.water === 'river' || h.water === 'lake');
   teleport(W, p.ped, bank[0], bank[1]); p.ped.a = bank[2];
   assert.ok(/Fish here/.test((players.findInteraction(W, p) || {}).label || ''), 'a rod, the water: fish');
@@ -354,4 +356,106 @@ test('your own ride beside you beats "Fish here": your hire kayak at the bank; s
   assert.ok(it && /rental/i.test(it.label) && it.key === 'F', `your hire kayak: get in (${it && it.label})`);
   W.remove(v);
   players.leave(W, p);
+});
+
+// (the owner, 2026-11-16, four phone shots: "You should have your fishing pole equipped before it prompts you to fish near
+// water" - and the prompt and the FISH button were up while he swam, fists out)
+test('rod first: no prompt with the rod in the bag or while swimming; the rod out (weapon keys, the bag) and it offers; it stays out after; gone with the last rod', async () => {
+  const combat = await import('../server/systems/combat.js');
+  const { p, prof } = joinPlayer(W, { cash: 0, bank: 0 });
+  prof.inventory.caneRod = 1; prof.inventory.worms = 5;
+  const bank = bankOf(W, (h) => h.water === 'river' || h.water === 'lake');
+  teleport(W, p.ped, bank[0], bank[1]); p.ped.a = bank[2];
+  const label = () => (players.findInteraction(W, p) || {}).label || '';
+  assert.equal(p.ped.weapon, 'fists');
+  assert.ok(fishing.spotFor(W, p.ped), 'facing the water');
+  assert.doesNotMatch(label(), /Fish/, 'a rod in the bag: no prompt');
+  fishing.begin(W, p, fishing.spotFor(W, p.ped));
+  assert.equal(p.ped.fishing, null, 'and no cast either (the server\'s own rule)');
+  // the rod's slot: in the me record, the weapon keys step to it, the bag's Use takes it out
+  assert.ok(players.buildMe(W, p).weapons.some((w) => w.id === 'rod'), 'the rod with your weapons');
+  combat.cycleWeapon(W, p.ped, 1);
+  assert.equal(p.ped.weapon, 'rod', 'the weapon keys: the rod');
+  combat.selectWeapon(W, p.ped, 'fists');
+  economy.useItem(W, p, 'caneRod');
+  assert.equal(p.ped.weapon, 'rod', 'the bag\'s Use: the rod in hand');
+  assert.match(label(), /Fish here/, 'the rod out: the prompt');
+  // swimming: never - into the water just off the bank, rod or not
+  const sx = bank[0] + Math.cos(bank[2]) * 26, sy = bank[1] + Math.sin(bank[2]) * 26;   // (the middle of the first water tile)
+  teleport(W, p.ped, sx, sy); p.ped.a = bank[2] + Math.PI;
+  assert.ok(isSwimming(W.map, p.ped), 'in the water');
+  assert.equal(fishing.spotFor(W, p.ped), null, 'no spot while swimming');
+  assert.doesNotMatch(label(), /Fish/, 'no prompt while swimming');
+  // back on the bank: cast, land one - the rod stays in your hand
+  teleport(W, p.ped, bank[0], bank[1]); p.ped.a = bank[2];
+  p.devFish = { next: 'bluegill', easy: true, now: true };
+  fishing.begin(W, p, fishing.spotFor(W, p.ped));
+  assert.equal(playLine(W, p, { hold: 4 }).F.out, 1, 'landed');
+  assert.equal(p.ped.weapon, 'rod', 'still in hand');
+  const fl = fishing.logInfo(p);   // (the phone's Fish log: client/fishlog.js)
+  assert.ok(fl.t === 'fishlog' && fl.log.bluegill && fl.creel.some((q) => q[0] === 'bluegill') && fl.max === FISHING.creel && fl.rec.bluegill, 'the Fish log');
+  // the last rod gone: out of your hand
+  prof.inventory.caneRod = 0;
+  fishing.tick(W);
+  assert.equal(p.ped.weapon, 'fists');
+  assert.ok(!players.buildMe(W, p).weapons.some((w) => w.id === 'rod'));
+  combat.selectWeapon(W, p.ped, 'rod');
+  assert.equal(p.ped.weapon, 'fists', 'no rod to take out');
+  players.leave(W, p);
+});
+
+// (the owner, 11-16: "the fishing pole has a line that goes out and a line that drops straight down")
+test('one line: the page draws a cast line tip to bobber; a player fishing is drawn with the rod\'s own hanging line off', () => {
+  const calls = [];
+  const g = new Proxy({}, { get: (o, k) => (k in o ? o[k] : (...a) => { calls.push(k); }), set: (o, k, v) => { o[k] = v; return true; } });
+  const S = { me: { fishing: { sx: 0, sy: 0, a: 0, x: 120, y: 0 } }, myPedId: 7, ents: new Map([[7, { id: 7, rx: 0, ry: 0, ra: 0, flags: 16384 }]]), loopClock: 1, pending: [] };
+  const V = new FishView(S);
+  V.F = { ...FS.newFight(), ph: PH.WAIT };
+  assert.ok(V.lineOut(7), 'your line is out');
+  V.drawWorld(g);
+  const segs = calls.filter((k) => k === 'lineTo' || k === 'quadraticCurveTo');
+  assert.equal(segs.length, 1, `one line from the tip (${calls.join(',')})`);
+  V.lines.set(9, { x: 0, y: 0, at: 0 });
+  assert.ok(V.lineOut(9) && !V.lineOut(10), 'another\'s line: from their cast');
+  // the sprite: a player in the fishing pose takes frame 1 (charging) or 2 (cast) - the pose's frames with no line of its own
+  const src = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  assert.match(src('client/art2/people.js'), /P\.line = f === 0 \|\| f === 3 \? -1 : 0;/, 'the fish pose hangs a line on frames 0 and 3 only');
+  const main = src('client/main.js');
+  assert.match(main, /function fishFrame\(e\) \{\n\s+if \(!e\.d \|\| !e\.d\.pl\) return 0;\n\s+return S\.fish && S\.fish\.lineOut\(e\.id\) \? 2 : 1;/, 'a player: frame 1 or 2');
+  assert.match(main, /if \(pose === 'fish'\) fr = fishFrame\(p\);/);
+  assert.match(src('client/art2/game/host.js'), /angle && api\.fishFrame \? api\.fishFrame\(p\)/, 'in a boat too');
+});
+
+test('every species has its own pixel art: drawn, its own pixels, outlined, the legendaries lit', async () => {
+  const { fishSprite, FISH_LOOKS } = await import('../client/fishart.js');
+  const seen = new Map();
+  for (const f of FS.FISH) {
+    assert.ok(FISH_LOOKS[f.id], `${f.id}: its own look`);
+    const s = fishSprite(f);
+    assert.ok(s.w >= 24 && s.h >= 6 && s.w <= 140 && s.h <= 140, `${f.id}: ${s.w}x${s.h}`);
+    const solid = s.px.filter((v) => v >>> 24 === 255).length;
+    assert.ok(solid > s.w * 3, `${f.id}: filled (${solid})`);
+    const cols = new Set(s.px.filter((v) => v >>> 24));
+    assert.ok(cols.size >= (f.shape === 'squid' || f.shape === 'octopus' || f.shape === 'isopod' || f.shape === 'ray' ? 5 : 8), `${f.id}: shaded, ${cols.size} colours`);
+    const key = Array.from(s.px).join(',');
+    assert.ok(!seen.has(key), `${f.id} looks the same as ${seen.get(key)}`);
+    seen.set(key, f.id);
+    if (f.rare === 5) assert.ok(s.px.some((v) => v >>> 24 && v >>> 24 < 255), `${f.name}: a glow round it`);
+  }
+});
+
+test('the catch card stays clear of the HUD at the top and fits the screen: a phone upright and sideways, a desktop', async () => {
+  const { cardLayout, CARD_H } = await import('../client/fishing.js');
+  const hit = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+  const cases = [
+    { name: 'phone upright', W: 390, H: 844, bottom: 0.3, obs: [{ l: 16, t: 16, r: 150, b: 200 }, { l: 236, t: 40, r: 374, b: 150 }, { l: 20, t: 206, r: 370, b: 262 }] },   // (the minimap, the vitals, a two-line note)
+    { name: 'phone sideways', W: 844, H: 390, bottom: 0.22, obs: [{ l: 40, t: 12, r: 210, b: 196 }, { l: 610, t: 12, r: 804, b: 128 }, { l: 222, t: 12, r: 598, b: 44 }] },
+    { name: 'desktop', W: 1280, H: 720, bottom: 0.06, obs: [{ l: 16, t: 16, r: 220, b: 230 }, { l: 1000, t: 16, r: 1264, b: 140 }, { l: 440, t: 16, r: 840, b: 46 }] },
+  ];
+  for (const c of cases) {
+    const B = cardLayout(c.W, c.H, c.obs, c.bottom), box = { l: B.x, t: B.y, r: B.x + B.w * B.s, b: B.y + CARD_H * B.s };
+    for (const o of c.obs) assert.ok(!hit(box, o), `${c.name}: clear of ${JSON.stringify(o)} (card ${JSON.stringify(box)})`);
+    assert.ok(box.l >= 0 && box.r <= c.W && box.t >= 0 && box.b <= c.H * (1 - c.bottom) + 1, `${c.name}: on the screen, over the thumbs (${JSON.stringify(box)})`);
+    assert.ok(B.s >= 0.85, `${c.name}: readable (${B.s})`);
+  }
 });

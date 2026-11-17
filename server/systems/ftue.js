@@ -50,6 +50,7 @@ import * as firstcar from './firstcar.js';
 import * as safety from './safety.js';
 import * as homes from './homes.js';
 import * as fishing from './fishing.js';
+import * as combat from './combat.js';   // (the rod you're given, in your hand)
 import * as mailjob from './mailjob.js';
 import * as skills from './skills.js';
 import * as transit from './transit.js';
@@ -74,6 +75,7 @@ export const MOMENTS = {
   night: { text: 'Night falls. A flashlight lights your way.', ctl: 'light', sec: 'items' },
   hurt: { text: 'Hurt? Hold for your quick wheel - a bandage patches you up.', ctl: 'use', sec: 'items' },
   chat: { text: 'Another player\'s near - say hi. Quick lines and emotes too, no typing needed.', ctl: 'chat', sec: 'activities' },
+  rod: { text: 'Take your rod out to fish - it\'s with your weapons.', ctl: 'nextw', sec: 'activities' },   // (by the water, a rod in the bag: players.js fishHere)
 };
 
 // The arrival stations' card: each region's name and its one line (World v3's regions: shared/world3-arrivals.js
@@ -176,7 +178,7 @@ export function goalFor(world, ans, x, y) {
 }
 
 // ---- the lines ---------------------------------------------------------------------------------------------------------
-const THERE = { mail: (g) => `Take a mail round at ${g.name}`, courier: (g) => `Sign on for work at ${g.name}`, fence: (g) => `Talk to the fence at ${g.name}`, gang: (g) => `Talk to the Syndicate at ${g.name}`, fish: () => 'Cast a line: face the water, hold and let go' };
+const THERE = { mail: (g) => `Take a mail round at ${g.name}`, courier: (g) => `Sign on for work at ${g.name}`, fence: (g) => `Talk to the fence at ${g.name}`, gang: (g) => `Talk to the Syndicate at ${g.name}`, fish: () => 'Rod in hand, face the water: hold and let go to cast' };
 const PLACE = { mail: (g) => g.name, courier: (g) => g.name, fence: (g) => g.name, gang: (g) => g.name, fish: (g) => g.name };
 // the step's line (the page puts its control's glyph in front of it) and the job card's objective
 export function stepLine(world, p, f) {
@@ -348,6 +350,7 @@ function gear(world, p) {
   const [bait, n] = FTUE.bait;
   if (!Object.keys(inv).some((k) => ITEMS[k] && ITEMS[k].bait && inv[k] > 0)) { inv[bait] = (inv[bait] || 0) + n; got.push(`${n} ${ITEMS[bait].name.toLowerCase()}`); }
   if (got.length) world.notify(p, `In your bag: ${got.join(' and ')}.`, 'good');
+  if (p.ped && !p.ped.dead && p.ped.weapon === 'fists') combat.selectWeapon(world, p.ped, 'rod');   // (the rod in your hand: you fish with it out - fishing.js)
   store.touch();
 }
 function setStep(world, p, n) {

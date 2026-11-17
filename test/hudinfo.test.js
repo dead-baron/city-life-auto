@@ -11,7 +11,7 @@ import { deathChoices, WAKE_ROWS } from '../client/deathscreen.js';
 import { STORE_ICON, GLYPHS } from '../client/storeicons.js';
 import { KIND_ICON } from '../client/mapwaypoints.js';
 import { SHOPS } from '../shared/items.js';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const memStore = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)) }; };
 
@@ -88,6 +88,24 @@ test('a hint strip: the first few times for each thing you do, per character, th
   assert.deepEqual(hintStrip('horse', 'touch').map((h) => h[0]), ['STOP', 'OFF'], 'GALLOP says its own word');
   assert.deepEqual(hintStrip('cine', 'kbm').map((h) => h[0]), ['F2', 'F4', 'F8', 'ESC']);
   for (const s of HINT_STATES) for (const d of ['kbm', 'pad', 'touch']) assert.ok(hintStrip(s, d).length >= 2, `${s} on ${d}`);
+});
+
+// (the owner, 2026-11-16: "when we do hints like that I think they show up once or twice then don't need to keep going,
+// the guide will have info" - and no swimming hint at all; the glyph chip's label readable and never clipped)
+test('every control hint has a show cap: at most twice, then never; only through hintDue; no swimming strip; glyph labels on one line', () => {
+  assert.ok(HINT_TIMES >= 1 && HINT_TIMES <= 2, `a cap of ${HINT_TIMES}`);
+  assert.ok(!HINT_STATES.includes('swim'), 'no swimming hint');
+  const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  const info = read('client/hudinfo.js');
+  // the strips are drawn in one place, behind the count: hint() asks hintDue, then counts the showing
+  assert.match(info, /function hint\(state, now = performance\.now\(\)\) \{\n\s+const pid = [^\n]+\n\s+if \(!hintDue\(st, pid, state\)\) \{ showStrip\(null\); return false; \}\n\s+hintSeen\(st, pid, state\);\n\s+showStrip\(hintStrip\(state, dev\(\)\)\);/);
+  assert.equal([...info.matchAll(/showStrip\(hintStrip\(/g)].length, 1, 'one way onto the screen');
+  for (const f of readdirSync(new URL('../client/', import.meta.url)).filter((x) => x.endsWith('.js') && x !== 'hudinfo.js')) assert.doesNotMatch(read(`client/${f}`), /hintStrip\(|hintHtml\(|\$\('hints'\)\.innerHTML/, `${f} draws a hint strip without the cap`);
+  // every glyph's label (a key, a pad button, a touch word) on one line, its chip as big as its words
+  const css = read('client/style.css');
+  assert.match(css, /\.kchip, \.g-key, \.g-touch \{[^}]*min-height: 24px;[^}]*white-space: nowrap;/);
+  assert.match(css, /\.g-pad \{[^}]*font: 700 var\(--fs-2\) var\(--pixel\);[^}]*white-space: nowrap;/);
+  assert.doesNotMatch(css, /\.touch #hints \.g-touch \{[^}]*height: 22px/);
 });
 
 test('the status line in plain words: Samaritan, Criminal XP, the record on its own', () => {

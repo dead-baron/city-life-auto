@@ -254,9 +254,9 @@ test('tackle shops: rods and bait; the bait you choose goes on the hook and is u
   assert.equal(prof.bait, 'squid');
   // a cast by the marina: the squid goes on and is used once a fish is hooked
   const pier = w.map.marina[0];
-  teleport(w, p.ped, pier.x - 3 * 32, pier.y);
-  let spot = null;
-  for (let a = 0; !spot && a < 8; a++) { p.ped.a = a * Math.PI / 4; spot = fishing.spotFor(w, p.ped); }
+  const dock = fishing.bankNear(w, pier.x, pier.y, 16, () => true, null);   // (on the planks or the bank beside the water - never in it: no fishing while swimming)
+  teleport(w, p.ped, dock.x, dock.y); p.ped.a = dock.a;
+  let spot = fishing.spotFor(w, p.ped);
   fishing.begin(w, p, spot);
   const L = playLine(w, p, { easy: true });
   assert.equal(L.bait, 'squid');

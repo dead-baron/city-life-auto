@@ -509,6 +509,7 @@ function onText(m) {
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
+    case 'fishlog': phone.on('FishLog', m); break;   // the Fish log app (server fishing.js logInfo)
     case 'next': phone.on('Next', m); break;   // the "What's next" app (server whatsnext.js; client/whatsnext.js)
     case 'crew': phone.on('Crew', m); S.crewMsg = m; if (hubMod && topOverlay() === 'players') hubMod.people(); break;   // the Crew app and the People tab (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
@@ -1459,7 +1460,7 @@ async function startArt2(map) {
   S.art2Off = null;
   if (token !== S.art2Token || S.map !== map) return; // a newer city arrived meanwhile
   // what the renderer borrows from here: how people look and pose, body heights, seats, the birds
-  const api = { pedLook, pedPose, vehLift, selfPos, walkInAt, umbrellaSprite, birds, PED_BUILD_SCALE, CSCALE, SEAT_BIKE, RIDER_H, UMBRELLA_COLORS };
+  const api = { pedLook, pedPose, fishFrame, vehLift, selfPos, walkInAt, umbrellaSprite, birds, PED_BUILD_SCALE, CSCALE, SEAT_BIKE, RIDER_H, UMBRELLA_COLORS };
   let w = null;
   // (a city read back from this browser's copy is read by the bake workers themselves: no copy sent from here)
   const worldKey = S.mapFrom === 'cache' && window.CLA_WORLD ? window.CLA_WORLD.key : null;
@@ -3101,6 +3102,14 @@ const SWING_TIME = 0.3, BANG_S = 0.42;
 function heldWay(id, now, span, n) { const s = Math.floor((now + id * 2.3) / (span + (id % 5))); return ((Math.imul(s + 1, 0x9e3779b1) >>> 9) + id) % n; }
 // the FISHING bit on these means kneeling (a medic at someone hurt, an officer holding someone down), not fishing
 const KNEELERS = new Set(['medic', 'cop', 'swat', 'agent', 'soldier', 'rescue']);
+// The fishing pose's frame (the owner, 11-16: "the fishing pole has a line that goes out and a line that drops straight
+// down"): a player's line is drawn by client/fishing.js from the rod's tip to the bobber, so a player is drawn with no
+// hanging line - the rod held back while the cast charges (frame 1), out over the water once the line's cast (2). An NPC
+// angler, whose line nobody else draws, keeps the pose's own line hanging into the water (0: art2/people.js 'fish').
+function fishFrame(e) {
+  if (!e.d || !e.d.pl) return 0;
+  return S.fish && S.fish.lineOut(e.id) ? 2 : 1;
+}
 function pedPose(e) {
   const f = e.flags;
   if (f & PF.DEAD) return 'dead';
@@ -4728,6 +4737,7 @@ function pedLook(p, now) {
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   if (seqFr >= 0) fr = seqFr;
   if (pose === 'downF' && p.d && p.d.cf) fr = 0;   // (held flat, not pushing up)
+  if (pose === 'fish') fr = fishFrame(p);   // (one line: the rod's own hanging line only on an NPC angler)
   if (fight) fr = pose === 'crawl' ? Math.floor(now * 9 + p.id) % 4 : 1;
   if (run && (pose === 'downF' || pose === 'downB')) fr = now - p.runAt > p.runD - 0.8 ? 1 : 0;   // (flat, then pushing up)
   if (fire) fr = fire === 1 ? Math.floor(now * 7 + p.id) % 4 : 1;   // (flailing; pushing up)
