@@ -11,7 +11,7 @@
 import { TILE, T } from './constants.js';
 import { TIDY3 } from './world3-tidy.js';
 
-export const PATH_MAX = 14;
+export const PATH_MAX = 14, PLANT_R = 18;
 // what a path is made of (a step on one of these needs nothing); what a path may be laid over
 export const PATH3 = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK, T.ROAD, T.BRIDGE, T.DIRT]);
 const OVER = new Set([T.GRASS, T.SAND]);
@@ -70,7 +70,8 @@ export function doorPaths3(m, H = {}) {
     if (!ok) { out.blocked++; continue; }
     for (const [x, y, i] of strip) {
       m.tiles[i] = T.PLAZA; out.tiles++;
-      for (const e of solidAt(x, y)) if (plantAt(e)) { const pr = m.props[e.pi]; pull.add(pr.x + ',' + pr.y); }
+      // (and a tree whose foot reaches over it from the tile beside: its trunk within PLANT_R px of the path's middle)
+      for (let dx = -1; dx <= 1; dx++) if (m.inside(x + dx, y)) for (const e of solidAt(x + dx, y)) if (plantAt(e) && Math.abs(e.x - (x + 0.5) * TILE) < PLANT_R + (e.r || 0)) { const pr = m.props[e.pi]; pull.add(pr.x + ',' + pr.y); }
     }
     out.paved++;
   }

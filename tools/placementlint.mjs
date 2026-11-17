@@ -376,7 +376,12 @@ function artRows(M, rows, seen) {
       let G = null;
       try { G = makeBuilding(sp); } catch { G = null; }
       const at = (q, k) => [it.x - G.ax + q.x + k, it.y - G.ay + q.y + k, it.x - G.ax + q.x + q.w - k, it.y - G.ay + q.y + q.h - k];
-      if (G && G.signBox && sp.shop.sign) out.push({ k: 'sign', t: sp.shop.sign.text, r: at(G.signBox, 2) });
+      if (G && G.signBox && sp.shop.sign) {
+        // (the words: as paintBoard centres them, after the trade's icon - not the board's empty ends)
+        const B = G.signBox, L = B.lay, ix = L && L.icon ? 2 + 9 + 2 : 2, lx = L ? ix + Math.floor((L.w - 2 - ix - L.cw) / 2) : 1;
+        const words = L ? { x: B.x + lx * 2, y: B.y, w: L.cw * 2, h: B.h } : B;
+        out.push({ k: 'sign', t: sp.shop.sign.text, r: at(words, 2) });
+      }
       if (G && G.openBox) out.push({ k: 'window sign', t: 'OPEN', r: at(G.openBox, 0) });
     }
     return (f.covers = out);

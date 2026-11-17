@@ -24872,3 +24872,35 @@ shop's counter, and the custody panel over the whole screen with an escape that 
   or kitchen fire with it (firefighter.js outWith, from endCall and letGo), and a spot fire with no call left goes out
   at its next step. Tests: firefighter.test.js (a shift given up, a call run out of time: no fire left), meleefire.test.js
   (no stray fire survives, and a knockdown on that spot lights nobody).
+
+## 2026-11-16 - Egret Point: walk-in shops, paths to the doors, nothing over a sign (and the class, world-wide)
+
+The owner's three phone shots of Egret Point (11-16 16:54): "These places in Egret Point don't have interiors, they just
+have you interact at the wall. They also don't have sidewalks or walkways leading up to the buildings, they just sit on
+grass. The open sign on this building is covered by this ATM." - and in the shots, the Fish Market's name read
+"§GRET" (the cash machine's green cap over its first letter) and the Gaff Hook's rooftop BAR read "Uar".
+- **Egret Point** (shared/world3-west.js). The fish market, The Gaff Hook, the bait shop and the charter office are walked
+  into: a room behind the door, the counter inside, the service there (sell the catch, order, buy bait, book the charter).
+  They're built by hand with no lot of their own (`prefab: -1`), which buildInteriors skipped; a building flagged
+  `b.rooms` is walked into all the same (shared/map.js). Every front is on its south side as drawn (the south row's
+  doors had been on their backs, by the street), its door there (`b.door`), onto a paved forecourt that runs on to the
+  quay: the north row's down to Wharf Street, the south row's along the water side with a lane between the charter
+  office and the bait shop back up to the street. The Gaff Hook is a dockside tavern (a hand plan's walk-in bar: its
+  counter the bar, stools, the pool table - shared/shoprooms.js barPlan knows GAFF / HOOK), not a nightclub lot; the
+  charter office a new fit-out (`charterOffice`: charts and photos up the wall, a trophy fish over the desk, a skipper's
+  desk, rods, a cooler). The shacks keep their homes; each gets a gravel path from its step to the street, and the south
+  row's are drawn with their backs to the camera, as their doors are on the street side.
+- **Charter offices are walk-ins** everywhere (`charter` in WALK_IN, plan 'office' -> charterOffice).
+- **The class: three placement lint rows** (tools/placementlint.mjs):
+  `signCovered` (a cash machine, a prop or a place's badge over a sign's words or the window's OPEN, by the drawn
+  pixels), `doorOnGrass` (a business's or home's door step not on a path, or the path reaching no road within 400
+  steps - every one listed), `wallOnly` (a walk-in kind's place with no room behind its door).
+- **Fixed by class:** the wall cash machine is lower (props-kit.js atmWall: 44 tall, was 52), so its cap stays under
+  a shop's sign board (its foot 48 px up the front); the window's OPEN moves to the door's other side when a machine
+  is set in front of it, or is left off (statics.js frontAtms -> spec.shop.avoid, buildings.js storefront); a place
+  served at a building's wall hangs its badge under the lintel's height, not up in the sign (host.js badgeOf, which the
+  lint uses too); a neon board keeps a dark row between its lit rim and the words' halo (statics.js NEON_PAD). The shop
+  rows World v3 adds where a district lacks something, and the storefronts it takes over (shared/world3-shops.js), get
+  their rooms (map.js walkInRoom, as Southside's lots do); and every door on the lawn gets a paved path straight out to
+  the nearest pavement, plaza, lot, dock, track or road where the way is clear (shared/world3-doorpaths.js, the done
+  hook: a home's one tile wide, a shop's two; plants on it taken up).
