@@ -794,7 +794,7 @@ function statueApp(A) {
   return { ...A, bronze: true, top: re(A.top, 0), bottom: re(A.bottom, 1), hat: re(A.hat, 2), shoes: BRONZE[3], shoeTrim: BRONZE[2], hair: { ...(A.hair || {}), color: BRONZE[0] }, chain: null, jewel: null, glassColor: BRONZE[3], bagColor: BRONZE[1], backColor: BRONZE[1], tattoo: 0 };
 }
 // The founder's Dead Baron look (server/founder.js; game/peds.js app.fd)
-export const FOUNDER = Object.freeze({ seed: 7, skin: 0, founder: 1, fem: false, headK: 1.24, body: { h: 1.03, w: 0.74, limb: 0.5 }, hair: { style: 'bald', color: '#efe6cf' }, top: { kind: 'none' }, bottom: { kind: 'none' }, shoes: '#efe6cf', shoeKind: 'barefoot', glasses: 'round', glassForm: 'founder', glassColor: '#5c1f6e', lens: '#ff5ccf', fmask: { k: 'skull', c: '#f2ead6', t: '#2a2024' }, wings: '#2ec8e6' });
+export const FOUNDER = Object.freeze({ seed: 7, skin: 0, founder: 1, fem: false, headK: 1.24, body: { h: 1.03, w: 0.74, limb: 0.5 }, hair: { style: 'bald', color: '#efe6cf' }, top: { kind: 'none' }, bottom: { kind: 'none' }, shoes: '#efe6cf', shoeKind: 'barefoot', glasses: 'round', glassForm: 'founder', glassColor: '#5c1f6e', lens: '#ff8ae6', fmask: { k: 'skull', c: '#f2ead6', t: '#2a2024' }, wings: '#2ec8e6' });
 const BONE = [[70, 52, 72], [150, 136, 138], [208, 198, 180], [238, 232, 214], [253, 250, 240]], BONE_GAP = cloth('#241a2c'), WTIP = cloth('#d4f8ff'), WIN = cloth('#1683b0'), WCOV = cloth('#7ee6f6');
 function boneTorso(Q, D, au, z, front, back) {
   const r0 = D.waistUp + 0.4, r1 = D.chestUp + 2.4;
@@ -1862,6 +1862,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
     const an = near * turn * 0.3, n = at(Math.sin(an), Math.cos(an), -0.2);
     stamp({ bx: n.bx, by: e0.by + 2 }, NOSE_ST[F.nose | 0], { s: skin[2], d: skin[1], k: skin[0], l: lit(skin[3], 0.3) });
   }
+  if (A.glassForm === 'founder' && !eyes.length) for (const sd of [-1, 1]) for (let t = 0; t <= 1; t += 0.1) { const az = (75 + t * 105) * Math.PI / 180, q = at(sd * Math.sin(az), Math.cos(az), 0.22); if (q.fc > 0) put(q, [176, 44, 150]); }   // (from behind: the band of his glasses)
   if (glasses && eyes.length) {
     // frames and lenses kept a step from the skin they sit on (dark frames on dark skin, gold on tan), a glint on the
     // left lens, the arms back to the ears; GLS: each kind's stamp round an eye
