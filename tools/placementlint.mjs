@@ -90,6 +90,9 @@ export const LINT_ALLOW = {
   // the pavement as their district's cash of its own, or where a move would leave a street out of the cash's reach
   // (shared/world3-shops.js seatAtms3; world3server.test.js): a shop front there takes one in - bring this down, never up
   atmStray: 53,
+  // two trees by the door paths laid 11-16 (shared/world3-doorpaths.js), their feet a few px over a path's edge: West Hills
+  // House #2971's palm, Pine Hills House #3332's apple tree - take them up and bring this to 0
+  plantOnPath: 2,
   // (11-16: the cash machine is lower now - props-kit.js atmWall - and the self storage's board clear of it)
   nameCovered: 0,
   // (the rows that came in 11-16 - the owner's Egret Point shots - each at what's left after the class fixes: bring them

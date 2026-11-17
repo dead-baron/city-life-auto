@@ -24907,7 +24907,8 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   Also: the window's OPEN sits below an awning's scallops (it was painted over, cut in half - the charter office's), and
   the art's shopfront pots stand clear of it (buildings.js openSignX, shared with statics.js addFrontage).
 - **The lint, before and after** (World v3, seed 1337): signCovered 409 -> 159, doorOnGrass 1777 -> 372, wallOnly
-  111 -> 17; nameCovered 1 -> 0 (the self storage's ATM). The rest is the long tail, allowed in LINT_ALLOW at what's
+  111 -> 17; nameCovered 1 -> 0 (the self storage's ATM); plantOnPath 0 -> 2 (two trees whose feet reach a few px over
+  the edge of a new door path: West Hills House #2971's, Pine Hills House #3332's - allowed, to be taken up). The rest is the long tail, allowed in LINT_ALLOW at what's
   left (bring it down, never up): signCovered - the street's furniture in front of a shop's words (shelter and stall
   canopies, el piers, phone booths, porches, lamps, flag and power poles, a few planters and street trees, festoons);
   doorOnGrass - mostly homes whose step can't take a straight path to the pavement (something solid, a field, more
