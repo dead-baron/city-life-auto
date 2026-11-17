@@ -8,7 +8,7 @@
 //                the guns and throwables that take a slot; the melee slot the at-risk blade, else the first cheap melee
 //                weapon you have (a bat, a knife). The quick keys 1-4 take these out (client/main.js quickKey).
 import { WEAPONS, SHOPS, weaponOrder } from './items.js';
-import { ARMS } from './rules.js';
+import { ARMS } from './rules-arms.js';   // (not rules.js: the page's start-up code imports this - test/lazypage.test.js)
 
 let PRICE = null;
 // a weapon's lowest price at any counter (null: sold at none - the plasma blade, the dev tools)
