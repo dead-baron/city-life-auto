@@ -1253,9 +1253,10 @@ export const TOWJOB = { firstS: 8, gapS: 20, shiftS: 1800, pay: 150, perKm: 60, 
 // round's and the riskier jobs'). Its job computer (JOBAD below) has the listings - and, when ads are on, the ad.
 export const OFFICE = { roundS: 45, items: 10, pay: 2, bonus: 4, opts: 4 };
 // the job computer's rewarded ad (server/systems/jobcenter.js; the page: client/ads.js - only when the server's CLA_ADS
-// says test or on): reward $ to your wallet for an ad watched to its end, at most perDay a day (the server's UTC day)
-// per character; offered once a character has played playS s (none in a first session - the 11-13 plan); a view is
-// paid only minS s or more after it began and within maxS s of it (a ticket the server hands out with the menu)
+// says test or on): reward $ to your wallet for an ad watched to its end, at most perDay a day (the goals' day: GOALS
+// resetUtcH) per character; offered once a character has played playS s (none in a first session - the 11-13 plan); a
+// view is paid only minS s or more after it began, on a ticket the server hands out with the menu - started within
+// maxS s of it and ended within maxS s of the start
 export const JOBAD = { reward: 150, perDay: 5, playS: 900, minS: 5, maxS: 300 };
 
 // jumping out of an aircraft: the fall (px, px/s, px/s²) - what each number is: server/systems/skydive.js

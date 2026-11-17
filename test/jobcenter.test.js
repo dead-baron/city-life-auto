@@ -17,6 +17,7 @@ import { MemoryStore } from '../server/store.js';
 import { privacyPage } from '../server/legal.js';
 import * as jobcenter from '../server/systems/jobcenter.js';
 import * as economy from '../server/systems/economy.js';
+import { endLine } from '../server/systems/ftue.js';
 import { OFFICE, JOBAD } from '../shared/rules.js';
 import { createAds, onPortal } from '../client/ads.js';
 import { guideSections } from '../shared/guide.js';
@@ -66,10 +67,10 @@ function setup({ ads = 'off', played = JOBAD.playS + 60 } = {}) {
   const { p, conn } = joinPlayer(w);
   p.profile.ftue = { st: 'done', tips: 0, m: {}, pt: played };
   const at = { x: p.ped.x, y: p.ped.y };
-  const desk = { id: w.map.pois.length, kind: 'jobcenter', label: 'Employment Center', x: at.x, y: at.y, r: 48, fixed: true };
-  w.map.pois.push(desk);
-  const pc = { id: w.map.pois.length, kind: 'jobpc', label: 'Job computer', x: at.x + 20, y: at.y, r: 30, fixed: true };
-  w.map.pois.push(pc);
+  // (the test city is shared by every world made here: the two counters added once, moved to the player each time)
+  const put = (o) => { let q = w.map.pois.find((e) => e && e.kind === o.kind); if (!q) { q = { id: w.map.pois.length, ...o }; w.map.pois.push(q); } return Object.assign(q, o); };
+  const desk = put({ kind: 'jobcenter', label: 'Employment Center', x: at.x, y: at.y, r: 48, fixed: true });
+  const pc = put({ kind: 'jobpc', label: 'Job computer', x: at.x + 20, y: at.y, r: 30, fixed: true });
   return { w, p, conn, desk, pc, last: () => conn.sent.filter((m) => m && m.t === 'menu').pop() };
 }
 const pickRight = (w, p, desk) => economy.handleMenu(w, p, desk.id, `of:${p.office.tasks[p.office.i].ans}`);
@@ -249,6 +250,18 @@ test('the page\'s ads module: Google\'s script only when asked and never on a po
   const page = new Set(closure(['client/boot.js', 'client/main.js']));
   assert.ok(!page.has('client/ads.js'), 'client/ads.js loads when the job computer offers an ad, not with the page');
   assert.match(readFileSync(new URL('../client/main.js', import.meta.url), 'utf8'), /import\('\.\/ads\.js'\)/);
+});
+
+test('the first-time experience sends honest work on to the Employment Center (its last line and a waypoint)', () => {
+  const { w, desk } = setup();
+  for (const k of ['mail', 'courier']) {
+    const L = endLine(w, k);
+    assert.match(L.text, /More steady work at the Employment Center - it's on your map/);
+    assert.deepEqual(L.mark, { x: Math.round(desk.x), y: Math.round(desk.y), label: 'Employment Center' });
+  }
+  assert.equal(endLine(w, 'fish').mark, undefined, 'the outdoors: as it was');
+  desk.kind = 'delivery';   // (a world without one: the line as it was)
+  try { assert.match(endLine(w, 'mail').text, /After that, the city's yours/); } finally { desk.kind = 'jobcenter'; }
 });
 
 test('the Guide: the Employment Center, office work and the job computer - their numbers from the rules', () => {

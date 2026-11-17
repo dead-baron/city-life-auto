@@ -94,7 +94,7 @@ export function menu(world, p, poi) {
   const wait = waitOf(world, p), best = OFFICE.items * OFFICE.pay + OFFICE.bonus, rec = p.profile.office;
   const opts = [{ id: 'of:start', label: wait > 0 ? `Office work - the next batch in ${wait}s` : 'Office work - start a round', note: `${OFFICE.items} quick tasks, ${money(OFFICE.pay)} each right, up to ${money(best)} a round`, dis: wait > 0 }];
   opts.push({ id: 'close', label: 'Leave' });
-  const sub = `Honest work, paid by the round: sort the mail, type up invoices, answer the phones. The job computers by the window list the rest of the work in town.${rec && rec.n ? ` Rounds you've done here: ${rec.n}.` : ''}`;
+  const sub = `Honest work, paid by the round: sort the mail, type up invoices, answer the phones. The job computers along the side list the rest of the work in town.${rec && rec.n ? ` Rounds you've done here: ${rec.n}.` : ''}`;
   return { t: 'menu', poi: poi.id, title: poi.label, sub, opts, ...cashOf(p) };
 }
 function taskMenu(world, p, poi, R) {
@@ -139,7 +139,7 @@ function adsOf(world, p) {
 }
 // the player's live ticket: made with the menu, kept until it's used or too old
 function ticket(world, p) {
-  if (p.adTk && world.time - p.adTk.made < JOBAD.maxS) return p.adTk;
+  if (p.adTk && (p.adTk.at ? world.time - p.adTk.at : world.time - p.adTk.made) < JOBAD.maxS) return p.adTk;
   p.adTk = { tk: randomBytes(9).toString('hex'), made: world.time, at: 0 };
   return p.adTk;
 }
@@ -210,7 +210,7 @@ export function end(world, p, why) {
 // ---- the ad (session.js: { t: 'ad', a, tk, st }) -----------------------------------------------------------------------
 export function onAd(world, p, msg) {
   const a = String(msg.a || ''), tk = String(msg.tk || ''), T = p.adTk;
-  const live = !!T && T.tk === tk && tk.length > 0 && world.time - T.made <= JOBAD.maxS;
+  const live = !!T && T.tk === tk && tk.length > 0 && (T.at ? world.time - T.at : world.time - T.made) <= JOBAD.maxS;   // (a ticket's life: maxS from the menu to the start, and from the start to the end)
   if (a === 'start') { if (live && !T.at) T.at = world.time; return null; }
   if (a === 'done') {
     if (world.track) world.track('ad', p, { st: String(msg.st || '').slice(0, 20) || 'done' });
