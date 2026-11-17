@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { LIVE_WORLD } from '../shared/liveworld.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+// (ads in test mode with no publisher id of its own: the placeholder id of Google's own example - test mode shows only
+// Google's test ads, never paid ones; declared before config, which reads it: adsOf)
+export const TEST_CLIENT = 'ca-pub-123456789';
 const DATA_DIR = process.env.CLA_DATA_DIR || join(ROOT, 'data');
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
@@ -99,9 +102,7 @@ config.launch = {
   // bug reports (server/bugreports.js) posted to the Discord's #bug-reports through this webhook; none: only kept here
   bugWebhook: env('BUG_WEBHOOK_URL'),
 };
-// -> { mode: 'off' | 'test' | 'on', client: 'ca-pub-...' | '' } (test with no id of its own: the placeholder id of
-// Google's own example - test mode shows only Google's test ads, never paid ones)
-export const TEST_CLIENT = 'ca-pub-123456789';
+// -> { mode: 'off' | 'test' | 'on', client: 'ca-pub-...' | '' } (test with no id of its own: TEST_CLIENT, at the top)
 export function adsOf(mode, client) {
   const id = /^ca-pub-\d{9,20}$/.test(client) ? client : '';
   const m = ['test', 'on'].includes(String(mode).toLowerCase()) ? String(mode).toLowerCase() : 'off';

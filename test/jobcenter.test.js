@@ -8,6 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { call } from './launchkit.js';
 import { adsOf, TEST_CLIENT } from '../server/config.js';
@@ -33,6 +34,11 @@ test('CLA_ADS / CLA_ADSENSE_CLIENT: off by default; test runs Google\'s test ads
   assert.deepEqual(adsOf('on', 'pub-123'), { mode: 'off', client: '' }, 'not a ca-pub id');
   assert.deepEqual(adsOf('on', PUB), { mode: 'on', client: PUB });
   assert.deepEqual(adsOf('yes', PUB), { mode: 'off', client: '' });
+  // the server reads them as it loads (a fresh process: the config built from the environment)
+  for (const [env, want] of [[{ CLA_ADS: 'test' }, { mode: 'test', client: TEST_CLIENT }], [{ CLA_ADS: 'on', CLA_ADSENSE_CLIENT: PUB }, { mode: 'on', client: PUB }], [{}, { mode: 'off', client: '' }]]) {
+    const out = execFileSync(process.execPath, ['-e', "import('./server/config.js').then((m) => console.log(JSON.stringify(m.config.launch.ads)))"], { cwd: new URL('..', import.meta.url), env: { ...process.env, CLA_ADS: '', CLA_ADSENSE_CLIENT: '', ...env } });
+    assert.deepEqual(JSON.parse(String(out)), want, JSON.stringify(env));
+  }
   // no publisher id written into the repo: it comes from the environment (deploy/set-keys.sh)
   const src = readFileSync(new URL('../server/config.js', import.meta.url), 'utf8');
   assert.match(src, /env\('CLA_ADSENSE_CLIENT'\)/);
