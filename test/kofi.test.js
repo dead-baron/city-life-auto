@@ -16,8 +16,7 @@ import { createKofi, supporterCode, codesIn } from '../server/kofi.js';
 import * as cosmetics from '../server/systems/cosmetics.js';
 import { SUPPORT, COSMETICS } from '../shared/rules.js';
 import { PIECES, PIECE_IDS } from '../shared/lookcore.js';
-import { SPECIAL_PAINTS } from '../shared/specialpaint.js';
-import { PAINTS } from '../shared/vehicles.js';
+import { PAINTS, SPECIAL_PAINTS } from '../shared/vehicles.js';
 
 const TOKEN = 'kofi-test-token';
 function setup({ token = TOKEN, packCodes = [], on = true } = {}) {

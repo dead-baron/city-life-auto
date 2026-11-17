@@ -12,8 +12,7 @@ import { birdModel, BIRDS } from '../birds.js';
 import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
 import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
 import { groundSprite as forageGround } from '../forage.js';
-import { VEHICLE_BY_INDEX, PAINTS, unpackVehDamage } from '../../../shared/vehicles.js';
-import { specialPaint } from '../../../shared/specialpaint.js';
+import { VEHICLE_BY_INDEX, PAINTS, unpackVehDamage, specialPaint } from '../../../shared/vehicles.js';
 const ART = {};   // (useArt: ferrisCab, hotAirBalloon, starfish; horseModel - loadArt)
 export function useArt(o) { Object.assign(ART, o); }
 // The newer art, loaded when first needed and out of the startup code (the renderer's and the bake workers'): the batch-4
@@ -231,7 +230,7 @@ export const towOf = (extra) => { const e = (extra | 0) & 3; return !e ? 0 : (e 
 const stKey = (s) => (s.tip ? 'P' : '') + (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg + 'z' + s.zones + 'o' + s.off : '') + (s.holes ? 'H' + s.holes : '') + (s.half ? 'C' + s.cut + s.half : '') + (s.reel ? 'r' + s.reel : '') || '-';   // (reel: a combine's reel turning - a third of a bat a step)
 function vehLook(d) {
   const t = vehType(d), tn = d.tn ?? -1, p = (((d.p ?? 0) % PAINTS.length) + PAINTS.length) % PAINTS.length;
-  const sp = specialPaint(tn);   // (a special paint - the Founder's Pack's chrome gold: shared/specialpaint.js - its hex as it is, more sheen)
+  const sp = specialPaint(tn);   // (a special paint - the Founder's Pack's chrome gold: shared/vehicles.js SPECIAL_PAINTS - its hex as it is, more sheen)
   if (sp) return WORK.has(t) ? { t, cab: sp.hex, sh: sp.sheen } : { t, paint: sp.hex, sh: sp.sheen };
   if (CIVIL.has(t) || CIVIL_X.has(t)) return { t, paint: carPaint(PAINTS[tn >= 0 ? tn : p]) };
   if (WORK.has(t)) return { t, cab: tn >= 0 ? carPaint(PAINTS[tn]) : p % 5 < 2 ? undefined : CABS[p % CABS.length] };   // 2 in 5 keep the model's own cab

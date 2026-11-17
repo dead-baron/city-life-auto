@@ -1164,7 +1164,7 @@ export const COSMETICS = {
 // a guest's would be lost with the guest. price: the price the game shows (USD); Ko-fi sets the real one. What's in it:
 // coat (shared/lookcore.js, a gift piece - never sold), color (a name color, COSMETICS.colors - switch it off at a style
 // counter or in Settings), plate (the card badge, COSMETICS.plates card: 1 - on your own card and in the players list,
-// never over your name), paint (a special paint, shared/specialpaint.js - free at any Fresh Coat garage, again any time).
+// never over your name), paint (a special paint, shared/vehicles.js SPECIAL_PAINTS - free at any Fresh Coat garage, again any time).
 export const SUPPORT = { price: 8, pack: "Founder's Pack", coat: "Founder's Coat", color: 'supporter', plate: 'supporter', paint: 64, paintName: 'Chrome gold', claimTries: 5, claimWindowMin: 60 };
 // The admin panel's gifts (server/admin.js gift; the owner, 11-16: "gift things to people"): money into the bank (the
 // panel's quick amounts; maxMoney at most a gift), items and weapons (maxItems at most: of an item, or magazines of a gun),

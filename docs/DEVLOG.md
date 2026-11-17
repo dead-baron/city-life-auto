@@ -25032,7 +25032,7 @@ The owner approved a paid pack of cosmetics on his Ko-fi shop, delivered to the 
   Coat** (shared/lookcore.js, a gift piece - the long coat in deep plum with gold sleeves and shoulders, the people
   renderer's varsity trim on the coat, so no new art and the art hash unchanged), **Supporter teal** (`#2fe0d0`) name color
   (not the owner's gold; switch it off in Settings or at a style counter), a **Supporter** card badge (a card plate: on your
-  own card, the Skills app and the players list - never over the name), and **chrome gold** paint (shared/specialpaint.js:
+  own card, the Skills app and the players list - never over the name), and **chrome gold** paint (shared/vehicles.js SPECIAL_PAINTS:
   tint 64, outside the shop palette, a brassy gold with 2.2x the sky sheen - client/art2/game/actors.js; free at any
   Fresh Coat garage, again any time). Kept on the account record (`acct.pack`), so a progress epoch, a season's end and
   Start fresh all keep it (the coat back on the next session: cosmetics.js `restoreFounder`).

@@ -738,6 +738,7 @@ function run(world, p, c, msg) {
       if (Number.isFinite(msg.x) && Number.isFinite(msg.y)) sp = { x: msg.x, y: msg.y, a: Number(msg.a) || 0 };   // (testing: exactly there)
       const v = world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false });
       v.issuedTo = p.pid;
+      if (Number.isInteger(msg.tn) && msg.tn >= 0 && msg.tn < 100) v.tint = msg.tn;   // (testing a paint: a palette index or a special one - shared/vehicles.js SPECIAL_PAINTS)
       v.lz = ped.lz || 0; // up on the highway with you
       // an aircraft already up (msg.alt px, flying: testing - shared/flight.js), and (msg.in) you at its controls
       if (VEHICLES[model].kind === 'air' && Number(msg.alt) > 0) { v.alt = Math.min(VEHICLES[model].ceiling, Number(msg.alt)); v.spool = 1; const sp0 = VEHICLES[model].air === 'plane' ? VEHICLES[model].stall * 1.6 : 0; v.vx = Math.cos(sp.a) * sp0; v.vy = Math.sin(sp.a) * sp0; }

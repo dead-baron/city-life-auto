@@ -25,9 +25,8 @@
 //     absent on old profiles (made the first time; sb, bp, tw on older ones too). tops: one { c, s } a career a season.
 import { COSMETICS, SEASON, CAREERS, CAREER_KEYS, SUPPORT } from '../../shared/rules.js';
 import { encodeLook, decodeLook } from '../../shared/look.js';
-import { SPECIAL_PAINTS } from '../../shared/specialpaint.js';
 import { PIECE_IDS } from '../../shared/lookcore.js';
-import { PAINTS } from '../../shared/vehicles.js';
+import { PAINTS, SPECIAL_PAINTS } from '../../shared/vehicles.js';
 import { store } from '../store.js';
 import * as careers from './careers.js';
 import * as looks from './looks.js';
