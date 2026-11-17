@@ -8,6 +8,7 @@
 import { WOODJOB } from '../../shared/rules-play.js';
 import { store } from '../store.js';
 import * as phone from './phone.js';
+import { poisWhere } from '../../shared/mapcore.js';
 
 // who buys firewood, by their kind of place: what they burn it in
 const BURNS = { diner: 'its wood-fired grill', cafe: 'its bread oven', bar: 'the fire in the snug', hotel: 'the lobby\'s fireplaces', camp: 'the campfires', hut: 'its stove', clubhouse: 'the fireplace in the lounge' };
@@ -20,7 +21,7 @@ export function customers(map) {
 }
 // the sawmill or lumber yard you're at (on foot), or null
 export function millAt(world, x, y) {
-  for (const q of world.map.pois) if (MILL.test(q.label || '') && Math.abs(q.x - x) < 140 && Math.abs(q.y - y) < 140 && Math.hypot(q.x - x, q.y - y) < 140) return q;
+  for (const q of poisWhere(world.map, 'mill', (o) => MILL.test(o.label || ''))) if (Math.abs(q.x - x) < 140 && Math.abs(q.y - y) < 140 && Math.hypot(q.x - x, q.y - y) < 140) return q;
   return null;
 }
 // the order on offer to you from (x, y): kept a while so the card and the board agree; a new one once it's taken or old

@@ -13,7 +13,7 @@ import { createAdminLog } from './adminlog.js';
 import { createAdminHttp } from './adminhttp.js';
 import { createBugReports } from './bugreports.js';
 import { createAdmin, note, notePurchase } from './admin.js';
-import { allowed } from './roles.js';
+import { allowed, rankOf, RANK } from './roles.js';
 import { filter as loadFilter } from './chatfilter.js';
 import { createModeration } from './moderation.js';
 import { createChat } from './chat.js';
@@ -55,7 +55,7 @@ export function createLaunch(opts) {
   const chat = createChat({ accounts, filter: loadFilter(), mod, now, onLine: (p, ch) => analytics.event('chat', p, { ch }), links: [L.discordInvite, L.supportUrl].filter(Boolean) });
   // bug reports from the pages (POST /report: server/bugreports.js), read at /admin/bugs, posted to the Discord's webhook
   const bugs = createBugReports({ dir: opts.bugDir !== undefined ? opts.bugDir : dataDir ? pathJoin(dataDir, 'reports') : null, accounts, store, world, origins: [...new Set([...L.pageOrigins, ...(opts.extraOrigins || [])])], ip: (req) => opts.ip(req), webhook: L.bugWebhook, fetch: opts.fetch, now, log });
-  const adminHttp = createAdminHttp({ bugs, accounts, log: adminLog, mod, analytics, news, mailAddress: L.mailAddress || '', publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), geo, stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), tickMsMax: +(world.stats.tickMax || 0).toFixed(2), ents: world.entities ? world.entities.size : 0, build: world.build || '', builtAt: world.buildAt || 0, ga: ga.stats }) });
+  const adminHttp = createAdminHttp({ bugs, accounts, log: adminLog, mod, analytics, news, mailAddress: L.mailAddress || '', publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), geo, stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), tickMsMax: +(world.stats.tickMax || 0).toFixed(2), ents: world.entities ? world.entities.size : 0, line: world.line ? world.line.summary() : null, build: world.build || '', builtAt: world.buildAt || 0, ga: ga.stats }) });
   const admin = createAdmin({ accounts, log: adminLog, mod, store, pageLink: adminHttp.pageLink, now });
   const onlineOf = (pid) => { const p = world.players.get(pid); return p && p.conn ? p : null; };
   const authHttp = createAuthHttp({
@@ -340,5 +340,11 @@ export function createLaunch(opts) {
     if (await bugs.handle(req, res, url)) return true;
     return false;
   }
-  return { login, hooks, http, start, stop, purgeDeleted, bugs, halfSecond, accounts, news, rename, memberOwns, onLinked: becameMember, adminLog, mod, chat, ac, analytics, geo, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
+  // who a hello's token is, without signing in (the line at the door: server/line.js) -> { pid, staff } | null
+  function peek(token) {
+    const c = token ? accounts.checkToken(token) : null;
+    return c ? { pid: c.pid, staff: !!(c.acct && rankOf(c.acct.role) >= RANK.helper) } : null;
+  }
+
+  return { login, peek, hooks, http, start, stop, purgeDeleted, bugs, halfSecond, accounts, news, rename, memberOwns, onLinked: becameMember, adminLog, mod, chat, ac, analytics, geo, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
 }

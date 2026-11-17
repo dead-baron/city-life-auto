@@ -10,6 +10,7 @@ import { readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { cpus, loadavg, freemem, totalmem } from 'node:os';
 import { join, normalize, extname } from 'node:path';
 import { config } from './config.js';
+import { createLine } from './line.js';
 import { attachWebSocketServer, wsStats } from './ws.js';
 import { createLimits, clientIp } from './limits.js';
 import { createLaunch } from './launch.js';
@@ -139,6 +140,13 @@ function originAllowed(origin) {
   return !origin || config.allowedOrigins.includes(origin);
 }
 
+// the line at the door (server/line.js): config.maxPlayers in the city at once, the rest wait their turn; the players on
+// at the last stop let straight back in
+const line = createLine({ max: config.maxPlayers, lineMax: config.lineMax, online: () => { let n = 0; for (const p of world.players.values()) if (p.conn) n++; return n; }, peek: (token) => launch.peek(token), file: join(config.dataDir, 'line-held.json') });
+world.line = line;
+{ const held = line.load(); if (held) console.log(`[line] ${held} players from before the restart get their places back`); }
+setInterval(() => line.pump(), 1000).unref();
+
 attachWebSocketServer(server, {
   path: '/ws',
   allowOrigin: originAllowed,
@@ -154,7 +162,7 @@ attachWebSocketServer(server, {
       seed: config.seed, dev: config.dev, world: WORLD3 ? 'v3' : undefined, maxPlayers: config.maxPlayers, label: 'City Life Auto 0.8',
       closedReason: () => (limits && limits.state() !== 'ok' ? QUOTA_MSG : null),
       login: (token, hello) => launch.login(token, hello, ip),   // (bans, kicks, new guests, the age gate: server/launch.js)
-      hooks: launch.hooks,
+      hooks: launch.hooks, line,
     });
     conn.on('message', (data, isBinary) => session.onMessage(data, isBinary));
     conn.on('close', () => session.onClose());
@@ -175,6 +183,7 @@ function statsSnapshot() {
     kbOutPerSec: +((world.stats.bytesOut / Math.max(1, (Date.now() - startedAt) / 1000)) / 1024).toFixed(1),
     weather: world.weather, clock: Math.round(world.clock.minutes), droppedSnapshots: world.stats.dropped || 0,
     systemMs: world.profile(),
+    line: line.summary(),   // (the line at the door: how many wait, how long people waited - server/line.js)
     traffic: limits ? limits.summary() : null,
     ga: launch.ga.stats, flags: launch.ac.flags.length, reviews: launch.mod.openReviews(500).length,
     art: artCdn ? artCdn.summary() : null,
@@ -264,6 +273,7 @@ function shutdown(sig) {
     if (p.ped && !p.ped.dead) players.savePos(p, p.ped);
     if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Server restarting - your progress is saved. Reconnecting...' }); } catch { /* closed */ } }
   }
+  line.save([...world.players.values()].filter((p) => p.conn).map((p) => p.pid));   // (their places held for the restart: line.js)
   try { launch.stop(); } catch (e) { console.error('[server] saving the analytics failed', e); }
   try { store.flushSync(); } catch (e) { console.error('[server] final save failed', e); }
   if (limits) { limits.addBytes(wsStats.bytesOut - lastWs); limits.save(); }

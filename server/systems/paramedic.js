@@ -24,6 +24,7 @@ import { sitesOf, openNear } from './firefighter.js';
 import { isDowned } from './revive.js';
 import * as combat from './combat.js';
 import * as jobs from './jobs.js';
+import { poisKind } from '../../shared/mapcore.js';
 
 export const KINDS = ['minor', 'serious', 'player'];
 const SAY = {
@@ -34,7 +35,7 @@ const SAY = {
 const NAMES = ['a cyclist', 'a jogger', 'a shopper', 'a pensioner', 'a delivery rider', 'a tourist', 'a dog walker', 'a builder'];
 let seq = 1;
 
-const hospitals = (m) => m.pois.filter((q) => q.kind === 'hospital');
+const hospitals = (m) => poisKind(m, 'hospital');   // (the map's list, shared: never changed here)
 export function hospitalFor(world, p) {
   const L = hospitals(world.map);
   if (!L.length) return null;

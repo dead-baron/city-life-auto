@@ -52,6 +52,7 @@ import * as prison from './prison.js';
 import { seek, footWay, walkInAt, sidestep, spawnNpc } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
+import { poisKind } from '../../shared/mapcore.js';
 
 const PICKUP_PX = 200;   // a car this close to the prisoner is walked to (further off, it drives over first)
 const DROP_PX = 170;     // at the station: this close to the kerb outside the front door
@@ -65,7 +66,7 @@ const floored = (world, e) => world.time < e.downUntil || world.time < e.stunUnt
 const wrecked = (v) => !v || v.removed || v.wreckAt || v.dead || v.sinkAt;
 
 // ---- the stations ---------------------------------------------------------------------------------------------------------
-const stations = (world) => world.map.pois.filter((q) => q.kind === 'police');
+const stations = (world) => poisKind(world.map, 'police');
 export function nearestStation(world, x, y) {
   let best = null, bd = Infinity;
   for (const st of stations(world)) { const d = Math.hypot(st.x - x, st.y - y); if (d < bd) { bd = d; best = st; } }

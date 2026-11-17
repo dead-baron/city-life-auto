@@ -37,6 +37,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import * as jobs from './jobs.js';
+import { poisKind } from '../../shared/mapcore.js';
 
 const rng = mulberry32(6464);
 // the wilderness: a wild district (the woods, the peaks, the desert, the rocks, the islets - not the open sea's own) or an
@@ -343,7 +344,7 @@ export function interaction(world, p) {
   if (p.job) return null;
   // at a Search & Rescue HQ (World v3: shared/world3-sarhq.js) - its door or its pad; never a hospital where there's an
   // HQ (the owner, 10-23: "we should have a few specific search and rescue HQs to take these missions not the hospital")
-  const m = world.map, hq = (m.pois || []).find((q) => q && q.kind === 'sar' && Math.hypot(q.x - ped.x, q.y - ped.y) < (q.r || 44) + 30);
+  const m = world.map, hq = (m.pois ? poisKind(m, 'sar') : []).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < (q.r || 44) + 30);
   const pad = hq ? nearestBase(m, hq.x, hq.y) : basePads(m).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < FLY.PAD_R + 30);
   if (!pad) return null;
   return { label: 'Sign on as a search & rescue pilot (a rescue helicopter is issued)', card: { id: 'sar', where: pad.name || null, start: () => start(world, p, pad) }, run: () => { const err = start(world, p, pad); if (err) world.notify(p, err, 'bad'); } };

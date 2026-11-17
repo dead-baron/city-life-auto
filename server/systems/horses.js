@@ -19,6 +19,7 @@ import { store } from '../store.js';
 import * as law from './law.js';
 import * as vehicles from './vehicles.js';
 import * as homes from './homes.js';
+import { poisKind } from '../../shared/mapcore.js';
 
 export const COATS = 8;
 export const BARE = 8;
@@ -32,7 +33,7 @@ export const coatOf = (v) => (v.variant | 0) & 7;
 export const isBare = (v) => ((v.variant | 0) & BARE) !== 0;
 export const coatName = (v) => COAT_NAMES[coatOf(v) % COATS];
 // a horse: never painted (a respray, economy.js), its coat kept; a stolen one stored bare stays as it was
-const farms = (world) => world.map.pois.filter((q) => q.kind === 'farm');
+const farms = (world) => poisKind(world.map, 'farm');
 
 // ---- a farm's horse, ridden off -----------------------------------------------------------------------------------
 // the livestock horse beside ped (on foot, within reach), or null

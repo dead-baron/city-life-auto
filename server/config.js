@@ -26,7 +26,10 @@ export const config = {
   seed: Number(process.env.CLA_SEED || 1337),
   dev: process.env.CLA_DEV === '1',
   secret: loadSecret(),
-  maxPlayers: Number(process.env.CLA_MAX_PLAYERS || 150),
+  // players in the city at once (the owner, 11-17: 100 a city); past it a line at the door (server/line.js), itself room
+  // for lineMax
+  maxPlayers: Number(process.env.CLA_MAX_PLAYERS || 100),
+  lineMax: Number(process.env.CLA_LINE_MAX || 200),
   // Cost / abuse guards - all OFF by default (0). The monthly data meter runs regardless and
   // shows in /stats. To switch them on see deploy/city-life-auto.service.
   // Outbound data cap per calendar month (GB): Oracle's free tier includes 10 TB/month, so 9000

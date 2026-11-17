@@ -211,7 +211,17 @@ function launchPad() {
 // and PLAY tries again. 4009 kicked, 4010 banned, 4011 the age gate, 4012 moved to another device, 4013 too many new
 // guests from this network, 4014 signed out on this device (the token goes: PLAY plays as a new guest), 4017 a deleted
 // account (RESTORE brings it back: the hello's restore - server/launch.js login).
-const REFUSED = new Set([4009, 4010, 4011, 4012, 4013, 4014, 4017]);
+const REFUSED = new Set([4009, 4010, 4011, 4012, 4013, 4014, 4017, 4018]);   // (4018: the city's full and so is the line - server/line.js)
+// The city's full: our place in the line at the door, kept up to date; the welcome comes when it's our turn. Cancel: out
+// of the line (PLAY joins it again).
+function inLine(m) {
+  const st = $('t-status');
+  st.textContent = `The city's full - you're #${m.pos} in line`;
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = 'Cancel'; b.className = 't-restore';
+  b.onclick = () => { const w = S.ws; S.refusedWhy = 'You left the line.'; refusedAtDoor(4018); try { w && w.close(); } catch { /* closed */ } };
+  st.append(' ', b);
+}
 function refusedAtDoor(code) {
   clearTimeout(S.reconnectT);
   S.ws = null; S.welcomed = false; S.refused = code;
@@ -528,6 +538,7 @@ function onText(m) {
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; S.refusedWhy = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
+    case 'line': inLine(m); break;   // the city's full: waiting at the door, in at our turn (server/line.js)
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
     case 'wiped': freshDone(m.keep); break;   // Start fresh: the character is gone (server players.js wipeAccount)
     case 'acctdeleted': S.ws = null; location.replace(location.pathname + location.search); break;   // (Delete account: back to the title, which says it's deleted and offers RESTORE - refusedAtDoor 4017)
