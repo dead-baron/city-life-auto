@@ -509,6 +509,7 @@ function onText(m) {
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
+    case 'fishlog': phone.on('FishLog', m); break;   // the Fish log app (server fishing.js logInfo)
     case 'next': phone.on('Next', m); break;   // the "What's next" app (server whatsnext.js; client/whatsnext.js)
     case 'crew': phone.on('Crew', m); S.crewMsg = m; if (hubMod && topOverlay() === 'players') hubMod.people(); break;   // the Crew app and the People tab (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)

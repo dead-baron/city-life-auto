@@ -244,7 +244,7 @@ test('fishing: by the water with a rod, the prompt; hold, let go, strike on the 
   const fishing = await import('../server/systems/fishing.js');
   const w = makeWorld();
   const { p, prof } = joinPlayer(w);
-  prof.weapons.rod = 0;
+  prof.weapons.rod = 0; p.ped.weapon = 'rod';   // (the rod in hand: you fish with it out)
   const pier = w.map.marina[0];
   const ped = p.ped;
   teleport(w, ped, pier.x - 3 * 32, pier.y); // on the dock beside water

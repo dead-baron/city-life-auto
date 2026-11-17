@@ -238,7 +238,7 @@ const WATER_LABEL = { lily: 'a park\'s lily pond (the Golden Koi)', drop: 'a lak
 export function devFish(world, p, msg) {
   const ped = p.ped, prof = p.profile, k = String(msg.k || 'kit');
   if (!ped) return '[dev] No character.';
-  const kit = () => { if (prof.weapons.rod === undefined) prof.weapons.rod = 0; for (const id of FS.ROD_IDS) if (id !== 'rod') prof.inventory[id] = Math.max(1, prof.inventory[id] || 0); p.meDirty = true; };
+  const kit = () => { if (prof.weapons.rod === undefined) prof.weapons.rod = 0; for (const id of FS.ROD_IDS) if (id !== 'rod') prof.inventory[id] = Math.max(1, prof.inventory[id] || 0); if (ped && !ped.dead) ped.weapon = 'rod'; p.meDirty = true; };   // (the rod in hand: you fish with it out)
   switch (k) {
     case 'kit': {
       kit();

@@ -25,6 +25,7 @@
 //   cancel(world, p, msg)            reel in
 //   interaction(world, p)            the prompt while fishing
 //   meInfo(p) / creelInfo(prof)      the me record's fishing and cooler
+//   logInfo(p)                       the phone's Fish log: the log, the cooler, the records board
 //   shopOptions(p, kind, opts)       a fish market's, a bait shop's, a charter desk's menu: sell the catch, choose a bait
 //   sellCatch(world, p, kind)        the cooler sold
 //   habitatAt(world, x, y, o)        the water there: { water, spot }
@@ -334,7 +335,7 @@ function land(world, p, ped, f, lb, hab) {
   const kinds = Object.keys(log).length;
   world.emit(ped.x, ped.y, { e: 'catch', id: ped.id, x: Math.round(ped.x), y: Math.round(ped.y), f: f.i, lb });
   if (p.conn) p.conn.sendJSON({ t: 'fish', f: f.i, lb, v, nw: first ? 1 : 0, pb: best && !first ? 1 : 0, wr: world1 ? 1 : 0, n: kinds, of: FS.FISH.length, w: FS.WATER_NAME[hab.water] });
-  world.notify(p, `${f.name}, ${lb} lb${first ? ' - new to your log!' : best ? ' - your best yet!' : ''} Into the cooler (${creelOf(prof).length}/${FISHING.creel}).`, 'good');
+  world.notify(p, `${f.name}, ${lb} lb - in your cooler (${creelOf(prof).length}/${FISHING.creel}).`, 'good');   // (short: the catch card says the rest - new to your log, your best, a record)
   if (f.rare === 5) world.broadcast({ e: 'toast', text: `${p.name || 'Someone'} has landed ${f.name} - ${lb} lb!`, tone: 'good' });
   // a koi out of a park's pond (Midtown's Commons Pond, Greenfield Pond, the Stadium Ponds): the ponds are for looking at -
   // anyone who sees you take one calls it in (law.js koiTheft, goldenKoi)
@@ -386,6 +387,13 @@ export function creelInfo(prof) {
   if (!c || !c.length) return null;
   let v = 0; for (const [id, lb] of c) { const f = FS.FISH_BY_ID[id]; if (f) v += FS.fishValue(f, lb); }
   return { n: c.length, v, max: FISHING.creel };
+}
+
+// the phone's Fish log (client/fishlog.js): your log, what's in your cooler, the records board's biggest of each
+export function logInfo(p) {
+  const prof = p.profile, rec = {};
+  for (const [id, r] of Object.entries(store.kept.fishRecords || {})) if (FS.FISH_BY_ID[id] && Array.isArray(r)) rec[id] = [r[0], String(r[1] || '')];
+  return { t: 'fishlog', log: prof.fishLog || {}, creel: creelOf(prof).slice(), rec, max: FISHING.creel };
 }
 
 // ---- the shops -------------------------------------------------------------------------------------------------------

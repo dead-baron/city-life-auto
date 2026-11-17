@@ -481,7 +481,7 @@ export class HUD {
     while (this.toastEls.length > 2) { const old = this.toastEls.shift(); clearTimeout(old._t); old.remove(); }
     const gone = () => { this.toastEls = this.toastEls.filter((x) => x !== el); el.classList.add('out'); setTimeout(() => el.remove(), 260); };   // (it fades out: style.css .out)
     el._t = setTimeout(gone, Math.min(6000, 2600 + shown.length * 40));
-    requestAnimationFrame(() => { const tx = el.lastChild; el.classList.toggle('more', line !== msg || tx.scrollWidth > tx.clientWidth + 1); });
+    requestAnimationFrame(() => { const tx = el.lastChild; el.classList.toggle('more', line !== msg || tx.scrollWidth > tx.clientWidth + 1 || tx.scrollHeight > tx.clientHeight + 1); });
   }
 
   // the money's count-up (the motion sheet UIC-20 02): the cash counts up (or down) to the new sum over 300 ms, the
