@@ -1804,7 +1804,7 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .iv-keys { margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--dim); font: 600 var(--fs-1) var(--ui); }
 .bag-craft { grid-area: craft; }   /* (crafting's place, for later) */
 .cue-down { -webkit-mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); }
-@media (max-width: 1100px) { .bag { grid-template-columns: 310px minmax(0, 1fr) 236px; } }
+@media (max-width: 1100px) { .bag { grid-template-columns: 380px minmax(0, 1fr) 220px; } }
 /* a phone on its side: everything a size down - the tabs a rail down the grid's left (never cut off, never two rows over
    the grid), the slots' words and the cash tucked away (the slots show their kind, the HUD the cash) */
 @media (max-height: 560px) {
