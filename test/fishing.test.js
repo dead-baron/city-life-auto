@@ -157,7 +157,7 @@ test('fishing waters: the river and the creek, the lake and the pond, the pier, 
 
 test('a day at the river: hold to charge, let go, wait out the nibbles, strike on the bite, play the fish in; the cooler, the log, the records board, the fish market', () => {
   const { p, prof, conn } = joinPlayer(W, { cash: 0, bank: 0 });
-  prof.weapons.rod = 0; prof.inventory.worms = 5;
+  prof.weapons.rod = 0; prof.inventory.worms = 5; p.ped.weapon = 'rod';   // (the rod in hand: you fish with it out)
   const bank = bankOf(W, (h) => h.water === 'river' || h.water === 'lake');
   assert.ok(bank, 'a river bank');
   teleport(W, p.ped, bank[0], bank[1]); p.ped.a = bank[2];
@@ -364,7 +364,7 @@ test('rod first: no prompt with the rod in the bag or while swimming; the rod ou
   const combat = await import('../server/systems/combat.js');
   const { p, prof } = joinPlayer(W, { cash: 0, bank: 0 });
   prof.inventory.caneRod = 1; prof.inventory.worms = 5;
-  const bank = bankOf(W, (h) => h.water === 'river' || h.water === 'lake' || h.water === 'pond');
+  const bank = bankOf(W, (h) => h.water === 'river' || h.water === 'lake');
   teleport(W, p.ped, bank[0], bank[1]); p.ped.a = bank[2];
   const label = () => (players.findInteraction(W, p) || {}).label || '';
   assert.equal(p.ped.weapon, 'fists');
@@ -381,7 +381,7 @@ test('rod first: no prompt with the rod in the bag or while swimming; the rod ou
   assert.equal(p.ped.weapon, 'rod', 'the bag\'s Use: the rod in hand');
   assert.match(label(), /Fish here/, 'the rod out: the prompt');
   // swimming: never - into the water just off the bank, rod or not
-  const sx = bank[0] + Math.cos(bank[2]) * 48, sy = bank[1] + Math.sin(bank[2]) * 48;
+  const sx = bank[0] + Math.cos(bank[2]) * 26, sy = bank[1] + Math.sin(bank[2]) * 26;   // (the middle of the first water tile)
   teleport(W, p.ped, sx, sy); p.ped.a = bank[2] + Math.PI;
   assert.ok(isSwimming(W.map, p.ped), 'in the water');
   assert.equal(fishing.spotFor(W, p.ped), null, 'no spot while swimming');
