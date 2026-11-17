@@ -417,3 +417,15 @@ test('an instrument from the Inventory: held and played in the city for everyone
   assert.match(bag, /if \(ITEMS\[t\.id\] && ITEMS\[t\.id\]\.music === 'inst'\) \{ close\(\); return; \}/, 'PLAY puts the Inventory away');
   assert.match(main, /if \(\(m\.game === 'jam' \|\| m\.game === 'rhythm'\) && inHub\(\)\) closeHub\(\);/, 'and the music game never opens over it');
 });
+
+test('playing an instrument, the dance key (one of its pads) doesn\'t start a dance or take the instrument out of your hands', async () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.inventory.bucketdrum = 1;
+  economy.useItem(w, p, 'bucketdrum');
+  assert.equal(p.ped.pp, 'drums');
+  assert.equal(dance.next(w, p), -1);
+  assert.ok(!p.ped.dancing); assert.equal(p.ped.pp, 'drums'); assert.ok(p.perf && p.perf.kind === 'jam');
+  music.stopPerf(w, p);
+  assert.ok(dance.next(w, p) >= 0, 'put away: the dance key dances again');
+});

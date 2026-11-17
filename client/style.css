@@ -1827,7 +1827,8 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
   .bag-detail { padding: var(--s2); }
   .bd-ic { width: 44px; height: 44px; } .bd-ic .gl { width: 28px; height: 28px; }
   .bd-what { margin-top: var(--s2); }
-  .touch .iv-off { width: 24px; height: 24px; right: -6px; bottom: -6px; }
+  .iv-off, .touch .iv-off { width: 20px; height: 20px; right: -5px; bottom: -5px; }
+  .bc-tag { transform: scale(.8); transform-origin: 0 0; }
 }
 @media (max-height: 560px) and (max-width: 780px) { .bag { grid-template-columns: 196px minmax(0, 1fr) 170px; } .iv-doll { grid-template-columns: 44px minmax(0, 1fr) 44px; } }
 /* upright on a phone (or a narrow window: client/bag.js .stack): the character on top (the figure between its slots), the

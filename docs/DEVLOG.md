@@ -24678,7 +24678,8 @@ bag, just Inventory." Built to the concepts U6, U14, U15, CC10 and UIC-19.
   tank or a bare chest, briefs). A top or bottoms over a dress takes the dress off and puts on bottoms (or a top) of yours.
   The clothes you own are in the grid too (the Clothes tab, and All), each with its colors; WEAR / TAKE OFF in the
   details' third place.
-- **Weapons at a glance, switched without opening it** (shared/loadout.js - the server's arms.js reads it too): the quick
+- **Weapons at a glance, switched without opening it** (shared/loadout.js - the server's arms.js reads it too; the weapon
+  numbers moved to shared/rules-arms.js, re-exported by rules.js, so the page's start-up code stays off rules.js): the quick
   bar under the grid has eight slots - 1 GUN 1, 2 GUN 2, 3 MELEE, 4 THROWN (the guns and throwable that take a slot, the
   melee slot the dear blade else a bat or a knife), then 5-8 the four things to use (pin one from its details, or drag a
   tile onto the slot). In play the number keys 1-4 take those weapons out (again: put it away), 5-8 use the things, 9
@@ -24691,7 +24692,8 @@ bag, just Inventory." Built to the concepts U6, U14, U15, CC10 and UIC-19.
   strip along the foot of the screen (eight in a row, CHORD and GIG over them; 22% of the screen's height at most, never
   over your character), the gig's track list and a set's result grow it upward while they show. Your character holds and
   plays it in the city for everyone (the server's descriptor `pp`, as the buskers: sax, violin, bucket drums, guitar - the
-  keytar as a guitar), and the Inventory's figure plays the instrument you pick.
+  keytar as a guitar), and the Inventory's figure plays the instrument you pick. While you play, the dance key (G, one of the
+  pads) no longer starts a dance that took the instrument's pose away (server/systems/dance.js).
 - **A gamepad**: LT / RT change the Inventory's tabs (LB / RB stay the hub's screens, the rule since UI-3), the D-pad or
   stick moves, A picks, X equips, wears or takes off, Y drops, B backs out of the details then the screen.
 - What I took from similar games: GTA V's weapon wheel (hold a button, point, let go - our Tab / RB / the ring on touch);
