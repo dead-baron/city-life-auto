@@ -37,7 +37,7 @@ const COUNTRY_PREFERRED = new Set([T.DIRT, T.SIDEWALK, T.PLAZA, T.LOT]); // out 
 const CIV_TARGET_DAY = 30, CIV_TARGET_NIGHT = 20;
 // How busy a place is (the World v3 plan: busy downtown pavements, a quiet suburb - density set per place): the
 // district's style, [by day, by night]; round a train station at the rush hours, half as many again
-const CROWD = { towers: [1.5, 0.7], commercial: [1.3, 0.9], nightlife: [0.9, 1.6], redlight: [0.8, 1.4], arts: [1.2, 1], oldtown: [1.15, 0.9], apartments: [1, 0.7], civic: [1.1, 0.6], beach: [1.3, 0.6], houses: [0.6, 0.35], luxury: [0.6, 0.5], southside: [0.9, 0.9], industrial: [0.4, 0.2], factory: [0.4, 0.2], harbor: [0.5, 0.3], park: [0.8, 0.3] };
+const CROWD = { towers: [1.5, 0.7], commercial: [1.3, 0.9], nightlife: [0.9, 2.2], redlight: [0.8, 1.4], arts: [1.2, 1], oldtown: [1.15, 0.9], apartments: [1, 0.7], civic: [1.1, 0.6], beach: [1.3, 0.6], houses: [0.6, 0.35], luxury: [0.6, 0.5], southside: [0.9, 0.9], industrial: [0.4, 0.2], factory: [0.4, 0.2], harbor: [0.5, 0.3], park: [0.8, 0.3] };
 const RUSH = [[420, 570], [990, 1140]];   // (minutes: 7:00-9:30, 16:30-19:00)
 function crowdAt(world, x, y, night) {
   const m = world.map, tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);

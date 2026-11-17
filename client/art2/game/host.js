@@ -1477,7 +1477,7 @@ export class World2 {
   // the Neon Strip after dark (the owner, 10-25): a sheen of wet on its streets, the signs' colour lying in it
   _slick(F, x, y) {
     const M = this.map, tx = Math.floor(x / 32), ty = Math.floor(y / 32), d = M.inside && M.inside(tx, ty) ? DISTRICTS[M.dist[M.idx(tx, ty)]] : null;
-    const want = d && d.tier === 'neon' ? 0.5 * smooth((F.sky.night - 0.2) / 0.5) : 0;
+    const want = d && d.tier === 'neon' ? 0.85 * smooth((F.sky.night - 0.1) / 0.45) : 0;   // (pass 3, 11-16: wetter - the neon lying in the street, WC012)
     this.slickK = (this.slickK || 0) + (want - (this.slickK || 0)) * 0.03;
     return this.slickK < 0.01 ? 0 : this.slickK;
   }
@@ -1538,6 +1538,9 @@ export class World2 {
     }
     p.lampsOn = Math.max(p.lampsOn || 0, sky.night);
     p.rain = Math.max(p.rain || 0, rk);
+    // (the Strip after dark - pass 3, WC421: a warm glow off its fronts on the ground, its neon brighter in the wet)
+    const k = this.slickK || 0;
+    if (k > 0.01) { const g = p.ambGround; g[0] += 0.055 * k; g[1] += 0.032 * k; g[2] += 0.03 * k; p.reflK = Math.max(p.reflK || 0, 0.7 + 0.4 * k); p.emiK = (p.emiK || 1) * (1 + 0.15 * k); }
     p.motes = this._nature(F);
     return p;
   }

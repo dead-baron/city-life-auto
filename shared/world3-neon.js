@@ -95,6 +95,15 @@ function composeNeon(used, cat, r) {
   return null;
 }
 
+// a lit roof (pass 3, 11-16 - from straight above the Strip was dark roof slabs): a lounge under two strings of lights
+// with its umbrellas and tables, skylights glowing either side, potted plants at the front, the plant at the back
+// (statics.js KITS; px from the roof's north-west corner, a y < 0 from its south edge)
+function glowKit(w, r) {
+  const W = w * TILE, c = Math.round(W / 2);
+  const deck = [['string', c, 90], ['string', c, 150], ['umb', c - 60, 122], ['table', c + 20, 124], ['umb', c + 70, 126], ['skyL', Math.round(W * 0.18), 210], ['skyL', Math.round(W * 0.82), 214], ['plant', 30, -40], ['plant', W - 30, -40], ['ac', Math.round(W * 0.3), 270], ['vent', Math.round(W * 0.72), 286]];
+  return r < 0.25 ? deck.filter(([k]) => k !== 'umb' && k !== 'table') : deck;
+}
+
 // ---- the picture signs (the owner's notes part 2, 2026-10-25: "way more neon signs with cool designs all around the
 // neon district"): his two sign sheets drawn as pixel neon - client/art2/neonpics.js NP. What a front may hang by its
 // trade (a name that says what it is picks its own: a ramen bar the bowl, the karaoke bar the katakana), then the
@@ -169,7 +178,9 @@ function build(m, api, K) {
     const home = o.home !== undefined ? o.home : floors >= 3 && w >= 6 && rnd(x, y, 41) < 0.4 ? { kind: 'apartment' } : null;
     // (a low front's roof: a picture sign standing at its front edge over the street - a y < 0 from the roof's south
     // edge: client/art2/game/statics.js - its AC and vents behind)
-    const kit = o.kit || (!o.garden && floors <= 3 && w >= 6 && rnd(x, y, 44) < (floors <= 2 ? 0.7 : 0.4) ? [[`npic|${deck.deal(null, null, 0, rnd(x, y, 45), null, ROOF_PICS)[0]}`, Math.round(w * TILE / 2), -26], ['ac', Math.round(w * TILE * 0.25), 90], ['vent', Math.round(w * TILE * 0.7), 140], ['acs', Math.round(w * TILE * 0.55), 60]] : null);
+    // (pass 3 - "dark roof slabs": every front's roof lit - a picture sign at its front edge on a low one, and on every
+    // roof a lounge under strings of lights, skylights glowing, the plant at the back: glowKit)
+    const kit = o.kit || (o.garden ? null : !o.garden && floors <= 3 && w >= 6 && rnd(x, y, 44) < (floors <= 2 ? 0.7 : 0.4) ? [[`npic|${deck.deal(null, null, 0, rnd(x, y, 45), null, ROOF_PICS)[0]}`, Math.round(w * TILE / 2), -26], ...glowKit(w, rnd(x, y, 46))] : w >= 6 ? glowKit(w, rnd(x, y, 46)) : null);
     return { arch: o.arch || 'nightrow', ...(o.key ? { key: o.key } : food ? { key: 'rest2' } : {}), art: { spec, shop, neon, ...(kit ? { kit } : {}) }, name: o.name, poi, ...(home ? { home } : {}), door: side === 'left' ? x : x + w - 1, whole: true };
   };
   // a back facing a street to its north (its front unseen): one or two floors, a sign standing on its roof over that
@@ -181,6 +192,7 @@ function build(m, api, K) {
     // (its roof's sign over the boulevard: half of them a picture of the owner's sheets - client/art2/game/statics.js 'npic')
     if (w >= 6 && rnd(x, y, 52) < 0.75) kit.push(rnd(x, y, 58) < 0.5 ? [`npic|${deck.deal(null, null, 0, rnd(x, y, 59), null, ROOF_PICS)[0]}`, Math.round(w * TILE / 2), 12] : [`neon|${pick(words, rnd(x, y, 53))}|${Math.floor(rnd(x, y, 54) * 7)}`, Math.round(w * TILE / 2), 12]);
     kit.push(['ac', Math.round(w * TILE * 0.3), 80], ['vent', Math.round(w * TILE * 0.7), 120], ['acs', Math.round(w * TILE * 0.5), 160]);
+    if (w >= 6) kit.push(['skyL', Math.round(w * TILE * 0.22), 150], ['skyL', Math.round(w * TILE * 0.78), 200], ...(rnd(x, y, 59) < 0.6 ? [['string', Math.round(w * TILE / 2), 230], ['umb', Math.round(w * TILE * 0.3), 262], ['table', Math.round(w * TILE * 0.62), 266]] : []));   // (pass 3: the roof lit)
     if (rnd(x, y, 55) < 0.4) kit.push(['dish', Math.round(w * TILE * 0.8), 60]);
     // (the back wall on the alley, the camera's side: its roll shutter, a lantern or a small sign beside it, the AC)
     const neon = { name: null, trim: false, col: Math.floor(rnd(x, y, 55) * 7), dress: { back: 1 }, top: 8, ...(rnd(x, y, 49) < 0.7 ? { pics: deck.deal(null, null, 0, rnd(x, y, 48), null, PIC_BACK) } : {}) };
@@ -268,7 +280,7 @@ function build(m, api, K) {
     // (the owner, 10-25: "a really awesome arcade in the neon district" - the flagship: the biggest floor of them all,
     // its cabinets in rows and the long prize counter - shared/homelayout.js 'arcadeflag', server/systems/arcade.js)
     { w: 24, lot: { arch: 'arcade', key: 'arcade', name: 'Pixel Arcade', poi: { kind: 'delivery', label: 'Pixel Arcade', flagship: true }, whole: true,
-      art: { ...litArt(5, 'arcade', 'PIXEL ARCADE', 'arcade', 3, 'gamepad', 'GAMES'), kit: [['npic|gamezone', 384, 680], ['hvac', 120, 200], ['ac', 560, 260], ['vent', 300, 120], ['acs', 640, 420], ['dish', 80, 520]] } }, depth: 22 },
+      art: { ...litArt(5, 'arcade', 'PIXEL ARCADE', 'arcade', 3, 'gamepad', 'GAMES'), kit: [['npic|gamezone', 384, 680], ['string', 384, 300], ['string', 384, 380], ['skyL', 200, 440], ['skyL', 560, 440], ['hvac', 120, 200], ['ac', 560, 260], ['vent', 300, 120], ['acs', 640, 420], ['dish', 80, 520]] } }, depth: 22 },
     { w: 14, lot: clubLot('club', 'Luna Lounge', 4, 'lounge', null, 'LOUNGE'), depth: 22 },
     { w: 9, name: 'Night Owl Ramen', store: 'diner', neon: 'diner', blade: 'RAMEN', floors: 4 },
   ], { depth: 22, floors: 4 });
@@ -349,7 +361,7 @@ function build(m, api, K) {
   function litArt(floors, store, name, neonKind, people = 3, pic = null, blade = null) {
     const f = faceOf(rnd(floors, name.length, 90));
     const [p0, ...more] = deck.deal(name, neonKind === 'arcade' ? 'arcade' : 'club', floors >= 4 ? 2 : 1, rnd(floors, name.length, 92), pic);
-    return { spec: { floors, ...f, win: pick(WINS, rnd(name.length, floors, 91)), parapet: 12, grime: 0.2, roofMat: 'rubber', lip: 10, rimW: 4, blades: [] }, shop: { kind: store, door: 'right', open: true, people, sign: null, awning: ['#16121e', '#16121e'] },
+    return { kit: glowKit(10, 1), spec: { floors, ...f, win: pick(WINS, rnd(name.length, floors, 91)), parapet: 12, grime: 0.2, roofMat: 'rubber', lip: 10, rimW: 4, blades: [] }, shop: { kind: store, door: 'right', open: true, people, sign: null, awning: ['#16121e', '#16121e'] },
       neon: { name, kind: neonKind, col: (ci++ * 3) % 7, pic: p0, ...(more.length ? { pics: more } : {}), ...(blade ? { blade } : {}), dress: true, flick: 1 } };
   }
   // D8's crossroads (the rebuild, 11-16 - the owner: "they look about the same but a street light is moved and a taxi
@@ -471,6 +483,9 @@ function build(m, api, K) {
     }
     if (o.carts !== false) for (let x = x0 + 12; x < x1 - 8; x += 26) { prop('foodcart', x, yL0 + 6.4, 14); tableau(K.m, { v: 'queue', x, y: yL0 + 5.2, a: Math.PI / 2 }); }
     for (let x = x0 + 6; x < x1 - 4; x += 8) if (rnd(x, yL1, 171) < 0.7) prop('potted', x + 0.5, yL1 - 0.5, 0);
+    for (let x = x0 + 10; x < x1 - 4; x += 8) if (m.tiles[m.idx(x, yL1)] === T.PLAZA && m.tiles[m.idx(x, yL1 - 1)] === T.PLAZA) prop('palm_a', x + 0.5, yL1 - 0.6, 10, { sp: 'royal', k: 1.15, lit: 1 });   // (pass 3: palm-lined)
+    // (pass 3: people walking it, more of them after dark - knots down its middle)
+    for (let x = x0 + 8; x < x1 - 6; x += 9) hang(K, x + (rnd(x, yL0, 172) - 0.5) * 3, (yL0 + yL1) / 2 + (rnd(x, yL1, 173) - 0.5) * 3, 2 + Math.floor(rnd(x, x, 174) * 3));
   }
 }
 
@@ -607,25 +622,37 @@ function lanternLane(K, x0, x1, out) {
   K.fill(x0, y0, x1 - x0, y1 - y0 + 1, T.PLAZA);
   const mid = (y0 + y1) / 2 + 0.5, sN = y0 + 3, sS = y1 - 3, cN = mid - 1.1, cS = mid + 1.1;   // (the rows: north, the spine's two, south)
   const rows = [[sN, 0, -0.75], [cN, Math.PI, 0.7], [cS, 0, -0.7], [sS, Math.PI, 0.75]];   // [y, facing (0 south, PI north), the stallholder's side]
-  let n = 0, k = 0;
-  for (let x = x0 + 4; x < x1 - 4; x += 3, k++) {
-    if (Math.abs(x + 1.5 - (PLAZA[0] + PLAZA[1]) / 2) < 4) { k = -1; continue; }   // (the rebuild: the market runs on across the plaza's mouth - it was an empty paved square - an aisle left open on the plaza's axis, the hall's door at its head)
-    if (k % 6 === 5) continue;   // (a cross aisle)
-    rows.forEach(([y, a, dv], r) => {
-      if ((r === 1 || r === 2) && k % 6 === 0) return;   // (the spine starts a stall in from each cross aisle)
-      prop('mstall', x + 1, y, 0, { v: Math.floor(rnd(x, y, 1) * 4), c: Math.floor(rnd(x, y, 2) * 4), a });
-      if (rnd(x, y, 8) < 0.7) vendor(K, x + 1, y + dv, a === 0 ? Math.PI / 2 : -Math.PI / 2);
-      n++;
-    });
-    // what's stacked by the outer rows: crates, a cooler (against the lane's sides, behind the stalls)
-    if (rnd(x, y0, 3) < 0.4) prop(pick(['crates', 'cooler', 'fruitcrate', 'crates'], rnd(x, y0, 4)), x + 2.4, sN - 1.4, 0);
-    if (rnd(x, y1, 5) < 0.4) prop(pick(['crates', 'cooler', 'fruitcrate', 'bags'], rnd(x, y1, 6)), x + 2.4, sS + 1.6, 0);
-    // the lanterns: across each aisle, from the outer row's stall front to the spine's, every other stall
-    // (the rebuild, 11-16 - WC422: rows of lanterns ACROSS the lane from wall to wall, dense, overhead: at every stall a
-    // line from the north row's wall to the outer stall, across the aisle to the spine, across the other aisle, on to
-    // a post at the lane's south edge (the boulevard row stands back behind its forecourt) - four runs end to end)
-    fest(K, x + 1, sN + 0.7, 0, cN - sN - 1.4, 54, 'pole', 'pole', 'lantern'); fest(K, x + 1, cS + 0.7, 0, sS - cS - 1.4, 54, 'pole', 'pole', 'lantern');
-    fest(K, x + 1, y0 + 0.05, 0, sN - 0.75 - y0, 58, 'wall', 'pole', 'lantern'); fest(K, x + 1, sS + 0.75, 0, y1 + 0.95 - sS - 0.75, 58, 'pole', 'wall', 'lantern');   // (on the stalls' line: each run straight across, its ends on the stalls' frames)
+  // (pass 3, 11-16 - "a tidy grid of stalls": the stalls in clusters of two to five, each cluster's rows shifted a
+  // little from the last, a break between clusters where the crowd stands about - a food cart steaming, friends, a
+  // knot round the cart; the lanterns across the lane at every stall)
+  let n = 0, x = x0 + 4, c = 0;
+  const axis = (PLAZA[0] + PLAZA[1]) / 2;
+  while (x < x1 - 6) {
+    if (Math.abs(x + 1.5 - axis) < 5) { x += 3; continue; }   // (an aisle left open on the plaza's axis, the hall's door at its head)
+    const len = 2 + Math.floor(rnd(x, c, 11) * 4), dy = Math.round((rnd(x, c, 12) - 0.5) * 6) / 10;
+    for (let i = 0; i < len && x < x1 - 6 && Math.abs(x + 1.5 - axis) >= 5; i++, x += 3) {
+      const sx = x + (rnd(x, i, 13) - 0.5) * 0.4;
+      rows.forEach(([y, a, dv], r) => {
+        if ((r === 1 || r === 2) && i === 0 && rnd(x, r, 14) < 0.6) return;   // (the spine starts a stall in, now and then)
+        prop('mstall', sx + 1, y + dy, 0, { v: Math.floor(rnd(x, y, 1) * 4), c: Math.floor(rnd(x, y, 2) * 4), a });
+        if (rnd(x, y, 8) < 0.75) vendor(K, sx + 1, y + dy + dv, a === 0 ? Math.PI / 2 : -Math.PI / 2);
+        n++;
+      });
+      if (rnd(x, y0, 3) < 0.4) prop(pick(['crates', 'cooler', 'fruitcrate', 'crates'], rnd(x, y0, 4)), x + 2.4, sN - 1.4, 0);
+      if (rnd(x, y1, 5) < 0.4) prop(pick(['crates', 'cooler', 'fruitcrate', 'bags'], rnd(x, y1, 6)), x + 2.4, sS + 1.6, 0);
+      // (WC422: rows of lanterns ACROSS the lane at every stall - from the north row's wall to the outer stall, across
+      // each aisle, on to a post at the lane's south edge (the boulevard row stands back behind its forecourt))
+      fest(K, sx + 1, sN + dy + 0.7, 0, cN - sN - 1.4, 54, 'pole', 'pole', 'lantern'); fest(K, sx + 1, cS + dy + 0.7, 0, sS - cS - 1.4, 54, 'pole', 'pole', 'lantern');
+      fest(K, sx + 1, y0 + 0.05, 0, sN + dy - 0.75 - y0, 58, 'wall', 'pole', 'lantern'); fest(K, sx + 1, sS + dy + 0.75, 0, y1 + 0.95 - sS - dy - 0.75, 58, 'pole', 'wall', 'lantern');
+    }
+    // the break: two or three tiles where the crowd gathers - a cart and its line, or friends about
+    const gx = x + 0.5;
+    if (gx < x1 - 6 && Math.abs(gx - axis) >= 5) {
+      if (c % 2 === 0) { prop('foodcart', gx + 0.5, mid - 0.6, 14); prop('steam', gx + 0.5, mid - 1.6, 0, { w: 30, h: 50, s: 1 }); tableau(K.m, { v: 'queue', x: gx + 0.5, y: mid + 0.7, a: -Math.PI / 2 }); }
+      else hang(K, gx + 0.5, mid, 4 + (c % 3));
+      hang(K, gx + 0.5, (sN + cN) / 2 + dy, 3); hang(K, gx + 0.5, (cS + sS) / 2 + dy, 3);
+    }
+    x += 3 + Math.floor(rnd(x, c, 15) * 2); c++;
   }
   // a gate at each end (where the lane meets the bridges' avenues), the market's sign over the west one
   for (const gx of [x0 + 1, x1 - 1]) prop('gatearch', gx, (y0 + y1) / 2, 0, { w: Math.round((y1 - y0 - 2) * TILE), a: Math.PI / 2 });
@@ -669,7 +696,7 @@ function eastHeadland(K, out, lit) {
   const x0 = NX.bridgeE + EXT.art + 1, yB = NY.blvd - EXT.blvd - 1;
   K.building({ x: x0, y: 2150, w: 22, h: yB - 2150 + 1, door: x0 + 20, arch: 'club', key: 'club', name: 'The Violet Room', poi: { kind: 'delivery', label: 'The Violet Room' }, whole: true,
     art: { spec: { floors: 7, style: 'concrete', wallColor: '#2a2436', win: 'tall', parapet: 14, grime: 0.15, roofMat: 'rubber', lip: 10, rimW: 5, blades: [] }, shop: { kind: 'bar', door: 'right', open: true, people: 4, sign: null, awning: ['#16121e', '#16121e'] },
-      neon: { name: 'VIOLET ROOM', kind: 'club', col: 3, pic: 'lucy', picV: 150, blade: 'DANCE', pics: ['clubv', 'nightclub', 'sake'], dress: true } } });
+      neon: { name: 'VIOLET ROOM', kind: 'club', col: 3, pic: 'lucy', picV: 150, blade: 'DANCE', pics: ['clubv', 'nightclub', 'sake'], dress: true }, kit: glowKit(22, 1) } });
   out.clubs++;
   // beside it on the boulevard: Afterdark, then a lit front or two
   let k = 0;
@@ -803,15 +830,23 @@ function harborLights(K, x0, out, lateLit) {
   {
     const cx = 3547, cy = 2234.6;
     prop('carousel', cx, cy, 44);
-    // (four rows of game stalls - two midways - the middle two back to back, broken round the carousel; the south row
-    // open in the middle, the way in off the walk)
-    for (let x = 3524, k = 0; x <= 3571; x += 3.6, k++) {
-      const st = (y, a, open) => { if (!open) return; prop('mstall', x, y, 0, { v: k % 4, c: (k + (a ? 1 : 3)) % 4, a }); if (rnd(Math.round(x * 2), Math.round(y), 9) < 0.8) vendor(K, x, y + (a ? 0.75 : -0.75), a ? -Math.PI / 2 : Math.PI / 2); };
-      st(2227.4, 0, true); st(2233.1, Math.PI, Math.abs(x - cx) > 6); st(2236.3, 0, Math.abs(x - cx) > 6); st(2242.2, Math.PI, Math.abs(x - cx) > 3);
+    // (pass 3 - "a tidy grid of stalls": the game stalls in a ring round the carousel, open at its east and west ends,
+    // the lights strung stall to stall round it; a loose cluster of stalls at each end of the ground, palms lit at the
+    // ring's mouths and the ground's corners, the crowd inside the ring and round the clusters)
+    const ring = [];
+    for (const k of [1, 2, 3, 4, 6, 7, 8, 9]) {
+      const x = cx + 11 * pseudoCos(k), y = cy + 6 * pseudoSin(k), a = pseudoSin(k) > 0 ? Math.PI : 0;
+      prop('mstall', x, y, 0, { v: k % 4, c: (k + 1) % 4, a }); vendor(K, x, y + (a ? 0.75 : -0.75), a ? -Math.PI / 2 : Math.PI / 2);
+      ring.push([x, y]);
     }
-    for (const [a, b] of [[3521.5, 3540.5], [3553.5, 3572.5]]) for (const y of [2230.25, 2239.3]) canopy(K, a, y, b, y, { span: 9.5, h: 62 });
-    hang(K, cx - 3.4, cy + 3, 6, [-0.75, 0]);   // (the queue for the carousel)
-    for (const [x, y, q] of [[3530, 2230.2, 4], [3564, 2230.4, 4], [3538, 2239.4, 3], [3557, 2230, 3], [3527, 2239.6, 2], [3568, 2239.2, 3], [3547, 2240.2, 4]]) hang(K, x, y, q);
+    for (let i = 0; i + 1 < ring.length; i++) if (i !== 3) fest(K, ring[i][0], ring[i][1] + 0.3, ring[i + 1][0] - ring[i][0], ring[i + 1][1] - ring[i][1], 62, 'pole', 'pole');
+    for (const [x, y, a] of [[3524.6, 2228, 0], [3528.4, 2228.6, 0], [3532.2, 2228.2, 0], [3525.4, 2241.4, Math.PI], [3529.6, 2240.8, Math.PI], [3562.2, 2228.2, 0], [3566, 2228.8, 0], [3569.8, 2228.3, 0], [3564.4, 2241, Math.PI], [3568.6, 2241.6, Math.PI]]) {
+      prop('mstall', x, y, 0, { v: Math.round(x) % 4, c: Math.round(x * 3) % 4, a }); vendor(K, x, y + (a ? 0.75 : -0.75), a ? -Math.PI / 2 : Math.PI / 2);
+    }
+    for (const [ax, bx] of [[3524.6, 3532.2], [3562.2, 3569.8]]) fest(K, ax, 2228.6, bx - ax, 0, 62, 'pole', 'pole');
+    for (const [x, y] of [[cx - 13, cy - 1.6], [cx - 13, cy + 1.6], [cx + 13, cy - 1.6], [cx + 13, cy + 1.6], [3522.4, 2230.6], [3522.4, 2238.8], [3571.6, 2230.6], [3571.6, 2238.8], [3536, 2242.6], [3558, 2242.6]]) prop('palm_a', x, y, 10, { sp: 'royal', k: 1.15, lit: 1 });
+    hang(K, cx - 3.4, cy + 3.6, 6, [-0.75, 0]);   // (the queue for the carousel)
+    for (const [x, y, q] of [[cx - 6, cy - 2.4, 5], [cx + 6, cy - 2, 5], [cx + 5.5, cy + 2.8, 4], [cx - 7, cy + 2.2, 3], [3528, 2234.5, 5], [3566, 2234.5, 5], [3530, 2238, 3], [3564, 2231.4, 4], [cx, cy - 4.4, 4], [3540, 2243, 3], [3554, 2243, 4]]) hang(K, x, y, q);
     prop('gatearch', 3520.6, 2234.8, 0, { w: Math.round(9 * TILE), a: Math.PI / 2 });
     prop('textsign', 3523.5, 2232.6, 0, { text: 'HARBOR LIGHTS FAIR', bg: '#7a1e4a', fg: [255, 220, 120], z: 64, sx: 2, lit: true });
     for (const x of [3521.4, 3572.6]) for (const y of [2226.4, 2243]) prop('bannerpole', x, y, 0, { v: x < 3540 ? 0 : 1 });
@@ -1012,6 +1047,10 @@ function dressing(K, out, poi0) {
   }
   // the south pavement: a lamp every eight tiles, kept off the junctions and the lantern walkway's mouth
   for (let x = NX.westside + 12; x < 3410; x += 8) if (!junction(x, 9) && Math.abs(x - 3068) > 4 && onWalk(x, yS + 0.4)) lamp(x + 0.5, yS + 0.4);
+  // (pass 3 - "no palms": the south pavement palm-lined too, a lit royal palm between each two lamps; and one on each
+  // corner of the crossings, by the knots of people)
+  for (let x = NX.westside + 16; x < 3410; x += 8) if (!junction(x, 9) && Math.abs(x - 3068) > 5 && onWalk(x, yS + 0.9) && onWalk(x, yS + 0.1)) { prop('palm_a', x + 0.5, yS + 0.6, 10, { sp: 'royal', k: 1.15, lit: 1 }); lit++; }
+  for (const c of [NX.parkW, NX.parkE, NX.civic]) for (const dx of [-8.6, 8.6]) for (const y of [yN - 0.2, yS + 0.6]) if (onWalk(c + dx, y)) { prop('palm_a', c + dx, y, 10, { sp: 'royal', k: 1.2, lit: 1 }); lit++; }
   // the median: royal palms, lit, clear of the junctions (where it stops for the turns) and of the fountain
   for (let x = NX.westside + 14; x < 3408; x += 9) {
     if (junction(x, 14) || Math.abs(x + 0.5 - FX) < 7) continue;

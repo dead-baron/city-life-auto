@@ -173,8 +173,11 @@ test('the craft pass: Lantern Lane four rows of stalls, Harbor Lights laid out, 
   const PM = PINKMILE.rect, count = (list, r) => (list || []).filter((q) => inR(r, q.x, q.y)).length;
   // Lantern Lane: no longer a 20-tile plaza with stalls along its edges - four rows, the lanterns over two aisles
   const lane = M.props.filter((p) => p.t === 'mstall' && p.x > 2983 * TILE && p.x < 3154 * TILE && p.y > 2141 * TILE && p.y < 2160 * TILE);
-  const rows = new Set(lane.map((p) => Math.round(p.y / 8)));
-  assert.ok(lane.length >= 60 && rows.size === 4, `the night market's stalls (${lane.length}) in four rows (${rows.size})`);
+  // (pass 3: in clusters along four rows, each cluster's rows shifted a little - not a grid)
+  const rowOf = (p) => [2144, 2149.4, 2151.6, 2157].findIndex((y) => Math.abs(p.y / TILE - y) < 0.9);
+  const rows = new Set(lane.map(rowOf));
+  assert.ok(lane.length >= 50 && !rows.has(-1) && rows.size === 4, `the night market's stalls (${lane.length}) along four rows (${[...rows]})`);
+  assert.ok(new Set(lane.map((p) => Math.round(p.y * 10 / TILE))).size > 4, 'not one straight grid');
   // Harbor Lights: the stage's crowd, the market street, the food trucks' tables, the wheel, the car park
   const HL = [3478, 2214, 3640, 2296];
   for (const [t, n] of [['mstall', 36], ['picnic', 6], ['foodcart', 5], ['ferris', 1], ['carousel', 1], ['vidboard', 1]]) assert.ok(M.props.filter((p) => p.t === t && inR(HL, p.x, p.y)).length >= n, `Harbor Lights: ${t}`);
