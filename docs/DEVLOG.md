@@ -25023,3 +25023,55 @@ avatar as a character he plays in admin mode, with his presence known; the admin
 - Tests: admin-console (the console's access, CSP, its JSON's privacy, the refs; the buckets, their bounds and a restart;
   the IP table and the time zones; the panel's commands - powers, limits, the log; the founder's crown, switch and art; the
   Beta plate off the tags); sinks and seasons updated for the card plate.
+
+## 2026-11-17 - Server load: the prompts ten times cheaper, a player cap with a line, sprinting isn't speeding
+
+A bot load test on World v3 (`node tools/bots.js N 75 ws://localhost:8090/ws --spread`, a 2-core sandbox, the bots on
+the same machine) had the tick at 110 ms with 100 players (the budget is 50), and the `players` system was half of it:
+0.5 ms a player a tick. Nearly all of that was every player's prompt (`players.js findInteraction`, five times a second
+each) walking World v3's whole list of places a dozen times a prompt.
+
+- **What was slow, from a CPU profile under 100 bots:** `CityMap.poiNear` (a scan of every place, four times a prompt:
+  the shop menus, the homes', the arcades' and the bathhouses' doors), the sawmills found by a regular expression over
+  every place's name, the taxi ranks, impound yards, hospitals, fish markets, police stations, farms and SAR bases
+  filtered out of every place on each call, the lost pets found by a look through every entity (twice a prompt and once
+  a snapshot), asking anyone into your crew by a look at every player, the trains' doors worked out for every train in
+  at any station anywhere. And outside the per-player work: the NPC boats' "is this real water?" flood fill once per sea
+  point (World v3 has 190,000), 5-7 ms of every tick.
+- **What changed (no gameplay change):** `server/pois.js` - `poiAt`, the same answer as `poiNear` through a grid of the
+  places' circles, and `poisWhere` / `poisKind`, each list made once per map (kept beside the map, so the world's and
+  the art's hashes are untouched); the pets' entities listed once a tick; crews through the spatial grid; trains far
+  off skipped; `world.query` and the snapshots' chunk walk without a generator; a page's messages of a tick in one
+  socket write (`ws.js` cork); the boats' water marked a whole body of water at a time (any tile of it gives the same
+  answer, so one fill marks them all).
+- **The numbers** (avg tick / `players` / `net`, ms; snapshots delivered a second in brackets):
+
+  | bots | before | after |
+  |---|---|---|
+  | 25 | 42 / 11 / 5 | 35 / 2.5 / 5 |
+  | 50 | 57 / 23 / 6 | 44 / 2.9 / 7 |
+  | 100 | 110 / 51 / 13 (900) | 57 / 5 / 12 (1,700) |
+  | 150 | 152 / 81 / 19 (990) | 75 / 7.7 / 17 (2,000) |
+
+  `players` went from 0.5 to 0.05 ms a player. The server now keeps up, so it sends nearly twice the snapshots, and `net`
+  (0.12 ms a player) is the biggest per-player cost left: in-process it's 0.02 (`tools/playersbench.mjs`), the rest is
+  the socket writes (on this sandbox the bots' loopback receive is counted in the server's writes). The rest of the
+  tick is the fixed systems (traffic, vehicles, NPCs, trains: ~25 ms here with 25 bots, the bots' own process on the
+  same two cores).
+- **Guards:** `tools/playersbench.mjs` (N players without sockets, `--v3` for World v3: 0.41 -> 0.03-0.08 ms a player
+  there); `test/serverload.test.js` - the prompts never walk the places' list once warmed up, `poiAt` finds what
+  `poiNear` finds, and a tick of 100 players' prompts stays under 0.035 yardsticks (`tools/perf.mjs`).
+- **Anti-cheat:** the bots were flagged "67 km/h, over the 54 allowed (on foot)". Not a cheat: with the tick behind,
+  a page's inputs back up and each one is still a physics step - two a tick - so a sprint or a dive roll covered
+  twice the ground per second of the world's clock. The movement audit now measures speed over the player's own steps
+  (`p.inSteps`), never counted for more than the wall clock's time, so a page that sends inputs faster than real time
+  is still caught. 0 flags in the runs after (`test/launch-roles.test.js`).
+- **The line at the door** (the owner, 11-17: 100 a city): `CLA_MAX_PLAYERS` (default 100, `deploy/set-keys.sh`,
+  docs/LAUNCH-SETUP.md). Past it a newcomer's title says "The city's full - you're #3 in line" with a Cancel, kept up to
+  date, and they go in when a place opens, first come first served (`server/line.js`, `session.js`). Staff (helper and
+  up) and anyone back within 2 minutes of a drop - or on when the server restarted (`line-held.json` in the data dir) -
+  skip it. The line itself holds `CLA_LINE_MAX` (200); past it "try again in a few minutes" (close 4018, the page
+  doesn't retry). A page in line has no character and gets no snapshots - a position message every few seconds.
+  `/stats` and the console's Server tab: `line` (waiting now, peak, average and longest wait). Bot run with
+  `CLA_MAX_PLAYERS=50` and 70 bots: 50 in, 20 in line (peak 20), all 20 let in as places opened. Tests:
+  `test/line.test.js`.
