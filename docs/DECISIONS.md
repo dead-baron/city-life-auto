@@ -32,6 +32,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Open debug mode stays while testing; at launch it closes (`CLA_DEV_OPEN=0`) and admin mode takes over. (11-03; launch-plan 11-03)
 - Claim the owner account, then `CLA_DEV_OPEN=0` (strangers are already in the game). (11-12; queue)
 - Hosting stays free for now (Oracle Always Free, 2 OCPU / 12 GB; may go to 4 / 24); scale later. (10-15; chat, DEVLOG 11-07)
+- A city holds 100 players at once (`CLA_MAX_PLAYERS`); past it, a line at the door on the title ("The city's full - you're #3 in line", Cancel), first come first served; staff and players back within ~2 min (a drop, a restart) skip it; the line itself capped (200: "try again in a few minutes"). Later several cities - a line that's often long is the signal to add one. (11-17; chat)
 - Later platforms: Android, iOS, Xbox, Steam, Epic, with cross-play, once the web version is locked down. (11-03; chat)
 - Marketing: trailers and devlog videos on TikTok, YouTube, LinkedIn; posts on Reddit and Discord, pointing to the web beta; traditional campaigns at platform launch. (11-13; chat)
 - Priority order (11-14): police low stars -> Sandpiper water -> casinos + watchable games -> weapons stash + valet -> director scripts + arena art -> beta readiness. (11-14; decisions-11-14*, queue)

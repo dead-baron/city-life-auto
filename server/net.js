@@ -194,7 +194,14 @@ function sendTo(world, p, conn, ped, veh) {
         k.sent = tick;
       }
     };
-    for (const e of world.inChunks(Math.floor(kx0 / CHUNK_PX), Math.floor(ky0 / CHUNK_PX), Math.floor(kx1 / CHUNK_PX), Math.floor(ky1 / CHUNK_PX))) visit(e, true);
+    {   // (world.inChunks' walk, written out: no generator)
+      const X = world.chunksX - 1, Y = world.chunksY - 1, cl = (v, M) => (v < 0 ? 0 : v > M ? M : v);
+      const cx0 = cl(Math.floor(kx0 / CHUNK_PX), X), cx1 = cl(Math.floor(kx1 / CHUNK_PX), X), cy0 = cl(Math.floor(ky0 / CHUNK_PX), Y), cy1 = cl(Math.floor(ky1 / CHUNK_PX), Y);
+      for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+        const set = world.chunks.get(cy * world.chunksX + cx);
+        if (set) for (const e of set) visit(e, true);
+      }
+    }
     if (ped) visit(ped, false);
     if (veh) visit(veh, false);
 

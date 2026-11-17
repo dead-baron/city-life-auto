@@ -3,7 +3,8 @@
 // and what the per-player systems cost a tick - 'players' (the prompts, findInteraction), 'inputs' (their steps) and
 // 'net' (their snapshots, with fake connections). test/serverload.test.js keeps 'players' in a budget with it.
 //
-//   node tools/playersbench.mjs [players=100] [seconds=20] [--v3]       (--v3: World v3's whole world, ~2.5 min to build)
+//   node tools/playersbench.mjs [players=100] [seconds=20] [--v3] [--warm=3] [--npc]   (--v3: World v3's whole world, ~2.5 min
+//   to build; --warm: seconds stepped first, not counted - the lazy tables made; --npc: the city's people and traffic too)
 //
 // -> { n, ticks, ms: { tick, players, inputs, net, perPlayer: { players, inputs, net } } }
 import { mkdtempSync } from 'node:fs';
@@ -77,7 +78,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const map = v3 ? (await (await import('../server/world3.js')).buildWorld3(1337, { log: () => {} })).map : (await import('../shared/map.js')).generateCity(1337);
   console.log(`${v3 ? 'World v3' : 'today\'s world'} built in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
   const npc = process.argv.includes('--npc') ? 700 : 0;
-  const r = await benchPlayers(map, { n, seconds, World, players, store, npcBudget: npc });
+  const warmArg = process.argv.find((a) => a.startsWith('--warm='));
+  const r = await benchPlayers(map, { n, seconds, World, players, store, npcBudget: npc, warmS: warmArg ? Number(warmArg.slice(7)) : 3 });
   console.log(`${r.n} players, ${r.ticks} ticks: tick ${r.ms.tick} ms; players ${r.ms.players} ms (${r.ms.perPlayer.players}/player), inputs ${r.ms.inputs} ms (${r.ms.perPlayer.inputs}/player), net ${r.ms.net} ms (${r.ms.perPlayer.net}/player)`);
   console.log(`systems: ${r.top}`);
   process.exit(0);
