@@ -97,7 +97,7 @@ export const LINT_ALLOW = {
   // the street's furniture standing in front of a shop's words - an el's piers, a shelter's or a stall's canopy, a phone
   // booth, a porch's posts, a lamp, a flag or power pole, a run of lights (shared/festoon.js's lint is its own) - and the
   // badge of a place at a wall over its window's OPEN
-  signCovered: 208,
+  signCovered: 159,
   // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
   // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
   // the most part (West Hills', Southside's, Old Town's lots)

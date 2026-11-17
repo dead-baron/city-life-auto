@@ -24904,3 +24904,20 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   their rooms (map.js walkInRoom, as Southside's lots do); and every door on the lawn gets a paved path straight out to
   the nearest pavement, plaza, lot, dock, track or road where the way is clear (shared/world3-doorpaths.js, the done
   hook: a home's one tile wide, a shop's two; plants on it taken up).
+  Also: the window's OPEN sits below an awning's scallops (it was painted over, cut in half - the charter office's), and
+  the art's shopfront pots stand clear of it (buildings.js openSignX, shared with statics.js addFrontage).
+- **The lint, before and after** (World v3, seed 1337): signCovered 409 -> 159, doorOnGrass 1777 -> 372, wallOnly
+  111 -> 17; nameCovered 1 -> 0 (the self storage's ATM). The rest is the long tail, allowed in LINT_ALLOW at what's
+  left (bring it down, never up): signCovered - the street's furniture in front of a shop's words (shelter and stall
+  canopies, el piers, phone booths, porches, lamps, flag and power poles, a few planters and street trees, festoons);
+  doorOnGrass - mostly homes whose step can't take a straight path to the pavement (something solid, a field, more
+  than 14 tiles of lawn), or a courtyard's plaza closed in (Bayside Heights, Old Town, the Arts District); wallOnly -
+  Red Lantern Bagels, Kaiju Tacos, Ironside Hardware, Lakeside and Redwood Creek Tackle, Axe & Saw Hardware, Sandpiper
+  Surf Co. and Pier Tackle & Bait, The Copper Room Supper Club (lot buildings with something else behind the same
+  front), Pelican Key Charters (too shallow), four of the added shop rows (too shallow), Marsh Bait & Tackle (a row
+  shared with the outfitters), Lane Mart and Park West Coffee (Greenfield Park's arrival block, built after the rooms).
+- Tests: test/world3west.test.js (each Egret Point business walked into from Wharf Street to its counter and back out,
+  its door on the forecourt; every door in the village on a path to the street), test/placementlint.test.js (the three
+  rows; it logs every row's count), test/world3server.test.js (a new shop's door spot is outside, its place inside).
+- The world and the art are re-keyed (the village, the walk-ins, the paths; the ATM, the OPEN, the neon boards); the
+  chunk carry keeps the unchanged chunks. No budget changed.
