@@ -12,6 +12,7 @@ import { legalHttp } from './legal.js';
 import { createAdminLog } from './adminlog.js';
 import { createAdminHttp } from './adminhttp.js';
 import { createBugReports } from './bugreports.js';
+import { createKofi } from './kofi.js';
 import { createAdmin, note, notePurchase } from './admin.js';
 import { allowed } from './roles.js';
 import { filter as loadFilter } from './chatfilter.js';
@@ -57,6 +58,8 @@ export function createLaunch(opts) {
   const bugs = createBugReports({ dir: opts.bugDir !== undefined ? opts.bugDir : dataDir ? pathJoin(dataDir, 'reports') : null, accounts, store, world, origins: [...new Set([...L.pageOrigins, ...(opts.extraOrigins || [])])], ip: (req) => opts.ip(req), webhook: L.bugWebhook, fetch: opts.fetch, now, log });
   const adminHttp = createAdminHttp({ bugs, accounts, log: adminLog, mod, analytics, news, mailAddress: L.mailAddress || '', publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), geo, stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), tickMsMax: +(world.stats.tickMax || 0).toFixed(2), ents: world.entities ? world.entities.size : 0, build: world.build || '', builtAt: world.buildAt || 0, ga: ga.stats }) });
   const admin = createAdmin({ accounts, log: adminLog, mod, store, pageLink: adminHttp.pageLink, now });
+  // the Founder's Pack bought on Ko-fi: the webhook (POST /kofi/webhook) and the claims from Settings (server/kofi.js)
+  const kofi = createKofi({ store, accounts, world, log: adminLog, token: L.kofiToken, packCodes: L.kofiPack, secret, now, ip: (req) => opts.ip(req) });
   const onlineOf = (pid) => { const p = world.players.get(pid); return p && p.conn ? p : null; };
   const authHttp = createAuthHttp({
     launch: L, accounts, secret, fetch: opts.fetch, now, log, ip: (req) => opts.ip(req), extraOrigins: opts.extraOrigins || [], news, mail: opts.mail,
@@ -248,6 +251,7 @@ export function createLaunch(opts) {
         if (msg.a === 'transfer') { const x = accounts.makeTransfer(p.pid); note(a, 'transfer', 'made a transfer code'); return { t: 'acct', a: 'transfer', code: x.code, exp: x.exp, guest: a.kind !== 'member' }; }
         if (msg.a === 'name') { const err = rename(p, msg.name); if (!err) sendAcct(p); return { t: 'acct', a: 'name', ok: !err, err: err || undefined, name: p.name }; }
         if (msg.a === 'age') { if (!a.age17) { a.age17 = now(); store.touch(); } return null; }
+        if (msg.a === 'support') return kofi.message(p, msg);   // (Settings > Help: the supporter code, a Ko-fi order claimed - server/kofi.js)
         if (msg.a === 'news') { const err = setNews(p, msg); if (!err) sendAcct(p); return { t: 'acct', a: 'news', ok: !err, err: err || undefined }; }
         return null;
       }
@@ -338,7 +342,8 @@ export function createLaunch(opts) {
     if (await authHttp.handle(req, res, url)) return true;
     if (await adminHttp.handle(req, res, url)) return true;
     if (await bugs.handle(req, res, url)) return true;
+    if (await kofi.http(req, res, url)) return true;
     return false;
   }
-  return { login, hooks, http, start, stop, purgeDeleted, bugs, halfSecond, accounts, news, rename, memberOwns, onLinked: becameMember, adminLog, mod, chat, ac, analytics, geo, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
+  return { login, hooks, http, start, stop, purgeDeleted, bugs, kofi, halfSecond, accounts, news, rename, memberOwns, onLinked: becameMember, adminLog, mod, chat, ac, analytics, geo, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
 }

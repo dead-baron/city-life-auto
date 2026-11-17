@@ -383,6 +383,10 @@ add('set', 'Nothing', 'mf', 'lounge', 0, 'bathhouse', { k: 'none', bk: 'none', i
 // a random look; the creator shows it only to its owners): Season 0's Founding Citizen jacket (server/systems/cosmetics.js,
 // shared/rules.js COSMETICS.beta) - the varsity jacket's art in black and gold, no new sprite art
 add('jacket', 'Founding Citizen jacket', 'mf', 'preppy streetwear retro', 0, 'gift', { k: 'jacket', varsity: 1, gift: 1 }, 'black', 'gold');
+// the Founder's Pack's coat (shared/rules.js SUPPORT; server/systems/cosmetics.js grantFounder): the long coat in deep plum
+// with gold sleeves and shoulders (the varsity trim on the long coat) - no new sprite art, and nothing a baked chunk is
+// made of changes (client/art2/people.js is in the art hash)
+add('jacket', "Founder's Coat", 'mf', 'smart hifashion retro', 0, 'gift', { k: 'coat', varsity: 1, gift: 1 }, 'plum', 'gold');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;

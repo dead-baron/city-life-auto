@@ -29,6 +29,8 @@
 //   endjob { id }                              -> a stuck job or activity ended for them (its own quit)
 //   gift { id, kind: 'money' | 'item' | 'weapon' | 'color' | 'plate', what, n } -> into their bank, bag or style counter
 //   founder { on }                             -> the owner's founder look on or off, this session only (owner; server/founder.js)
+//   pack { id, on }                            -> the Founder's Pack given (on) or taken back (a refund; its Ko-fi orders marked so
+//                                                 they can't be claimed again) - online or not (owner; server/kofi.js)
 //   season                                     -> the season now, its days left and each board's top (owner)
 //   season { end: 1, confirm: <the season's n> } -> the season over and the next begun: the top-10 plates, everyone online
 //                                                 out to the title, every profile reset (systems/seasons.js endSeason; owner)
@@ -42,13 +44,13 @@ import { chatData } from './moderation.js';
 import * as devmode from './devmode.js';
 import { moved } from './movemark.js';
 import * as seasons from './systems/seasons.js';
-import { SEASON, COSMETICS, GIFT } from '../shared/rules.js';
+import { SEASON, COSMETICS, GIFT, SUPPORT } from '../shared/rules.js';
 import { TILE } from '../shared/constants.js';
 import { revive as revivePed, isDowned } from './systems/revive.js';
 import { failJob } from './systems/jobs.js';
 import * as actquit from './systems/activityquit.js';
 import { placeNamed, tpSpot } from './dev.js';
-import { cosmOf, refresh as refreshPlate } from './systems/cosmetics.js';
+import { cosmOf, refresh as refreshPlate, grantFounder, revokeFounder, hasPack } from './systems/cosmetics.js';
 import { founderSync } from './founder.js';
 
 const PLOG_MAX = 60, BUYS_MAX = 20, REFUND_DAYS = 30;
@@ -90,7 +92,7 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
   // what the panel's Gift offers: the cosmetics that are bought (not a season's gift), the items and weapons by name
   let GC = null;
   const giftCatalog = () => (GC ||= {
-    colors: COSMETICS.colors.map((c) => [c.id, c.name]), plates: COSMETICS.plates.filter((q) => !q.gift && !q.card).map((q) => [q.id, q.t]),
+    colors: COSMETICS.colors.filter((c) => !c.gift).map((c) => [c.id, c.name]), plates: COSMETICS.plates.filter((q) => !q.gift && !q.card).map((q) => [q.id, q.t]),
     items: Object.entries(ITEMS).map(([id, it]) => [id, it.name]).sort((x, y) => x[1].localeCompare(y[1])),
     weapons: Object.entries(WEAPONS).filter(([id]) => id !== 'fists').map(([id, w]) => [id, w.name]).sort((x, y) => x[1].localeCompare(y[1])),
     money: GIFT.money, maxMoney: GIFT.maxMoney,
@@ -283,7 +285,7 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
         for (const q of world.players.values()) {
           if (!q.conn) continue;
           const ped = q.ped, act = actquit.current(world, q);
-          l.push({ id: q.pid, n: q.name, me: q === p ? 1 : 0, gu: accounts.isGuest(q.pid) ? 1 : 0, role: accounts.role(q.pid) || '', fo: q.founder ? 1 : 0, d: ped && !ped.hidden ? world.map.districtAt(ped.x, ped.y).name : '', w: q.wanted || 0, down: ped && (ped.dead || isDowned(ped)) ? 1 : 0, hp: ped && ped.maxHp ? Math.round((ped.hp / ped.maxHp) * 100) : 0, job: q.job ? String(q.job.type || 'job') : act ? act.n : '', cust: q.custody || q.prison ? 1 : 0, eid: ped ? ped.id : 0, sess: q.anStart ? Math.round((now() - q.anStart) / 60e3) : 0, muted: !!(q.acct && chatData(q.acct).muteUntil > now()) });
+          l.push({ id: q.pid, n: q.name, me: q === p ? 1 : 0, gu: accounts.isGuest(q.pid) ? 1 : 0, role: accounts.role(q.pid) || '', fo: q.founder ? 1 : 0, sp: hasPack(q.profile) ? 1 : 0, d: ped && !ped.hidden ? world.map.districtAt(ped.x, ped.y).name : '', w: q.wanted || 0, down: ped && (ped.dead || isDowned(ped)) ? 1 : 0, hp: ped && ped.maxHp ? Math.round((ped.hp / ped.maxHp) * 100) : 0, job: q.job ? String(q.job.type || 'job') : act ? act.n : '', cust: q.custody || q.prison ? 1 : 0, eid: ped ? ped.id : 0, sess: q.anStart ? Math.round((now() - q.anStart) / 60e3) : 0, muted: !!(q.acct && chatData(q.acct).muteUntil > now()) });
         }
         l.sort((x, y) => y.me - x.me || x.n.localeCompare(y.n));
         return reply(a, true, { data: { l, watch: p.watch ? p.watch.pid : null, founder: role === 'owner' ? { on: !!p.founderOn, look: !!p.founderLook } : null, gifts: giftCatalog() } });
@@ -375,6 +377,20 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
         if (q) { q.meDirty = true; world.notify(q, `${p.name} sent you a gift: ${label}.`, 'good'); }
         done({ what: 'gift', before, after, note: `${kind} ${what || ''} ${label}`.trim() });
         return reply(a, true, { data: { label } });
+      }
+      case 'pack': {
+        const on = !!msg.on, was = hasPack(t.prof);
+        if (on === was) return reply(a, false, { err: on ? `They have the ${SUPPORT.pack} already.` : `They don't have the ${SUPPORT.pack}.` });
+        if (on) grantFounder(world, t.prof, t.p);
+        else {
+          revokeFounder(world, t.prof, t.p);
+          const O = (store.kept.kofi && store.kept.kofi.orders) || {};
+          for (const o of Object.values(O)) if (o.by === t.pid) o.rev = 1;   // (its orders can't be claimed again: kofi.js claim)
+          store.touch();
+          if (t.p) world.notify(t.p, `The ${SUPPORT.pack} was taken back (a refund). Ask in the Discord if that's wrong.`, 'warn');
+        }
+        done({ what: 'pack', before: was, after: on });
+        return reply(a, true, { data: { on } });
       }
       case 'founder': {
         const on = !!msg.on;

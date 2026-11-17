@@ -1138,6 +1138,7 @@ export const COSMETICS = {
     { id: 'emerald', name: 'Emerald', hex: '#3ee08f', tok: 1 },
     { id: 'violet', name: 'Neon violet', hex: '#c86bff', tok: 2 },
     { id: 'gold', name: 'Gold', hex: '#ffcc33', tok: 3 },
+    { id: 'supporter', name: 'Supporter teal', hex: '#2fe0d0', gift: 'pack' },   // (the Founder's Pack's: SUPPORT - never sold)
   ],
   plates: [
     { id: 'local', t: 'Local', cash: 2000 },
@@ -1149,11 +1150,22 @@ export const COSMETICS = {
     { id: 'regular', t: 'Regular', tok: 2 },
     { id: 'legend', t: 'Legend', tok: 4 },
     { id: 'beta', t: 'Beta', gift: 'beta', gold: 1, card: 1 },
+    { id: 'supporter', t: 'Supporter', gift: 'pack', card: 1 },   // (the Founder's Pack's badge: SUPPORT)
   ],
   rankPlatesFrom: 1,   // a career's ranks from this one up are plates (rank 0 - Corner Kid, Recruit, Vendor - isn't)
   paint: { cash: 600, tok: 1 },
   beta: { season: 0, jacket: 'Founding Citizen jacket', plate: 'beta' },
 };
+// The Founder's Pack (the owner, 11-17: a paid pack of cosmetics on his Ko-fi shop - never power; server/kofi.js,
+// server/systems/cosmetics.js grantFounder): bought on Ko-fi (a Shop Order of the pack's item - its link code in the
+// server's CLA_KOFI_PACK) or with a monthly Ko-fi membership (a Subscription payment, any tier), it lands on the buyer's
+// account: by the supporter code (Settings > Help, shown to members) in the order's note, at once; or by pasting the
+// order's transaction id in Settings (claimTries wrong ones in claimWindowMin minutes at most). A full account only -
+// a guest's would be lost with the guest. price: the price the game shows (USD); Ko-fi sets the real one. What's in it:
+// coat (shared/lookcore.js, a gift piece - never sold), color (a name color, COSMETICS.colors - switch it off at a style
+// counter or in Settings), plate (the card badge, COSMETICS.plates card: 1 - on your own card and in the players list,
+// never over your name), paint (a special paint, shared/specialpaint.js - free at any Fresh Coat garage, again any time).
+export const SUPPORT = { price: 8, pack: "Founder's Pack", coat: "Founder's Coat", color: 'supporter', plate: 'supporter', paint: 64, paintName: 'Chrome gold', claimTries: 5, claimWindowMin: 60 };
 // The admin panel's gifts (server/admin.js gift; the owner, 11-16: "gift things to people"): money into the bank (the
 // panel's quick amounts; maxMoney at most a gift), items and weapons (maxItems at most: of an item, or magazines of a gun),
 // and the bought cosmetics (never a season's gift). Every one in the admin log.

@@ -94,6 +94,12 @@ config.launch = {
   // bug reports (server/bugreports.js) posted to the Discord's #bug-reports through this webhook; none: only kept here
   bugWebhook: env('BUG_WEBHOOK_URL'),
 };
+// ---- the Founder's Pack on Ko-fi (the owner, 11-17: server/kofi.js; docs/LAUNCH-SETUP.md section 10) ----
+// CLA_KOFI_TOKEN: the webhook's verification token (Ko-fi > More > API) - secret, set with deploy/set-keys.sh, never in the
+// repo; none: the webhook answers 503. CLA_KOFI_PACK: the pack's shop item(s) - the link code at the end of the item's
+// link (ko-fi.com/s/<code>), commas between several; none: every shop order is the pack.
+config.launch.kofiToken = process.env.CLA_KOFI_TOKEN || '';
+config.launch.kofiPack = String(process.env.CLA_KOFI_PACK || '').split(',').map((c) => c.trim()).filter((c) => /^[A-Za-z0-9]{4,32}$/.test(c));
 function supportOf(v) { return /^https:\/\/ko-fi\.com\/[A-Za-z0-9_]{2,40}$/.test(v) ? v : ''; }
 function inviteOf(v) { return /^https:\/\/(discord\.gg|(www\.)?discord\.com\/invite)\/[A-Za-z0-9-]{2,32}$/.test(v) ? v : ''; }
 // Only trust X-Forwarded-For when a local proxy (Caddy) is the only thing that can reach us.

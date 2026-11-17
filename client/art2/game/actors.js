@@ -13,6 +13,7 @@ import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
 import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
 import { groundSprite as forageGround } from '../forage.js';
 import { VEHICLE_BY_INDEX, PAINTS, unpackVehDamage } from '../../../shared/vehicles.js';
+import { specialPaint } from '../../../shared/specialpaint.js';
 const ART = {};   // (useArt: ferrisCab, hotAirBalloon, starfish; horseModel - loadArt)
 export function useArt(o) { Object.assign(ART, o); }
 // The newer art, loaded when first needed and out of the startup code (the renderer's and the bake workers'): the batch-4
@@ -230,6 +231,8 @@ export const towOf = (extra) => { const e = (extra | 0) & 3; return !e ? 0 : (e 
 const stKey = (s) => (s.tip ? 'P' : '') + (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg + 'z' + s.zones + 'o' + s.off : '') + (s.holes ? 'H' + s.holes : '') + (s.half ? 'C' + s.cut + s.half : '') + (s.reel ? 'r' + s.reel : '') || '-';   // (reel: a combine's reel turning - a third of a bat a step)
 function vehLook(d) {
   const t = vehType(d), tn = d.tn ?? -1, p = (((d.p ?? 0) % PAINTS.length) + PAINTS.length) % PAINTS.length;
+  const sp = specialPaint(tn);   // (a special paint - the Founder's Pack's chrome gold: shared/specialpaint.js - its hex as it is, more sheen)
+  if (sp) return WORK.has(t) ? { t, cab: sp.hex, sh: sp.sheen } : { t, paint: sp.hex, sh: sp.sheen };
   if (CIVIL.has(t) || CIVIL_X.has(t)) return { t, paint: carPaint(PAINTS[tn >= 0 ? tn : p]) };
   if (WORK.has(t)) return { t, cab: tn >= 0 ? carPaint(PAINTS[tn]) : p % 5 < 2 ? undefined : CABS[p % CABS.length] };   // 2 in 5 keep the model's own cab
   if (t === 'bus' && tn < 0) return { t, band: carPaint(PAINTS[p]) };   // a bus wears its line's colour in a band (server transit.js)
@@ -248,12 +251,14 @@ export function vehicleKey(d, st, hi = 0, N = 32) {
 // and ~150 MB while its normals are worked out, a second to build; halved, 6.5 MB.
 const COARSE = { ferry: 2, waterbus: 2 };
 function vehModel(d, s) {
-  const k = vehLook(d), vr = (((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS, key = `${k.t}|${k.paint || k.cab || k.band || 'L'}|${vr}|${stKey(s)}`;
+  const k = vehLook(d), vr = (((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS, key = `${k.t}|${k.paint || k.cab || k.band || 'L'}${k.sh ? '*' : ''}|${vr}|${stKey(s)}`;
   return MODELS.get(key, () => {
     const o = { paint: k.paint, cab: k.cab, band: k.band, variant: vr, lights: s.lights ? 1 : 0, brake: s.brake, reverse: s.rev, siren: s.siren || false, bloody: s.bloody, state: modelState(k.t, s), reel: s.reel,
       damage: s.dmg || s.holes ? { stage: s.dmg, zones: s.zones, holes: s.holes * 2, off: s.off } : null, half: s.half || null, cut: s.cut, cool: s.wreck };
     const q = ART_PX > 1 ? COARSE[k.t] : 0;
-    return compactVox(q ? halveVox(vehicleModel(k.t, { ...o, dry: true }), q) : vehicleModel(k.t, o));
+    const m = q ? halveVox(vehicleModel(k.t, { ...o, dry: true }), q) : vehicleModel(k.t, o);
+    if (k.sh) m.look = { ...(m.look || {}), sheen: ((m.look && m.look.sheen) ?? 1) * k.sh };   // (a metallic special paint)
+    return compactVox(m);
   });
 }
 // the vehicle sprite at heading index hi of N (angle hi * 2pi / N, 0 east, + toward south); anchor = the

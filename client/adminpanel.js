@@ -84,7 +84,7 @@ function stopWatch(ctx, body) {
 function card(q, ctx, body, btn) {
   const el = document.createElement('div');
   el.className = `adm-p${ST.open === q.id ? ' open' : ''}`;
-  const tags = [q.me ? '<em>you</em>' : '', q.role ? `<em class="gd">${esc(q.role)}</em>` : '', q.gu ? '<em>guest</em>' : '', q.down ? '<em class="bad">down</em>' : '', q.w ? `<em class="bad">${'★'.repeat(Math.min(5, q.w))}</em>` : '', q.cust ? '<em class="bad">custody</em>' : '', q.muted ? '<em>muted</em>' : ''].join('');
+  const tags = [q.me ? '<em>you</em>' : '', q.role ? `<em class="gd">${esc(q.role)}</em>` : '', q.gu ? '<em>guest</em>' : '', q.down ? '<em class="bad">down</em>' : '', q.w ? `<em class="bad">${'★'.repeat(Math.min(5, q.w))}</em>` : '', q.cust ? '<em class="bad">custody</em>' : '', q.muted ? '<em>muted</em>' : '', q.sp ? '<em class="sp">supporter</em>' : ''].join('');
   const who = btn(el, '', 'adm-who', () => { ST.open = ST.open === q.id ? null : q.id; ST.sheet = null; draw(body, ctx); });
   who.innerHTML = `<span><b class="${q.gu ? 'gu' : ''}">${q.fo ? '<span class="cr">♛</span> ' : ''}${esc(q.n)}</b>${tags}<small>${esc(q.d || 'indoors')}${q.job ? ' · ' + esc(q.job) : ''} · ${q.hp}% health · ${q.sess} min on</small></span>`;
   if (ST.open !== q.id) return el;
@@ -105,6 +105,8 @@ function card(q, ctx, body, btn) {
   go('rescue', '🧭 Unstick (to the street)', {}, '', `${q.n} is out on the street.`);
   if (q.job) go('endjob', `⏹ End: ${q.job}`, {}, 'warn', `${q.n}'s ${q.job} is over.`);
   btn(A, '🎁 Gift…', '', () => { ST.sheet = ST.sheet === 'gift' ? null : 'gift'; draw(body, ctx); });
+  // the Founder's Pack (the owner's: server/admin.js pack) - given by hand, or taken back after a refund (asks again)
+  if (ST.data.founder) { if (q.sp) harsh(A, btn, ctx, body, q, 'pack', '💜 Take back the Founder\'s Pack', { on: 0 }); else go('pack', '💜 Give the Founder\'s Pack', { on: 1 }, '', `${q.n} has the Founder's Pack.`); }
   if (!q.me) {
     go(q.muted ? 'unmute' : 'mute', q.muted ? '🔈 Unmute chat' : '🔇 Mute chat (1 h)', { hours: 1 }, 'warn');
     harsh(A, btn, ctx, body, q, 'prison', '⛓ Prison (15 min)', { mins: 15, why: 'by an admin' });

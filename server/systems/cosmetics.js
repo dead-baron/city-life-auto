@@ -23,7 +23,9 @@
 //     reached), nc (the color worn, or null), tp (the plate worn, or null), gifts: { beta: { at, s } }, sb: [seasons
 //     played], bp: [{ s (season), c (career), i (place), of (the top it was) }], tw (a top's title put on once: 1) } -
 //     absent on old profiles (made the first time; sb, bp, tw on older ones too). tops: one { c, s } a career a season.
-import { COSMETICS, SEASON, CAREERS, CAREER_KEYS } from '../../shared/rules.js';
+import { COSMETICS, SEASON, CAREERS, CAREER_KEYS, SUPPORT } from '../../shared/rules.js';
+import { encodeLook, decodeLook } from '../../shared/look.js';
+import { SPECIAL_PAINTS } from '../../shared/specialpaint.js';
 import { PIECE_IDS } from '../../shared/lookcore.js';
 import { PAINTS } from '../../shared/vehicles.js';
 import { store } from '../store.js';
@@ -76,7 +78,7 @@ export function hasPlate(prof, id) {
 }
 // a card plate (the beta's): yours, shown on your own card - never by your name over your head
 export const cardPlate = (id) => !!(PLATE[id] && PLATE[id].card);
-export const hasColor = (prof, id) => cosmOf(prof).c.includes(id);
+export const hasColor = (prof, id) => (COLOR[id] && COLOR[id].gift ? !!cosmOf(prof).gifts[COLOR[id].gift] : cosmOf(prof).c.includes(id));   // (a gift's color: the Founder's Pack's)
 
 // what the nameplate shows: { c (name color, hex), t (plate text), g (gold plate), k (a founded crew's tag: crews.js) } or null
 export function plateOf(prof) {
@@ -111,6 +113,47 @@ export function grantBeta(world, p) {
   return true;
 }
 
+// ---- the Founder's Pack (shared/rules.js SUPPORT; server/kofi.js) ----------------------------------------------------------
+// bought on Ko-fi: the coat into the wardrobe, the supporter name color (worn unless another is), the Supporter badge on
+// the card, the special paint at any Fresh Coat garage. Kept in profile.cosm.gifts.pack { at, tx } (tx: the Ko-fi order -
+// null when the owner gave it), so it outlives a season's wipe and a progress reset like the beta gift. A profile (online or
+// not); p: the player when online (the name and the card brought up to date, told). -> true when given now
+export const hasPack = (prof) => !!(prof && prof.cosm && prof.cosm.gifts && prof.cosm.gifts.pack);
+export function grantFounder(world, prof, p = null, tx = null) {
+  const C = cosmOf(prof);
+  if (C.gifts.pack) return false;
+  C.gifts.pack = { at: Date.now(), tx: tx || null };
+  looks.ensureLook(prof);
+  const ck = PIECE_IDS[SUPPORT.coat];
+  if (ck && Array.isArray(prof.wardrobe) && !prof.wardrobe.includes(ck)) prof.wardrobe.push(ck);
+  if (!C.nc) C.nc = SUPPORT.color;
+  store.touch();
+  if (p) {
+    p.supporter = true; refresh(p); p.meDirty = true;
+    if (world) world.notify(p, `Thank you for supporting the game! The ${SUPPORT.pack} is yours: the ${SUPPORT.coat} is in your wardrobe, your name shows in ${COLOR[SUPPORT.color].name} (switch it at a style counter or in Settings), the Supporter badge is on your card, and any Fresh Coat garage paints your car ${SUPPORT.paintName.toLowerCase()} for free.`, 'good');
+  }
+  return true;
+}
+// taken back (the owner: a refund or a chargeback) - the coat out of the wardrobe and off the look, the color and the paint
+// off. -> true when it was theirs
+export function revokeFounder(world, prof, p = null) {
+  const C = cosmOf(prof);
+  if (!C.gifts.pack) return false;
+  delete C.gifts.pack;
+  const ck = PIECE_IDS[SUPPORT.coat];
+  if (Array.isArray(prof.wardrobe)) prof.wardrobe = prof.wardrobe.filter((id) => id !== ck);
+  const L = typeof prof.look === 'string' ? decodeLook(prof.look) : null;
+  if (L && L.outfit && L.outfit.jacket && L.outfit.jacket.id === ck) { L.outfit.jacket = null; prof.look = encodeLook(L); if (p && p.ped) { p.ped.app = looks.appOf(prof); p.ped.appVer = (p.ped.appVer || 0) + 1; } }
+  for (const L2 of prof.looks || []) { const d = decodeLook(L2.c); if (d && d.outfit && d.outfit.jacket && d.outfit.jacket.id === ck) { d.outfit.jacket = null; L2.c = encodeLook(d); } }
+  if (C.nc === SUPPORT.color) C.nc = null;
+  if (C.tp === SUPPORT.plate) C.tp = null;
+  for (const v of prof.vehicles || []) if (SPECIAL_PAINTS[v.tint]) delete v.tint;
+  if (world && world.entities) for (const v of world.entities.values()) if (v && v.owner === prof.pid && SPECIAL_PAINTS[v.tint]) { v.tint = v.paint; v.descVer = (v.descVer || 0) + 1; }
+  store.touch();
+  if (p) { p.supporter = false; refresh(p); p.meDirty = true; }
+  return true;
+}
+
 // a career's top rank reached: its title for good, with its season - and over your name from that moment (worn: the
 // unlock), for everyone to see. Once a season (a top reached again in a later one: that season noted too).
 export function noteTops(prof, s = SEASON.n) {
@@ -138,7 +181,7 @@ export function update(world) {
   const slow = world.tick % 200 === 9;
   for (const p of world.players.values()) {
     if (!p.profile || !p.ped) continue;
-    if (!p.cosmOk) { p.cosmOk = 1; const C = cosmOf(p.profile); if (C.tp && cardPlate(C.tp)) { C.tp = null; store.touch(); } grantBeta(world, p); noteSeason(p.profile); noteTops(p.profile); refresh(p); continue; }
+    if (!p.cosmOk) { p.cosmOk = 1; const C = cosmOf(p.profile); if (C.tp && cardPlate(C.tp)) { C.tp = null; store.touch(); } grantBeta(world, p); p.supporter = hasPack(p.profile); noteSeason(p.profile); noteTops(p.profile); refresh(p); continue; }
     if (slow) { noteTops(p.profile); refresh(p); }   // (a rank lost: its plate comes off)
     else if (p.npDirty) { p.npDirty = false; noteTops(p.profile); refresh(p); }   // (a crew's tag on or off: crews.js; a rank-up: careers.js)
   }
@@ -151,6 +194,7 @@ export function menu(world, p, poi) {
   opts.push({ id: 'cosc:none', label: `${C.nc ? 'Plain white name' : 'Plain white name (wearing)'}`, dis: !C.nc });
   for (const c of COSMETICS.colors) {
     const own = hasColor(prof, c.id), on = C.nc === c.id;
+    if (c.gift && !own) continue;   // (a gift's - the Founder's Pack's - only for those who have it)
     opts.push({ id: `cosc:${c.id}`, label: `Name color: ${c.name}${on ? ' (wearing)' : ''}`, ...(own ? {} : c.cash ? { price: c.cash } : {}), dis: on || (!own && c.tok && tokens(prof) < c.tok), note: own ? (on ? '' : 'yours - wear it') : priceNote(c, prof), sw: c.hex });
   }
   opts.push({ id: 'cosp:none', label: `${C.tp ? 'No title plate' : 'No title plate (wearing)'}`, dis: !C.tp });
@@ -175,6 +219,7 @@ export function pick(world, p, kind, id, pay) {
     else {
       const c = COLOR[id];
       if (!c) return 'No such color.';
+      if (!hasColor(prof, id) && c.gift) return 'That one comes with the Founder\'s Pack - it can\'t be bought here.';
       if (!hasColor(prof, id)) {
         if (c.tok ? !spendTok(prof, c.tok) : !pay(p, c.cash)) return c.tok ? `It takes ${c.tok} cosmetic token${c.tok === 1 ? '' : 's'} - a weekly goal earns one.` : `You need ${money(c.cash)} (cash + bank).`;
         C.c.push(id);
@@ -208,6 +253,7 @@ export function pick(world, p, kind, id, pay) {
 export function paintMenu(p, poi, v) {
   const prof = p.profile, P = COSMETICS.paint, tok = !!p.paintTok, opts = [];
   opts.push({ id: 'cptok', label: tok ? `Paying with a cosmetic token (you have ${tokens(prof)}) - tap for cash` : `Pay with a cosmetic token instead (you have ${tokens(prof)})`, dis: !tok && tokens(prof) < P.tok });
+  if (hasPack(prof)) opts.push({ id: `cpk:${SUPPORT.paint}`, label: `${SUPPORT.paintName} - the ${SUPPORT.pack}'s${v && v.tint === SUPPORT.paint ? ' (now)' : ''}`, note: 'yours - free', dis: !v, sw: SPECIAL_PAINTS[SUPPORT.paint].hex });
   PAINTS.forEach((hex, i) => opts.push({ id: `cpk:${i}`, label: `${PAINT_NAMES[i] || `Color ${i + 1}`}${v && v.paint === i ? ' (now)' : ''}`, ...(tok ? {} : { price: P.cash }), note: tok ? `${P.tok} token` : '', dis: !v || (tok && tokens(prof) < P.tok), sw: hex }));
   opts.push({ id: 'cpback', label: 'Back to the garage' });
   opts.push({ id: 'close', label: 'Close' });
@@ -217,8 +263,16 @@ export function paintMenu(p, poi, v) {
 export function paintPick(world, p, v, i, pay, entry = null) {
   const P = COSMETICS.paint;
   if (!v) return 'Bring your vehicle onto the lot first.';
-  if (!(i >= 0 && i < PAINTS.length)) return 'No such color.';
   if (v.def.horse) return "We don't paint horses.";
+  if (i === SUPPORT.paint && SPECIAL_PAINTS[i]) {   // (the Founder's Pack's paint: free for its owners, any time)
+    if (!hasPack(p.profile)) return `That paint comes with the ${SUPPORT.pack}.`;
+    v.tint = i; v.bloody = false; v.descVer = (v.descVer || 0) + 1;
+    if (entry) entry.tint = i;
+    store.touch();
+    world.notify(p, `Your ${v.def.name} is ${SUPPORT.paintName.toLowerCase()} now. Looking sharp.`, 'good');
+    return null;
+  }
+  if (!(i >= 0 && i < PAINTS.length)) return 'No such color.';
   if (p.paintTok ? !spendTok(p.profile, P.tok) : !pay(p, P.cash)) return p.paintTok ? 'No cosmetic token to spend - a weekly goal earns one.' : `You need ${money(P.cash)} (cash + bank).`;
   v.paint = i; v.tint = i; v.bloody = false;
   v.descVer = (v.descVer || 0) + 1;

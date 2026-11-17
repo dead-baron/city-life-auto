@@ -176,7 +176,7 @@ function launchCall(k, a) {
       gate: (el, done) => { el.innerHTML = ''; acc.showGate(done, { into: el }); },
       gateNeeded: () => acc.gateNeeded(),
       chat: (el) => chat.settings(el),
-      legal: (el) => acc.legal(el), news: (el) => acc.newsBox(el),
+      legal: (el) => acc.legal(el), news: (el) => acc.newsBox(el), support: (el) => acc.supportBox(el),
     });
     return S.launch;
   });
@@ -1612,7 +1612,7 @@ function renderPlayers() {
   el.innerHTML = '';
   for (const q of ps) {
     const row = document.createElement('div'); row.className = 'pl-row';
-    row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm && !q.fo ? ' <i>dev</i>' : ''}<small>${q.fo ? '<b style="color:var(--gold)">♛ Founder</b> · ' : ''}${q.gu ? 'Guest · ' : ''}${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
+    row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm && !q.fo ? ' <i>dev</i>' : ''}<small>${q.fo ? '<b style="color:var(--gold)">♛ Founder</b> · ' : ''}${q.sp ? '<b style="color:#2fe0d0">♥ Supporter</b> · ' : ''}${q.gu ? 'Guest · ' : ''}${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
     if (S.plist.dev && !q.me && q.id) for (const [c, label] of [['goto', 'Go to'], ['bring', 'Bring'], ...(q.dm ? [] : [['grant', 'Give dev']])]) {
       const b = document.createElement('button'); b.className = 'pl-btn'; b.textContent = label;
       b.onclick = () => { send({ t: 'dev', c, pid: q.id }); if (c !== 'grant') closeHub(); setTimeout(requestPlayers, 300); };
@@ -1678,6 +1678,7 @@ function setAccountUi(ui) {
   if (accountUi && accountUi.chat) accountUi.chat($('s-chatbox'));     // (Settings > Chat: the channel toggles)
   if (accountUi && accountUi.legal) accountUi.legal($('s-legalbox'));  // (Settings > Legal: the terms, the privacy policy, the notice)
   if (accountUi && accountUi.news) accountUi.news($('s-newsbox'));     // (Settings > Account: game news by email)
+  if (accountUi && accountUi.support) accountUi.support($('s-supportbox'));   // (Settings > Help: the Founder's Pack - the supporter code, a claim)
 }
 const SIGNIN_WAYS = [['guest', 'Guest', 'playing now: saved in this browser'], ['password', 'Email and password'], ['google', 'Google'], ['discord', 'Discord'], ['passkey', 'Passkey']];
 function openSignIn() {

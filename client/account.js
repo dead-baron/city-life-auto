@@ -337,7 +337,8 @@ export function onMessage(m) {
     if (m.a === 'transfer') { C.toast(`Your transfer code: ${m.code} - enter it on your other device within 10 minutes. It works once.`, 'info'); if (panel) panel.querySelector('#a-code').textContent = m.code; return; }
     if (m.a === 'name') { const t = m.ok ? `You're ${m.name} now.` : m.err; C.toast(t, m.ok ? 'good' : 'warn'); const e = panel && panel.querySelector('#a-msg'); if (e) e.textContent = t; return; }
     if (m.a === 'news') { if (!m.ok) C.toast(m.err, 'warn'); return; }
-    if (!m.a) { state = m; if (panel) renderPanel(); if (newsEl) renderNews(); if (C && C.analytics && C.analytics.props) C.analytics.props({ player_type: m.guest ? 'guest' : 'account' }); }   // (GA's Player type: guest or signed in)
+    if (m.a === 'support') { sup = m; if (m.k === 'claim' || m.k === 'color') { supMsg = m.ok ? (m.k === 'claim' ? `The ${m.pack} is yours - thank you!` : '') : m.err; if (!m.ok) C.toast(m.err, 'warn'); } renderSupport(); return; }
+    if (!m.a) { state = m; if (panel) renderPanel(); if (newsEl) renderNews(); C.send({ t: 'acct', a: 'support' }); if (C && C.analytics && C.analytics.props) C.analytics.props({ player_type: m.guest ? 'guest' : 'account' }); }   // (GA's Player type: guest or signed in)
     return;
   }
   if (m.t === 'admin') { const r = pendingAdmin.get(m.a); if (r) { pendingAdmin.delete(m.a); r(m); } else if (!m.ok && m.err) C.toast(m.err, 'warn'); return; }
@@ -470,6 +471,33 @@ function renderNews() {
   if (q('#s-news-off')) q('#s-news-off').onclick = () => C.send({ t: 'acct', a: 'news', on: false });
   if (q('#s-news-on')) q('#s-news-on').onclick = () => { newsAsk = true; renderNews(); const i = q('#s-news-in'); if (i) i.focus(); };
   if (q('#s-news-go')) q('#s-news-go').onclick = () => { newsAsk = false; C.send({ t: 'acct', a: 'news', on: true, email: q('#s-news-in').value }); };
+}
+// Settings > Help: the Founder's Pack (server/kofi.js; the owner, 11-17) - the supporter code to put in the Ko-fi order's
+// note (members only: a guest's pack would be lost with the guest), the shop, a Ko-fi order claimed by its transaction id,
+// and the supporter name color on or off. What it shows comes from the server ({ t: 'acct', a: 'support' }).
+let supEl = null, sup = null, supMsg = '';
+export function supportBox(el) { supEl = el; renderSupport(); }
+function renderSupport() {
+  const el = supEl, s = sup;
+  if (!el || !el.isConnected) return;
+  if (!s) { el.innerHTML = ''; return; }
+  const shop = info && /^https:\/\/ko-fi\.com\/\w{2,40}$/.test(info.support || '') ? `${info.support}/shop` : '';
+  let h = `<div class="set-card sup"><b>${esc(s.pack.toUpperCase())}</b><p>Cosmetic thanks for supporting the game: the Founder's Coat, a chrome-gold car paint, a Supporter teal name and a Supporter badge on your card. Looks only - never any power. $${esc(s.price)} on Ko-fi.</p></div>`;
+  if (s.guest) h += `<p class="msub">Make an account first - a guest's pack would be lost with the guest. Then your supporter code shows here.</p><button class="sbtn" id="s-sup-acct">Make an account (sign in)</button>`;
+  else if (s.has) h += `<p class="msub">The ${esc(s.pack)} is yours - thank you! The coat is in your wardrobe; any Fresh Coat garage paints your car chrome gold for free.</p><label class="srow"><span>Supporter teal name</span><input type="checkbox" id="s-sup-color"${s.color ? ' checked' : ''}></label>`;
+  else {
+    h += `<p class="msub">Your supporter code: <b class="sup-code">${esc(s.code)}</b> - put it in the note when you buy, and the pack lands on this account at once.</p><button class="sbtn" id="s-sup-copy">⧉ Copy my supporter code</button>`;
+    if (shop) h += '<button class="sbtn" id="s-sup-buy">Get the Founder\'s Pack on Ko-fi</button>';
+    h += '<p class="msub">Claim a Ko-fi purchase - paste the transaction id from your Ko-fi receipt:</p><div class="m-opts devpw-row"><input id="s-sup-tx" type="text" placeholder="Transaction id" autocomplete="off" spellcheck="false"><button class="btn" id="s-sup-claim">Claim</button></div>';
+  }
+  if (supMsg) h += `<p class="msub">${esc(supMsg)}</p>`;
+  el.innerHTML = h;
+  const q = (id) => el.querySelector(id);
+  if (q('#s-sup-acct')) q('#s-sup-acct').onclick = () => { const b = document.getElementById('s-signin'); if (b) b.click(); };
+  if (q('#s-sup-color')) q('#s-sup-color').onchange = (e) => C.send({ t: 'acct', a: 'support', k: 'color', on: !!e.target.checked });
+  if (q('#s-sup-copy')) q('#s-sup-copy').onclick = () => { try { navigator.clipboard.writeText(s.code).then(() => C.toast('Supporter code copied.', 'info'), () => C.toast(s.code, 'info')); } catch { C.toast(s.code, 'info'); } };
+  if (q('#s-sup-buy')) q('#s-sup-buy').onclick = () => window.open(`${shop}?utm_source=game&utm_medium=settings&utm_campaign=founderpack`, '_blank', 'noopener');
+  if (q('#s-sup-claim')) q('#s-sup-claim').onclick = () => { const v = q('#s-sup-tx').value.trim(); if (v) C.send({ t: 'acct', a: 'support', k: 'claim', tx: v.slice(0, 80) }); };
 }
 // Settings > Legal: the drafts of the terms and the privacy policy, on the game server (server/legal.js)
 export function legal(el) {
