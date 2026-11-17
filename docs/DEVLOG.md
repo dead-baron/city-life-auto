@@ -24669,6 +24669,13 @@ bag, just Inventory." Built to the concepts U6, U14, U15, CC10 and UIC-19.
   dress or a set fills the top's slot as OUTFIT, the bottoms' says "with the outfit") - each with an X to take it off;
   TAKE IT ALL OFF; SAVED LOOKS (CC10) shows your saved looks as small figures, a tap puts that look's clothes on. Health,
   armor and stamina bars under it.
+- **The character fills its stand** (the owner's review of the first shots: "character is super short in that space"):
+  the stand was stretched to the column's height with a small figure at its foot. Now the stand is sized by the slots
+  round it, the column is wider (the figure gets the room between the slots), and the sprite - its true proportions, the
+  widest and tallest of its eight turns - is scaled by whole device pixels (the desktop's zoom included) to about 85-90%
+  of the stand, centered, feet on the shadow, the turn arrows in the top corners beside the head. The item counts sit on
+  their own line under the names (they ran over them on a phone upright). invlayout.test.js fails a count on a name and
+  a character under 70% of its stand.
 - **Clothes from the inventory, on the server** (server/systems/looks.js): `{ t: 'look', a: 'off', s: slot | 'all' }`,
   `a: 'wear', id` (a piece you own, in its colors or the ones worn), `a: 'outfit', i` (a saved look's clothes over your
   own body and hair). All three go through the creator's own `put()`: refused in cuffs, in uniform, and **while you're
