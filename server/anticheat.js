@@ -4,13 +4,19 @@
 // (server/moderation.js) and log; they never punish by themselves (kick and ban are admin actions: server/admin.js).
 //   movement: every sample (about 2 a second), how far each player moved against what the shared physics allow for how
 //     they're travelling (shared/physics.js PED, shared/vehicles.js max per vehicle) - a jump far past it with no
-//     teleport the server made (p.teleportAt) is a 'teleport' flag; staying over it a 'speed' flag;
+//     teleport the server made (p.teleportAt) is a 'teleport' flag; staying over it a 'speed' flag. The time it's
+//     measured over is the longer of the world's clock and the player's own steps (p.inSteps: one physics step per input,
+//     two a tick while a page's inputs back up - players.js inputsOf), the steps never counted for more than the wall
+//     clock's time (a page sends one input a tick of real time: one sending more is stepped faster, and still flagged):
+//     a server running behind, or a phone's inputs arriving in a clump, steps a sprint or a dive roll twice in a tick,
+//     and that's no cheat (bots logged 58-67 km/h on foot at 100-150 players, 11-17);
 //   actions: each kind of message a page sends has a rate it may come at (RATES); past it, it's dropped, and a page
 //     that keeps on is flagged;
 //   inputs: more input packets a second than any page sends;
 //   economy: earnings an hour far above the norm (server/analytics.js feeds earned()).
 import { PED } from '../shared/physics.js';
 import { VEHICLES } from '../shared/vehicles.js';
+import { DT } from '../shared/constants.js';
 
 // messages a second, per kind (anything else: DEFAULT_RATE)
 export const RATES = {
@@ -61,15 +67,16 @@ export function createAntiCheat({ mod, now = Date.now, log = console }) {
       const ped = p.ped;
       if (!ped || ped.dead) { p.acPos = null; continue; }
       const last = p.acPos, mode = ped.vehId || 0;
-      p.acPos = { x: ped.x, y: ped.y, t: world.time, mode, tp: p.teleportAt || 0, ms: p.movedSeq || 0, ped: ped.id };
+      p.acPos = { x: ped.x, y: ped.y, t: world.time, mode, tp: p.teleportAt || 0, ms: p.movedSeq || 0, ped: ped.id, n: p.inSteps || 0, w: now() };
       // (a move the server made since the last sample - teleportAt, or server/movemark.js moved(): not the player's doing)
       if (!last || last.ped !== ped.id || last.mode !== mode || (p.teleportAt || 0) !== last.tp || (p.teleportAt || 0) > last.t || (p.movedSeq || 0) !== last.ms) continue;
       const dt = world.time - last.t;
       if (dt <= 0.05 || dt > 5) continue;
       const max = allowed(world, p);
       if (!max) continue;
-      const d = Math.hypot(ped.x - last.x, ped.y - last.y), sp = d / dt;
-      if (d > Math.max(MOVE.jumpPx, max * dt * 3)) { out.push(flag('teleport', p, `moved ${Math.round(d / 32)} m in ${dt.toFixed(1)} s (${ped.vehId ? 'in a ' + (world.get(ped.vehId)?.def?.name || 'vehicle') : 'on foot'})`, { from: [Math.round(last.x), Math.round(last.y)], to: [Math.round(ped.x), Math.round(ped.y)] })); continue; }
+      const span = Math.max(dt, Math.min(((p.inSteps || 0) - last.n) * DT, (now() - last.w) / 1000));   // (the player's own steps: two in a tick while their inputs catch up)
+      const d = Math.hypot(ped.x - last.x, ped.y - last.y), sp = d / span;
+      if (d > Math.max(MOVE.jumpPx, max * span * 3)) { out.push(flag('teleport', p, `moved ${Math.round(d / 32)} m in ${dt.toFixed(1)} s (${ped.vehId ? 'in a ' + (world.get(ped.vehId)?.def?.name || 'vehicle') : 'on foot'})`, { from: [Math.round(last.x), Math.round(last.y)], to: [Math.round(ped.x), Math.round(ped.y)] })); continue; }
       if (sp > max) {
         const hits = (p.acSpeed || []).filter((h) => world.time - h < MOVE.speedWindowS);
         hits.push(world.time);

@@ -17,6 +17,8 @@ import { POWERS, allowed } from '../server/roles.js';
 import { createAntiCheat, RATES } from '../server/anticheat.js';
 import * as devmode from '../server/devmode.js';
 import { VEHICLES } from '../shared/vehicles.js';
+import { PED } from '../shared/physics.js';
+import { DT } from '../shared/constants.js';
 
 function setup(c = clock()) {
   for (const k of Object.keys(store.kept)) delete store.kept[k];
@@ -177,6 +179,28 @@ test('movement audit: a teleport the server didn\'t make and sustained overspeed
   assert.deepEqual(step(20000, 0), [], 'dev mode flies about');
   assert.ok(S.mod.openReviews().some((r) => r.kind === 'teleport'));
   assert.ok(S.mod.openReviews().some((r) => r.kind === 'speed'));
+});
+
+test('movement audit: a sprint and dive rolls stepped twice a tick (a server behind, a clump of inputs) are not speeding; a page flooding inputs still is', () => {
+  const S = setup();
+  const ac = createAntiCheat({ mod: S.mod, now: S.c.now, log: null });
+  const p = S.P(null, { x: 1000, y: 1000 });
+  // each sample: the world's clock moves dt, the player took `steps` input steps over `wallS` seconds of real time, each
+  // step the fastest a ped goes on foot (a dive roll with an energy drink's sprint either side of it)
+  const top = Math.max(PED.aSprint * 1.15, PED.rollSpeed);
+  const step = (steps, wallS, dt = 0.5) => { S.w.time += dt; S.c.add(wallS * 1000); p.inSteps = (p.inSteps || 0) + steps; p.ped.x += top * steps * DT; return ac.audit(S.w); };
+  step(0, 0);
+  // the server running at half speed: 10 ticks of world time, 20 inputs (two a tick), a second of real time
+  let f = [];
+  for (let i = 0; i < 8; i++) f = f.concat(step(20, 1));
+  assert.deepEqual(f, [], 'twice the world clock\'s speed, but the player\'s own pace');
+  // a phone's inputs arriving in a clump: 14 steps in a tick's half second of world time, 0.7 s of real time
+  for (let i = 0; i < 8; i++) f = f.concat(step(14, 0.7));
+  assert.deepEqual(f, [], 'a clump caught up');
+  // a page sending inputs twice as fast as real time (40 a second): stepped twice a tick, flagged
+  for (let i = 0; i < 4; i++) f = f.concat(step(20, 0.5));
+  assert.equal(f.length, 1);
+  assert.equal(f[0].kind, 'speed');
 });
 
 test('action rate checks: each message kind at its own rate, the rest dropped; a flood is flagged; inputs capped', () => {
