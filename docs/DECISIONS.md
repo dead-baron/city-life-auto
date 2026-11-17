@@ -314,6 +314,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Cinematics, the plan after the first shot list ("The cinematic shots really aren't good ... all the same nighttime scene"): fix the fundamentals first - each shot exactly its own time and weather, roofs drawn solid in a shot (no interior/exterior flicker) unless it's an interior, frames over streets, plazas and open ground (never a roof in the middle), people about, street races that race (through the lights, weaving through traffic, people diving clear), chases on wide streets in view; then "Save this view" so he scouts; then ~10 hero shots refined with him. (11-14 20:21; chat, queue)
 - The shot list shows only the shots that pass the sanity check (subject in frame, open ground at street level, the right time, people present); the rest wait under "More (unreviewed)". Play all plays the kept ones. (11-14; queue)
 - Saved views live on the server (kept with the world's state); saving, renaming and deleting are the owner's and admins' (anyone on a private dev server); anyone in dev mode can go to and play them. (11-14; queue)
+- The Camera's clean screen (all the UI off) has nothing on it, not even the close X: it comes back on a tap or a key; Esc / B still exit. (11-17; chat)
 
 ## FTUE and Guide
 - The tutorial IS the first goal: train arrival, one question ("What brings you to town?"), at most 3 steps, then first-time moments. "Short and sweet, general direction." (11-04; ftue-design 11-04, CLAUDE.md)

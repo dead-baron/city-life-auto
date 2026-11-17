@@ -25023,3 +25023,9 @@ avatar as a character he plays in admin mode, with his presence known; the admin
 - Tests: admin-console (the console's access, CSP, its JSON's privacy, the refs; the buckets, their bounds and a restart;
   the IP table and the time zones; the panel's commands - powers, limits, the log; the founder's crown, switch and art; the
   Beta plate off the tags); sinks and seasons updated for the card plate.
+
+## 2026-11-17 - The Camera's clean screen: no close X left on it
+The owner, recording trailer clips (11-17 09:39): "When all the UI is off there is still an X at the top center." The Camera
+panel's close X (and, on a phone, the picture button) stayed up on the clean screen (F2, all the UI off). They now hide with
+the rest of the UI and come back with the bar's controls for a few seconds on a tap or a key; Esc / B still close the camera
+at any time. `client/director.js` (`cine-woke`), `test/directorcam.test.js`.
