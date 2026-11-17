@@ -73,7 +73,10 @@ const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} '&.,!?-]/gu, '').
 // why the look can't change right now (null: it can)
 export function changeBlocked(world, p) {
   const ped = p.ped;
-  if (!ped) return 'Not right now.';
+  // (on the title screen there's no one in the world yet: the CHARACTER button's creator - the owner, 11-17: "when you change
+  // your appearance in the main menu and hit done it doesn't apply". Clothes from your wardrobe go on; body and hair keep
+  // their places (refusal), and a wanted or arrested character waits till they're in the city)
+  if (!ped) return p.wanted > 0 || p.custody ? 'Not right now.' : null;
   if (ped.dead) return 'Not while you\'re down.';
   if (ped.cuffed || p.custody) return 'Not in cuffs.';
   if (p.badge) return 'Hand in the uniform (go off duty) first.';

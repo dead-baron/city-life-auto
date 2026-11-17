@@ -292,3 +292,24 @@ test('debug wardrobe: any piece (the issued kit too) and any hair, worn or saved
   assert.ok(!(r.prof.wardrobe || []).includes(cap.i), 'no issued cap for a player not in dev mode');
   assert.deepEqual(r.prof.wardrobe || [], own0);
 });
+
+test('the title screen\'s CHARACTER: with no one in the world yet, Done puts owned clothes on (the owner, 11-17)', () => {
+  const w = makeWorld();
+  const a = picked(w);
+  const before = a.prof.look;
+  const L = LK.decodeLook(before);
+  const sw = W.BASICS.map((id) => LK.PIECES[id]).find((P) => P && P.slot && L.outfit[P.slot] && L.outfit[P.slot].id !== P.i);
+  assert.ok(sw, 'a basic piece to swap in');
+  L.outfit[sw.slot] = { id: sw.i, c: sw.c, t: sw.t, p: 0 };
+  const ped = a.p.ped; a.p.ped = null;   // (on the title: no one in the world)
+  set(a, L);
+  assert.notEqual(a.prof.look, before, 'the new look went on');
+  a.p.ped = ped;
+  // still refused on the title while wanted
+  run(w, 1.1);
+  const L2 = LK.decodeLook(a.prof.look); L2.outfit[sw.slot] = LK.decodeLook(before).outfit[sw.slot];
+  a.p.ped = null; a.p.wanted = 2;
+  const was = a.prof.look; set(a, L2);
+  assert.equal(a.prof.look, was, 'wanted: not on the title either');
+  a.p.ped = ped; a.p.wanted = 0;
+});

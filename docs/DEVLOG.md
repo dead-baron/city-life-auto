@@ -25111,3 +25111,10 @@ kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` rema
   recording. While a shot plays (or Play all), the X, the bar, the shutter and the Camera panel are off
   (`body.cine-shot`); moving the mouse doesn't bring them back. A tap, a key or a button hands you the camera as before
   (the shot stops and the controls return); Esc / B close the camera.
+
+## 2026-11-17 - The title's CHARACTER applies the look; no lobby music in the cinema
+- The owner: changing your appearance from the main menu and pressing Done didn't apply it. On the title there's no one
+  in the world yet, and the server refused any look change without a ped ("Not right now." - unseen on the title). Now
+  clothes you own go on from the title too; body and hair keep their places (the mirror at home, a barbershop), and a
+  wanted or arrested character still waits till they're in the city. Test: test/wardrobe.test.js.
+- No music in the cinema (it had the lobby's bossa nova): client/sound/places.js SONG_FOR.
