@@ -25105,3 +25105,9 @@ the echo through it too) and `room`, a short slap off the walls in place of the 
 (`bassOct`) so the thin speaker still carries it. Same sequencer, same make-up gain and per-step voices as the other
 lobby songs. The songbook (tools/music/songbook.mjs) compiles the new parts (guitar to `pluck`, piano to `keys`, rim to the
 kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` remade.
+
+## 2026-11-17 - Nothing on screen while a shot plays
+- The owner: playing a shot from the Camera's list left the close X at the top and the shot's bar at the bottom on the
+  recording. While a shot plays (or Play all), the X, the bar, the shutter and the Camera panel are off
+  (`body.cine-shot`); moving the mouse doesn't bring them back. A tap, a key or a button hands you the camera as before
+  (the shot stops and the controls return); Esc / B close the camera.
