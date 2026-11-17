@@ -113,6 +113,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Donate / tip button "Support Dead Baron" on title and Settings. (11-03; launch-plan 11-03) - SETTLED 11-16: Ko-fi.
 - Donations through Ko-fi (ko-fi.com/deadbaron, 0% on donations): "Buy a ❤️ for Dead Baron", $3 a heart; a SUPPORT button on the title and "Support the game" in Settings (CLA_SUPPORT_URL, "off" hides them for portal builds). Ads: apply now, no interrupting ads in the beta (opt-in rewarded ads only once approved). (11-16; chat)
 - Supporters get a Discord role through Ko-fi's Discord rewards (one-time supporters included); cosmetic thanks only, never gameplay. (11-16; chat)
+- Founder's Pack: one paid tier ($8 shown in the game, Ko-fi sets the price; monthly Ko-fi members get it too) on his Ko-fi shop, cosmetic only - the Founder's Coat, a supporter name color (teal, switchable; not the owner's gold), a Supporter card badge, a chrome-gold car paint; delivered to the account automatically (Ko-fi webhook + a supporter code in the order's note, or a claim by transaction id), full accounts only; the owner grants or takes back in the admin panel; kept through every reset. (11-17; chat, DEVLOG 11-17)
+- The pack is behind a switch, CLA_FOUNDER_PACK, off by default: the beta may launch without selling it; off, the webhook still keeps orders and the owner can still grant. (11-17; chat)
 - Ads account (AdSense / Ad Placement API) is the owner's sign-up. (11-03; launch-plan 11-03) - OPEN: when.
 
 ## HUD and controls

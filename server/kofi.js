@@ -42,10 +42,12 @@ const txOk = (s) => /^[a-z0-9-]{6,64}$/.test(s);
 const clip = (v, n) => (v === null || v === undefined ? null : String(v).slice(0, n));
 const sameSecret = (a, b) => { const x = createHash('sha256').update(String(a)).digest(), y = createHash('sha256').update(String(b)).digest(); return timingSafeEqual(x, y); };
 
-// opts: { store, accounts, world, log (the admin log), token (CLA_KOFI_TOKEN), packCodes ([CLA_KOFI_PACK]), secret, now, ip }
+// opts: { store, accounts, world, log (the admin log), token (CLA_KOFI_TOKEN), packCodes ([CLA_KOFI_PACK]), on (() => the pack on
+// sale: CLA_FOUNDER_PACK - off, Settings shows none of it and claims wait; the webhook keeps orders all the same), secret, now, ip }
 export function createKofi(opts) {
   const { store, accounts, world, log, secret } = opts;
   const now = opts.now || Date.now, token = String(opts.token || ''), packCodes = (opts.packCodes || []).map((c) => String(c).trim().toLowerCase()).filter(Boolean);
+  const onSale = typeof opts.on === 'function' ? opts.on : () => opts.on !== false;
   const ipOf = opts.ip || ((req) => (req.socket && req.socket.remoteAddress) || '?');
   const rl = createRateLimiter(now), tries = new Map();
   const K = () => { const k = (store.kept.kofi ||= { orders: {} }); k.orders ||= {}; return k; };
@@ -113,11 +115,13 @@ export function createKofi(opts) {
 
   // ---- the page's Settings > Help: { t: 'acct', a: 'support', k: 'state' | 'claim' | 'color', tx, on } ----------------------
   function state(p) {
-    const guest = accounts.isGuest(p.pid), C = cosmOf(p.profile);
-    return { t: 'acct', a: 'support', guest, code: guest ? null : supporterCode(p.pid, secret), has: hasPack(p.profile), color: C.nc === SUPPORT.color, price: SUPPORT.price, pack: SUPPORT.pack };
+    const guest = accounts.isGuest(p.pid), C = cosmOf(p.profile), has = hasPack(p.profile);
+    if (!onSale()) return { t: 'acct', a: 'support', on: false, has, color: C.nc === SUPPORT.color, pack: SUPPORT.pack };   // (off: no code, no claim, no price)
+    return { t: 'acct', a: 'support', on: true, guest, code: guest ? null : supporterCode(p.pid, secret), has, color: C.nc === SUPPORT.color, price: SUPPORT.price, pack: SUPPORT.pack };
   }
   // -> null, or why not
   function claim(p, raw) {
+    if (!onSale()) return `The ${SUPPORT.pack} isn't on sale yet.`;
     if (accounts.isGuest(p.pid)) return `Make an account first (Settings > Account > Sign in) - a guest's ${SUPPORT.pack} would be lost with the guest.`;
     const t = now(), win = SUPPORT.claimWindowMin * 60e3, mine = (tries.get(p.pid) || []).filter((x) => t - x < win);
     if (mine.length >= SUPPORT.claimTries) return `Too many tries - wait ${SUPPORT.claimWindowMin} minutes, or ask in the Discord.`;

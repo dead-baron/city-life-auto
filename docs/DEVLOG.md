@@ -25023,3 +25023,31 @@ avatar as a character he plays in admin mode, with his presence known; the admin
 - Tests: admin-console (the console's access, CSP, its JSON's privacy, the refs; the buckets, their bounds and a restart;
   the IP table and the time zones; the panel's commands - powers, limits, the log; the founder's crown, switch and art; the
   Beta plate off the tags); sinks and seasons updated for the card plate.
+
+## 2026-11-17 - The Founder's Pack on Ko-fi
+
+The owner approved a paid pack of cosmetics on his Ko-fi shop, delivered to the buyer's account by itself - never power
+(docs/DECISIONS.md Monetization).
+- **The pack** (shared/rules.js `SUPPORT`, one tier, $8 shown in the game; Ko-fi sets the real price): the **Founder's
+  Coat** (shared/lookcore.js, a gift piece - the long coat in deep plum with gold sleeves and shoulders, the people
+  renderer's varsity trim on the coat, so no new art and the art hash unchanged), **Supporter teal** (`#2fe0d0`) name color
+  (not the owner's gold; switch it off in Settings or at a style counter), a **Supporter** card badge (a card plate: on your
+  own card, the Skills app and the players list - never over the name), and **chrome gold** paint (shared/specialpaint.js:
+  tint 64, outside the shop palette, a brassy gold with 2.2x the sky sheen - client/art2/game/actors.js; free at any
+  Fresh Coat garage, again any time). Kept on the account record (`acct.pack`), so a progress epoch, a season's end and
+  Start fresh all keep it (the coat back on the next session: cosmetics.js `restoreFounder`).
+- **Ko-fi's webhook** (server/kofi.js, `POST /kofi/webhook`): the form's `data` JSON, its `verification_token` checked
+  against `CLA_KOFI_TOKEN` (constant time), 200 at once, then kept once per `kofi_transaction_id` in `store.kept.kofi`
+  (type, the shop items' link codes, tier, amount, currency, time - no email, name, note or address); a line in the admin
+  log for each. The pack: a Shop Order with the pack's item (`CLA_KOFI_PACK`, the link code) or any Subscription payment.
+- **Claiming**: a member's **supporter code** (`CLA-XXXXXX`, keyed from the account id and the server secret; Settings >
+  Help beside Support the game) in the order's note gives it at once; otherwise **Claim a Ko-fi purchase** with the
+  transaction id - once, by one account, `SUPPORT.claimTries` wrong ids per `claimWindowMin`. Guests are asked to make an
+  account first (no code shown, claims refused). The owner's admin panel: Give / Take back the Founder's Pack (the `pack`
+  power, owner only; a taken-back order can't be claimed again).
+- **The switch** `CLA_FOUNDER_PACK` (off by default, in /launch.json `founderPack`, set-keys.sh): off, Settings shows none
+  of it (no code, claim box or price) and claims wait; the webhook still keeps orders and the owner can still give it.
+- Guide entry (Property: The Founder's Pack), a privacy-policy paragraph (server/legal.js), docs/LAUNCH-SETUP.md section 10.
+- Tests: test/kofi.test.js - a bad token refused, the same transaction twice granted once, auto-claim by code, a claim by
+  transaction id once only, wrong ids rate-limited, guests refused, cosmetic only (no stats, a grant changes nothing else),
+  the special paint, the owner's give/take back, the switch off and on, the pack surviving an epoch bump and Start fresh.

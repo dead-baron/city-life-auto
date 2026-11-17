@@ -98,6 +98,9 @@ config.launch = {
 // CLA_KOFI_TOKEN: the webhook's verification token (Ko-fi > More > API) - secret, set with deploy/set-keys.sh, never in the
 // repo; none: the webhook answers 503. CLA_KOFI_PACK: the pack's shop item(s) - the link code at the end of the item's
 // link (ko-fi.com/s/<code>), commas between several; none: every shop order is the pack.
+// CLA_FOUNDER_PACK: on puts the pack on sale in the game (Settings > Help: the code, the claim box, the price; /launch.json
+// founderPack); off (the default) hides all of it - the webhook still keeps orders, and the owner can still give the pack.
+config.launch.founderPack = String(process.env.CLA_FOUNDER_PACK || 'off').trim().toLowerCase() === 'on';
 config.launch.kofiToken = process.env.CLA_KOFI_TOKEN || '';
 config.launch.kofiPack = String(process.env.CLA_KOFI_PACK || '').split(',').map((c) => c.trim()).filter((c) => /^[A-Za-z0-9]{4,32}$/.test(c));
 function supportOf(v) { return /^https:\/\/ko-fi\.com\/[A-Za-z0-9_]{2,40}$/.test(v) ? v : ''; }

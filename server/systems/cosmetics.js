@@ -73,12 +73,12 @@ export function hasPlate(prof, id) {
   if (B) return !!boardOf(prof, B);
   const P = PLATE[id];
   if (!P) return false;
-  if (P.gift) return !!C.gifts[P.gift];
+  if (P.gift) return P.gift === 'pack' ? hasPack(prof) : !!C.gifts[P.gift];
   return C.pl.includes(id);
 }
 // a card plate (the beta's): yours, shown on your own card - never by your name over your head
 export const cardPlate = (id) => !!(PLATE[id] && PLATE[id].card);
-export const hasColor = (prof, id) => (COLOR[id] && COLOR[id].gift ? !!cosmOf(prof).gifts[COLOR[id].gift] : cosmOf(prof).c.includes(id));   // (a gift's color: the Founder's Pack's)
+export const hasColor = (prof, id) => (COLOR[id] && COLOR[id].gift ? (COLOR[id].gift === 'pack' ? hasPack(prof) : !!cosmOf(prof).gifts[COLOR[id].gift]) : cosmOf(prof).c.includes(id));   // (a gift's color: the Founder's Pack's)
 
 // what the nameplate shows: { c (name color, hex), t (plate text), g (gold plate), k (a founded crew's tag: crews.js) } or null
 export function plateOf(prof) {
@@ -115,22 +115,37 @@ export function grantBeta(world, p) {
 
 // ---- the Founder's Pack (shared/rules.js SUPPORT; server/kofi.js) ----------------------------------------------------------
 // bought on Ko-fi: the coat into the wardrobe, the supporter name color (worn unless another is), the Supporter badge on
-// the card, the special paint at any Fresh Coat garage. Kept in profile.cosm.gifts.pack { at, tx } (tx: the Ko-fi order -
-// null when the owner gave it), so it outlives a season's wipe and a progress reset like the beta gift. A profile (online or
-// not); p: the player when online (the name and the card brought up to date, told). -> true when given now
-export const hasPack = (prof) => !!(prof && prof.cosm && prof.cosm.gifts && prof.cosm.gifts.pack);
-export function grantFounder(world, prof, p = null, tx = null) {
-  const C = cosmOf(prof);
-  if (C.gifts.pack) return false;
-  C.gifts.pack = { at: Date.now(), tx: tx || null };
+// the card, the special paint at any Fresh Coat garage. Cosmetic only, and yours to keep through any reset: the grant lives
+// on the account record (profile.acct.pack { at, tx } - tx: the Ko-fi order, null when the owner gave it), which a progress
+// epoch, a season's end and Start fresh all keep (store.js resetProfile, players.js wipeAccount); profile.cosm.gifts.pack
+// mirrors it, and a profile that lost the mirror and the coat (Start fresh) gets them back on its next session
+// (restoreFounder). A profile (online or not); p: the player when online (name and card brought up to date, told).
+export const hasPack = (prof) => !!(prof && ((prof.acct && prof.acct.pack) || (prof.cosm && prof.cosm.gifts && prof.cosm.gifts.pack)));
+function packPieces(prof, C, rec) {
+  C.gifts.pack ||= rec;
+  if (prof.acct) prof.acct.pack ||= rec;
   looks.ensureLook(prof);
   const ck = PIECE_IDS[SUPPORT.coat];
   if (ck && Array.isArray(prof.wardrobe) && !prof.wardrobe.includes(ck)) prof.wardrobe.push(ck);
+}
+// the pack's things back where a reset took them (the account still has it) -> true when something came back
+export function restoreFounder(prof) {
+  const rec = prof && prof.acct && prof.acct.pack, C = cosmOf(prof), ck = PIECE_IDS[SUPPORT.coat];
+  if (!rec || (C.gifts.pack && Array.isArray(prof.wardrobe) && prof.wardrobe.includes(ck))) return false;
+  packPieces(prof, C, rec);
+  store.touch();
+  return true;
+}
+// -> true when given now
+export function grantFounder(world, prof, p = null, tx = null) {
+  const C = cosmOf(prof);
+  if (hasPack(prof)) return false;
+  packPieces(prof, C, { at: Date.now(), tx: tx || null });
   if (!C.nc) C.nc = SUPPORT.color;
   store.touch();
   if (p) {
     p.supporter = true; refresh(p); p.meDirty = true;
-    if (world) world.notify(p, `Thank you for supporting the game! The ${SUPPORT.pack} is yours: the ${SUPPORT.coat} is in your wardrobe, your name shows in ${COLOR[SUPPORT.color].name} (switch it at a style counter or in Settings), the Supporter badge is on your card, and any Fresh Coat garage paints your car ${SUPPORT.paintName.toLowerCase()} for free.`, 'good');
+    if (world) world.notify(p, `Thank you for supporting the game! The ${SUPPORT.pack} is yours: the ${SUPPORT.coat} is in your wardrobe, your name shows in ${COLOR[SUPPORT.color].name} (switch it at a style counter or in Settings), the Supporter badge is on your card, and any Fresh Coat garage paints your car ${SUPPORT.paintName.toLowerCase()} for free. Cosmetic only - yours to keep through any reset.`, 'good');
   }
   return true;
 }
@@ -138,8 +153,9 @@ export function grantFounder(world, prof, p = null, tx = null) {
 // off. -> true when it was theirs
 export function revokeFounder(world, prof, p = null) {
   const C = cosmOf(prof);
-  if (!C.gifts.pack) return false;
+  if (!hasPack(prof)) return false;
   delete C.gifts.pack;
+  if (prof.acct) delete prof.acct.pack;
   const ck = PIECE_IDS[SUPPORT.coat];
   if (Array.isArray(prof.wardrobe)) prof.wardrobe = prof.wardrobe.filter((id) => id !== ck);
   const L = typeof prof.look === 'string' ? decodeLook(prof.look) : null;
@@ -181,7 +197,7 @@ export function update(world) {
   const slow = world.tick % 200 === 9;
   for (const p of world.players.values()) {
     if (!p.profile || !p.ped) continue;
-    if (!p.cosmOk) { p.cosmOk = 1; const C = cosmOf(p.profile); if (C.tp && cardPlate(C.tp)) { C.tp = null; store.touch(); } grantBeta(world, p); p.supporter = hasPack(p.profile); noteSeason(p.profile); noteTops(p.profile); refresh(p); continue; }
+    if (!p.cosmOk) { p.cosmOk = 1; const C = cosmOf(p.profile); if (C.tp && cardPlate(C.tp)) { C.tp = null; store.touch(); } grantBeta(world, p); restoreFounder(p.profile); p.supporter = hasPack(p.profile); noteSeason(p.profile); noteTops(p.profile); refresh(p); continue; }
     if (slow) { noteTops(p.profile); refresh(p); }   // (a rank lost: its plate comes off)
     else if (p.npDirty) { p.npDirty = false; noteTops(p.profile); refresh(p); }   // (a crew's tag on or off: crews.js; a rank-up: careers.js)
   }

@@ -66,6 +66,10 @@ ask CLA_CONTACT "The contact email players can write to (account deletion, quest
 echo; echo "== Google Analytics 4 (section 5)"
 ask GA_MEASUREMENT_ID "GA4 measurement ID (starts with G-)" 0
 ask GA_API_SECRET "GA4 Measurement Protocol API secret" 1
+echo; echo "== The Founder's Pack on Ko-fi (section 10)"
+ask CLA_FOUNDER_PACK "Sell the Founder's Pack in the game: on or off (default off - Settings shows none of it; orders are still kept)" 0
+ask CLA_KOFI_TOKEN "Ko-fi's webhook verification token (Ko-fi -> More -> API -> Webhooks -> Advanced)" 1
+ask CLA_KOFI_PACK "The pack's Ko-fi shop item code - the end of its link, ko-fi.com/s/<code> (commas between several)" 0
 echo; echo "== The owner's account (section 6) - optional"
 ask CLA_OWNER_ID "Your account id (in the game: Settings -> Account)" 0
 

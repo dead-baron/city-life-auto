@@ -480,10 +480,11 @@ export function supportBox(el) { supEl = el; renderSupport(); }
 function renderSupport() {
   const el = supEl, s = sup;
   if (!el || !el.isConnected) return;
-  if (!s) { el.innerHTML = ''; return; }
+  if (!s || (!s.on && !s.has)) { el.innerHTML = ''; return; }   // (CLA_FOUNDER_PACK off: nothing - unless the owner gave you one)
   const shop = info && /^https:\/\/ko-fi\.com\/\w{2,40}$/.test(info.support || '') ? `${info.support}/shop` : '';
-  let h = `<div class="set-card sup"><b>${esc(s.pack.toUpperCase())}</b><p>Cosmetic thanks for supporting the game: the Founder's Coat, a chrome-gold car paint, a Supporter teal name and a Supporter badge on your card. Looks only - never any power. $${esc(s.price)} on Ko-fi.</p></div>`;
-  if (s.guest) h += `<p class="msub">Make an account first - a guest's pack would be lost with the guest. Then your supporter code shows here.</p><button class="sbtn" id="s-sup-acct">Make an account (sign in)</button>`;
+  let h = `<div class="set-card sup"><b>${esc(s.pack.toUpperCase())}</b><p>Cosmetic thanks for supporting the game: the Founder's Coat, a chrome-gold car paint, a Supporter teal name and a Supporter badge on your card. Cosmetic only - never any power. Yours to keep through any reset.${s.on ? ` $${esc(s.price)} on Ko-fi.` : ''}</p></div>`;
+  if (!s.on && !s.has) h = '';
+  else if (s.guest) h += `<p class="msub">Make an account first - a guest's pack would be lost with the guest. Then your supporter code shows here.</p><button class="sbtn" id="s-sup-acct">Make an account (sign in)</button>`;
   else if (s.has) h += `<p class="msub">The ${esc(s.pack)} is yours - thank you! The coat is in your wardrobe; any Fresh Coat garage paints your car chrome gold for free.</p><label class="srow"><span>Supporter teal name</span><input type="checkbox" id="s-sup-color"${s.color ? ' checked' : ''}></label>`;
   else {
     h += `<p class="msub">Your supporter code: <b class="sup-code">${esc(s.code)}</b> - put it in the note when you buy, and the pack lands on this account at once.</p><button class="sbtn" id="s-sup-copy">⧉ Copy my supporter code</button>`;

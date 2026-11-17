@@ -59,7 +59,7 @@ export function createLaunch(opts) {
   const adminHttp = createAdminHttp({ bugs, accounts, log: adminLog, mod, analytics, news, mailAddress: L.mailAddress || '', publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), geo, stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), tickMsMax: +(world.stats.tickMax || 0).toFixed(2), ents: world.entities ? world.entities.size : 0, build: world.build || '', builtAt: world.buildAt || 0, ga: ga.stats }) });
   const admin = createAdmin({ accounts, log: adminLog, mod, store, pageLink: adminHttp.pageLink, now });
   // the Founder's Pack bought on Ko-fi: the webhook (POST /kofi/webhook) and the claims from Settings (server/kofi.js)
-  const kofi = createKofi({ store, accounts, world, log: adminLog, token: L.kofiToken, packCodes: L.kofiPack, secret, now, ip: (req) => opts.ip(req) });
+  const kofi = createKofi({ store, accounts, world, log: adminLog, token: L.kofiToken, packCodes: L.kofiPack, on: () => !!L.founderPack, secret, now, ip: (req) => opts.ip(req) });
   const onlineOf = (pid) => { const p = world.players.get(pid); return p && p.conn ? p : null; };
   const authHttp = createAuthHttp({
     launch: L, accounts, secret, fetch: opts.fetch, now, log, ip: (req) => opts.ip(req), extraOrigins: opts.extraOrigins || [], news, mail: opts.mail,

@@ -5,7 +5,9 @@
 import { clock, fakeWorld, fakePlayer, call } from './launchkit.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { store } from '../server/store.js';
+import { store, resetOldEpochs, PROGRESS_EPOCH } from '../server/store.js';
+import { defaultProfile } from '../server/store.js';
+import { createAuthHttp } from '../server/authhttp.js';
 import { createAccounts } from '../server/accounts.js';
 import { createAdminLog } from '../server/adminlog.js';
 import { createModeration } from '../server/moderation.js';
@@ -18,10 +20,10 @@ import { SPECIAL_PAINTS } from '../shared/specialpaint.js';
 import { PAINTS } from '../shared/vehicles.js';
 
 const TOKEN = 'kofi-test-token';
-function setup({ token = TOKEN, packCodes = [] } = {}) {
+function setup({ token = TOKEN, packCodes = [], on = true } = {}) {
   for (const k of Object.keys(store.kept)) delete store.kept[k];
   const c = clock(), A = createAccounts({ store, secret: 'test-secret', now: c.now }), log = createAdminLog(null, c.now), w = fakeWorld();
-  const kofi = createKofi({ store, accounts: A, world: w, log, token, packCodes, secret: 'test-secret', now: c.now, ip: () => '1.2.3.4' });
+  const kofi = createKofi({ store, accounts: A, world: w, log, token, packCodes, on: () => on, secret: 'test-secret', now: c.now, ip: () => '1.2.3.4' });
   const P = (member = true) => { const p = fakePlayer(w, store); const a = A.ensure(p.profile); a.kind = member ? 'member' : 'guest'; return p; };
   const hook = (d) => call(kofi.http, { method: 'POST', url: '/kofi/webhook', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(JSON.stringify(d)) });
   const order = (o = {}) => ({ verification_token: TOKEN, message_id: 'm-' + Math.random(), timestamp: '2026-11-17T12:00:00Z', type: 'Shop Order', is_public: true, from_name: 'Jo Example', message: null, amount: '8.00', url: 'https://ko-fi.com/x', email: 'jo@example.com', currency: 'USD', is_subscription_payment: false, is_first_subscription_payment: false, kofi_transaction_id: '00000000-1111-2222-3333-444444444444', shop_items: [{ direct_link_code: 'abc123def', variation_name: null, quantity: 1 }], tier_name: null, shipping: null, ...o });
@@ -169,7 +171,7 @@ test('cosmetic only: no stats, never sold, nothing but looks changes on a grant'
   // a grant changes the cosmetics, the wardrobe and nothing else
   const S = setup(), p = S.P(), prof = p.profile;
   cosmetics.cosmOf(prof); prof.wardrobe ||= [];
-  const strip = (o) => { const x = JSON.parse(JSON.stringify(o)); delete x.cosm; delete x.wardrobe; delete x.look; delete x.lookIntro; delete x.lookPicked; delete x.looks; return x; };
+  const strip = (o) => { const x = JSON.parse(JSON.stringify(o)); delete x.cosm; delete x.wardrobe; delete x.look; delete x.lookIntro; delete x.lookPicked; delete x.looks; if (x.acct) delete x.acct.pack; return x; };
   const before = strip(prof), hp = p.ped.hp;
   assert.equal(cosmetics.grantFounder(S.w, prof, p), true);
   assert.deepEqual(strip(prof), before, 'no cash, bank, items, weapons, skills or stats');
@@ -190,4 +192,44 @@ test('the special paint: free at a Fresh Coat garage for the pack\'s owners, ref
   const menu = cosmetics.paintMenu(p, { id: 'g' }, v2);
   assert.ok(menu.opts.some((x) => x.id === `cpk:${SUPPORT.paint}` && /\(now\)/.test(x.label)));
   assert.ok(!cosmetics.paintMenu(o, { id: 'g' }, v2).opts.some((x) => x.id === `cpk:${SUPPORT.paint}`), 'not offered to others');
+});
+
+test('CLA_FOUNDER_PACK off: no code, no claim, no price - orders still kept, the owner can still give it; on: all of it', async () => {
+  const S = setup({ on: false }), p = S.P();
+  const st = S.kofi.state(p);
+  assert.equal(st.on, false);
+  for (const k of ['code', 'price', 'guest']) assert.equal(st[k], undefined, `no ${k} while off`);
+  await S.hook(S.order({ kofi_transaction_id: 'early-order-1' }));
+  assert.equal(S.kofi.orders()['early-order-1'].pack, 1, 'an early order is kept');
+  assert.match(S.kofi.claim(p, 'early-order-1'), /isn't on sale yet/);
+  assert.equal(has(p), false);
+  assert.equal(cosmetics.grantFounder(S.w, p.profile, p), true, 'the owner\'s grant works while off');
+  assert.equal(S.kofi.state(p).has, true);
+  const S2 = setup({ on: true }), q = S2.P(), st2 = S2.kofi.state(q);
+  assert.equal(st2.on, true); assert.match(st2.code, /^CLA-/); assert.equal(st2.price, SUPPORT.price);
+  // /launch.json says which (the page's switch): off by default
+  const { config } = await import('../server/config.js');
+  assert.equal(config.launch.founderPack, false, 'off by default');
+  for (const fp of [false, true]) {
+    const h = createAuthHttp({ launch: { ...config.launch, founderPack: fp }, accounts: S.A, secret: 'test-secret', now: S.c.now, log: { log() {}, error() {} }, ip: () => '1.1.1.1' });
+    const r = await call(h.handle, { url: '/launch.json' });
+    assert.equal(r.json().founderPack, fp);
+  }
+});
+
+test('the pack survives every reset: a new progress epoch, a season\'s end, Start fresh', () => {
+  const S = setup(), p = S.P(), prof = p.profile, ck = PIECE_IDS[SUPPORT.coat];
+  cosmetics.grantFounder(S.w, prof, p, 'tx-keep-1');
+  prof.cash = 99999;
+  prof.epoch = PROGRESS_EPOCH - 1;   // (as if PROGRESS_EPOCH were bumped: the beta switch at launch, a future full reset)
+  assert.ok(resetOldEpochs(store) >= 1);
+  assert.equal(prof.cash, 200, 'the progress reset ran');
+  assert.ok(cosmetics.hasPack(prof), 'still owned after the epoch bump');
+  assert.ok(prof.wardrobe.includes(ck), 'the coat still in the wardrobe');
+  // Start fresh keeps only the account: the pack comes back with the next session
+  { const keep = { pid: prof.pid, acct: prof.acct, name: prof.name, created: prof.created }; for (const k of Object.keys(prof)) delete prof[k]; Object.assign(prof, defaultProfile(keep.pid), keep); }   // (what players.js wipeAccount keeps)
+  assert.ok(cosmetics.hasPack(prof), 'the account still has it');
+  assert.equal(cosmetics.restoreFounder(prof), true);
+  assert.ok(prof.wardrobe.includes(ck), 'the coat back');
+  assert.ok(cosmetics.hasColor(prof, SUPPORT.color) && cosmetics.hasPlate(prof, SUPPORT.plate));
 });

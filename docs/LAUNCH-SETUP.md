@@ -278,3 +278,33 @@ How it behaves:
   can post to the channel). Each report then arrives as an embed - its first line the title; the player, where, the
   device, the build, the frame rate and the kind as fields - with the screenshot attached. Mentions in a report never
   ping anyone. If Discord is down or slow the report is still kept here (the log says it couldn't post it).
+
+## 10. The Founder's Pack on Ko-fi
+
+A paid pack of cosmetics (never power): the Founder's Coat, Supporter teal name color, a Supporter badge on the card, the
+chrome-gold car paint (`shared/rules.js` SUPPORT; $8 shown in the game - Ko-fi sets the real price). Bought on Ko-fi,
+it lands on the buyer's game account by itself (server/kofi.js). Monthly Ko-fi members get the same pack.
+
+1. **The shop item**: Ko-fi → **Shop** → **Add a product** → a digital product named **Founder's Pack - City Life Auto**,
+   price **$8**. In its description: "Put your supporter code (in the game: Settings → Help) in the note when you buy -
+   the pack lands on your account at once. Or claim it in Settings with the transaction id on your receipt. Needs a game
+   account (not a guest)." Save it, then copy the **code at the end of its link** (`ko-fi.com/s/<code>`).
+2. **The webhook**: Ko-fi → **More → API** → **Webhooks**: Webhook URL **`https://play.deadbaron.com/kofi/webhook`** →
+   **Update**. Open **Advanced** and copy the **Verification Token**. (**Send Single Donation Test** there checks it: the
+   admin log shows a `kofi-order` line.)
+3. **The keys**: on the Oracle server run `sudo bash ~/city-life-auto/deploy/set-keys.sh` and paste:
+   - `CLA_KOFI_TOKEN` - the verification token (a secret; never in the repo);
+   - `CLA_KOFI_PACK` - the item's link code from step 1 (left empty, every shop order counts as the pack);
+   - `CLA_FOUNDER_PACK` - **on** to sell it in the game, **off** (the default) to hide it: Settings shows no code, claim box
+     or price, but the webhook still keeps every order (nothing is lost if someone buys early - they claim it once it's
+     on) and the admin panel can still give it.
+4. **Nothing to change in Caddy**: `deploy/Caddyfile` sends every path on play.deadbaron.com to the game server, so
+   `/kofi/webhook` already reaches it.
+
+**How a buyer gets it**: their supporter code (Settings → Help, beside Support the game; full accounts only) in the order's
+note gives it at once; otherwise **Claim a Ko-fi purchase** there with the transaction id from the Ko-fi receipt - once,
+by one account (5 wrong ids an hour at most). The game keeps only the transaction id, the type, the item code, the tier,
+the amount and the time - never the buyer's email, name or note. Every order is a line in the admin log
+(`kofi-order`, `kofi-grant`). **By hand**: the admin panel (admin mode → a player's card) has **Give the Founder's Pack**
+and, after a refund, **Take back the Founder's Pack** (its orders can't be claimed again) - the owner's alone. The pack
+lives on the account record, so it survives every reset (a new progress epoch, a season's end, Start fresh).

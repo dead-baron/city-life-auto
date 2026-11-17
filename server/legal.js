@@ -45,6 +45,8 @@ export function privacyPage(L, { ga = false } = {}) {
 <li>Your approximate location - the country (and, from your device's time zone, the region) - is worked out on the server when you connect, from your connection's address (using DB-IP's free IP-to-country data, db-ip.com, CC BY 4.0) or your device's time zone, and counted with everyone else's (how many players from each country). The address itself isn't stored.</li>
 <li><b>Google Analytics 4</b> ${ga ? 'is switched on' : 'is not switched on at the moment; if it is,'}: it loads only if you choose <b>Accept</b> on the first screen (Essential only keeps it off), with ad features off. Google gets a hashed account id, never your name or email. You can change your choice in Settings.</li>
 </ul>
+<h2>Purchases (the Founder's Pack)</h2>
+<p>The Founder's Pack is bought on Ko-fi (ko-fi.com), which handles the payment under its own privacy policy. Ko-fi tells our server about the order; we keep only its transaction id, the item, the amount and the time, and which game account claimed it - never your email, name, message or payment details. It is cosmetic only.</p>
 <h2>What we don't keep</h2>
 <ul><li>We don't keep IP addresses. The server sees your address while you're connected and uses it in memory to limit abuse (too many tries) and to look up your country; it isn't written down.</li><li>We don't sell anything about you, and there are no ads.</li></ul>
 <h2>How long</h2>
