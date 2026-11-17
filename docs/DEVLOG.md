@@ -24674,11 +24674,10 @@ avatar as a character he plays in admin mode, with his presence known; the admin
   drawWorldLabels). Guide: "Names over heads", "The beta gift".
 - **The founder** (server/founder.js): the owner's account (the role `owner`) gets a small gold pixel crown by his name for
   everyone (the descriptor's `fo`, client/main.js founderMark) and "♛ Founder" in the players list. His Dead Baron avatar
-  is an outfit (the owner, later the same day: "for fun, not my character"): his regular character every time he plays,
+  is an outfit (the owner, later the same day: an outfit for fun, not his character): his regular character every time he plays,
   on only with the admin panel's switch (this session only, never saved), off when he switches it off or logs in again -
   admin mode alone never puts it on. The avatar is built in the game's own people renderer (client/art2/people.js `FOUNDER`): a
-  skeleton - ivory bone with a violet-leaning shadow, a skull's face, a rib cage over a hollow middle, the spine - round pink
-  glasses, blue angel wings off the shoulder blades that sway with his stride. The descriptor carries `app.fd` while it's on
+  skeleton with round pink glasses and cyan angel wings (drawn better the same day: below). The descriptor carries `app.fd` while it's on
   (server/net.js; client/art2/game/peds.js adaptApp, its own sprite key `F`). Only the server decides; nobody else can
   wear it.
   Note: people.js is part of the chunk bake's code, so the `art` hash moves with this change (chunks come out the same and
@@ -24711,6 +24710,13 @@ avatar as a character he plays in admin mode, with his presence known; the admin
   server/data/tzcountry.json), which also gives the region. The address is looked up and dropped: never stored, logged or
   shown. The console shows no address, email or account id: a player is a ref good for the session (/admin/go). The
   privacy page says so (server/legal.js).
+- The founder drawn better (the owner: "Let's draw my character a little better" - at the game's zoom he read as a white
+  figure, a pink blob and blue tabs): the skull 1.24x a head (his signature) with a nose hole and a jaw's tooth row; round
+  magenta lenses, each in a dark purple rim with a glint, and their band round the skull so they read from behind and the
+  sides; a rib cage with dark gaps, the spine, thin bone limbs with dark joints; cyan angel wings in three rows a side -
+  the long primaries with pale tips (a faint glow at night), the darker secondaries, the coverts - spread up and out past
+  his shoulders, a little folded at rest and beating with his stride; at rest a peace sign (the right hand up, two
+  fingers in a V). The renderer's code 410 -> 411 KB for it (its comments trimmed first: 410.5).
 - Budget: the bake workers' code 1010 -> 1012 KB (tools/perf.mjs) - the founder figure lives in the people renderer
   the workers draw with (+1.1 KB gzipped, its comments trimmed first: 1011.5; the bake was at 1010.4 on its own). The
   renderer stays at 410.
