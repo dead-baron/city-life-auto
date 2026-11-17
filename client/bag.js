@@ -251,6 +251,7 @@ function drawFigure(cv, code, dir, f, pp) {
 }
 export const INST_PP = (id) => (INSTRUMENTS[id] ? INSTRUMENTS[id].pp : null);
 
+const DEBUG = typeof location !== 'undefined' && /[?&]debug\b/.test(location.search);
 const loadPref = (k, d) => { try { return localStorage.getItem('cla.bag.' + k) || d; } catch { return d; } };
 const savePref = (k, v) => { try { localStorage.setItem('cla.bag.' + k, v); } catch { /* storage blocked */ } };
 
@@ -452,6 +453,7 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
     const sig = JSON.stringify([m.weapons, m.weapon, m.inv, m.quick, m.cash, m.crew && m.crew.ids, m.blade, m.light, m.creel, st0 && st0.cur, st0 && st0.own, st0 && st0.saved, look(), pp(), tab, sort, sel, armDrop, showLooks, input.device, portrait()]);
     if (sig === lastSig && force !== true) { stats(m); return; }
     lastSig = sig;
+    if (DEBUG) { window.__invSig = sig; window.__invRenders = (window.__invRenders || 0) + 1; }   // (the capture scripts: what a rebuild was for)
     const all = things(m);
     el.querySelector('.bag').classList.toggle('stack', portrait());
     const cb = $q('.bag-cats');
