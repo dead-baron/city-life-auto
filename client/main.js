@@ -2357,7 +2357,10 @@ function toggleFullscreen(force, auto = false) {
     Promise.resolve(req).then(followRotation).catch(() => {});
   } else if (!want && isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
 }
-for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
+$('t-fs').onclick = () => toggleFullscreen();
+// Settings > Graphics: a plain switch that shows whether you're in fullscreen now (F11 and Esc move it too; the owner, 11-17)
+$('s-fsnow').onchange = (e) => { toggleFullscreen(e.target.checked); setTimeout(() => { $('s-fsnow').checked = isFullscreen(); }, 600); };   // (refused: the switch goes back)
+$('s-fsnow').checked = isFullscreen();
 // the HUD's row: MENU (the hub on its last tab), PHONE, MAP - each closes the hub when it's on that tab
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
@@ -2370,7 +2373,7 @@ for (const id of ['b-talk', 'b-emote']) $(id).addEventListener('pointerdown', (e
 $('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
 $('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub('pause'); };
 $('ph-back').onclick = () => phone.back();
-for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });   // (older iPad Safari: the prefixed one)
+for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { document.body.classList.toggle('fs', isFullscreen()); $('s-fsnow').checked = isFullscreen(); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });   // (older iPad Safari: the prefixed one)
 
 // Let the phone rotate freely, even in fullscreen and in the installed app. 'any' follows the
 // rotation sensor and overrides an older landscape-only install (Android only refreshes an installed

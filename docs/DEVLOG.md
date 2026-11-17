@@ -25053,3 +25053,9 @@ the echo through it too) and `room`, a short slap off the walls in place of the 
 (`bassOct`) so the thin speaker still carries it. Same sequencer, same make-up gain and per-step voices as the other
 lobby songs. The songbook (tools/music/songbook.mjs) compiles the new parts (guitar to `pluck`, piano to `keys`, rim to the
 kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` remade.
+
+## 2026-11-17 - Fullscreen as a switch at the top of Graphics
+- The owner: the "Fullscreen on or off" button at the bottom of Settings > Graphics should sit higher and show whether
+  it's on. It's now the first row of Graphics, a plain switch that shows the state - F11, Esc and the title's button move
+  it too (fullscreenchange), and a browser that refuses puts it back. The title's FULLSCREEN button stays hidden with a
+  keyboard and mouse (F11 does it on a desktop) and shows on touch and gamepad.
