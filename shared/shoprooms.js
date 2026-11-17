@@ -900,8 +900,7 @@ FIT.jobs = (c) => {
   for (const reg of c.regs) { const q = corner(reg, 12, 10, false); put(c, 'plant', ...q, 22); }
   fill(c, [
     K([44, 18], (c, x0, y0, x1, y1, g) => put(c, 'desk', x0, y0, x1, y1, 18, { c: '#8a8e96', pc: 1 }, g)),
-    K([40, 16], (c, x0, y0, x1, y1, g) => put(c, 'sofa', x0, y0, x1, y1, 16, { c: '#3a62a8' }, g)),
-    K([30, 30], (c, x0, y0, x1, y1, g) => put(c, 'rug', x0, y0, x1, y1, 1, { c: '#2e4a6e', c2: '#c8a050', flat: true }, g)),
+    K([30, 30], (c, x0, y0, x1, y1, g) => put(c, 'rug', x0, y0, x1, y1, 1, { c: '#2e4a6e', c2: '#c8a050', flat: true }, g), 1),
     K([12, 10], (c, x0, y0, x1, y1, g) => put(c, 'plant', x0, y0, x1, y1, 22, {}, g), 3),
   ]);
   lamp(c, c.tillX, c.Ya - 6, 50, WARM, 0.8);

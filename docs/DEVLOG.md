@@ -24840,7 +24840,8 @@ the beta: opt-in rewarded ads only, once Google approves H5 Games Ads.
   hook `walkInRoom`), so no other building's, home's or place's number moves - no WORLD_VERSION bump. A walk-in fitted
   by shared/shoprooms.js `FIT.jobs`: the front desk (a clerk: interiors.js), a cork job board (client/art2/shopart.js
   `jobs`), NOW HIRING, a clock and files behind it; the job computers - desks with their screens - down one side, the
-  first the job computer's place (`jobDesk`); waiting chairs, a water cooler and plants on the other.
+  first the job computer's place (`jobDesk`), people at some of the others; a sofa on a rug, waiting chairs, a water
+  cooler and plants on the other; more desks and plants fill the floor (test/shoprooms.test.js: its fill floor).
 - **Office work** at the front desk: a round of `OFFICE.items` (10) quick tasks on the counters' menu kit - one kind a
   round, in turn: sort the mail (the tray by the addressee's surname), type up the invoices (the total), answer the
   phones (put the caller through) - four options, one right, picked by tap, number key or pad; `OFFICE.pay` ($2) each
