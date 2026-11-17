@@ -154,6 +154,7 @@ const FLOOR = {
   saloon: [0, 10, 13, 17, 17, 18, 16, null],   // (main's saloon was bare: the bar's numbers. 14 wide is a big roadhouse - statics.js draws MC4's floor, so its plan's own reckoning, seenOf)
   office: [0, 11, 14, 11, 9, 9, 7, 8],
   records: [0, 8, 13, 17, 19, 22, 24, 25],
+  jobs: [14, 20, 25, 28, 31, 33, 34, 35],   // (the Employment Center, new 11-16: its own numbers then, less a point)
 };
 // a room as World v3 makes them: the door at column dc, the counter where shared/map.js puts it, an ATM on a side wall in
 // a third of them (where the map stands one: by the wall, a little in from the front)
