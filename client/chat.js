@@ -14,8 +14,11 @@
 //   chat button (the nav row's on a desktop), B on a keyboard, the pad's radial (hold LB) - and the pixel balloon over
 //   the head for the emotes that have one; the log says only dancing and the lasting poses ("Ann sat down")
 // - a pad: the radial's Type opens the sheet with an on-screen keyboard (padActive / pad: client/main.js launchPad)
-// - Settings > Chat (settings): the channel switches, who's muted and blocked;
-// - a name in the log or a bubble (while the sheet is up): mute, block, report (shared/chatdefs.js REPORT_WHY).
+// - Settings > Chat (settings): the channel switches, who can text me, who's muted and blocked;
+// - a name in the log or a bubble (while the sheet is up): add friend, mute, block, report (shared/chatdefs.js REPORT_WHY);
+// - friends (the owner, 11-15): requests at the top of Messages (Accept / Decline), a star and first in the list; Add
+//   friend / Remove friend / Remove contact on a thread; "Who can text me"; Blocked (n) at the bottom of Messages; a
+//   block's Undo for CHAT.undoS (the server decides all of it: server/chat.js friend).
 // createChat(ctx) -> { onMessage(m), open(ch?), close(), toggle(), say(ch, text, to?), emote(e), emotes() (the picker),
 //   emotesUp, closeEmotes(), emoteApp(el, api) (the phone's Emote screen), renderApp(el, api), balloonOn(eid) (the
 //   bounty skull gives way: main.js), radial (emotes.js), padKeys(), padActive(), pad(p),
@@ -25,7 +28,7 @@
 //   device() ('keyboard' | 'gamepad' | 'touch'), playing() (in the city, online), focus(on) (typing: the game's keys
 //   off), dot(on) (unread phone messages: the HUD's chat button and the phone's Messages app), openApp() (the phone's
 //   Messages app) }
-import { CHANNELS, CHAT, EMOTES, REPORT_WHY, REPORT_LABEL, QUICK, emoteId } from '../shared/chatdefs.js';
+import { CHANNELS, CHAT, EMOTES, REPORT_WHY, REPORT_LABEL, QUICK, WHO_TEXT, emoteId } from '../shared/chatdefs.js';
 import { glyph } from './touchicons.js';
 import { createEmotes } from './emotes.js';
 
@@ -136,6 +139,17 @@ span.cht-n { cursor: default; color: var(--dim); }
 .cm-mod { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s3); }
 .cm-mod .btn { min-height: 40px; padding: 0 var(--s3); font-size: var(--fs-2); }
 .cs-list .srow .btn { min-height: 36px; padding: 0 var(--s3); }
+.cm-app .ph-row .fr { color: var(--gold); }
+.cm-rq { display: flex; align-items: center; gap: var(--s2); }
+.cm-rq .nm { flex: 1; min-width: 0; }
+.cm-rqb { display: flex; gap: var(--s1); }
+.cm-rqb .btn { min-height: 36px; padding: 0 var(--s3); font-size: var(--fs-2); }
+.cm-who { margin-top: var(--s3); }
+.cm-who .seg { margin: var(--s1) 0 0; }
+.cht-undo { position: fixed; z-index: 58; left: 50%; top: calc(env(safe-area-inset-top) + var(--s4)); transform: translateX(-50%); display: flex; align-items: center; gap: var(--s3); max-width: calc(100vw - 2 * var(--s4)); padding: var(--s1) var(--s1) var(--s1) var(--s3); background: var(--pad-navy); border: 2px solid var(--pad-ink); box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); font: 700 var(--fs-2) var(--pixel); animation: enter var(--t2) var(--ease); transition: opacity var(--t3) var(--ease); }
+.cht-undo.out { opacity: 0; }
+.cht-undo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cht-undo .btn { min-height: 36px; padding: 0 var(--s3); }
 `;
 
 export function createChat(ctx) {
@@ -146,7 +160,8 @@ export function createChat(ctx) {
   doc.head.appendChild(st);
 
   // ---- the data ---------------------------------------------------------------------------------------------------
-  let state = { off: {}, mutes: [], blocks: [], names: {}, max: CHAT.maxLen, me: null, crew: false, fac: null, muted: 0 };
+  let state = { off: {}, mutes: [], blocks: [], names: {}, max: CHAT.maxLen, me: null, crew: false, fac: null, muted: 0, who: 'met' };
+  let requests = [];                // friend requests waiting for you: [{ id, n, at }] (the server's contacts message)
   const lines = [];                 // the log: { k: 'chat' | 'emote' | 'sys', ch, n, id, text, own, tn, e, at }
   const threads = new Map();        // a contact's id -> { n, l: [{ me, text, at }], un, at }
   const named = new Map();          // an id seen -> its name
@@ -414,10 +429,12 @@ export function createChat(ctx) {
   function renderWho() {
     if (!whoId) return;
     if (!whoEl) { whoEl = doc.createElement('div'); whoEl.className = 'cht-who panel'; whoEl.setAttribute('role', 'dialog'); host.appendChild(whoEl); }
-    const isM = state.mutes.includes(whoId), isB = state.blocks.includes(whoId), contact = (contactList || []).some((c) => c.id === whoId);
+    const isM = state.mutes.includes(whoId), isB = state.blocks.includes(whoId), cl = (contactList || []).find((c) => c.id === whoId), contact = !!cl;
+    const asked = requests.some((r) => r.id === whoId);
     let body;
     if (whoStep === 'report') body = `<p class="msub">What's wrong? Their last lines go to the moderators with your report.</p>${REPORT_WHY.map((w) => `<button class="btn" type="button" data-why="${w}">${esc(REPORT_LABEL[w] || w)}</button>`).join('')}<button class="btn" type="button" data-w="back">Back</button>`;
     else body = (contact && !isB ? '<button class="btn btn-1" type="button" data-w="msg">Message</button>' : '')
+      + (isB ? '' : asked ? '<button class="btn btn-1" type="button" data-w="fyes">Accept friend request</button>' : cl && cl.fr ? '' : cl && cl.rs ? '<button class="btn" type="button" disabled>Friend request sent</button>' : '<button class="btn" type="button" data-w="fask">Add friend</button>')
       + `<button class="btn" type="button" data-w="${isM ? 'unmute' : 'mute'}">${isM ? 'Unmute' : 'Mute'}<small class="dim">&nbsp;${isM ? '' : '- hide their lines'}</small></button>`
       + `<button class="btn" type="button" data-w="${isB ? 'unblock' : 'block'}">${isB ? 'Unblock' : 'Block'}<small class="dim">&nbsp;${isB ? '' : '- no messages either way'}</small></button>`
       + '<button class="btn btn-x" type="button" data-w="report">Report…</button>';
@@ -431,11 +448,30 @@ export function createChat(ctx) {
       if (w === 'back') { whoStep = 'main'; renderWho(); return; }
       if (w === 'report') { whoStep = 'report'; renderWho(); return; }
       if (w === 'msg') { closeWho(); close(); openThread(id, whoN); return; }
+      if (w === 'fask' || w === 'fyes') { friendDo(w === 'fask' ? 'ask' : 'yes', id); closeWho(); return; }
+      if (w === 'block') { block(id, whoN); closeWho(); return; }
       ctx.send({ t: 'mod', a: w, id });
       closeWho();
     };
   }
   function report(id, why, note) { ctx.send({ t: 'mod', a: 'report', id, why: REPORT_WHY.includes(why) ? why : 'other', note }); }
+  function friendDo(a, id) { ctx.send({ t: 'friend', a, id }); }
+  // a block, and its Undo for a few seconds (the owner, 11-15: "a way to unblock in case a block happens on accident")
+  let undoEl = null, undoT = 0;
+  function block(id, n) {
+    ctx.send({ t: 'mod', a: 'block', id });
+    clearTimeout(undoT);
+    if (undoEl) undoEl.remove();
+    undoEl = doc.createElement('div');
+    undoEl.className = 'cht-undo';
+    undoEl.setAttribute('role', 'status');
+    undoEl.innerHTML = `<span>Blocked ${esc(n || named.get(id) || state.names[id] || 'them')}.</span><button class="btn" type="button">Undo</button>`;
+    const el = undoEl;
+    el.querySelector('button').onclick = () => { ctx.send({ t: 'mod', a: 'unblock', id }); gone(); };
+    const gone = () => { clearTimeout(undoT); el.classList.add('out'); setTimeout(() => el.remove(), 300); if (undoEl === el) undoEl = null; };
+    (doc.body || host).appendChild(el);
+    undoT = setTimeout(gone, CHAT.undoS * 1000);
+  }
 
   // ---- what the server sends -------------------------------------------------------------------------------------
   function push(l) {
@@ -481,7 +517,8 @@ export function createChat(ctx) {
       }
       case 'chatsay': if (!m.ok) sysLine(m.err || 'Not sent.'); return;
       case 'modres': if (m.state) state = { ...state, ...m.state }; ctx.toast(m.ok ? m.note : m.err, m.ok ? 'good' : 'warn'); renderSettings(); refreshApp(true); return;
-      case 'contacts': contactList = m.l || []; for (const c of contactList) named.set(c.id, c.n); if (whoEl) renderWho(); refreshApp(true); return;
+      case 'contacts': contactList = m.l || []; requests = m.rq || []; for (const c of [...contactList, ...requests]) named.set(c.id, c.n); if (whoEl) renderWho(); refreshApp(true); return;
+      case 'friendres': ctx.toast(m.ok ? m.note : m.err, m.ok ? 'good' : 'warn'); return;   // (the contacts list follows)
       case 'inbox': for (const l of m.l || []) onMessage(l); return;
       default:
     }
@@ -494,8 +531,8 @@ export function createChat(ctx) {
   function emote(e) { if (Object.hasOwn(EMOTES, e)) ctx.send({ t: 'emote', e }); }
 
   // ---- the phone's Messages app ----------------------------------------------------------------------------------
-  // app.tab: 'msgs' (the threads) | 'near' | 'crew' | 'faction' (quick lines, a line to type); app.view 'home'
-  // or 'thread' (app.id: whose); app.step: 'report' while picking a reason
+  // app.tab: 'msgs' (the threads) | 'near' | 'crew' | 'faction' (quick lines, a line to type); app.view 'home',
+  // 'thread' (app.id: whose) or 'blocked' (the blocked, with Unblock); app.step: 'report' while picking a reason
   const app = { tab: 'msgs', view: 'home', id: null, n: '', step: null, el: null, root: null, api: null };
   const appShowing = () => !!(app.root && app.root.isConnected);
   function openThread(id, n) {
@@ -507,25 +544,37 @@ export function createChat(ctx) {
   }
   const ago = (at) => { const s = Math.max(0, (Date.now() - at) / 1000); return s < 60 ? 'now' : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : `${Math.floor(s / 86400)} d`; };
   function people() {
-    // the threads, newest first, then the people you've met with none yet
-    const out = [...threads.entries()].map(([id, t]) => ({ id, n: t.n, last: t.l[t.l.length - 1], un: t.un || 0, at: t.at }));
-    out.sort((a, b) => b.at - a.at);
-    const have = new Set(out.map((q) => q.id)), byId = new Map((contactList || []).map((c) => [c.id, c]));
-    for (const q of out) { const c = byId.get(q.id); if (c) { q.on = c.on; q.crew = c.crew; } }
-    const rest = (contactList || []).filter((c) => !have.has(c.id) && !state.blocks.includes(c.id));
-    return { out, rest };
+    // everyone you can text - the threads and the contacts as one list: friends first, then crew, online, the most recent
+    // (the server's order for the contacts; a thread's last message counts as recent); the blocked are under Blocked (n)
+    const all = new Map();
+    for (const [id, t] of threads) if (!state.blocks.includes(id)) all.set(id, { id, n: t.n, last: t.l[t.l.length - 1], un: t.un || 0, at: t.at, ta: t.at });
+    for (const c of contactList || []) {
+      if (state.blocks.includes(c.id)) continue;
+      const q = all.get(c.id) || { id: c.id, n: c.n, at: 0 };
+      Object.assign(q, { n: c.n || q.n, on: c.on, crew: c.crew, fr: c.fr, how: c.how, at: Math.max(q.at || 0, c.at || 0) });
+      all.set(c.id, q);
+    }
+    return [...all.values()].sort((a, b) => (b.fr ? 1 : 0) - (a.fr ? 1 : 0) || (b.crew ? 1 : 0) - (a.crew ? 1 : 0) || (b.on ? 1 : 0) - (a.on ? 1 : 0) || (b.at || 0) - (a.at || 0));
   }
-  const contactRow = (q) => `<button class="ph-row" type="button" data-cmh="${esc(q.id)}" data-cmn="${esc(q.n)}"><span class="ic${q.on ? ' on' : ''}">${q.on ? '●' : '○'}</span><span class="nm">${esc(q.n)}${q.crew ? ' <small>(crew)</small>' : ''}<small>${q.last ? `${q.last.me ? 'You: ' : ''}${esc(q.last.text)}` : q.how === 'met' ? 'Met in town' : q.how ? esc(q.how) : ''}</small></span>${q.un ? `<span class="un">${q.un}</span>` : q.at ? `<span class="d">${ago(q.at)}</span>` : ''}</button>`;
+  const contactRow = (q) => `<button class="ph-row" type="button" data-cmh="${esc(q.id)}" data-cmn="${esc(q.n)}"><span class="ic${q.on ? ' on' : ''}" aria-label="${q.on ? 'online' : 'away'}">${q.on ? '●' : '○'}</span><span class="nm">${q.fr ? '<b class="fr" aria-label="friend">★</b> ' : ''}${esc(q.n)}${q.crew ? ' <small>(crew)</small>' : ''}<small>${q.last ? `${q.last.me ? 'You: ' : ''}${esc(q.last.text)}` : q.fr ? 'Friend' : q.how === 'met' ? 'Met in town' : q.how === 'crew' ? 'Your crew' : q.how ? esc(q.how) : ''}</small></span>${q.un ? `<span class="un">${q.un}</span>` : q.ta ? `<span class="d">${ago(q.ta)}</span>` : ''}</button>`;
+  const requestRow = (r) => `<div class="ph-row cm-rq"><span class="ic fr">★</span><span class="nm">${esc(r.n)}<small>wants to be friends · ${ago(r.at)}</small></span><span class="cm-rqb"><button class="btn btn-1" type="button" data-fra="${esc(r.id)}">Accept</button><button class="btn" type="button" data-frd="${esc(r.id)}">Decline</button></span></div>`;
+  function blockedHtml() {
+    const ids = state.blocks;
+    return ids.length ? ids.map((id) => `<div class="ph-row"><span class="nm">${esc(state.names[id] || named.get(id) || 'Someone')}<small>blocked: no messages either way</small></span><button class="btn" type="button" data-cmub="${esc(id)}">Unblock</button></div>`).join('') : '<p class="ph-empty">Nobody blocked.</p>';
+  }
   function appListHtml() {
     if (app.view === 'thread') {
       const t = threads.get(app.id), l = t ? t.l : [];
       return `<div class="cm-thread">${l.length ? l.map((x) => `<div class="cm-m${x.me ? ' me' : ''}">${esc(x.text)}<small>${ago(x.at)}</small></div>`).join('') : '<p class="ph-empty">No messages yet. Say hello.</p>'}</div>`;
     }
+    if (app.view === 'blocked') return blockedHtml();
     if (app.tab === 'msgs') {
       if (!contactList && !threads.size) return '<p class="ph-empty">Loading…</p>';
-      const { out, rest } = people();
-      if (!out.length && !rest.length) return `<p class="ph-hint">Nobody to text yet. Spend a few seconds within ${CHAT.metM} m of another player and they're in your contacts - your crew are too. Messages wait for them if they're away.</p>`;
-      return out.map(contactRow).join('') + (rest.length ? `<h3>People you've met</h3>${rest.map((c) => contactRow({ id: c.id, n: c.n, on: c.on, crew: c.crew, how: c.how === 'met' ? 'met' : c.how === 'crew' ? 'Your crew' : c.how })).join('')}` : '');
+      const all = people();
+      const rq = requests.length ? `<h3>Friend requests</h3>${requests.map(requestRow).join('')}` : '';
+      const nb = state.blocks.length ? `<button class="ph-row" type="button" data-cmb="1"><span class="ic">⦸</span><span class="nm">Blocked (${state.blocks.length})<small>Unblock someone</small></span></button>` : '';
+      if (!all.length) return rq + `<p class="ph-hint">Nobody to text yet. Spend a few seconds within ${CHAT.metM} m of another player and they're in your contacts - your crew are too. Messages wait for them if they're away.</p>` + nb;
+      return rq + (rq ? '<h3>Contacts</h3>' : '') + all.map(contactRow).join('') + nb;
     }
     const ch = app.tab, mine = lines.filter((x) => (x.k === 'emote' ? ch === 'near' : x.k === 'chat' && x.ch === ch)).slice(-8);
     return `<div class="cm-log">${mine.length ? mine.map(lineHtml).join('') : `<div class="cht-l hint">${ch === 'near' ? 'Nothing said near you lately.' : `Nothing on ${LABEL[ch]} lately.`}</div>`}</div>`;
@@ -541,10 +590,12 @@ export function createChat(ctx) {
       if (!isB) h += `<div class="cm-chips">${chipsHtml('phone').replace(/data-q=/g, 'data-cmq=')}</div><form class="cm-send" autocomplete="off"><input class="field" type="text" maxlength="${state.max || CHAT.maxLen}" enterkeyhint="send" placeholder="Message ${esc(app.n)}" aria-label="Message"><button class="btn btn-1" type="submit">SEND</button></form>`;
       h += app.step === 'report'
         ? `<p class="ph-hint">Report ${esc(app.n)} for:</p><div class="cm-mod">${REPORT_WHY.map((w) => `<button class="btn" type="button" data-cmw="${w}">${esc(REPORT_LABEL[w] || w)}</button>`).join('')}<button class="btn" type="button" data-cmx="back">Back</button></div>`
-        : `<div class="cm-mod"><button class="btn" type="button" data-cmx="${isM ? 'unmute' : 'mute'}">${isM ? 'Unmute' : 'Mute'}</button><button class="btn" type="button" data-cmx="${isB ? 'unblock' : 'block'}">${isB ? 'Unblock' : 'Block'}</button><button class="btn btn-x" type="button" data-cmx="report">Report…</button></div>`;
+        : `<div class="cm-mod">${isB ? '' : requests.some((r) => r.id === app.id) ? '<button class="btn btn-1" type="button" data-cmf="yes">Accept friend request</button>' : c && c.fr ? '<button class="btn" type="button" data-cmf="unfriend">Remove friend</button>' : c && c.rs ? '<button class="btn" type="button" disabled>Request sent</button>' : c ? '<button class="btn" type="button" data-cmf="ask">Add friend</button>' : ''}${c && !c.crew && !isB ? '<button class="btn" type="button" data-cmf="forget">Remove contact</button>' : ''}<button class="btn" type="button" data-cmx="${isM ? 'unmute' : 'mute'}">${isM ? 'Unmute' : 'Mute'}</button><button class="btn" type="button" data-cmx="${isB ? 'unblock' : 'block'}">${isB ? 'Unblock' : 'Block'}</button><button class="btn btn-x" type="button" data-cmx="report">Report…</button></div>`;
+    } else if (app.view === 'blocked') {
+      h += `<p class="ph-hint">Blocked people can't message you or see your lines, and you don't see theirs.</p><div class="cm-list">${appListHtml()}</div>`;
     } else {
       h += `<div class="seg" role="tablist">${tabs.map(([k, n]) => `<button type="button" role="tab" data-cmt="${k}" class="${k === app.tab ? 'on' : ''}${k !== 'msgs' && !reach(k) ? ' na' : ''}" aria-checked="${k === app.tab}">${n}${k === 'msgs' && unread() ? ` (${unread()})` : ''}</button>`).join('')}</div>`;
-      if (app.tab === 'msgs') h += `<div class="cm-list">${appListHtml()}</div>`;
+      if (app.tab === 'msgs') h += `<div class="cm-list">${appListHtml()}</div><div class="cm-who"><p class="ph-hint">Who can text me</p><div class="seg" role="radiogroup">${Object.entries(WHO_TEXT).map(([k, n]) => `<button type="button" role="radio" data-cmwho="${k}" class="${state.who === k ? 'on' : ''}" aria-checked="${state.who === k}">${esc(n)}</button>`).join('')}</div></div>`;
       else if (!reach(app.tab)) h += `<p class="ph-hint">${whyNot(app.tab)}</p>`;
       else {
         h += `<div class="cm-list">${appListHtml()}</div><div class="cm-chips">${chipsHtml(app.tab).replace(/data-q=/g, 'data-cmq=')}</div>`
@@ -555,7 +606,7 @@ export function createChat(ctx) {
     el.innerHTML = `<div class="cm-app">${h}</div>`;
     app.root = el.firstChild;
     wireApp(app.root);
-    if (app.api && app.api.title) app.api.title(app.view === 'thread' ? app.n : 'Messages');
+    if (app.api && app.api.title) app.api.title(app.view === 'thread' ? app.n : app.view === 'blocked' ? 'Blocked' : 'Messages');
   }
   function wireApp(root) {
     root.onclick = (e) => {
@@ -568,7 +619,13 @@ export function createChat(ctx) {
       if (d.cmw) { report(app.id, d.cmw); app.step = null; renderAppNow(); refocus(true); return; }
       if (d.cmx === 'report') { app.step = 'report'; renderAppNow(); refocus(true); return; }
       if (d.cmx === 'back') { app.step = null; renderAppNow(); refocus(true); return; }
+      if (d.cmx === 'block') { block(app.id, app.n); return; }
       if (d.cmx) { ctx.send({ t: 'mod', a: d.cmx, id: app.id }); return; }
+      if (d.fra || d.frd) { friendDo(d.fra ? 'yes' : 'no', d.fra || d.frd); return; }
+      if (d.cmf) { friendDo(d.cmf, app.id); if (d.cmf === 'forget') { app.view = 'home'; app.tab = 'msgs'; app.id = null; renderAppNow(); refocus(true); } return; }
+      if (d.cmb) { app.view = 'blocked'; app.step = null; renderAppNow(); refocus(true); return; }
+      if (d.cmub) { ctx.send({ t: 'mod', a: 'unblock', id: d.cmub }); return; }
+      if (d.cmwho) { setWho(d.cmwho); return; }
     };
     const f = root.querySelector('form');
     if (f) {
@@ -606,7 +663,7 @@ export function createChat(ctx) {
   function appBack() {
     if (!appShowing()) return false;
     if (app.step) { app.step = null; renderAppNow(); refocus(true); return true; }
-    if (app.view === 'thread') { app.view = 'home'; app.tab = 'msgs'; app.id = null; renderAppNow(); refocus(true); return true; }
+    if (app.view === 'thread' || app.view === 'blocked') { app.view = 'home'; app.tab = 'msgs'; app.id = null; renderAppNow(); refocus(true); return true; }
     return false;
   }
 
@@ -618,13 +675,16 @@ export function createChat(ctx) {
     const ids = [...new Set([...state.blocks, ...state.mutes])];
     setEl.innerHTML = '<p class="msub">Who you hear. A channel switched off brings you none of its lines, and you can\'t send on it.</p>'
       + CHANNELS.map((c) => `<label class="srow"><span>${esc(OFF_LABEL[c])}</span><input type="checkbox" data-ch="${c}"${state.off[c] ? '' : ' checked'}></label>`).join('')
+      + `<p class="msub">Who can text me</p>${Object.entries(WHO_TEXT).map(([k, n]) => `<label class="srow"><span>${esc(n)}</span><input type="radio" name="cht-who" data-who="${k}"${state.who === k ? ' checked' : ''}></label>`).join('')}`
       + (state.muted && state.muted > Date.now() ? `<p class="msub bad">You're muted from chat until ${esc(new Date(state.muted).toLocaleString())}.</p>` : '')
       + '<p class="msub">Muted and blocked</p><div class="cs-list">'
       + (ids.length ? ids.map((id) => { const b = state.blocks.includes(id); return `<div class="srow"><span>${esc(state.names[id] || named.get(id) || 'Someone')} <small class="dim">${b ? 'blocked' : 'muted'}</small></span><button class="btn" type="button" data-un="${esc(id)}" data-a="${b ? 'unblock' : 'unmute'}">${b ? 'Unblock' : 'Unmute'}</button></div>`; }).join('') : '<div class="srow"><span class="dim">Nobody.</span></div>')
-      + '</div><p class="msub">To mute, block or report someone, tap their name in the chat, or their speech bubble while chat is open. In a phone thread, the buttons are under the messages.</p>';
+      + '</div><p class="msub">To add a friend, mute, block or report someone, tap their name in the chat, or their speech bubble while chat is open. In a phone thread, the buttons are under the messages. The blocked are under Blocked at the bottom of Messages too.</p>';
     for (const i of setEl.querySelectorAll('input[data-ch]')) i.onchange = () => ctx.send({ t: 'chatset', off: { [i.dataset.ch]: !i.checked } });
     for (const b of setEl.querySelectorAll('[data-un]')) b.onclick = () => ctx.send({ t: 'mod', a: b.dataset.a, id: b.dataset.un });
+    for (const i of setEl.querySelectorAll('input[data-who]')) i.onchange = () => { if (i.checked) setWho(i.dataset.who); };
   }
+  function setWho(w) { if (Object.hasOwn(WHO_TEXT, w)) ctx.send({ t: 'chatset', who: w }); }
 
   // ---- a pad's on-screen keyboard (the radial's Type) -------------------------------------------------------------
   let padOn = false, kx = 0, ky = 1, caps = true;
@@ -670,8 +730,8 @@ export function createChat(ctx) {
     contacts() { ctx.send({ t: 'contacts' }); },
     inbox() { ctx.send({ t: 'inbox' }); },
     mute(id) { ctx.send({ t: 'mod', a: 'mute', id }); }, unmute(id) { ctx.send({ t: 'mod', a: 'unmute', id }); },
-    block(id) { ctx.send({ t: 'mod', a: 'block', id }); }, unblock(id) { ctx.send({ t: 'mod', a: 'unblock', id }); },
-    report,
+    block(id, n) { block(id, n); }, unblock(id) { ctx.send({ t: 'mod', a: 'unblock', id }); },
+    report, friend: friendDo, setWho, get requests() { return requests; },
     get state() { return state; }, get lines() { return lines; }, get contactList() { return contactList; }, get isOpen() { return isOpen; },
     get unread() { return unread(); }, get threads() { return threads; }, get app() { return app; },
   };

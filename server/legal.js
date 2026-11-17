@@ -35,6 +35,7 @@ export function privacyPage(L, { ga = false } = {}) {
 <h2>Chat and safety</h2>
 <ul>
 <li>Chat lines are checked by a word filter. Recent lines are held in the server's memory for moderators; messages to an offline contact wait in their inbox.</li>
+<li>Your contacts, friends, friend requests and your "Who can text me" choice are kept with your account. Contact details in chat lines are hidden before anyone sees them. A line that asks someone for personal information (age, home, school, real name, photos, another app) is kept, as it was shown, in the moderators' review list.</li>
 <li>We keep moderation records on accounts: reports from players, filter hits, strikes, mutes, kicks and bans, and anti-cheat flags, with notes from the staff. Staff actions are written to an audit log.</li>
 <li>An account keeps a short log of its own recent events (money in and out, purchases, deaths, crimes, jobs, sign-ins) so staff can help - refund a purchase, rescue a stuck character.</li>
 </ul>
@@ -66,6 +67,8 @@ export function termsPage(L) {
 <ul><li>You can play as a guest, or sign in to keep your character on any device. Keep your password to yourself; you're responsible for what's done with your account.</li><li>A guest character lives in one browser: clearing it can lose the character unless you've signed in or made a transfer code.</li><li>Your name must not be hateful, sexual, or pretend to be staff or someone else. Names held by signed-in players are theirs; a guest's name can be given to a member who picks it.</li></ul>
 <h2>Playing fair</h2>
 <ul><li>No cheating, bots, exploits on purpose, or attacking the servers.</li><li>No harassment, hate, sexual content or threats in chat or names, and never share anyone's personal information.</li><li>Staff can mute, strike, kick, send to the game's prison or ban an account that breaks these rules, and remove names.</li></ul>
+<h2>Chat, friends and messages</h2>
+<ul><li>Phone numbers, email addresses, links, street addresses and social media handles are hidden in chat automatically. Don't try to get round it, and don't ask anyone for theirs.</li><li>Lines that ask someone's age, where they live or go to school, their real name, for photos, or to move to another app are sent to our moderators to look at. Staff can mute or ban an account that does this.</li><li>You choose who can text you: everyone you've met, or only your friends and crew (Settings, Chat). Block anyone at any time - tap their name - and report anything that worries you.</li></ul>
 <h2>The game and its money</h2>
 <ul><li>In-game money, items, homes and cars have no real-world value and can't be sold or exchanged for real money.</li><li>It's a beta: things change, break and get reset. Seasons end with a reset of progress (your account stays).</li><li>We may change or end the game or these terms; we'll say so in the game.</li></ul>
 <h2>No warranty</h2>
