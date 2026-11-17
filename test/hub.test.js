@@ -244,5 +244,5 @@ test('a sideways phone: the shop\'s menu has a compact head and a scroll cue; th
   assert.match(css, /\.cue-down \{[^}]*mask-image/);
   assert.match(read('client/hud.js'), /box\.classList\.toggle\('cue-down'/, 'the menu shows when there is more below');
   assert.match(read('client/bag.js'), /export function cue\(el\) \{ el\.classList\.toggle\('cue-down'/, 'the bag\'s grid too');
-  assert.match(css, /@media \(max-height: 560px\) \{\n  \.bag \{ grid-template-columns: 224px minmax\(0, 1fr\) 196px;/, 'the bag beside its slots and its details at 844x390');
+  assert.match(css, /@media \(max-height: 560px\) \{\n  \.bag \{ grid-template-columns: 250px minmax\(0, 1fr\) 190px;/, 'the bag beside its slots and its details at 844x390');
 });

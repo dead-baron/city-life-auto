@@ -260,8 +260,8 @@ function drawFigure(cv, code, dir, f, pp) {
   g.imageSmoothingEnabled = false;
   g.clearRect(0, 0, W, H);
   const R = reach(code, pp);
-  const s = Math.max(1, Math.floor(Math.min(H * 0.86 / (R.up + R.down + 2), W * 0.98 / (2 * R.side))));
-  const cx = Math.round(W / 2), feet = Math.round(Math.min(H - (R.down + 2) * s, H / 2 + (R.up - R.down) * s / 2 + s));
+  const s = Math.max(1, Math.floor(Math.min(H * 0.94 / (R.up + R.down + 1), W / (2 * R.side))));
+  const cx = Math.round(W / 2), feet = Math.round(Math.min(H - (R.down + 1) * s - 2, H / 2 + (R.up - R.down) * s / 2 + s));
   g.fillStyle = 'rgba(255,236,180,.10)'; g.beginPath(); g.ellipse(cx, feet, Math.min(W / 2, s * R.side * 1.15), s * 3, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = 'rgba(8,10,24,.45)'; g.beginPath(); g.ellipse(cx, feet, s * 5, s * 1.4, 0, 0, Math.PI * 2); g.fill();
   const S = figure(code, dir, f, pp);

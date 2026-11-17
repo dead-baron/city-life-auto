@@ -1706,12 +1706,13 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
    bar's eight slots under it (1-4 your weapon slots, 5-8 things to use); what's picked on the right with USE / DROP /
    EQUIP. Upright: the character on top, the grid under it, the details a sheet from the bottom. Nothing is cut off: the
    tabs wrap, each column scrolls on its own. */
-.bag { position: relative; display: grid; width: 100%; height: 100%; grid-template-columns: minmax(290px, 360px) minmax(0, 1fr) minmax(240px, 290px); grid-template-rows: minmax(0, 1fr); grid-template-areas: "eq items detail"; gap: var(--s3); padding: var(--s3); }
+.bag { position: relative; display: grid; width: 100%; height: 100%; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr) minmax(240px, 290px); grid-template-rows: minmax(0, 1fr); grid-template-areas: "eq items detail"; gap: var(--s3); padding: var(--s3); }
 .bag h3 { margin: 0; font: 700 var(--fs-3) var(--pixel); color: var(--gold); letter-spacing: 2px; }
 .iv-me { grid-area: eq; display: flex; flex-direction: column; gap: var(--s2); min-width: 0; min-height: 0; overflow-y: auto; padding: var(--s2) var(--s3) var(--s3); border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy); }
-.iv-doll { flex: none; display: grid; grid-template-columns: 72px minmax(0, 1fr) 72px; gap: var(--s1); }   /* (sized by its slots: the figure fills the space between them - client/bag.js drawFigure) */
+.iv-doll { flex: none; display: grid; grid-template-columns: 64px minmax(0, 1fr) 64px; gap: var(--s1); }
+.touch .iv-doll { grid-template-columns: 72px minmax(0, 1fr) 72px; } .touch .iv-slot { width: 70px; }   /* (the touch type is bigger: ACCESSORY fits) */   /* (sized by its slots: the figure fills the space between them - client/bag.js drawFigure) */
 .iv-col { display: flex; flex-direction: column; gap: 6px; }
-.iv-slot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; width: 70px; margin: 0 auto; }
+.iv-slot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; width: 62px; margin: 0 auto; }
 .iv-slot > small { max-width: 100%; overflow: hidden; font: 700 var(--fs-1) var(--ui); color: var(--dim); white-space: nowrap; }
 .iv-sb { position: relative; display: grid; place-items: center; width: 56px; height: 48px; padding: 0; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy2); color: var(--cream); cursor: pointer; touch-action: manipulation; }
 .iv-sb .gl { width: 26px; height: 26px; }
@@ -1803,15 +1804,15 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .iv-keys { margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--dim); font: 600 var(--fs-1) var(--ui); }
 .bag-craft { grid-area: craft; }   /* (crafting's place, for later) */
 .cue-down { -webkit-mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); }
-@media (max-width: 1100px) { .bag { grid-template-columns: 250px minmax(0, 1fr) 236px; } }
+@media (max-width: 1100px) { .bag { grid-template-columns: 310px minmax(0, 1fr) 236px; } }
 /* a phone on its side: everything a size down - the tabs a rail down the grid's left (never cut off, never two rows over
    the grid), the slots' words and the cash tucked away (the slots show their kind, the HUD the cash) */
 @media (max-height: 560px) {
-  .bag { grid-template-columns: 224px minmax(0, 1fr) 196px; padding: 6px; gap: 6px; }
+  .bag { grid-template-columns: 250px minmax(0, 1fr) 190px; padding: 6px; gap: 6px; }
   .iv-me { padding: 4px 6px 6px; gap: 6px; }
   .iv-me > h3, .iv-keys, .bag-wheel > small, .bag-sort, .bag-cash, .bag-detail > h3 { display: none; }
-  .iv-doll { grid-template-columns: 46px minmax(0, 1fr) 46px; }
-  .iv-col { gap: 4px; } .iv-slot { width: 44px; } .iv-slot > small { display: none; }
+  .iv-doll, .touch .iv-doll { grid-template-columns: 46px minmax(0, 1fr) 46px; }
+  .iv-col { gap: 4px; } .iv-slot, .touch .iv-slot { width: 44px; } .iv-slot > small { display: none; }
   .iv-sb { width: 44px; height: 38px; } .iv-sb .gl { width: 22px; height: 22px; }
   .iv-turn { display: none; }   /* (a drag turns the figure: the arrows would cover it here) */
   .iv-dacts .btn { min-height: 32px; font-size: var(--fs-1); letter-spacing: 0; }
@@ -1829,7 +1830,7 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
   .iv-off, .touch .iv-off { width: 20px; height: 20px; right: -5px; bottom: -5px; }
   .bc-tag { transform: scale(.8); transform-origin: 0 0; }
 }
-@media (max-height: 560px) and (max-width: 780px) { .bag { grid-template-columns: 196px minmax(0, 1fr) 170px; } .iv-doll { grid-template-columns: 44px minmax(0, 1fr) 44px; } }
+@media (max-height: 560px) and (max-width: 780px) { .bag { grid-template-columns: 236px minmax(0, 1fr) 166px; } }
 /* upright on a phone (or a narrow window: client/bag.js .stack): the character on top (the figure between its slots), the
    grid under it; the details a sheet from the bottom. A tall desktop window keeps the three columns. */
 .bag.stack { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "eq" "items"; gap: var(--s2); padding: var(--s2); }
