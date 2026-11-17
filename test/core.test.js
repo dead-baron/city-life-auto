@@ -247,10 +247,9 @@ test('fishing: by the water with a rod, the prompt; hold, let go, strike on the 
   prof.weapons.rod = 0; p.ped.weapon = 'rod';   // (the rod in hand: you fish with it out)
   const pier = w.map.marina[0];
   const ped = p.ped;
-  teleport(w, ped, pier.x - 3 * 32, pier.y); // on the dock beside water
-  ped.a = 0;
+  const dock = fishing.bankNear(w, pier.x, pier.y, 16, () => true, null);   // (on the planks or the bank beside the water - never in it: no fishing while swimming)
+  teleport(w, ped, dock.x, dock.y); ped.a = dock.a;
   let spot = fishing.spotFor(w, ped);
-  for (let a = 0; !spot && a < 8; a++) { ped.a = a * Math.PI / 4; spot = fishing.spotFor(w, ped); }
   assert.ok(spot, 'water within casting range');
   fishing.begin(w, p, spot);
   const L = playLine(w, p, { easy: true });

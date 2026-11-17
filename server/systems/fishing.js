@@ -243,7 +243,7 @@ const creelOf = (prof) => (prof.creel ||= []);
 export function begin(world, p, spot) {
   const ped = p.ped, prof = p.profile;
   if (!canFish(p)) { world.notify(p, 'You need a fishing rod - a bait shop or a sports store sells them.', 'warn'); return; }
-  if (!rodInHand(ped)) return;   // (the prompt's only offered with the rod out: players.js fishHere)
+  if (!rodInHand(ped) || !spot) return;   // (the prompt's only offered with the rod out, by the water: players.js fishHere)
   if (creelOf(prof).length >= FISHING.creel) { world.notify(p, `Your cooler's full (${FISHING.creel} fish) - sell your catch at a fish market or a bait shop.`, 'warn'); return; }
   ped.a = spot.a;
   const when = whenOf(world), hab = habitatAt(world, spot.x, spot.y, { ug: ped.ug === UG.CAVE, boat: !!spot.boat, night: when === 'night' });
