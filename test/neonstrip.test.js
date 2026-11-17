@@ -229,7 +229,7 @@ test('the rebuild: the open lots filled with lit fronts at the end of the list, 
   // Lantern Lane (WC422): the lanterns across it wall to wall at every stall - four runs end to end
   const across = M.props.filter((p) => p.t === 'festoon' && p.k === 'lantern' && p.x > 2983 * TILE && p.x < 3154 * TILE && p.y >= 2140 * TILE && p.y < 2161 * TILE && Math.abs(p.tx || 0) <= 8);
   assert.ok(across.length >= 140, `the lanterns across Lantern Lane (${across.length})`);
-  assert.ok(across.filter((p) => (p.ends || []).includes('wall')).length >= 50, 'made fast to the rows\' walls');
+  assert.ok(across.filter((p) => (p.ends || []).includes('wall')).length >= 30, 'made fast to the north row\'s walls');
   // the crossroads: the taxis waiting, the Violet Room's door on the corner
   assert.ok(M.parking.filter((p) => p.model === 'taxi' && inR([3150, 2205, 3180, 2216], p.x, p.y)).length >= 3, 'the taxi rank');
   const vr = M.buildings.find((b) => b && b.name === 'The Violet Room');

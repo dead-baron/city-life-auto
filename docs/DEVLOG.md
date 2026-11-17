@@ -24840,7 +24840,7 @@ sign went up." Built to WC421 (the Strip at night), WC422 (Lantern Lane), WC012 
   Arcade** - a lit arch over the walk every two tiles, a neon tube along each, cyan and pink by turns (new art: the
   arcade's rib), so the walk under it and its people stay in view; shoppers and friends under it.
 - **Lantern Lane** (WC422): red lanterns ACROSS the lane at every stall - four runs end to end from the north row's wall
-  to the outer stall, across each aisle, on to the south row's wall - instead of every other stall over the aisles
+  to the outer stall, across each aisle, on to a post at the lane's south edge (176 runs, 38 on the north row's walls) - instead of every other stall over the aisles
   only; the market now runs on across the plaza's mouth (an empty paved square), an aisle left open on the plaza's axis.
 - **The crossroads** (D8, boulevard x Park East Avenue): the south-west corner was the 24/7's car park (its mart never
   stood: the bays' asphalt went down first, so the building failed its free-ground check). Now the taxi rank at the
@@ -24860,7 +24860,9 @@ sign went up." Built to WC421 (the Strip at night), WC422 (Lantern Lane), WC012 
   rooftop pool, the video board: client/art2/game/statics.js, about 2 KB) - no room left for the next art without a
   trim or a raise; the build's time unchanged (World v3 128.7 -> 125.3 s total on this machine, handLate under 0.1 s).
   The world and art hashes move (world3, art3): the Strip's chunks rebake, the rest carry over (server/artcdn.js).
-- Tests: test/placementlint.test.js passes (festoons, boats, signs, blades); test/visaudit.test.js fails the same two
+- Proof (scratchpad/neon2/owner/, concept | ours): the Strip wide at night, the crossroads night and noon, the billboard,
+  the Glow Arcade, the promenade and marina, Marina Lane, Harbor Lights from above and the fair, Lantern Lane at night.
+- Tests: test/neonstrip.test.js 7 of 7; test/placementlint.test.js passes (festoons, boats, signs, blades); test/visaudit.test.js fails the same two
   rows as the base (lights 63db2738: three doors under trees in the desert and the north, two vending machines, two tree
   crowns - none in the Strip). test/neonstrip.test.js - the rebuild (the late fronts at the end of the list with no home, the pools, the
   billboard, Harbor Lights' lawn and asphalt under 12%, the carousel, Lantern Lane's lanterns across, the taxi rank, the

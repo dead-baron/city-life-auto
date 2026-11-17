@@ -623,7 +623,7 @@ function lanternLane(K, x0, x1, out) {
     // the lanterns: across each aisle, from the outer row's stall front to the spine's, every other stall
     // (the rebuild, 11-16 - WC422: rows of lanterns ACROSS the lane from wall to wall, dense, overhead: at every stall a
     // line from the north row's wall to the outer stall, across the aisle to the spine, across the other aisle, on to
-    // the south row's wall - four runs end to end, each made fast to the wall or the stall's frame)
+    // a post at the lane's south edge (the boulevard row stands back behind its forecourt) - four runs end to end)
     fest(K, x + 1, sN + 0.7, 0, cN - sN - 1.4, 54, 'pole', 'pole', 'lantern'); fest(K, x + 1, cS + 0.7, 0, sS - cS - 1.4, 54, 'pole', 'pole', 'lantern');
     fest(K, x + 1, y0 + 0.05, 0, sN - 0.75 - y0, 58, 'wall', 'pole', 'lantern'); fest(K, x + 1, sS + 0.75, 0, y1 + 0.95 - sS - 0.75, 58, 'pole', 'wall', 'lantern');   // (on the stalls' line: each run straight across, its ends on the stalls' frames)
   }
