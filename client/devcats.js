@@ -166,6 +166,8 @@ export const DEV_SECTIONS = [
     ['🛥 Boats with people aboard (riders in open boats)', 'rescue', { at: 'crew' }], ['🚤 Rescue boat', 'car', { m: 'rescueboat' }],
   ] },
   // a night out (IN14: server/systems/bowling.js)
+  // the Employment Center (server/systems/jobcenter.js): its two counters; the ad readied (played enough, today's count cleared)
+  { id: 'jobcenter', title: '💼 Employment Center', items: [['💼 The front desk (office work)', 'near', { k: 'jobcenter' }], ['💻 The job computer (listings; the ad when ads are on)', 'near', { k: 'jobpc' }], ['📺 Ready for the ad (time played, today\'s count cleared)', 'adready']] },
   { id: 'nightout', title: '🎳 Bowling & cinema', items: [['🎳 Pinwheel Lanes (bowling alley, at the shoe counter)', 'near', { k: 'bowling' }], ['🎬 The Grand Theater (cinema, at the ticket counter)', 'near', { k: 'cinema' }]] },
   // people going about their lives (task #423: server/systems/activities.js) - the nearest spot, filled, you a little way off
   { id: 'activities', title: '🎣 People going about', items: [

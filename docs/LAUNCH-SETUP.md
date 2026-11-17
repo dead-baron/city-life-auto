@@ -95,6 +95,8 @@ Caddy already proxies everything on `play.deadbaron.com` to the server, includin
 | `GA_API_SECRET` | GA4 Measurement Protocol secret, for server events. | unset (server events off) |
 | `CLA_DISCORD_INVITE` | The player Discord's invite: the title's DISCORD button and Settings → Help → Join our Discord (section 9). `off` hides them. | `https://discord.gg/zuVSkbfjg` |
 | `BUG_WEBHOOK_URL` | A Discord webhook (secret): every bug report is posted to #bug-reports (section 9). | unset (reports kept on the server only) |
+| `CLA_ADS` | Ads at the job computer (section 10): `off`, `test` (Google's test ads only) or `on`. | `off` |
+| `CLA_ADSENSE_CLIENT` | Your AdSense publisher id (`ca-pub-...`). `on` without it stays off. | unset |
 
 `CLA_SECRET` (already in use) signs the login tokens. Never change it once players exist: every token would stop
 working.
@@ -278,3 +280,25 @@ How it behaves:
   can post to the channel). Each report then arrives as an embed - its first line the title; the player, where, the
   device, the build, the frame rate and the kind as fields - with the screenshot attached. Mentions in a report never
   ping anyone. If Discord is down or slow the report is still kept here (the log says it couldn't post it).
+
+## 10. Ads (opt-in rewarded ads at the job computer)
+
+The game shows **no interrupting ads**. The only ad is one a player chooses: at the Employment Center's job computer,
+"Watch an ad for $150" (shared/rules.js `JOBAD`: the reward, 5 a day per character, offered after 15 minutes played).
+It is Google's **H5 Games Ads** (the Ad Placement API: `adBreak({ type: 'reward' })`), loaded on the page only when the
+server says ads are on and the computer offers one - never at start, never on a game portal's build. The server pays
+the reward after the page reports the ad watched to its end on the ticket the server handed out (server/systems/
+jobcenter.js); a closed ad pays nothing. The ads are asked for non-personalized.
+
+What to do, in order:
+1. **AdSense account and site**: in AdSense, Sites → add `deadbaron.com` and get it approved (Google reviews the site:
+   the About page, the Privacy Policy and the Terms must be reachable). Put `ads.txt` at the root of deadbaron.com
+   (`https://deadbaron.com/ads.txt`, one line AdSense shows you: `google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0`).
+2. **Apply for H5 Games Ads** (Google's form for the Ad Placement API - by application; approval isn't guaranteed).
+3. **Consent for Europe**: AdSense → **Privacy & messaging** → **European regulations** → create a message for
+   deadbaron.com (Google's own certified consent message, TCF) and publish it; do the same for **US state regulations** if
+   offered. Google then shows it before any ad in the EEA, the UK and Switzerland - nothing to change in the game.
+4. **The publisher id onto the server**: `sudo bash ~/city-life-auto/deploy/set-keys.sh` → `CLA_ADSENSE_CLIENT` =
+   your `ca-pub-...` id, `CLA_ADS` = `test`. Open the job computer in the game: Google's test ad plays (no money, safe to
+   click). When approved, run it again with `CLA_ADS` = `on`. `off` (or `-`) switches them off again at once.
+

@@ -11,7 +11,7 @@ export const STORE_ICON = {
   snack: 'burger', fruitstand: 'apple', farmstand: 'shop', market: 'shop', gasstation: 'fuel', pawn: 'rings', fence: 'hood', smuggler: 'hood', gang: 'hood',
   garage: 'wrench', salvage: 'wrench', paint: 'spray', dealer: 'car', usedlot: 'car', barber: 'scissors', sports: 'dumbbell', tackle: 'hook', fishmarket: 'fish',
   lodge: 'deer', huntcamp: 'deer', trapper: 'deer', butcher: 'cleaver', marina: 'anchor', rental: 'ship', charter: 'ship', airport: 'plane',
-  assay: 'pick', cinema: 'film', bowling: 'pin', warehouse: 'box', vending: 'cup', bathhouse: 'bath',
+  assay: 'pick', cinema: 'film', bowling: 'pin', warehouse: 'box', vending: 'cup', bathhouse: 'bath', jobcenter: 'case',
 };
 // a glyph: drawn in a 24-unit box (g scaled), centred on 12,12
 const fillPath = (g, c, d) => { g.fillStyle = c; g.fill(new Path2D(d)); };
@@ -57,6 +57,7 @@ export const GLYPHS = {
   pick: (g) => { strokePath(g, C.wood, 2.6, 'M6 20L16 8'); strokePath(g, C.steel, 2.6, 'M5 8c4-4 10-5 15-2'); },
   film: (g) => { fillPath(g, C.amber, 'M3 6h18v12H3z'); fillPath(g, C.ink, 'M5 8h2v2H5zM5 14h2v2H5zM17 8h2v2h-2zM17 14h2v2h-2zM9 9h6v6H9z'); },
   pin: (g) => { fillPath(g, C.cream, 'M12 2a3 3 0 0 1 2 5c2 3 3 7 2 11a4 4 0 0 1-8 0c-1-4 0-8 2-11a3 3 0 0 1 2-5z'); fillPath(g, C.red, 'M9.6 8.5h4.8v1.6H9.6z'); },
+  case: (g) => { fillPath(g, C.brown, 'M3 8h18v12H3z'); strokePath(g, C.amber, 2, 'M9 8V5h6v3'); fillPath(g, C.amber, 'M3 12h18v2H3zM11 11h2v4h-2z'); },   // (the Employment Center's briefcase)
   box: (g) => { fillPath(g, C.wood, 'M3 7l9-4 9 4v11l-9 4-9-4z'); strokePath(g, C.amber, 1.5, 'M3 7l9 4 9-4M12 11v11'); },
   bath: (g) => { strokePath(g, C.steel, 2, 'M20 13V5a2.5 2.5 0 0 0-5 0'); fillPath(g, C.steel, 'M12.5 5h5v2h-5z'); g.fillStyle = C.cyan; for (const [x, y] of [[13, 9], [15, 10.5], [17, 9]]) g.fillRect(x, y, 1.4, 1.8); g.fillStyle = C.cream; g.beginPath(); g.arc(7, 9.5, 3, 0, 6.3); g.fill(); fillPath(g, C.cream, 'M1 12h22v1.6h-1v1.4a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5v-1.4H1z'); fillPath(g, C.cyan, 'M3 13.6h18v1.2H3z'); fillPath(g, C.steel, 'M5 19.5h2.4l-.8 3H5.4zM16.6 19.5H19l-.6 3h-1.2z'); },   // (a bathtub on its feet, someone in it, the shower over it: not a mug)
   cup: (g) => { fillPath(g, C.green, 'M6 4h12l-1.5 17h-9z'); fillPath(g, C.cream, 'M7 8h10v3H7z'); },

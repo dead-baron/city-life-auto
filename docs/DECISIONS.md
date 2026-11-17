@@ -105,6 +105,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Donations through Ko-fi (ko-fi.com/deadbaron, 0% on donations): "Buy a ❤️ for Dead Baron", $3 a heart; a SUPPORT button on the title and "Support the game" in Settings (CLA_SUPPORT_URL, "off" hides them for portal builds). Ads: apply now, no interrupting ads in the beta (opt-in rewarded ads only once approved). (11-16; chat)
 - Supporters get a Discord role through Ko-fi's Discord rewards (one-time supporters included); cosmetic thanks only, never gameplay. (11-16; chat)
 - Ads account (AdSense / Ad Placement API) is the owner's sign-up. (11-03; launch-plan 11-03) - OPEN: when.
+- Ads ready behind a switch, off until the owner turns them on: `CLA_ADS` off | test (Google's test ads) | on, the publisher id `CLA_ADSENSE_CLIENT` set on the server (deploy/set-keys.sh), never in the repo. Opt-in rewarded ads only (Google's H5 Games Ads, adBreak 'reward'): the job computer's "Watch an ad" for in-game cash (`JOBAD`: $150, 5 a day per character, none before 15 min played), paid by the server after a view watched to its end; guests too; non-personalized; Google's own consent message for the EEA (AdSense Privacy & messaging); never on a game portal's page; the privacy page's ads section only while ads are on. Pause / death-screen ads stay a later decision. (11-16; chat, DEVLOG 11-16)
 
 ## HUD and controls
 - Minimal HUD: a dot or one fading line, never a new on-screen panel; new UI lives in the phone. (10-24; agent-rules, chat)
@@ -285,6 +286,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Leaderboards per career; top 10 get a unique cosmetic. (11-07; PROGRESSION.md)
 - Tune the economy from real telemetry after the first test weekend. (11-03; launch-plan 11-03)
 - More honest jobs (flying, coast guard, firefighter, taxi, bus, forklift...). (10-11; DEVLOG 10-11)
+- The Employment Center (Downtown, across Park East Avenue from Greenfield Park, a walk from the city's arrival) to send beta players to: office work at its front desk (short desk rounds - the mail, invoices, the phones - a modest, safe wage, `OFFICE`) and the job computer (the work in town; with ads on, the ad). Honest-work FTUE players are pointed there after their first goal; a "What's next" card for new characters. (11-16; chat, DEVLOG 11-16)
 - Search and rescue missions in the wilderness, from their own HQs. (10-24; DEVLOG 10-24)
 - ATMs: a pop-up (Deposit all / Use ATM), on foot only. (10-06; DEVLOG 10-22)
 - Air hockey is two-player (or vs the machine); a game in progress can only be watched. (11-07; DEVLOG 11-07)

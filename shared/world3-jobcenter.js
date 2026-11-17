@@ -1,20 +1,21 @@
 // World v3: the Employment Center (the owner, 11-16: "even having the 'office work' or employment center options in the
-// city so we can send beta players that way" - server/systems/jobcenter.js). Downtown, on the main street along
-// Greenfield Park's north side - a short walk north across the park from the city's arrival (Greenfield Park Station,
-// shared/world3-firstcars.js) - on the west end of Greenfield Tower's forecourt, the paved gap between the tower's plaza
-// and the Corvo House block the craft passes left open: a three-floor civic office in pale stone, EMPLOYMENT CENTER over
-// its glass doors, its door onto the pavement. Inside (a walk-in: shared/map.js walkInRoom, fitted by shared/
-// shoprooms.js FIT.jobs): the front desk at the counter (poi 'jobcenter': office work), the cork job board and NOW
-// HIRING behind it, the job computers along one side (poi 'jobpc' at the first: the listings and, with ads on, the ad),
-// waiting chairs, a water cooler and plants on the other.
+// city so we can send beta players that way" - server/systems/jobcenter.js). Downtown, on the corner of Park East Avenue
+// and 22nd Street, across the avenue from Greenfield Park - a walk east through the park from the city's arrival
+// (Greenfield Park Station, shared/world3-firstcars.js): the south end of the paving in front of Park East Tower, west of
+// the Grand Neon Hotel's fountain drive (shared/world3-downtown.js eastBand) - open ground the craft passes left bare.
+// A three-floor civic office in pale stone, EMPLOYMENT CENTER over its glass doors, onto 22nd Street's pavement; the
+// tower keeps its forecourt in front of it. Inside (a walk-in: shared/map.js walkInRoom, fitted by shared/shoprooms.js
+// FIT.jobs): the front desk at the counter (poi 'jobcenter': office work), the cork job board and NOW HIRING behind it,
+// the job computers along one side (poi 'jobpc' at the first: the listings and, with ads on, the ad), waiting chairs, a
+// water cooler and plants on the other.
 // Laid in the done hook after every other building and place (shared/world3-world.js), so no other building's, home's
 // or place's number moves (no WORLD_VERSION bump): its building, its two places and its walk-in join their lists last.
-// Its ground is checked free first (paving, no building); what stood on it (the forecourt's trees and lamps) is cleared.
+// Its ground is checked free first (paving, no building); anything standing on it is cleared.
 // Deterministic: integer tiles, nothing at load.
 import { TILE, T } from './constants.js';
 import { shopRoom, jobDesk } from './shoprooms.js';
 
-export const JOB_CENTER = { x: 3060, y: 2380, w: 11, h: 12, name: 'Employment Center', d: 4 };
+export const JOB_CENTER = { x: 3196, y: 2471, w: 15, h: 12, name: 'Employment Center', d: 4 };
 const OPEN = new Set([T.PLAZA, T.GRASS, T.LOT, T.SIDEWALK]);
 const WALKABLE = new Set([T.PLAZA, T.SIDEWALK, T.LOT]);
 
@@ -49,7 +50,7 @@ export function jobCenter3(m, H3) {
   const u = b.walkIn.units[0], R = shopRoom(b, u, TILE, m), at = jobDesk(R);
   const pc = at ? { id: m.pois.length, kind: 'jobpc', label: 'Job computer', x: at.x, y: at.y, r: 30, b: bid, fixed: true } : null;
   if (pc) m.pois.push(pc);
-  // the pavement's furniture by its side, on the forecourt: a bench, a planter, a bike rack - away from the doors
+  // its side of the forecourt: a bench, a planter, a bike rack - away from the doors
   if (H3.addProp) {
     H3.addProp(m, 'bench_m', Math.round((x + w + 1.2) * TILE), Math.round((y + h - 1.6) * TILE), 0);
     H3.addProp(m, 'planter_g', Math.round((x + w + 0.7) * TILE), Math.round((y + h - 3.6) * TILE), 0);

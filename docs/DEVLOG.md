@@ -24801,6 +24801,68 @@ every run in the world (docs/DECISIONS.md, World and places).
 - Proof (scratchpad/lights/owner/): before | after live, noon and night, at the owner's zoom: Downtown's food-truck
   plaza and its tables, Harbor Lights' stage square, the Neon food trucks, Lantern Lane, Westport Center's food carts,
   Old Town's lane lights, Midtown's Market Square lanterns.
+## 2026-11-16 - Ads ready behind a switch; the Employment Center: office work and the job computer
+
+The owner: "I would like to get ads going so they're ready to turn on when the time is right. And even having the
+'office work' or employment center options in the city so we can send beta players that way." No interrupting ads in
+the beta: opt-in rewarded ads only, once Google approves H5 Games Ads.
+- **The switch** (server/config.js `ads`): `CLA_ADS` off (the default) | test | on, and `CLA_ADSENSE_CLIENT`, the
+  AdSense publisher id (`ca-pub-...`), set on the server with deploy/set-keys.sh (its new Ads section) - never in the
+  repo. `on` without an id stays off; `test` without one uses the placeholder id of Google's own example (test mode only
+  ever shows Google's test ads). Served in /launch.json `ads` like the Discord invite and the Ko-fi page. With ads off
+  nothing changes on the page: Google's script is never fetched.
+- **The page** (client/ads.js, loaded only when the job computer offers an ad - not with the page, never on a game
+  portal's page: CrazyGames, Poki, GameDistribution... or `?portal=1`): Google's H5 Games Ads, the Ad Placement API -
+  adsbygoogle.js with `data-ad-client` (and `data-adbreak-test="on"` in test mode), `requestNonPersonalizedAds`,
+  `adConfig({ preloadAdBreaks: 'on', sound })`, and on the press `adBreak({ type: 'reward' })` right then, inside the
+  player's own tap (Google asks for that): beforeReward shows it at once, beforeAd / afterAd hush the game's sound
+  (client/audio.js `hushFor`), adViewed and adBreakDone go to the server, adDismissed is a line ("no reward this time"),
+  no ad ready is a line too; a press that gets no answer lets go after 8 s.
+- **The reward is the server's** (server/systems/jobcenter.js): the computer's ad row carries a ticket the server made;
+  the page reports `{ t: 'ad', a: 'start' | 'viewed' | 'done', tk }`. Paid (`JOBAD.reward`, $150, to the wallet) only for
+  a view on a live ticket that was started at least `JOBAD.minS` before, under `JOBAD.maxS` old, under the day's cap
+  (`JOBAD.perDay`, 5 a character, the goals' day), with ads on - then the ticket's gone. Nothing for a dismissed ad, no
+  ad, a made-up or used ticket. Guests too (most beta players are guests; it's opt-in, capped per character, and only
+  offered once a character has played `JOBAD.playS` - 15 minutes: no ad in a first session, which also keeps a farm of
+  fresh guests from paying). Logged: the analytics' `ad:<status>` counts and the account's notes (`ad paid (2 today)`),
+  the money as `msg:ad` - not clean money (no business XP).
+- **Consent**: Google's own consent message (AdSense > Privacy & messaging > European regulations) shows before any ad
+  in the EEA, the UK and Switzerland once the owner publishes it; the ads are asked for non-personalized (13+ game).
+  The game's first-launch gate is unchanged (it asks about analytics); GA's Consent Mode keeps ad_storage denied.
+  The Privacy Policy gets an "Ads (only if you choose to watch one)" section - Google, its cookies, non-personalized,
+  how to opt out (don't press it; Google's ads settings) - shown only while ads are on; with them off it still says
+  there are no ads. docs/LAUNCH-SETUP.md section 10: what the owner does in AdSense, in order.
+- **The Employment Center** (shared/world3-jobcenter.js): Downtown on the corner of Park East Avenue and 22nd Street,
+  across the avenue from Greenfield Park - a walk east through the park from the city's arrival - on the bare south end
+  of the paving in front of Park East Tower, west of the Grand Neon Hotel's fountain drive (the tower keeps its forecourt).
+  A three-floor civic office in pale stone, EMPLOYMENT CENTER over its doors, onto 22nd Street's pavement; a bench, a
+  planter and a bike rack by its side. Laid in the done hook after every other building and place (map.js now hands the
+  hook `walkInRoom`), so no other building's, home's or place's number moves - no WORLD_VERSION bump. A walk-in fitted
+  by shared/shoprooms.js `FIT.jobs`: the front desk (a clerk: interiors.js), a cork job board (client/art2/shopart.js
+  `jobs`), NOW HIRING, a clock and files behind it; the job computers - desks with their screens - down one side, the
+  first the job computer's place (`jobDesk`); waiting chairs, a water cooler and plants on the other.
+- **Office work** at the front desk: a round of `OFFICE.items` (10) quick tasks on the counters' menu kit - one kind a
+  round, in turn: sort the mail (the tray by the addressee's surname), type up the invoices (the total), answer the
+  phones (put the caller through) - four options, one right, picked by tap, number key or pad; `OFFICE.pay` ($2) each
+  right, `OFFICE.bonus` ($4) for a clean round, at most `OFFICE.roundS` (45 s) a round and a new round 45 s after the last
+  began: about $1.9k an hour at best, under the mail round's and the riskier jobs'. Made and marked on the server, paid
+  when the round ends (all answered, time up, Stop, or walked off), as clean money (business XP: careers.js).
+- **The job computer**: the work in town that suits you (the "What's next" cards, each one put on your map) - and, with
+  ads on, "Watch an ad for $150" (shut once the day's five are watched: "back tomorrow").
+- **Sending beta players there**: honest work's first goal (the mail round or the courier contract) now ends with "More
+  steady work at the Employment Center - it's on your map" and its waypoint (ftue.js complete); a "What's next" card
+  for characters who haven't done six rounds ("Office work at the Employment Center"). On the map and the Places app
+  (Jobs / Work & law), a briefcase badge over its door; the debug menu's "Employment Center" goes to either counter and
+  readies the ad (`adready`: time played, today's count cleared).
+- **The Guide**: Places "The Employment Center", Ways to earn "Office work", Activities "The job computer" - their
+  numbers from shared/rules.js `OFFICE` and `JOBAD`.
+- Tests: test/jobcenter.test.js (the config and /launch.json, the privacy page, office rounds paid by what's right and
+  capped in time, the walk-off and the clock, the ad paid only for a started and finished view on a live ticket, the
+  daily cap and the next day, none in a first session, the page module: never on a portal, test mode, the callbacks,
+  loaded lazily; the Guide), test/world3jobcenter.test.js (one World v3 build: built Downtown, its doorway onto the
+  pavement, both counters reached from the door and from Greenfield Park Station, laid last, its room fitted, on the
+  map, the placement lint clean round it). Budgets unchanged (page 531 of 540 KB, bake 1015 of 1020 KB).
+
 ## 2026-11-16 - Support the game: the Ko-fi buttons
 
 - The owner set up Ko-fi (ko-fi.com/deadbaron: "Buy a ❤️ for Dead Baron", $3 a heart). The title's small buttons get a

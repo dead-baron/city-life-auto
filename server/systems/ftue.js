@@ -372,7 +372,10 @@ function complete(world, p) {
   prof.cash += FTUE.reward;
   const xp = skills.gain(world, p, 'drive', FTUE.xp);
   send(p, { t: 'ftue', a: 'end', title: 'FIRST GOAL DONE', sub: `+$${FTUE.reward}${xp ? ` · +${Math.round(xp)} DRIVING XP` : ''}` });
-  world.notify(p, END[f.goal.k], 'good');
+  // (honest work done: the Employment Center's desk work and job computer next, on the map - server/systems/jobcenter.js)
+  const jc = f.goal.k === 'mail' || f.goal.k === 'courier' ? (world.map.pois || []).find((q) => q && q.kind === 'jobcenter') : null;
+  world.notify(p, jc ? END[f.goal.k].replace(/ After that, .*$/, ` More steady work at the ${jc.label} - it's on your map, and your phone's Guide has the rest.`) : END[f.goal.k], 'good');
+  if (jc) send(p, { t: 'ftue', a: 'mark', x: Math.round(jc.x), y: Math.round(jc.y), label: jc.label });
   track(world, p, 'ftue_done');
   finish(world, p, 'goal');
 }
