@@ -45,6 +45,9 @@ export function doorPaths3(m, H = {}) {
   const solidAt = (x, y) => { const l = m.solidProps.get(m.idx(x, y)); return l ? l.filter((e) => !e.off) : []; };
   const plantAt = (e) => { const pr = e.pi !== undefined ? m.props[e.pi] : null; return !!(pr && TIDY3.PLANT.test(pr.t)); };
   const pull = new Set(), seen = new Set();
+  // the map's plants by tile (made when first wanted)
+  let PL = null;
+  const plantsAt = () => { if (!PL) { PL = new Map(); for (const pr of m.props) if (pr && TIDY3.PLANT.test(pr.t)) { const k = Math.floor(pr.y / TILE) * 65536 + Math.floor(pr.x / TILE); let l = PL.get(k); if (!l) PL.set(k, (l = [])); l.push(pr); } } return PL; };
   for (const p of m.pois) {
     if (!p || p.b === undefined || p.b === null || !(DOOR_KINDS3.has(p.kind) || p.walk)) continue;
     const S = doorStep3(m, p, units);
@@ -71,7 +74,7 @@ export function doorPaths3(m, H = {}) {
     for (const [x, y, i] of strip) {
       m.tiles[i] = T.PLAZA; out.tiles++;
       // (and a tree whose foot reaches over it from the tile beside: its trunk within PLANT_R px of the path's middle)
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (m.inside(x + dx, y + dy)) for (const e of solidAt(x + dx, y + dy)) if (plantAt(e) && Math.abs(e.x - (x + 0.5) * TILE) < PLANT_R + (e.r || 0) && Math.abs(e.y - (y + 0.5) * TILE) < TILE) { const pr = m.props[e.pi]; pull.add(pr.x + ',' + pr.y); }
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const pr of plantsAt().get((y + dy) * 65536 + x + dx) || []) if (Math.abs(pr.x - (x + 0.5) * TILE) < PLANT_R && Math.abs(pr.y - (y + 0.5) * TILE) < TILE) pull.add(pr.x + ',' + pr.y);
     }
     out.paved++;
   }

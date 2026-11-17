@@ -941,18 +941,11 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   const people = shop.people ?? (shop.kind === 'diner' ? 4 : 0);
   for (let i = 0; i < people; i++) { const px = 16 + ((i * 37 + seed * 11) % Math.max(20, w - 40)); if (px > doorX - 12 && px < doorX + doorW + 12) continue; bust(G, px, winTop + 10, [ [180, 60, 60], [60, 110, 180], [230, 200, 80], [90, 150, 90] ][i % 4], seed + i * 3, 0.8); }
   if (shop.clerk !== false && shop.kind !== 'diner') bust(G, shop.door === 'right' ? doorX - 30 : doorX + doorW + 30, winTop + 9, shop.clerkShirt || [40, 130, 110], seed + 99, 1);
-  const L = shop.openSign && OPEN_L(), bw = L ? L.w * 2 : 0;   // (only where it fits beside the door: a kiosk's cut it in half - 11-14)
-  // (beside the door on its usual side, else the other; never behind a cash machine set in the wall in front of the
-  // window - shop.avoid, its columns: statics.js frontAtms; the owner, 11-16: "the open sign is covered by this ATM")
-  const fitsAt = (x) => x >= 4 && x + bw <= w - 4, clearOf = (x) => !(shop.avoid || []).some(([a, z]) => x < z && a < x + bw);
-  const sides = shop.door === 'right' ? [doorX - 6 - bw, doorX + doorW + 6] : [doorX + doorW + 6, doorX - 6 - bw];
-  let oxAt = null;
-  if (L && shop.openSign.x !== undefined) { const x = clampI(shop.openSign.x, 4, w - 4 - bw); if (clearOf(x)) oxAt = x; }
-  else if (L && fitsAt(sides[0])) oxAt = clearOf(sides[0]) ? sides[0] : fitsAt(sides[1]) && clearOf(sides[1]) ? sides[1] : null;
+  const L = shop.openSign && OPEN_L(), oxAt = openSignX(shop, w);   // (only where it fits beside the door: a kiosk's cut it in half - 11-14)
   if (L && oxAt !== null) {   // a neon OPEN in the window
     const col = shop.openSign.col || [255, 60, 70];
     const ox = oxAt, oy = winTop + (shop.awning ? 15 : 4);   // (under an awning: below its scallops - it's painted after, over the window's head - 11-16, the charter office's OPEN cut in half)
-    G.openBox = { x: ox, y: oy, w: bw, h: L.h * 2 };   // (where it went: the placement lint's signCovered)
+    G.openBox = { x: ox, y: oy, w: L.w * 2, h: L.h * 2 };   // (where it went: the placement lint's signCovered)
     const P = { p: [20, 14, 26], i: col.map((v) => Math.min(255, Math.round(v * 0.5 + 128))), h: [70, 140, 255], f: [70, 140, 255], neon: true };
     paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, ox, oy, { lit: 'neon', night });
   }
@@ -980,6 +973,20 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
 }
 const clampI = (v, a, b) => Math.max(a, Math.min(Math.max(a, b), v));
 const OPEN_L = () => layoutSign('OPEN', 27, { face: 'civic', lines: 1 });
+// Where a storefront's neon OPEN goes in its window (facade px from the front's west edge), or null: beside the door on
+// its usual side when it fits there, else none; never behind a cash machine or a planter in front of the window
+// (shop.avoid: statics.js frontAtms) - then the door's other side, or none (the owner, 11-16: "the open sign on this
+// building is covered by this ATM"). statics.js addFrontage keeps its pots off it. -> x | null; openSignW: its width
+export const openSignW = () => OPEN_L().w * 2;
+export function openSignX(shop, w) {
+  if (!shop || !shop.openSign) return null;
+  const bw = openSignW(), doorW = shop.doorW || (shop.kind === 'arcade' ? 30 : 22), doorX = shop.door === 'right' ? w - doorW - 10 : shop.door === 'left' ? 10 : (shop.door | 0);
+  const fitsAt = (x) => x >= 4 && x + bw <= w - 4, clearOf = (x) => !(shop.avoid || []).some(([a, z]) => x < z && a < x + bw);
+  const sides = shop.door === 'right' ? [doorX - 6 - bw, doorX + doorW + 6] : [doorX + doorW + 6, doorX - 6 - bw];
+  if (shop.openSign.x !== undefined) { const x = clampI(shop.openSign.x, 4, w - 4 - bw); return clearOf(x) ? x : null; }
+  if (!fitsAt(sides[0])) return null;
+  return clearOf(sides[0]) ? sides[0] : fitsAt(sides[1]) && clearOf(sides[1]) ? sides[1] : null;
+}
 // a sign's pixel on the face: its colour and its glow (or none: the wall's or the window's under it put out), and no
 // longer glass for the lights
 function facePx(G, x, y, c, e) {

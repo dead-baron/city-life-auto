@@ -9,7 +9,7 @@
 // worker caches sprites by key.
 import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
-import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox } from '../buildings.js';
+import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW } from '../buildings.js';
 import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, paintBoard, paintLine, lineMask, rgbOf, TRADES } from '../signfont.js';   // (wave A1: the sign faces, by trade)
 import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
@@ -1661,7 +1661,7 @@ function addBuildings(c, I) {
       for (const [dx, dy, z, r, col, k, kind] of lights) lightAt(I, x0 + dx, y1 + dy, z, r, col, k, kind, 1);
       // garage doors (the yard keeps their driveways clear), shopfronts (dressed later)
       for (const q of spec.doors || []) if (q.kind === 'garage' && s.south) { let l = I.garages.get(bi); if (!l) I.garages.set(bi, (l = [])); l.push([x0 + q.x - 10, x0 + q.x + q.w + 10]); }
-      if (spec.shop && s.south && !s.vox && !s.frame) { const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10; I.fronts.push({ x0, y1, w, dx, dw, kind: sh.kind, A, st: D.style, b: bi }); }
+      if (spec.shop && s.south && !s.vox && !s.frame) { const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10; const ox = openSignX(sh, w); I.fronts.push({ x0, y1, w, dx, dw, kind: sh.kind, A, st: D.style, b: bi, open: ox === null ? null : [ox, ox + openSignW()] }); }
     }
   });
 }
@@ -4000,6 +4000,7 @@ function addFrontage(c, I) {
     const pool = POTS[st] || POTS.commercial;
     for (const px of [x0 + dx - 13, x0 + dx + dw + 13]) {
       if (px < x0 + 8 || px > x0 + w - 8 || !paved(px) || rnd() < 0.3) continue;
+      if (f.open && px + 18 > x0 + f.open[0] && px - 18 < x0 + f.open[1]) continue;   // (not in front of the window's OPEN - 11-16)
       const k = pick(pool, rnd());
       if (k === 'pot') put(I, vitem('pot', 'pottedPalm', [], Math.round(px), y1 + 12));
       else if (k === 'plg') put(I, vitem('plg', 'planter', [true], Math.round(px), y1 + 9));
