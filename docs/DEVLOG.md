@@ -24700,7 +24700,8 @@ bag, just Inventory." Built to the concepts U6, U14, U15, CC10 and UIC-19.
   over your character), the gig's track list and a set's result grow it upward while they show. Your character holds and
   plays it in the city for everyone (the server's descriptor `pp`, as the buskers: sax, violin, bucket drums, guitar - the
   keytar as a guitar), and the Inventory's figure plays the instrument you pick. While you play, the dance key (G, one of the
-  pads) no longer starts a dance that took the instrument's pose away (server/systems/dance.js).
+  pads) no longer starts a dance that took the instrument's pose away (server/systems/dance.js). A gun in your hands goes away while you
+  play (both hands on the instrument; the city drew the gun in place of it) and comes back when you put it away.
 - **A gamepad**: LT / RT change the Inventory's tabs (LB / RB stay the hub's screens, the rule since UI-3), the D-pad or
   stick moves, A picks, X equips, wears or takes off, Y drops, B backs out of the details then the screen.
 - What I took from similar games: GTA V's weapon wheel (hold a button, point, let go - our Tab / RB / the ring on touch);

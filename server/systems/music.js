@@ -285,6 +285,7 @@ function startJam(world, p, inst) {
   const src = add(world, p, 'jam', ped.x, ped.y, { att: ped.id, i: I.code, on: true });
   const P = newPerf(world, p, 'jam', { inst, hat: hat.id, src: src.id, key: 57, minor: true });
   ped.pp = I.pp; ped.vx = 0; ped.vy = 0; bump(ped);
+  if (ped.weapon && ped.weapon !== 'fists') { P.wasWeapon = ped.weapon; ped.weapon = 'fists'; p.meDirty = true; }   // (both hands on the instrument: what you held goes away while you play, back in your hands after - drawn in the city with the instrument, not a gun)
   if (p.conn) p.conn.sendJSON({ t: 'arcade', game: 'jam', id: 0, inst, key: 57, minor: true, tapes: tapesOf(p).map((t) => t.id), now: +world.time.toFixed(2), tk: world.tick, setS: RHYTHM.setS });
   world.notify(p, `You take out your ${ITEMS[inst].name.toLowerCase()}. Play for the people walking by - a good gig fills your hat.`, 'info');
   return P;
@@ -313,6 +314,7 @@ export function stopPerf(world, p, why = 'stop') {
   const mat = P.mat && stage(world).get(P.mat);
   if (mat) { mat.on = false; mat.tr = null; send(world, mat); }
   if (P.kind === 'jam' || P.kind === 'gig') { const src = stage(world).get(P.src); if (src) remove(world, src); if (ped && INSTRUMENTS[P.inst] && ped.pp === INSTRUMENTS[P.inst].pp) { ped.pp = null; bump(ped); } }
+  if (P.wasWeapon && ped && !ped.dead && ped.weapon === 'fists' && p.profile.weapons[P.wasWeapon] !== undefined) { ped.weapon = P.wasWeapon; p.meDirty = true; }
   if (ped && ped.dancing && (P.kind === 'rhythm' || why !== 'danced')) { ped.dancing = false; if (ped.gt === 'dance') { ped.gt = null; ped.dm = undefined; } bump(ped); }
   const hat = stage(world).get(P.hat);
   if (hat) {

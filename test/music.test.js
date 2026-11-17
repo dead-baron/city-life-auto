@@ -429,3 +429,14 @@ test('playing an instrument, the dance key (one of its pads) doesn\'t start a da
   music.stopPerf(w, p);
   assert.ok(dance.next(w, p) >= 0, 'put away: the dance key dances again');
 });
+
+test('playing an instrument puts what you held away (both hands on it - the city draws the instrument, not a gun), back after', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.weapons.pistol = 24; p.ped.weapon = 'pistol';
+  prof.inventory.violin = 1;
+  economy.useItem(w, p, 'violin');
+  assert.equal(p.ped.weapon, 'fists'); assert.equal(p.ped.pp, 'violin');
+  music.stopPerf(w, p);
+  assert.equal(p.ped.weapon, 'pistol', 'back in your hands');
+});
