@@ -624,8 +624,8 @@ function lanternLane(K, x0, x1, out) {
     // (the rebuild, 11-16 - WC422: rows of lanterns ACROSS the lane from wall to wall, dense, overhead: at every stall a
     // line from the north row's wall to the outer stall, across the aisle to the spine, across the other aisle, on to
     // the south row's wall - four runs end to end, each made fast to the wall or the stall's frame)
-    fest(K, x + 1.5, sN + 0.7, 0, cN - sN - 1.4, 54, 'pole', 'pole', 'lantern'); fest(K, x + 1.5, cS + 0.7, 0, sS - cS - 1.4, 54, 'pole', 'pole', 'lantern');
-    fest(K, x + 1.5, y0 + 0.05, 0, sN - 0.75 - y0, 58, 'wall', 'pole', 'lantern'); fest(K, x + 1.5, sS + 0.75, 0, y1 + 0.95 - sS - 0.75, 58, 'pole', 'wall', 'lantern');
+    fest(K, x + 1, sN + 0.7, 0, cN - sN - 1.4, 54, 'pole', 'pole', 'lantern'); fest(K, x + 1, cS + 0.7, 0, sS - cS - 1.4, 54, 'pole', 'pole', 'lantern');
+    fest(K, x + 1, y0 + 0.05, 0, sN - 0.75 - y0, 58, 'wall', 'pole', 'lantern'); fest(K, x + 1, sS + 0.75, 0, y1 + 0.95 - sS - 0.75, 58, 'pole', 'wall', 'lantern');   // (on the stalls' line: each run straight across, its ends on the stalls' frames)
   }
   // a gate at each end (where the lane meets the bridges' avenues), the market's sign over the west one
   for (const gx of [x0 + 1, x1 - 1]) prop('gatearch', gx, (y0 + y1) / 2, 0, { w: Math.round((y1 - y0 - 2) * TILE), a: Math.PI / 2 });

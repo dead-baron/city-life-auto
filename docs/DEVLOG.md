@@ -24813,12 +24813,13 @@ sign went up." Built to WC421 (the Strip at night), WC422 (Lantern Lane), WC012 
   building's, home's or business's number moves - no WORLD_VERSION bump, nobody's home bought back. Their ground is
   taken in the plan (kept free, sealed as lawn) and anything a later pass stood on it is cleared. Each is a lit front
   (the plan's own `lit()` - its neon, picture signs, blade, dressing) with a delivery stop, no home and no walk-in (the
-  interiors are built before). 26 of them.
+  interiors are built before). 19 of them (World v3, seed 1337), after the 7474 buildings before them; the homes'
+  count unchanged (3467).
 - **Marina Lane** (the waterfront gardens' lawn grid behind the boulevard's east row, the Strip's biggest open ground
   after Harbor Lights): a row of fronts facing south onto a lane ten tiles wide - the Marina Bay Hotel and Skyline Suites
   (eight and nine storeys, glass, their rooftop pools lit - the bay behind them, so they hide no street), the Golden Koi
   Casino's front, bars, a karaoke, food places, an arcade, a tattoo parlor; passages through to the promenade under
-  lanterns; bistro bulbs strung across the lane from the fronts every four tiles, terraces at the bars and food places,
+  lanterns; where the shore cuts in across the lane's east end, a waterside terrace of tables at the edge; bistro bulbs strung across the lane from the fronts every four tiles, terraces at the bars and food places,
   friends at their doors, food carts with their queues, the hotels' doormen (activities.js tableau 'staff'). The
   boulevard row in front of it is 16 deep and three storeys (Volt four) so the lane stays in view behind it.
 - **Harbor Lights** (the headland: "a huge dark lawn with a few lights round its edge and a big car park"):
@@ -24855,6 +24856,12 @@ sign went up." Built to WC421 (the Strip at night), WC422 (Lantern Lane), WC012 
   glowing: the Strip's bulbs glow (emissive); the frame keeps the 96 strongest lights (engine.js `_packLights`) and the
   bulbs' ground pools are the weakest, so where neon crowds the screen the pools drop out first - the bulbs themselves
   still glow.
-- Tests: test/neonstrip.test.js - the rebuild (the late fronts at the end of the list with no home, the pools, the
+- Performance: no budget raised. The bake's code 1013 -> 1014.96 KB of its 1015 (the carousel, the arcade's rib, the
+  rooftop pool, the video board: client/art2/game/statics.js, about 2 KB) - no room left for the next art without a
+  trim or a raise; the build's time unchanged (World v3 128.7 -> 125.3 s total on this machine, handLate under 0.1 s).
+  The world and art hashes move (world3, art3): the Strip's chunks rebake, the rest carry over (server/artcdn.js).
+- Tests: test/placementlint.test.js passes (festoons, boats, signs, blades); test/visaudit.test.js fails the same two
+  rows as the base (lights 63db2738: three doors under trees in the desert and the north, two vending machines, two tree
+  crowns - none in the Strip). test/neonstrip.test.js - the rebuild (the late fronts at the end of the list with no home, the pools, the
   billboard, Harbor Lights' lawn and asphalt under 12%, the carousel, Lantern Lane's lanterns across, the taxi rank, the
   Violet Room's corner door), the Glow Arcade's arches, Harbor Lights' pieces.

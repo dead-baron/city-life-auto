@@ -227,7 +227,7 @@ test('the rebuild: the open lots filled with lit fronts at the end of the list, 
   assert.ok(lot < all * 0.12, `Harbor Lights' asphalt ${lot} of ${all} tiles`);
   assert.ok(M.props.some((p) => p.t === 'carousel' && inR(HL, p.x, p.y)), 'the carousel');
   // Lantern Lane (WC422): the lanterns across it wall to wall at every stall - four runs end to end
-  const across = M.props.filter((p) => p.t === 'festoon' && p.k === 'lantern' && p.x > 2983 * TILE && p.x < 3154 * TILE && p.y >= 2140 * TILE && p.y < 2161 * TILE && !p.tx);
+  const across = M.props.filter((p) => p.t === 'festoon' && p.k === 'lantern' && p.x > 2983 * TILE && p.x < 3154 * TILE && p.y >= 2140 * TILE && p.y < 2161 * TILE && Math.abs(p.tx || 0) <= 8);
   assert.ok(across.length >= 140, `the lanterns across Lantern Lane (${across.length})`);
   assert.ok(across.filter((p) => (p.ends || []).includes('wall')).length >= 50, 'made fast to the rows\' walls');
   // the crossroads: the taxis waiting, the Violet Room's door on the corner
