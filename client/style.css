@@ -150,8 +150,10 @@ i.ic { display: inline-grid; place-items: center; flex: none; font-style: normal
 
 /* chips: a tag (CITIZEN), a key (E, ACT), a pad's button */
 .chip { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border-radius: var(--r1); background: var(--navy3); color: var(--cream); font: 600 var(--fs-2) var(--ui); }
-.kchip, .g-key, .g-touch { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; min-width: 24px; height: 24px; padding: 0 6px; border-radius: var(--r1); background: var(--cream); color: var(--ink); box-shadow: inset 0 -3px 0 var(--dim); font: 700 var(--fs-2) var(--pixel); line-height: 1; letter-spacing: 0; text-transform: uppercase; }
-.g-pad { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; min-width: 26px; height: 26px; border-radius: var(--r3); color: var(--cream); border: 2px solid var(--ink); font: 700 var(--fs-2) var(--ui); line-height: 1; text-shadow: var(--halo-s); }
+/* (a glyph's label - a key, a touch word, LEFT THUMB - on one line, the chip as big as its words: never clipped or
+   squeezed - the owner, 11-16, "the font that left thumb uses ... doesn't fit in that space well") */
+.kchip, .g-key, .g-touch { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; min-width: 24px; min-height: 24px; box-sizing: border-box; padding: 3px 6px; white-space: nowrap; border-radius: var(--r1); background: var(--cream); color: var(--ink); box-shadow: inset 0 -3px 0 var(--dim); font: 700 var(--fs-2) var(--pixel); line-height: 1; letter-spacing: 0; text-transform: uppercase; }
+.g-pad { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; min-width: 26px; height: 26px; border-radius: var(--r3); color: var(--cream); border: 2px solid var(--ink); font: 700 var(--fs-2) var(--pixel); line-height: 1; white-space: nowrap; text-shadow: var(--halo-s); }
 .g-pad.g-a { background: var(--pad-a); } .g-pad.g-b { background: var(--pad-b); } .g-pad.g-x { background: var(--pad-x); } .g-pad.g-y { background: var(--pad-y); }
 .g-pad.g-bumper, .g-pad.g-sys, .g-pad.g-stick { border-radius: var(--r1); padding: 0 6px; background: var(--navy3); font-size: var(--fs-1); }
 
@@ -548,7 +550,7 @@ body:not(.touch) #helpbox { max-width: min(560px, 60vw); }
 #hints.off { opacity: 0; visibility: hidden; transition: opacity var(--t3) var(--ease), visibility 0s var(--t3); }
 #hints .hint { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .touch #hints { left: calc(max(20px, env(safe-area-inset-left)) + 246px); right: var(--lo-c, 344px); max-width: none; padding: var(--s1) var(--s2); gap: 2px 10px; }
-.touch #hints .g-touch { height: 22px; padding: 0 var(--s1); }
+.touch #hints .g-touch { min-height: 24px; padding: 3px 6px; font-size: var(--fs-2); }
 .touch #hints .hint { white-space: normal; }
 .touch:not(.portrait) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--lo-b, 82px) + 40px); }   /* (the first-time strip under the cards: the card over it) */
 body.portrait.touch #hints .hint { white-space: normal; }
@@ -558,7 +560,7 @@ body:not(.touch) #hints { left: var(--sl); right: auto; margin: 0; max-width: ca
 body:not(.touch) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--sb) + 52px); }
 /* a touch button named in words elsewhere (the hint strips, the Guide, a first-goal line, a cue): the button as it looks
    - its color, its plain symbol or its word (client/touchicons.js faceChip) */
-.g-touch.g-face, #hints .g-touch.g-face, #helpbox > .g-touch.g-face { display: inline-grid; place-items: center; flex: none; min-width: 30px; height: 30px; padding: 0 6px; box-sizing: border-box; border-radius: var(--r3); border: 0; background: var(--face, var(--pad-navy)); color: var(--white); box-shadow: inset 0 2px 0 var(--pad-hi), inset 0 -3px 0 var(--pad-lo); font: 700 var(--fs-2) var(--pixel); text-shadow: 2px 2px 0 var(--pad-ink); vertical-align: middle; }
+.g-touch.g-face, #hints .g-touch.g-face, #helpbox > .g-touch.g-face { display: inline-grid; place-items: center; flex: none; min-width: 30px; height: 30px; padding: 0 6px; box-sizing: border-box; white-space: nowrap; border-radius: var(--r3); border: 0; background: var(--face, var(--pad-navy)); color: var(--white); box-shadow: inset 0 2px 0 var(--pad-hi), inset 0 -3px 0 var(--pad-lo); font: 700 var(--fs-2) var(--pixel); text-shadow: 2px 2px 0 var(--pad-ink); vertical-align: middle; }
 .g-face.g-sw { box-shadow: inset 0 0 0 2px var(--pad-gold); }
 .g-face.g-fire { --face: var(--pad-fire); } .g-face.g-act { --face: var(--pad-act); } .g-face.g-roll { --face: var(--pad-roll); } .g-face.g-car { --face: var(--pad-car); }
 .g-face:has(.sym) { width: 30px; padding: 0; }

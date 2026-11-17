@@ -8,6 +8,7 @@ import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physi
 import { levelStep, sameLevel } from '../../shared/levels.js';
 import * as skills from './skills.js';
 import { WEAPONS, stepWeapon } from '../../shared/items.js';
+import { takeable } from '../../shared/fish.js';
 import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT, VEHICLE_WEAPON, VEHICLE_WEAPON_DEFAULT, NPC_GUARD } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
@@ -644,12 +645,12 @@ export function reload(world, ped) {
 // plasma blade last, so one step back from your fists (a tap of LB, the mouse wheel back) is the blade, if you have it
 export function cycleWeapon(world, ped, dir) {
   if (!ped.player) return;
-  const id = stepWeapon(Object.keys(ped.player.profile.weapons), ped.weapon, dir);
+  const id = stepWeapon(takeable(ped.player.profile), ped.weapon, dir);   // (a rod in the bag: the rod's slot - shared/fish.js)
   if (id) selectWeapon(world, ped, id);
 }
 
 export function selectWeapon(world, ped, id) {
-  if (!ped.player || !WEAPONS[id] || ped.player.profile.weapons[id] === undefined) return;
+  if (!ped.player || !WEAPONS[id] || !takeable(ped.player.profile).includes(id)) return;
   ped.weapon = id;
   ped.reloadUntil = 0; ped.pendingReload = null;
   const w = WEAPONS[id];

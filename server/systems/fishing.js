@@ -15,8 +15,10 @@
 // held, the button pressed - so a strike lands when the page says it does, wherever the server's clock is. The state
 // rides the snapshot's spare slots (net.js: fishOut), the fight's parameters the me record (meInfo: fixed when the line
 // goes out, so the page can play the fight itself).
-//   spotFor(world, ped)              the water in front of you (or over a boat's side), or null
-//   canFish(p)                       a rod to fish with
+//   spotFor(world, ped)              the water in front of you (or over a boat's side), or null - never swimming
+//   canFish(p)                       a rod to fish with (the weapon slot, or one in the bag)
+//   rodInHand(ped)                   the rod out (the 'rod' weapon): the only way the prompt is offered (the owner, 11-16)
+//   takeOut(world, p)                the bag's Use on a rod: the rod in hand
 //   begin(world, p, spot)            the action button pressed by the water: the cast's charge starts
 //   input(world, p, ped, inp, pressed, dt) -> true while fishing (the action button is the fishing's)
 //   tick(world)                      the line's own clock: a boat driven off, a fight left too long
@@ -28,14 +30,15 @@
 //   habitatAt(world, x, y, o)        the water there: { water, spot }
 import { TILE, T } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
-import { DISTRICTS } from '../../shared/mapcore.js';
+import { DISTRICTS, isSwimming } from '../../shared/mapcore.js';
 import { undergroundOf, ugMapOf, caveOf, UG } from '../../shared/underground.js';
 import * as FS from '../../shared/fish.js';
 import { ITEMS } from '../../shared/items.js';
 import { FISHING, DEEPSEA_PAY } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as law from './law.js';
-import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
+import * as careers from './careers.js';
+import * as combat from './combat.js';   // (progress events: the goals, what you've tried - careers.js note)
 
 const { PH } = FS;
 const wet = (t) => t === T.WATER || t === T.DEEP;
@@ -66,6 +69,7 @@ export function spotFor(world, ped) {
     return { x: v.x + Math.cos(a) * d, y: v.y + Math.sin(a) * d, a, boat: v.id };
   }
   const m = mapFor(world, ped);
+  if (isSwimming(m, ped)) return null;   // (in the water yourself: no fishing - the owner's shots, 11-16)
   for (const off of [0, 0.6, -0.6, Math.PI / 2, -Math.PI / 2]) {
     const a = ped.a + off;
     for (const d of [30, 48]) {
@@ -218,7 +222,15 @@ export function whenOf(world) {
 
 // ---- the gear -------------------------------------------------------------------------------------------------------
 const hasRod = (prof) => (id) => (id === 'rod' ? prof.weapons.rod !== undefined : (prof.inventory[id] || 0) > 0);
-export function canFish(p) { return FS.ROD_IDS.some(hasRod(p.profile)); }
+export function canFish(p) { return FS.ownsRod(p.profile); }
+export const rodInHand = (ped) => !!ped && ped.weapon === 'rod';
+// the bag's Use on a rod (economy.js useItem): the rod in your hand - the rod's weapon slot (shared/fish.js takeable)
+export function takeOut(world, p) {
+  const ped = p.ped;
+  if (!ped || ped.dead || !canFish(p)) return;
+  if (ped.weapon === 'rod') { world.notify(p, 'Your rod is already in your hand - face the water to fish.', 'info'); return; }
+  combat.selectWeapon(world, ped, 'rod');
+}
 function baitFor(prof, water, when) {
   const have = (id) => prof.inventory[id] || 0, night = when === 'night';
   const ok = (id) => id && FS.BAITS[id] && have(id) > 0 && (!FS.BAITS[id].night || night);
@@ -230,12 +242,12 @@ const creelOf = (prof) => (prof.creel ||= []);
 export function begin(world, p, spot) {
   const ped = p.ped, prof = p.profile;
   if (!canFish(p)) { world.notify(p, 'You need a fishing rod - a bait shop or a sports store sells them.', 'warn'); return; }
+  if (!rodInHand(ped)) return;   // (the prompt's only offered with the rod out: players.js fishHere)
   if (creelOf(prof).length >= FISHING.creel) { world.notify(p, `Your cooler's full (${FISHING.creel} fish) - sell your catch at a fish market or a bait shop.`, 'warn'); return; }
   ped.a = spot.a;
   const when = whenOf(world), hab = habitatAt(world, spot.x, spot.y, { ug: ped.ug === UG.CAVE, boat: !!spot.boat, night: when === 'night' });
   const rod = FS.rodFor(hasRod(prof), hab.water) || 'rod';
-  ped.fishing = { F: FS.newFight(), P: null, a: spot.a, sx: spot.x, sy: spot.y, x: spot.x, y: spot.y, boat: spot.boat || 0, rod, seq: p.lastInput ? p.lastInput.seq : -1, at: world.time, held: ped.weapon };
-  ped.weapon = 'rod';   // (the rod in your hands: the 'fish' pose holds it out - client/art2/game/peds.js)
+  ped.fishing = { F: FS.newFight(), P: null, a: spot.a, sx: spot.x, sy: spot.y, x: spot.x, y: spot.y, boat: spot.boat || 0, rod, seq: p.lastInput ? p.lastInput.seq : -1, at: world.time };
   p.meDirty = true;
 }
 // One input's step: the button held and pressed. true: fishing took the action button.
@@ -305,9 +317,7 @@ function finish(world, p, ped, L, ph0) {
   end(p, ped);
 }
 function end(p, ped) {
-  const L = ped.fishing, W = p.profile.weapons;
-  ped.fishing = null;
-  if (L && W.rod === undefined) ped.weapon = L.held && W[L.held] !== undefined ? L.held : 'fists';   // (a rod from the bag goes back in it)
+  ped.fishing = null;   // (the rod stays in your hand: put it away like any weapon)
   p.meDirty = true;
 }
 const KOI = new Set(['koi', 'goldenkoi']);
@@ -349,6 +359,7 @@ export function cancel(world, p, msg) {
 export function tick(world) {
   for (const p of world.players.values()) {
     const ped = p.ped, L = ped && ped.fishing;
+    if (ped && ped.weapon === 'rod' && !L && !canFish(p)) { ped.weapon = 'fists'; p.meDirty = true; }   // (the last rod sold or lost: out of your hand)
     if (!L || !L.F) continue;
     if (L.boat) { const v = world.get(L.boat); if (!v || ped.vehId !== L.boat || Math.hypot(v.vx, v.vy) > 60) { cancel(world, p, 'You pulled your line in.'); continue; } }
     else if (ped.vehId || ped.dead || ped.board) { cancel(world, p, null); continue; }

@@ -149,6 +149,13 @@ export const RODS = {
   gameRod: { name: 'Big-Game Rod', cast: 7, bar: 0.31, reel: 1.2, lb: 2500, best: ['offshore', 'deep'] },
 };
 export const ROD_IDS = Object.keys(RODS);
+// A rod of any kind: the Fishing Pole's weapon slot, or a rod in the bag. You fish with the rod IN HAND (the owner,
+// 11-16: "You should have your fishing pole equipped before it prompts you to fish") - the 'rod' weapon, taken out like
+// any weapon (the weapon keys, the wheel, the bag's Use on a rod); a rod from the bag takes the rod's slot, and the rod
+// made for the water is the one that casts (rodFor).
+export const ownsRod = (prof) => !!prof && ROD_IDS.some((id) => (id === 'rod' ? prof.weapons.rod !== undefined : (prof.inventory[id] || 0) > 0));
+// the weapons you can take out: your weapon slots, and the rod's whenever you own a rod (server combat.js, the me record)
+export const takeable = (prof) => { const ids = Object.keys(prof.weapons); if (prof.weapons.rod === undefined && ownsRod(prof)) ids.push('rod'); return ids; };
 // which of your rods you fish with here: the strongest of those made for this water, else the strongest you have
 export function rodFor(have, water) {
   const ids = ROD_IDS.filter((id) => have(id));

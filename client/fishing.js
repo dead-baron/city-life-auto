@@ -26,6 +26,12 @@ export class FishView {
   // what the server sent while this was loading
   drain() { const q = this.S.fishQ || []; while (q.length) { const x = q.shift(); if (x.t === 'fish') this.showCard(x); else this.onEvent(x); } }
   get P() { const m = this.S.me && this.S.me.fishing; return m && m.P ? m.P : null; }
+  // a line out from this person's rod (yours: cast and not yet done; another's: from the 'cast' event) - the page draws it,
+  // tip to bobber, so their sprite holds the rod out with none of its own (client/main.js fishFrame)
+  lineOut(id) {
+    if (id === this.S.myPedId) { const F = this.F; return !!F && F.ph >= PH.WAIT && F.ph < PH.DONE; }
+    return this.lines.has(id);
+  }
 
   // ---- your own line: predicted --------------------------------------------------------------------------------------
   // the snapshot: the server's fight at the input it last took, then the inputs it hasn't had, again

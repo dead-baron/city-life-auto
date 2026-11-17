@@ -28,6 +28,7 @@ import * as bounties from './bounties.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as fishing from './fishing.js';   // (the rod, the bite, the fight: task #277)
+import { takeable } from '../../shared/fish.js';
 import * as picking from './picking.js';
 import * as foraging from './foraging.js';
 import * as hunting from './hunting.js';
@@ -855,11 +856,15 @@ function tackle(world, ped) {
 
 // ---------------------------------------------------------------------------
 // Context-sensitive interaction (GDD §13: E key manages context interactions)
-// with a rod, facing the water (or still in a boat): fish here - press and hold to charge the cast (fishing.js)
+// with a rod IN HAND, facing the water from the bank, a dock or a boat sitting still (never swimming): fish here - press
+// and hold to charge the cast (fishing.js). A rod in the bag only: no prompt - the first time by the water, the
+// first-time moment says to take it out (ftue.js MOMENTS.rod); the Guide has the rest (the owner, 11-16).
 function fishHere(world, p, ped) {
   if (!fishing.canFish(p) || ped.fishing) return null;
   const spot = fishing.spotFor(world, ped);
-  return spot ? { label: spot.boat ? 'Fish over the side (hold to cast)' : 'Fish here (hold to cast)', run: () => fishing.begin(world, p, spot) } : null;
+  if (!spot) return null;
+  if (!fishing.rodInHand(ped)) { ftue.moment(world, p, 'rod'); return null; }
+  return { label: spot.boat ? 'Fish over the side (hold to cast)' : 'Fish here (hold to cast)', run: () => fishing.begin(world, p, spot) };
 }
 export function findInteraction(world, p) {
   const ped = p.ped;
@@ -1192,7 +1197,7 @@ function armorBar(prof) { const A = armor.worn(prof); return A ? [Math.round(A.p
 export function buildMe(world, p) {
   const ped = p.ped;
   const prof = p.profile;
-  const weapons = Object.keys(prof.weapons).filter((id) => WEAPONS[id]).map((id) => ({
+  const weapons = takeable(prof).filter((id) => WEAPONS[id]).map((id) => ({   // (a rod in the bag: the rod's slot - shared/fish.js)
     id, ammo: prof.weapons[id] || 0, mag: ped ? (ped.mag[id] || 0) : 0,
   }));
   const inv = {};
