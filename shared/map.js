@@ -404,7 +404,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildBoatDocks(m); unpin();
   buildSignals(m);
   buildStreetAtms(m);
-  if (OPTS?.shops) { ATM_PG = propGrid(m); try { OPTS.shops(m, { addProp, removeProps, simpleBuilding, wallAtm: (b, x, look, loose) => wallAtm(m, b, x, look, false, loose) }); } finally { ATM_PG = null; } }   // (World v3: shops where you need them - shared/world3-shops.js)
+  if (OPTS?.shops) { ATM_PG = propGrid(m); try { OPTS.shops(m, { addProp, removeProps, simpleBuilding, walkInRoom, WALK_IN, wallAtm: (b, x, look, loose) => wallAtm(m, b, x, look, false, loose) }); } finally { ATM_PG = null; } }   // (World v3: shops where you need them - shared/world3-shops.js)
   m.atms = m.pois.filter((p) => p.kind === 'atm');
   if (WD) {
     const L = breakPlainBlocks(m);   // (World v3: no huge plain buildings - the owner, 11-03)

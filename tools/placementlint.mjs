@@ -74,7 +74,7 @@ import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameNam
 import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
 import { textAudit } from './textaudit.mjs';
 import { WALK_IN } from '../shared/map.js';
-import { badgeAt } from '../client/art2/game/host.js';
+import { badgeOf } from '../client/art2/game/host.js';
 
 // what the test lets by, each explained (else what the lint found is fixed in the data)
 export const LINT_ALLOW = {
@@ -391,7 +391,7 @@ function artRows(M, rows, seen) {
       if (!pl.length) continue;
       const cov = coversOf(f);
       for (const p of pl) {
-        const d = doorOf.get(p.id), B = d ? badgeAt(d[0], d[1]) : { x: p.x, y: p.y - 64, size: 24 }, h = B.size / 2;
+        const d = doorOf.get(p.id), B = badgeOf(M, p, d ? { x: d[0], y: d[1] } : null), h = B.size / 2;
         const r = [B.x - h, B.y - h - 2, B.x + h, B.y + h + 2];   // (and its bob)
         for (const q of cov) if (hit2(q.r, r) && Math.min(r[2], q.r[2]) - Math.max(r[0], q.r[0]) >= 3 && Math.min(r[3], q.r[3]) - Math.max(r[1], q.r[1]) >= 3) rows.signCovered.push({ what: `${p.label || p.kind}'s badge over ${f.b.name || f.b.kind}'s ${q.k} "${q.t}"`, x: B.x, y: B.y });
       }
