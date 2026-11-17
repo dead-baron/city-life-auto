@@ -295,6 +295,8 @@ const WALLF = {
   board: (x, v, w, h) => (frame(x, v, w, h) ? [70, 52, 40] : v % 6 === 3 && x > 3 && x < w - 4 && (x % 14) < 9 + (hash(x / 14 | 0, v, 1649) * 4 | 0) ? [236, 232, 220] : [36, 44, 40]),
   chalk: (x, v, w, h) => (frame(x, v, w, h) ? [110, 76, 46] : v % 6 === 3 && x > 3 && x < w - 4 && (x % 12) < 7 + (hash(x / 12 | 0, v, 1651) * 4 | 0) ? [230, 228, 214] : [34, 40, 38]),
   frames: (x, v, w, h) => (v % 12 < 2 ? [214, 210, 200] : v % 12 > 3 && v % 12 < 8 && ((x % 14 > 1 && x % 14 < 6) || (x % 14 > 7 && x % 14 < 12)) ? (x % 14 === 2 || x % 14 === 5 || x % 14 === 8 || x % 14 === 11 || v % 12 === 4 || v % 12 === 7 ? rgb(['#2a2a2e', '#8a2a2a', '#c8a050', '#2a5a8a'][(x / 14 | 0) % 4]) : [200, 220, 230]) : [236, 232, 224]),
+  // the Employment Center's job board: cards and notices pinned on cork (shared/shoprooms.js FIT.jobs)
+  jobs: (x, v, w, h) => { if (frame(x, v, w, h, 2)) return [120, 84, 50]; const cx = x % 16, cv = v % 14, k = (x / 16 | 0) * 7 + (v / 14 | 0) * 3; if (cx > 1 && cx < 14 && cv > 1 && cv < 13 && hash(k, 1, 1671) > 0.2) { if (cv === 11 && cx > 6 && cx < 9) return [200, 40, 44]; return cv < 9 && cv % 2 === 1 && cx > 3 && cx < 12 ? [96, 96, 104] : rgb(['#f4f0e0', '#fff3a8', '#cfe8ff', '#ffd6e0'][k % 4]); } return (x + v) % 3 ? [176, 132, 84] : [160, 118, 72]; },
   files: (x, v, w, h) => (x % 18 > 15 ? null : v % 11 < 1 || x % 18 < 1 || x % 18 > 14 ? [110, 114, 120] : v % 11 === 5 && x % 18 > 5 && x % 18 < 10 ? [60, 60, 64] : [160, 164, 170]),
   // a brass wall lamp with its lit shade
   // the club's (NE9): the screen behind the DJ - a lit wall of colour bars; a speaker cabinet; a neon tube up the wall

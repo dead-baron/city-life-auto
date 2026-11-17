@@ -165,6 +165,8 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
     else if (kind === 'flag') bump(d.flags, data.kind);
     else if (kind === 'rank') bump(d.act, `rank:${data.career}:${data.rank}`);   // (a career rank-up: server/systems/careers.js)
     else if (kind === 'chat') { bump(d.act, 'chat:' + data.ch); if (p && p.acct) ftue(p, p.acct, 'first_chat'); }
+    else if (kind === 'ad') bump(d.act, 'ad:' + key(data.st));   // (the job computer's rewarded ad: paid, refused, or how Google's break ended - systems/jobcenter.js)
+    else if (kind === 'office') bump(d.act, 'office:' + (data.pay > 0 ? 'paid' : 'none'));   // (a round of office work at the Employment Center)
   }
   function perf(r) {
     if (!r) return;

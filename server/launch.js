@@ -38,6 +38,7 @@ const LEISURE = { arcade: 'arcade', chess: 'chess', mus: 'music', racebook: 'rac
 export function createLaunch(opts) {
   const { config, store, world } = opts;
   const L = config.launch, now = opts.now || Date.now, log = opts.log || console, secret = config.secret;
+  world.ads = L.ads || { mode: 'off', client: '' };   // (the job computer's rewarded ad: server/systems/jobcenter.js)
   const signOutCloseMs = opts.signOutCloseMs ?? 1500;
   const dataDir = opts.dataDir === undefined ? config.dataDir : opts.dataDir;
   const accounts = createAccounts({ store, secret, now });
@@ -263,6 +264,8 @@ export function createLaunch(opts) {
     else if (kind === 'crewed' && d.other) chat.addContact(p, d.other, 'crew');
     else if (kind === 'danced') chat.announce(world, p, 'dance');   // (started dancing: "Ann started dancing" to the people near - systems/dance.js)
     else if (kind === 'ftue') analytics.ftue(p, p.acct, d.step);
+    else if (kind === 'ad') { analytics.event('ad', p, { st: d.st }); note(p.acct, 'ad', `${d.st}${d.n ? ` (${d.n} today)` : ''}`); }   // (the job computer's rewarded ad: systems/jobcenter.js)
+    else if (kind === 'office') analytics.event('office', p, { right: d.right, pay: d.pay });   // (a round of office work: systems/jobcenter.js)
     else if (kind === 'rank') { analytics.event('rank', p, { career: d.career, rank: d.rank }); note(p.acct, 'rank', `${d.career} ${d.rank}`); }   // (careers.js rankUp)   // (the first-time experience's funnel: systems/ftue.js)
   };
 

@@ -66,6 +66,9 @@ ask CLA_CONTACT "The contact email players can write to (account deletion, quest
 echo; echo "== Google Analytics 4 (section 5)"
 ask GA_MEASUREMENT_ID "GA4 measurement ID (starts with G-)" 0
 ask GA_API_SECRET "GA4 Measurement Protocol API secret" 1
+echo; echo "== Ads (opt-in rewarded ads at the job computer - only once Google approves H5 Games Ads)"
+ask CLA_ADSENSE_CLIENT "Your AdSense publisher id (starts with ca-pub-)" 0
+ask CLA_ADS "Ads: off (the default), test (Google's test ads only) or on" 0
 echo; echo "== The owner's account (section 6) - optional"
 ask CLA_OWNER_ID "Your account id (in the game: Settings -> Account)" 0
 
@@ -98,4 +101,6 @@ ga=$(printf '%s' "$out" | grep -o '"ga":"[^"]*"' | cut -d'"' -f4)
 echo "  Google Analytics: ${ga:-off}"
 dc=$(printf '%s' "$out" | grep -o '"discord":"[^"]*"' | cut -d'"' -f4)
 echo "  The Discord button: ${dc:-off}"
+ads=$(printf '%s' "$out" | grep -o '"ads":{"mode":"[a-z]*"' | cut -d'"' -f6)
+echo "  Ads at the job computer: ${ads:-off}"
 if [ -n "$(current BUG_WEBHOOK_URL)" ]; then echo "  Bug reports to Discord: on"; else echo "  Bug reports to Discord: off (kept on the server, at /admin/bugs)"; fi

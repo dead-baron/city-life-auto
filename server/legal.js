@@ -13,6 +13,7 @@ const shell = (title, body) => `<!doctype html><meta charset="utf-8"><meta name=
 ${body}</main>`;
 
 export function privacyPage(L, { ga = false } = {}) {
+  const ads = !!(L.ads && L.ads.mode !== 'off');   // (the job computer's opt-in ad: server/config.js CLA_ADS)
   const pr = enabledProviders(L), contact = esc(L.contact || '[contact email - to be added before launch]'), post = L.mailAddress ? esc(L.mailAddress) : '';   // (no postal address yet: the owner sends no news mail till he has one - 11-14)
   const signins = ['as a guest (no sign-up)', 'with an email and password', pr.google ? 'with Google' : null, pr.discord ? 'with Discord' : null, 'with a passkey (your device\'s fingerprint, face or PIN)'].filter(Boolean).join(', ');
   return shell('Privacy Policy', `
@@ -43,8 +44,15 @@ export function privacyPage(L, { ga = false } = {}) {
 <li>The server counts how the game is played, in totals by day (sessions, jobs, money sources, deaths, devices and frame rates), plus a few counters on each account (first and last day played). This stays on our server.</li>
 <li><b>Google Analytics 4</b> ${ga ? 'is switched on' : 'is not switched on at the moment; if it is,'}: it loads only if you choose <b>Accept</b> on the first screen (Essential only keeps it off), with ad features off. Google gets a hashed account id, never your name or email. You can change your choice in Settings.</li>
 </ul>
+${ads ? `<h2>Ads (only if you choose to watch one)</h2>
+<ul>
+<li>The game shows no ads on its own. At the Employment Center's job computer you can choose to watch a short ad for in-game cash (at most a few a day). Only then does the page load <b>Google's</b> ads code (the H5 Games Ads of Google AdSense) and Google show the ad.</li>
+<li>Google may use cookies or your device's storage to show the ad, count it and stop fraud. We ask Google for <b>non-personalized</b> ads only: they're picked by the game and the rough location, not by a profile of you. In the EEA, the UK and Switzerland, Google asks for your consent first, in its own message.</li>
+<li>We don't send Google your name, email or account; we only learn that an ad was watched (to pay the reward), and keep a count.</li>
+<li>To opt out, don't press "Watch an ad". To see or change how Google uses cookies for ads, visit <a href="https://policies.google.com/technologies/ads">policies.google.com/technologies/ads</a> and <a href="https://adssettings.google.com">adssettings.google.com</a>.</li>
+</ul>` : ''}
 <h2>What we don't keep</h2>
-<ul><li>We don't keep IP addresses. The server sees your address while you're connected and uses it in memory to limit abuse (too many tries); it isn't written down.</li><li>We don't sell anything about you, and there are no ads.</li></ul>
+<ul><li>We don't keep IP addresses. The server sees your address while you're connected and uses it in memory to limit abuse (too many tries); it isn't written down.</li><li>We don't sell anything about you${ads ? '' : ', and there are no ads'}.</li></ul>
 <h2>How long</h2>
 <p>Your account and character are kept while the game runs, so you can come back. Season resets wipe progress but keep the account. The server's analytics totals are kept for ${Math.round(DAYS_KEPT / 365)} years; Google Analytics keeps its data for 14 months.</p>
 <h2>Deleting your account, unsubscribing</h2>

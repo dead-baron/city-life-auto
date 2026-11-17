@@ -22,6 +22,7 @@ import * as events from './systems/events.js';
 import * as gangwar from './systems/gangwar.js';
 import * as paint from './systems/paint.js';
 import * as phone from './systems/phone.js';
+import * as jobcenter from './systems/jobcenter.js';
 import * as ems from './systems/ems.js';
 import * as tow from './systems/tow.js';
 import * as revive from './systems/revive.js';
@@ -189,6 +190,7 @@ const SYSTEMS = [
   ['tennis', tennis.update],        // tennis with the club pro on any tennis court (tennis.js)
   ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
   ['phone', phone.update],          // phone job board + police patrol calls
+  ['jobcenter', jobcenter.update],  // the Employment Center: an office round's time up, a desk walked away from
   ['ems', ems.update],              // ambulances + 45s cleanup loop
   ['revive', revive.update],        // holding to revive / finish a downed player, the limp afterwards
   ['carsoccer', carsoccer.update],  // car soccer at the arena: the lobby, kick-offs, the clock, the boost, the city's drivers at the wheel

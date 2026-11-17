@@ -39,7 +39,7 @@ const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
   FT = m;
   return m;
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
-import { initAudio, preloadAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
+import { initAudio, preloadAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus, soundOn, hushFor } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild, onVisible, retryDelay, holdFrame, PROBE_MS } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
@@ -493,7 +493,7 @@ function onText(m) {
       if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); if (S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('dev'); } }
       { const g = document.getElementById('dev-god'); if (g) g.classList.toggle('on', !!m.god); }
       break;
-    case 'menu': S.hud.openMenu(m); break;   // (a counter, a shop, someone to talk to - and the first-time experience's question: m.ask)
+    case 'menu': S.hud.openMenu(m); if (m.ad) adsFor(m.ad); break;   // (a counter, a shop, someone to talk to - and the first-time experience's question: m.ask; the job computer's ad: client/ads.js)
     case 'ftue': loadFtue().then((f) => f.onMsg(m)).catch(() => {}); break;   // the first-time experience: the arrival, the first goal's end, a first-time moment (client/ftue.js)
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
     case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; if (!drawStarView) import('./stargaze.js').then((mod) => { drawStarView = mod.drawStarView; }).catch((e) => console.warn('[stargaze]', e)); break;   // (the observatory: the night sky through the eyepiece)
@@ -1324,7 +1324,7 @@ function setupWorld(seed, here = false, given = null) {
   S._hw = null;
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.spec = newSpectator(S.map);   // (the free camera: made the first time it's used - client/spectator.js loads then)
-  S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), (m) => { if (m && m.ask) send({ t: 'menu', poi: m.poi, opt: 'close' }); });   // (a question closed unanswered - the first-time experience's: server/systems/ftue.js)
+  S.hud = new HUD(S.map, (poi, opt) => { if (opt.startsWith('ad:')) watchAd(opt.slice(3)); else send({ t: 'menu', poi, opt }); }, (m) => { if (m && m.ask) send({ t: 'menu', poi: m.poi, opt: 'close' }); });   // (a question closed unanswered - the first-time experience's: server/systems/ftue.js)
   S.hud.setInfoCtx({ pos: selfPos, self: () => worldToScreen(selfPos()), pid: () => S.pid }); S.hud.openLog = () => openHub('phone', 'log'); S.hud.openJob = () => { if (S.playing) openHub('phone', 'jobs'); };   // (client/hudinfo.js; a note cut short: the Log; the job card tapped: the phone's Jobs, the job you're on at the top with Quit job)
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.router = createRouter(S.map);   // the GPS route to your waypoint (client/route.js)
@@ -2054,6 +2054,18 @@ function bugApi() {
 }
 // The player Discord (/launch.json discord - server/config.js CLA_DISCORD_INVITE): the title's DISCORD and Settings' Join
 // our Discord, only when it's set; a new tab
+// the job computer's rewarded ad (client/ads.js, only when the server's ads are on - never on a portal): its module and
+// Google's script loaded when the computer first offers one; pressed, the ad asked for right then (the server pays)
+let adsMod = null, adsLoading = null;
+function adsFor(cfg) {
+  if (adsMod) { adsMod.load(cfg); return; }
+  adsLoading ||= import('./ads.js').then((A) => { adsMod = A.createAds({ win: window, doc: document, send, toast: (t, tone) => { if (S.hud) S.hud.toast(t, tone); }, sound: soundOn, hush: hushFor }); return adsMod; }).catch((e) => { adsLoading = null; console.warn('[ads]', e); });
+  adsLoading.then((a) => { if (a) a.load(cfg); });
+}
+function watchAd(tk) {
+  if (!adsMod || !adsMod.state.added) { if (S.hud) S.hud.toast('Ads aren\'t available right now.', 'warn'); return; }
+  adsMod.reward(tk);
+}
 function discordLinks(url) {
   if (!/^https:\/\/(discord\.gg|(www\.)?discord\.com\/invite)\//.test(url || '')) return;
   S.discord = url;
