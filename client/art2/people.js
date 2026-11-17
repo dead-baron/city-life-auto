@@ -250,7 +250,7 @@ function dims(A) {
     pelR: [6.4 * w * (fem ? 1.12 : 1) * WK, 4.6 * w, 4.6], waistR: [(6.7 * w * (fem ? 0.8 : 0.97) + bel * 1.4) * WK, 4.7 * w + bel * 1.2, 5.1], waistUp: 4.5 * h,
     chestR: [8.4 * w * (1 + mu * 0.1) * (fem ? 0.94 : 1.02) * WK, 5.3 * w * (1 + mu * 0.08), 6.6 * h], chestUp: 9.4 * h,
     shX: 8.3 * w * (1 + mu * 0.1) * (fem ? 0.95 : 1.03) * WK, shUp: 13.6 * h, shBar: 3.5 * w * (1 + mu * 0.08), neckUp: 15.8 * h, neckR: 2.0 * w * (1 + mu * 0.25),
-    head: (fem ? [5.5, 5.5, 5.8] : [5.72, 5.68, 6.03]).map((v, i) => v * HK * (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[i]), headUp: 5.8 * HK,
+    head: (fem ? [5.5, 5.5, 5.8] : [5.72, 5.68, 6.03]).map((v, i) => v * HK * (A.headK || 1) * (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[i]), headUp: 5.8 * HK * (A.headK || 1),
     jawW: (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[3], age: A.age | 0,
     upper: 8.8 * h * AK, fore: 7.4 * h * AK, armR: [2.95 * lm * (1 + mu * 0.2) * TK, 2.55 * lm * (1 + mu * 0.12) * TK], foreR: [2.5 * lm * (1 + mu * 0.15) * TK, 2.0 * lm * TK], fist: 2.6 * lm * (fem ? 0.93 : 1) * TK,
     thighR: [3.7 * lm * (fem ? 1.06 : 1) * TK, 3.0 * lm * TK], shinR: [2.85 * lm * TK, 2.3 * lm * TK], foot: fem ? [2.45, 4.3, 2.15] : [2.9, 4.95, 2.5],
@@ -793,14 +793,40 @@ function statueApp(A) {
   const re = (o, k) => (o ? { ...o, color: BRONZE[k], color2: BRONZE[(k + 1) % 4], inner: BRONZE[(k + 2) % 4], trim: BRONZE[(k + 3) % 4], tie: BRONZE[3], sleeve: o.sleeve ? BRONZE[k] : o.sleeve, pattern: null } : o);
   return { ...A, bronze: true, top: re(A.top, 0), bottom: re(A.bottom, 1), hat: re(A.hat, 2), shoes: BRONZE[3], shoeTrim: BRONZE[2], hair: { ...(A.hair || {}), color: BRONZE[0] }, chain: null, jewel: null, glassColor: BRONZE[3], bagColor: BRONZE[1], backColor: BRONZE[1], tattoo: 0 };
 }
+// The founder's Dead Baron look (server/founder.js; game/peds.js app.fd)
+export const FOUNDER = Object.freeze({ seed: 7, skin: 0, founder: 1, fem: false, headK: 1.24, body: { h: 1.03, w: 0.74, limb: 0.5 }, hair: { style: 'bald', color: '#efe6cf' }, top: { kind: 'none' }, bottom: { kind: 'none' }, shoes: '#efe6cf', shoeKind: 'barefoot', glasses: 'round', glassForm: 'founder', glassColor: '#5c1f6e', lens: '#ff8ae6', fmask: { k: 'skull', c: '#f2ead6', t: '#2a2024' }, wings: '#2ec8e6' });
+const BONE = [[70, 52, 72], [150, 136, 138], [208, 198, 180], [238, 232, 214], [253, 250, 240]], BONE_GAP = cloth('#241a2c'), WTIP = cloth('#d4f8ff'), WIN = cloth('#1683b0'), WCOV = cloth('#7ee6f6');
+function boneTorso(Q, D, au, z, front, back) {
+  const r0 = D.waistUp + 0.4, r1 = D.chestUp + 2.4;
+  if (z > r1) return BONE;
+  if (z < r0) return (front || back) && au < 0.14 ? BONE : BONE_GAP;
+  if (au < (front ? 0.09 : 0.12) && (front || back)) return BONE;
+  const t = (z - r0) / 2.2;
+  if (t - Math.floor(t) > 0.5 || au > 0.9) return BONE_GAP;
+  if (front && au < 0.24) Q.k -= 0.14;
+  return BONE;
+}
+function founderWings(E, A, D, S, P) {
+  const wc = cloth(A.wings), beat = P.gait ? Math.sin(2 * Math.PI * (P.ph || 0)) : 0, up = P.gait ? 0.5 + beat * 0.2 : 0.7;
+  for (const s of [-1, 1]) {
+    const root = vadd(S.chest, mv(S.SP, [s * D.chestR[0] * 0.45, -(D.chestR[1] + 1.3), 3.6]));
+    const row = (rx, rz, dz, back, tilt, part, fn, scal) => {
+      const F = mmul(S.SP, ry(-s * (up + tilt)));
+      E(vadd(root, mv(F, [s * rx * 0.92, -back, dz])), F, [rx, 1.0, rz], GR.ACC, part, (Q) => fn(Q, (Q.l0 * s + 1) / 2), scal ? (a, b, c) => c > -0.96 + 0.5 * Math.abs(Math.sin((a + 1) * Math.PI * scal)) : null);
+    };
+    row(13.5, 4.4, -1.4, 0, 0.06, 'wing', (Q, t) => { if (t > 0.72) { Q.e = [120, 230, 255, 70]; return WTIP; } if (Math.abs(((t * 7) % 1) - 0.5) < 0.1 && Q.l2 < 0.3) Q.k -= 0.28; return wc; }, 3.5);
+    row(9.5, 3.4, -2.2, -0.7, -0.08, 'wing2', (Q, t) => { if (Math.abs(((t * 6) % 1) - 0.5) < 0.12) Q.k -= 0.25; return WIN; }, 3);
+    row(5.6, 2.6, 0.8, -1.3, 0.04, 'wing3', (Q) => { Q.k += 0.08; return WCOV; }, 2);
+  }
+}
 function wardrobe(A, D, TF, seed) {
   if (A.carry === 'statue') A = statueApp(A);
   let tk = A.top?.kind || 'tee', bk = A.bottom?.kind || 'jeans';
-  if (A.censored) {   // the "censored nudity" setting: swimwear instead of nothing
+  if (A.censored && !A.founder) {   // the "censored nudity" setting: swimwear instead of nothing
     if (tk === 'none' && D.fem) tk = 'bikini';
     if (bk === 'none') bk = D.fem ? 'bikini' : 'trunks';
   }
-  const T = TOP[tk] || TOP.tee, skin = A.bronze ? BRONZE_SKIN : SKIN[clamp(A.skin ?? 1, 0, SKIN.length - 1) | 0];
+  const T = TOP[tk] || TOP.tee, skin = A.founder ? BONE : A.bronze ? BRONZE_SKIN : SKIN[clamp(A.skin ?? 1, 0, SKIN.length - 1) | 0];
   const top = cloth(A.top?.color || (tk === 'bikini' || tk === 'swimsuit' ? 'teal' : tk === 'towel' ? 'white' : 'grey')), top2 = cloth(A.top?.color2 || 'white');
   const bot = cloth(A.bottom?.color || (bk === 'jeans' ? 'denim' : bk === 'trunks' || bk === 'bikini' ? (A.top?.color || 'red') : bk === 'towel' ? 'white' : 'black'));
   const shoeC = A.shoes || 'white', shoe = cloth(shoeC), sk = SHOE_OF(shoeC, A);
@@ -808,7 +834,7 @@ function wardrobe(A, D, TF, seed) {
   const hasInner = !!A.top && 'inner' in A.top, trim = cloth(A.top?.trim || 'white'), chainR = typeof A.chain === 'string' ? cloth(A.chain) : null;
   const tat = A.tattoo === true ? 3 : A.tattoo | 0, jw = A.jewel || null, jwR = jw ? cloth(jw.color || 'gold') : null;
   const fm = A.fmask ? A.fmask.k : null, fmC = fm ? cloth(A.fmask.c) : null, fmHead = fm === 'pig' || fm === 'alien';   // (CP2's masks)
-  const W = { T, tk, bk, skin, top, top2, bot, shoe, sk, hairR, seed, bare: bk === 'none' || (tk === 'none' && D.fem) };
+  const W = { T, tk, bk, skin, top, top2, bot, shoe, sk, hairR, seed, bare: !A.founder && (bk === 'none' || (tk === 'none' && D.fem)) };
   const dark = (R) => R[Math.max(0, R.length - 4)], gold0 = cloth('gold'), white = cloth('white'), black = cloth('black'), silver = cloth('#c8ccd4');
   const gold = gold0, chainC = chainR || gold0;
   // the look system's patterns (shared/look.js PATTERNS), in model space so they run on across the seams: main colour,
@@ -841,6 +867,7 @@ function wardrobe(A, D, TF, seed) {
   W.torso = (Q) => {
     tco(TF, Q);
     const u = Q.u, au = Math.abs(u), f = Q.f, z = Q.z, front = f > 0.05, back = f < -0.35;
+    if (A.founder) return boneTorso(Q, D, au, z, front, back);
     if (W.bare && tk === 'none' && D.fem) return skin;
     if (T.crop && z < D.waistUp + 0.9) return skin;                                              // a bare midriff
     if (T.tube && z > D.chestUp + 1.4) return (tat & 8) && front && au > 0.35 && hash(Math.floor(u * 9), Math.floor(z), seed + 3) > 0.6 ? ink : skin;
@@ -937,6 +964,7 @@ function wardrobe(A, D, TF, seed) {
     const hemZ = T.tuck ? 2.4 : T.bare || T.bikini || T.towel || T.crop ? 9 : T.tank ? 0.4 : -0.9;
     if (z > hemZ + (T.tuck ? 0.9 : 0)) return W.torso(Q);
     if (T.tuck && z > hemZ - 0.2) { if (front && au < 0.12) { Q.gloss = 1; return T.duty ? silver : gold; } return T.duty ? black : cloth('#3a2a22'); }
+    if (A.founder) return z > 1.6 ? (au < 0.12 ? BONE : BONE_GAP) : (front && au < 0.16 && z < 0.4) || au > 0.86 ? BONE_GAP : BONE;
     if (bk === 'none') return skin;
     if (bk === 'bikini') return z > 1.3 || (au > 0.5 && z > -1.5) ? skin : bot;
     if (bk === 'trunks' && z > 2.4) return skin;
@@ -981,6 +1009,7 @@ function wardrobe(A, D, TF, seed) {
     if (gl && along > 0.88) return gl;
     if (jw && jw.cuffband && Q.part === 'fa' && along > 0.78 && along < 0.9) return jwR;
     if (jw && Q.part === 'fa' && ((jw.watch && along > 0.82 && along < 0.88) || (jw.bangles && ((along > 0.8 && along < 0.83) || (along > 0.85 && along < 0.88))))) { Q.gloss = 1; return jwR; }
+    if (A.founder) { if (Math.abs(along - 0.5) < 0.06 || along > 0.93) Q.k -= 0.2; else if (Q.part === 'fa' && Math.abs(Q.l1) < 0.12) Q.k -= 0.32; return skin; }
     if ((tat & 1) && along > 0.25 && along < 0.85 && hash(Math.floor(along * 14), Math.floor((Q.l1 + 2) * 2.4), seed) > 0.55) return ink;
     return skin;
   };
@@ -990,6 +1019,7 @@ function wardrobe(A, D, TF, seed) {
   W.leg = (Q) => {
     const along = Q.part === 'th' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5, side = Q.l1 * Q.side;
     if (T.bib) return along > 0.94 ? dark(top) : top;
+    if (A.founder) { if (Math.abs(along - 0.5) < 0.07) Q.k -= 0.22; return skin; }
     if (legSkin || (bk === 'shorts' && along > 0.33) || (bk === 'trunks' && along > 0.18)) {
       if (bk === 'shorts' && along < 0.37) Q.k -= 0.2;
       if ((tat & 2) && along < 0.4 && side > 0.3 && hash(Math.floor(along * 16), Math.floor((Q.l2 + 2) * 2), seed + 1) > 0.6) return ink;
@@ -1037,6 +1067,7 @@ function wardrobe(A, D, TF, seed) {
   const bandana = A.bandana ? cloth(typeof A.bandana === 'string' ? A.bandana : 'red') : null, maskR = cloth(typeof A.mask === 'string' ? A.mask : '#24242a');
   W.head = (Q) => {
     const a = Q.l0, b = Q.l1, c = Q.l2;
+    if (A.founder) { if (Q.part === 'nose') return BONE_GAP; if (Q.part === 'jaw' && b > 0.25) { if (Math.abs(c + 0.05) < 0.16) return BONE_GAP; if (c < -0.05 && c > -0.6 && Math.abs(a) < 0.62 && ((Q.x >> 1) & 1)) return BONE_GAP; } return skin; }
     if (fm) {
       if (fmHead) return fmC;
       if (fm === 'clown' || fm === 'skull') { if (Q.part === 'nose') return fm === 'clown' ? cloth(A.fmask.t) : dark(fmC); if (b > 0.2 && c < 0.62) return fmC; }
@@ -1181,6 +1212,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     C(el, wr, D.foreR[0], D.foreR[1], g, 'fa', W.arm, null, side, mv(S.SP, [0, 1, 0])).side = 1;
     const open = P['open' + k];
     E(ha, frameFU(fd, side), open ? [D.fist * 0.62, D.fist * 1.25, D.fist * 0.95] : [D.fist * 0.95, D.fist * 1.06, D.fist], g, 'hand', W.hand);
+    if (P.peace && k === 'R') for (const t of [-1, 1]) C(vadd(ha, [0, 0, 0.8]), vadd(ha, mv(S.SP, [1.2 + t * 1.7, 0.6, 5.2])), 0.66, 0.52, g, 'finger', W.hand);
   }
   // legs and feet
   for (const [k, s, g] of [['L', -1, GR.LEGL], ['R', 1, GR.LEGR]]) {
@@ -1220,6 +1252,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.0), 0.6])), S.SP, [4.6, 2.4, 7.4], GR.ACC, 'pack', (Q) => { if (Math.abs(Q.l2 + 0.35) < 0.06 || Math.abs(Q.l0) > 0.9) Q.k -= 0.22; return W.pack(Q); });
     C(vadd(S.chest, mv(S.SP, [-4.8, -(D.chestR[1] + 2.0), 9.0])), vadd(S.chest, mv(S.SP, [4.8, -(D.chestR[1] + 2.0), 9.0])), 1.7, 1.7, GR.ACC, 'bedroll', MAT('#3a6a9a'));
   }
+  if (A.wings) founderWings(E, A, D, S, P);
   if (A.back === 'guitarcase') E(vadd(S.chest, mv(S.SP, [1.0, -(D.chestR[1] + 1.7), -1.6])), mmul(S.SP, ry(0.38)), [3.3, 1.5, 11.5], GR.ACC, 'gcase', (Q) => { Q.gloss = 0.4; if (Math.abs(Q.l2 + 0.25) < 0.05) Q.k -= 0.25; return cloth(A.backColor || 'black'); });
   if (A.jewel && A.jewel.bow) for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 0.75, D.chestR[1] + 0.45, D.chestR[2] - 0.7])), S.SP, [0.85, 0.5, 0.6], GR.ACC, 'bow', MAT(A.jewel.color));   // (a bow tie at the collar)
   if (A.rig) B(vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.8, -0.6])), S.SP, [3.8, 1.0, 2.3], GR.ACC, 'rig', (Q) => { if (Math.abs(Q.l0) < 0.05 || Math.abs(Q.l2 - 0.2) < 0.08) Q.k -= 0.25; return cloth(A.rig); });
@@ -1554,7 +1587,7 @@ const EYE = [34, 22, 30], WHITE = [236, 230, 222], LASH = [34, 22, 26];
 // the face's stamps at the game's size (face() stamp: an art pixel each - dx outward then dy down as digits from -1, a colour key)
 const EYE_ST = ['11i', '11i10l', '11i21d', '11i10s20s', '11i10l21w', '11i10d21d'], BROW_ST = ['', '10h20h', '20m', '1/m20m', '10m20m', '10h20h1/h00h'];
 const NOSE_ST = ['11s', '', '11d01l', '01d11d', '11d10s', '11k10l'], LIP_ST = ['11a', '11t', '11a21a', '01a11a21a', '01c11b21c', '11c'], SHAPE_ST = ['', '', '23j', '', '22c', '22c23j'];
-const GLS = { sun: '11G01F21F12D', 'sun+': '00F10F20F02D22D', avi: '10H11G01F21F12D22D', wrap: '11G01L21L31F', round: '10F01F21F12F11E', half: '11E01F21F12F',
+const GLS = { founder: '11G21L12L22L01F02F31F32F10F20F13F23F', sun: '11G01F21F12D', 'sun+': '00F10F20F02D22D', avi: '10H11G01F21F12D22D', wrap: '11G01L21L31F', round: '10F01F21F12F11E', half: '11E01F21F12F',
   frames: '00F20F01F21F02F22F11E', 'frames+': '10F12F', browline: '00F10F20F21T12T11E', rimless: '11E21W01W', roundsun: '10F01F21F12F11G',
   goggles: '00F10F20F01L11G21L31F02F12F22F', swim: '01F11G21F', safety: '00F10F20F01C11E21C', monocle: '10F01F21F12F11G22F23F', patch: '10F11F21F12F', domino: '01F21F31F10F20F12F11K' };
 export const CLOSE = { SA, CA, NOSE, WHITE, LASH, hexRgb, lum };   // (for client/art2/peopleclose.js)
@@ -1809,7 +1842,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
   // as the head turns away from the camera the near-side features slide back round it (pixel-art profiles keep the
   // eye a pixel inside the face's edge)
   const fh = Math.hypot(M[1], M[4]), turn = fh > 0.2 ? Math.abs(M[1]) / fh : 0, near = M[3] >= 0 ? 1 : -1;
-  const azE = (s) => (24 + (s === near ? 16 * turn : 0)) * Math.PI / 180;
+  const azE = (s) => ((A.founder ? 33 : 24) + (s === near ? 16 * turn : 0)) * Math.PI / 180;
   let eyes = [-1, 1].map((s) => { const a = azE(s); return { s, p: at(s * Math.sin(a), Math.cos(a) * 0.99, 0.12) }; }).filter((e) => e.p.fc > 0.28 && onHead(e.p.x, e.p.y));
   if (eyes.length === 2 && eyes[0].p.bx === eyes[1].p.bx) eyes = [eyes[0].p.fc > eyes[1].p.fc ? eyes[0] : eyes[1]];   // (one pixel wide: the nearer eye)
   const glasses = A.glasses, F = A.face || {}, mk = A.makeup || null, fm = A.fmask ? A.fmask.k : null;
@@ -1829,6 +1862,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
     const an = near * turn * 0.3, n = at(Math.sin(an), Math.cos(an), -0.2);
     stamp({ bx: n.bx, by: e0.by + 2 }, NOSE_ST[F.nose | 0], { s: skin[2], d: skin[1], k: skin[0], l: lit(skin[3], 0.3) });
   }
+  if (A.glassForm === 'founder' && !eyes.length) for (const sd of [-1, 1]) for (let t = 0; t <= 1; t += 0.1) { const az = (75 + t * 105) * Math.PI / 180, q = at(sd * Math.sin(az), Math.cos(az), 0.22); if (q.fc > 0) put(q, [176, 44, 150]); }   // (from behind: the band of his glasses)
   if (glasses && eyes.length) {
     // frames and lenses kept a step from the skin they sit on (dark frames on dark skin, gold on tan), a glint on the
     // left lens, the arms back to the ears; GLS: each kind's stamp round an eye
@@ -1838,6 +1872,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
     const K = { F: fcol, H: lit(fcol, 0.45), L: lens, D: lens.map((v) => Math.round(v * 0.6)), G: lit(lens, 0.5), E: mixC(eyeC, [206, 224, 238], 0.5), T: tcol, C: [196, 210, 216], W: mixC(skin[3], [240, 244, 248], 0.6), K: eyeC };
     const strap = (col, a0 = 50, a1 = 150) => { for (const s of [-1, 1]) for (let t = 0; t <= 1; t += 0.25) { const az = (a0 + t * (a1 - a0)) * Math.PI / 180, q = at(s * Math.sin(az), Math.cos(az), 0.14); if (q.fc > 0) put(q, col); } };   // (round the head at the eyes)
     if (gk === 'goggles' || gk === 'swim' || gk === 'safety') strap(gk === 'safety' ? tcol : fcol);
+    else if (gk === 'founder') strap(fcol, 60, 180);
     else if (turn > 0.35 && gk !== 'patch' && gk !== 'domino' && gk !== 'monocle') strap(fcol, 66, 100);
     const one = gk === 'monocle' || gk === 'patch' ? eyes.reduce((a, b) => (b.s > a.s ? b : a)) : null;
     if (gk === 'visor') {   // (a shield, mirrored in a rainbow, its rim under it)
@@ -1869,7 +1904,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
   // the face's shape at the game's size: a square jaw's corners, a heart's cheekbones, a diamond's both
   if (!covered0 && SHAPE_ST[F.shape | 0]) for (const e of eyes) stamp(e.p, SHAPE_ST[F.shape | 0], { j: skin[2], c: lit(skin[3], 0.25) }, outOf(e));
   // CP2's masks: an alien's big black eyes, a skull's sockets, a gas mask's round lenses, a clown's painted diamonds
-  if (fm) for (const e of eyes) {
+  if (fm && !(A.founder && glasses)) for (const e of eyes) {
     if (fm === 'alien') { put(e.p, [14, 16, 14]); put(e.p, [14, 16, 14], outOf(e), 0); }
     else if (fm === 'skull') { put(e.p, [24, 20, 22]); put(e.p, [24, 20, 22], 0, -1); }
     else if (fm === 'gas') put(e.p, [150, 172, 182]);
@@ -1969,6 +2004,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
   const D = dims(A), P = rig(D, A, pn, f, kind, acc);
+  if (A.founder && pn === 'idle' && !kind) { const h0 = P.hands; P.hands = (S) => { if (h0) h0(S); P.hR = vadd(S.shR, mv(S.SP, [7.6, 1.6, 8.0 + (f & 1) * 0.5])); P.elR = [1, 0, -0.6]; P.peace = 1; }; }
   if (!P.root) P.camYaw = 0.3 * Math.cos(th);                       // E +, W -: the face turns toward the camera (south)
   const S = solve(D, P);
   if (opt.lineLen > 0 && P.line) P.line = opt.lineLen;              // (a pose's hands set its line while solving)

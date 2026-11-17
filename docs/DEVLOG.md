@@ -24959,3 +24959,67 @@ up once or twice then don't need to keep going ... the font that left thumb uses
   stays out, gone with the last rod; one line; every species' own pixel art; the card at three screen sizes), hudinfo
   (the hint cap, only through hintDue, no swimming strip, glyph labels on one line), ftue (the rod's moment), core,
   water, devplay updated for the rod in hand.
+
+## 2026-11-16 - The owner's console, the founder, an admin panel in the game, clean name tags
+
+The owner (chat, 11-16): no "beta" tag on every player, just the name, guests told apart without the word; his Dead Baron
+avatar as a character he plays in admin mode, with his presence known; the admin tools in one place - a live dashboard
+(now, the last hours, days), who's on, what they're doing, where from - good on a phone and a desktop, for him only.
+
+- **Name tags.** The gold Beta plate is off everyone's name: it's a card plate now (shared/rules.js COSMETICS `card: 1`,
+  server/systems/cosmetics.js `cardPlate`) - still theirs, listed with the Season badges in the Skills app, never over a
+  head; anyone wearing it loses it from the tag on their next session, and the style counter no longer offers it. The
+  Founding Citizen jacket is unchanged. Over heads: a member's name bright white with a dark edge all round, a guest's a
+  softer grey with only a faint shadow (lightness and the edge, not hue - readable at night and colorblind-safe; client/main.js
+  drawWorldLabels). Guide: "Names over heads", "The beta gift".
+- **The founder** (server/founder.js): the owner's account (the role `owner`) gets a small gold pixel crown by his name for
+  everyone (the descriptor's `fo`, client/main.js founderMark) and "♛ Founder" in the players list. His Dead Baron avatar
+  is an outfit (the owner, later the same day: an outfit for fun, not his character): his regular character every time he plays,
+  on only with the admin panel's switch (this session only, never saved), off when he switches it off or logs in again -
+  admin mode alone never puts it on. The avatar is built in the game's own people renderer (client/art2/people.js `FOUNDER`): a
+  skeleton with round pink glasses and cyan angel wings (drawn better the same day: below). The descriptor carries `app.fd` while it's on
+  (server/net.js; client/art2/game/peds.js adaptApp, its own sprite key `F`). Only the server decides; nobody else can
+  wear it.
+  Note: people.js is part of the chunk bake's code, so the `art` hash moves with this change (chunks come out the same and
+  carry over).
+- **The admin panel in the game** (client/adminpanel.js, the debug menu's first tile "🛡 Admin" for admins and the owner,
+  lazy-loaded): the founder switch, the console link, the free camera; everyone online as a card (name, guest, role, district,
+  what they're doing, health, down / wanted / custody); a card's actions: Watch (the camera and what the server sends follow
+  them, you invincible where you stand: server/view.js focusOf, client/main.js watchCam), Go to, Bring, Send to a place,
+  Heal or Revive, Unstick, End job, Gift (money to the bank, an item, a weapon, a name color, a title plate - within
+  shared/rules.js `GIFT`), Mute, Prison, Kick, Ban (the harsh ones ask on a second press). All of it staff commands on the
+  server (server/admin.js roster, watch, tpto, bring, send, heal, revive, endjob, gift, founder; server/roles.js powers),
+  each in the admin log.
+- **The console** (/admin/: server/adminconsole.js page, server/adminconsole-page.js its script, server/adminhttp.js
+  `/admin/api`): tabs Now (who's on - guest or member, district, doing, session length, device, country; what everyone's
+  doing, where in the city, devices), Trends (1 h, 6 h, 24 h, 3 days, 7 days: players, peak and average online, new and
+  returning players, sessions and their length, sign-ups, jobs, crimes, deaths, chat lines, page errors; an online chart and
+  bar charts of players and sessions, every window side by side), Where from (countries, regions, who's on now), Moderation
+  (the review list, player reports, bug reports, the admin log's latest), Server (uptime, tick, memory, entities, accounts,
+  build, page errors, GA, the IP table), Tools (the older pages one tap away; each of them links back to the console). It
+  polls every 5 s (the heavier parts every 30 s or when a tab or window is picked), draws its charts as inline SVG with no
+  library, one column and big tabs on a phone, a grid on a desktop, in the game's navy and gold. Admins and the owner (the
+  new `console` power); the admin log section is the owner's. Settings > Account > Staff tools: Console.
+- **The data** (server/analytics.js `roll`, `trends`, `places`): a bucket a minute for 6 hours and a bucket an hour for
+  7 days, bounded, saved with analytics.json (a restart keeps the week). Players in them are a salted hash, never the
+  account id.
+- **Privacy / where from** (server/geo.js): the country from the connecting address through DB-IP's IP to Country Lite
+  (CC BY 4.0, credited on the console and the privacy page) packed into `<data>/ipcountry.bin` - the server fetches this
+  month's edition by itself a minute after starting when it's missing or over 40 days old (in the background, never on the
+  start's path), or tools/ipcountry.mjs packs one by hand - else from the page's time zone (the IANA zone table,
+  server/data/tzcountry.json), which also gives the region. The address is looked up and dropped: never stored, logged or
+  shown. The console shows no address, email or account id: a player is a ref good for the session (/admin/go). The
+  privacy page says so (server/legal.js).
+- The founder drawn better (the owner: "Let's draw my character a little better" - at the game's zoom he read as a white
+  figure, a pink blob and blue tabs): the skull 1.24x a head (his signature) with a nose hole and a jaw's tooth row; round
+  magenta lenses, each in a dark purple rim with a glint, and their band round the skull so they read from behind and the
+  sides; a rib cage with dark gaps, the spine, thin bone limbs with dark joints; cyan angel wings in three rows a side -
+  the long primaries with pale tips (a faint glow at night), the darker secondaries, the coverts - spread up and out past
+  his shoulders, a little folded at rest and beating with his stride; at rest a peace sign (the right hand up, two
+  fingers in a V). The renderer's code 410 -> 411 KB for it (its comments trimmed first: 410.5).
+- Budget: the bake workers' code 1010 -> 1012 KB (tools/perf.mjs) - the founder figure lives in the people renderer
+  the workers draw with (+1.1 KB gzipped, its comments trimmed first: 1011.5; the bake was at 1010.4 on its own). The
+  renderer stays at 410.
+- Tests: admin-console (the console's access, CSP, its JSON's privacy, the refs; the buckets, their bounds and a restart;
+  the IP table and the time zones; the panel's commands - powers, limits, the log; the founder's crown, switch and art; the
+  Beta plate off the tags); sinks and seasons updated for the card plate.

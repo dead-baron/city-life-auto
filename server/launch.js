@@ -19,6 +19,8 @@ import { createModeration } from './moderation.js';
 import { createChat } from './chat.js';
 import { createAntiCheat } from './anticheat.js';
 import { createAnalytics, deviceClass } from './analytics.js';
+import { createGeo, FETCH_AFTER_MS } from './geo.js';
+import { founderSync } from './founder.js';
 import { browserOf } from './perfreports.js';
 import { createGA } from './ga.js';
 import { watch, settle, release } from './moneywatch.js';
@@ -46,13 +48,14 @@ export function createLaunch(opts) {
   const news = createNewsList({ file: dataDir ? pathJoin(dataDir, 'news.json') : null, now, publicUrl: L.publicUrl, mailAddress: L.mailAddress || '', log });
   const ga = createGA({ measurementId: L.gaMeasurementId, apiSecret: L.gaApiSecret, fetch: opts.fetch, now, log, userHash: (pid) => keyedHash('ga-user', pid, secret), regionOf: (p) => (p.ped && world.map ? (world.map.districtAt(p.ped.x, p.ped.y) || {}).isl : '') });
   let ac = null;
+  const geo = createGeo({ dir: dataDir || null, fetch: opts.fetch || (dataDir ? globalThis.fetch : null), now, log });   // (the console's countries: server/geo.js)
   const analytics = createAnalytics({ file: dataDir ? pathJoin(dataDir, 'analytics.json') : null, now, ga, onEarned: (p, perHour, norm) => { if (ac) ac.earned(p, perHour, norm); } });
   const modWithStats = { ...mod, review: (kind, who, noteText, data, by) => { if (['teleport', 'speed', 'rate', 'input', 'econ'].includes(kind)) { analytics.event('flag', null, { kind }); const a = who && accounts.get(who.id); if (a) note(a, 'flag', `${kind}: ${noteText}`); } return mod.review(kind, who, noteText, data, by); } };
   ac = createAntiCheat({ mod: modWithStats, now, log });
   const chat = createChat({ accounts, filter: loadFilter(), mod, now, onLine: (p, ch) => analytics.event('chat', p, { ch }), links: [L.discordInvite, L.supportUrl].filter(Boolean) });
   // bug reports from the pages (POST /report: server/bugreports.js), read at /admin/bugs, posted to the Discord's webhook
   const bugs = createBugReports({ dir: opts.bugDir !== undefined ? opts.bugDir : dataDir ? pathJoin(dataDir, 'reports') : null, accounts, store, world, origins: [...new Set([...L.pageOrigins, ...(opts.extraOrigins || [])])], ip: (req) => opts.ip(req), webhook: L.bugWebhook, fetch: opts.fetch, now, log });
-  const adminHttp = createAdminHttp({ bugs, accounts, log: adminLog, mod, analytics, news, mailAddress: L.mailAddress || '', publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), ga: ga.stats }) });
+  const adminHttp = createAdminHttp({ bugs, accounts, log: adminLog, mod, analytics, news, mailAddress: L.mailAddress || '', publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), geo, stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), tickMsMax: +(world.stats.tickMax || 0).toFixed(2), ents: world.entities ? world.entities.size : 0, build: world.build || '', builtAt: world.buildAt || 0, ga: ga.stats }) });
   const admin = createAdmin({ accounts, log: adminLog, mod, store, pageLink: adminHttp.pageLink, now });
   const onlineOf = (pid) => { const p = world.players.get(pid); return p && p.conn ? p : null; };
   const authHttp = createAuthHttp({
@@ -211,6 +214,9 @@ export function createLaunch(opts) {
       const a = accounts.ensure(p.profile);
       p.acct = a;
       p.guest = a.kind !== 'member';   // (over their head in grey, "Guest" in the players list: net.js gu, devmode.js)
+      p.founderOn = false; founderSync(p, a.role === 'owner');   // (the owner: the founder's crown; the look off at every login - server/founder.js)
+      p.cc = geo.where(hello.ip, hello.tz);   // (the country, from the connecting address - the address itself never kept: server/geo.js)
+      p.devKind = hello.dk || null;
       accounts.noteDevice(p.pid, hello.dm);
       if (hello.age17 && !a.age17) { a.age17 = now(); store.touch(); }
       watch(world, p);
@@ -310,11 +316,15 @@ export function createLaunch(opts) {
     purgeDeleted();
     timers.push(setInterval(halfSecond, 500));
     timers.push(setInterval(() => { ga.flush().catch(() => {}); }, 10e3));
+    // the country-by-IP table (server/geo.js): fetched in the background a minute after the start when it's missing or old,
+    // then looked at once a day - never on the start's path (the updater's health window)
+    const geoCheck = () => { if (geo.stale()) geo.refresh().catch(() => {}); };
+    timers.push(setTimeout(geoCheck, FETCH_AFTER_MS), setInterval(geoCheck, 86400e3));
     for (const t of timers) t.unref();
   }
   // at shutdown (index.js SIGTERM / SIGINT): the money settled, the analytics and the admin log's queued lines written now
   function stop() {
-    for (const t of timers) clearInterval(t);
+    for (const t of timers) { clearInterval(t); clearTimeout(t); }
     timers.length = 0;
     try { settle(world, onMoney); } catch (e) { log.error('[launch] settling at stop:', e && e.message); }
     try { bugs.flush(); } catch (e) { log.error('[launch] the bug reports at stop:', e && e.message); }
@@ -330,5 +340,5 @@ export function createLaunch(opts) {
     if (await bugs.handle(req, res, url)) return true;
     return false;
   }
-  return { login, hooks, http, start, stop, purgeDeleted, bugs, halfSecond, accounts, news, rename, memberOwns, onLinked: becameMember, adminLog, mod, chat, ac, analytics, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
+  return { login, hooks, http, start, stop, purgeDeleted, bugs, halfSecond, accounts, news, rename, memberOwns, onLinked: becameMember, adminLog, mod, chat, ac, analytics, geo, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
 }

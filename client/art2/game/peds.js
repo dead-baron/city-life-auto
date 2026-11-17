@@ -20,7 +20,7 @@
 //     weapon: WEAPON_BY_INDEX index (drawn held: rest, aimed or swung per pose), or an items.js kind ('phone', 'medkit')
 //     opt.bc: the plasma blade's colour (shared/items.js BLADE_COLORS; 0 / none: its own blue), opt.cut: a half of the body
 //   weaponItem(w) -> items.js kind or null;  PED_POSES: frames per pose;  SEATS: seat heights of the seated poses
-import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN } from '../people.js';
+import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN, FOUNDER } from '../people.js';
 import { ITEMS } from '../items.js';
 import { hash, cutGBuf } from '../gbuf.js';
 import { WEAPON_BY_INDEX, bladeColor, hexRgb } from '../../../shared/items.js';
@@ -99,6 +99,8 @@ export function adaptApp(app, ar = null, opt = {}) {
   const a = app || {};
   ar = ar || a.ar || 'casual';
   if (typeof ar === 'string' && ar.startsWith('pet:')) return { pet: ar.slice(4), seed: 1 };
+  // the founder's look (server net.js app.fd)
+  if (a.fd) return FOUNDER;
   // a player's look (shared/look.js): its code says it all
   if (a.lk) { const L = decodeLook(a.lk); if (L) return lookArt(L, { code: a.lk, censored: !!opt.censored }); }
   const H = seedOf(a, ar), r = (k) => hash(H & 0xfffff, k, 131), pick = (arr, k) => arr[Math.floor(r(k) * arr.length) % arr.length];
@@ -255,6 +257,7 @@ const KEYS = new WeakMap();
 function art2Key(A) {
   let k = KEYS.get(A);
   if (k) return k;
+  if (A.founder) { k = 'F' + Object.keys(A).filter((f) => A[f] !== FOUNDER[f]).sort().map((f) => `;${f}=${JSON.stringify(A[f])}`).join(''); KEYS.set(A, k); return k; }
   if (A.lk) { k = 'L' + A.lk + (A.censored ? 'c' : '') + (A.pp ? '+' + A.pp : '') + (A.back === 'moneybag' ? '$' : ''); KEYS.set(A, k); return k; }
   const parts = [];
   for (const f of ['seed', 'skin', 'fem', 'build', 'body', 'hair', 'beard', 'top', 'bottom', 'shoes', 'shoeKind', 'hat', 'glasses', 'mask', 'bandana', 'chain', 'carry', 'held', 'back', 'backColor', 'gloves', 'tattoo', 'censored', 'pet']) {
@@ -267,6 +270,7 @@ function art2Key(A) {
   return k;
 }
 export function appKey(app, opt = {}) {
+  if (app && app.fd) return 'F';
   if (app && app.lk && app.top === undefined) return 'L' + app.lk + (opt.censored ? 'c' : '');
   if (isServer(app)) return 'S' + [app.s, app.h, app.hc, app.t, app.tc, app.tc2, app.l, app.sh, app.ht, app.htc, app.b, app.bd, app.bandana ? 1 : 0, opt.ar || app.ar || '', opt.censored ? 1 : 0].join(',');
   return art2Key(app || {});
