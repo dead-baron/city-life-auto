@@ -26,7 +26,7 @@ import * as crazytaxi from './crazytaxi.js';
 import * as transit from './transit.js';
 import { payFrom } from './economy.js';
 import { CABHAIL } from '../../shared/rules.js';
-import { poisWhere } from '../../shared/mapcore.js';
+import { poisWhere } from '../pois.js';
 
 const NAMES = ['a nurse off shift', 'a tourist', 'a banker', 'a student', 'a chef', 'a salesman', 'a night owl', 'a musician', 'a pensioner', 'a lawyer', 'a builder', 'a bride-to-be'];
 const GOES = new Set(['delivery', 'convenience', 'coffee', 'clothing', 'pharmacy', 'hospital', 'club', 'bank', 'cinema', 'bowling', 'gasstation', 'station', 'airport', 'market', 'barber', 'grocery', 'home', 'courthouse', 'marina']);

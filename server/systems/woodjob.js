@@ -8,7 +8,7 @@
 import { WOODJOB } from '../../shared/rules-play.js';
 import { store } from '../store.js';
 import * as phone from './phone.js';
-import { poisWhere } from '../../shared/mapcore.js';
+import { poisWhere } from '../pois.js';
 
 // who buys firewood, by their kind of place: what they burn it in
 const BURNS = { diner: 'its wood-fired grill', cafe: 'its bread oven', bar: 'the fire in the snug', hotel: 'the lobby\'s fireplaces', camp: 'the campfires', hut: 'its stove', clubhouse: 'the fireplace in the lounge' };

@@ -282,64 +282,16 @@ export class CityMap {
     }
     return best;
   }
-  // the nearest place whose circle (x, y) is in - the first of equals - through a grid of the places' circles (poiGrid):
-  // the server asks it for every player's prompt several times a second, and World v3 holds thousands of places
   poiNear(x, y, kind = null) {
-    const G = poiGrid(this.pois);
-    let best = null, bd = Infinity, bi = Infinity;
-    const look = (L) => {
-      for (let j = 0; j < L.length; j++) {
-        const i = L[j], p = this.pois[i];
-        if (!p || (kind && p.kind !== kind)) continue;
-        const d = (p.x - x) ** 2 + (p.y - y) ** 2;
-        if (d <= p.r * p.r && (d < bd || (d === bd && i < bi))) { bd = d; best = p; bi = i; }
-      }
-    };
-    const cx = Math.floor(x / POI_CELL), cy = Math.floor(y / POI_CELL);
-    const L = G.cells.get(cx * 65536 + cy);
-    if (L) look(L);
-    if (G.big.length) look(G.big);
+    let best = null, bd = Infinity;
+    for (const p of this.pois) {
+      if (!p || (kind && p.kind !== kind)) continue;
+      const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+      if (d <= p.r * p.r && d < bd) { bd = d; best = p; }
+    }
     return best;
   }
   poisOf(kind) { return this.pois.filter((p) => p.kind === kind); }
-}
-// The places that pass a test, worked out once per map (key: a name for the test) - the server's per-player prompts
-// look through the same few kinds of place several times a second. Kept beside the places' array (made again if its
-// length changes); the list is shared: never sort or change it (copy it first).
-const POI_LISTS = new WeakMap();
-export function poisWhere(m, key, test) {
-  const pois = m.pois;
-  let C = POI_LISTS.get(pois);
-  if (!C || C.n !== pois.length) POI_LISTS.set(pois, (C = { n: pois.length, lists: new Map() }));
-  let L = C.lists.get(key);
-  if (!L) C.lists.set(key, (L = pois.filter((q) => q && test(q))));
-  return L;
-}
-export const poisKind = (m, kind) => poisWhere(m, 'kind:' + kind, (q) => q.kind === kind);
-// poiNear's grid: each place's index in every POI_CELL cell its circle touches (a very wide one in .big, looked at
-// always); kept beside the places' array, not on the map (the map's fields are its data), made again if the array's
-// length changes
-const POI_CELL = 256, POI_BIG = 2048;
-const POI_GRIDS = new WeakMap();
-function poiGrid(pois) {
-  let G = POI_GRIDS.get(pois);
-  if (G && G.n === pois.length) return G;
-  G = { n: pois.length, cells: new Map(), big: [] };
-  for (let i = 0; i < pois.length; i++) {
-    const p = pois[i];
-    if (!p || !(p.r >= 0)) continue;
-    if (p.r > POI_BIG) { G.big.push(i); continue; }
-    const x0 = Math.floor((p.x - p.r) / POI_CELL), x1 = Math.floor((p.x + p.r) / POI_CELL);
-    const y0 = Math.floor((p.y - p.r) / POI_CELL), y1 = Math.floor((p.y + p.r) / POI_CELL);
-    for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) {
-      const k = cx * 65536 + cy;
-      let L = G.cells.get(k);
-      if (!L) G.cells.set(k, (L = []));
-      L.push(i);
-    }
-  }
-  POI_GRIDS.set(pois, G);
-  return G;
 }
 // (on the prototype: the whole map's data - the world hash, the kept city - has no new fields; a window has its own)
 CityMap.prototype.x0 = 0;

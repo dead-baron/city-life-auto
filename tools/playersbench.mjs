@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
-export async function benchPlayers(map, { n = 100, seconds = 20, warmS = 3, seed = 7, World, players, store, npcBudget = 0 } = {}) {
+export async function benchPlayers(map, { n = 100, seconds = 20, warmS = 3, seed = 7, World, players, store, npcBudget = 0, warmed = null } = {}) {
   const { IN } = await import('../shared/input.js');
   let s = seed >>> 0;
   const rnd = () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -48,6 +48,7 @@ export async function benchPlayers(map, { n = 100, seconds = 20, warmS = 3, seed
     world.step();
     const dt = performance.now() - t0;
     if (k < warm) continue;
+    if (k === warm && warmed) warmed(world);   // (warmed up: the lazy tables made - test/serverload.test.js starts counting)
     const raw = world.sysMs.map((v, i) => (v - before[i] * 0.98) / 0.02);
     const net = (world.netMs - netBefore * 0.98) / 0.02;
     if (!acc) acc = { sys: raw.map(() => 0), net: 0 };

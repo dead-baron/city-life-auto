@@ -22,7 +22,7 @@ import { store } from '../store.js';
 import { seaSites } from './coastguard.js';
 import { slotWorld } from './cargo.js';
 import * as jobs from './jobs.js';
-import { poisKind } from '../../shared/mapcore.js';
+import { poisKind } from '../pois.js';
 
 const rng = mulberry32(8181);
 // what a net brings up: the shoaling fish of the coast and the open sea (common and uncommon, the market's price under $100)

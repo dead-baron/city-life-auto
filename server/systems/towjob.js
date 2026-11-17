@@ -20,7 +20,7 @@ import { towReason, tailGap, carry } from './tow.js';
 import { sitesOf } from './firefighter.js';
 import { kerbFor } from './kerbdrive.js';
 import * as jobs from './jobs.js';
-import { poisKind } from '../../shared/mapcore.js';
+import { poisKind } from '../pois.js';
 
 export const yardsOf = (m) => poisKind(m, 'police').map((q) => ({ x: q.x, y: q.y, name: `the impound at ${q.label}` }));
 export function yardFor(world, x, y) {

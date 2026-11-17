@@ -131,6 +131,12 @@ export function send(world) {
     const veh = ped && ped.vehId ? world.get(ped.vehId) : null;
     const focus = veh || ped;
     if (!focus) continue;
+    if (conn.cork) { conn.cork(); try { sendTo(world, p, conn, ped, veh); } finally { conn.uncork(); } }   // (the tick's messages to this page in one write: ws.js)
+    else sendTo(world, p, conn, ped, veh);
+  }
+}
+function sendTo(world, p, conn, ped, veh) {
+  {
     const r = netRect(world, p, rect);
     const minX = r.x0, maxX = r.x1, minY = r.y0, maxY = r.y1;
     const kx0 = minX - NET_KEEP, kx1 = maxX + NET_KEEP, ky0 = minY - NET_KEEP, ky1 = maxY + NET_KEEP;

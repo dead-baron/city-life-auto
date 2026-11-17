@@ -19,7 +19,7 @@ import { store } from '../store.js';
 import * as law from './law.js';
 import * as vehicles from './vehicles.js';
 import * as homes from './homes.js';
-import { poisKind } from '../../shared/mapcore.js';
+import { poisKind } from '../pois.js';
 
 export const COATS = 8;
 export const BARE = 8;

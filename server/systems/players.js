@@ -135,6 +135,7 @@ import * as carsoccer from './carsoccer.js';
 import * as bathhouse from './bathhouse.js';
 import * as showers from './showers.js';
 import * as evhooks from './eventhooks.js';   // (the event calendar's offers: a gang war's sides - calevents.js)
+import { poiAt } from '../pois.js';   // (the place you're at, through a grid: World v3's thousands of places)
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -1000,7 +1001,7 @@ export function findInteraction(world, p) {
   if (hire) return hire;
   const table = casinofloor.interaction(world, p, economy.openMenu);   // a casino's table or slot machine, a bar's card table (casinofloor.js)
   if (table) return table;
-  const poi = world.map.poiNear(ped.x, ped.y);
+  const poi = poiAt(world.map, ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
     const label = economy.poiLabel(world, p, poi);
     if (label) return { label, run: () => economy.openMenu(world, p, poi) };

@@ -32,6 +32,7 @@ import * as homeinside from './homeinside.js';
 import * as skate from './skate.js';
 import * as poolmatch from './poolmatch.js';
 import * as hockeymatch from './hockeymatch.js';
+import { poiAt } from '../pois.js';   // (the place you're at, through a grid: World v3's thousands of places)
 
 // an arcade's door: a business place whose building is an arcade (the strip's storefronts, the Pixel Arcade)
 export function isArcade(world, poi) {
@@ -89,7 +90,7 @@ const inHall = (p, poi) => !!(p.ped && p.ped.hidden && p.ped.home && p.ped.home.
 export function doorInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.entering || ped.ug || ped.carrying) return null;
-  const poi = world.map.poiNear(ped.x, ped.y);
+  const poi = poiAt(world.map, ped.x, ped.y);
   if (!poi || !isArcade(world, poi)) return null;
   if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }   // (the floor's drawing loaded ahead: homeview.js)
   return { label: `Into ${poi.label} - the arcade`, run: () => goIn(world, p, poi) };

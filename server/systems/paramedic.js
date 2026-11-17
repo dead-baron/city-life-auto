@@ -24,7 +24,7 @@ import { sitesOf, openNear } from './firefighter.js';
 import { isDowned } from './revive.js';
 import * as combat from './combat.js';
 import * as jobs from './jobs.js';
-import { poisKind } from '../../shared/mapcore.js';
+import { poisKind } from '../pois.js';
 
 export const KINDS = ['minor', 'serious', 'player'];
 const SAY = {

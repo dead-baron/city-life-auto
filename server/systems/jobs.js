@@ -18,7 +18,7 @@ import * as trains from './trains.js';
 import { pointGrid } from '../pointgrid.js';
 import * as vehicles from './vehicles.js';
 import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
-import { poisKind } from '../../shared/mapcore.js';
+import { poisKind } from '../pois.js';
 
 const rng = mulberry32(5150);
 

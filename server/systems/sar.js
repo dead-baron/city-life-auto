@@ -37,7 +37,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import * as jobs from './jobs.js';
-import { poisKind } from '../../shared/mapcore.js';
+import { poisKind } from '../pois.js';
 
 const rng = mulberry32(6464);
 // the wilderness: a wild district (the woods, the peaks, the desert, the rocks, the islets - not the open sea's own) or an

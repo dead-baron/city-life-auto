@@ -41,6 +41,7 @@ import * as bathhouse from './bathhouse.js';
 import * as grime from './grime.js';
 import * as homeups from './homeups.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
+import { poiAt } from '../pois.js';   // (the place you're at, through a grid: World v3's thousands of places)
 
 // (the home upgrades - homeups.js: with the world, the level lv of the home as built - the stairs in the ground floor, a
 // floor up or the basement; without, the plan as it came)
@@ -80,7 +81,7 @@ export function enter(world, p, h, at) {
 export function doorInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.carrying || ped.entering || ped.ug) return null;
-  const poi = world.map.poiNear(ped.x, ped.y);
+  const poi = poiAt(world.map, ped.x, ped.y);
   let h = null, back = false;
   if (poi && poi.kind === 'home') {
     if (homes.unitsAt(world, poi)) return lobbyDoor(world, p, poi);   // (H71: an apartment block - into its lobby, open to anyone)
