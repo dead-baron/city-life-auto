@@ -139,7 +139,10 @@ span.cht-n { cursor: default; color: var(--dim); }
 .cm-mod { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s3); }
 .cm-mod .btn { min-height: 40px; padding: 0 var(--s3); font-size: var(--fs-2); }
 .cs-list .srow .btn { min-height: 36px; padding: 0 var(--s3); }
+.cs-who { flex: 1; }
+.cs-who > button { flex: 1; min-height: 40px; }
 .cm-app .ph-row .fr { color: var(--gold); }
+.cm-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cm-rq { display: flex; align-items: center; gap: var(--s2); }
 .cm-rq .nm { flex: 1; min-width: 0; }
 .cm-rqb { display: flex; gap: var(--s1); }
@@ -556,7 +559,7 @@ export function createChat(ctx) {
     }
     return [...all.values()].sort((a, b) => (b.fr ? 1 : 0) - (a.fr ? 1 : 0) || (b.crew ? 1 : 0) - (a.crew ? 1 : 0) || (b.on ? 1 : 0) - (a.on ? 1 : 0) || (b.at || 0) - (a.at || 0));
   }
-  const contactRow = (q) => `<button class="ph-row" type="button" data-cmh="${esc(q.id)}" data-cmn="${esc(q.n)}"><span class="ic${q.on ? ' on' : ''}" aria-label="${q.on ? 'online' : 'away'}">${q.on ? '●' : '○'}</span><span class="nm">${q.fr ? '<b class="fr" aria-label="friend">★</b> ' : ''}${esc(q.n)}${q.crew ? ' <small>(crew)</small>' : ''}<small>${q.last ? `${q.last.me ? 'You: ' : ''}${esc(q.last.text)}` : q.fr ? 'Friend' : q.how === 'met' ? 'Met in town' : q.how === 'crew' ? 'Your crew' : q.how ? esc(q.how) : ''}</small></span>${q.un ? `<span class="un">${q.un}</span>` : q.ta ? `<span class="d">${ago(q.ta)}</span>` : ''}</button>`;
+  const contactRow = (q) => `<button class="ph-row" type="button" data-cmh="${esc(q.id)}" data-cmn="${esc(q.n)}"><span class="ic${q.on ? ' on' : ''}" aria-label="${q.on ? 'online' : 'away'}">${q.on ? '●' : '○'}</span><span class="nm"><span class="cm-n">${q.fr ? '<b class="fr" aria-label="friend">★</b> ' : ''}${esc(q.n)}${q.crew ? ' <small>(crew)</small>' : ''}</span><small>${q.last ? `${q.last.me ? 'You: ' : ''}${esc(q.last.text)}` : q.fr ? 'Friend' : q.how === 'met' ? 'Met in town' : q.how === 'crew' ? 'Your crew' : q.how ? esc(q.how) : ''}</small></span>${q.un ? `<span class="un">${q.un}</span>` : q.ta ? `<span class="d">${ago(q.ta)}</span>` : ''}</button>`;
   const requestRow = (r) => `<div class="ph-row cm-rq"><span class="ic fr">★</span><span class="nm">${esc(r.n)}<small>wants to be friends · ${ago(r.at)}</small></span><span class="cm-rqb"><button class="btn btn-1" type="button" data-fra="${esc(r.id)}">Accept</button><button class="btn" type="button" data-frd="${esc(r.id)}">Decline</button></span></div>`;
   function blockedHtml() {
     const ids = state.blocks;
@@ -675,14 +678,14 @@ export function createChat(ctx) {
     const ids = [...new Set([...state.blocks, ...state.mutes])];
     setEl.innerHTML = '<p class="msub">Who you hear. A channel switched off brings you none of its lines, and you can\'t send on it.</p>'
       + CHANNELS.map((c) => `<label class="srow"><span>${esc(OFF_LABEL[c])}</span><input type="checkbox" data-ch="${c}"${state.off[c] ? '' : ' checked'}></label>`).join('')
-      + `<p class="msub">Who can text me</p>${Object.entries(WHO_TEXT).map(([k, n]) => `<label class="srow"><span>${esc(n)}</span><input type="radio" name="cht-who" data-who="${k}"${state.who === k ? ' checked' : ''}></label>`).join('')}`
+      + `<p class="msub">Who can text me</p><div class="srow"><div class="seg cs-who" role="radiogroup" aria-label="Who can text me">${Object.entries(WHO_TEXT).map(([k, n]) => `<button type="button" role="radio" data-who="${k}" class="${state.who === k ? 'on' : ''}" aria-checked="${state.who === k}">${esc(n)}</button>`).join('')}</div></div>`
       + (state.muted && state.muted > Date.now() ? `<p class="msub bad">You're muted from chat until ${esc(new Date(state.muted).toLocaleString())}.</p>` : '')
       + '<p class="msub">Muted and blocked</p><div class="cs-list">'
       + (ids.length ? ids.map((id) => { const b = state.blocks.includes(id); return `<div class="srow"><span>${esc(state.names[id] || named.get(id) || 'Someone')} <small class="dim">${b ? 'blocked' : 'muted'}</small></span><button class="btn" type="button" data-un="${esc(id)}" data-a="${b ? 'unblock' : 'unmute'}">${b ? 'Unblock' : 'Unmute'}</button></div>`; }).join('') : '<div class="srow"><span class="dim">Nobody.</span></div>')
       + '</div><p class="msub">To add a friend, mute, block or report someone, tap their name in the chat, or their speech bubble while chat is open. In a phone thread, the buttons are under the messages. The blocked are under Blocked at the bottom of Messages too.</p>';
     for (const i of setEl.querySelectorAll('input[data-ch]')) i.onchange = () => ctx.send({ t: 'chatset', off: { [i.dataset.ch]: !i.checked } });
     for (const b of setEl.querySelectorAll('[data-un]')) b.onclick = () => ctx.send({ t: 'mod', a: b.dataset.a, id: b.dataset.un });
-    for (const i of setEl.querySelectorAll('input[data-who]')) i.onchange = () => { if (i.checked) setWho(i.dataset.who); };
+    for (const b of setEl.querySelectorAll('[data-who]')) b.onclick = () => setWho(b.dataset.who);
   }
   function setWho(w) { if (Object.hasOwn(WHO_TEXT, w)) ctx.send({ t: 'chatset', who: w }); }
 

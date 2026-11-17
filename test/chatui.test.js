@@ -164,7 +164,7 @@ out.setRows = set.querySelectorAll('input[data-ch]').length;
 out.muteList = [...set.querySelectorAll('[data-un]')].map((b) => b.dataset.a + ':' + b.dataset.un);
 set.querySelector('input[data-ch="faction"]').click();
 set.querySelector('[data-un]').click();
-out.setWho = [...set.querySelectorAll('input[data-who]')].map((i) => i.dataset.who + (i.checked ? '*' : ''));
+out.setWho = [...set.querySelectorAll('[data-who]')].map((b) => b.dataset.who + (b.classList.contains('on') ? '*' : ''));
 // friends (11-15): a request at the top of Messages; a friend's star, first; Blocked (n) and its Unblock; who can text me;
 // a thread's Add friend and Remove contact; a block's Undo
 C.onMessage({ t: 'modres', ok: true, note: 'x', state: { mutes: [], blocks: ['bad1'], names: { bad1: 'Badguy' }, who: 'met' } });
