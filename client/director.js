@@ -264,6 +264,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 body.cine-on #cine-x, body.touch.cine-on #cine-shut { display: block; }
 body.cine-cap #cine-x, body.cine-cap #cine-shut, body.cine-cap #cine-ctl { display: none !important; }
 body.cine-clean:not(.cine-woke) #cine-x, body.cine-clean:not(.cine-woke) #cine-shut { display: none !important; }
+body.cine-shot:not(.cine-woke) #cine-x, body.cine-shot:not(.cine-woke) #cine-shut, body.cine-shot:not(.cine-woke) #cine-ctl, body.cine-shot:not(.cine-woke) #cine-panel { display: none !important; }
 body.cine-nosay #cht-bubs .cht-bub, body.cine-noemo #cht-bubs .emo-pop { display: none !important; }
 #cine-panel button:focus-visible { outline: 2px solid var(--pad-gold); outline-offset: 1px; }   /* (a capture's frames: nothing of the camera's own on them) */
 body.touch.cine-on #cine-ctl { bottom: max(108px, env(safe-area-inset-bottom)); }
@@ -642,9 +643,12 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   function barShow() {
     // the clean screen (all the UI off) has nothing on it - the close X and the picture button too (the owner, 11-17: "there
     // is still an X at the top center"): back with the bar for a few seconds on a tap or a key; Esc / B still close the camera
-    const woke = D.clean && performance.now() - wokeAt < 3500;
-    if (woke !== wokeSig) { wokeSig = woke; document.body.classList.toggle('cine-woke', woke); }
+    // a shot playing is the same (the owner, 11-17: "the X and the scene info at the bottom would show up on the recording"):
+    // the X, the bar and the panel stay off while it plays, back for a few seconds on a tap or a key
     const shotOn = D.mode === 'script' || !!want, on0 = D.mode === 'drift' || D.mode === 'scene' || (shotOn && !(sct && sct.cap));
+    const woke = (D.clean || shotOn) && performance.now() - wokeAt < 3500;
+    if (woke !== wokeSig) { wokeSig = woke; document.body.classList.toggle('cine-woke', woke); }
+    document.body.classList.toggle('cine-shot', shotOn);
     document.body.classList.toggle('cine-bar', on0);   // (on a phone the bar takes the action buttons' corner: they do nothing while the camera has the controls)
     if (!on0) { if (bar) bar.style.display = 'none'; return; }
     if (!bar) { bar = document.createElement('div'); bar.id = 'cine-ctl'; bar.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); wake(); }); document.body.appendChild(bar); }
