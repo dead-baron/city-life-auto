@@ -25030,3 +25030,8 @@ avatar as a character he plays in admin mode, with his presence known; the admin
   home-screen and install icons, the maskable pair with the logo inside the safe circle, the Apple touch icon).
 - 256 colors, dithered (no banding in the dusk), the transparency kept: icon-512 153 -> 104 KB; the title's assets
   budget holds (test/perf.test.js).
+
+## 2026-11-17 - The fist icon drawn as a fist
+- The owner: the weapon wheel's Fists "doesn't look like a fist" (it read as a bread roll). client/render/peds.js
+  weaponIcon draws it by hand now: four knuckles with their creases, the thumb across them, the wrist, shaded skin in a
+  dark line - the same icon in the weapon wheel, the weapon tray and the weapon plate.
