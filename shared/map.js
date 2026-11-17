@@ -3149,7 +3149,7 @@ function forecourts(m) {
 // fades out over the room while you are inside (client). The place's interaction point moves in
 // front of its counter.
 export const WALK_IN = new Set(['club', 'convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle',
-  'barber', 'roadhouse']);   // (roadhouse: the Rusty Spur, countryside.js - task #366)
+  'barber', 'roadhouse', 'charter']);   // (roadhouse: the Rusty Spur, countryside.js - task #366; charter: a charter office's desk, 11-16)
 const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
 // How deep a walk-in's room is (rows, the counter and the stock room behind it included): about as deep as the shop is
 // wide - roughly square to a modest rectangle - however deep the building is. A narrow shop thirty tiles deep (World v3's
@@ -3180,7 +3180,9 @@ function buildInteriors(m) {
   const bays = new Set((m.bays || []).map((bay) => m.bld[bay.ty * m.w + bay.tx]));
   for (const [bid, list] of byB) {
     const b = m.buildings[bid];
-    if (!b || b.gone || (b.prefab < 0 && !list.some((p) => p.casino)) || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
+    // (b.rooms: a hand-built village's business, no lot of its own - World v3's shared/world3-west.js Egret Point - walked
+    // into all the same: the owner, 11-16, "these places don't have interiors, they just have you interact at the wall")
+    if (!b || b.gone || (b.prefab < 0 && !b.rooms && !list.some((p) => p.casino)) || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
     // (p.walk: a hand plan's shop you can walk into - its counter by its trade, p.store; b.hand: a flat over the shop
     // has its own door beside it - shared/world3-hand.js)
     const main = list.filter((p) => isWalk(p) || p.kind === 'delivery');

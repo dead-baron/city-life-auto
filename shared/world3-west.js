@@ -105,7 +105,7 @@ function addBld(m, x, y, w, h, kind, name, roofKind, art, sign) {
 
 export function buildWest(m, addProp) {
   const W = m.w, HH = m.h;
-  const out = { village: [], homes: 0, piers: 0, boats: 0, quay: 0, raceway: null, light: null, boardwalk: 0, hide: null, blinds: 0, ramps: 0, falls: null, platform: 0, cape: null, pools: 0, stacks: 0, coves: 0, tracks: 0, props: 0 };
+  const out = { village: [], homes: 0, paved: 0, piers: 0, boats: 0, quay: 0, raceway: null, light: null, boardwalk: 0, hide: null, blinds: 0, ramps: 0, falls: null, platform: 0, cape: null, pools: 0, stacks: 0, coves: 0, tracks: 0, props: 0 };
   const inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH;
   const tile = (x, y) => (inF(x, y) ? m.tiles[y * W + x] : T.DEEP);
   const sea = (x, y) => { if (!inF(x, y)) return true; const i = y * W + x; return !m.land[i] && !m.river[i] && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP); };
@@ -207,19 +207,35 @@ export function buildWest(m, addProp) {
     // nets and gear on the quay, a bench looking out
     let q = 0;
     for (const [x, y] of quay) { if (hash(x, y, 74) > 0.07) continue; addProp(m, ['crates', 'pallet', 'fishtable', 'drum', 'rods', 'lifering'][q++ % 6], (x + 0.5) * TILE, (y + 0.5) * TILE, 0); out.props++; }
-    // the businesses by the quay (north and south of Wharf Street's end), the shacks along the road
-    const named = (x, y, w, h, kind, name, sideN, poiKind, extra) => {
-      const b = addBld(m, x, y, w, h, kind, name, 'metal', null, { x: (x + w / 2) * TILE, y: (sideN ? y + h + 0.8 : y - 0.8) * TILE, text: name });
+    // a path laid over open ground (grass, sand, dirt - never a building, the road or the water): t PLAZA for the paved
+    // forecourts, DIRT for the shacks' gravel paths (the owner, 11-16: "they don't have sidewalks or walkways leading up
+    // to the buildings, they just sit on grass")
+    const pave = (x0, y0, x1, y1, t) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (open(x, y)) { const i = y * W + x; if (m.tiles[i] !== t) out.paved++; m.tiles[i] = t; m.reserve[i] |= 4; } };
+    // the businesses by the quay (north and south of Wharf Street's end), each walked into (b.rooms: shared/map.js
+    // buildInteriors - the room, its counter, the place's spot moved in front of it; the owner, 11-16: "these places
+    // don't have interiors, they just have you interact at the wall"): every front on its south side, as drawn, its door
+    // there (b.door), onto a paved forecourt that runs on to the quay - the north row's down to Wharf Street, the south
+    // row's on the water side, a lane between them back up to the street
+    const named = (x, y, w, h, kind, name, poiKind, extra) => {
+      const b = addBld(m, x, y, w, h, kind, name, 'metal', null, { x: (x + w / 2) * TILE, y: (y + h - 0.6) * TILE, text: name });
       if (!b) return null;
       out.village.push(name);
-      if (poiKind) poi(poiKind, name, x + w / 2, sideN ? y + h + 1 : y - 1, { b: b.id, ...extra });
+      b.rooms = true; b.door = { tx: x + (w >> 1), ty: y + h };
+      if (poiKind) poi(poiKind, name, x + w / 2, y + h + 0.8, { b: b.id, ...extra });
       return b;
     };
-    named(1298, R - 15, 14, 8, 'market', 'Egret Point Fish Market', true, 'fishmarket');
-    named(1280, R - 13, 12, 7, 'club', 'The Gaff Hook', true, 'club');
-    named(1302, R + 6, 9, 6, 'tackle2', 'Egret Point Bait & Tackle', false, 'tackle');
-    const ch = named(1288, R + 6, 8, 5, 'charter', 'Egret Point Charters', false, 'charter');
+    const QX = Math.min(...quay.filter(([, y]) => y >= R - 18 && y <= R + 16).map(([x]) => x).concat([1318]));   // (the quay's west edge along here)
+    named(1298, R - 15, 14, 8, 'market', 'Egret Point Fish Market', 'fishmarket');
+    const gaff = named(1280, R - 13, 12, 7, 'bar', 'The Gaff Hook', 'delivery', { walk: true, store: 'bar' });   // (a dockside tavern: its bar, stools, the pool table - shared/shoprooms.js; not a 'club' lot: that's a nightclub's)
+    if (gaff) gaff.arch = 'club';   // (its look as before: the neon name over a bar's front)
+    named(1302, R + 6, 9, 6, 'tackle2', 'Egret Point Bait & Tackle', 'tackle');
+    const ch = named(1288, R + 6, 8, 5, 'charter', 'Egret Point Charters', 'charter');
     if (ch && charter) { const p = m.pois[m.pois.length - 1]; p.boat = { x: Math.round(charter[0] * TILE), y: Math.round(charter[1] * TILE) }; }
+    // the forecourts: the north row's from its fronts down to Wharf Street and east to the quay; the south row's along
+    // the water side of its fronts to the quay, and the lane between the charter office and the bait shop up to the street
+    pave(1278, R - 8, QX + 14, R - 4, T.PLAZA);   // (open ground only: up to the quay's planks, however far out it starts)
+    pave(1286, R + 11, QX + 14, R + 14, T.PLAZA);
+    pave(1296, R + 4, 1301, R + 13, T.PLAZA);
     // the fishing shacks: weathered siding, tin roofs, either side of the road; homes as today's shacks
     const walls = ['#8a9aa0', '#a08a70', '#7a8a7a', '#b0a088', '#6e7e88', '#9a7a62'];
     let k = 0;
@@ -237,6 +253,12 @@ export function buildWest(m, addProp) {
       m.homes.push(home);
       m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: door.x, y: door.y, r: 40, b: b.id });
       b.home = id; b.name = home.name; out.homes++;
+      // its door where it's drawn (the south row's on the street side, away from the camera: drawn as its back), a gravel
+      // path from its step to Wharf Street
+      const cx = x + w / 2;
+      b.door = { tx: Math.floor(cx), ty: N ? y + h : y - 1 };
+      if (!N) b.back = true;
+      if (N) pave(Math.floor(cx - 0.9), y + h, Math.floor(cx + 0.9), R - 4, T.DIRT); else pave(Math.floor(cx - 0.9), R + 4, Math.floor(cx + 0.9), y - 1, T.DIRT);
       // nets drying, pots and a skiff on blocks beside some
       if (k % 3 === 0) prop('crates', x - 1.2, N ? y + 2 : y + 4, 10);
       if (k % 4 === 1) prop('drum', x + 8, N ? y + 3 : y + 2, 6);

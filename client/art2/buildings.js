@@ -416,6 +416,7 @@ export function makeBuilding(spec) {
   let R = pitched(G, spec, w, d, H, seed);
   if ((R.ay - G.ay) & 1) R = padTop(R);
   if (G.signBox) R.signBox = { ...G.signBox, y: G.signBox.y + R.ay - G.ay };
+  if (G.openBox) R.openBox = { ...G.openBox, y: G.openBox.y + R.ay - G.ay };
   return R;
 }
 function padTop(G) {
@@ -941,9 +942,17 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   for (let i = 0; i < people; i++) { const px = 16 + ((i * 37 + seed * 11) % Math.max(20, w - 40)); if (px > doorX - 12 && px < doorX + doorW + 12) continue; bust(G, px, winTop + 10, [ [180, 60, 60], [60, 110, 180], [230, 200, 80], [90, 150, 90] ][i % 4], seed + i * 3, 0.8); }
   if (shop.clerk !== false && shop.kind !== 'diner') bust(G, shop.door === 'right' ? doorX - 30 : doorX + doorW + 30, winTop + 9, shop.clerkShirt || [40, 130, 110], seed + 99, 1);
   const L = shop.openSign && OPEN_L(), bw = L ? L.w * 2 : 0;   // (only where it fits beside the door: a kiosk's cut it in half - 11-14)
-  if (L && (shop.openSign.x !== undefined || (shop.door === 'right' ? doorX - 6 - bw >= 4 : doorX + doorW + 6 + bw <= w - 4))) {   // a neon OPEN in the window
+  // (beside the door on its usual side, else the other; never behind a cash machine set in the wall in front of the
+  // window - shop.avoid, its columns: statics.js frontAtms; the owner, 11-16: "the open sign is covered by this ATM")
+  const fitsAt = (x) => x >= 4 && x + bw <= w - 4, clearOf = (x) => !(shop.avoid || []).some(([a, z]) => x < z && a < x + bw);
+  const sides = shop.door === 'right' ? [doorX - 6 - bw, doorX + doorW + 6] : [doorX + doorW + 6, doorX - 6 - bw];
+  let oxAt = null;
+  if (L && shop.openSign.x !== undefined) { const x = clampI(shop.openSign.x, 4, w - 4 - bw); if (clearOf(x)) oxAt = x; }
+  else if (L && fitsAt(sides[0])) oxAt = clearOf(sides[0]) ? sides[0] : fitsAt(sides[1]) && clearOf(sides[1]) ? sides[1] : null;
+  if (L && oxAt !== null) {   // a neon OPEN in the window
     const col = shop.openSign.col || [255, 60, 70];
-    const ox = clampI(shop.openSign.x ?? (shop.door === 'right' ? doorX - 6 - bw : doorX + doorW + 6), 4, w - 4 - bw), oy = winTop + 4;
+    const ox = oxAt, oy = winTop + 4;
+    G.openBox = { x: ox, y: oy, w: bw, h: L.h * 2 };   // (where it went: the placement lint's signCovered)
     const P = { p: [20, 14, 26], i: col.map((v) => Math.min(255, Math.round(v * 0.5 + 128))), h: [70, 140, 255], f: [70, 140, 255], neon: true };
     paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, ox, oy, { lit: 'neon', night });
   }

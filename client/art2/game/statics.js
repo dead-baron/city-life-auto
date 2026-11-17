@@ -1125,6 +1125,20 @@ function stylePlaque(pq, A, seed) {
 
 // the makeBuilding spec, rooftop kit and lights of one section. lights: [dx, dy, z, r, col, k, kind] from the
 // section's south-west corner (dy south of the front wall)
+// The cash machines set into the fronts (map.js wallAtm: an 'atmw' 5 px out from the wall's foot), by the row of the wall's
+// foot -> a front's [x0, x1] spans of them (facade px from its section's west edge, the machine's width and a margin)
+const ATM_ROWS = new WeakMap();
+export function frontAtms(M, tx, footTy, tw) {
+  let I = ATM_ROWS.get(M);
+  if (!I) {
+    I = new Map();
+    for (const p of M.props || []) if (p && p.t === 'atmw' && p.inside === undefined) { const k = Math.floor((p.y - 5) / TILE); let l = I.get(k); if (!l) I.set(k, (l = [])); l.push(p.x); }
+    ATM_ROWS.set(M, I);
+  }
+  const out = [], X0 = tx * TILE, X1 = (tx + tw) * TILE;
+  for (const x of I.get(footTy) || []) if (x > X0 - 18 && x < X1 + 18) out.push([Math.round(x - X0 - 21), Math.round(x - X0 + 21)]);
+  return out;
+}
 function specOf(c, b, A, s, D) {
   const rnd = rndOf(b.id * 31 + s.k, 911), w = s.tw * TILE, d = s.th * TILE, seed = ((b.id * 7919 + s.k * 131) >>> 0) % 100000 + 7;
   const st = D.style, tier = D.tier, rough = tier === 'rough', low = tier === 'low' || tier === 'red';
@@ -1147,6 +1161,8 @@ function specOf(c, b, A, s, D) {
     if (!sh.sign && !sh.awning) sh.band = pick(AWN, rnd());
     if (o.grille) sh.grille = true;
     if (o.openSign) sh.openSign = { col: [255, 60, 70] };
+    const av = s.south ? frontAtms(c.M, s.tx, s.ty + s.th, s.tw) : null;
+    if (av && av.length) sh.avoid = av;   // (a cash machine set in this front: the window's OPEN sign not behind it)
     spec.shop = sh;
     const dx = typeof sh.door === 'number' ? sh.door + (sh.doorW || 22) / 2 : sh.door === 'left' ? 21 : w - 21;
     shopSpill(lights, w, dx);
@@ -3004,7 +3020,10 @@ function makeSignBoard(r) {
   const t = clean(r.text, 24), fk = r.face || 'civic', neonF = fk === 'neon', fg = rgbOf(r.fg || [236, 240, 248]);
   const P = r.pal ? { ...r.pal } : neonF ? palOf({ p: '#16141e', i: fg, neon: true }) : palOf([r.bg || '#1c2a44', fg]);   // (r.pal: a shop sign's own palette - the towns' false fronts)
   if (!neonF && !r.pal) legible(P);
-  const L0 = layoutSign(t, 200, { face: fk, lines: 1 }), L = r.maxW && L0.cw + 4 > r.maxW / 2 ? layoutSign(t, Math.floor(r.maxW / 2), { face: fk, lines: 2 }) : layoutSign(t, Math.max(L0.cw + 4, r.w ? Math.floor(r.w / 2) : 0), { face: fk, lines: 1 });   // (r.maxW: as wide as that at most, on two lines if it must)
+  const L1 = r.maxW && L0w(t, fk) + 4 > r.maxW / 2 ? layoutSign(t, Math.floor(r.maxW / 2), { face: fk, lines: 2 }) : layoutSign(t, Math.max(L0w(t, fk) + 4, r.w ? Math.floor(r.w / 2) : 0), { face: fk, lines: 1 });   // (r.maxW: as wide as that at most, on two lines if it must)
+  // (a neon board: a dark row between its lit rim and the tubes' halo, above and below - the owner, 11-16: the Gaff Hook's
+  // rooftop BAR read "Uar", the capital's top tube run into the rim; NEON_PAD)
+  const L = neonF ? { ...L1, h: L1.h + 2 * NEON_PAD } : L1;
   const w = L.w * 2, h = L.h * 2, F = new GBuf(w, h);
   paintBoard((x, y, c, e) => F.put(x, y, c, [0, 1, 0.1], 0, e, 0), L, P, 0, 0, { lit: r.lit ? (neonF ? 'neon' : 'panel') : false, night: 0.7 });
   const S = upright(F, r.z || 0);
@@ -3012,6 +3031,8 @@ function makeSignBoard(r) {
   return S;
 }
 
+const L0w = (t, fk) => layoutSign(t, 200, { face: fk, lines: 1 }).cw;
+export const NEON_PAD = 1;   // (art px clear between a neon board's rim and its words' halo, top and bottom: makeSignBoard)
 // half a text sign's board, world px (as makeSignBoard lays it out)
 function signHalfW(text) { const t = clean(text, 24), L0 = layoutSign(t, 200, { face: 'civic', lines: 1 }); return layoutSign(t, L0.cw + 4, { face: 'civic', lines: 1 }).w; }
 // A trail sign (the owner, 2026-11-13: "it should just be a more appropriate wooden sign" - the wilds' signs): weathered
