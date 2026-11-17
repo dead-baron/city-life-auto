@@ -166,25 +166,30 @@ test('the admin panel\'s commands: staff only, every one logged, gifts within li
   assert.ok(T.L.adminLog.tail(50).some((e) => e.what === 'gift' && e.ok === false), 'a refusal logged too');
 });
 
-test('the founder: the owner\'s crown for everyone; his Dead Baron look only in admin mode, switchable, only his', () => {
+test('the founder: the crown for everyone; the Dead Baron look an outfit - off by default, on only by the switch, off again at the next login', () => {
   const T = launch();
   const owner = T.join({ name: 'DeadBaron' }, 'owner'), admin = T.join({ name: 'Mod' }, 'admin');
-  assert.equal(owner.founder, true); assert.equal(owner.founderLook, false, 'not in admin mode');
-  assert.ok(!admin.founder);
-  owner.devMode = true; founderSync(owner);
-  assert.equal(owner.founderLook, true, 'in admin mode: the look');
-  const v0 = owner.ped.appVer;
-  assert.equal(T.adm(owner, 'founder', { on: false }).ok, true);
-  assert.equal(owner.founderLook, false); assert.equal(T.L.accounts.get(owner.pid).founderOff, true, 'kept on the account');
-  assert.ok(owner.ped.appVer > v0, 'the descriptor sent again');
-  assert.equal(T.adm(admin, 'founder', { on: true }).ok, false, 'an admin can\'t wear it');
-  T.adm(owner, 'founder', { on: true });
-  // the descriptor: fo for the crown, app.fd for the look (net.js)
   owner.ped.kind = K.PED; owner.ped.player = owner; owner.ped.app = { lk: 'abc' };
+  assert.equal(owner.founder, true); assert.ok(!admin.founder);
+  assert.equal(owner.founderLook, false, 'his own character when he joins');
+  owner.devMode = true; founderSync(owner);
+  assert.equal(owner.founderLook, false, 'admin mode alone never puts it on');
+  assert.deepEqual(descriptor(owner.ped).app, { lk: 'abc' }); assert.equal(descriptor(owner.ped).fo, 1, 'the crown in his own look');
+  assert.equal(T.adm(admin, 'founder', { on: true }).ok, false, 'an admin can\'t switch it (server-checked)');
+  const v0 = owner.ped.appVer || 0;
+  const on = T.adm(owner, 'founder', { on: true });
+  assert.equal(on.ok, true); assert.deepEqual(on.data, { on: true, look: true });
+  assert.ok(owner.ped.appVer > v0, 'the descriptor sent again');
   const d = descriptor(owner.ped);
-  assert.equal(d.fo, 1); assert.deepEqual(d.app, { lk: 'abc', fd: 1 });
-  owner.devMode = false; founderSync(owner);
-  assert.deepEqual(descriptor(owner.ped).app, { lk: 'abc' }, 'out of admin mode: his own look'); assert.equal(descriptor(owner.ped).fo, 1, 'the crown stays');
+  assert.equal(d.fo, 1); assert.deepEqual(d.app, { lk: 'abc', fd: 1 }, 'the switch: the look on');
+  assert.deepEqual(T.adm(owner, 'roster').data.founder, { on: true, look: true });
+  T.adm(owner, 'founder', { on: false });
+  assert.deepEqual(descriptor(owner.ped).app, { lk: 'abc' }, 'switched off: his own look'); assert.equal(descriptor(owner.ped).fo, 1, 'the crown stays');
+  T.adm(owner, 'founder', { on: true });
+  assert.equal(T.L.accounts.get(owner.pid).founderOn, undefined, 'never saved on the account');
+  const again = T.join({ pid: owner.pid, name: 'DeadBaron' });   // (the next login: a new session)
+  assert.equal(again.founder, true); assert.equal(again.founderLook, false, 'off again at the next login');
+  assert.ok(T.L.adminLog.tail(50).some((e) => e.what === 'founder' && e.ok !== false), 'the switch in the admin log');
   // the art: one figure, the game's own people renderer, its own sprite key
   assert.equal(adaptApp({ fd: 1, lk: 'whatever' }), FOUNDER); assert.equal(appKey({ fd: 1, lk: 'x' }), 'F');
   const G = person(FOUNDER, 0, 'idle', 0, { tight: true });

@@ -4,7 +4,7 @@
 // a pad and keys. Loaded the first time it's opened. Everything it does is a staff command on the server (server/admin.js:
 // roster, watch, tpto, bring, send, heal, revive, rescue, endjob, gift, mute, kick, ban, prison, founder) - the role checked
 // there for every one, each one in the admin log; the page only asks.
-//   - the founder's switch (the owner): his Dead Baron look on or off while he's in admin mode (server/founder.js);
+//   - the founder's switch (the owner): his Dead Baron outfit on or off - this session only (server/founder.js);
 //   - the console (/admin/, a one-time link), the free camera, Stop watching;
 //   - everyone online, a card each: who, where, what they're doing, down / wanted / in custody; tap a card for its actions:
 //     Watch, Go to, Bring, Send to a place, Heal or Revive, Unstick, End job, Gift, and the moderation ones (Mute, Kick,
@@ -61,8 +61,8 @@ function draw(body, ctx) {
   const top = document.createElement('div'); top.className = 'adm-top'; body.appendChild(top);
   const btn = (parent, text, cls, run) => { const b = document.createElement('button'); b.textContent = text; if (cls) b.className = cls; b.onclick = run; parent.appendChild(b); return b; };
   if (D.founder) {
-    const f = btn(top, D.founder.on ? '♛ Founder look: ON' : '♛ Founder look: off', D.founder.on ? 'on dev-top' : 'dev-top', () => act(ctx, body, 'founder', { on: !D.founder.on }, (r) => (r.data.on ? 'Founder look on - everyone sees the Dead Baron.' : 'Founder look off - your own character.')));
-    f.title = 'Your Dead Baron look, while you\'re in admin mode';
+    const f = btn(top, D.founder.on ? '♛ Dead Baron look: ON' : '♛ Dead Baron look: off', D.founder.on ? 'on dev-top' : 'dev-top', () => act(ctx, body, 'founder', { on: !D.founder.on }, (r) => (r.data.on ? 'Dead Baron look on - everyone sees it until you switch it off or log out.' : 'Dead Baron look off - your own character.')));
+    f.title = 'Your Dead Baron outfit, for fun: off again when you switch it off or next log in';
   }
   btn(top, '📊 Open the console', '', () => ctx.staffPage('console').then((r) => { if (r && !r.ok) ctx.toast(r.err || 'Not available.', 'warn'); }));
   btn(top, '🎥 Free camera', '', () => ctx.spectate());

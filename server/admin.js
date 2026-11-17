@@ -28,7 +28,7 @@
 //   heal { id } · revive { id }                -> full health · back on their feet (a downed player)
 //   endjob { id }                              -> a stuck job or activity ended for them (its own quit)
 //   gift { id, kind: 'money' | 'item' | 'weapon' | 'color' | 'plate', what, n } -> into their bank, bag or style counter
-//   founder { on }                             -> the owner's founder look in admin mode on or off (owner; server/founder.js)
+//   founder { on }                             -> the owner's founder look on or off, this session only (owner; server/founder.js)
 //   season                                     -> the season now, its days left and each board's top (owner)
 //   season { end: 1, confirm: <the season's n> } -> the season over and the next begun: the top-10 plates, everyone online
 //                                                 out to the title, every profile reset (systems/seasons.js endSeason; owner)
@@ -286,7 +286,7 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
           l.push({ id: q.pid, n: q.name, me: q === p ? 1 : 0, gu: accounts.isGuest(q.pid) ? 1 : 0, role: accounts.role(q.pid) || '', fo: q.founder ? 1 : 0, d: ped && !ped.hidden ? world.map.districtAt(ped.x, ped.y).name : '', w: q.wanted || 0, down: ped && (ped.dead || isDowned(ped)) ? 1 : 0, hp: ped && ped.maxHp ? Math.round((ped.hp / ped.maxHp) * 100) : 0, job: q.job ? String(q.job.type || 'job') : act ? act.n : '', cust: q.custody || q.prison ? 1 : 0, eid: ped ? ped.id : 0, sess: q.anStart ? Math.round((now() - q.anStart) / 60e3) : 0, muted: !!(q.acct && chatData(q.acct).muteUntil > now()) });
         }
         l.sort((x, y) => y.me - x.me || x.n.localeCompare(y.n));
-        return reply(a, true, { data: { l, watch: p.watch ? p.watch.pid : null, founder: role === 'owner' ? { on: !p.founderOff, look: !!p.founderLook } : null, gifts: giftCatalog() } });
+        return reply(a, true, { data: { l, watch: p.watch ? p.watch.pid : null, founder: role === 'owner' ? { on: !!p.founderOn, look: !!p.founderLook } : null, gifts: giftCatalog() } });
       }
       case 'watch': {
         if (!t) {   // (back to yourself)
@@ -378,8 +378,7 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
       }
       case 'founder': {
         const on = !!msg.on;
-        p.founderOff = !on;
-        if (p.acct) { p.acct.founderOff = !on; store.touch(); }
+        p.founderOn = on;   // (this session only: off again at the next login - server/founder.js)
         founderSync(p, true);
         done({ what: 'founder', before: !on, after: on });
         return reply(a, true, { data: { on, look: !!p.founderLook } });

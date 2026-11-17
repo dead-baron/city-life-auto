@@ -214,7 +214,7 @@ export function createLaunch(opts) {
       const a = accounts.ensure(p.profile);
       p.acct = a;
       p.guest = a.kind !== 'member';   // (over their head in grey, "Guest" in the players list: net.js gu, devmode.js)
-      p.founderOff = !!a.founderOff; founderSync(p, a.role === 'owner');   // (the owner: the founder's crown and look - server/founder.js)
+      p.founderOn = false; founderSync(p, a.role === 'owner');   // (the owner: the founder's crown; the look off at every login - server/founder.js)
       p.cc = geo.where(hello.ip, hello.tz);   // (the country, from the connecting address - the address itself never kept: server/geo.js)
       p.devKind = hello.dk || null;
       accounts.noteDevice(p.pid, hello.dm);

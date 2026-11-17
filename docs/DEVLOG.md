@@ -24673,12 +24673,14 @@ avatar as a character he plays in admin mode, with his presence known; the admin
   softer grey with only a faint shadow (lightness and the edge, not hue - readable at night and colorblind-safe; client/main.js
   drawWorldLabels). Guide: "Names over heads", "The beta gift".
 - **The founder** (server/founder.js): the owner's account (the role `owner`) gets a small gold pixel crown by his name for
-  everyone (the descriptor's `fo`, client/main.js founderMark) and "♛ Founder" in the players list. In admin mode his
-  character is his Dead Baron avatar, built in the game's own people renderer (client/art2/people.js `FOUNDER`): a
+  everyone (the descriptor's `fo`, client/main.js founderMark) and "♛ Founder" in the players list. His Dead Baron avatar
+  is an outfit (the owner, later the same day: "for fun, not my character"): his regular character every time he plays,
+  on only with the admin panel's switch (this session only, never saved), off when he switches it off or logs in again -
+  admin mode alone never puts it on. The avatar is built in the game's own people renderer (client/art2/people.js `FOUNDER`): a
   skeleton - ivory bone with a violet-leaning shadow, a skull's face, a rib cage over a hollow middle, the spine - round pink
   glasses, blue angel wings off the shoulder blades that sway with his stride. The descriptor carries `app.fd` while it's on
-  (server/net.js; client/art2/game/peds.js adaptApp, its own sprite key `F`); the admin panel's switch turns it off (kept on
-  the account: `acct.founderOff`); out of admin mode he's his normal character. Only the server decides; nobody else can wear it.
+  (server/net.js; client/art2/game/peds.js adaptApp, its own sprite key `F`). Only the server decides; nobody else can
+  wear it.
   Note: people.js is part of the chunk bake's code, so the `art` hash moves with this change (chunks come out the same and
   carry over).
 - **The admin panel in the game** (client/adminpanel.js, the debug menu's first tile "🛡 Admin" for admins and the owner,
