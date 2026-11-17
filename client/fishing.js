@@ -209,7 +209,8 @@ export class FishView {
   // boxes in the canvas's px), and how much of the bottom the thumbs' buttons hold
   cardObstacles() {
     const c = this.cv || (this.cv = document.getElementById('view')), o = c ? c.getBoundingClientRect() : { left: 0, top: 0 }, out = [];
-    for (const id of ['hud-tl', 'hud-tr', 'toasts', 'job', 'hud-msg']) {
+    // (the boxes themselves, not the corners' columns round them - those can run the screen's height)
+    for (const id of ['radar-wrap', 'rclock', 'status', 'hud-btns', 'hud-stat', 'toasts', 'job', 'trainbar', 'vchip']) {
       const el = document.getElementById(id);
       if (!el) continue;
       for (const q of el.id === 'toasts' ? el.children : [el]) {
@@ -239,6 +240,7 @@ export class FishView {
 export const CARD_H = 206;
 export function cardLayout(W, H, obs, bottom = 0.06) {
   const gap = 8, floor = H * (1 - bottom);
+  obs = obs.filter((q) => q.t < H * 0.45 && q.b - q.t < H * 0.6);   // (only what sits at the top)
   // the clear column between the top corners' HUD, if it's wide enough for a card
   const tl = obs.filter((q) => q.l < W * 0.35 && q.t < H * 0.5), tr = obs.filter((q) => q.r > W * 0.65 && q.t < H * 0.5);
   const L = tl.length ? Math.max(...tl.map((q) => q.r)) + gap : gap, R = tr.length ? Math.min(...tr.map((q) => q.l)) - gap : W - gap;
