@@ -19,6 +19,7 @@ import { drawFish, fishSprite } from './fishart.js';
 const { PH } = FS;
 const wet = (t) => t === T.WATER || t === T.DEEP;
 const fmt = (n) => Math.round(n).toLocaleString('en-US');
+export const ROD_TIP = [44, 40];   // (the rod's tip from the feet, world px: out ahead, up)
 const SILHOUETTE = FS.FISH_BY_ID.bass;   // (the fish on the line, a silhouette till it's landed)
 
 export class FishView {
@@ -109,7 +110,9 @@ export class FishView {
   // a line from the rod's tip to the bobber (st 0 bobbing, 1 diving, 2 a fish on: taut, the fish thrashing about the
   // end - fy: where it is on its track, your own)
   line(g, e, bx, by, now, st, L, fy) {
-    const a = e.ra || 0, tx = e.rx + Math.cos(a) * 20, ty = e.ry + Math.sin(a) * 20 - 30;
+    // (from the rod's tip: held out over the water - the fishing pose's frame 2, client/main.js fishFrame - about 44 px out
+    // ahead of the feet and 40 up)
+    const a = e.ra || 0, tx = e.rx + Math.cos(a) * ROD_TIP[0], ty = e.ry + Math.sin(a) * ROD_TIP[0] * 0.85 - ROD_TIP[1];
     let ex = bx, ey = by;
     if (st === 2) {   // (the fish on: off to one side and back, as it runs)
       const k = fy === null ? Math.sin(now * 5 + e.id) * 0.5 : fy - 0.5, nx = -Math.sin(a), ny = Math.cos(a);
