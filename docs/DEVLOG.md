@@ -24867,3 +24867,32 @@ sign went up." Built to WC421 (the Strip at night), WC422 (Lantern Lane), WC012 
   crowns - none in the Strip). test/neonstrip.test.js - the rebuild (the late fronts at the end of the list with no home, the pools, the
   billboard, Harbor Lights' lawn and asphalt under 12%, the carousel, Lantern Lane's lanterns across, the taxi rank, the
   Violet Room's corner door), the Glow Arcade's arches, Harbor Lights' pieces.
+
+## 2026-11-16 - The Neon Strip, pass 3: warm and wet after dark, palms, lit roofs, crowds, stalls that aren't a grid
+The owner, shown pass 2 beside the concepts: "lets do that pass before this goes live". Our camera looks straight down,
+so the Strip has to read from its ground and its roofs, not from the concepts' glowing facades. What was wrong: dark asphalt and
+dark roofs, a tidy grid of stalls on dark paving, no palms, no warm light.
+- **Warm and wet after dark** (client/art2/game/host.js): the Strip's wet sheen at night (`_slick`) from 0.5 to 0.85,
+  and it starts earlier in the evening. While it's on, the ambient off the ground is warmed (the fronts' glow lying on the
+  paving), the wet reflection is stronger (reflK 0.7 -> up to 1.1) and the neon brighter (emiK x1.15). Only where the
+  camera is in the Strip: the rest of the city's nights are unchanged. Renderer code 409.15 -> 409.3 KB of 410.
+- **Palms** (shared/world3-neon.js): a lit royal palm between each two lamps down the boulevard's south pavement as well
+  as the north, one on each corner of the three crossings, down Marina Lane's south edge, and at the fair (its ring's
+  mouths and the ground's corners).
+- **Lit roofs** (glowKit): every lit front's roof, the clubs', The Violet Room's and the Pixel Arcade's carry a lounge
+  under strings of lights with its umbrellas and tables, glowing skylights, potted plants. A wide roof also gets a lit
+  pool or a picture sign standing on it. The backs get skylights and, on most, strings of lights over a table. They are
+  all existing roof-kit pieces, so the bake's code doesn't grow (still 1014.96 KB).
+- **Crowds**: more people walking the nightlife streets at night (server/systems/npc.js CROWD nightlife 1.6 -> 2.2), the
+  knots of friends' cap round a player 10 -> 14 (activities.js), knots down Marina Lane and at Lantern Lane's breaks.
+- **Not a grid**: Lantern Lane's stalls in clusters of two to five along its four rows, each cluster shifted a little, a
+  break between clusters where the crowd stands, with a food cart steaming and its queue at every other break. The
+  lanterns are still across the lane at every stall. The fair's game stalls stand in a ring round the carousel, open at
+  its east and west ends, with lights strung stall to stall round it and a loose cluster of stalls at each end of the
+  ground. The fair's shot is framed with the Ferris wheel in it.
+- The 96-light limit: it does bite on the Strip. Each frame keeps the 96 strongest lights, and the Strip's neon fronts
+  outrank the bulbs' and the roofs' small lights. That's why pass 3 lights the ground and the roofs by emissive glow and
+  the ambient, which the limit doesn't cap, rather than by more lights.
+- Tests: test/neonstrip.test.js (Lantern Lane's stalls along four rows, not one grid; a stall's frame holds a run's end;
+  the hotels' pools and the wide roofs' pools);
+  test/placementlint.test.js passes.

@@ -218,8 +218,9 @@ test('the rebuild: the open lots filled with lit fronts at the end of the list, 
   for (const [b] of late) assert.ok(b.home === undefined, `${b.name}: no home`);
   // the hotel towers' pools on their roofs; the video billboard on Lantern Hall's roof over the plaza
   const pools = M.buildings.filter((b) => b && (b.art?.kit || []).some(([k]) => k === 'rpool'));
-  assert.ok(pools.length >= 4, `rooftop pools (${pools.length})`);
-  assert.ok(pools.every((b) => (b.art.spec?.floors || 0) >= 5 || b.kind === 'hotel'), 'on the hotels');
+  const hotelPools = pools.filter((b) => b.kind === 'hotel' || /Hotel/.test(b.name || ''));
+  assert.ok(hotelPools.length >= 4, `the hotels' rooftop pools (${hotelPools.length})`);
+  assert.ok(pools.length >= 10, `pools on the wide roofs too - pass 3, lit roofs (${pools.length})`);
   const hall = M.buildings.find((b) => b && b.name === 'Lantern Hall');
   assert.ok(hall && hall.art.kit.some(([k]) => k === 'vid'), 'the video billboard on Lantern Hall');
   // Harbor Lights: no lawn of any size left on the headland's middle, no car park
