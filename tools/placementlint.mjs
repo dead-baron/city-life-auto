@@ -90,8 +90,22 @@ export const LINT_ALLOW = {
   // the pavement as their district's cash of its own, or where a move would leave a street out of the cash's reach
   // (shared/world3-shops.js seatAtms3; world3server.test.js): a shop front there takes one in - bring this down, never up
   atmStray: 53,
-  // a cash machine set in a one-storey self storage's front, its top a few px over the foot of the board above it
-  nameCovered: 1,
+  // (11-16: the cash machine is lower now - props-kit.js atmWall - and the self storage's board clear of it)
+  nameCovered: 0,
+  // (the rows that came in 11-16 - the owner's Egret Point shots - each at what's left after the class fixes: bring them
+  // down, never up)
+  // the street's furniture standing in front of a shop's words - an el's piers, a shelter's or a stall's canopy, a phone
+  // booth, a porch's posts, a lamp, a flag or power pole, a run of lights (shared/festoon.js's lint is its own) - and the
+  // badge of a place at a wall over its window's OPEN
+  signCovered: SIGN_COVERED_N,
+  // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
+  // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
+  // the most part (West Hills', Southside's, Old Town's lots)
+  doorOnGrass: DOOR_ON_GRASS_N,
+  // the places you'd walk into still served at the wall: a building too shallow for a room (Pelican Key Charters, a few
+  // of World v3's added shop rows), a row shared with a place that isn't a shop (Egret Marsh Outfitters' and the Marsh
+  // Bait & Tackle's), a lot building with a home or a bay behind the same front, the hand-built Greenfield Park shops
+  wallOnly: WALL_ONLY_N,
 };
 export const CANOPY_MAX = [4 * TILE, 2 * TILE], ALLEY_GAP = 26;
 const CANOPIES = new Set(['porte', 'canopy', 'pergola']);
@@ -411,7 +425,10 @@ function artRows(M, rows, seen) {
   for (const [k, fl] of chunks) {
     const cx = k % 4096, cy = Math.floor(k / 4096);
     for (const o of staticItems(M, cx, cy, { noCover: true })) {
-      if (!o.recipe || SKIP.has(o.recipe.t) || THIN.has(o.recipe.m || o.recipe.t) || o.b !== undefined) continue;
+      // (a plant: only for signCovered - a planter stood against the front, a tree before it: sightlines3 keeps the crowns
+      // off the boards, nameCovered never counted them)
+      const flora = !!o.recipe && o.recipe.t === 'f';
+      if (!o.recipe || (SKIP.has(o.recipe.t) && !flora) || THIN.has(o.recipe.m || o.recipe.t) || o.b !== undefined) continue;
       for (const f of fl) {
         const { it, sp, b } = f;
         if (o.y <= it.y || o.y > it.y + 260 || o.x + o.ext[2] < it.x || o.x - o.ext[0] > it.x + sp.w) continue;
@@ -428,10 +445,11 @@ function artRows(M, rows, seen) {
               let n = 0;
               for (let y = Math.max(0, Math.ceil(Y0 - oy)); y < Math.min(G.h, Math.floor(Y1 - oy)); y++) for (let x = Math.max(0, Math.ceil(X0 - ox)); x < Math.min(G.w, Math.floor(X1 - ox)); x++) if (G.col[(y * G.w + x) * 4 + 3] > 128) n++;
               const id = `c|${f.bi}|${q.t}|${o.key}|${Math.round(o.x)}`;
-              if (n >= 6 && !hitOnce.has(id)) { hitOnce.add(id); rows.signCovered.push({ what: `${o.recipe.m || o.recipe.t} in front of ${b.name || b.kind}'s ${q.k} "${q.t}"`, x: o.x, y: o.y, why: `${n} px over it` }); }
+              if (n >= 6 && !hitOnce.has(id)) { hitOnce.add(id); rows.signCovered.push({ what: `${o.recipe.m || o.recipe.sp || o.recipe.t} in front of ${b.name || b.kind}'s ${q.k} "${q.t}"`, x: o.x, y: o.y, why: `${n} px over it` }); }
             }
           }
         }
+        if (flora) continue;
         if (f.sgn && box[1] < it.y - 30) {
           if (f.sign === undefined) { let sb = null; try { const G = makeBuilding(sp); if (G.signBox) sb = [it.x - G.ax + G.signBox.x, it.y - G.ay + G.signBox.y, it.x - G.ax + G.signBox.x + G.signBox.w, it.y - G.ay + G.signBox.y + G.signBox.h]; } catch { sb = null; } f.sign = sb; }
           if (f.sign && hit2(f.sign, box)) bx = bx.concat([{ t: f.sgn.text, r: f.sign }]);

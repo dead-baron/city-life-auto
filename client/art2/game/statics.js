@@ -1125,18 +1125,26 @@ function stylePlaque(pq, A, seed) {
 
 // the makeBuilding spec, rooftop kit and lights of one section. lights: [dx, dy, z, r, col, k, kind] from the
 // section's south-west corner (dy south of the front wall)
-// The cash machines set into the fronts (map.js wallAtm: an 'atmw' 5 px out from the wall's foot), by the row of the wall's
-// foot -> a front's [x0, x1] spans of them (facade px from its section's west edge, the machine's width and a margin)
+// The cash machines set into the fronts (map.js wallAtm: an 'atmw' 5 px out from the wall's foot) and the planters stood
+// against them, by the row of the wall's foot -> a front's [x0, x1] spans of them (facade px from its section's west
+// edge, the thing's width and a margin)
 const ATM_ROWS = new WeakMap();
 export function frontAtms(M, tx, footTy, tw) {
   let I = ATM_ROWS.get(M);
   if (!I) {
     I = new Map();
-    for (const p of M.props || []) if (p && p.t === 'atmw' && p.inside === undefined) { const k = Math.floor((p.y - 5) / TILE); let l = I.get(k); if (!l) I.set(k, (l = [])); l.push(p.x); }
+    const add = (row, x, hw) => { let l = I.get(row); if (!l) I.set(row, (l = [])); l.push([x, hw]); };
+    for (const p of M.props || []) {
+      if (!p) continue;
+      if (p.t === 'atmw' && p.inside === undefined) add(Math.floor((p.y - 5) / TILE), p.x, 21);
+      // (and a flower box or a potted shrub stood against the front - plantFor: a planter on the paving - in its first
+      // 22 px: the OPEN not behind it either)
+      else if (POTTED.test(p.t) && p.y % TILE <= 22) add(Math.floor(p.y / TILE), p.x, 26);
+    }
     ATM_ROWS.set(M, I);
   }
   const out = [], X0 = tx * TILE, X1 = (tx + tw) * TILE;
-  for (const x of I.get(footTy) || []) if (x > X0 - 18 && x < X1 + 18) out.push([Math.round(x - X0 - 21), Math.round(x - X0 + 21)]);
+  for (const [x, hw] of I.get(footTy) || []) if (x > X0 - hw && x < X1 + hw) out.push([Math.round(x - X0 - hw), Math.round(x - X0 + hw)]);
   return out;
 }
 function specOf(c, b, A, s, D) {

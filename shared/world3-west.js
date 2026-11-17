@@ -248,20 +248,21 @@ export function buildWest(m, addProp) {
       const b = addBld(m, x, y, w, h, 'shack', `Fishing Shack`, 'metal', { spec: { floors: 1, style: 'siding', wallColor: walls[k % walls.length], pitch: 'gable', roof: 'metal', roofColor: ['#7a8288', '#8a6a50', '#6a7076'][k % 3], slope: 0.4 + (k % 3) * 0.08 } });
       k++;
       if (!b) continue;
-      const id = m.homes.length, door = { x: (x + w / 2) * TILE, y: (N ? y + h + 0.8 : y - 0.8) * TILE };
+      // its door where it's drawn - on its south side, the camera's (the south row's had theirs on the back, by the street)
+      const id = m.homes.length, door = { x: (x + w / 2) * TILE, y: (y + h + 0.8) * TILE };
       const home = { id, kind: 'shack', name: `Egret Point Shack #${id + 1}`, price: 6000, slots: 1, x: door.x, y: door.y, garage: { x: (x + w - 0.8) * TILE, y: (N ? y + h + 1.6 : y - 1.6) * TILE, a: N ? -Math.PI / 2 : Math.PI / 2 }, b: b.id };
       m.homes.push(home);
       m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: door.x, y: door.y, r: 40, b: b.id });
       b.home = id; b.name = home.name; out.homes++;
-      // its door where it's drawn (the south row's on the street side, away from the camera: drawn as its back), a gravel
-      // path from its step to Wharf Street
-      const cx = x + w / 2;
-      b.door = { tx: Math.floor(cx), ty: N ? y + h : y - 1 };
-      if (!N) b.back = true;
-      if (N) pave(Math.floor(cx - 0.9), y + h, Math.floor(cx + 0.9), R - 4, T.DIRT); else pave(Math.floor(cx - 0.9), R + 4, Math.floor(cx + 0.9), y - 1, T.DIRT);
-      // nets drying, pots and a skiff on blocks beside some
-      if (k % 3 === 0) prop('crates', x - 1.2, N ? y + 2 : y + 4, 10);
-      if (k % 4 === 1) prop('drum', x + 8, N ? y + 3 : y + 2, 6);
+      // a gravel path from its step to Wharf Street: the north row's straight down to it; the south row's along the front
+      // and up the shack's west side (the gap to the next is three tiles or more)
+      const cx = x + w / 2, c0 = Math.floor(cx - 0.9), c1 = Math.floor(cx + 0.9);
+      b.door = { tx: Math.floor(cx), ty: y + h };
+      if (N) pave(c0, y + h, c1, R - 4, T.DIRT);
+      else { pave(x - 2, y + h, c1, y + h + 1, T.DIRT); pave(x - 2, R + 4, x - 1, y + h + 1, T.DIRT); }
+      // nets drying, pots and a skiff on blocks beside some (off the paths: the south row's behind it, by the street)
+      if (k % 3 === 0) prop('crates', N ? x - 1.2 : x + 2, N ? y + 2 : y - 1.2, 10);
+      if (k % 4 === 1 && N) prop('drum', x + 8, y + 3, 6);
     }
     for (let j = 0; j < 4; j++) addProp(m, 'lamp', (1142 + j * 44) * TILE, (R - 3.2) * TILE), out.props++;
     keep(EGRET.box[0], EGRET.box[1], EGRET.box[2], EGRET.box[3]);
