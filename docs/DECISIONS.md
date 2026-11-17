@@ -80,6 +80,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Chat on every device; on touch the chat button sits by the left thumb. (11-12; DEVLOG 11-12, queue)
 - Emotes are separate from chat, with their own button. (11-13; DEVLOG 11-13)
 - Speech bubbles clear above the head, bigger text, a small pop; quick phrases as bubbles, long typed lines to the log (or a capped bubble). (11-13; queue)
+- Keep the chat and name filter as it is; report and block easy to find; a block can be undone (an Undo right after, Unblock in Messages' Blocked list and Settings > Chat). (11-15; chat, DEVLOG 11-17)
+- Friends: a way to add a specific person (crews are only 4) - a request, Accept / Decline; friends starred and first in the contacts, never pushed out. (11-15; chat, DEVLOG 11-17)
+- Contact details (phone numbers, emails, links other than ours, street addresses, social handles) masked in every chat line; lines fishing for personal info (age, home, school, real name, photos, another app) flagged to the staff's Review list, not blocked. (11-15; chat, DEVLOG 11-17)
+- Messaging privacy: "Remove contact" and a "Who can text me" choice (everyone I've met / friends and crew only). (11-15; chat, DEVLOG 11-17)
 - Typing indicator: three dots pulsing in a small bubble, no word "typing". (11-13; queue)
 - No Unicode emoji over heads: our own 16x16 pixel emotion balloons in the game palette (Kenney CC0 as base, credited). (11-13; queue)
 - Imanor balloon sheets: animation timing reference only until the license is known. (11-13; queue) - OPEN: license.

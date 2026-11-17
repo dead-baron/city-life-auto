@@ -24872,3 +24872,45 @@ shop's counter, and the custody panel over the whole screen with an escape that 
   or kitchen fire with it (firefighter.js outWith, from endCall and letGo), and a spot fire with no call left goes out
   at its next step. Tests: firefighter.test.js (a shift given up, a call run out of time: no fire left), meleefire.test.js
   (no stray fire survives, and a knockdown on that spot lights nobody).
+
+## 2026-11-17 - Open beta safety: friends, Who can text me, contact details hidden, fishing flagged, Undo a block
+The owner (11-15): the beta stays open and easy (13+, under 18 with a parent's permission - the terms carry it); keep the
+chat filter, make report and block easy to find, add friends, hide contact details, flag personal-info fishing to the
+staff, and give players "Remove contact", "Who can text me" and a way to unblock an accidental block.
+- **Friends** (server/chat.js `friend`, the page's Messages app). Add friend on a contact's thread, or the tap-a-name
+  menu (a contact, a crewmate, or anyone within chat range, CHAT.nearM). The other player gets a notification and a
+  "Friend requests" row at the top of Messages: Accept / Decline. Accepted: `contacts[pid].fr = 1` both ways. Friends
+  get a star and come first (then crew, then online, then the most recent - the server sorts, the page merges the
+  threads in the same order); they're never pushed out by CHAT.contactsMax (that cap now counts the others only) and
+  are capped at CHAT.friendsMax (100). Requests (`chat.freq` on the target, `chat.fsent` on the sender) lapse after
+  CHAT.friendReqS (3 days), at most CHAT.friendReqMax (20) wait for one player, a sender gets CHAT.friendRate (6 in 10
+  min), and the same person can be asked again only CHAT.friendAgainS (a day) after the last ask - declined or lapsed.
+  A blocked or muted sender's request "is sent" as far as they know and never arrives; a block ends the friendship and
+  drops requests both ways. Asking someone who already asked you makes you friends. Remove friend keeps the contact.
+  **Guests** can send and accept requests - they already text their contacts; choosing the simplest safe default,
+  since all of it stays inside the game and the safety below applies to everyone.
+- **Remove contact** (a contact's thread, not crew): off both lists - they can't text you - until you meet again.
+- **Who can text me** (Messages, under the list; Settings > Chat): "Everyone I've met" (default) or "Friends and crew
+  only", kept with the account (`chat.who`). The server refuses a phone message from anyone else with a reason ("...only
+  takes messages from friends and crew - send a friend request first"), and the inbox drops what came from others.
+- **Contact details hidden** (server/chatfilter.js `contact`, every channel): phone numbers (7-15 digits with separators,
+  10+ run together, seven or more spelled out), emails (also "at ... dot com"), links and bare domains except our own
+  (deadbaron.com, the Discord invite and the Ko-fi page - passed from config), street addresses (a house number, one to
+  three words, a street word) and handles after a platform's name ("my snap is ...", "insta: ...", "@...", Name#1234)
+  are masked with * for everyone, the sender's own echo included; the sender is told why at most every CHAT.maskToldS.
+  Game talk passes: "$5000", "3 stars", "10:30", "1,000,000", "5 blocks down the road", "oh snap" (test/chatsafety).
+- **Fishing flagged, not blocked** (`fishing`): a line asking someone's age (asl, how old r u), where they live, their
+  school, real name, for photos, to move to another app or for a number, or to keep a secret / whether parents are home
+  goes through as said and lands on the staff's Review list as `safety` - the sender, what was asked, the last few such
+  lines as shown (masked: no raw contact details are stored), and for a text who it went to. At most one review call a
+  sender per CHAT.safetyGapS (the lines between ride along), merged on one entry per hour by moderation.js. Whoever it
+  reached gets a "never share..." tip, at most every CHAT.safetyTipS.
+- **Unblock**: right after a block (tap-a-name menu or a thread) an Undo line shows for CHAT.undoS; Messages gets a
+  "Blocked (n)" row at its bottom that opens the blocked with Unblock; Settings > Chat keeps its list.
+- The Terms get a "Chat, friends and messages" section; the Privacy Policy's chat section says what's kept. The Guide's
+  Chat entry says contact details are hidden and where Unblock lives; a new "Friends and contacts" entry.
+- Wire: `{ t: 'friend', a: 'ask'|'yes'|'no'|'unfriend'|'forget', id }` -> `{ t: 'friendres' }` and a contacts list
+  (`fr`, `rs`, `rq`); `{ t: 'chatset', who }`; chatstate `who`. An erased account leaves others' requests too.
+- Tests: test/chatsafety.test.js (new: the filter both ways, the flags, friends, remove contact, who can text me, the
+  Guide and the Terms), chatui (requests, the star, Blocked, who can text me, a thread's Add friend / Remove contact,
+  Undo), launch-chat. No budget changed (chat.js loads after the page is up).
