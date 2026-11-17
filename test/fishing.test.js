@@ -392,6 +392,8 @@ test('rod first: no prompt with the rod in the bag or while swimming; the rod ou
   fishing.begin(W, p, fishing.spotFor(W, p.ped));
   assert.equal(playLine(W, p, { hold: 4 }).F.out, 1, 'landed');
   assert.equal(p.ped.weapon, 'rod', 'still in hand');
+  const fl = fishing.logInfo(p);   // (the phone's Fish log: client/fishlog.js)
+  assert.ok(fl.t === 'fishlog' && fl.log.bluegill && fl.creel.some((q) => q[0] === 'bluegill') && fl.max === FISHING.creel && fl.rec.bluegill, 'the Fish log');
   // the last rod gone: out of your hand
   prof.inventory.caneRod = 0;
   fishing.tick(W);

@@ -1055,16 +1055,16 @@ div.ph-row { cursor: default; }
 /* the Fish log (client/fishlog.js): the cooler's row, then every kind as a tile - its pixel picture, its name, your count
    and best; the ones still to catch dark shapes */
 .fl-cool { display: flex; gap: var(--s2); overflow-x: auto; padding: 2px 2px var(--s2); }
-.fl-c { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 96px; padding: var(--s1); background: var(--panel2, rgba(255,255,255,.04)); border: 1px solid var(--line); }
+.fl-c { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 96px; padding: var(--s1); background: var(--track); border: 1px solid var(--line); }
 .fl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--s2); margin: 4px 0 var(--s3); }
-.fl-f { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: var(--s1) var(--s1) var(--s2); border: 1px solid var(--line); background: rgba(10, 30, 46, .55); text-align: center; }
-.fl-f.r3 { border-color: #58b8ff; } .fl-f.r4 { border-color: #c890ff; } .fl-f.r5 { border-color: #ffd34a; box-shadow: inset 0 0 12px rgba(255, 211, 74, .25); }
+.fl-f { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: var(--s1) var(--s1) var(--s2); border: 1px solid var(--line); background: var(--track); text-align: center; }
+.fl-f.r3 { border-color: var(--pad-roll); } .fl-f.r4 { border-color: var(--pad-obj); } .fl-f.r5 { border-color: var(--pad-gold); box-shadow: inset 0 0 12px var(--gold-a); }
 .fl-f.no { opacity: .75; }
 .fl-pic { display: flex; align-items: center; justify-content: center; height: 64px; max-width: 100%; overflow: hidden; }
 .fl-pic canvas { image-rendering: pixelated; max-width: 100%; max-height: 64px; object-fit: contain; }
 .fl-f b, .fl-c b { font: 700 var(--fs-2) var(--pixel); line-height: 1.2; overflow-wrap: anywhere; }
 .fl-f small, .fl-c small { font: 600 var(--fs-1) var(--ui); color: var(--dim); }
-.fl-f small.fl-rec { color: var(--pad-gold, #ffd34a); }
+.fl-f small.fl-rec { color: var(--pad-gold); }
 
 /* ==== the bag, the quick wheel, the weapon wheel ==== */
 #wheel { position: fixed; inset: 0; z-index: 30; background: radial-gradient(circle at 50% 50%, var(--scrim) 0, var(--ink-a) 200px, transparent 320px); touch-action: none; }

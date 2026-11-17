@@ -257,7 +257,8 @@ function drawCardBody(g, cw, m, f, now0) {
   g.fillStyle = 'rgba(12,20,30,.92)'; g.fillRect(0, 0, cw, ch);
   g.strokeStyle = leg ? '#ffd34a' : f.rare >= 4 ? '#c890ff' : f.rare >= 3 ? '#58b8ff' : '#c8a060'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, cw - 3, ch - 3);
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  const fit = (text, size, weight, family, max) => { let z = size; g.font = `${weight} ${z}px ${family}`; while (z > 10 && g.measureText(text).width > max) { z--; g.font = `${weight} ${z}px ${family}`; } return z; };
+  const font = (weight, z, family) => `${weight} ${z}px ${family}`;   // (the families below: CLA Pixel, Barlow Condensed)
+  const fit = (text, size, weight, family, max) => { let z = size; g.font = font(weight, z, family); while (z > 10 && g.measureText(text).width > max) { z--; g.font = font(weight, z, family); } return z; };
   const banner = m.wr ? 'NEW RECORD!' : m.nw ? 'NEW SPECIES!' : m.pb ? 'PERSONAL BEST!' : leg ? 'LEGENDARY!' : '';
   if (banner) { fit(banner, 16, 700, '"CLA Pixel", "Barlow Condensed", sans-serif', cw - 24); g.fillStyle = leg || m.wr ? '#ffd34a' : '#7fe07f'; g.fillText(banner, cx, 18); }
   // the fish: bigger the heavier, in a box under the news (its pixels whole: client/fishart.js)

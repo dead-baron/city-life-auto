@@ -60,7 +60,7 @@ export const DEV_SECTIONS = [
     ['🛒 The nearest grocery (carts by the door)', 'near', { k: 'grocery' }],
   ] },
   { id: 'fish', title: '🎣 Fishing', items: [
-    ['🎣 Every rod and 20 of every bait', 'fish', { k: 'kit' }],
+    ['🎣 Every rod and 20 of every bait', 'fish', { k: 'kit' }], ['📖 Half the kinds in your Fish log', 'fish', { k: 'log' }],
     ['🏞 A pond', 'fish', { k: 'go', w: 'pond' }], ['🏞 A lake', 'fish', { k: 'go', w: 'lake' }], ['🏞 A river', 'fish', { k: 'go', w: 'river' }],
     ['🏞 A creek', 'fish', { k: 'go', w: 'creek' }], ['🌀 A river\'s calm pocket (the big trout)', 'fish', { k: 'go', spot: 'pocket' }], ['🪨 The fishing rocks (stripers, redfish)', 'fish', { k: 'go', spot: 'point' }], ['🦢 The marshes', 'fish', { k: 'go', w: 'swamp' }], ['🏖 The shallows', 'fish', { k: 'go', w: 'shore' }],
     ['⚓ A pier', 'fish', { k: 'go', w: 'pier' }], ['🐠 The reef (the southern keys)', 'fish', { k: 'go', w: 'reef' }],
