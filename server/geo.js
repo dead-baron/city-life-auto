@@ -6,7 +6,7 @@
 //      the console), packed into <data>/ipcountry.bin (packTable; by hand: tools/ipcountry.mjs). The server fetches this month's edition by
 //      itself a minute after it starts when the table is missing or over 40 days old (start: in the background, never on the
 //      start's path), or the file is put there by hand. No table yet: step 2 alone.
-//   2. The page's time zone (the hello's tz: Intl's), through the IANA tz database's zone table (server/data/tzcountry.json,
+//   2. The page's time zone (the hello's tz: Intl's), through the IANA tz database's zone table (server/tzcountry.json - tracked: server/data/ is git-ignored runtime data,
 //      public domain): its country - and its region ("Central", "Ontario"), which the address can't give. When the address
 //      found a country the time zone's region is added only if the two agree.
 // where(ip, tz) -> { c: 'US', r: 'Central' | undefined, s: 'ip' | 'tz' } or null. names[c]: the country's name.
@@ -15,7 +15,7 @@ import { join as pathJoin, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 
-const TZ = JSON.parse(readFileSync(pathJoin(dirname(fileURLToPath(import.meta.url)), 'data', 'tzcountry.json'), 'utf8'));
+const TZ = JSON.parse(readFileSync(pathJoin(dirname(fileURLToPath(import.meta.url)), 'tzcountry.json'), 'utf8'));
 export const names = TZ.names;
 export const TABLE_FILE = 'ipcountry.bin', MAX_AGE_DAYS = 40, FETCH_AFTER_MS = 60e3;
 
