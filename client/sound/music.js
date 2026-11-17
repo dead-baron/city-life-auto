@@ -24,7 +24,7 @@ const TITLE_CHORDS = ['C', 'Am', 'F', 'G', 'C', 'Am', 'Dm', 'G', 'F', 'G', 'Em',
 export const CH = {   // root (bass octave) and the chord's tones (an octave up)
   C: [36, [60, 64, 67]], Am: [45, [57, 60, 64]], F: [41, [57, 60, 65]], G: [43, [55, 59, 62]], Dm: [38, [57, 62, 65]], Em: [40, [55, 59, 64]],
   Fmaj7: [41, [57, 60, 64, 65]], Em7: [40, [55, 59, 62, 64]], Dm7: [38, [57, 60, 62, 65]], Cmaj7: [36, [55, 59, 60, 64]],
-  Am7: [45, [55, 57, 60, 64]], G7: [43, [53, 55, 59, 62]], Bb: [46, [58, 62, 65]],
+  Am7: [45, [55, 57, 60, 64]], G7: [43, [53, 55, 59, 62]], Bb: [46, [58, 62, 65]], A7: [45, [55, 57, 61, 64]],
 };
 export const SONGS = {
   title: { bpm: 96, steps: 8, bars: 16, swing: 0.04, echo: 0.3,
@@ -51,12 +51,21 @@ export const SONGS = {
       72, _, _, _, _, _, 76, _, _, 79, _, _, 81, _, _, _, _, _, 79, _, _, 76, _, _, 77, _, _, _, _, _, 76, _, _, 74, _, _, 74, _, _, _, _, _, _, _, _, 0, 0, 0,
       76, _, _, 79, _, _, 84, _, _, _, _, _, 81, _, _, 79, _, _, 76, _, _, 72, _, _, 74, _, _, 77, _, _, 76, _, _, 74, _, _, 72, _, _, _, _, _, _, _, _, 0, 0, 0] },
     drums: { brush: '...x.....x..', tick: 'x..x..x..x..' }, drumVol: 0.45 },
-  // a lobby (the bank, the hospital): slow vibes over a pad, nothing to hurry anyone
-  lobby: { bpm: 78, steps: 8, bars: 8, echo: 0.3,
-    chords: ['Cmaj7', 'Am7', 'Dm7', 'G7', 'Cmaj7', 'Am7', 'Fmaj7', 'G7'], bassPat: [1, 0, 0, 0, 2, 0, 0, 0], padVol: 0.016,
-    lead: { inst: 'vibes', vol: 0.055, notes: [
-      76, _, _, 79, _, _, 77, _, 76, _, 72, _, _, _, 0, 0, 74, _, _, 77, _, _, 76, _, 74, _, 71, _, _, _, 0, 0,
-      72, _, 76, _, 79, _, 84, _, 81, _, _, _, 76, _, 0, 0, 77, _, 81, _, 79, _, 77, _, 74, _, _, _, _, _, 0, 0] } },
+  // a lobby (the hospital, the bank): "Visiting Hours" - a gentle bossa nova from the ceiling speakers (the owner, 11-17:
+  // "cheesy but not too cheesy", a funny contrast to dying and respawning). Nylon guitar comping the bossa's two-bar
+  // figure, a soft electric piano under each bar, the bass on the root and the fifth, brushes and a cross-stick, vibes on
+  // the tune. speaker: what it plays through - a thin, band-limited ceiling speaker (no lows, no air, a honk in the mids)
+  // and a short room echo off the lobby's hard walls
+  lobby: { bpm: 116, steps: 8, bars: 16, swing: 0.02, echo: 0.22, room: { t: 0.083, fb: 0.26 }, speaker: { hp: 420, lp: 3300, mid: 1400 },
+    chords: ['Cmaj7', 'Cmaj7', 'Am7', 'Am7', 'Dm7', 'G7', 'Cmaj7', 'G7', 'Fmaj7', 'Fmaj7', 'Em7', 'A7', 'Dm7', 'G7', 'Cmaj7', 'Cmaj7'],
+    bassPat: [1, 0, 0, 1, 2, 0, 0, 2], bassOct: 12,   // (an octave up: a ceiling speaker has no low end to carry it)
+    guitarPat: [1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0], guitarVol: 0.022, keysVol: 0.01,
+    lead: { inst: 'vibes', vol: 0.045, notes: [
+      76, _, 79, _, _, 77, 76, _, 72, _, _, _, 0, 0, 0, 79, 81, _, 79, _, 76, _, _, 74, 72, _, _, _, 0, 0, 76, 77,
+      77, _, 81, _, _, 79, 77, _, 74, _, 71, _, _, 74, 77, _, 76, _, _, _, 72, _, 74, _, 71, _, _, _, 0, 0, 0, 0,
+      81, _, 84, _, _, 81, 79, _, 77, _, _, 76, 77, _, 81, _, 79, _, _, 76, _, 74, 76, _, 73, _, _, _, 0, 0, 76, 79,
+      81, _, 77, _, _, 74, 72, _, 71, _, 74, _, 77, _, 79, _, 76, _, _, _, _, _, 72, _, 72, _, _, _, 0, 0, 0, 0] },
+    drums: { kick: 'x...x...', rim: 'x..x..x.', brush: 'xxxxxxxx' }, drumVol: 0.32 },
 };
 
 // ---- the instruments (notes go through E.tone / E.fm / E.noise into a song's chain) ----
@@ -70,6 +79,8 @@ function play(E, out, inst, t, m, dur, v) {
     case 'epiano': E.fm(out, t, f, dur, v, 1, 0.9, { mdecay: 0.25 }); E.tone(out, t, f * 2, 0.15, v * 0.25, { type: 'sine' }); break;
     case 'vibes': E.fm(out, t, f, dur, v, 4, 0.25, { mdecay: 0.12 }); E.tone(out, t, f * 1.003, dur, v * 0.5, { type: 'sine' }); break;
     case 'pad': E.tone(out, t, f, dur, v, { wave: 'organ', a: 0.35, lp: 1600 }); break;
+    // a nylon-string guitar: a soft thumb-plucked string (a triangle, darkened, dying away) and the nail's brief click
+    case 'nylon': E.tone(out, t, f, Math.min(dur, 0.9), v, { type: 'triangle', a: 0.003, lp: 1500 }); E.tone(out, t, f * 2, 0.05, v * 0.18, { wave: 'pulse25', a: 0.001, lp: 2600 }); break;
     case 'stab': E.tone(out, t, f, dur, v, { wave: 'saw8', a: 0.004, lp: 2400 }); break;
     default: break;
   }
@@ -83,6 +94,7 @@ function drum(E, out, kind, t, v) {
     case 'tick': E.noise(out, t, 0.02, v * 0.035, { ft: 'highpass', f: 8000 }); break;
     case 'shaker': E.noise(out, t, 0.045, v * (0.03 + R() * 0.02), { ft: 'bandpass', f: 6000, q: 1.2, a: 0.01 }); break;
     case 'brush': E.noise(out, t, 0.14, v * 0.06, { ft: 'bandpass', f: 3000, q: 0.6, a: 0.02 }); break;
+    case 'rim': E.noise(out, t, 0.03, v * 0.12, { ft: 'bandpass', f: 1700, q: 2.5 }); E.tone(out, t, 820, 0.03, v * 0.05, { type: 'triangle' }); break;   // (a cross-stick)
     default: break;
   }
 }
@@ -96,10 +108,19 @@ export class Music {
     const inp = c.createGain(), lp = krate(c.createBiquadFilter()), pan = c.createStereoPanner ? krate(c.createStereoPanner()) : null, lvl = c.createGain();
     lp.type = 'lowpass'; lp.frequency.value = 16000; lvl.gain.value = 0;
     inp.gain.value = 4;   // (the notes are written quiet: the songs' make-up gain)
-    inp.connect(lp); if (pan) { lp.connect(pan); pan.connect(lvl); } else lp.connect(lvl);
+    // (S.speaker: played through a small ceiling speaker - its band, the echo too, before the room's muffle and place)
+    let into = lp;
+    if (S.speaker) {
+      const hp = krate(c.createBiquadFilter()), mid = krate(c.createBiquadFilter()), top = krate(c.createBiquadFilter());
+      hp.type = 'highpass'; hp.frequency.value = S.speaker.hp; hp.Q.value = 0.9;
+      mid.type = 'peaking'; mid.frequency.value = S.speaker.mid; mid.Q.value = 1; mid.gain.value = 4;
+      top.type = 'lowpass'; top.frequency.value = S.speaker.lp; top.Q.value = 0.9;
+      hp.connect(mid); mid.connect(top); top.connect(lp); into = hp;
+    }
+    inp.connect(into); if (pan) { lp.connect(pan); pan.connect(lvl); } else lp.connect(lvl);
     const d = c.createDelay(1), fb = c.createGain(), dk = krate(c.createBiquadFilter()), send = c.createGain();
-    d.delayTime.value = (60 / S.bpm) * 0.75; fb.gain.value = 0.3; dk.type = 'lowpass'; dk.frequency.value = 2200; send.gain.value = S.echo || 0;
-    inp.connect(send); send.connect(d); d.connect(dk); dk.connect(fb); fb.connect(d); dk.connect(lp);
+    d.delayTime.value = S.room ? S.room.t : (60 / S.bpm) * 0.75; fb.gain.value = S.room ? S.room.fb : 0.3; dk.type = 'lowpass'; dk.frequency.value = 2200; send.gain.value = S.echo || 0;   // (S.room: a short slap off a room's walls in place of the beat's echo)
+    inp.connect(send); send.connect(d); d.connect(dk); dk.connect(fb); fb.connect(d); dk.connect(into);
     const p = { name, S, inp, lp, pan, lvl, on: false, step: 0, nextT: 0, want: 0, quietAt: 0 };
     this.players[name] = p;
     return p;
@@ -143,11 +164,13 @@ export class Music {
     }
     if (chord) {
       const [root, tones] = chord;
-      if (S.bassPat && S.bassPat[s]) { const m = S.bassPat[s] === 2 ? root + 7 : S.bassPat[s] === 3 ? root + 12 : root; play(E, out, S.bassInst || 'bass', t, m, sd * (S.bassInst ? 0.8 : 1.6), (S.bassInst ? 0.09 : 0.08) * hum()); }
+      if (S.bassPat && S.bassPat[s]) { const m = (S.bassOct || 0) + (S.bassPat[s] === 2 ? root + 7 : S.bassPat[s] === 3 ? root + 12 : root); play(E, out, S.bassInst || 'bass', t, m, sd * (S.bassInst ? 0.8 : 1.6), (S.bassInst ? 0.09 : 0.08) * hum()); }
       if (S.arpPat && S.arpPat[s] && R() > 0.08) play(E, out, 'arp', t, tones[(S.arpPat[s] - 1) % tones.length] + 12, sd * 0.9, S.arpVol * hum());
       if (S.compPat && S.compPat[s]) for (const m of tones) play(E, out, 'epiano', t, m, sd * 1.6, 0.018 * hum());
       if (S.stabPat && S.stabPat[s] && R() < 0.6) for (const m of tones) play(E, out, 'stab', t, m + 12, sd * 0.5, S.stabVol * hum());
       if (S.padVol && s === 0) for (const m of tones) play(E, out, 'pad', t, m, sd * S.steps * 0.98, S.padVol);
+      if (S.keysVol && s === 0) for (const m of tones) play(E, out, 'epiano', t, m, sd * S.steps * 0.9, S.keysVol * hum());   // (a soft electric piano held under the bar)
+      if (S.guitarPat && S.guitarPat[i % S.guitarPat.length]) tones.forEach((m, k) => play(E, out, 'nylon', t + k * 0.012, m, sd * 2.4, S.guitarVol * hum()));   // (the nylon guitar's figure, its strings a hair apart)
     }
     if (S.drums) for (const k in S.drums) { const pat = S.drums[k]; if (pat[s % pat.length] === 'x') drum(E, out, k, t, S.drumVol * hum()); }
   }

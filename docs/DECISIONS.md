@@ -198,6 +198,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Title track: the owner's "Chill closer"; the first title track kept as the train arrival's music. (11-12; DEVLOG 11-12)
 - Sound effects synthesized, SNES-flavored. (10-08; DEVLOG 10-08)
 - The casino games make subtle sounds: a card flick, the roulette ball's rattle and click, slot reels ticking, a small win chime. (11-14; queue)
+- The hospital lobby plays a gentle bossa nova elevator tune ("Visiting Hours": nylon guitar, soft electric piano, brushes, a light melody), "cheesy but not too cheesy", as if from ceiling speakers (thin, muffled, a slight room echo); the other lobbies share it. (11-17; chat)
 
 ## World and places
 - World v3: the whole world handcrafted, district by district; Claude has full creative control within the world's size and region placements. (10-17; chat)

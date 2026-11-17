@@ -20,6 +20,6 @@ export const SONGS = {
   "waiting-room": {"title":"Waiting Room Disco","secs":85.71,"beats":160,"tempo":[[0,112,0]],"key":60,"minor":false},
   "club": {"title":"club","secs":15.48,"beats":32,"tempo":[[0,124,0]],"key":69,"minor":true},
   "shop": {"title":"shop","secs":19.2,"beats":32,"tempo":[[0,100,0]],"key":65,"minor":false},
-  "lobby": {"title":"lobby","secs":24.62,"beats":32,"tempo":[[0,78,0]],"key":60,"minor":false},
+  "lobby": {"title":"lobby","secs":33.1,"beats":64,"tempo":[[0,116,0]],"key":60,"minor":false},
   "drivein": {"title":"drivein","secs":28.24,"beats":32,"tempo":[[0,68,0]],"key":60,"minor":false},
 };

@@ -25041,3 +25041,15 @@ The owner, recording trailer clips (11-17 09:39): "When all the UI is off there 
 panel's close X (and, on a phone, the picture button) stayed up on the clean screen (F2, all the UI off). They now hide with
 the rest of the UI and come back with the bar's controls for a few seconds on a tap or a key; Esc / B still close the camera
 at any time. `client/director.js` (`cine-woke`), `test/directorcam.test.js`.
+
+## 2026-11-17 - The hospital lobby's music: "Visiting Hours", a bossa from the ceiling speakers
+The owner (11-17 08:12): the hospital's "Lobby Hours" becomes a gentle bossa nova elevator tune, "cheesy but not too cheesy",
+a funny contrast to dying and respawning. The live synth's `lobby` song (client/sound/music.js; the hospital, the bank,
+the courthouse and the cinema lobby play it) is now "Visiting Hours": C major, 116 bpm, 16 bars (about 33 s a loop) -
+a nylon guitar comping the bossa's two-bar figure (a new `nylon` voice), a soft electric piano held under each bar, the
+bass on the root and the fifth, brushes, a soft kick and a cross-stick (a new `rim` drum), vibes on the tune. It plays as if
+from the lobby's ceiling speakers: a song's `speaker` band (a high-pass at 420 Hz, a honk at 1.4 kHz, a low-pass at 3.3 kHz,
+the echo through it too) and `room`, a short slap off the walls in place of the beat's echo; the bass an octave up
+(`bassOct`) so the thin speaker still carries it. Same sequencer, same make-up gain and per-step voices as the other
+lobby songs. The songbook (tools/music/songbook.mjs) compiles the new parts (guitar to `pluck`, piano to `keys`, rim to the
+kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` remade.
