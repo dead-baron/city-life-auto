@@ -268,3 +268,24 @@ test('saved views: where the camera is, the time and the weather saved to the se
   assert.ok(sc.cam[0].z[1] > sc.cam[0].z[0], 'pushing in slowly');
   D.stop(true);
 });
+
+test('the clean screen has nothing on it: the close X and the picture button hide with the rest, back for a moment on a tap', () => {
+  const { D, frame } = page();
+  const cls = new Set(), was = document.body.classList;
+  document.body.classList = { add: (c) => cls.add(c), remove: (c) => cls.delete(c), contains: (c) => cls.has(c), toggle: (c, on) => { const v = on === undefined ? !cls.has(c) : !!on; if (v) cls.add(c); else cls.delete(c); return v; } };
+  try {
+    const css = document.head.kids.map((k) => k.textContent).join('\n');
+    assert.match(css, /body\.cine-clean:not\(\.cine-woke\) #cine-x, body\.cine-clean:not\(\.cine-woke\) #cine-shut \{ display: none !important; \}/);
+    D.key('F2', true);
+    frame(1 / 30, 3);
+    assert.ok(cls.has('cine-clean') && !cls.has('cine-woke'), 'all the UI off: no X');
+    fire('pointerdown', { target: { closest: () => null }, pointerId: 1, clientX: 0, clientY: 0 });
+    frame(1 / 30, 1);
+    assert.ok(cls.has('cine-woke'), 'a tap brings it back');
+    frame(1 / 30, 120);
+    assert.ok(!cls.has('cine-woke'), 'and it goes again');
+    D.key('F2', true);
+    frame(1 / 30, 1);
+    assert.ok(!cls.has('cine-clean') && !cls.has('cine-woke'));
+  } finally { document.body.classList = was; }
+});

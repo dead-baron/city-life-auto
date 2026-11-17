@@ -228,7 +228,7 @@ export function makeDirector(S, api) {
     if (!D.clean) api.toast(`${q.n}${q.note ? ` - ${q.note}` : ''}`, 'info');
     render();
   }
-  let fs = null, fcam = null, near = true, frameAt = 0, missing = 0, padZoomAt = 0, wokeAt = -1e9, bar = null, barKey = '';
+  let fs = null, fcam = null, near = true, frameAt = 0, missing = 0, padZoomAt = 0, wokeAt = -1e9, wokeSig = false, bar = null, barKey = '';
   D.holds = () => D.mode === 'drone' || D.mode === 'drift' || D.mode === 'scene' || D.mode === 'script' || !!want;
   // the scene director's scene on this screen (sct): { sc, seq, tick0, cast { castId: entity id }, anchors, bt (when its
   // beats began), cap, vel (the cast's smoothed velocities, for the shots' lead), cam (where the camera was), shot }
@@ -263,6 +263,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 #cine-shut:active { transform: scale(.9); }
 body.cine-on #cine-x, body.touch.cine-on #cine-shut { display: block; }
 body.cine-cap #cine-x, body.cine-cap #cine-shut, body.cine-cap #cine-ctl { display: none !important; }
+body.cine-clean:not(.cine-woke) #cine-x, body.cine-clean:not(.cine-woke) #cine-shut { display: none !important; }
 body.cine-nosay #cht-bubs .cht-bub, body.cine-noemo #cht-bubs .emo-pop { display: none !important; }
 #cine-panel button:focus-visible { outline: 2px solid var(--pad-gold); outline-offset: 1px; }   /* (a capture's frames: nothing of the camera's own on them) */
 body.touch.cine-on #cine-ctl { bottom: max(108px, env(safe-area-inset-bottom)); }
@@ -639,6 +640,10 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   // the bar along the bottom (drift / follow scenes / the shot playing): made again when what it shows changes
   const shotName = () => { const q = want ? (want.view ? { n: want.n } : DSCENES[want.id]) : sct ? sct.sc : null; return q ? `${q.n}${reel && reel.ids.length > 1 ? ` (${reel.i + 1}/${reel.ids.length})` : ''}` : ''; };
   function barShow() {
+    // the clean screen (all the UI off) has nothing on it - the close X and the picture button too (the owner, 11-17: "there
+    // is still an X at the top center"): back with the bar for a few seconds on a tap or a key; Esc / B still close the camera
+    const woke = D.clean && performance.now() - wokeAt < 3500;
+    if (woke !== wokeSig) { wokeSig = woke; document.body.classList.toggle('cine-woke', woke); }
     const shotOn = D.mode === 'script' || !!want, on0 = D.mode === 'drift' || D.mode === 'scene' || (shotOn && !(sct && sct.cap));
     document.body.classList.toggle('cine-bar', on0);   // (on a phone the bar takes the action buttons' corner: they do nothing while the camera has the controls)
     if (!on0) { if (bar) bar.style.display = 'none'; return; }

@@ -25030,3 +25030,9 @@ avatar as a character he plays in admin mode, with his presence known; the admin
   home-screen and install icons, the maskable pair with the logo inside the safe circle, the Apple touch icon).
 - 256 colors, dithered (no banding in the dusk), the transparency kept: icon-512 153 -> 104 KB; the title's assets
   budget holds (test/perf.test.js).
+
+## 2026-11-17 - The Camera's clean screen: no close X left on it
+The owner, recording trailer clips (11-17 09:39): "When all the UI is off there is still an X at the top center." The Camera
+panel's close X (and, on a phone, the picture button) stayed up on the clean screen (F2, all the UI off). They now hide with
+the rest of the UI and come back with the bar's controls for a few seconds on a tap or a key; Esc / B still close the camera
+at any time. `client/director.js` (`cine-woke`), `test/directorcam.test.js`.
