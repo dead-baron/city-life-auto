@@ -55,7 +55,7 @@ if (q.get('looks')) inv.querySelector('[data-a="looks"]').click();
 await new Promise((r) => setTimeout(r, 400));
 // the boxes: everything to press or read
 const boxes = [];
-for (const el of inv.querySelectorAll('button, select, .bc-nm, .bag-slot > small, .iv-slot > small, h3, h4, .bag-hint, .iv-stat, .bag-cash, .iv-keys, canvas.iv-cv')) {
+for (const el of inv.querySelectorAll('button, select, .bc-n, .bc-tag, .bc-nm, .bag-slot > small, .iv-slot > small, h3, h4, .bag-hint, .iv-stat, .bag-cash, .iv-keys, canvas.iv-cv')) {
   if (!el.offsetParent) continue;
   const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
   const scroller = el.closest('.bag-grid, .bag-detail, .iv-me, .bag-tools');
@@ -64,10 +64,11 @@ for (const el of inv.querySelectorAll('button, select, .bc-nm, .bag-slot > small
   const x0 = sr ? Math.max(r.left, sr.left) : r.left, y0 = sr ? Math.max(r.top, sr.top) : r.top, x1 = sr ? Math.min(r.right, sr.right) : r.right, y1 = sr ? Math.min(r.bottom, sr.bottom) : r.bottom;
   const hidden = x1 - x0 < 2 || y1 - y0 < 2;
   const clip = (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).textOverflow !== 'ellipsis') && !/canvas|select/i.test(el.tagName);
-  boxes.push({ name: (el.className || el.tagName) + ':' + (el.dataset.k || el.dataset.cat || el.dataset.q || el.dataset.a || el.dataset.s || el.dataset.off || el.textContent.trim().slice(0, 18)), x0: Math.round(x0), y0: Math.round(y0), x1: Math.round(x1), y1: Math.round(y1), hidden, clip, par: el.parentElement && el.parentElement.className, tag: el.tagName, off: el.classList.contains('iv-off'), sheet: H > W && !!el.closest('.bag-detail') });
+  boxes.push({ name: (el.className || el.tagName) + ':' + (el.dataset.k || el.dataset.cat || el.dataset.q || el.dataset.a || el.dataset.s || el.dataset.off || el.textContent.trim().slice(0, 18)), x0: Math.round(x0), y0: Math.round(y0), x1: Math.round(x1), y1: Math.round(y1), hidden, clip, par: el.parentElement && el.parentElement.className, cell: (el.closest('.bag-cell') || {}).dataset?.k || '', cls: el.className, tag: el.tagName, off: el.classList.contains('iv-off'), sheet: H > W && !!el.closest('.bag-detail') });
 }
 const fr = hub.querySelector('.hub-frame').getBoundingClientRect();
-const res = { w: W, h: H, dev, extra: q.get('x') || '', frame: [fr.left, fr.top, fr.right, fr.bottom].map(Math.round), boxes };
+const cvf = inv.querySelector('canvas.iv-cv'), fig = cvf && cvf.dataset.fig ? cvf.dataset.fig.split('|').map(Number) : null;
+const res = { fig: fig && { s: fig[0], head: fig[1], feet: fig[2], h: cvf.height, w: cvf.width }, w: W, h: H, dev, extra: q.get('x') || '', frame: [fr.left, fr.top, fr.right, fr.bottom].map(Math.round), boxes };
 if (parent !== window) parent.postMessage(res, '*');
 document.getElementById('out').textContent = JSON.stringify(res);
 </script></body></html>`;
@@ -124,6 +125,12 @@ export function problems(r) {
     if (a.x0 < 0 || a.y0 < 0 || a.x1 > r.w || a.y1 > r.h) out.push(`${tag}: ${a.name} off the screen ${JSON.stringify([a.x0, a.y0, a.x1, a.y1])}`);
     if (a.clip) out.push(`${tag}: ${a.name} cut off`);
   }
+  // a tile's words: its name, its count and its tag never on top of each other (the owner's phone, 11-16: "12|24" over "Pistol")
+  const words = B.filter((b) => b.cell && /^bc-(nm|n|tag)$/.test(b.cls));
+  for (const [i, a] of words.entries()) for (const b of words.slice(i + 1)) if (a.cell === b.cell && over(a, b)) out.push(`${tag}: ${a.cls} on ${b.cls} in ${a.cell} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${b.x0},${b.y0}-${b.x1},${b.y1})`);
+  for (const a of words) { const c = B.find((b) => b.tag === 'BUTTON' && b.name.endsWith(':' + a.cell) && b.name.startsWith('bag-cell')); if (c && (a.y1 > c.y1 + 1 || a.y0 < c.y0 - 1)) out.push(`${tag}: ${a.cls} out of its tile ${a.cell}`); }
+  // your character fills its stand: at least 70% of its height, the head in the top quarter (the owner, 11-16: "super short")
+  if (r.fig && !r.extra) { const fh = (r.fig.feet - r.fig.head) / r.fig.h; if (fh < 0.7) out.push(`${tag}: the character fills ${Math.round(fh * 100)}% of its stand`); if (r.fig.head > r.fig.h * 0.25) out.push(`${tag}: the character's head at ${Math.round(r.fig.head / r.fig.h * 100)}% down its stand`); }
   const press = B.filter((b) => b.tag === 'BUTTON' || b.tag === 'SELECT');
   for (const [i, a] of press.entries()) for (const b of press.slice(i + 1)) {
     if (!over(a, b) || inside(a, b) || inside(b, a)) continue;

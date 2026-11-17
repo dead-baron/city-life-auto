@@ -234,20 +234,39 @@ function figure(code, dir, f, pp) {
   if (SPR.size > 160) SPR.delete(SPR.keys().next().value);
   return S;
 }
-const FIG_H = 30;   // a tall figure with a hat, in art px (the scale is fitted to it, so turning never resizes it)
+// the figure's reach from the rig's anchor (the point between the feet), the widest and tallest over the eight turns, in art
+// px: the scale is fitted to it once a look, so turning never resizes it and a wide look (arms out, a big coat) still fits
+const REACH = new Map();
+function reach(code, pp) {
+  const k = `${code}|${pp || ''}`;
+  let R = REACH.get(k);
+  if (R) return R;
+  R = { side: 6, up: 20, down: 1 };
+  for (let d = 0; d < 8; d++) { const S = figure(code, d, 0, pp); R.side = Math.max(R.side, S.ax, S.w - S.ax); R.up = Math.max(R.up, S.ay); R.down = Math.max(R.down, S.h - S.ay); }
+  REACH.set(k, R);
+  if (REACH.size > 60) REACH.delete(REACH.keys().next().value);
+  return R;
+}
+// your character on its stand: the game's own sprite at its true proportions, made bigger only by whole device pixels an
+// art pixel (crisp, nearest-neighbour), as big as the box allows - about 85% of its height - centered, the feet on the
+// stand's shadow near the foot. The box's real size on screen (a desktop's --zk zoom included: getBoundingClientRect) is
+// the backing store, so one art pixel is exactly s device pixels.
 function drawFigure(cv, code, dir, f, pp) {
   if (!cv || !code) return;
-  const r = Math.max(1, Math.min(3, window.devicePixelRatio || 1)), W = Math.max(1, Math.round(cv.clientWidth * r)), H = Math.max(1, Math.round(cv.clientHeight * r));
+  const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1)), rc = cv.getBoundingClientRect();
+  const W = Math.max(1, Math.round(rc.width * dpr)), H = Math.max(1, Math.round(rc.height * dpr));
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   const g = cv.getContext('2d');
   g.imageSmoothingEnabled = false;
   g.clearRect(0, 0, W, H);
-  const s = Math.max(1, Math.floor(Math.min(H * 0.86 / FIG_H, W * 0.94 / 18))), cx = Math.round(W / 2), feet = Math.round(H * 0.9);
-  // the stand: a soft ellipse of light under the feet
-  g.fillStyle = 'rgba(255,236,180,.10)'; g.beginPath(); g.ellipse(cx, feet, s * 11, s * 3, 0, 0, Math.PI * 2); g.fill();
+  const R = reach(code, pp);
+  const s = Math.max(1, Math.floor(Math.min(H * 0.86 / (R.up + R.down + 2), W * 0.98 / (2 * R.side))));
+  const cx = Math.round(W / 2), feet = Math.round(Math.min(H - (R.down + 2) * s, H / 2 + (R.up - R.down) * s / 2 + s));
+  g.fillStyle = 'rgba(255,236,180,.10)'; g.beginPath(); g.ellipse(cx, feet, Math.min(W / 2, s * R.side * 1.15), s * 3, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = 'rgba(8,10,24,.45)'; g.beginPath(); g.ellipse(cx, feet, s * 5, s * 1.4, 0, 0, Math.PI * 2); g.fill();
   const S = figure(code, dir, f, pp);
   g.drawImage(S.cv, 0, 0, S.w, S.h, cx - S.ax * s, feet - S.ay * s, S.w * s, S.h * s);
+  cv.dataset.fig = `${s}|${feet - R.up * s}|${feet}`;   // (the art px's size, the head's top and the feet: test/invpage.js measures it)
 }
 export const INST_PP = (id) => (INSTRUMENTS[id] ? INSTRUMENTS[id].pp : null);
 
