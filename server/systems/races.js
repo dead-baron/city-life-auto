@@ -118,7 +118,7 @@ export function withdraw(world, p) {
 // On foot at a race that starts from a hire dock (the Redwood River Run's kayaks: shared/world3-riverrun.js race.rental) -
 // on its planks, at its start buoy or at the hire's counter, with no hire boat of your own out: rent one right there (the
 // owner, 2026-11-13: "I dont see a way to start the kayak run either"; players.js findInteraction asks this before the
-// places and before "Fish here", which used to win on the planks with a rod in the bag). -> { label, run } or null
+// places and before "Fish here" (offered only with the rod in hand since 11-16), which used to win on the planks). -> { label, run } or null
 export function footInteraction(world, p, rentals, openMenu) {
   const ped = p.ped;
   if (!ped || ped.vehId || !world.map.races) return null;
