@@ -41,6 +41,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Start fresh on a signed-in account resets progress and keeps the account; kicked or banned pages stop reconnecting. (11-04; decisions-11-04)
 - /perf and /clienterrors behind the owner/admin login (clients can still post errors). (11-04; decisions-11-04)
 
+- App icon: the neon logo (City Life over Auto, the skyline) on a navy-to-magenta dusk, from the title art (assets/icons; option A of four). (11-17; chat)
 ## Accounts, sign-in and privacy
 - One account, many sign-ins; our own account record with providers linked. (11-03; launch-plan 11-03)
 - Sign-ins: Guest, Email + password, Google, Discord. Reddit and email magic links OUT. (11-12; DEVLOG 11-12) - SUPERSEDES the 11-03 lineup (Google, Discord, magic link).
@@ -198,6 +199,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Title track: the owner's "Chill closer"; the first title track kept as the train arrival's music. (11-12; DEVLOG 11-12)
 - Sound effects synthesized, SNES-flavored. (10-08; DEVLOG 10-08)
 - The casino games make subtle sounds: a card flick, the roulette ball's rattle and click, slot reels ticking, a small win chime. (11-14; queue)
+- The hospital lobby plays a gentle bossa nova elevator tune ("Visiting Hours": nylon guitar, soft electric piano, brushes, a light melody), "cheesy but not too cheesy", as if from ceiling speakers (thin, muffled, a slight room echo); the other lobbies share it. (11-17; chat)
 
 ## World and places
 - World v3: the whole world handcrafted, district by district; Claude has full creative control within the world's size and region placements. (10-17; chat)
@@ -315,6 +317,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Cinematics, the plan after the first shot list ("The cinematic shots really aren't good ... all the same nighttime scene"): fix the fundamentals first - each shot exactly its own time and weather, roofs drawn solid in a shot (no interior/exterior flicker) unless it's an interior, frames over streets, plazas and open ground (never a roof in the middle), people about, street races that race (through the lights, weaving through traffic, people diving clear), chases on wide streets in view; then "Save this view" so he scouts; then ~10 hero shots refined with him. (11-14 20:21; chat, queue)
 - The shot list shows only the shots that pass the sanity check (subject in frame, open ground at street level, the right time, people present); the rest wait under "More (unreviewed)". Play all plays the kept ones. (11-14; queue)
 - Saved views live on the server (kept with the world's state); saving, renaming and deleting are the owner's and admins' (anyone on a private dev server); anyone in dev mode can go to and play them. (11-14; queue)
+- The Camera's clean screen (all the UI off) has nothing on it, not even the close X: it comes back on a tap or a key; Esc / B still exit. (11-17; chat)
 
 ## FTUE and Guide
 - The tutorial IS the first goal: train arrival, one question ("What brings you to town?"), at most 3 steps, then first-time moments. "Short and sweet, general direction." (11-04; ftue-design 11-04, CLAUDE.md)

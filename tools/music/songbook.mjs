@@ -122,18 +122,20 @@ export function compileSynth(id, Sg, CH) {
   const hold = -1, sd = 60 / Sg.bpm / (Sg.steps / 4), total = Sg.steps * Sg.bars, P = {};
   const add = (v, t, d, m, ve) => (P[v] ||= []).push([Math.round(t * 1000), Math.round(d * 1000), m, vel(ve)]);
   const kit = [];
-  const DK = { kick: 0, snare: 1, clap: 2, hat: 3, tick: 5, shaker: 6, brush: 7 };
+  const DK = { kick: 0, snare: 1, clap: 2, hat: 3, tick: 5, rim: 5, shaker: 6, brush: 7 };
   for (let i = 0; i < total; i++) {
     const bar = Math.floor(i / Sg.steps), s = i % Sg.steps, t = i * sd + (Sg.swing && s % 2 ? sd * Sg.swing * 4 : 0);
     if (Sg.lead) { const nn = Sg.lead.notes, m = nn[i % nn.length]; if (m > 0) { let len = 1; while (nn[(i + len) % nn.length] === hold && len < 16) len++; add(Sg.lead.inst === 'vibes' ? 'bells' : 'lead', t, len * sd * 0.95, m, 0.8); } }
     const chord = Sg.chords ? CH[Sg.chords[bar % Sg.chords.length]] : null;
     if (chord) {
       const [root, tones] = chord;
-      if (Sg.bassPat && Sg.bassPat[s]) add('bass', t, sd * (Sg.bassInst ? 0.8 : 1.6), Sg.bassPat[s] === 2 ? root + 7 : Sg.bassPat[s] === 3 ? root + 12 : root, 0.8);
+      if (Sg.bassPat && Sg.bassPat[s]) add('bass', t, sd * (Sg.bassInst ? 0.8 : 1.6), (Sg.bassOct || 0) + (Sg.bassPat[s] === 2 ? root + 7 : Sg.bassPat[s] === 3 ? root + 12 : root), 0.8);
       if (Sg.arpPat && Sg.arpPat[s]) add('lead', t, sd * 0.9, tones[(Sg.arpPat[s] - 1) % tones.length] + 12, 0.35);
       if (Sg.compPat && Sg.compPat[s]) for (const m of tones) add('keys', t, sd * 1.6, m, 0.45);
       if (Sg.stabPat && Sg.stabPat[s]) for (const m of tones) add('brass', t, sd * 0.5, m + 12, 0.5);
       if (Sg.padVol && s === 0) for (const m of tones) add('pad', t, sd * Sg.steps * 0.98, m, 0.5);
+      if (Sg.keysVol && s === 0) for (const m of tones) add('keys', t, sd * Sg.steps * 0.9, m, 0.35);
+      if (Sg.guitarPat && Sg.guitarPat[i % Sg.guitarPat.length]) for (const m of tones) add('pluck', t, sd * 2.4, m, 0.5);
     }
     if (Sg.drums) for (const k in Sg.drums) { const pat = Sg.drums[k]; if (pat[s % pat.length] === 'x' && DK[k] !== undefined) kit.push([Math.round(t * 1000), DK[k], vel((Sg.drumVol || 0.6) * (k === 'kick' ? 1 : 0.7))]); }
   }

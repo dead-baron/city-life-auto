@@ -46,7 +46,7 @@ export const TRACKS = [
   // what the shops and lobbies play
   { id: 'club', title: 'Street Beat', by: 'the mat', genre: 'beat', tape: false, file: null, secs: null },
   { id: 'shop', title: 'Aisle Bossa', by: 'In-Store Sounds', genre: 'lobby', tape: true, file: null, secs: null },
-  { id: 'lobby', title: 'Lobby Hours', by: 'In-Store Sounds', genre: 'lobby', tape: true, file: null, secs: null },
+  { id: 'lobby', title: 'Visiting Hours', by: 'In-Store Sounds', genre: 'lobby', tape: true, file: null, secs: null },
   { id: 'drivein', title: 'Starlite Slow Dance', by: 'The Speaker Posts', genre: 'lobby', tape: true, file: null, secs: null },
 ];
 export const TRACK = Object.fromEntries(TRACKS.map((t, i) => [t.id, Object.assign(t, { i })]));

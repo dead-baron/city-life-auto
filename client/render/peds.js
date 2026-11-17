@@ -314,6 +314,8 @@ export const CHAR_GRID = G;
 // HUD weapon icon: the same pixel weapon the characters hold, drawn large with an outline (the plasma blade in your
 // colour, bc). Each call gets its own copy: the HUD's weapon box, the bag, the tray and the pad's
 // weapon wheel can all show the same weapon at once (one shared canvas was moved from one to the next).
+const FIST = ['.LLLLLLLLLLL.', 'LHSLHSLHSLHSL', 'LSSLSSLSSLSSL', 'LSDLSDLSDLSDL', 'LLLLLLLLLLSDL', 'LHHHHHHSLSSDL',
+  'LSSSSSSDLSSDL', '.LLLLLLLLSSDL', '..LSSSSSSSDL.', '..LLLLLLLLLL.'];
 const iconCache = new Map();
 export function weaponIcon(wIndex, bc = 0) {
   const src = iconMaster(wIndex | 0, wIndex === 28 ? bc | 0 : 0), out = document.createElement('canvas');
@@ -327,10 +329,9 @@ function iconMaster(wIndex, bc) {
   const g = art.getContext('2d', { willReadFrequently: true });
   g.clearRect(0, 0, G, G);
   const P = new Px(g);
-  if (!wIndex) { // fist
-    P.blob(12, 12, 4.5, 3.6, '#e0ac7e');
-    for (let k = 0; k < 4; k++) P.r(13 + (k & 1), 9 + k * 1.6, 3, 1, '#a8774c');
-    P.r(8, 13, 4, 2, '#c68953');
+  if (!wIndex) { // fist, from the front: four knuckles, the thumb across them, the wrist (the owner, 11-17: "doesn't look like a fist")
+    const C = { L: '#6b3f22', H: '#f4cfa6', S: '#e0ac7e', D: '#c68953' };
+    FIST.forEach((row, y) => { for (let x = 0; x < row.length; x++) if (C[row[x]]) P.r(5 + x, 7 + y, 1, 1, C[row[x]]); });
   } else weapon(P, wIndex, (wIndex >= 9 && wIndex <= 12) || wIndex >= 15 ? 5 : 7, 12, 0, bc);
   const img = g.getImageData(0, 0, G, G), d = img.data;
   const solid = (x, y) => x >= 0 && y >= 0 && x < G && y < G && d[(y * G + x) * 4 + 3] > 40;
