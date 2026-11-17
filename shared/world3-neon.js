@@ -99,9 +99,13 @@ function composeNeon(used, cat, r) {
 // with its umbrellas and tables, skylights glowing either side, potted plants at the front, the plant at the back
 // (statics.js KITS; px from the roof's north-west corner, a y < 0 from its south edge)
 function glowKit(w, r) {
-  const W = w * TILE, c = Math.round(W / 2);
-  const deck = [['string', c, 90], ['string', c, 150], ['umb', c - 60, 122], ['table', c + 20, 124], ['umb', c + 70, 126], ['skyL', Math.round(W * 0.18), 210], ['skyL', Math.round(W * 0.82), 214], ['plant', 30, -40], ['plant', W - 30, -40], ['ac', Math.round(W * 0.3), 270], ['vent', Math.round(W * 0.72), 286]];
-  return r < 0.25 ? deck.filter(([k]) => k !== 'umb' && k !== 'table') : deck;
+  const W = w * TILE, c = Math.round(W / 2), big = W >= 300;
+  const strings = big ? [['string', c - 80, 90], ['string', c + 80, 90], ['string', c - 80, 140], ['string', c + 80, 140]] : [['string', c, 90], ['string', c, 140]];
+  const deck = [...strings, ['umb', c - 60, 116], ['table', c + 20, 118], ['umb', c + 70, 120], ['skyL', Math.round(W * 0.18), 210], ['skyL', Math.round(W * 0.82), 214], ['plant', 30, -40], ['plant', W - 30, -40], ['ac', Math.round(W * 0.3), 300], ['vent', Math.round(W * 0.72), 316]];
+  // (a wide roof: its pool by the lounge, lit turquoise, or a picture sign standing on it over the street behind)
+  if (big && r >= 0.5) deck.push(['rpool', c, 210]);
+  else if (big) deck.push([`npic|${ROOF_PICS[Math.floor(r * 2 * ROOF_PICS.length) % ROOF_PICS.length]}`, c, 250]);
+  return r < 0.15 ? deck.filter(([k]) => k !== 'umb' && k !== 'table') : deck;
 }
 
 // ---- the picture signs (the owner's notes part 2, 2026-10-25: "way more neon signs with cool designs all around the

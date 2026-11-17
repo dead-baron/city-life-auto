@@ -33,7 +33,7 @@ test('every string of lights in the Neon Strip is made fast at both ends: a post
     [[f.x, f.y], [f.x + (f.tx || 0), f.y + (f.ty || 0)]].forEach(([x, y], i) => {
       const a = ends[i] || 'nothing';
       kinds[a] = (kinds[a] || 0) + 1;
-      const ok = a === 'pole' || (a === 'wall' && bldNear(x, y, 1)) || ((a === 'palm' || a === 'tree') && propNear(/^(palm|tree)/, x, y, 40)) || (a === 'lamp' && propNear(/^lamp$/, x, y, 40));
+      const ok = a === 'pole' || (a === 'wall' && bldNear(x, y, 1)) || ((a === 'palm' || a === 'tree') && propNear(/^(palm|tree)/, x, y, 40)) || (a === 'lamp' && propNear(/^lamp$/, x, y, 40)) || (a === 'stall' && propNear(/^mstall$/, x, y, 40));   // (a stall's frame holds an end: shared/world3-festoons.js)
       if (!ok) bad.push(`${a} end at ${Math.round(x / TILE)},${Math.round(y / TILE)}`);
     });
   }
