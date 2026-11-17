@@ -25035,3 +25035,9 @@ avatar as a character he plays in admin mode, with his presence known; the admin
 - The owner: the weapon wheel's Fists "doesn't look like a fist" (it read as a bread roll). client/render/peds.js
   weaponIcon draws it by hand now: four knuckles with their creases, the thumb across them, the wrist, shaded skin in a
   dark line - the same icon in the weapon wheel, the weapon tray and the weapon plate.
+
+## 2026-11-17 - The Camera's clean screen: no close X left on it
+The owner, recording trailer clips (11-17 09:39): "When all the UI is off there is still an X at the top center." The Camera
+panel's close X (and, on a phone, the picture button) stayed up on the clean screen (F2, all the UI off). They now hide with
+the rest of the UI and come back with the bar's controls for a few seconds on a tap or a key; Esc / B still close the camera
+at any time. `client/director.js` (`cine-woke`), `test/directorcam.test.js`.
