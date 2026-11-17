@@ -542,7 +542,7 @@ export function purgeAccount(world, prof) {
   for (const [id, owner] of [...(world.homeOwner || [])]) if (owner === pid) world.homeOwner.delete(id);
   for (const v of [...world.entities.values()]) if (v.kind === K.VEH && v.owner === pid) { if (!v.seats.some((s) => s)) world.remove(v); else { v.owner = null; v.ownerName = null; v.despawnable = true; v.descVer = (v.descVer || 0) + 1; } }
   starter.forget(world, pid);
-  for (const q of store.all()) { const c = q.acct && q.acct.chat; if (c && c.contacts && c.contacts[pid]) delete c.contacts[pid]; }
+  for (const q of store.all()) { const c = q.acct && q.acct.chat; if (c && c.contacts && c.contacts[pid]) delete c.contacts[pid]; if (c && c.freq && c.freq[pid]) delete c.freq[pid]; if (c && c.fsent) delete c.fsent[pid]; }
   store.remove(pid);
 }
 

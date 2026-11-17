@@ -49,7 +49,7 @@ export function createLaunch(opts) {
   const analytics = createAnalytics({ file: dataDir ? pathJoin(dataDir, 'analytics.json') : null, now, ga, onEarned: (p, perHour, norm) => { if (ac) ac.earned(p, perHour, norm); } });
   const modWithStats = { ...mod, review: (kind, who, noteText, data, by) => { if (['teleport', 'speed', 'rate', 'input', 'econ'].includes(kind)) { analytics.event('flag', null, { kind }); const a = who && accounts.get(who.id); if (a) note(a, 'flag', `${kind}: ${noteText}`); } return mod.review(kind, who, noteText, data, by); } };
   ac = createAntiCheat({ mod: modWithStats, now, log });
-  const chat = createChat({ accounts, filter: loadFilter(), mod, now, onLine: (p, ch) => analytics.event('chat', p, { ch }) });
+  const chat = createChat({ accounts, filter: loadFilter(), mod, now, onLine: (p, ch) => analytics.event('chat', p, { ch }), links: [L.discordInvite, L.supportUrl].filter(Boolean) });
   // bug reports from the pages (POST /report: server/bugreports.js), read at /admin/bugs, posted to the Discord's webhook
   const bugs = createBugReports({ dir: opts.bugDir !== undefined ? opts.bugDir : dataDir ? pathJoin(dataDir, 'reports') : null, accounts, store, world, origins: [...new Set([...L.pageOrigins, ...(opts.extraOrigins || [])])], ip: (req) => opts.ip(req), webhook: L.bugWebhook, fetch: opts.fetch, now, log });
   const adminHttp = createAdminHttp({ bugs, accounts, log: adminLog, mod, analytics, news, mailAddress: L.mailAddress || '', publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), ga: ga.stats }) });
@@ -233,7 +233,7 @@ export function createLaunch(opts) {
     // a message for the launch foundation: undefined when it isn't one (session.js goes on routing it)
     message(p, msg) {
       const t = msg.t;
-      if (t === 'chat' || t === 'emote' || t === 'typing' || t === 'chatset' || t === 'mod' || t === 'contacts' || t === 'inbox') return chat.handle(world, p, msg);
+      if (t === 'chat' || t === 'emote' || t === 'typing' || t === 'chatset' || t === 'mod' || t === 'contacts' || t === 'inbox' || t === 'friend') return chat.handle(world, p, msg);
       if (t === 'admin') return admin.handle(world, p, msg);
       if (t === 'name') { const err = rename(p, msg.name); if (err) world.notify(p, err, 'warn'); else sendAcct(p); return null; }
       if (t === 'acct') {
