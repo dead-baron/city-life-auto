@@ -180,6 +180,29 @@ function close(apply) {
   if (mode === 'wheel' || mode === 'shop' || mode === 'barber') apply = false;   // (the wheel puts a look on with Apply; a store sells it)
   if (apply && look && devWear) devSend({});
   else if (apply && look) {
+    // Done with locked pieces in the look (previewed from All - the owner, 11-17: "it should change things that you have
+    // unlocked; stuff you haven't unlocked lets you preview, but it should be clear you can't go into the game with it"):
+    // what's yours goes on, each locked piece is left off (the slot back to what you wore, if it's yours and fits, else
+    // a basic), and the creator says which and where they're sold - Done again closes
+    if (!state.free && !devWear) {
+      const no = WD.unowned(state.own || [], look);
+      if (no.length) {
+        const cur = state.cur && LK.decodeLook(state.cur), base = look.body.base, L = clone(look);
+        const keep = (it) => it && it.id && owned(it.id) && LK.PIECES[it.id] && LK.fits(LK.PIECES[it.id], base) ? it : null;
+        const basic = (slot) => { const P = WD.BASICS.map((id) => LK.PIECES[id]).find((q) => q && q.slot === slot && LK.fits(q, base)); return P ? { id: P.i, c: P.c, t: P.t, p: P.d.p || 0 } : null; };
+        for (const sl of LK.SLOTS) { const it = L.outfit[sl]; if (it && it.id && no.includes(it.id)) L.outfit[sl] = keep(cur && cur.outfit[sl]) || basic(sl); }
+        if (L.outfit.set && !no.includes(L.outfit.set.id)) { /* (a set covers top and bottoms: kept as is) */ }
+        else if (!L.outfit.top && !L.outfit.set) L.outfit.top = basic('top');
+        if (!L.outfit.bottoms && !L.outfit.set) L.outfit.bottoms = basic('bottoms');
+        look = L;
+        const names = no.map((id) => LK.PIECES[id] && LK.PIECES[id].name).filter(Boolean), S0 = WD.STORES[WD.sellerOf(no[0])];
+        if (!problem(look)) C.send({ t: 'look', a: 'set', c: code(), title: onTitle() ? 1 : 0 });
+        render();
+        sayWhy(`🔒 Not yours yet, left off: ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` and ${names.length - 3} more` : ''}${S0 ? ` - ${S0.name} sells ${names.length > 1 ? 'them' : 'it'}` : ''}. Everything else is on.`);
+        doneWarnAt = performance.now();
+        return;
+      }
+    }
     const why = problem(look);
     if (!why) {
       C.send({ t: 'look', a: 'set', c: code(), title: onTitle() ? 1 : 0 });
@@ -495,7 +518,7 @@ function renderPage() {
   const L = look, B = L.body;
   // (outside the first session: the body, face and extras change at the mirror at home, the hair at a barber)
   const here = (what) => `<p class="cc-note cc-info">${what}</p>`;
-  const lockedHere = mode === 'edit' && !state.free && !devWear && ((tab === 'hair') || (!state.home && (tab === 'body' || tab === 'face' || tab === 'extras')));
+  const lockedHere = mode === 'edit' && !state.free && !devWear && !onTitle() && ((tab === 'hair') || (!state.home && (tab === 'body' || tab === 'face' || tab === 'extras')));
   if (mode === 'shop') {
     const S = WD.STORES[shop.store] || {}, own = state.own || [];
     h = `<p class="cc-note">${esc(S.line || '')}. Everything you buy goes to your wardrobe.</p>` + layerRow();
