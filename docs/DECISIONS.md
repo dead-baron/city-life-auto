@@ -119,6 +119,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 
 ## HUD and controls
 - Minimal HUD: a dot or one fading line, never a new on-screen panel; new UI lives in the phone. (10-24; agent-rules, chat)
+- World events (someone collapsed, a fire...): no arrow pointing at them off screen - you see one when it's on screen, marked by an SNES-style pixel highlight (corner brackets and a chevron in its colour); the radar still shows them. (11-17 20:34; chat)
 - Nothing lingers: prompts fade after a few s, big moments go by themselves (2.6 s), sit long and the UI fades. (10-10; DEVLOG 10-10, 11-03, 11-04)
 - The touch sticks' behavior is untouchable (layout may move, behavior may not). (10-24; agent-rules, queue 11-06)
 - The aim stick stays (drag-to-aim on FIRE was rejected). (10-24; DEVLOG 10-24)

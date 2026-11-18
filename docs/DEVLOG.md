@@ -25153,3 +25153,11 @@ kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` rema
 - A piece picked takes the colors its tile shows (picking the same piece again keeps the colors you gave it).
 - The Outfit tab opens on All: owned pieces bright, locked ones dimmed and greyed with a dashed edge and the 🔒 store that
   sells them; Owned still filters to yours.
+
+## 2026-11-17 - World events: no arrow, a pixel highlight on screen
+
+The owner (11-17): the arrow that pointed at a nearby event (with its "Someone collapsed - 18m" label) didn't look
+good and didn't add much. It's gone: an event is marked where it is - four pixel corner brackets in its colour that
+step in and out, and a small bobbing chevron over it - and you notice it when it's on screen; the radar blip still
+shows the ones further away. The highlight stays while the event lasts (the arrow's 10-second fade is gone with it).
+`client/main.js` drawEventArrows; DECISIONS (HUD and controls).

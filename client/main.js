@@ -29,7 +29,7 @@ import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
 import { createRouter } from './route.js';
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
-import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
+import { EVENT_KINDS } from '../shared/worldevents.js';
 // The first-time experience (the old city tour's place - retired 11-04): the server runs it (server/systems/ftue.js); its
 // page side, client/ftue.js, loads the first time the server speaks of it - a new character's arrival, the first goal's
 // lines, a first-time moment's tip - never with the page.
@@ -2958,13 +2958,11 @@ function callCruiser() {
   if (c.s === 'none' && c.cd > 0) { S.hud.toast(`Dispatch can send a new cruiser in ${c.cd}s.`, 'warn'); return; }
   send({ t: 'cruiser' });
 }
-// World events: a coloured arrow around the player points at each one (and a ring marks it
-// when it's on screen). Each arrow shows for ARROW_SHOW_S seconds from when it first appeared
-// and then fades, so an ignored event doesn't nag forever; the radar blip stays.
+// World events: a pixel highlight marks each one where it is (no arrow off screen: the owner, 11-17); the radar blip
+// shows the ones further away.
 const evSeen = new Map();
 let lostArt = 0;
 function drawEventArrows(g, list, z, now) {
-  const me = selfPos();
   const tNow = performance.now() / 1000;
   const live = new Set();
   let slot = 0;
@@ -2974,8 +2972,8 @@ function drawEventArrows(g, list, z, now) {
     live.add(ev.id);
     if (!evSeen.has(ev.id)) evSeen.set(ev.id, tNow);
     const age = tNow - evSeen.get(ev.id);
-    const alpha = kind.stay || age < ARROW_SHOW_S - ARROW_FADE_S ? 1 : Math.max(0, (ARROW_SHOW_S - age) / ARROW_FADE_S);   // (stay: a lost pet's, till you have it or it's home)
-    if (alpha <= 0) continue;
+    const alpha = 1;   // (the highlight stays while the event lasts: it's only seen when it's on screen)
+    void age;
     if (ev.k === 'poster' || ev.r) {
       if (lostArt && lostArt !== 1) lostArt.mark(g, ev, kind, z, now); else if (!lostArt) { lostArt = 1; import('./lostposter.js').then((m) => { lostArt = m; }, () => { lostArt = 0; }); }
       if (ev.k === 'poster') continue;
@@ -2991,27 +2989,26 @@ function drawEventArrows(g, list, z, now) {
       g.fill();
       g.fillStyle = '#fff'; g.fillText(t, bx + 25 * u, oy + u); g.textAlign = 'center';
     }
-    const dx = ev.x - me.x, dy = ev.y - me.y, d = Math.hypot(dx, dy);
+    // (the owner, 11-17: no arrow pointing off screen - you see an event when it's on screen; there it gets an
+    // SNES-style highlight: four pixel corner brackets in its colour, stepping in and out, and a small bobbing chevron)
     g.save();
     g.globalAlpha = alpha;
-    // ring on the event itself
-    const ph = (now * 1.4) % 1;
-    g.strokeStyle = kind.color; g.lineWidth = 3 / z;
-    g.beginPath(); g.arc(ev.x, ev.y, (18 + ph * 22) / Math.max(z, 0.5), 0, 6.28); g.stroke();
-    if (d > 150 && !kind.noArrow) {
-      const a = Math.atan2(dy, dx), r = (78 + slot * 6) / z;
-      const ax = me.x + Math.cos(a) * r, ay = me.y + Math.sin(a) * r, s = 15 / z;
-      g.translate(ax, ay);
-      g.save(); g.rotate(a);
-      g.fillStyle = kind.color; g.strokeStyle = 'rgba(0,0,0,.85)'; g.lineWidth = 2 / z;
-      g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.7, -s * 0.8); g.lineTo(-s * 0.3, 0); g.lineTo(-s * 0.7, s * 0.8); g.closePath(); g.fill(); g.stroke();
-      g.restore();
-      const txt = `${kind.label} · ${Math.round(d / 32)}m`;
-      g.font = `600 ${12 / z}px "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-      const ly = (Math.sin(a) > 0 ? 1 : -1) * 22 / z;
-      g.lineWidth = 3 / z; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(txt, 0, ly);
-      g.fillStyle = kind.color; g.fillText(txt, 0, ly);
+    const u = 1 / Math.max(z, 0.5), st = Math.floor(now * 4) % 2, R = (14 + st * 3) * u, L = 6 * u, w = 3 * u;
+    g.fillStyle = 'rgba(0,0,0,.8)';
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const cx = ev.x + sx * R, cy = ev.y + sy * R;
+      g.fillRect(cx - (sx > 0 ? L : 0) - u, cy - (sy > 0 ? w : 0) - u, L + 2 * u, w + 2 * u);
+      g.fillRect(cx - (sx > 0 ? w : 0) - u, cy - (sy > 0 ? L : 0) - u, w + 2 * u, L + 2 * u);
     }
+    g.fillStyle = kind.color;
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const cx = ev.x + sx * R, cy = ev.y + sy * R;
+      g.fillRect(cx - (sx > 0 ? L : 0), cy - (sy > 0 ? w : 0), L, w);
+      g.fillRect(cx - (sx > 0 ? w : 0), cy - (sy > 0 ? L : 0), w, L);
+    }
+    const cy0 = ev.y - R - (10 + st * 2) * u;   // the chevron over it
+    g.beginPath(); g.moveTo(ev.x - 5 * u, cy0 - 4 * u); g.lineTo(ev.x + 5 * u, cy0 - 4 * u); g.lineTo(ev.x, cy0 + 2 * u); g.closePath();
+    g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 2 * u; g.stroke(); g.fill();
     g.restore();
     slot++;
   }
