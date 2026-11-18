@@ -15,7 +15,7 @@
 //   storeOutfits(id, base, n)   complete outfits in the store's styles, of its own pieces (the fitting room's Outfits)
 //   HAIR_TABS, hairCost(kind, cur, next)   the barber's and the salon's menu, and what a change costs
 import { PIECES, PIECE_IDS, SLOTS, STYLES, FACIAL_HAIR, randomLook, validLook } from './look.js';
-import { CLOTHES_PRICE_K, STARTER_BASICS, BARBER_PRICES, SALON_K } from './rules.js';
+import { CLOTHES_PRICE_K, STARTER_BASICS, STARTER_WARDROBE, BARBER_PRICES, SALON_K } from './rules.js';
 
 const R = (kinds, styles) => ({ kinds: kinds ? kinds.split(' ') : null, styles: styles ? styles.split(' ') : null });
 // (the order matters for sellerOf: the stores that sell a whole store kind come first)
@@ -65,7 +65,8 @@ export function sellerOf(pid) {
 
 // ---- owning ----------------------------------------------------------------------------------------------------
 export const free = (pid) => !!PIECES[pid] && PIECES[pid].price === 0 && !PIECES[pid].d.issued && !PIECES[pid].d.gift;   // (an issued uniform is nobody's to wear off duty; a season's gift only its owners')
-export const owns = (own, pid) => free(pid) || (!!own && own.includes(pid));
+export const STARTER = new Set(STARTER_WARDROBE.map((n) => PIECE_IDS[n]).filter(Boolean));   // (everyone's from day one: rules.js)
+export const owns = (own, pid) => free(pid) || STARTER.has(pid) || (!!own && own.includes(pid));
 export function lookPieces(L) {
   const out = [];
   if (L && L.outfit) for (const s of SLOTS) { const it = L.outfit[s]; if (it && it.id && !out.includes(it.id)) out.push(it.id); }

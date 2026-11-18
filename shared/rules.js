@@ -796,7 +796,13 @@ export const BIKE_THIEF_RESPECT = 6;       // ...and the Samaritan points
 // (shared/look.js PIECES) at its prices times this, times the store's own markup (the uptown boutique asks more,
 // thrift and vintage less, the fence a lot more)
 export const CLOTHES_PRICE_K = 1;
-export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];   // what every player owns from the start (with the starting look's pieces)
+export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];
+// the starter wardrobe: everyday pieces everyone can wear from day one, on top of what they own (the owner, 11-17: plenty
+// to make a look you like at the start; the stand-out pieces are what you work toward - shared/wardrobe.js owns)
+export const STARTER_WARDROBE = ['Plain tee', 'Graphic tee', 'Long-sleeve tee', 'Tank top', 'Hoodie', 'Flannel shirt', 'Blouse', 'Crop top',
+  'Jeans', 'Black jeans', 'Chinos', 'Joggers', 'Shorts', 'Skirt', 'Leggings', 'Sundress',
+  'Sneakers', 'Skate shoes', 'Slip-ons', 'Sandals', 'Ballet flats',
+  'Zip hoodie', 'Denim jacket', 'Baseball cap', 'Beanie', 'Sunglasses'];   // what every player owns from the start (with the starting look's pieces)
 // the barbershop and the hair salon (ST3): what each change costs; the salon charges SALON_K times as much
 export const BARBER_PRICES = { cut: 15, colour: 25, beard: 12, moustache: 8 };
 export const SALON_K = 2;

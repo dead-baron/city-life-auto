@@ -25132,3 +25132,14 @@ kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` rema
   Done can't put on - a piece you don't own yet - whose reason went to a toast, and the title has no HUD to show it.
   Now the reason is said in the creator itself, above its buttons (client/creator.js sayWhy); Done again leaves as you
   were.
+
+## 2026-11-17 - Done with locked pieces, and a starter wardrobe
+- The owner: switching to the other body and picking an outfit, Done did nothing and said nothing. A look with any piece
+  you don't own was refused whole. Now Done puts on everything you're allowed (body, face and hair from the title; every
+  owned piece), leaves each locked piece off - the slot back to what you wore if it's yours and fits, else a basic - and
+  says in the creator which pieces were left off and where they're sold; Done again closes (client/creator.js). Checked in a
+  browser against a local server: men -> women, a locked Graphic tee from All, Done - the rest went on, the tee left off.
+- A starter wardrobe: 26 everyday pieces everyone can wear from day one (rules.js STARTER_WARDROBE, wardrobe.js owns) -
+  tees, a hoodie, a flannel, a blouse, a crop top; jeans, chinos, joggers, shorts, a skirt, leggings, a sundress;
+  sneakers, skate shoes, slip-ons, sandals, flats; a zip hoodie, a denim jacket, a cap, a beanie, sunglasses. The
+  stand-out pieces stay in the shops. Guide (Your look) and DECISIONS updated.
