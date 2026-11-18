@@ -143,7 +143,7 @@ export function open(m = 'edit', st = null) {
   if (mode === 'start') { startPick = 0; look = clone(LK.STARTERS[0].look); }
   if (mode === 'wheel') { wheelSel = Math.max(0, (state.saved || []).findIndex((s) => s.c === state.cur)); const s = (state.saved || [])[wheelSel]; if (s) look = LK.decodeLook(s.c) || look; }
   tab = 'body'; outBase = null; doneWarnAt = 0;
-  outView = state.free || devWear ? 'all' : 'owned';
+  outView = 'all';   // (everything shown, what isn't yours padlocked with its store - the owner, 11-17)
   if (mode === 'shop' || mode === 'barber') { shop = state.shop || shop; if (!shop) { mode = 'edit'; } }
   if (mode === 'shop') { shopSel = 0; const t = shopTabs(); shopTab = t.length ? t[0][0] : 'outfits'; }
   if (mode === 'barber') hairTab = 'cut';
@@ -642,12 +642,33 @@ function renderPage() {
   if (renaming >= 0) { const inp = pg.querySelector('.cc-sv input'); if (inp) inp.focus(); }
   refocus();
 }
+// a random outfit made only of what you can wear (the owner, 11-17: "don't show complete outfits the player doesn't own
+// the things for"): each locked piece of the random one swapped for an owned piece of the same slot that fits - in its
+// style if one is - an optional slot left empty if there's none; free players and the dev's wear: anything
+function wearable(R, base, seed) {
+  if (state.free || devWear) return R.outfit;
+  const O = { ...R.outfit };
+  let r = (seed >>> 0) || 1;
+  const rnd = () => { r = (r * 1103515245 + 12345) >>> 0; return r / 4294967296; };
+  for (const sl of LK.SLOTS) {
+    const it = O[sl];
+    if (!it || !it.id || owned(it.id)) continue;
+    const P0 = LK.PIECES[it.id], pool = LK.PIECES.filter((q) => q && q.slot === sl && owned(q.i) && !q.d.issued && LK.fits(q, base));
+    const same = pool.filter((q) => P0 && q.tags.some((t) => P0.tags.includes(t))), L = same.length ? same : pool;
+    const Q = L.length ? L[Math.floor(rnd() * L.length) % L.length] : null;
+    O[sl] = Q ? { id: Q.i, c: Q.c, t: Q.t, p: Q.d.p || 0 } : null;
+  }
+  if (!O.set && !O.top) { const Q = LK.PIECES.find((q) => q && q.slot === 'top' && owned(q.i) && LK.fits(q, base)); O.top = Q ? { id: Q.i, c: Q.c, t: Q.t, p: 0 } : null; }
+  if (!O.set && !O.bottoms) { const Q = LK.PIECES.find((q) => q && q.slot === 'bottoms' && owned(q.i) && LK.fits(q, base)); O.bottoms = Q ? { id: Q.i, c: Q.c, t: Q.t, p: 0 } : null; }
+  return O;
+}
 function completeLooks() {
   const base = look.body.base, st = outStyle || null, out = [];
   let h = 7; for (const ch of String(outStyle || 'all')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   for (let i = 0; i < 6; i++) {
     const R = LK.randomLook(h + i * 977, base, st || LK.STYLES[(h + i) % LK.STYLES.length][0]);
-    out.push(variant((V) => { V.outfit = R.outfit; }));
+    const O = wearable(R, base, h + i * 977);
+    out.push(variant((V) => { V.outfit = O; }));
   }
   return out;
 }
@@ -689,12 +710,12 @@ function act(a, v, el) {
     case 'undo': if (hist.length) { look = LK.decodeLook(hist.pop()); drawPreview(); render(); } return;
     case 'random': {   // (each tab randomises its own part: the body, the face, the hair, the outfit, the extras)
       const s = newSeed();
-      if (tab === 'outfit') { const R = LK.randomLook(s, look.body.base, outStyle || null); setL((L) => { L.outfit = R.outfit; }); }
+      if (tab === 'outfit') { const R = LK.randomLook(s, look.body.base, outStyle || null), O = wearable(R, look.body.base, s); setL((L) => { L.outfit = O; }); }
       else if (tab === 'body') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.body = { ...R.body, base: L.body.base }; }); }
       else if (tab === 'face') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.face = R.face; }); }
       else if (tab === 'hair') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.hair = R.hair; if (L.body.base === 'f') L.hair.facial = 0; }); }
       else if (tab === 'extras') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.extras = R.extras; }); }
-      else { const R = LK.randomLook(s, look.body.base); setL((L) => { Object.assign(L, R); }); }
+      else { const R = LK.randomLook(s, look.body.base); R.outfit = wearable(R, look.body.base, s); setL((L) => { Object.assign(L, R); }); }
       render(); return;
     }
     case 'save': tab = 'saved'; render(); { const i = root.querySelector('.cc-name'); if (i) i.focus(); } return;
@@ -739,8 +760,9 @@ function act(a, v, el) {
       setL((L) => {
         const cur = L.outfit[outSlot];
         if (!P) { L.outfit[outSlot] = null; return; }
-        L.outfit[outSlot] = { id, c: cur ? cur.c : P.c, t: cur ? cur.t : P.t, p: cur && cur.p ? cur.p : P.d.p || 0 };
-        if (!cur) { L.outfit[outSlot].c = P.c; L.outfit[outSlot].t = P.t; }
+        // (the colors its tile shows - the piece's own; the owner, 11-17: "you see a red shirt, choose it and a white shirt is
+        // equipped". The same piece picked again keeps the colors you gave it)
+        L.outfit[outSlot] = cur && cur.id === id ? { ...cur } : { id, c: P.c, t: P.t, p: P.d.p || 0 };
         if (outSlot === 'set') { L.outfit.top = null; L.outfit.bottoms = null; }
         if ((outSlot === 'top' || outSlot === 'bottoms') && L.outfit.set) { const S2 = L.outfit.set; L.outfit.set = null; if (outSlot === 'top' && !L.outfit.bottoms) L.outfit.bottoms = LK.item('Jeans'); if (outSlot === 'bottoms' && !L.outfit.top) L.outfit.top = { ...LK.item('Plain tee'), c: S2.c }; }
       });

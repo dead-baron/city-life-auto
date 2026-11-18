@@ -25143,3 +25143,13 @@ kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` rema
   tees, a hoodie, a flannel, a blouse, a crop top; jeans, chinos, joggers, shorts, a skirt, leggings, a sundress;
   sneakers, skate shoes, slip-ons, sandals, flats; a zip hoodie, a denim jacket, a cap, a beanie, sunglasses. The
   stand-out pieces stay in the shops. Guide (Your look) and DECISIONS updated.
+
+## 2026-11-17 - The creator: wearable outfits, a piece in the color it shows, All with the locks plain
+- The owner: complete outfits (the Outfit tab's strip, Random) were shown though you didn't own their pieces; a red shirt
+  picked from its tile went on white; and what you own vs what's locked should be plain to see.
+- Complete outfits and Random are made of what you can wear: each locked piece swapped for an owned one of the same slot
+  that fits, of the same style if there is one (client/creator.js wearable); a new player's free first session still gets
+  anything.
+- A piece picked takes the colors its tile shows (picking the same piece again keeps the colors you gave it).
+- The Outfit tab opens on All: owned pieces bright, locked ones dimmed and greyed with a dashed edge and the 🔒 store that
+  sells them; Owned still filters to yours.

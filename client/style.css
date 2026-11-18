@@ -1304,7 +1304,7 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
 #creator .cc-card .cc-sub { font: 600 var(--fs-1) var(--ui); letter-spacing: .6px; text-transform: uppercase; color: var(--dim); }
 #creator .cc-card.on { border-color: var(--gold); background: var(--pick), var(--navy); box-shadow: 0 0 0 2px var(--ink), 0 0 12px var(--gold-a); }
 #creator .cc-card.fc { min-height: 0; padding: 3px 2px var(--s1); }
-#creator .cc-card.locked canvas { opacity: .6; }
+#creator .cc-card.locked { border-style: dashed; } #creator .cc-card.locked canvas { opacity: .45; filter: grayscale(.6); }
 /* thumbnails: the game's own sprite in whole pixels (creator.js SIZES); a soft glow holds the place till each is drawn */
 #creator .cc-th { width: 80px; height: 110px; image-rendering: pixelated; image-rendering: crisp-edges; border-radius: var(--r1); }
 #creator .cc-th:not(.ok) { background: radial-gradient(ellipse at 50% 45%, var(--gold-t), transparent 62%); animation: ccPulse 1.1s ease-in-out infinite alternate; }
