@@ -4,8 +4,8 @@
 // from the server's word - `local`), predicts the giant ball between the server's words (its own physics, stepped
 // every frame against the cars as drawn - your car's touch shows at once - and eased back onto the server's ball), and
 // draws: the ball and its shadow (up the banks too), the goals' frames and nets, the boost pads lit or spent, the
-// scoreboard and the clock, the kick-off's countdown, a goal (the scorer, the confetti, the replay of the ball's last
-// seconds), full time; at the wheel your boost and an arrow to the ball when it's off the screen. Drawn over the world
+// scoreboard and the clock, the kick-off's countdown, a goal (the scorer, the confetti; then
+// kick-off puts everyone back - no replay: the owner, 11-17), full time; at the wheel your boost and an arrow to the ball when it's off the screen. Drawn over the world
 // (main.js drawOverlays, either renderer), in the world's own coordinates; the HUD over the screen.
 import { CARSOCCER as C } from '../shared/rules-games.js';
 import { TEAMS, TEAM_COL, stepBall, carStep, local, groundZ, joinPad } from '../shared/carsoccer.js';
@@ -78,8 +78,7 @@ class SoccerView {
     }
     if (onScreen) { this.goals(g, a); this.pads(g, a, st, now); }
     if ((st.ph === 'idle' || st.ph === 'lobby' || !st.ph) && !st.me) this.gate(g, a, st, now, view);
-    if (B && onScreen && st.ph !== 'goal') this.drawBall(g, a, B.x, B.y, B.z, this.roll, 1);
-    if (st.ph === 'goal' && st.rp && st.rp.length > 1) this.replay(g, a, st, now);
+    if (B && onScreen) this.drawBall(g, a, B.x, B.y, B.z, this.roll, 1);   // (no goal replay: the owner, 11-17 - it confused; the ball stays in the net, then kick-off resets everyone)
     this.drawConfetti(g, dt);
     this.hud(g, F, st, now, v2);
   }
@@ -198,7 +197,7 @@ class SoccerView {
       const left = Math.max(0, (st.tl || 0) - (now - st.at));
       if (st.ph === 'lobby') { g.font = 'bold 14px monospace'; g.fillStyle = '#fff'; g.fillText(`Kick-off in ${Math.ceil(left)} s - ${st.q || 0} player${st.q === 1 ? '' : 's'} in`, x0 + cw / 2, y0 + 60); }
       else if (st.ph === 'kick' && mine) big(left > 0.2 ? String(Math.ceil(left)) : 'GO!', 'Hold BOOST to boost - the pads refill it');
-      else if (st.ph === 'goal' && st.goal) big('GOAL!', `${st.goal.who} - REPLAY`, TEAM_COL[st.goal.team]);
+      else if (st.ph === 'goal' && st.goal) big('GOAL!', `${st.goal.who} scores - back to kick-off`, TEAM_COL[st.goal.team]);
       else if (st.ph === 'over') { const w = st.sc[0] === st.sc[1] ? -1 : st.sc[0] > st.sc[1] ? 0 : 1; big('FULL TIME', w < 0 ? 'A tie' : `${TEAMS[w]} win`, w < 0 ? '#fff' : TEAM_COL[w]); }
     }
     if (mine) {   // your boost: a ring filling round its number, bottom right

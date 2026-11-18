@@ -25161,3 +25161,11 @@ good and didn't add much. It's gone: an event is marked where it is - four pixel
 step in and out, and a small bobbing chevron over it - and you notice it when it's on screen; the radar blip still
 shows the ones further away. The highlight stays while the event lasts (the arrow's 10-second fade is gone with it).
 `client/main.js` drawEventArrows; DECISIONS (HUD and controls).
+
+## 2026-11-17 - Car soccer: no goal replay
+
+The owner (11-17): the goal's replay (a faint ghost ball re-running its last seconds) was confusing and didn't work.
+Gone from the page: a goal shows GOAL! with "<scorer> scores - back to kick-off", the ball stays where it went in,
+and the kick-off (server/systems/carsoccer.js, unchanged) puts the ball and every car back in their places. The
+server still sends the ball's last seconds (`rp`); dropping that waits for the next server change (no restart for
+this). `client/carsoccer.js`; DECISIONS.
