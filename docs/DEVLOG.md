@@ -25169,3 +25169,11 @@ Gone from the page: a goal shows GOAL! with "<scorer> scores - back to kick-off"
 and the kick-off (server/systems/carsoccer.js, unchanged) puts the ball and every car back in their places. The
 server still sends the ball's last seconds (`rp`); dropping that waits for the next server change (no restart for
 this). `client/carsoccer.js`; DECISIONS.
+
+## 2026-11-17 - The respawn map takes clicks on a desktop
+
+The owner (11-17): on a desktop, the map of places to wake up wouldn't take a click on a place. The death screen's
+panel is scaled with CSS zoom on desktops (style.css `--zk`), and inside a zoomed box Chrome's pointer offsetX/Y
+don't match the canvas's own pixels (tested: a zoom of 1.5 put a click 50% off) - so a click never landed near a
+mark. The map now works the pointer out from the canvas's box on screen (clicks, drags, the wheel's zoom point).
+Phones (no zoom) were fine. `client/deathscreen.js` mapInput.

@@ -260,33 +260,37 @@ function spawnMap(H, me, C, show) {
   render(H, c);
 }
 function mapInput(H, c) {
+  // (the pointer in the canvas's own pixels, from its box on screen: on a desktop the panel is scaled with CSS zoom
+  // (style.css --zk), and offsetX/Y there didn't match where the marks are drawn - a click never found its place)
+  const xy = (e) => { const r = c.getBoundingClientRect(), kx = r.width ? c.clientWidth / r.width : 1, ky = r.height ? c.clientHeight / r.height : 1; return [(e.clientX - r.left) * kx, (e.clientY - r.top) * ky]; };
   const pts = new Map();
   let drag = 0, pinch = 0;
-  c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.offsetX, e.offsetY]); drag = 0; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
+  c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); pts.set(e.pointerId, xy(e)); drag = 0; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
   c.addEventListener('pointermove', (e) => {
     const p = pts.get(e.pointerId);
     if (!p || !SM.wm) return;
     if (pts.size === 2) {
-      pts.set(e.pointerId, [e.offsetX, e.offsetY]);
+      pts.set(e.pointerId, xy(e));
       const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
       if (pinch > 0 && d > 0) SM.wm.zoom(d / pinch, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, c.clientWidth, c.clientHeight);
       pinch = d; drag = 99; render(H, c); return;
     }
-    const dx = e.offsetX - p[0], dy = e.offsetY - p[1];
+    const [ex, ey] = xy(e), dx = ex - p[0], dy = ey - p[1];
     drag += Math.abs(dx) + Math.abs(dy);
     if (drag > 6) { SM.wm.pan(dx, dy); render(H, c); }
-    pts.set(e.pointerId, [e.offsetX, e.offsetY]);
+    pts.set(e.pointerId, xy(e));
   });
   const up = (e) => {
     const was = pts.has(e.pointerId), n = pts.size;
     pts.delete(e.pointerId);
     if (!was || n > 1 || drag > 6 || e.type === 'pointercancel') return;
+    const [ex, ey] = xy(e);
     let best = null, bd = 30;   // a tap: the mark under it (or nearest it, within reach)
-    for (const [x, y, o] of SM.hits) { const d = Math.hypot(x - e.offsetX, y - e.offsetY); if (d < bd) { bd = d; best = o; } }
+    for (const [x, y, o] of SM.hits) { const d = Math.hypot(x - ex, y - ey); if (d < bd) { bd = d; best = o; } }
     if (best) pick(H, (H.me.spawnOpts || []).find((q) => q.id === best.id) || best);
   };
   c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
-  c.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); if (SM.wm) { SM.wm.zoom(e.deltaY < 0 ? 1.25 : 0.8, e.offsetX, e.offsetY, c.clientWidth, c.clientHeight); render(H, c); } }, { passive: false });
+  c.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); if (SM.wm) { const [wx, wy] = xy(e); SM.wm.zoom(e.deltaY < 0 ? 1.25 : 0.8, wx, wy, c.clientWidth, c.clientHeight); render(H, c); } }, { passive: false });
   // a picked spot off the map's edge (zoomed in): the view moves to it
   SM.keepInView = (o) => {
     const wm = SM.wm, [ox, oy] = wm.origin, sc = wm.scale, x = (o.x - ox) * sc, y = (o.y - oy) * sc;
