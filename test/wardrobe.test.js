@@ -313,3 +313,17 @@ test('the title screen\'s CHARACTER: with no one in the world yet, Done puts own
   assert.equal(a.prof.look, was, 'wanted: not on the title either');
   a.p.ped = ped; a.p.wanted = 0;
 });
+
+test('the title screen\'s CHARACTER is the character creator: body, face and hair change there; in the city they wait for the mirror and the barber (the owner, 11-17)', () => {
+  const w = makeWorld();
+  const a = picked(w);
+  const before = a.prof.look;
+  const L = LK.decodeLook(before);
+  const H = LK.decodeLook(LK.encodeLook(LK.STARTERS[0].look)).hair;
+  L.hair = JSON.stringify(H) !== JSON.stringify(L.hair) ? H : LK.decodeLook(LK.encodeLook(LK.STARTERS[1].look)).hair;
+  set(a, L);
+  assert.equal(a.prof.look, before, 'in the city: hair at a barbershop');
+  run(w, 1.1);
+  looks.handle(a.w, a.p, { t: 'look', a: 'set', c: LK.encodeLook(L), title: 1 });
+  assert.notEqual(a.prof.look, before, 'from the title: the new hair is on');
+});

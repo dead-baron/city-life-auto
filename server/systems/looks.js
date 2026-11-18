@@ -119,8 +119,11 @@ export function freshOutfit(prof, seed, ownedOnly = false) {
 
 // why a new look can't be worn (outside the first session; null: it can): the body, face and extras change at the
 // mirror at home, the hair at a barber or salon (a new body at home brings its own), and every piece must be yours
-function refusal(world, p, cur, L) {
+// (title: from the title screen's CHARACTER - the character creator, body, face and hair free; the owner, 11-17. The wanted,
+// the cuffed and the uniformed are still refused by changeBlocked, so it's no disguise)
+function refusal(world, p, cur, L, title = false) {
   const c = W.changes(cur, L), home = atHome(world, p);
+  if (title) { c.body = false; c.hair = false; }
   if (c.body && !home) return 'Your body, face, makeup and tattoos change at the mirror at home.';
   if (c.hair && !(home && cur.body.base !== L.body.base)) return 'Hair and facial hair change at a barbershop or a hair salon.';
   return unownedNote(p.profile.wardrobe, L);
@@ -265,7 +268,7 @@ export function handle(world, p, msg) {
     if (!L) { world.notify(p, 'That look didn\'t come through.', 'warn'); return stateMsg(p, world); }
     const code = encodeLook(L), first = prof.lookPicked === false;   // (the first session is free: whatever it ends in is yours)
     if (code === prof.look) { if (first) { prof.lookPicked = true; grant(prof, L); store.touch(); } return stateMsg(p, world); }
-    const why = changeBlocked(world, p) || (first ? null : refusal(world, p, decodeLook(prof.look), L));
+    const why = changeBlocked(world, p) || (first ? null : refusal(world, p, decodeLook(prof.look), L, !!msg.title));
     if (why) { world.notify(p, why, 'warn'); return stateMsg(p, world); }
     if (p.lookSetAt !== undefined && world.time - p.lookSetAt < 1) return stateMsg(p, world);   // (one change a second: each one goes out to everyone near)
     p.lookSetAt = world.time;

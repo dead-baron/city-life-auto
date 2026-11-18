@@ -158,6 +158,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Safety mode (press twice to commit a crime) OFF by default, switchable in Settings. (11-06; decisions-11-06) - supersedes 'on for new characters' (10-11).
 - Mini-games: a close button on touch; each arcade game shown as its real machine; SNES art for pool, air hockey, skee-ball, pinball; multiplayer where a game works with two; bigger bowling lanes, multiplayer bowling. (11-06; decisions-11-06)
 
+- The title screen's CHARACTER is the character creator: body, face and hair change freely there; clothes from what you own. In the city, body and face at the mirror at home, hair at a barbershop; wanted, cuffed or in uniform, no change anywhere. (11-17; chat: "customize your character and have it commit in the main menu")
 ## Art direction
 - 16-bit SNES pixel art with modern lighting and atmosphere (Octopath Traveler, Eastward for environment and light), a GTA vibe. (10-05; chat)
 - Not true top-down: vehicles 3/4 angled, people and building fronts slightly angled, like the concepts. (10-05; chat)

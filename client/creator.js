@@ -171,7 +171,7 @@ function close(apply) {
   else if (apply && look) {
     const why = problem(look);
     if (!why) {
-      C.send({ t: 'look', a: 'set', c: code() });
+      C.send({ t: 'look', a: 'set', c: code(), title: onTitle() ? 1 : 0 });
       // (Done wears it - nothing else to save; the owner, 11-15: a player could think "Add to Saved" was needed first)
       if (state.cur && code() !== state.cur && C.toast) C.toast('New look on. (Add to Saved keeps a copy to switch back to.)', 'good');
     }
@@ -182,10 +182,14 @@ function close(apply) {
 }
 // why the look being edited can't be worn now (the server says the same: looks.js refusal); null: it can
 const owned = (id) => !!state.free || devWear || WD.owns(state.own || [], id);
+// the title screen's CHARACTER: the character creator - body, face and hair change freely there (the owner, 11-17: "customize
+// your character and have it commit in the main menu"); clothes still from your wardrobe
+const onTitle = () => { const t = document.getElementById('title'); return !!t && !t.classList.contains('hidden'); };
 function problem(L) {
   const cur = !state.free && !devWear && state.cur && LK.decodeLook(state.cur);
   if (!cur) return null;
   const c = WD.changes(cur, L);
+  if (onTitle()) { c.body = false; c.hair = false; }
   if (c.body && !state.home) return 'Your body, face, makeup and tattoos change at the mirror at home.';
   if (c.hair && !(state.home && cur.body.base !== L.body.base)) return 'Hair and facial hair change at a barbershop or a hair salon.';
   const no = WD.unowned(state.own || [], L);

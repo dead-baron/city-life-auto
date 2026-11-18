@@ -25118,3 +25118,10 @@ kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` rema
   clothes you own go on from the title too; body and hair keep their places (the mirror at home, a barbershop), and a
   wanted or arrested character still waits till they're in the city. Test: test/wardrobe.test.js.
 - No music in the cinema (it had the lobby's bossa nova): client/sound/places.js SONG_FOR.
+
+## 2026-11-17 - The title's CHARACTER is the character creator (body, face, hair commit there)
+- The owner, again: changes made from the main menu's CHARACTER still didn't stick on Done. A change of body, face or
+  hair was refused there (the mirror at home, a barbershop - the city's rules), with the warning on a toast the title
+  doesn't show, so Done looked like it did nothing. Now the title's creator commits body, face and hair (the page sends
+  `title`; client/creator.js problem, server/systems/looks.js refusal); clothes are still from your wardrobe, and the
+  wanted, cuffed or uniformed are still refused (changeBlocked). DECISIONS (HUD and controls). Test: wardrobe.test.js.
