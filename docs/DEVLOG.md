@@ -25125,3 +25125,10 @@ kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` rema
   doesn't show, so Done looked like it did nothing. Now the title's creator commits body, face and hair (the page sends
   `title`; client/creator.js problem, server/systems/looks.js refusal); clothes are still from your wardrobe, and the
   wanted, cuffed or uniformed are still refused (changeBlocked). DECISIONS (HUD and controls). Test: wardrobe.test.js.
+
+## 2026-11-17 - The creator says why Done didn't put the look on
+- Checked end to end (a local World v3 server, the page in a browser, the title's CHARACTER): a new character's and an
+  established character's hair both commit on Done from the title. What still looked like "Done does nothing" is a look
+  Done can't put on - a piece you don't own yet - whose reason went to a toast, and the title has no HUD to show it.
+  Now the reason is said in the creator itself, above its buttons (client/creator.js sayWhy); Done again leaves as you
+  were.

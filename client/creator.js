@@ -165,7 +165,18 @@ export function onState(st) {
   } else if (mode === 'shop' || mode === 'barber') render();
   else if (mode === 'edit' && !(document.activeElement && document.activeElement.tagName === 'INPUT' && root.contains(document.activeElement))) renderPage();   // (what you own, whether you're at home)
 }
+// why Done didn't put the look on, said in the creator itself (on the title screen there's no HUD for a toast - the owner,
+// 11-17: "character still doesn't change when you press done in the main menu")
+function sayWhy(t) {
+  const foot = root && root.querySelector('.cc-foot');
+  if (!foot) return;
+  let el = root.querySelector('.cc-why');
+  if (!el) { el = document.createElement('div'); el.className = 'cc-why'; el.setAttribute('role', 'alert'); foot.parentNode.insertBefore(el, foot); }
+  el.textContent = t;
+  el.style.cssText = 'padding:var(--s2) var(--s3);margin:0 var(--s3);background:var(--panel-bg);color:var(--gold-hi);border:2px solid var(--gold);text-align:center';
+}
 function close(apply) {
+  { const w = root && root.querySelector('.cc-why'); if (w) w.remove(); }
   if (mode === 'wheel' || mode === 'shop' || mode === 'barber') apply = false;   // (the wheel puts a look on with Apply; a store sells it)
   if (apply && look && devWear) devSend({});
   else if (apply && look) {
@@ -175,7 +186,7 @@ function close(apply) {
       // (Done wears it - nothing else to save; the owner, 11-15: a player could think "Add to Saved" was needed first)
       if (state.cur && code() !== state.cur && C.toast) C.toast('New look on. (Add to Saved keeps a copy to switch back to.)', 'good');
     }
-    else if (performance.now() - doneWarnAt > 4000) { doneWarnAt = performance.now(); if (C.toast) C.toast(`${why} (Done again: leave as you were.)`, 'warn'); return; }
+    else if (performance.now() - doneWarnAt > 4000) { doneWarnAt = performance.now(); sayWhy(`${why} Done again: leave as you were.`); if (C.toast && !onTitle()) C.toast(`${why} (Done again: leave as you were.)`, 'warn'); return; }
   }
   cancelAnimationFrame(raf); raf = 0;
   if (C.topOverlay() === 'creator') C.closeOverlay('creator');
