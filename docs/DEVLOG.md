@@ -25221,3 +25221,16 @@ navy plate with the gold rim, square, the pixel face, Google's and Discord's own
 scrolls inside the screen (a phone on its side no longer cuts the gate's title). On a phone on its side the title keeps
 SIGN IN, compact in the player card. Checked in headless Chrome at 844x390 and 1440x900 (title, gate, Account,
 Settings). `test/uitokens.test.js`; DECISIONS (HUD and controls).
+
+## 2026-11-19 - Pre-beta quick wins 5: device words
+
+REPORT2 B4/B6: touch and pad players read keyboard keys. A key named inside a prompt or a note - the server's "Hold to
+revive Sam · hold F to finish them", any "press E" - or an `[[action]]` is now this device's own: the key's tile on a
+keyboard, the pad's button, and on touch the button in words (no chip on the touch prompt's card - the 11-14 rule:
+"hold the door button to finish them") - all on the page (`client/glyphs.js` keysHtml, localizeText), no server change.
+The cinematic panel and its notes speak the device (`client/director.js` say/key: no Esc, WASD, Q / E or F2 / F4 / F8
+on touch or a pad; the keys only on a keyboard), the horse's line says SHIFT / RT ALL THE WAY / HOLD GALLOP instead of
+SPRINT (`client/ridehud.js`), and the touch cinematic hint names the ✕, not MENU (`client/hudinfo.js`). A Windows touch
+tablet with no mouse (a Surface without its keyboard) is no longer taken for an Xbox: the pad-cursor test now needs a
+screen with no touch points (`client/platform.js`), so it gets the touch controls, not "A SELECT / B BACK".
+`test/devicewords.test.js`.

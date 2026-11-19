@@ -6,11 +6,13 @@
 //                                      running down as it gallops (Sprint), BLOWN when it's spent (a canter till it's got
 //                                      its breath back) - and a hired one's time left
 
+// the gallop's control in this device's words (pre-beta quick wins: never SPRINT or a key on touch): body.touch / .pad
+const gallopKey = () => { const b = typeof document !== 'undefined' ? document.body.classList : null; return b && b.contains('touch') ? 'HOLD GALLOP' : b && b.contains('pad') ? 'RT ALL THE WAY' : 'SHIFT'; };
 export function drawHorseHud(g, W, H, S, h, now) {
   const P = S.pred, st = P && P.def && P.def.horse && P.s.stam !== undefined ? P.s.stam : h.st, blown = P && P.def && P.def.horse ? !!P.s.blown : !!h.bl;
   g.save();
   // (low in the middle of the screen: clear of the money and the stars down the right, the sticks and buttons at the sides)
-  const w = 120, x = Math.round(W / 2 - w / 2), y = H - Math.max(70, H * 0.13), lab = blown ? 'BLOWN - LET IT BREATHE' : 'HORSE · SPRINT TO GALLOP';
+  const w = 120, x = Math.round(W / 2 - w / 2), y = H - Math.max(70, H * 0.13), lab = blown ? 'BLOWN - LET IT BREATHE' : `HORSE · ${gallopKey()} TO GALLOP`;
   g.textAlign = 'center'; g.textBaseline = 'bottom'; g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif';
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(lab, W / 2 + 1, y - 2 + 1);
   g.fillStyle = blown ? '#ff9a6a' : '#f2e2c4'; g.fillText(lab, W / 2, y - 2);

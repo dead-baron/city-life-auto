@@ -42,15 +42,26 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // the button says it, ENTER, TALK, BUY..., in place of this chip)
 export function formatPrompt(p) {
   const m = /^([A-Za-z]+):\s*(.*)$/.exec(p || '');
-  if (!m || !actionOfKey(m[1])) { setActWord('ACT'); return { action: null, kind: setActKind('interact'), html: esc(p || ''), words: p || '' }; }
+  if (!m || !actionOfKey(m[1])) { setActWord('ACT'); return { action: null, kind: setActKind('interact'), html: keysHtml(p || ''), words: p || '' }; }
   const action = actionOfKey(m[1]), kind = setActKind(action === 'action' ? actKind(m[2]) : 'interact');
   setActWord(action === 'action' ? actWord(m[2]) : 'ACT');
-  return { action, kind, html: `${glyph(action)} <span>${esc(m[2])}</span>`, words: m[2] };
+  return { action, kind, html: `${glyph(action)} <span>${keysHtml(m[2])}</span>`, words: m[2] };
+}
+// a key named inside the words ("Hold to revive Sam · hold F to finish them", "press E") or an [[action]] as this
+// device's own glyph - touch and pad players never read a keyboard key (pre-beta quick wins)
+const KEY_IN = /\b([Pp]ress|[Hh]old|[Tt]ap)(ing)? ([EFQRXHMLGV])\b/g, NAMED = /\[\[([a-z]+)\]\]/g;
+// (on touch the prompt's card has no chip - nothing on it looks pressable, the owner 11-14: the button named in words)
+const TOUCH_SAY = { vehicle: 'the door button' };
+const sayKey = (a) => (input.device === 'touch' && TOUCH_SAY[a]) || keyName(a);
+const keyHtml = (a) => (input.device === 'touch' ? `<b>${esc(TOUCH_SAY[a] || keyName(a))}</b>` : glyph(a));
+export function keysHtml(t) {
+  return esc(t).replace(KEY_IN, (s, v, ing, k) => { const a = actionOfKey(k); return a ? `${v}${ing || ''} ${keyHtml(a)}` : s; }).replace(NAMED, (s, a) => keyHtml(a));
 }
 
-// rewrite "press E" / "(E)" style hints inside server notifications for the current device
+// rewrite "press E" / "hold F" / [[action]] hints inside server notifications for the current device
 export function localizeText(t) {
   return String(t)
-    .replace(/\bpress(ing)? ([EFQRXHML])\b/gi, (s, ing, k) => `${s.slice(0, ing ? 8 : 5)} ${keyName(actionOfKey(k))}`)
+    .replace(KEY_IN, (s, v, ing, k) => { const a = actionOfKey(k); return a ? `${v}${ing || ''} ${sayKey(a)}` : s; })
+    .replace(NAMED, (s, a) => sayKey(a))
     .replace(/\bPress ` \(or DEV\)/g, input.device === 'keyboard' ? 'Press ` (or DEV)' : 'Tap DEV');
 }

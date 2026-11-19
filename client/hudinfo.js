@@ -120,7 +120,7 @@ export const HINTS = {
   horse: { all: [['move', 'ride'], ['sprint', 'gallop'], ['dive', 'stop'], ['vehicle', 'get off']] },
   boat: { all: [['move', 'steer'], ['dive', 'brake'], ['horn', 'horn'], ['vehicle', 'get off at a dock']], pad: [['steer', 'steer'], ['gas', 'gas'], ['brake', 'brake'], ['vehicle', 'get off']] },
   board: { all: [['move', 'push and steer'], ['dive', 'ollie'], ['trick', 'tricks'], ['vehicle', 'step off']] },
-  cine: { kbm: [['F2', 'the HUD back'], ['F4', 'the camera panel'], ['F8', 'a picture'], ['ESC', 'back to you']], pad: [['Y', 'the camera panel'], ['X', 'a picture'], ['B', 'back to you']], touch: [['TAP', 'the camera bar'], ['MENU', 'leave the cinematic mode']] },
+  cine: { kbm: [['F2', 'the HUD back'], ['F4', 'the camera panel'], ['F8', 'a picture'], ['ESC', 'back to you']], pad: [['Y', 'the camera panel'], ['X', 'a picture'], ['B', 'back to you']], touch: [['TAP', 'the camera bar'], ['✕', 'leave the cinematic mode']] },
 };
 export const HINT_STATES = Object.keys(HINTS);
 const TOUCH_STATE_OF = { drive: 'drive', air: 'air', horse: 'horse', boat: 'boat', board: 'board' };   // (no swimming strip: the owner, 11-16)
