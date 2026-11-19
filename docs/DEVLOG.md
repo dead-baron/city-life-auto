@@ -25242,3 +25242,14 @@ such screen. Now: "You can change it later: CHARACTER on the title screen, or in
 11-17 decision). Their carousel showed the browser's white scrollbar under the navy panel: every scrollbar on the page
 is now thin, a gold thumb on the panels' ink (`client/style.css`; a rule's own `scrollbar-width: none` still wins).
 `client/creator.js`; `test/uitokens.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 7: touch collisions on a 360x740 phone
+
+REPORT2 B3: on a 360x740 phone upright (a common Android size the layout test didn't have) the emote button ran into
+FIRE's disc and the chat button touched FIRE ON (0 px): both are placed by CSS offsets beside the move stick, and at
+360 px there's no room along the bottom. Under 380 px wide, upright, they now sit side by side in the free space just
+over the move stick's rest (8 px above its ring, by the left thumb, clear of the prompt card). `test/hudlayout.test.js`'s
+small-phone test now measures chat, the emotes and the move stick with the cluster, and its placement rule knows the
+narrow-phone spot (and the HUD row's new bag button). 44 px targets on touch: chat's tabs, quick lines and row
+buttons (34-36 px), the emote picker's tabs (36), What's next's skip (30) and goal buttons (32), and Settings' tabs on a
+short screen (40). `client/style.css`; `test/uitokens.test.js`.

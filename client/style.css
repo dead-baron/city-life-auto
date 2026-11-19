@@ -391,6 +391,17 @@ body.portrait.touch #b-talk { left: calc(max(20px, env(safe-area-inset-left)) + 
 body.touch #b-emote { position: absolute; display: grid; place-items: center; left: calc(max(20px, env(safe-area-inset-left)) + 190px); bottom: max(8px, env(safe-area-inset-bottom)); width: var(--tap-l); height: var(--tap-l); padding: 0; pointer-events: auto; touch-action: none; background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); --ic: 24px; }
 body.touch #b-emote:active { transform: scale(var(--press)); }
 body.portrait.touch #b-emote { left: calc(max(20px, env(safe-area-inset-left)) + 128px); bottom: calc(max(8px, env(safe-area-inset-bottom)) + 52px); width: 44px; height: 44px; }   /* (upright: over it - the right thumb's cluster starts at the middle along the bottom) */
+/* a narrow phone upright (360 px: a common Android): along the bottom beside the move stick they ran into FIRE and FIRE ON
+   - side by side in the free space just over the move stick's rest instead, by the left thumb still (pre-beta quick wins) */
+@media (max-width: 379px) {
+  body.portrait.touch #b-talk, body.portrait.touch #b-emote { bottom: calc(max(84px, calc(env(safe-area-inset-bottom) + 66px)) + 70px); }
+  body.portrait.touch #b-talk { left: max(20px, env(safe-area-inset-left)); }
+  body.portrait.touch #b-emote { left: calc(max(20px, env(safe-area-inset-left)) + 52px); }
+}
+/* 44 px targets on touch (pre-beta quick wins, REPORT2 B3): chat's quick lines, tabs and row buttons, the emote
+   picker's tabs, What's next's skip and goal buttons */
+.touch :is(.cht-tab, .cht-chip, .emo-tab, .cs-list .srow .btn, .cm-rqb .btn, .cht-undo .btn, .wn-goal button, .wn-ssn button) { min-height: var(--tap); }
+.touch .wn-card .skip { top: 2px; right: 2px; width: var(--tap); height: var(--tap); }
 body.touch.emo-open #b-emote { box-shadow: inset 0 0 0 2px var(--pad-cream), var(--pn-drop); }
 
 /* the plate: health, armor, stamina - the icon, the segmented bar, the number - then the cash and the stars */
@@ -1872,6 +1883,7 @@ body.portrait .people { grid-template-columns: minmax(0, 1fr); }
 @media (max-height: 560px) {
   #set-nav { padding: var(--s1) var(--s2) 0; }
   #set-nav .tab { min-height: 40px; font-size: var(--fs-2); }
+  .touch #set-nav .tab { min-height: var(--tap); }   /* (44 on touch: pre-beta quick wins) */
   #set-body { padding: var(--s2) var(--s4); }
   #set-body .srow { min-height: var(--tap-l); font-size: var(--fs-3); }
   .set-head .seg > button { padding: 0 10px; font-size: var(--fs-2); }
