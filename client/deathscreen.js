@@ -329,7 +329,7 @@ function render(H, c) {
   if (at) {   // where you fell: a red ring, its name over it
     const [x, y] = P(at[0], at[1]);
     g.strokeStyle = danger; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 9, 0, 6.28); g.stroke();
-    g.font = '700 14px "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText('You fell here', x + 1, y - 21); g.fillStyle = cream; g.fillText('You fell here', x, y - 22);
+    g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText('You fell here', x + 1, y - 21); g.fillStyle = cream; g.fillText('You fell here', x, y - 22);
   }
   SM.hits = [];
   g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif';
@@ -351,6 +351,6 @@ function render(H, c) {
     g.fillStyle = cream; g.strokeStyle = danger; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill(); g.stroke();
     g.fillStyle = danger; g.fillRect(x - 2, y - 7, 4, 14); g.fillRect(x - 7, y - 2, 14, 4);
     const t = SM.wet ? 'Rescue boat' : 'Ambulance';
-    g.font = '700 13px "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText(t, x + 1, y + r + 11); g.fillStyle = cream; g.fillText(t, x, y + r + 10);
+    g.font = '700 13px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText(t, x + 1, y + r + 11); g.fillStyle = cream; g.fillText(t, x, y + r + 10);
   }
 }

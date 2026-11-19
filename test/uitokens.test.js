@@ -91,3 +91,15 @@ test('two faces, both shipped: CLA Pixel and Barlow Condensed - no Rubik, Anton,
   for (const m of read('client/render/homeview.js').matchAll(/\.font = ([`'][^`']*[`'])/g)) if (/system-ui|Rubik|Anton/.test(m[1])) bad.push(`homeview.js: ${m[1]}`);
   assert.deepEqual(bad, [], bad.join('\n'));
 });
+
+test('menus in the pixel font: the body face is CLA Pixel (Regular under 700, Bold from it); the gate and the account panel on UI v2 classes, no inline styles (pre-beta quick wins)', () => {
+  assert.match(CSS, /--ui: "CLA Pixel", "Barlow Condensed", sans-serif;/, 'the page default and every menu');
+  assert.match(CSS, /CLAPixel-Regular\.woff"\) format\("woff"\); font-weight: 100 600;/);
+  assert.match(CSS, /CLAPixel-Bold\.woff"\) format\("woff"\); font-weight: 700 900;/);
+  assert.doesNotMatch(read('index.html'), /preload" href="assets\/fonts\/Barlow/, 'Barlow only a fallback: not preloaded');
+  const acc = read('client/account.js');
+  assert.deepEqual([...acc.matchAll(/style="([^"]*)"/g)].map((m) => m[1]), ['flex:none'], 'only the Google mark\'s own');
+  assert.doesNotMatch(acc, /system-ui|#3a7bd5|#1b1e24/, 'no app look');
+  for (const c of ['.acc-ov', '.acc-box', '.acc-btn', '.acc-go', '.acc-inp', '.acc-tab']) assert.ok(CSS.includes(c + ' '), c);
+  assert.match(CSS, /\.acc-ov \.acc-box \{ max-height: calc\(100dvh/, 'scrolls inside a phone on its side, never cut');
+});

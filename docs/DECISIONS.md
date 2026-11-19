@@ -128,6 +128,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Back and close in the same place on every screen. (11-03; DEVLOG 11-03 UI-10)
 - Portrait stays fully playable (no landscape-only). (11-12; queue)
 - HUD look: Direction A, the SNES pad - navy panels, gold rim, CLA Pixel everywhere in the HUD. (11-12; DEVLOG 11-12)
+- Menus in the pixel font too: CLA Pixel for every menu and the page default (Bold for heads, labels and buttons, Regular for what you read); no Barlow / system fonts in player screens (Barlow only a missing-glyph fallback); the age gate and Account panel in the UI v2 look; SIGN IN on a sideways title. (11-19; the owner 11-17 "not in the SNES pixel font", QUICKWINS task) - SUPERSEDES UI-1's "Barlow Condensed for everything you read" (10-24).
 - Button rule: a fixed action gets a simple symbol (FIRE crosshair, ROLL chevrons), a situational one gets a word (ACT shows its verb, BRAKE...). (11-12 19:28; queue) - SUPERSEDES words-only (19:26), symbols + chips (19:22), game-icons silhouettes (17:29).
 - The vehicle button: simple enter/exit door symbols; GET IN / ON / EXIT / OFF words only in tips and the Guide. (11-12 19:37; queue)
 - Button sizes 60 / 52 / 40 px, translucent navy with an accent rim, one word size, measured centering. (11-12; queue)

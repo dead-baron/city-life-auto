@@ -1,12 +1,13 @@
 /* City Life Auto UI: one system (the UI overhaul, 2026-10-24; scratchpad mockups Main.dc.html). Navy panels with a gold
-   rim, CLA Pixel (the game's own face, tools/build-pixelfont.py) for titles and numbers, Barlow Condensed for everything
-   you read. Every colour, type size, radius and gap comes from the tokens below: no literals in the rules
+   rim, CLA Pixel (the game's own face, tools/build-pixelfont.py) for every word: Bold for titles, labels and numbers,
+   Regular for what you read (any weight under 700 - pre-beta quick wins, the owner 11-17: menus in the SNES pixel font;
+   Barlow Condensed only a fallback for a glyph CLA Pixel lacks). Every colour, type size, radius and gap comes from the tokens below: no literals in the rules
    (test/uitokens.test.js). Positions stay as each screen tunes them; the touch slots, the hub and the HUD come later. */
 @font-face { font-family: "Barlow Condensed"; src: url("../assets/fonts/BarlowCondensed-Medium.woff") format("woff"); font-weight: 500; font-display: swap; }
 @font-face { font-family: "Barlow Condensed"; src: url("../assets/fonts/BarlowCondensed-SemiBold.woff") format("woff"); font-weight: 600; font-display: swap; }
 @font-face { font-family: "Barlow Condensed"; src: url("../assets/fonts/BarlowCondensed-Bold.woff") format("woff"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "CLA Pixel"; src: url("../assets/fonts/CLAPixel-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "CLA Pixel"; src: url("../assets/fonts/CLAPixel-Bold.woff") format("woff"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "CLA Pixel"; src: url("../assets/fonts/CLAPixel-Regular.woff") format("woff"); font-weight: 100 600; font-display: swap; }
+@font-face { font-family: "CLA Pixel"; src: url("../assets/fonts/CLAPixel-Bold.woff") format("woff"); font-weight: 700 900; font-display: swap; }
 
 /* ==== tokens ==== */
 :root {
@@ -65,7 +66,7 @@
   --neon: #5ae0ff; --cab: linear-gradient(#2a1a4a, #140c26);
   /* type: six sizes, 14 the smallest on a phone */
   --pixel: "CLA Pixel", "Barlow Condensed", sans-serif;
-  --ui: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --ui: "CLA Pixel", "Barlow Condensed", sans-serif;   /* (the body face: CLA Pixel Regular - pre-beta quick wins) */
   --fs-1: 12px; --fs-2: 14px; --fs-3: 16px; --fs-4: 20px; --fs-5: 28px; --fs-6: 40px;
   --fs-row: var(--fs-4);
   --fs-w1: 10px; --fs-w2: 12px;           /* (a word on a small touch button, stepped down to fit its disc: client/touchicons.js wordPx) */
@@ -1405,7 +1406,7 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #t-practice { font-size: var(--fs-1); line-height: 1.3; }
   #t-foot { left: max(var(--s3), env(safe-area-inset-left)); right: max(var(--s3), env(safe-area-inset-right)); bottom: max(var(--s2), env(safe-area-inset-bottom)); }
   #t-card { min-width: 0; max-width: 28vw; padding: var(--s1) var(--s2) var(--s1) var(--s1); } .t-av { width: 40px; height: 40px; } .t-av .pi24 { width: 24px; height: 24px; } .t-who b { font-size: var(--fs-3); } .t-who small { font-size: var(--fs-1); } #t-sam { display: none; }
-  #t-card .t-sign { display: none; }
+  #t-card { max-width: 46vw; } #t-card .t-sign { padding: 0 var(--s2); font-size: var(--fs-1); }   /* (SIGN IN stays on a phone on its side, compact - pre-beta quick wins) */
   #t-online { padding: 0 var(--s3); font-size: var(--fs-2); }
   #t-tools { position: absolute; top: max(var(--s2), env(safe-area-inset-top)); left: max(var(--s2), env(safe-area-inset-left)); }
 }
@@ -1924,24 +1925,49 @@ body:not(.touch) .pz-head img { width: min(240px, calc(100% - 104px)); }   /* (c
 body:not(.touch) .pz-row { min-height: var(--tap); }
 /* the map: the map itself full screen as it was, its head, legend and zoom buttons at the screens' scale */
 body:not(.touch) #hub[data-tab=map] #hub-bar, body:not(.touch) #bm-panel, body:not(.touch) .bm-zoom { zoom: var(--zk, 1); }
-/* the launch code's account panel and age gate (client/account.js: its own inline styles) inside the title's slots, on
-   the kit: its heading is the screen's own, its buttons the kit's */
-#gate-body h2 { display: none; }
-#gate-body [data-cla-modal] > div { max-width: none !important; margin: 0 !important; padding: var(--s3) var(--s4) !important; background: none !important; border: 0 !important; color: var(--cream); font: 500 var(--fs-3) var(--ui); }
-:is(#gate-body, #signin-body) button { border-radius: var(--r2); min-height: var(--tap) !important; padding: 0 var(--s4) !important; border: 2px solid var(--gold-a) !important; background: var(--navy) !important; color: var(--cream) !important; font: 700 var(--fs-3) var(--ui) !important; }
-:is(#gate-body #g-all, #signin-body [data-in], #signin-body #a-pks, #signin-body #a-namego) { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--ink) !important; }
-:is(#gate-body, #signin-body) input:not([type=checkbox]) { min-height: var(--tap); padding: 0 var(--s2) !important; border: 2px solid var(--steel); border-radius: var(--r1); background: var(--ink); color: var(--cream); font: 600 var(--fs-3) var(--ui); }
-#signin-body .cla-account { padding: var(--s3) var(--s4); color: var(--cream); font: 500 var(--fs-3) var(--ui); }
-/* email + password (11-12): the two tabs, the primary buttons gold, Forgot password a plain link */
-#signin-body button[data-tab] { flex: 1; border: 0 !important; border-bottom: 3px solid transparent !important; border-radius: 0; background: none !important; color: var(--cream) !important; opacity: .62; }
-#signin-body button[data-tab][aria-selected=true] { border-bottom-color: var(--gold) !important; color: var(--gold) !important; opacity: 1; }
-#signin-body :is(#a-ingo, #a-upgo) { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--ink) !important; }
-/* Google's own button (its branding guidelines' dark theme) and Discord's blurple - not the sheet's gold (client/account.js PROV) */
-#signin-body #a-body button.a-prov { display: flex !important; align-items: center; justify-content: center; gap: var(--s2); width: 100%; margin: var(--s1) 0 0 !important; }
-#signin-body #a-body button.a-pg { background: var(--g-bg) !important; border: 1px solid var(--g-rim) !important; color: var(--g-ink) !important; font-family: Roboto, Arial, sans-serif !important; font-weight: 500 !important; }
-#signin-body #a-body button.a-pd { background: var(--discord) !important; border-color: var(--discord) !important; color: var(--discord-ink) !important; }
-#signin-body #a-body button.a-linkb { display: inline-flex !important; align-items: center; gap: var(--s2); }
-#signin-body button.a-link { min-height: 0 !important; padding: var(--s1) 0 !important; border: 0 !important; background: none !important; color: var(--cream) !important; font-weight: 500 !important; text-decoration: underline; }
+/* the age / consent gate, the account panel and their small choices (client/account.js, pre-beta quick wins: no more
+   inline "app" styles) - UI v2: a navy plate, the gold rim inside, square, a hard shadow, CLA Pixel (Bold for heads and
+   buttons, Regular for what you read). Full screen (.acc-ov) it scrolls inside the screen - never cut on a phone on its
+   side; in the title's slots (#gate-body, #signin-body: .acc-in, .cla-account) the slot is the panel and its head */
+.acc-ov { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; overflow: auto; padding: max(var(--s2), env(safe-area-inset-top)) max(var(--s2), env(safe-area-inset-right)) max(var(--s2), env(safe-area-inset-bottom)) max(var(--s2), env(safe-area-inset-left)); background: var(--scrim-hi); color: var(--pad-cream); font: 400 var(--fs-3)/1.45 var(--ui); }
+.acc-box { width: min(32em, 100%); max-height: 100%; overflow: auto; padding: var(--s4) var(--s4) var(--s3); background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); }
+.acc-ov .acc-box { max-height: calc(100dvh - 2 * var(--s2)); }
+.acc-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); margin-bottom: var(--s2); }
+.acc-h { margin: 0 0 var(--s2); font: 700 var(--fs-4) var(--pixel); letter-spacing: 1px; color: var(--pad-gold); text-transform: uppercase; }
+.acc-head .acc-h { margin: 0; }
+.acc-in > .acc-box, .cla-account { width: auto; max-height: none; margin: 0; padding: var(--s3) var(--s4); background: none; border: 0; box-shadow: none; color: var(--pad-cream); font: 400 var(--fs-3)/1.45 var(--ui); }
+#gate-body .acc-h { display: none; }   /* (the slot's own head says it) */
+:is(.acc-box, .cla-account) p { margin: var(--s2) 0; }
+.acc-lbl { margin: var(--s3) 0 var(--s1) !important; }
+.acc-note, .acc-dim, .acc-or { color: var(--pad-mute); font-size: var(--fs-2); }
+.acc-or { text-align: center; }
+.acc-check { display: flex; gap: var(--s2); align-items: flex-start; margin: var(--s2) 0; cursor: pointer; }
+.acc-check input { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--pad-gold); }
+.acc-row { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; margin: var(--s1) 0; }
+.acc-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: var(--tap); margin: var(--s1) var(--s1) 0 0; padding: 0 var(--s4); border: 2px solid var(--pad-ink); border-radius: 0; background: var(--pad-navy); box-shadow: inset 0 0 0 2px var(--pad-line), var(--pn-drop); color: var(--pad-cream); font: 700 var(--fs-3) var(--pixel); cursor: pointer; touch-action: manipulation; }
+.acc-btn:hover, .acc-btn:focus-visible { box-shadow: var(--pn-rim), var(--pn-drop); outline: none; }
+.acc-btn:active { transform: scale(var(--press)); }
+.acc-go { background: var(--pad-gold); color: var(--pad-ink); box-shadow: inset 0 0 0 2px var(--gold-hi), var(--pn-drop); }
+.acc-wide { width: 100%; margin-right: 0; }
+.acc-left { justify-content: flex-start; text-align: left; }
+.acc-danger { color: var(--danger); box-shadow: inset 0 0 0 2px var(--danger), var(--pn-drop); }
+.acc-tabs { display: flex; margin: var(--s1) 0 var(--s2); border-bottom: 2px solid var(--pad-line); }
+.acc-tab { flex: 1; min-height: var(--tap); border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px; background: none; color: var(--pad-cream); opacity: .62; font: 700 var(--fs-3) var(--pixel); cursor: pointer; }
+.acc-tab.on { border-bottom-color: var(--pad-gold); color: var(--pad-gold); opacity: 1; }
+.acc-inp { display: block; width: 100%; min-height: var(--tap); margin: var(--s1) 0 var(--s2); padding: 0 var(--s2); border: 2px solid var(--steel); border-radius: 0; background: var(--pad-ink); color: var(--pad-cream); font: 400 var(--fs-3) var(--ui); }
+.acc-inp.acc-short { display: inline-block; width: auto; max-width: 14em; margin: var(--s1) var(--s1) 0 0; }
+.acc-code { width: 10em; text-transform: uppercase; }
+.acc-codeout { margin-left: var(--s2); font: 700 var(--fs-4) var(--pixel); color: var(--pad-gold); }
+.acc-sel { user-select: all; -webkit-user-select: all; }
+.acc-link { min-height: var(--tap); padding: var(--s1) 0; border: 0; background: none; color: var(--info); font: 400 var(--fs-2) var(--ui); text-decoration: underline; cursor: pointer; }
+.acc-a { color: var(--info); }
+.acc-msg { min-height: 1.2em; margin: var(--s2) 0 0 !important; color: var(--pad-gold); }
+.acc-msg.acc-err { color: var(--danger); }
+.acc-prov { display: flex; width: 100%; margin: var(--s1) 0 0; }
+/* Google's own button (its branding guidelines' dark theme, its own face) and Discord's blurple - not the sheet's gold */
+.acc-btn.a-pg { background: var(--g-bg); border: 1px solid var(--g-rim); box-shadow: none; color: var(--g-ink); font: 500 var(--fs-3) Roboto, Arial, sans-serif; }
+.acc-btn.a-pd { background: var(--discord); border-color: var(--discord); box-shadow: none; color: var(--discord-ink); }
+#gate-body .acc-in { padding: 0; }
 /* the title at a desktop's size (the 11-04 review: "all tiny at 1920"): its menu, card, tools and the plates over it
    zoomed with the screens (--zk), PLAY about a fifth of the screen at 1080; the logo sized by the height so it all fits */
 body:not(.touch) #title > :is(#t-status, #t-load, #t-off, #t-buttons, #t-row2, #t-gfx, #t-practice, #t-tools, #t-foot), body:not(.touch) :is(#signin, #gate) .panel { zoom: var(--zk, 1); }

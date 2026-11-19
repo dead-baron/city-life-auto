@@ -25207,3 +25207,17 @@ MENU, with its I chip (`#b-bag`, `client/main.js` toggleBag; hidden on touch), a
 (no `items` flag) and called BAG - the name the screen, the pause row and the Guide use (it was ITEMS:
 `shared/touchcontrols.js`, `shared/controls.js`, `client/touchicons.js`). The Guide's bag line and the README say so.
 The 10-24 hub (UI-3) had taken the bag's HUD button away; the hub tests now expect it back.
+
+## 2026-11-19 - Pre-beta quick wins 4: menus in the pixel font
+
+The owner (11-17): the menus weren't in the SNES pixel font. The page's body face (`--ui`, every menu's text and 5
+HUD bits) is now CLA Pixel: its Regular answers every weight under 700 (`@font-face` weight ranges), so what you read is
+the Regular face and heads, labels and buttons (700) the Bold - one readable face, no new font. Barlow Condensed stays
+only as the fallback for a glyph CLA Pixel lacks, and is no longer preloaded (CLA Pixel Regular is). The canvas text
+that was Barlow only (the ride and skate score cards, the knocked-out map's labels, the fish catch card, the spectator
+and debug maps) leads with CLA Pixel too. The age / consent gate and the Account panel (`client/account.js`) lost their
+76 inline "app" styles (system-ui, grey box, blue buttons): they're `.acc-*` classes in `client/style.css` - a UI v2
+navy plate with the gold rim, square, the pixel face, Google's and Discord's own buttons - and full screen the panel
+scrolls inside the screen (a phone on its side no longer cuts the gate's title). On a phone on its side the title keeps
+SIGN IN, compact in the player card. Checked in headless Chrome at 844x390 and 1440x900 (title, gate, Account,
+Settings). `test/uitokens.test.js`; DECISIONS (HUD and controls).
