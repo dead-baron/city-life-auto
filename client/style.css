@@ -90,6 +90,12 @@ body.touch { --fs-1: 14px; --fs-row: var(--fs-3); }
 
 /* ==== base ==== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* no white browser scrollbar anywhere (pre-beta quick wins: the starting looks' carousel showed one): thin, a gold thumb
+   on the panel's ink */
+* { scrollbar-width: thin; scrollbar-color: var(--gold-a) var(--pad-ink); }
+::-webkit-scrollbar { width: 8px; height: 8px; background: var(--pad-ink); }
+::-webkit-scrollbar-thumb { background: var(--gold-a); border-radius: 0; }
+::-webkit-scrollbar-corner { background: var(--pad-ink); }
 html, body { margin: 0; height: 100%; background: var(--ink); color: var(--cream); font-family: var(--ui); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 #game { position: fixed; inset: 0; }
 #view { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; cursor: crosshair; transition: filter .8s; }

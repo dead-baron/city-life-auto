@@ -25234,3 +25234,11 @@ SPRINT (`client/ridehud.js`), and the touch cinematic hint names the ✕, not ME
 tablet with no mouse (a Surface without its keyboard) is no longer taken for an Xbox: the pad-cursor test now needs a
 screen with no touch points (`client/platform.js`), so it gets the touch controls, not "A SELECT / B BACK".
 `test/devicewords.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 6: the starting looks
+
+REPORT2 B4/B6: the starting looks said "You can change everything later from the menu (Appearance)" - there's no
+such screen. Now: "You can change it later: CHARACTER on the title screen, or in the city the mirror at home" (the
+11-17 decision). Their carousel showed the browser's white scrollbar under the navy panel: every scrollbar on the page
+is now thin, a gold thumb on the panels' ink (`client/style.css`; a rule's own `scrollbar-width: none` still wins).
+`client/creator.js`; `test/uitokens.test.js`.
