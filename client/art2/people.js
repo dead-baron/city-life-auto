@@ -41,6 +41,10 @@
 import { GBuf, F_CHAR, F_NOCAST, hash, bayer } from './gbuf.js';
 import { ITEMS, drawItem, itemSpan } from './items.js';
 import { CLUBS } from '../../shared/clubs.js';   // (the biker clubs' patches: task #366)
+// The character polish pass (docs/characters/NOTES.md): staged, OFF until the owner approves a sheet. Its code is
+// client/art2/peoplepolish.js, loaded only when switched on and handed in here; null draws today's people, unchanged.
+let PL = null;
+export function setPolish(p) { PL = p || null; }
 
 
 // ---- camera, light, poses -------------------------------------------------------------------------------------
