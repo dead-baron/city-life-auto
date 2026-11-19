@@ -25198,3 +25198,12 @@ Not done - the sign "SANDPIPER / JUNCTION FIRST" (the desert first-aid post): th
 "FIRST AID", and the post's small front clips the two-line board. Fixing it changes the baked art (a new `art` hash, a
 rebake), which this pass mustn't: left for the owner (fix: hand the whole name to `layoutSign`, which already shortens to
 "SANDPIPER FIRST / AID STATION"-style lines, and give a two-line board its height on the small posts).
+
+## 2026-11-19 - Pre-beta quick wins 3: the bag findable
+
+The owner (11-17): the bag can't be found. A desktop had only the I key and MENU > BAG; on touch the ITEMS switch showed
+only while you held an item. Now a desktop (and a pad) has a backpack button in the HUD's row, between the emotes and
+MENU, with its I chip (`#b-bag`, `client/main.js` toggleBag; hidden on touch), and on touch the switch is always there
+(no `items` flag) and called BAG - the name the screen, the pause row and the Guide use (it was ITEMS:
+`shared/touchcontrols.js`, `shared/controls.js`, `client/touchicons.js`). The Guide's bag line and the README say so.
+The 10-24 hub (UI-3) had taken the bag's HUD button away; the hub tests now expect it back.

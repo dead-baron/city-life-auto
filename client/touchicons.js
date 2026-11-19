@@ -504,7 +504,7 @@ let wordNow = 'ACT';
 export function setActWord(w) { wordNow = w || 'ACT'; return wordNow; }
 export const actWordNow = () => wordNow;
 // the small switches' words (the slot's label is the button's name: its long press, its aria-label)
-const SWITCH_WORD = { firetog: 'AUTO', cruiser: 'CALL', use: 'ITEMS', light: 'LIGHT' };
+const SWITCH_WORD = { firetog: 'AUTO', cruiser: 'CALL', use: 'BAG', light: 'LIGHT' };
 // what a slot's button shows: { sym } (cross, chev, enter, exit, shield) or { word }
 export function faceOf(a, label) {
   if (a === 'fire' && (label === 'FIRE' || label === 'HIT')) return hoseNow ? { word: 'HOSE' } : { sym: 'cross' };

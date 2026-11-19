@@ -2380,6 +2380,7 @@ for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
 $('b-chat').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };   // (chat: client/chat.js - the sheet, or away again)
+$('b-bag').onclick = () => { if (S.playing) toggleBag(); };   // (the bag on the HUD's row, I - pre-beta quick wins)
 $('b-emo').onclick = () => { if (S.playing && !S.practice) launchCall('emotes'); };   // (the emotes beside it on a desktop: the picker, as B - client/emotes.js)
 // the thumb's chat button (touch): a tap the sheet; the emote button beside it: a tap the emote picker (client/emotes.js)
 $('b-talk').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };
