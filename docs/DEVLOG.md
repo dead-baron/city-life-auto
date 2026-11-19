@@ -25253,3 +25253,13 @@ small-phone test now measures chat, the emotes and the move stick with the clust
 narrow-phone spot (and the HUD row's new bag button). 44 px targets on touch: chat's tabs, quick lines and row
 buttons (34-36 px), the emote picker's tabs (36), What's next's skip (30) and goal buttons (32), and Settings' tabs on a
 short screen (40). `client/style.css`; `test/uitokens.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 8: no red cross on the knocked-out screen (and two more)
+
+The owner's rule (10-18): never a red cross. The knocked-out screen's map drew the ambulance you called as a white
+disc with a red cross; it's now a white cross on the clinics' green (`client/deathscreen.js`). The test's source
+guard (`test/storeicons.test.js`) only looked at lines assigning a `cross...` variable, so it missed it: it now also
+catches a plus painted as two turned bars (`fillRect` pairs) in any red - and that found two more, both fixed the same
+way: the hospital helipad's badge (`client/render/aircraft.js`) and the lifeguard tower's roof (`client/render/trains.js`
+drawLifeguardTower; its red flag stays). None is in the art bake's imports (no new art hash). The guard's walk of
+`client/` also works on Windows now (`fileURLToPath`).

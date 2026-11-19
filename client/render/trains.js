@@ -148,7 +148,8 @@ export function drawLifeguardTower(g, t, cx, cy) {
   g.fillStyle = '#d8cdb4'; g.fillRect(-5, 18, 10, 26); for (let y = 20; y < 44; y += 4) { g.fillStyle = '#b8ad94'; g.fillRect(-5, y, 10, 1); }   // the ramp
   g.fillStyle = '#e8e4d8'; g.fillRect(-18, -18, 36, 36);                         // the roof
   g.fillStyle = '#5aa8c8'; g.fillRect(-18, 14, 36, 4);
-  g.fillStyle = '#d8342a'; g.fillRect(-2, -8, 4, 16); g.fillRect(-8, -2, 16, 4); g.fillRect(17, -22, 7, 5);   // the cross, the flag
+  g.fillStyle = '#1d7a3a'; g.fillRect(-10, -10, 20, 20); g.fillStyle = '#f2f2f2'; g.fillRect(-2, -8, 4, 16); g.fillRect(-8, -2, 16, 4);   // the cross: white on green, never red (the owner's rule, 10-18)
+  g.fillStyle = '#d8342a'; g.fillRect(17, -22, 7, 5);   // the flag
   g.restore();
 }
 

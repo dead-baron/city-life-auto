@@ -324,7 +324,7 @@ function render(H, c) {
   const g = c.getContext('2d'), [ox, oy] = wm.origin, sc = wm.scale;
   const P = (x, y) => [(x - ox) * sc, (y - oy) * sc];
   const css = getComputedStyle(document.documentElement), col = (k) => css.getPropertyValue(k).trim();
-  const ink = col('--ink'), gold = col('--gold'), danger = col('--danger'), cream = col('--cream');
+  const ink = col('--ink'), gold = col('--gold'), danger = col('--danger'), cream = col('--cream'), medic = col('--pocket-green');   // (medic: the clinics' green - a white cross on it, 4.8:1)
   g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
   if (at) {   // where you fell: a red ring, its name over it
     const [x, y] = P(at[0], at[1]);
@@ -346,10 +346,10 @@ function render(H, c) {
     g.fillStyle = ink; g.fillText(o.kind === 'home' ? '⌂' : String(i + 1), x, y + 1);
     SM.hits.unshift([x, y, o]);
   }
-  if (SM.amb) {   // the ambulance (or rescue boat) you called, driving over: a white disc with a red cross, its name under it
+  if (SM.amb) {   // the ambulance (or rescue boat) you called, driving over: a white cross on a green disc (never a red cross - the owner's rule, 10-18), its name under it
     const [x, y] = P(SM.amb.x, SM.amb.y), r = 11;
-    g.fillStyle = cream; g.strokeStyle = danger; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill(); g.stroke();
-    g.fillStyle = danger; g.fillRect(x - 2, y - 7, 4, 14); g.fillRect(x - 7, y - 2, 14, 4);
+    g.fillStyle = medic; g.strokeStyle = ink; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill(); g.stroke();
+    g.fillStyle = cream; g.fillRect(x - 2, y - 7, 4, 14); g.fillRect(x - 7, y - 2, 14, 4);
     const t = SM.wet ? 'Rescue boat' : 'Ambulance';
     g.font = '700 13px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText(t, x + 1, y + r + 11); g.fillStyle = cream; g.fillText(t, x, y + r + 10);
   }
