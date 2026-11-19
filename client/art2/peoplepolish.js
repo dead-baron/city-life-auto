@@ -31,6 +31,7 @@ export const POLISH = {
     D.chestR[0] *= fem ? 0.98 : 1.04;
     D.waistR[0] *= (fem ? 0.86 : 0.93) * (1 - mu * 0.08);
     if (fem) { D.pelR[0] *= 1.05; D.hipX *= 1.04; }
+    if (fem && b.belly > 0 && b.belly < 1.2) { D.pelR[0] *= 1.08; D.hipX *= 1.05; D.waistR[0] *= 0.95; }   // (curvy: the hips, not the waist)
     // hands: never smaller than an art pixel and a half across, whatever the limbs' thickness
     D.fist = Math.max(D.fist, fem ? 2.75 : 3.0);
     D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;

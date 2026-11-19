@@ -115,7 +115,7 @@ async function lineup(on, out, title) {
 }
 async function sides(outDir) {
   for (const r of ROWS) {
-    const [id, name, L] = EIGHT[r], A = LK.lookArt(L), W = stripWidth(), H = 56 + 2 * stripH();
+    const [id, name, L] = EIGHT[r], A = LK.lookArt(L), W = stripWidth(), H = 56 + 2 * stripH() + 4 * KB;
     const sh = new Sheet(W, H);
     sh.text(`${name}: BEFORE`, 8, 6, 2); heading(sh, 0, 22);
     await polish(false); strip(sh, 0, 26, A);
@@ -195,6 +195,41 @@ async function variants(out) {
   });
   sh.save(out);
 }
+// what else the body does: a pose a column (facing SE), before over after, for the first chosen archetype; --dir 2 for E
+async function poses(out) {
+  const PS = [['walk0', 1], ['walk0', 3], ['walk2', 1], ['walk3', 2], ['punch', 2], ['aim', 0], ['carry', 1], ['handsup', 0], ['kneel', 0], ['sit', 0], ['drive', 0], ['ride', 0], ['pedal', 1], ['swim', 0], ['down', 0], ['fish', 1]];
+  const d = +arg('dir', 1), CW = 26 * KB, RH = stripH() + 4 * KB, sh = new Sheet(8 + PS.length * CW, ROWS.length * 2 * RH + 12);
+  let y = 0;
+  for (const r of ROWS) for (const on of [false, true]) {
+    await polish(on);
+    PS.forEach(([p, fr], i) => { if (!on) sh.text(p, 8 + i * CW + 4, y + 4, 2); sh.sprite(baked(LK.lookArt(EIGHT[r][2]), d, p, fr, p === 'aim' ? { held: 'pistol' } : {}), 8 + i * CW + CW / 2, y + RH - 4 * KB, KB); });
+    y += RH;
+  }
+  sh.save(out);
+}
+// every hairstyle (facing SW, then from behind), before over after, on a man and a woman
+async function hair(out) {
+  const HS = LK.HAIR_STYLES.map((h, i) => i), CW = 19 * KB, RH = stripH() - 6 * KB, per = 14, nr = Math.ceil(HS.length / per), sh = new Sheet(8 + per * 2 * CW, nr * 2 * RH + 12);
+  for (const [k, on] of [[0, false], [1, true]]) {
+    await polish(on);
+    HS.forEach((h, i) => { const L = LK.emptyLook(i % 2 ? 'f' : 'm'); L.hair.style = h; L.hair.color = 1 + i % 5; L.body.skin = [1, 4, 9, 12][i % 4]; L.outfit.top = LK.item('Plain tee'); L.outfit.bottoms = LK.item('Jeans');
+      const A = LK.lookArt(LK.validLook(L)), x = 8 + (i % per) * 2 * CW, y = (Math.floor(i / per) * 2 + k + 1) * RH;
+      sh.sprite(baked(A, 7, 'idle', 0), x + CW / 2, y, KB); sh.sprite(baked(A, 4, 'idle', 0), x + CW + CW / 2, y, KB); });
+  }
+  sh.save(out);
+}
+// the builds: both bases, every build, the same tee and jeans, facing S and E - before over after
+async function builds(out) {
+  const CW = 22 * KB, RH = stripH(), n = LK.BUILDS.length, sh = new Sheet(8 + n * 4 * CW, 2 * RH + 26);
+  for (const [k, on] of [[0, false], [1, true]]) {
+    await polish(on);
+    ['m', 'f'].forEach((base, b) => LK.BUILDS.forEach((B, i) => { const L = LK.emptyLook(base); L.body.build = i; L.hair.style = base === 'f' ? 5 : 1; L.outfit.top = LK.item('Tank top', 'white'); L.outfit.bottoms = LK.item('Shorts', 'navy');
+      const A = LK.lookArt(LK.validLook(L)), x = 8 + (b * n + i) * 2 * CW;
+      if (!k) sh.text(B.name, x + 4, 4, 2);
+      sh.sprite(baked(A, 0, 'idle', 0), x + CW / 2, 14 + (k + 1) * RH - 2 * KB, KB); sh.sprite(baked(A, 2, 'idle', 0), x + CW + CW / 2, 14 + (k + 1) * RH - 2 * KB, KB); }));
+  }
+  sh.save(out);
+}
 const DOCS = join(ROOT, 'docs', 'characters');
 if (mode === 'before') await lineup(false, arg('out', join(DOCS, 'before.png')), 'TODAY\'S PEOPLE (BEFORE)');
 else if (mode === 'after') await lineup(true, arg('out', join(DOCS, 'after.png')), 'AFTER: THE POLISH PASS');
@@ -202,5 +237,8 @@ else if (mode === 'side') await sides(arg('out', DOCS));
 else if (mode === 'grounds') await grounds(arg('out', join(DOCS, 'grounds.png')));
 else if (mode === 'faces') await faces(arg('out', join(DOCS, 'faces.png')));
 else if (mode === 'variants') await variants(arg('out', join(DOCS, 'variants.png')));
+else if (mode === 'poses') await poses(arg('out', join(DOCS, 'poses.png')));
+else if (mode === 'hair') await hair(arg('out', join(DOCS, 'hair.png')));
+else if (mode === 'builds') await builds(arg('out', join(DOCS, 'builds.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

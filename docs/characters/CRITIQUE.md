@@ -76,3 +76,19 @@ colours. None of that needs replacing - the polish is proportions, the neck and 
 5. Builds and the two bases told apart by shape.
 6. Left for later passes (the owner's order: faces, then hands/arms, then clothing): dark-cloth detail, role tells,
    hair silhouettes beyond what the new proportions give for free, the walk's bob.
+
+## Re-checked against `after.png` (the pass switched on)
+
+| # | Issue | After the pass |
+| --- | --- | --- |
+| 1 | No neck, no shoulder line | **Fixed** from S, SE and E: the chin clears the collar, shoulders start below it. From N the hair still covers the neck on most styles |
+| 2 | Head too big, legs stubs | **Better, not what the brief asked**: about 3.1 heads (from 2.4), legs 20% longer. 3.5-4 heads is a choice for the owner (`NOTES.md`, `variants.png`) |
+| 3 | No face | **Fixed** at 4x and on `faces.png` for all 16 skins; at game scale the eyes read, brows and mouth are faint |
+| 4 | Facing carried by hair alone | **Better**: the eyes show S and SE, a profile has an eye and a mouth. N against S is still hair against face |
+| 5 | Arms merge, hands vanish | **Partly**: thinner arms hang off the shoulders and hands show on light tops; on dark tops the arm is still lost in the chest |
+| 6 | Man and woman differ only by hair | **Better**: a waist and hips, narrower shoulders, coloured lips, a softer brow. Still close in loose dark clothes |
+| 7 | Builds differ only in width | **Better** (`builds.png`): athletic is a V, curvy has hips, big has the belly. Slim and average are still close |
+| 8 | Dark outfits are holes, skin glows | **Remains** (clothing pass) |
+| 9 | Hair a cap or a spike | **Remains**: unchanged, though long hair now falls past real shoulders |
+| 10 | Animation | **Partly**: longer legs give the walk a visible stride; still no bob |
+| 11 | Role tells | **Remains** (clothing pass) |

@@ -25177,3 +25177,13 @@ panel is scaled with CSS zoom on desktops (style.css `--zk`), and inside a zoome
 don't match the canvas's own pixels (tested: a zoom of 1.5 put a click 50% off) - so a click never landed near a
 mark. The map now works the pointer out from the canvas's box on screen (clicks, drags, the wheel's zoom point).
 Phones (no zoom) were fine. `client/deathscreen.js` mapInput.
+
+## 2026-11-19 - The character polish pass, staged (off)
+
+The task `docs/tasks/CHARACTERS.md`: a critique of today's people first (`docs/characters/CRITIQUE.md`), then a pass
+behind a switch - about 3.1 heads instead of 2.4, a neck, a shoulder line, hands that show, and a face whose eyes are
+dark on every skin with brows, a nose shadow and a mouth. Off by default; the debug menu's *Character polish* turns it
+on in one browser (`cla.polish`). The pass is `client/art2/peoplepolish.js`, loaded only when on (the sprite workers
+are handed its address, as for the aircraft), so it is in no budget; `people.js` and `game/peds.js` carry small hooks
+(the renderer's code +0.5 KB, inside its 411 KB). The world's baked art doesn't change. Review sheets and the owner's
+choices: `docs/characters/` (`NOTES.md`), drawn by `tools/charsheet.mjs`. Not yet seen running in a browser.
