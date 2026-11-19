@@ -662,3 +662,8 @@ test('the tip\'s Guide link: each moment names a Guide section; a tap on the tip
   assert.match(css, /#ftue-line\.faded \{[^}]*pointer-events: none/, 'faded: back to the sticks');
   assert.match(html, /id="s-tips"/, 'Settings: First-time tips');
 });
+
+test('the arrival letterbox never cuts the HUD: the HUD is away while the bars are in (pre-beta quick wins)', () => {
+  const css = readFileSync(new URL('../client/style.css', import.meta.url), 'utf8');
+  assert.match(css, /body:has\(#arrival:not\(\.hidden\):not\(\.leaving\)\) #hud \{ visibility: hidden; \}/);
+});

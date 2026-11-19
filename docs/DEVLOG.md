@@ -25187,3 +25187,14 @@ in Dev Debug Mode (or on a private dev server, `S.dev`), and everyone while the 
 `openDebug` (the button, the row, the backquote key, the pad) does nothing for anyone else. While testing with the
 open dev mode on, nothing changes; at `CLA_DEV_OPEN=0` players stop seeing them. `client/main.js` debugOk /
 syncDebugUi, `client/style.css`, `index.html`; `test/hub.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 2: the arrival's letterbox doesn't cut the HUD
+
+REPORT2 B6: the arrival's black bars (`#arrival::before/::after`, over the HUD) sliced the minimap and the round
+buttons in half. The HUD is now away while the arrival (and its "Where to?" pick) is up with its bars in, and back as
+they slide off (`#arrival.leaving`). `client/style.css`; `test/ftue.test.js`.
+Not done - the sign "SANDPIPER / JUNCTION FIRST" (the desert first-aid post): the art's `signName`
+(`client/art2/game/statics.js` `clean(b.name, 26)`) cuts "Sandpiper Junction First Aid Station" at 26 characters, mid
+"FIRST AID", and the post's small front clips the two-line board. Fixing it changes the baked art (a new `art` hash, a
+rebake), which this pass mustn't: left for the owner (fix: hand the whole name to `layoutSign`, which already shortens to
+"SANDPIPER FIRST / AID STATION"-style lines, and give a two-line board its height on the small posts).
