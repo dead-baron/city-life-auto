@@ -247,7 +247,7 @@ function dims(A) {
   // second pass's 3.7 heads (a small head on long legs) shrank the face and the hair to a few pixels. So: the head 1.36x,
   // the legs 0.88x, the arms a little shorter with them, the limbs 1.2x as thick, the body 1.08x as wide. Shoulders and
   // hips by base and build as before: a man's taper from the shoulders, a woman's waist and hips.
-  const HK = 1.36, LK = 0.88, AK = 0.94, TK = 1.2, WK = 1.08;
+  const [HK, LK, AK, TK, WK] = PL ? PL.K : [1.36, 0.88, 0.94, 1.2, 1.08];
   const D = {
     fem, h, w, lm, mu, belly: bel,
     ank: 3.1, shin: 8.2 * h * LK, thigh: 8.2 * h * LK, hipX: 3.4 * w * (fem ? 1.12 : 1),
@@ -261,6 +261,7 @@ function dims(A) {
   };
   D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;
   D.reach = D.upper + D.fore + 1.2;
+  if (PL) PL.dims(D, A, b);
   return D;
 }
 
@@ -1201,7 +1202,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   const headP = E(S.head, HD, hr, GR.HEAD, 'head', W.head);
   E(at([0, 0.42, -0.5]), HD, [hr[0] * (D.jawW || 0.74), hr[1] * 0.6, hr[2] * 0.5], GR.HEAD, 'jaw', W.head);
   const nz = NOSE[A.face?.nose | 0] || NOSE[0];
-  E(at([0, 0.97, -0.24]), HD, [0.9 * nz[0], 1.1 * nz[1], 1.15 * nz[2]], GR.HEAD, 'nose', W.head);
+  E(at([0, 0.97, -0.24]), HD, [0.9 * nz[0], 1.1 * nz[1] * (PL ? PL.noseK : 1), 1.15 * nz[2]], GR.HEAD, 'nose', W.head);
   if (A.beard === 'long' && !A.mask && !A.fmask) E(at([0, 0.5, -1.02]), HD, [hr[0] * 0.48, hr[1] * 0.34, hr[2] * 0.42], GR.HAIR, 'beard', W.hairLock);
   for (const s of [-1, 1]) E(at([s * 0.97, -0.1, 0.04]), HD, [1.1, 1.3, 1.75], GR.HEAD, 'ear', W.ear);
   hairPrims(E, C, A, D, P, S, W, at, hat, seed);
@@ -1847,7 +1848,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
   // eye a pixel inside the face's edge)
   const fh = Math.hypot(M[1], M[4]), turn = fh > 0.2 ? Math.abs(M[1]) / fh : 0, near = M[3] >= 0 ? 1 : -1;
   const azE = (s) => ((A.founder ? 33 : 24) + (s === near ? 16 * turn : 0)) * Math.PI / 180;
-  let eyes = [-1, 1].map((s) => { const a = azE(s); return { s, p: at(s * Math.sin(a), Math.cos(a) * 0.99, 0.12) }; }).filter((e) => e.p.fc > 0.28 && onHead(e.p.x, e.p.y));
+  let eyes = [-1, 1].map((s) => { const a = azE(s); return { s, p: at(s * Math.sin(a), Math.cos(a) * 0.99, PL ? PL.eyeZ : 0.12) }; }).filter((e) => e.p.fc > 0.28 && onHead(e.p.x, e.p.y));
   if (eyes.length === 2 && eyes[0].p.bx === eyes[1].p.bx) eyes = [eyes[0].p.fc > eyes[1].p.fc ? eyes[0] : eyes[1]];   // (one pixel wide: the nearer eye)
   const glasses = A.glasses, F = A.face || {}, mk = A.makeup || null, fm = A.fmask ? A.fmask.k : null;
   // (#429: the eye's one pixel takes the iris's colour - it was mostly the dark base, and every colour looked the same -
@@ -1862,9 +1863,11 @@ function face(fig, P, A, D, w, h, AX, AY) {
   const stamp = (q, s, K, o = 1, dy = 0) => { for (let i = 0; i < s.length; i += 3) put(q, K[s[i + 2]], (s.charCodeAt(i) - 49) * o, s.charCodeAt(i + 1) - 49 + dy); };
   // the nose under the eyes, its shadow to the right (the light's from the left): straight, small, button, wide, long, hooked
   const covered0 = A.mask || A.bandana || A.medmask || fm;
+  const cx = PL && { at, put, onHead, eyes, e0, A, D, P, F, W, skin, eyeC, near, turn, EYE, WHITE, LASH, hexRgb };   // (the polish pass draws the nose, the eyes and brows, the mouth)
   if (e0 && !covered0) {
     const an = near * turn * 0.3, n = at(Math.sin(an), Math.cos(an), -0.2);
-    stamp({ bx: n.bx, by: e0.by + 2 }, NOSE_ST[F.nose | 0], { s: skin[2], d: skin[1], k: skin[0], l: lit(skin[3], 0.3) });
+    if (cx) PL.nose(cx, n);
+    else stamp({ bx: n.bx, by: e0.by + 2 }, NOSE_ST[F.nose | 0], { s: skin[2], d: skin[1], k: skin[0], l: lit(skin[3], 0.3) });
   }
   if (A.glassForm === 'founder' && !eyes.length) for (const sd of [-1, 1]) for (let t = 0; t <= 1; t += 0.1) { const az = (75 + t * 105) * Math.PI / 180, q = at(sd * Math.sin(az), Math.cos(az), 0.22); if (q.fc > 0) put(q, [176, 44, 150]); }   // (from behind: the band of his glasses)
   if (glasses && eyes.length) {
@@ -1898,7 +1901,8 @@ function face(fig, P, A, D, w, h, AX, AY) {
     // hair's colour over them: natural unmarked, thick, thin, arched, straight, bushy
     const E5 = F.eyes | 0, hairC = W.hairR ? W.hairR[1] : EYE, lid = mixC(LASH, skin[1], 0.2);
     const EK = { i: E5 === 2 ? mixC(eyeC, LASH, 0.55) : eyeC, l: LASH, w: WHITE, s: skin[1], d: lid, h: hairC, m: mixC(hairC, skin[3], 0.45) };
-    for (const e of eyes) {
+    if (cx) PL.eyes(cx);
+    else for (const e of eyes) {
       if (!P.eyes) { put(e.p, skin[0]); continue; }
       const o = outOf(e);
       stamp(e.p, EYE_ST[E5] || '11i', EK, o);
@@ -1932,6 +1936,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
       // (on the eyes' row or right under it - a very short face - it moves down one)
       const L5 = fm === 'clown' ? 3 : A.face?.lips | 0, my = e0 && m.by - e0.by < 4 ? 1 : 0;
       if (fm === 'skull') { put(m, [40, 34, 30], -1, my); put(m, [40, 34, 30], 1, my); }   // (the teeth between two gaps)
+      else if (cx) PL.mouth(cx, m, lip, L5, my);
       else stamp(m, LIP_ST[L5], { a: lip, t: mixC(lip, skin[0], 0.5), b: lit(lip, 0.3), c: mixC(lip, skin[3], 0.5) }, 1, my);   // (medium, thin a dark line, full two pixels, wide three, a bow's lit top, small a faint dot)
     }
   }

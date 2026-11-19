@@ -89,7 +89,7 @@ const FONT = Object.fromEntries(Object.entries({
 // the game at zoom 1); then standing and walking at ZOOM times that ----
 const KG = 2, KB = 2 * ZOOM, CELL = 40, BCELL = 21 * KB + 6;
 const stripWidth = () => 8 + 12 * CELL + 20 + 8 * BCELL + 8;
-const stripH = () => 27 * KB + 22;
+const stripH = () => 29 * KB + 22;
 function strip(sh, x, y, A, tint = null) {
   const feet = y + stripH() - 10;
   let cx = x + 8 + CELL / 2;
@@ -141,34 +141,50 @@ async function grounds(out) {
   }
   sh.save(out);
 }
-// heads close up: every option of the look system's eyes, brows, noses and lips, on a man and a woman, S and SE
+// heads close up: every option of the look system's eyes, brows, noses and lips - a man facing S, a woman facing SE -
+// before over after, on six skins; the last column the same man in profile (E)
 async function faces(out) {
-  const K = 8, CW = 20 * K / 2 + 8, opts = [['eyes', LK.FACE_OPTS.eyes], ['brows', LK.FACE_OPTS.brows], ['nose', LK.FACE_OPTS.nose], ['lips', LK.FACE_OPTS.lips]];
-  const n = Math.max(...opts.map((o) => o[1].length)), RH = 13 * K / 2 * 2 + 14, W = 70 + n * 2 * CW + 16, H = 20 + opts.length * 2 * RH * 2 + 10;
+  const K = 2 * +arg('zoom', 3), CW = 18 * K + 4, RH = 20 * K + 2, opts = (arg('only', null) ? [arg('only')] : ['eyes', 'brows', 'nose', 'lips']).map((k) => [k, LK.FACE_OPTS[k]]);
+  const n = Math.min(+arg('cols', 9), Math.max(...opts.map((o) => o[1].length))), W = 64 + (n * 2 + 1) * CW + 8, H = 22 + opts.length * (2 * RH + 16);
   const sh = new Sheet(W, H);
-  sh.text(`HEADS AT ${K / 2}X THE 4X SHEET: EACH OPTION FACING S AND SE - A MAN (TOP) AND A WOMAN; BEFORE THEN AFTER`, 8, 6, 2);
-  let y = 20;
-  for (const [key, names] of opts) for (const [k, on] of [[0, false], [1, true]]) {
-    await polish(on);
-    sh.text(key, 6, y + 20, 2); sh.text(on ? 'AFTER' : 'BEFORE', 6, y + 34, 2, on ? [170, 240, 170] : [240, 200, 160]);
-    names.forEach((nm, i) => {
-      if (!k) sh.text(nm, 70 + i * 2 * CW + 4, y + 2, 1);
-      ['m', 'f'].forEach((base, b) => [0, 1].forEach((d, j) => {
-        const L = LK.validLook({ ...structuredClone(LK.emptyLook(base)), face: { ...LK.emptyLook(base).face, [key]: i, eyeColor: 1 + i % 4 } });
-        L.body.skin = [1, 3, 9, 12, 5, 14][i % 6]; L.hair = { ...L.hair, style: base === 'f' ? 5 : 1, color: 1 + (i % 3) };
-        const s = baked(LK.lookArt(LK.validLook(L)), d, 'idle', 0, { region: 'head' });
-        sh.sprite(s, 70 + (i * 2 + j) * CW + CW / 2, y + 12 + (b + 1) * RH - 6, K, null, false);
-      }));
-    });
-    y += 2 * RH + 4;
+  sh.text(`HEADS AT ${K / 2}X GAME SCALE: EACH OPTION ON A MAN (S) AND A WOMAN (SE); LAST COLUMN A PROFILE`, 8, 6, 2);
+  const head = (base, key, i, d) => {
+    const L = LK.emptyLook(base);
+    L.face = { ...L.face, [key]: i, eyeColor: 1 + i % 4 }; L.body.skin = [1, 3, 9, 12, 5, 14][i % 6]; L.hair = { ...L.hair, style: base === 'f' ? 5 : 1, color: 1 + (i % 3) };
+    L.outfit.top = LK.STARTERS[0].look.outfit.top;
+    const s = baked(LK.lookArt(LK.validLook(L)), d, 'idle', 0, { region: 'head' });
+    return { ...s, ax: s.w >> 1, ay: s.h };   // (placed by its box, not the feet)
+  };
+  let y = 22;
+  for (const [key, names] of opts) {
+    names.slice(0, n).forEach((nm, i) => sh.text(nm, 64 + i * 2 * CW + 6, y, 2));
+    for (const on of [false, true]) {
+      await polish(on);
+      sh.text(key, 4, y + 24, 2); sh.text(on ? 'AFTER' : 'BEFORE', 4, y + 38, 2, on ? [170, 240, 170] : [240, 200, 160]);
+      const fy = y + 14 + 19 * K;
+      names.slice(0, n).forEach((nm, i) => { sh.sprite(head('m', key, i, 0), 64 + i * 2 * CW + CW / 2, fy, K, null, false); sh.sprite(head('f', key, i, 1), 64 + (i * 2 + 1) * CW + CW / 2, fy, K, null, false); });
+      sh.sprite(head('m', key, 0, 2), 64 + n * 2 * CW + CW / 2, fy, K, null, false);
+      y += RH;
+    }
+    y += 16;
   }
   sh.save(out);
 }
 
+// (a working view: the chosen archetypes standing S, SE, E, N - before then after - at ZOOM; --pose walk0 --frame 1 for a stride)
+async function dev(out) {
+  const pose = arg('pose', 'idle'), fr = +arg('frame', 0), W = 8 + 8 * BCELL, sh = new Sheet(W, ROWS.length * stripH() + 4 * KB);
+  for (const [k, on] of [[0, false], [1, true]]) {
+    await polish(on);
+    ROWS.forEach((r, i) => DIRS.forEach(([d], j) => sh.sprite(baked(LK.lookArt(EIGHT[r][2]), d, pose, fr), 8 + (k * 4 + j) * BCELL + BCELL / 2, (i + 1) * stripH() - 8, KB)));
+  }
+  sh.save(out);
+}
 const DOCS = join(ROOT, 'docs', 'characters');
 if (mode === 'before') await lineup(false, arg('out', join(DOCS, 'before.png')), 'TODAY\'S PEOPLE (BEFORE)');
 else if (mode === 'after') await lineup(true, arg('out', join(DOCS, 'after.png')), 'AFTER: THE POLISH PASS');
 else if (mode === 'side') await sides(arg('out', DOCS));
 else if (mode === 'grounds') await grounds(arg('out', join(DOCS, 'grounds.png')));
 else if (mode === 'faces') await faces(arg('out', join(DOCS, 'faces.png')));
+else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }
