@@ -49,7 +49,11 @@ test('every item of the old pause list has a home in the hub', () => {
   // the debug menu: reachable, last and quiet
   const lines = [...help.matchAll(/data-h="([a-z]+)"/g)].map((m) => m[1]);
   assert.equal(lines[lines.length - 1], 'dev', 'the debug menu is the last line');
-  assert.match(help, /class="opt quiet play-only" data-h="dev"/, 'and never loud');
+  assert.match(help, /class="opt quiet play-only" data-h="dev" id="h-dev"/, 'and never loud');
+  // (pre-beta quick wins: only the owner, admins, Dev Debug Mode or the server's open dev mode see the debug ways in)
+  assert.match(read('client/style.css'), /body:not\(\.dbg-ok\) :is\(#b-dev, #h-dev\) \{ display: none !important; \}/, 'hidden from players');
+  assert.match(MAIN, /function debugOk\(\) \{ return !!\(S\.dev \|\| S\.devMode \|\| S\.devOpen \|\| S\.role === 'owner' \|\| S\.role === 'admin'\); \}/);
+  assert.match(MAIN, /function openDebug\(\) \{\s*if \(!debugOk\(\)\) return;/, 'the ` key and the pad too');
   // each Help line does what the pause line did
   const hub = read('client/hub.js');
   for (const h of ['unstuck', 'surrender', 'cine', 'fullscreen', 'title', 'install', 'look', 'devmode', 'dev']) assert.match(hub, new RegExp(`\\b${h}: `), `Help: ${h}`);

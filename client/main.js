@@ -168,7 +168,7 @@ function launchCall(k, a) {
     // (noGate: the title shows the age gate itself, in its own slot, before the first PLAY - withGate)
     acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
     S.launch = { acc, ga, chat, er };
-    acc.launchInfo().then((i) => { discordLinks(i && i.discord); supportLinks(i && i.support); }).catch(() => {});
+    acc.launchInfo().then((i) => { S.devOpen = !!(i && i.devOpen); syncDebugUi(); discordLinks(i && i.discord); supportLinks(i && i.support); }).catch(() => {});
     // the title's slots (UI-10): SIGN IN opens the account panel in the sign-in screen, the gate shows in the gate's -
     // with no sign-in provider switched on (today), the panel still has the transfer code and the name
     setAccountUi({
@@ -184,7 +184,7 @@ function launchCall(k, a) {
     if (k === 'msg') {
       // (a new session's account state: GA's ids again - the server forgets them with a session - and any errors queued
       // while offline go now)
-      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) { L.ga.setId(a.ga); L.ga.resend(); L.er.flush(); S.role = a.role || null; } L.acc.onMessage(a); } else L.chat.onMessage(a);
+      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) { L.ga.setId(a.ga); L.ga.resend(); L.er.flush(); S.role = a.role || null; syncDebugUi(); } L.acc.onMessage(a); } else L.chat.onMessage(a);
     } else if (k === 'play') { L.ga.event('play_click'); send({ t: 'ftue', s: 'title_play' }); }
     else if (k === 'world') { L.ga.event('in_world'); send({ t: 'ftue', s: 'in_world' }); }
     else if (k === 'perf') L.ga.perf(a);
@@ -433,7 +433,7 @@ function onText(m) {
       else if (worldChanged(m)) break;   // (the server runs another world than the one this page asked its city worker for)
       else if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
       try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
-      S.welcomed = true; S.restore = false; S.pid = m.pid; S.dev = !!m.dev;
+      S.welcomed = true; S.restore = false; S.pid = m.pid; S.dev = !!m.dev; syncDebugUi();
       S.day = Number(m.day) || 0; S.snapLoop = undefined;   // (the day: the server's count of the loop's turns; onBinary counts on)
       if (!m.practice) S.everConnected = true;
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
@@ -1594,7 +1594,13 @@ function enterCity() {
 
 // Open the debug menu straight away, switching Dev Debug Mode on first if it's off (no password while the team
 // and friends are testing; if the server asks for one after all, its prompt opens).
+// Who sees the debug entry points (the HUD's button, Settings > Help's row, the ` key / pad): the owner and admins,
+// anyone already in Dev Debug Mode (or on a private dev server), and everyone only while the server's open dev mode is
+// on (CLA_DEV_OPEN, /launch.json devOpen) - other players never see them (pre-beta quick wins).
+function debugOk() { return !!(S.dev || S.devMode || S.devOpen || S.role === 'owner' || S.role === 'admin'); }
+function syncDebugUi() { document.body.classList.toggle('dbg-ok', debugOk()); }
 function openDebug() {
+  if (!debugOk()) return;
   if (S.dev || S.devMode) { if (topOverlay() !== 'dev') openOverlay('dev'); return; }
   if (!S.welcomed) return;
   S.openDevOnEnter = true;
@@ -1607,6 +1613,7 @@ setInterval(() => { const el = document.getElementById('dev-sound'); if (el && e
 // first time it's on - the page itself only shows or hides its button.
 let devMenu = null, devMenuP = null;
 function setupDev() {
+  syncDebugUi();
   const on = S.dev || S.devMode;
   if (!on) { $('dev').classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
   devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });

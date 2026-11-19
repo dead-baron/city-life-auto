@@ -25177,3 +25177,13 @@ panel is scaled with CSS zoom on desktops (style.css `--zk`), and inside a zoome
 don't match the canvas's own pixels (tested: a zoom of 1.5 put a click 50% off) - so a click never landed near a
 mark. The map now works the pointer out from the canvas's box on screen (clicks, drags, the wheel's zoom point).
 Phones (no zoom) were fine. `client/deathscreen.js` mapInput.
+
+## 2026-11-19 - Pre-beta quick wins 1: debug hidden from players
+
+The second audit (REPORT2 B4): every player saw the debug button by the minimap and "Debug menu" in Settings > Help
+(a tap sent `devmode` with no password and got a refusal). Now only the owner and admins (`S.role`), anyone already
+in Dev Debug Mode (or on a private dev server, `S.dev`), and everyone while the server's open dev mode is on
+(`CLA_DEV_OPEN`, read from /launch.json `devOpen`) see them: `body.dbg-ok` shows the button and the row, and
+`openDebug` (the button, the row, the backquote key, the pad) does nothing for anyone else. While testing with the
+open dev mode on, nothing changes; at `CLA_DEV_OPEN=0` players stop seeing them. `client/main.js` debugOk /
+syncDebugUi, `client/style.css`, `index.html`; `test/hub.test.js`.
