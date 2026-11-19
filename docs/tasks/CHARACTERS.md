@@ -21,12 +21,12 @@ not in the repo, work from the description here).
   world's baked art must not change (no art redraw).
 
 ## Do
-0. **The critique first** (\`docs/characters/CRITIQUE.md\`, before changing anything): what's wrong with today's
+0. **The critique first** (`docs/characters/CRITIQUE.md`, before changing anything): what's wrong with today's
    people and why, ranked by how much a player notices - readability at game scale on a phone (can you tell a man
    from a woman, a cop from a civilian, one archetype from another, which way someone faces, what they hold?),
    against busy ground (pavement, grass, night, rain), silhouettes, faces, proportions, colours that merge with the
    world, animation (walk, run, idle), outfits and hair that clip or vanish. If concept images are in
-   \`docs/characters/concepts/\` (the owner may add them) or under \`docs/art-v2/\` / \`assets/\`, compare against them
+   `docs/characters/concepts/` (the owner may add them) or under `docs/art-v2/` / `assets/`, compare against them
    point by point; list what the concepts show that the game lacks.
 1. Study how people are built (the parts, the poses, the 8 directions, the outfits and hair from the wardrobe, the
    pixel grid) and render a "before" line-up sheet: 8 archetypes (men and women, each build), 4 directions, standing
