@@ -448,7 +448,14 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     playShot(reel.ids[reel.i]);
   };
   // one shot on its own (a tap on it): a reel of one - or, while a reel plays, a jump to it, the reel going on from there
-  D.shot = (id) => { if (reel && reel.ids.length > 1 && reel.ids.includes(id)) { reel.i = reel.ids.indexOf(id); } else reel = { ids: [id], i: 0, sec: null }; playShot(id); };
+  // (a shot on its own still knows its list - its section, or the unreviewed ones: Next and the one before step through
+  // that list, where a reel of one used to just end - the owner's "next scene doesn't move to the next shot"; on its own
+  // it ends when it's over, one: true - pre-beta quick wins)
+  D.shot = (id) => {
+    if (reel && reel.ids.length > 1 && reel.ids.includes(id)) reel.i = reel.ids.indexOf(id);
+    else { const q = DSCENES[id], sec = q && isKept(id) ? q.g : MORE, ids = sec === MORE ? moreOf() : shotsOf(sec); reel = ids.includes(id) ? { ids, i: ids.indexOf(id), sec, one: true } : { ids: [id], i: 0, sec: null, one: true }; }
+    playShot(id);
+  };
   D.next = (dir = 1) => {
     if (!reel) return;
     reel.i += dir;
@@ -926,7 +933,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       if (reel && !want) {   // (the shot list: a fade, then the next - or the end of it)
         fadeTo(1);
         endAt = performance.now();
-        setTimeout(() => { if (!reel || want || (sct && !sct.over)) return; reel.i + 1 < reel.ids.length ? D.next(1) : stopReel(true); }, END_FADE);
+        setTimeout(() => { if (!reel || want || (sct && !sct.over)) return; reel.i + 1 < reel.ids.length && !reel.one ? D.next(1) : stopReel(true); }, END_FADE);
         return;
       }
       if (want) return;   // (the next is on its way: its own 'dscene' takes over)

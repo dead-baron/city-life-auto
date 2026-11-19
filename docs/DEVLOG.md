@@ -25263,3 +25263,15 @@ catches a plus painted as two turned bars (`fillRect` pairs) in any red - and th
 way: the hospital helipad's badge (`client/render/aircraft.js`) and the lifeguard tower's roof (`client/render/trains.js`
 drawLifeguardTower; its red flag stays). None is in the art bake's imports (no new art hash). The guard's walk of
 `client/` also works on Windows now (`fileURLToPath`).
+
+## 2026-11-19 - Pre-beta quick wins 9 (part): Next moves to the next shot
+
+The owner (recording trailers with the camera tool): "next scene" didn't move to the next shot. A shot tapped in the
+list was a reel of one, so Next (the panel's ⏭, the bar's Next, N, a pad's A / RB) just ended it. A tapped shot now
+keeps its list - its section's kept shots, or the unreviewed ones - so Next and the one before step through it; on its
+own it still stops when it's over (`one`: no auto-advance; Play all still plays on). `client/director.js` D.shot;
+`test/directorcam.test.js` (fails on the old code). A new test also plays every place shot on the page - held, go,
+then frames - and each one's camera travels, so the page side of "shots that don't play their camera move" checks out
+with the shots' own anchors; the live cause (a place whose anchors or cast don't resolve, the camera holding its last
+spot) needs a World v3 run to find. Not done: shots of NPCs playing their games (pool, cards, hoops) - new scenes with
+the watchable games' server sims, a server change.
