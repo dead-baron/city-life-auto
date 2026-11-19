@@ -55,7 +55,8 @@ export const POLISH = {
     // (the iris's colour kept - task #429 - and darkened, hue and all, until it's well under the skin it sits on)
     let pupil = eyeC; for (let k = 0; k < 10 && (lum(skin[3]) - lum(pupil) < (dk ? 0.17 : 0.22) || dist(pupil, skin[3]) < 100); k++) pupil = pupil.map((v) => Math.round(v * 0.86));
     const lid = mix(skin[1], LASH, 0.35), white = mix(WHITE, skin[4], dk ? 0.2 : 0.1), lash = mix(LASH, skin[0], 0.15);
-    const brow = off(mix(hairC, EYE, 0.2), skin[3], 84), browS = mix(brow, skin[2], 0.4);
+    // (a brow is never as dark as the eye under it, or the two read as one tall bar)
+    const brow0 = off(mix(hairC, EYE, 0.2), skin[3], 84), brow = mix(brow0, skin[2], 0.3), browS = mix(brow0, skin[2], 0.55);
     for (const e of eyes) {
       const o = outOf(cx, e), q = e.p;
       if (!P.eyes) { put(q, lid); continue; }   // (shut: the lid's line)

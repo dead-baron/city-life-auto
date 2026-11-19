@@ -180,11 +180,27 @@ async function dev(out) {
   }
   sh.save(out);
 }
+// the proportions to choose from (the owner picks: docs/characters/NOTES.md): today's, the pass as built, and the same pass
+// with a smaller head on longer legs - the eight standing S and SE at ZOOM, then at game scale
+export const VARIANTS = [['BEFORE', null], ['A: THE PASS', {}], ['B: SMALLER HEAD, LONGER LEGS', { K: [1.22, 1.13, 1.04, 1.02, 1.0] }], ['C: THE HEAD AS TODAY, LONGER LEGS', { K: [1.36, 1.1, 1.03, 1.02, 1.0] }]];
+async function variants(out) {
+  await polish(true);
+  const W = 8 + ROWS.length * 2 * BCELL + 16 + ROWS.length * CELL + 8, RH = stripH() + 6 * KB, sh = new Sheet(W, VARIANTS.length * RH + 2 * KB);
+  VARIANTS.forEach(([name, v], k) => {
+    setPolish(v ? { ...POLISH, ...v } : null);
+    sh.text(name, 8, k * RH + 8, 2);
+    ROWS.forEach((r, i) => { const A = LK.lookArt(EIGHT[r][2]), y = (k + 1) * RH - 3 * KB;
+      [0, 1].forEach((d, j) => sh.sprite(baked(A, d, 'idle', 0), 8 + (i * 2 + j) * BCELL + BCELL / 2, y, KB));
+      sh.sprite(baked(A, 1, 'walk0', 1), 8 + ROWS.length * 2 * BCELL + 16 + i * CELL + CELL / 2, y, KG); });
+  });
+  sh.save(out);
+}
 const DOCS = join(ROOT, 'docs', 'characters');
 if (mode === 'before') await lineup(false, arg('out', join(DOCS, 'before.png')), 'TODAY\'S PEOPLE (BEFORE)');
 else if (mode === 'after') await lineup(true, arg('out', join(DOCS, 'after.png')), 'AFTER: THE POLISH PASS');
 else if (mode === 'side') await sides(arg('out', DOCS));
 else if (mode === 'grounds') await grounds(arg('out', join(DOCS, 'grounds.png')));
 else if (mode === 'faces') await faces(arg('out', join(DOCS, 'faces.png')));
+else if (mode === 'variants') await variants(arg('out', join(DOCS, 'variants.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

@@ -20,7 +20,7 @@
 //     weapon: WEAPON_BY_INDEX index (drawn held: rest, aimed or swung per pose), or an items.js kind ('phone', 'medkit')
 //     opt.bc: the plasma blade's colour (shared/items.js BLADE_COLORS; 0 / none: its own blue), opt.cut: a half of the body
 //   weaponItem(w) -> items.js kind or null;  PED_POSES: frames per pose;  SEATS: seat heights of the seated poses
-import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN, FOUNDER } from '../people.js';
+import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN, FOUNDER, setPolish } from '../people.js';
 import { ITEMS } from '../items.js';
 import { hash, cutGBuf } from '../gbuf.js';
 import { WEAPON_BY_INDEX, bladeColor, hexRgb } from '../../../shared/items.js';
@@ -279,9 +279,13 @@ const normPose = (p) => (p && p.startsWith('move') ? 'walk' + (p[4] || '0') : p 
 // lying flat straight up/down the screen reads as standing: drawn on the diagonal (the owner, 11-15)
 const FLAT = new Set(['emfaceplant', 'emlie', 'emsleep', 'empushups', 'downF', 'downB', 'deadF', 'deadS', 'dead']);
 export const flatDir = (pose, dir8) => { const d = ((dir8 | 0) % 8 + 8) % 8; return (d & 3) === 0 && FLAT.has(pose) ? d + 1 : d; };
+// (the staged polish pass, docs/characters/NOTES.md: '~' starts a polished sprite's key)
+let PLM = null, PLON = false;
+export const loadPolish = (url) => (PLM ? Promise.resolve() : import(url).then((m) => { PLM = m.POLISH; }));
+export function usePolish(on) { PLON = !!on && !!PLM; setPolish(PLON ? PLM : null); }
 export function pedKey(app, pose, dir8, frame, weapon, opt = {}) {
   const pn = normPose(pose), n = PED_POSES[pn] || 1, k = weaponItem(weapon);
-  return `${appKey(app, opt)}|${pn}|${flatDir(pn, dir8)}|${(((frame | 0) % n) + n) % n}|${k || ''}${opt.bc && k === 'energyBlade' ? '|bc' + opt.bc : ''}${opt.cut ? '|cut' + opt.cut : ''}`;
+  return `${PLON ? '~' : ''}${appKey(app, opt)}|${pn}|${flatDir(pn, dir8)}|${(((frame | 0) % n) + n) % n}|${k || ''}${opt.bc && k === 'energyBlade' ? '|bc' + opt.bc : ''}${opt.cut ? '|cut' + opt.cut : ''}`;
 }
 // The plasma blade in another colour (the descriptor's bc): items.js draws it blue and glowing - the blade's pixels carry
 // its glow [70, 150, 255], the white-hot core's [210, 235, 255] (people.js keeps an item pixel's glow as it is, and gives

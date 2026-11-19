@@ -41,9 +41,7 @@
 import { GBuf, F_CHAR, F_NOCAST, hash, bayer } from './gbuf.js';
 import { ITEMS, drawItem, itemSpan } from './items.js';
 import { CLUBS } from '../../shared/clubs.js';   // (the biker clubs' patches: task #366)
-// The character polish pass (docs/characters/NOTES.md): staged, OFF until the owner approves a sheet. Its code is
-// client/art2/peoplepolish.js, loaded only when switched on and handed in here; null draws today's people, unchanged.
-let PL = null;
+let PL = null;   // (the staged polish pass, off: peoplepolish.js, docs/characters/NOTES.md)
 export function setPolish(p) { PL = p || null; }
 
 
@@ -1863,7 +1861,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
   const stamp = (q, s, K, o = 1, dy = 0) => { for (let i = 0; i < s.length; i += 3) put(q, K[s[i + 2]], (s.charCodeAt(i) - 49) * o, s.charCodeAt(i + 1) - 49 + dy); };
   // the nose under the eyes, its shadow to the right (the light's from the left): straight, small, button, wide, long, hooked
   const covered0 = A.mask || A.bandana || A.medmask || fm;
-  const cx = PL && { at, put, onHead, eyes, e0, A, D, P, F, W, skin, eyeC, near, turn, EYE, WHITE, LASH, hexRgb };   // (the polish pass draws the nose, the eyes and brows, the mouth)
+  const cx = PL && { at, put, onHead, eyes, e0, A, D, P, F, W, skin, eyeC, near, turn, EYE, WHITE, LASH, hexRgb };
   if (e0 && !covered0) {
     const an = near * turn * 0.3, n = at(Math.sin(an), Math.cos(an), -0.2);
     if (cx) PL.nose(cx, n);

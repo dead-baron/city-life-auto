@@ -111,6 +111,8 @@ if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection 
 setTimeout(preloadAudio, 1500);
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
+// (the character polish pass, staged - the debug menu's switch: the title's portrait and the creator draw with it too; docs/characters/NOTES.md)
+try { if (localStorage.getItem('cla.polish') === '1') window.CLA_POLISH = Promise.all([import('./art2/people.js'), import('./art2/peoplepolish.js')]).then(([p, m]) => p.setPolish(m.POLISH)).catch(() => {}); } catch { /* blocked */ }
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
 const afloat = (e) => e.swim || (e.kind === K.VEH && !!e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).kind === 'boat');
 S.fx.water = (x, y) => { const t = S.map ? S.map.tileAtPx(x, y) : -1; return WATER_T[t] === 1 ? 1 : t === T.BRIDGE && afloatUnder(S.ents.values(), x, y, afloat) ? 2 : 0; };   // (render/fx.js: 2 under a deck)
@@ -421,7 +423,7 @@ const lookWait = [];
 import('../shared/look.js').then((m) => { LOOKS = m; for (const d of lookWait.splice(0)) lookApp(d); }).catch((e) => console.warn('[looks]', e));
 function lookApp(d) { if (!LOOKS) { lookWait.push(d); return; } const L = LOOKS.decodeLook(d.app.lk); if (L) { const fd = d.app.fd; d.app = LOOKS.lookToApp(L, d.app.lk); if (fd) d.app.fd = 1; } }   // (fd: the founder's look over it - client/art2/game/peds.js)
 function openCreator(mode) {
-  creatorP ||= import('./creator.js').then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k), zoom: () => baseZoom() }); S.creator = m; return m; });   // (zoom: the game's CSS px per world px - the creator draws you a little bigger than that)
+  creatorP ||= Promise.resolve(window.CLA_POLISH).then(() => import('./creator.js')).then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k), zoom: () => baseZoom() }); S.creator = m; return m; });   // (zoom: the game's CSS px per world px - the creator draws you a little bigger than that)
   creatorP.then((m) => m.open(mode, S.looks)).catch((e) => console.warn('[creator]', e));
 }
 
