@@ -7,7 +7,7 @@
 3. **Get the code** (PowerShell):
    ```
    cd $HOME
-   git clone https://github.com/<your-account>/city-life-auto.git cla-audit
+   git clone https://github.com/dead-baron/city-life-auto.git cla-audit
    cd cla-audit
    git checkout audit
    npm install
