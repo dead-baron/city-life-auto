@@ -25177,3 +25177,19 @@ panel is scaled with CSS zoom on desktops (style.css `--zk`), and inside a zoome
 don't match the canvas's own pixels (tested: a zoom of 1.5 put a click 50% off) - so a click never landed near a
 mark. The map now works the pointer out from the canvas's box on screen (clicks, drags, the wheel's zoom point).
 Phones (no zoom) were fine. `client/deathscreen.js` mapInput.
+
+## 2026-11-19 - Security fixes from the audit: two ways to stop the server, and a money loop
+
+The security audit (branch `audit-security`, docs/audit/SECURITY.md) found three critical holes; fixed:
+- **`GET /%FF` stopped the server** (no join needed): a bad % in the path threw out of `decodeURIComponent` in the HTTP
+  handler. Now a 400 (`server/index.js`).
+- **One message stopped the server:** a guest's `{"t":{"toString":1}}` (and 47 other fields the same way) threw where
+  the server turned a value into text, and nothing caught it. Now the JSON is read without `toString` / `valueOf` /
+  `__proto__` / `constructor` keys, a message's type must be a string (`server/session.js`), and a message that still
+  throws is logged once and its connection closed - never the process (`server/index.js`). Checked against a local
+  server: both attacks answered, the server up.
+- **Shops sold for less than they bought back** (apples $4 for 3 at the fruit stand, $5 each at the corner store: about
+  $350k an hour by script; grapes, oranges and three butcher dishes the same): every item a shop sells now costs at
+  least a quarter more per piece than the best buy-back anywhere (`shared/items.js`, applied over the whole table), so
+  picking and hunting stay the way to earn. `test/moneyloop.test.js` guards it.
+The audit's other findings (high and below) are for the pre-beta pass.

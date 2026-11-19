@@ -93,8 +93,9 @@ const limits = createLimits({ dataDir: config.dataDir, monthlyGB: config.monthly
 const QUOTA_MSG = 'The city is closed for the rest of the month (monthly data limit reached). It reopens on the 1st!';
 
 const server = createServer(async (req, res) => {
-  const url = new URL(req.url, 'http://x');
-  let path = decodeURIComponent(url.pathname);
+  // (a bad % in the path - GET /%FF - threw here and took the whole server down: the security audit, 11-19)
+  let url, path;
+  try { url = new URL(req.url, 'http://x'); path = decodeURIComponent(url.pathname); } catch { res.writeHead(400); res.end(); return; }
   // (baked chunks: many small requests a second while moving - counted in the monthly data, not the per-address rate)
   if (worldCdn && path.startsWith('/world/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (worldCdn.handle(path + (url.search || ''), req, res)) return; }
   if (artCdn && path.startsWith('/art/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (artCdn.handle(path + (url.search || ''), req, res)) return; }
@@ -164,7 +165,14 @@ attachWebSocketServer(server, {
       login: (token, hello) => launch.login(token, hello, ip),   // (bans, kicks, new guests, the age gate: server/launch.js)
       hooks: launch.hooks, line,
     });
-    conn.on('message', (data, isBinary) => session.onMessage(data, isBinary));
+    // (one bad message must never stop the city: a guest's {"t":{"toString":1}} threw out of here and the process exited -
+    // the security audit, 11-19. Logged once per connection, the connection dropped)
+    conn.on('message', (data, isBinary) => {
+      try { session.onMessage(data, isBinary); } catch (e) {
+        if (!conn.badMsgLogged) { conn.badMsgLogged = true; console.warn('[net] a message threw:', String((e && e.message) || e).slice(0, 200)); }
+        try { conn.close(); } catch { /* already gone */ }
+      }
+    });
     conn.on('close', () => session.onClose());
   },
 });

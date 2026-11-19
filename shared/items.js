@@ -538,3 +538,16 @@ SHOPS.grocery = { title: 'FreshHub Grocery', buy: [], sells: GARDEN_PRODUCE.slic
 SHOPS.hardware.buy.push(...SEED_OFFERS);
 SHOPS.market.buy.push(...SEED_OFFERS);
 SHOPS.market.sells.push(...GARDEN_PRODUCE);
+
+// ---- no money loops (the security audit, 11-19) ----------------------------------------------------------------------
+// A shop must never sell an item for less than some place buys it back for: the fruit stand sold apples at $4 for 3 and
+// the corner stores paid $5 each - a script made ~$350k an hour. Every item a shop sells costs at least a quarter more per
+// piece than the best price anywhere pays for it (picking your own fruit, hunting your own meat stays the way to earn).
+{
+  const bestBuyback = (id) => Math.max((ITEMS[id] && ITEMS[id].sell) || 0, ...Object.values(SHOPS).map((s) => (s && s.sellPrice && s.sellPrice[id]) || 0));
+  for (const sh of Object.values(SHOPS)) for (const b of (sh && sh.buy) || []) {
+    if (!b || b.kind !== 'item' || !(b.price > 0) || !ITEMS[b.id]) continue;
+    const floor = Math.ceil(Math.max(1, b.qty || 1) * bestBuyback(b.id) * 1.25);
+    if (b.price < floor) b.price = floor;
+  }
+}

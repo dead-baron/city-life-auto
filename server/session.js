@@ -68,8 +68,10 @@ export function createSession(world, conn, opts) {
         return;
       }
       let msg;
-      try { msg = JSON.parse(data); } catch { return; }
-      if (!msg || typeof msg !== 'object') return;
+      // (no key that changes how a value turns into text: an object with its own toString / valueOf threw wherever the
+      // server did String() on it - the security audit, 11-19)
+      try { msg = JSON.parse(data, (k, v) => (k === 'toString' || k === 'valueOf' || k === '__proto__' || k === 'constructor' ? undefined : v)); } catch { return; }
+      if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
       if (data.length > TEXT_MAX && msg.t !== 'perf') return;
       if (msg.t === 'hello') {
         if (player || waiting) return;
