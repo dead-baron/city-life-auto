@@ -21,6 +21,13 @@ not in the repo, work from the description here).
   world's baked art must not change (no art redraw).
 
 ## Do
+0. **The critique first** (\`docs/characters/CRITIQUE.md\`, before changing anything): what's wrong with today's
+   people and why, ranked by how much a player notices - readability at game scale on a phone (can you tell a man
+   from a woman, a cop from a civilian, one archetype from another, which way someone faces, what they hold?),
+   against busy ground (pavement, grass, night, rain), silhouettes, faces, proportions, colours that merge with the
+   world, animation (walk, run, idle), outfits and hair that clip or vanish. If concept images are in
+   \`docs/characters/concepts/\` (the owner may add them) or under \`docs/art-v2/\` / \`assets/\`, compare against them
+   point by point; list what the concepts show that the game lacks.
 1. Study how people are built (the parts, the poses, the 8 directions, the outfits and hair from the wardrobe, the
    pixel grid) and render a "before" line-up sheet: 8 archetypes (men and women, each build), 4 directions, standing
    and walking, at game scale and 4x - with the existing tools (`tools/art2/`) or a small script under `tools/`.
@@ -29,7 +36,8 @@ not in the repo, work from the description here).
    builds that differ (slim, average, athletic, curvy, big); every outfit and hair piece still fitting (run the
    wardrobe/outfit tests: `test/peoplelook.test.js`, `test/outfits.test.js`, the creator's).
 3. Render the same "after" sheet, and a side-by-side (before | after) per archetype, into `docs/characters/`.
-4. Write `docs/characters/NOTES.md`: what changed, how to switch it on, what's left, and the owner's choices to make.
+4. Re-check the critique's list against the "after" sheet: which issues are fixed, which remain.
+5. Write `docs/characters/NOTES.md`: what changed, how to switch it on, what's left, and the owner's choices to make.
 
 Spend most of the budget on getting the faces and proportions right; stop at a good, finished subset rather than a
 half-done whole.
