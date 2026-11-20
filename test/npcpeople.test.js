@@ -201,11 +201,11 @@ test('street life: the busker plays for coins, people sit on benches, someone sl
   const f = m.props.find((q) => q.t === 'fountain');
   teleport(w, q.ped, f.x + 200, f.y);
   const sf = spawnPersona(w, spawnNpc, 'selfie', f.x + 40, f.y);
-  assert.ok(sf && sf.filming === 2 && sf.npc.state === 'film', 'phone up');
+  assert.ok(sf && sf.filming === 3 && sf.npc.state === 'film', 'phone up: a selfie - ph 3 in the descriptor (pass 3)');
   assert.ok(Math.cos(sf.a - Math.atan2(sf.y - f.y, sf.x - f.x)) > 0.9, 'the fountain behind them');
   const v0 = sf.appVer;
   run(w, 2);
-  assert.equal(sf.filming, 2); assert.equal(sf.appVer, v0, 'sent once');  // leaning on a wall, a foot up behind
+  assert.equal(sf.filming, 3); assert.equal(sf.appVer, v0, 'sent once');  // leaning on a wall, a foot up behind
   let ln = null;
   for (let k = 0; k < 20 && !ln; k++) { const sp = spotIn('commercial', k); ln = sp && spawnPersona(w, spawnNpc, 'leaner', sp.x, sp.y); }
   assert.ok(ln && ln.gt === 'lean', 'someone leaning on a wall');

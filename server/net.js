@@ -33,7 +33,7 @@ let recDv = new DataView(recBuf.buffer);
 export function descriptor(e) {
   switch (e.kind) {
     // fl: a player's flashlight is switched on; st: sitting by a campfire; bt: a bounty on their head (the golden skull:
-    // bounties.js); ph: their phone out (1: its menu open: phone.js phoneOut; 2: held up, filming: npc.js spectacle); cf:
+    // bounties.js); ph: their phone out (1: its menu open: phone.js phoneOut; 2: held up, filming: npc.js spectacle; 3: a selfie: personas.js); cf:
     // cuffed (custody.js: hands behind the back); sg: fighting off an officer who's on them (struggle.js); mb: carrying a robbery's takings, the money bag on the back (hotmoney.js); es: an officer
     // walking a prisoner, a hand on their arm (custody.js: 1 the prisoner on their right, 2 on their left); bc: a player's plasma blade colour
     // (looks.js setBlade; shared/items.js BLADE_COLORS, blue left out); sf: on a surfboard (surf.js: 1 paddling, 2 riding a wave, 3 an

@@ -170,3 +170,21 @@ test('drapes (a hooded cloak, a cape-coat, a sari, a ghillie suit, morning dress
   assert.notEqual(H.hat.kind, 'hood');
   assert.equal(plain('m').drape, undefined);
 });
+
+test('phone poses: texting, the texting walk and a call draw with the pass on; a selfie is its own silhouette - an arm out and up - where it was the filming hold', async () => {
+  const { readFileSync } = await import('node:fs'), src = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  const A = plain('f'), G = (d, held, pose = 'idle', f = 0, app = A) => baked(app, d, pose, f, held ? { held } : {});
+  // off: a selfie is the filming hold, pixel for pixel (today's people)
+  for (const d of [0, 2, 5]) assert.equal(diff(G(d, 'phoneSelfie'), G(d, 'phoneUp')), 0, `off, facing ${d}`);
+  withPass(() => {
+    for (const d of [0, 1, 2, 3, 4, 5, 6, 7]) {
+      const s = G(d, 'phoneSelfie'), f = G(d, 'phoneUp'), t = G(d, 'phone'), c = G(d, null, 'idle', 0, { ...A, carry: 'call' });
+      assert.ok(diff(s, f) >= 6 && diff(s, t) >= 6 && diff(s, c) >= 6, `facing ${d}: not the filming hold, texting or a call`);
+      for (const g of [s, t, c, G(d, 'phone', 'walk0', 2), G(d, null, 'walk0', 3, { ...A, carry: 'call' }), G(d, null, 'walk0', 1, { ...A, carry: 'phone' })]) assert.ok(g.w > 6 && g.h > 20);
+    }
+    // the arm is out: facing the camera the selfie's figure is wider than the texting one
+    assert.ok(G(0, 'phoneSelfie').w >= G(0, 'phone').w + 2, 'an arm out of the silhouette');
+  });
+  assert.ok(/p\.d\.ph === 3 \? 'phoneSelfie'/.test(src('client/art2/game/host.js')), 'the renderer draws ph 3 as a selfie');
+  assert.ok(/ped\.filming = 3/.test(src('server/systems/personas.js')), 'the selfie persona says so');
+});

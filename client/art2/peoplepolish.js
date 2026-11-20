@@ -97,6 +97,13 @@ export const POLISH = {
     if (L5 === 2) { put(q, mix(c, skin[3], 0.5), -1, 1); put(q, mix(c, skin[3], 0.5), 0, 1); }
     if (L5 === 3) { put(q, soft, -2, 0); put(q, soft, 1, 0); }
   },
+  // a selfie (pass 3, gap 13; CC6): people.js restHold's 'phoneup' hands a point in the chest's frame (x right, y forward,
+  // z up). One arm out and up with the phone turned back at the face, the other hand at the hip, the chin up toward it -
+  // the silhouette that differs from texting (both hands at the chest) and a call (a hand at the ear)
+  selfie(P, at) {
+    P.hR = at(9.6, 5.0, 15.5); P.elR = [1, 0.1, -0.2]; P.hL = at(-5.4, 1.4, -6.2); P.elL = [-1, -0.6, 0];
+    P.headYaw += 0.38; P.headPitch -= 0.2; P.item.axis = [0.35, -0.5, 0.79]; P.item.two = false;
+  },
   // ---- pass 2 (docs/tasks/CHARACTERS2.md, docs/characters/CONCEPTS.md) ----------------------------------------------
   // Dark clothing that reads: people.js wardrobe() hands over its materials (W: a function a part, each returning a
   // 5-step ramp). A dark cloth's ramp is re-lit - its shadows kept, its lit steps lifted and cooled, as the concepts

@@ -237,7 +237,7 @@ async function builds(out) {
 const PASS1 = () => ({ ...POLISH, dress: null, post: null, hairK: null, pass1: true });
 // (pass 2 as it was: pass 3's additions to the pass switched off - each is a key of its own on POLISH)
 const PASS2 = () => ({ ...POLISH, ...Object.fromEntries(P3_KEYS.map((k) => [k, null])), mouthOn: true });
-const P3_KEYS = ['hairLit'];
+const P3_KEYS = ['hairLit', 'selfie'];
 async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 150 } = {}) {
   const CW = cw * k, RH = rh * k, n = Math.max(...rows.map((r) => r[1].length)), sh = new Sheet(label + n * CW + 8, 24 + rows.length * RH + 8, bg);
   sh.text(title, 8, 6, 2);
@@ -369,6 +369,17 @@ async function p3drapes(out) {
       rows.push([n.replace(' ', '|') + '|' + (base === 'm' ? 'MAN' : 'WOMAN'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 6 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 2, pose: 'run', f: 2 }, { L, d: 1, pose: 'sit', f: 0 }, { L, d: 1, on: false, t: 'off' }, { L, d: 5, on: false, t: 'off' }]]); } }
   await grid(out, 'DRAPES: S, SE, E, N, W, WALKING, RUNNING, SITTING; THE PASS OFF, FRONT AND BACK QUARTER', rows, { k: 6, rh: 33 });
 }
+// the phone (gap 13; CC6): texting, the texting walk, a call, a call walking, filming, a selfie - eight facings, then
+// pass 2's selfie (the filming hold) and the pass off
+async function p3phone(out) {
+  const L = dressed('f', { top: ['Hoodie', 'teal'], bottoms: 'Jeans', shoes: ['High-tops', 'white', 'red'] }, { skin: 9 }, { hair: { style: 20, color: 0 } }), A = LK.lookArt(L), D8 = [0, 1, 2, 3, 4, 5, 6, 7];
+  const row = (name, more, tail = []) => [name, [...D8.map((d) => ({ A: more.A || A, d, ...more })), ...tail]];
+  const sel = { opt: { held: 'phoneSelfie' } };
+  await grid(out, 'THE PHONE: S SE E NE N NW W SW - THEN PASS 2 (THE FILMING HOLD) AND THE PASS OFF', [
+    row('TEXTING|(PHONE OUT)', { opt: { held: 'phone' } }), row('TEXTING|WALK', { opt: { held: 'phone' }, pose: 'walk0', f: 2 }, [{ A, d: 1, opt: { held: 'phone' }, pose: 'walk0', f: 4 }, { A, d: 2, opt: { held: 'phone' }, pose: 'walk0', f: 0 }]),
+    row('NPC TEXTER|(PROP)', { A: { ...A, carry: 'phone' }, pose: 'walk0', f: 2 }), row('A CALL', { A: { ...A, carry: 'call' } }), row('A CALL,|WALKING', { A: { ...A, carry: 'call' }, pose: 'walk0', f: 2 }),
+    row('FILMING', { opt: { held: 'phoneUp' } }), row('A SELFIE', sel, [{ A, d: 1, ...sel, p2: true, t: 'pass 2' }, { A, d: 7, ...sel, p2: true, t: 'pass 2' }, { A, d: 1, ...sel, on: false, t: 'off' }]), row('A SELFIE,|A MAN', { A: LK.lookArt(EIGHT[4][2]), ...sel })], { k: 4, rh: 34, cw: 24, label: 100 });
+}
 // every animation with the pass on: a pose a row, its eight facings (S, SE, E, NE, N, NW, W, SW) then a second frame S and E
 const HELD = { aim: 'pistol', aimw: 'pistol', swing: 'bat', held: 'phone' };
 async function anim(out) {
@@ -455,5 +466,6 @@ else if (mode === 'p3socks') await p3socks(arg('out', join(P3, 'socks.png')));
 else if (mode === 'p3gear') await p3gear(arg('out', join(P3, 'gear.png')));
 else if (mode === 'p3body') await p3body(arg('out', join(P3, 'body.png')));
 else if (mode === 'p3drapes') await p3drapes(arg('out', join(P3, 'drapes.png')));
+else if (mode === 'p3phone') await p3phone(arg('out', join(P3, 'phone.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

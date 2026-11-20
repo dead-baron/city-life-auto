@@ -317,7 +317,8 @@ const ICLS = {
   umbrella: 'umb',     // held up in the right hand, the shaft straight up (the other arm swings free)
 };
 // ---- lights to carry and felling trees (#358, #359): the axe swung like a sledge, the lantern carried by its bail ----
-Object.assign(ICLS, { axe: 'big', lantern: 'bill', pickaxe: 'big' });   // (pickaxe: a miner's - server activities.js)
+Object.assign(ICLS, { axe: 'big', lantern: 'bill', pickaxe: 'big', phoneSelfie: 'phoneup' });   // (pickaxe: a miner's - server activities.js)
+ITEMS.phoneSelfie = ITEMS.phoneUp;   // (a selfie: the phone held up as for a photo - the polish pass's own hold, PL.selfie)
 // ---- end ----
 // The umbrella's hold, in body space (x right, y forward, z up): the right hand in front of the right shoulder at a
 // set height whatever the build, the shaft UMBRELLA_LEN long straight up, so its top - where the renderer puts the
@@ -344,7 +345,7 @@ function restHold(D, P, S, kind) {
   else if (c === 'umb') { P.hR = [...UMBRELLA_HAND]; setItem(P, kind, [0, 0, 1], [0, 1, 0]); P.elR = [0.8, -0.3, -1]; }
   else if (c === 'phone') { P.hR = vadd(S.chest, mv(S.SP, [1.4, 6.6, -2.4])); P.hL = vadd(S.chest, mv(S.SP, [-0.6, 6.4, -3])); setItem(P, kind, [0, 1, 0], [0, 0, -1]); P.elR = [1, -0.5, -0.6]; P.elL = [-1, -0.5, -0.6]; }
   // held up in both hands at eye height, arms out: filming or taking a photo of something (server npc.js spectacle)
-  else if (c === 'phoneup') { P.hR = vadd(S.chest, mv(S.SP, [1.2, 8.8, 7.8])); P.hL = vadd(S.chest, mv(S.SP, [-0.9, 8.6, 7.4])); setItem(P, kind, [0, 0, 1], [0, 1, 0]); P.elR = [1, -0.2, -0.4]; P.elL = [-1, -0.2, -0.4]; }
+  else if (c === 'phoneup') { P.hR = vadd(S.chest, mv(S.SP, [1.2, 8.8, 7.8])); P.hL = vadd(S.chest, mv(S.SP, [-0.9, 8.6, 7.4])); setItem(P, kind, [0, 0, 1], [0, 1, 0]); P.elR = [1, -0.2, -0.4]; P.elL = [-1, -0.2, -0.4]; if (PL && PL.selfie && kind === 'phoneSelfie') PL.selfie(P, (x, y, z) => vadd(S.chest, mv(S.SP, [x, y, z]))); }
   else { P.hR = vadd(sR, [1.6, 2.4, -r * 0.92]); setItem(P, kind, [0, 1, 0], [0, 0, -1]); }
 }
 // arms and torso for a melee arc, frame k 0 wind-up, 1 strike, 2 follow-through; side -1 swings back the other way
