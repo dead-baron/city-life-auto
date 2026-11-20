@@ -1170,6 +1170,7 @@ function wardrobe(A, D, TF, seed) {
   W.wood = (Q) => { if (Q.l0 > 0.94) Q.k += 0.2; return cloth('#6a4428'); };
   W.board = (Q) => (Math.abs(Q.l0) < 0.12 ? cloth('teal') : cloth('#f0ece4'));
   W.holster = () => black;
+  if (PL && PL.dress) PL.dress(W, A, D, T, TF);
   return W;
 }
 
@@ -1735,6 +1736,7 @@ function render(fig, P, S, X, D, A, opt) {
   // outline's near-black, which made a busy figure of every overlap)
   if (R === 1) { for (let i = 0; i < n; i++) if (LN[i]) { CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; } }
   else for (let i = 0; i < n; i++) if (LN[i]) { CR[i] = CR[i] * 0.3 + 12; CG[i] = CG[i] * 0.26 + 8; CB[i] = CB[i] * 0.34 + 18; }
+  if (PL && PL.post && R === 1) PL.post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, AX, AY, GR, fig, A, D, P });
   // pack: colour, a soft normal (half the shape's own, half facing the camera and up), height, glow, flags; then the
   // outline into the empty pixels round the figure
   const G = new GBuf(w, h), gc = G.col, gn = G.nrm, gz = G.z, ge = G.emi, gf = G.flag;

@@ -93,4 +93,43 @@ export const POLISH = {
     if (L5 === 2) { put(q, mix(c, skin[3], 0.5), -1, 1); put(q, mix(c, skin[3], 0.5), 0, 1); }
     if (L5 === 3) { put(q, soft, -2, 0); put(q, soft, 1, 0); }
   },
+  // ---- pass 2 (docs/tasks/CHARACTERS2.md, docs/characters/CONCEPTS.md) ----------------------------------------------
+  // Dark clothing that reads: people.js wardrobe() hands over its materials (W: a function a part, each returning a
+  // 5-step ramp). A dark cloth's ramp is re-lit - its shadows kept, its lit steps lifted and cooled, as the concepts
+  // paint black and navy (a slate mid-tone, a blue-grey light) - so folds, lapels and the arm over the chest have
+  // tones to be drawn in; a dark top over dark bottoms gets a waist line, dark shoes a lighter sole.
+  dress(W, A, D, T) {
+    const keep = new Set([W.skin, W.hairR]), fix = (R) => (Array.isArray(R) && Array.isArray(R[0]) && !keep.has(R) ? relit(R) : R);
+    const wrap = (k, f) => { const o = W[k]; if (o) W[k] = (Q) => f(o(Q), Q); };
+    for (const k of ['torso', 'arm', 'leg', 'skirt', 'hood', 'collar', 'shoe', 'sole', 'hat', 'brim', 'lining', 'apron', 'pack', 'leather', 'case', 'beltbag']) wrap(k, fix);
+    const bothDark = isDark(W.top) && isDark(W.bot) && !T.dress && !T.long && !T.bib;
+    wrap('pel', (R, Q) => { if (bothDark && R === W.bot && Q.z > (T.tuck ? 1.4 : -1.9) && Q.z < (T.tuck ? 2.2 : -0.9)) Q.k += 0.3; return fix(R); });
+  },
+  // the arm over the body: a line on the body's pixels beside an arm in front of them, however close the two are (the
+  // renderer's own lines want a clear step in depth: an arm hanging by a chest has none, and the two were one mass)
+  post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, GR }) {
+    const g = (i) => { const k = PID[i]; return k >= 0 && k < 32000 && !NOO[i] ? prims[k].g : 0; }, arm = (x) => x === GR.ARML || x === GR.ARMR;
+    const hit = [];
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x, gi = g(i);
+      if (LN[i] || (gi !== GR.TORSO && gi !== GR.SKIRT && gi !== GR.LEGL && gi !== GR.LEGR)) continue;
+      for (const j of [i - 1, i + 1]) if (arm(g(j)) && NEAR[j] > NEAR[i] + 0.2) { hit.push(i); break; }
+    }
+    for (const i of hit) { LN[i] = 1; CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; }
+  },
 };
+// a dark ramp re-lit (kept per ramp; a re-lit ramp is its own)
+const RELIT = new WeakMap();
+const isDark = (R) => Array.isArray(R) && R.length === 5 && lum(R[3]) < 0.27;
+function relit(R) {
+  let N = RELIT.get(R);
+  if (N) return N;
+  if (!isDark(R)) N = R;
+  else {
+    // (the concepts' black is a warm charcoal with lighter folds, never flat; a dark colour - navy, forest, wine - keeps its hue)
+    const b = R[2], sat = Math.max(...b) - Math.min(...b), cool = sat < 14 ? [b[0] + 30, b[1] + 25, b[2] + 27] : b.map((v) => v * 1.3 + 14), k = Math.max(0, 0.2 - lum(R[2])) * 2.2;
+    N = [mix(R[0], [14, 10, 22], 0.35), R[1], mix(R[2], cool, 0.12 + k * 0.7), mix(R[3], cool.map((v) => v + 24), 0.4 + k), mix(R[4], cool.map((v) => v + 62), 0.6 + k * 0.5)];
+  }
+  RELIT.set(R, N); RELIT.set(N, N);
+  return N;
+}
