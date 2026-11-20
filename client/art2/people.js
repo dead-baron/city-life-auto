@@ -877,8 +877,11 @@ function wardrobe(A, D, TF, seed) {
     if (T.bare) { if (front && z > D.chestUp - 2.6 && z < D.chestUp - 1.5 && au < 0.7) Q.k -= 0.12; if (A.chain && front && Math.abs(z - (D.shUp - 1.6 - (1 - u * u) * 2.8)) < 0.45 && au < 0.6) { Q.gloss = 1; return chainC; } if ((tat & 8) && au > 0.25 && au < 0.75 && z > D.chestUp - 1 && hash(Math.floor(u * 10), Math.floor(z * 0.9), seed + 3) > 0.62) return ink; return skin; }
     if (T.towel) { if (z < D.chestUp + 1.6) { if (front && Math.abs(u - 0.35) < 0.08 && z > D.chestUp - 1) Q.k -= 0.25; return top; } return skin; }
     if (T.bikini) { if (Q.part === 'bust' || (z > D.chestUp - 0.6 && z < D.chestUp + 1.5 && !(front && au < 0.08))) return top; if (z > D.chestUp && au > 0.26 && au < 0.38) return top; return skin; }
-    if ((T.tank || T.swimsuit) && z > D.shUp - 1.7 && au > 0.33) return au < 0.5 ? (T.dress ? top : top) : skin;   // bare shoulders, straps
-    if (T.tank && front && z > D.chestUp + 2.9 - (0.33 - au) * 3 && au < 0.33) return skin;                       // scoop neckline
+    // (the polish pass, the owner 11-20: a strap is a whole art pixel wide and joins the top - at a third of one it broke into
+    // dots over a row of skin)
+    const sA = PL ? 0.22 : 0.33, sB = PL ? 0.6 : 0.5;
+    if ((T.tank || T.swimsuit) && z > D.shUp - 1.7 && au > sA) return au < sB ? (T.dress ? top : top) : skin;   // bare shoulders, straps
+    if (T.tank && front && z > D.chestUp + 2.9 - (sA - au) * 3 && au < sA) return skin;                       // scoop neckline
     if (T.vneck && front && z > D.chestUp + 3.4 - (0.32 - au) * 8 && au < 0.32) return skin;
     if (A.chain && front && !T.open && au < 0.36) {   // (from the neck's sides down to a U on the chest: a V of three art pixels at the game's size)
       const cz = D.shUp - 0.6 - (1 - (u / 0.36) * (u / 0.36)) * 3;
@@ -1196,7 +1199,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   if (D.belly) E(vadd(S.pel, mv(S.SH, [0, 1.6 + D.belly * 1.4, 4.4])), S.SH, [(7.2 + D.belly * 1.4) * D.w, 4.4 + D.belly * 2.2, 6.0 + D.belly * 0.6], GR.TORSO, 'belly', W.torso);
   if (fem && PL) {   // (the polish pass, the owner 11-20: "a little shape" to a woman's chest and seat - enough to show from the side)
     for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.6, D.chestR[1] - 0.9, 0.9])), S.SP, [2.6, 2.5, 2.3], GR.TORSO, 'bust', W.torso);
-    E(vadd(S.pel, mv(S.PF, [0, -D.pelR[1] * 0.62, -0.9])), S.PF, [D.pelR[0] * 0.86, 2.6, 2.9], GR.TORSO, 'pel', W.pel);
+    E(vadd(S.pel, mv(S.PF, [0, -D.pelR[1] * 0.8, -1.3])), S.PF, [D.pelR[0] * 0.88, 3.1, 3.2], GR.TORSO, 'pel', W.pel);
   } else if (fem) for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.5, D.chestR[1] - 1.5, 1.0])), S.SP, [2.3, 1.9, 2.0], GR.TORSO, 'bust', W.torso);
   if (W.T.hood && hat !== 'hood') E(vadd(S.neck, mv(S.SP, [0, -3.0, -0.2])), S.SP, [4.8, 2.4, 2.8], GR.TORSO, 'hood', W.hood);
   if (W.T.fur) E(vadd(S.neck, mv(S.SP, [0, 0.4, -1.2])), S.SP, [6.6, 5.2, 2.2], GR.TORSO, 'fur', W.fur);

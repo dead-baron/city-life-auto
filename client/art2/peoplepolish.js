@@ -68,7 +68,7 @@ export const POLISH = {
     { const l0 = b.limb || 1, k = (1 + (l0 - 1) * 0.55) / l0; for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * k); D.fist *= k; }
     if (mu) { const k = (1 + mu * 0.1) / (1 + mu * 0.2), k2 = (1 + mu * 0.06) / (1 + mu * 0.12), k3 = (1 + mu * 0.05) / (1 + mu * 0.1); D.armR = [D.armR[0] * k, D.armR[1] * k2]; D.foreR[0] *= (1 + mu * 0.08) / (1 + mu * 0.15); D.shX *= k3; D.chestR[0] *= k3; }
     // a body with depth (the concepts' side views are a barrel, not a plank), and a big build's belly out in front
-    D.chestR[1] *= 1.1; D.waistR[1] *= 1.1; D.pelR[1] *= 1.08;
+    D.chestR[1] *= fem ? 0.96 : 1.1; D.waistR[1] *= fem ? 1.0 : 1.1; D.pelR[1] *= 1.08;   // (a woman's back flatter: her upper back stood out behind the shoulder in a side view - the owner, 11-20; her shape is the bust's and the seat's)
     if (b.belly >= 1.2) { D.waistR[0] *= 1.12; D.waistR[1] *= 1.12; D.chestR[0] *= 1.06; D.shX *= 1.05; }
     D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;
   },
@@ -108,7 +108,8 @@ export const POLISH = {
         // (the owner's pick, 11-20: the eye's colour with a white beside it, on the outer side. The six shapes on it: almond as
         // it is; round a lash over the colour; narrow no white - a squint; hooded the lid's shadow over both; big a lash over
         // both; sleepy a heavy lid over the colour and half a white)
-        put(q, iris); put(q, E5 === 2 ? lid : E5 === 5 ? mix(white, lid, 0.5) : white, o, 0);
+        const wc = E5 === 2 ? lid : E5 === 5 ? mix(white, lid, 0.5) : white;
+        put(q, iris); if (!put(q, wc, o, 0)) put(q, wc, -o, 0);   // (in profile there's no face beyond the eye: the white goes behind the colour, as on a face seen from the side)
         if (E5 === 1) put(q, lash, 0, -1);
         if (E5 === 3) { const sh = mix(skin[1], skin[0], 0.3); put(q, sh, 0, -1); put(q, sh, o, -1); }
         if (E5 === 4) { put(q, lash, 0, -1); put(q, lash, o, -1); }

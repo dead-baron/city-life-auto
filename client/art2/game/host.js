@@ -1752,6 +1752,9 @@ export class World2 {
     this.meNone = me && !(p._v2k && E.hasSprite(p._v2k));
     if (me && this.warming && World2.X) World2.X.warmMe(this, A2, wpn, bo);
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo]);
+    // (a blink, peds.js blinkAt: the same figure, the eyes shut - asked for a second ahead, shown only once it's made)
+    const bk = sk && Pd.blinkAt && Pd.BLINKS.test(ppose) && !lying ? Pd.blinkAt(p.id, now) : 0;
+    if (bk) { const ob = { ...(bo || {}), bl: 1 }, kb = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, ob), [A2, ppose, d8, pf, wpn, ob]); if (bk === 1 && kb) sk = kb; }
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
     if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {
       p._cp = ppose; p._cd = d8; p._cw = wpn; p._ca = A2;

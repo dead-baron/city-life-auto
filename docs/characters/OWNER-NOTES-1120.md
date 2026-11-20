@@ -66,3 +66,12 @@ detail, people should blink, or everyone stares.
   (the frame exists: `person(..., { blink: 1 })`; the game has to ask for it - peds.js - standing and sitting first).
 - Panties: the strap is the triangle's top row run across the hips (under4). A woman's chest and seat: a little fuller (people.js).
 - The far arm's scrap behind the shoulder in a side view: folded into the outline.
+
+## 14:38
+- Blinking: "not on a loop that gets repetitive ... natural for players and NPCs"; eyes closed may be part of animations too.
+  Built: peds.js `blinkAt` (each person's own irregular moments, a double now and then), host.js shows the shut-eyed sprite in
+  still poses (`BLINKS`). NOT YET SEEN in the running game. Eyes shut inside emotes (a laugh, a yawn): to add with the emotes.
+- The side view's eye: the white goes behind the color in profile (it had no room in front and vanished - "thin eye").
+- Reminder from him: glasses a size bigger (the size-ups batch).
+- Body: her upper back flatter (the bump behind the shoulder), the seat fuller "like the chest is". Good as it is otherwise.
+- Straps must join their top: a tank top's and a swimsuit's are a whole art pixel wide now.

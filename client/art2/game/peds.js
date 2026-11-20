@@ -283,9 +283,26 @@ export const flatDir = (pose, dir8) => { const d = ((dir8 | 0) % 8 + 8) % 8; ret
 let PLM = null, PLON = false;
 export const loadPolish = (url) => (PLM ? Promise.resolve() : import(url).then((m) => { PLM = m.POLISH; }));
 export function usePolish(on) { PLON = !!on && !!PLM; setPolish(PLON ? PLM : null); }
+// Blinking (the polish pass; the owner, 11-20: "natural ... not on a loop"): each person's own moments, from their id - time
+// in slots of 0.9 s, a blink in about one slot in four at its own point in the slot (so 1 to 15 s apart, 3.7 on average),
+// now and then a second one straight after. 1: the eyes are shut now; 2: they will be within the second (ask for the sprite).
+const bh = (a, b) => { let h = (Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263)) >>> 0; h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+export function blinkAt(id, now) {
+  if (!PLON) return 0;
+  const t = now / 0.9 + (id % 97) * 0.618, s0 = Math.floor(t);
+  let r = 0;
+  for (let s = s0 - 1; s <= s0 + 1; s++) {
+    if (bh(id, s) > 0.24) continue;
+    const dt = (t - s - bh(id, s + 7919) * 0.6) * 0.9;   // (seconds since this slot's blink began)
+    if ((dt >= 0 && dt < 0.13) || (bh(id, s + 104729) < 0.15 && dt >= 0.3 && dt < 0.42)) return 1;
+    if (dt < 0 && dt > -1) r = 2;
+  }
+  return r;
+}
+export const BLINKS = /^(idle|sit|sitx|sitlow|lean|phone)/;   // (the poses a blink shows in: standing and sitting still)
 export function pedKey(app, pose, dir8, frame, weapon, opt = {}) {
   const pn = normPose(pose), n = PED_POSES[pn] || 1, k = weaponItem(weapon);
-  return `${PLON ? '~' : ''}${appKey(app, opt)}|${pn}|${flatDir(pn, dir8)}|${(((frame | 0) % n) + n) % n}|${k || ''}${opt.bc && k === 'energyBlade' ? '|bc' + opt.bc : ''}${opt.cut ? '|cut' + opt.cut : ''}`;
+  return `${PLON ? '~' : ''}${appKey(app, opt)}|${pn}|${flatDir(pn, dir8)}|${(((frame | 0) % n) + n) % n}|${k || ''}${opt.bc && k === 'energyBlade' ? '|bc' + opt.bc : ''}${opt.cut ? '|cut' + opt.cut : ''}${opt.bl ? '|bl' : ''}`;
 }
 // The plasma blade in another colour (the descriptor's bc): items.js draws it blue and glowing - the blade's pixels carry
 // its glow [70, 150, 255], the white-hot core's [210, 235, 255] (people.js keeps an item pixel's glow as it is, and gives
@@ -320,7 +337,7 @@ export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {
   const A = isServer(app) ? adaptApp(app, opt.ar || app.ar, opt) : app || {};
   const d = (8 - flatDir(normPose(pose), dir8)) % 8;
   const k = weaponItem(weapon);
-  const G = person(A, d, normPose(pose), frame | 0, k ? { held: k, tight: true } : { tight: true });
+  const G = person(A, d, normPose(pose), frame | 0, k ? { held: k, tight: true, blink: opt.bl } : { tight: true, blink: opt.bl });
   if (opt.bc && k === 'energyBlade') recolorBlade(G, opt.bc);
   return opt.cut ? cutGBuf(G, opt.cut, 7) : G;   // (cut in two by the plasma blade: one half, a little apart from the other, the edge seared)
 }
