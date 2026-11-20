@@ -344,6 +344,11 @@ async function p3socks(out) {
   const wear = (base, p) => dressed(base, { top: ['Plain tee', base === 'm' ? 'grey' : 'white'], bottoms: p && p.d.warm ? ['Leggings', 'black'] : base === 'm' ? ['Shorts', 'navy'] : ['Mini skirt', 'burgundy'], shoes: ['Sneakers', 'white'], ...(p ? { socks: p.name } : {}) }, { skin: base === 'm' ? 2 : 9 }, { hair: { style: base === 'f' ? 20 : 6 } });
   await grid(out, 'SOCKS (THE NEW SLOT): S, SE, E, N, W, WALKING, RUNNING, SITTING; THE PASS OFF; WITHOUT', pieceRows('socks', wear), { k: 6, rh: 32 });
 }
+async function p3gear(out) {
+  const N = ['Knee pads', 'Elbow pads', 'Skate pads', 'Wallet chain', 'Tool belt', 'Climbing harness'];
+  const wear = (base, p) => dressed(base, { top: ['Plain tee', base === 'm' ? 'grey' : 'white'], bottoms: p && p.d.tbelt ? ['Work pants', 'khaki'] : p && p.d.harness ? ['Leggings', 'charcoal'] : base === 'm' ? ['Jeans', 'sky'] : ['Shorts', 'olive'], shoes: ['Sneakers', 'white'], ...(p ? { jewel: p.name } : {}) }, { skin: base === 'm' ? 1 : 4 }, { hair: { style: base === 'f' ? 20 : 6 } });
+  await grid(out, 'SMALL GEAR (ACCESSORIES): S, SE, E, N, W, WALKING, RUNNING, SITTING; THE PASS OFF (NOT DRAWN); WITHOUT', pieceRows('jewel', wear, N), { k: 6, rh: 32 });
+}
 // every animation with the pass on: a pose a row, its eight facings (S, SE, E, NE, N, NW, W, SW) then a second frame S and E
 const HELD = { aim: 'pistol', aimw: 'pistol', swing: 'bat', held: 'phone' };
 async function anim(out) {
@@ -427,5 +432,6 @@ else if (mode === 'p3police') await p3police(arg('out', join(P3, 'police.png')))
 else if (mode === 'p3mouth') await p3mouth(arg('out', join(P3, 'faces-mouth.png')));
 else if (mode === 'p3hair') await p3hair(arg('out', join(P3, 'hair.png')));
 else if (mode === 'p3socks') await p3socks(arg('out', join(P3, 'socks.png')));
+else if (mode === 'p3gear') await p3gear(arg('out', join(P3, 'gear.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

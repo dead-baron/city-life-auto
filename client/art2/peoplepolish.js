@@ -160,6 +160,26 @@ export const POLISH = {
         return R;
       });
     }
+    // small gear (pass 3; lookcore.js d.pp accessories, A.jewel): knee and elbow pads - a block on the front of the joint,
+    // a lit pixel on its cap; a wallet chain - a silver loop from the belt down the right thigh; a tool belt - a leather
+    // band at the waist, pouches at the hips, a tool's handle; a climbing harness - a waist band and two leg loops
+    const J = A.jewel || {}, jc = J.color && cloth(J.color), jt = J.trim && cloth(J.trim), DK = cloth('#3a2a20');
+    const pad = (Q, al) => { if (Math.abs(al - 0.52) < 0.13 && Q.l2 > -0.3) { Q.k += al < 0.5 ? 0.3 : 0; return 1; } return 0; };
+    if (J.knee || J.wchain || J.harness || J.tbelt) wrap('leg', (R, Q) => {
+      const al = Q.part === 'th' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5, side = Q.l1 * Q.side;
+      if (J.knee && pad(Q, al)) return jc;
+      if (J.harness && Math.abs(al - 0.13) < 0.045) return jc;
+      if (J.tbelt && al < 0.15 && side > 0.2) { if (al < 0.07 && side > 0.55) { Q.gloss = 1; return jt; } return DK; }   // (the pouches, a tool's handle)
+      if (J.wchain && Q.side > 0 && side > 0.25 && al > 0.03 && al < 0.3 && Math.abs(al - 0.3 + (side - 0.25) * 0.36) < 0.04) { Q.gloss = 1; Q.k += 0.25; return jc; }
+      return R;
+    });
+    if (J.elbow) wrap('arm', (R, Q) => (pad(Q, Q.part === 'ua' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5) ? jc : R));
+    if (J.tbelt || J.harness) {   // (the band: over an untucked hem on the torso's last rows, at the waist of a tucked shirt)
+      const band = (Q) => { if (J.harness && Math.abs(Q.u) < 0.12 && Q.f > 0) { Q.gloss = 1; return jt; } return jc; };
+      if (T.tuck) wrap('pel', (R, Q) => (Q.z > 0.9 ? band(Q) : R));
+      else wrap('torso', (R, Q) => (Q.z > 0.2 && Q.z < 1.7 ? band(Q) : R));
+      if (J.tbelt) wrap('pel', (R, Q) => (Math.abs(Q.u) > 0.3 && Q.z < (T.tuck ? 0.9 : 0.2) ? DK : R));
+    }
     wrap('pel', (R, Q) => { if (bothDark && R === W.bot && Q.z > (T.tuck ? 1.4 : -1.9) && Q.z < (T.tuck ? 2.2 : -0.9)) Q.k += 0.3; return fix(R); });
   },
   // hair (CB3-M, CB3-F, CC2): the six shapes the concepts have that the list lacked, each on a style the renderer

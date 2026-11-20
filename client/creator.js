@@ -591,7 +591,7 @@ function renderPage() {
   } else if (tab === 'outfit') {
     const base = outBase || B.base;
     const slotItem = L.outfit[outSlot];
-    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (devWear || !p.d.issued) && (!p.d.gift || devWear || owned(p.i)) && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)) && (outView === 'all' || owned(p.i)));
+    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (devWear || !p.d.issued) && (!p.d.pp || passOn()) && (!p.d.gift || devWear || owned(p.i)) && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)) && (outView === 'all' || owned(p.i)));
     // each tile: you wearing it (a top or a set without the jacket over it; hats, glasses and masks as a close-up)
     const crop = outSlot === 'hat' || outSlot === 'glasses' ? 'head' : 'full';
     const dress = (V, id) => { V.outfit[outSlot] = id; if (outSlot === 'set' && id) { V.outfit.top = null; V.outfit.bottoms = null; } if ((outSlot === 'top' || outSlot === 'set') && id) V.outfit.jacket = null; if (outSlot === 'socks' || outSlot === 'under') { V.outfit.set = V.outfit.bottoms = null; if (outSlot === 'under') V.outfit.top = V.outfit.jacket = null; }   // (a tile shows the piece: nothing worn over it) if (outSlot === 'hair' || crop === 'head') V.outfit.glasses = outSlot === 'glasses' ? id : V.outfit.glasses; };
@@ -647,6 +647,7 @@ function renderPage() {
 // style if one is - an optional slot left empty if there's none; free players and the dev's wear: anything
 // the polish pass's hairstyles (lookcore.js HAIR_STYLES' fourth field) are offered only while the pass is switched on:
 // off, each would draw as the style it's built on
+const passOn = () => { try { return localStorage.getItem('cla.polish') === '1'; } catch { return false; } };   // (pieces only the pass draws - d.pp - likewise)
 function hairShown(s) { try { return !s[3] || localStorage.getItem('cla.polish') === '1'; } catch { return !s[3]; } }
 function wearable(R, base, seed) {
   if (state.free || devWear) return R.outfit;

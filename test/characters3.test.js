@@ -95,3 +95,23 @@ test('socks show on a bare leg - the pass on or off - and never through trousers
   const tube = wear('m', 'Tube socks', 'Shorts');
   assert.ok(withPass(() => red(baked(tube, 0))) > red(baked(tube, 0)), 'the tube socks\' red stripes');
 });
+
+// (a piece's own pixels: the same figure - its look's seed - with the piece taken off the renderer's app)
+const strip = (A, ...keys) => { const B = { ...A }; for (const k of keys) delete B[k]; return B; };
+test('small gear (knee and elbow pads, a wallet chain, a tool belt, a harness): accessories the pass draws, in every pose; offered only while it is on', async () => {
+  const { readFileSync } = await import('node:fs');
+  const GEAR = ['Knee pads', 'Elbow pads', 'Skate pads', 'Wallet chain', 'Tool belt', 'Climbing harness'];
+  for (const n of GEAR) {
+    const P = LK.PIECES[LK.byName(n)];
+    assert.ok(P && P.slot === 'jewel' && P.d.pp, n);
+    for (const base of ['m', 'f']) {
+      const A = plain(base, (L) => { L.outfit.bottoms = LK.item('Jeans', 'sky'); L.outfit.jewel = LK.item(n); }), B = strip(A, 'jewel');
+      const seen = [0, 1, 2, 4, 6].map((d) => withPass(() => diff(baked(A, d), baked(B, d))));
+      assert.ok(seen.filter((v) => v >= 1).length >= 3 && Math.max(...seen) >= 2, `${n} on ${base}: ${seen} art pixels by facing`);
+      assert.ok(Math.max(...seen) <= 40, `${n}: small gear stays small (${seen})`);
+      assert.equal(diff(baked(A, 1), baked(B, 1)), 0, `${n}: the pass off draws none of it`);
+      withPass(() => { for (const pose of ['walk0', 'run', 'sit', 'kneel', 'punch', 'down']) assert.ok(person(A, 1, pose, 1, { tight: true }).w > 6, pose); });
+    }
+  }
+  assert.ok(/!p\.d\.pp \|\| passOn\(\)/.test(readFileSync(new URL('../client/creator.js', import.meta.url), 'utf8')), 'the creator hides the pass\'s pieces while it is off');
+});

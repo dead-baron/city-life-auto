@@ -422,6 +422,14 @@ add('socks', 'Knee socks', 'mf', 'preppy alt casual lounge', 12, 'clothing', { h
 add('socks', 'Thigh-high socks', 'f', 'alt nightclub lounge', 18, 'boutique', { h: 0.34, stripes: 1 }, 'black', 'white');
 add('socks', 'Tights', 'f', 'smart business alt winter', 15, 'clothing', { h: 0 }, 'black');
 add('socks', 'Leg warmers', 'mf', 'retro athletic lounge', 14, 'sports', { h: 0.54, warm: 1 }, 'hot pink', 'white');
+// small gear (pass 3, gap 15; SF7, SM7, SM21, SF16), worn as an accessory. d.pp: drawn by the polish pass only (the
+// creator offers these while it is on)
+add('jewel', 'Knee pads', 'mf', 'skater work athletic', 22, 'sports', { knee: 1, pp: 1 }, 'charcoal');
+add('jewel', 'Elbow pads', 'mf', 'skater athletic', 20, 'sports', { elbow: 1, pp: 1 }, 'charcoal');
+add('jewel', 'Skate pads', 'mf', 'skater', 38, 'sports', { knee: 1, elbow: 1, pp: 1 }, 'charcoal');
+add('jewel', 'Wallet chain', 'mf', 'skater punk alt street', 18, 'clothing', { wchain: 1, pp: 1 }, 'silver');
+add('jewel', 'Tool belt', 'mf', 'work', 40, 'workwear', { tbelt: 1, pp: 1 }, 'brown', 'yellow');
+add('jewel', 'Climbing harness', 'mf', 'outdoors athletic', 55, 'outdoor', { harness: 1, pp: 1 }, 'orange', 'silver');
 // the rest of the concepts' wardrobe (pass 2, docs/characters/CONCEPTS.md's gap list; SF/SM1-23, C2, C3, CC3-5): the
 // jobs' looks (d.bands: reflective bands, drawn by the polish pass), neckwear and gloves, headphones, camo, the odd
 // costume - each drawn with a kind the renderer already has
