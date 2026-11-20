@@ -97,3 +97,10 @@ detail, people should blink, or everyone stares.
   capped at a third over the wrist; a one-pixel point of an elbow or a hand at the side is folded into the outline.
 - Slim "one pixel high" seat: three art pixels tall now. Athletic: the neck without the muscle's thickening.
 - Left: a small point at the hand in curvy's angle view.
+
+## 15:36 - the builds, third round (his notes on women's backs and the men)
+- Women from behind, all builds: "the legs don't go all the way up" - the taller seat hung over the tops of the legs. Cut level with the pelvis.
+- Curvy: more definition to the bust (D.bust). Big (women and men): the belly a tall shape cut top and bottom - a round front, not a point.
+- Men: slim's chest bump and athletic's pointy chest - the chest no more than half a pixel in front of the waist; average's
+  neck - the head a pixel higher; big's points on the shoulders from behind - an upper arm's one-pixel top folded into the outline.
+- Checked: with the pass OFF the renderer draws exactly what pass 5 drew (240 sprites, scratch `offsame.mjs`) - worth a test.

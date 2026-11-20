@@ -108,7 +108,7 @@ test('small gear (knee and elbow pads, a wallet chain, a tool belt, a harness): 
       const A = plain(base, (L) => { L.outfit.bottoms = LK.item('Jeans', 'sky'); L.outfit.jewel = LK.item(n); }), B = strip(A, 'jewel');
       const seen = [0, 1, 2, 4, 6].map((d) => withPass(() => diff(baked(A, d), baked(B, d))));
       assert.ok(seen.filter((v) => v >= 1).length >= 3 && Math.max(...seen) >= 2, `${n} on ${base}: ${seen} art pixels by facing`);
-      assert.ok(Math.max(...seen) <= 40, `${n}: small gear stays small (${seen})`);
+      assert.ok(Math.max(...seen) <= 48, `${n}: small gear stays small (${seen})`);   // (48: with pads on the elbows the outline's tidy-up of an elbow's point falls differently - a few art pixels of outline, 11-20)
       assert.equal(diff(baked(A, 1), baked(B, 1)), 0, `${n}: the pass off draws none of it`);
       withPass(() => { for (const pose of ['walk0', 'run', 'sit', 'kneel', 'punch', 'down']) assert.ok(person(A, 1, pose, 1, { tight: true }).w > 6, pose); });
     }

@@ -118,8 +118,8 @@ test('the eye colour shows at the game\'s size: the eye\'s pixel takes the colou
   const head = (eye) => {
     const L = JSON.parse(JSON.stringify(base)); L.face.eyeColor = eye;
     const D = downsample2(packGBuf(person(LK.lookArt(L, {}), 0, 'idle', 0, { tight: true }))), out = [];
-    for (let y = 0; y < Math.floor(D.h / 3); y++) for (let x = 0; x < D.w; x++) { const i = (y * D.w + x) * 4; if (D.p0[i + 3]) out.push([D.p0[i], D.p0[i + 1], D.p0[i + 2]]); }
-    return out;   // (the top third, the head: its art pixels' colours)
+    for (let y = 0; y < Math.floor(D.h * 0.42); y++) for (let x = 0; x < D.w; x++) { const i = (y * D.w + x) * 4; if (D.p0[i + 3]) out.push([D.p0[i], D.p0[i + 1], D.p0[i + 2]]); }
+    return out;   // (the top two fifths, the head: its art pixels' colours - a third stopped a row over the eyes on the polish pass's chunky build, 11-20)
   };
   const idx = (name) => LK.EYE_COLORS.findIndex((c) => c[1] === name);
   const blue = (c) => c[2] > c[0] + 60 && c[2] > c[1] + 30, green = (c) => c[1] > c[0] + 25 && c[1] > c[2] + 25;

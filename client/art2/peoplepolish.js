@@ -49,7 +49,7 @@ export const POLISH = {
   dims(D, A, b) {
     const fem = D.fem, mu = D.mu, w = D.w, h = D.h;
     // the neck: the head sits a neck above the shoulders (today the chin is inside them), the neck thick enough to show
-    D.headUp = D.head[2] + 1.7 * h;
+    D.headUp = D.head[2] + (fem ? 1.7 : 2.7) * h;   // (a man's a pixel more: on the chunky build his chin sat on his chest from the side - "lost definition to the neck", the owner 11-20)
     D.neckR = (fem ? 2.05 : 2.4) * Math.min(1.2, 0.5 + w * 0.5) * (1 + mu * 0.2);
     // the shoulder line: square and wider than the head on a man, narrower with a waist and hips on a woman; a build's
     // muscle is shoulders and chest over a narrow waist (a V), its belly the waist (a pear)
@@ -68,6 +68,7 @@ export const POLISH = {
     if (fem) {
       if (mu) { const k = (1 + mu * 0.03) / (1 + mu * 0.2); D.armR = D.armR.map((v) => v * k); D.foreR[0] *= 1 / (1 + mu * 0.15); D.shX *= 1.02 / (1 + mu * 0.1); D.chestR[0] *= 1.02 / (1 + mu * 0.1); D.neckR /= 1 + mu * 0.2; LIMB(1.04); }
       D.shape = b.belly > 0 && b.belly < 1.2 ? 1.18 : mu ? 1.08 : b.belly >= 1.2 ? 1.28 : 1;
+      if (b.belly > 0 && b.belly < 1.2) D.bust = 1.5;   // (curvy: "more definition to her breasts")
       if (b.belly > 0 && b.belly < 1.2) {   // (curvy)
         const kw = 1.05 / (b.w || 1);
         D.belly = 0; D.waistR[0] = (D.waistR[0] - b.belly * 1.4 * 1.1) * kw; D.waistR[1] = (D.waistR[1] - b.belly * 1.2) * kw; D.chestR[0] *= kw; D.chestR[1] *= kw; D.shX *= kw; D.shBar *= kw; D.pelR[0] *= 1.1 / (b.w || 1); D.pelR[1] *= kw; D.hipX *= 1.1 / (b.w || 1); D.w = 1.05;
@@ -81,7 +82,8 @@ export const POLISH = {
     { const l0 = b.limb || 1, k = (1 + (l0 - 1) * 0.55) / l0; for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * k); D.fist *= k; }
     if (mu && !fem) { const k = (1 + mu * 0.1) / (1 + mu * 0.2), k2 = (1 + mu * 0.06) / (1 + mu * 0.12), k3 = (1 + mu * 0.05) / (1 + mu * 0.1); D.armR = [D.armR[0] * k, D.armR[1] * k2]; D.foreR[0] *= (1 + mu * 0.08) / (1 + mu * 0.15); D.shX *= k3; D.chestR[0] *= k3; }
     // a body with depth (the concepts' side views are a barrel, not a plank), and a big build's belly out in front
-    D.chestR[1] *= fem ? 0.84 : 1.1; D.waistR[1] *= fem ? 1.0 : 1.1; D.pelR[1] *= 1.08;   // (a woman's back flatter: her upper back stood out behind the shoulder in a side view - the owner, 11-20; her shape is the bust's and the seat's)
+    D.chestR[1] *= fem ? 0.84 : 1.03; D.waistR[1] *= fem ? 1.0 : 1.1; D.pelR[1] *= 1.08;
+    if (!fem) D.chestR[1] = Math.min(D.chestR[1], D.waistR[1] + 0.55);   // (a man's chest no more than half a pixel in front of his waist: more was a bump on a slim build, a point on an athletic one)   // (a woman's back flatter: her upper back stood out behind the shoulder in a side view - the owner, 11-20; her shape is the bust's and the seat's)
     if (b.belly >= 1.2) { D.waistR[0] *= 1.12; D.waistR[1] *= 1.12; D.chestR[0] *= 1.06; D.shX *= 1.05; }
     D.fist = Math.min(D.fist, D.foreR[1] * 1.35);   // (a hand no more than a third wider than its wrist: on a slim build's arm it stood out at the hip as a point, and from the side behind it)
     // (a big build's back is a back: the waist no deeper than the chest - the belly is its own shape in front, people.js)
