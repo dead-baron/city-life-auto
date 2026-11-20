@@ -17,7 +17,7 @@ const bare = (base, under) => { const L = LK.emptyLook(base); L.hair.style = 2; 
 const withPass = (f) => { setPolish(POLISH); try { return f(); } finally { setPolish(null); } };
 
 test('the underwear slot: its own slot, for both bases, the lingerie among it; the code stays as short as before without it', () => {
-  assert.equal(LK.SLOTS[LK.SLOTS.length - 1], 'under');
+  assert.equal(LK.SLOTS[9], 'under');
   assert.equal(LK.SLOT_NAMES.under, 'Underwear');
   for (const base of ['m', 'f']) assert.ok(UNDER.filter((p) => p.b.includes(base)).length >= 8, `${base}: a full drawer`);
   for (const n of ['Boxers', 'Briefs', 'Boxer briefs', 'Undershirt and boxers', 'Tank and briefs', 'Bra and briefs', 'Sports bra and shorts', 'Lace bra and panties', 'Bralette set', 'Lace bodysuit', 'Teddy', 'Silk slip', 'Silk boxers', 'Fitted trunks', 'Nothing on']) assert.ok(LK.byName(n), n);

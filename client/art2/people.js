@@ -1015,12 +1015,14 @@ function wardrobe(A, D, TF, seed) {
   W.hand = () => gl || skin;
   // legs
   const legSkin = bk === 'none' || bk === 'bikini' || bk === 'skirt' || bk === 'towel' || T.dress || T.swimsuit || (T.towel && bk !== 'jeans' && bk !== 'pants');
+  const sox = A.socks && !A.founder ? cloth(A.socks.color) : null;
   W.leg = (Q) => {
     const along = Q.part === 'th' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5, side = Q.l1 * Q.side;
     if (T.bib) return along > 0.94 ? dark(top) : top;
     if (A.founder) { if (Math.abs(along - 0.5) < 0.07) Q.k -= 0.22; return skin; }
     if (legSkin || (bk === 'shorts' && along > 0.33) || (bk === 'trunks' && along > 0.18)) {
       if (bk === 'shorts' && along < 0.37) Q.k -= 0.2;
+      if (sox && along > A.socks.h) return sox;   // (the socks slot: on a bare leg, down from where they start)
       if ((tat & 2) && along < 0.4 && side > 0.3 && hash(Math.floor(along * 16), Math.floor((Q.l2 + 2) * 2), seed + 1) > 0.6) return ink;
       return skin;
     }

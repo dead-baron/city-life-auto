@@ -8,12 +8,12 @@
 //   hair   { style (HAIR_STYLES index), color (HAIR_COLORS), facial (FACIAL_HAIR index) }
 //   extras { makeup (MAKEUP), makeupColor (MAKEUP_COLORS), tattoos (TATTOO_AREAS bits), piercings (PIERCINGS bits),
 //            scar (SCARS) }
-//   outfit { top, jacket, bottoms, set, shoes, hat, glasses, jewel, bag, under }: each null or { id (PIECES index), c
+//   outfit { top, jacket, bottoms, set, shoes, hat, glasses, jewel, bag, under, socks }: each null or { id (PIECES index), c
 //            main colour, t trim colour (CLOTH indexes), p pattern (PATTERNS) }. A set (dresses, suits, tracksuits,
 //            swimwear) is worn instead of a top and bottoms. under: the underwear - what shows where there's no top
 //            or no bottoms (null: the plain white basics every look had before the slot; 'Nothing on': bare, the
 //            renderer's mosaic over the private areas).
-// encodeLook(look) -> a short string (66 characters, 71 with underwear picked) for saving and the network;
+// encodeLook(look) -> a short string (66 characters, 71 with underwear picked, 76 with socks) for saving and the network;
 // decodeLook(code) -> look or null.
 // validLook(look) -> a clamped copy (anything unknown goes back to a default) - the server's check.
 // (shared/look.js adds randomLook, CC9's STARTERS, policeLook and lookFromOutfit, and re-exports all of this: the
@@ -23,8 +23,8 @@
 // The catalogue is append-only: a piece's index is its id on the wire and in saves.
 
 export const LOOK_VERSION = 1;
-export const SLOTS = ['top', 'jacket', 'bottoms', 'set', 'shoes', 'hat', 'glasses', 'jewel', 'bag', 'under'];   // (append-only: a slot's place is its place in the code)
-export const SLOT_NAMES = { top: 'Tops', jacket: 'Jackets', bottoms: 'Bottoms', set: 'Dresses & sets', shoes: 'Shoes', hat: 'Hats', glasses: 'Glasses & masks', jewel: 'Jewelry', bag: 'Bags', under: 'Underwear' };
+export const SLOTS = ['top', 'jacket', 'bottoms', 'set', 'shoes', 'hat', 'glasses', 'jewel', 'bag', 'under', 'socks'];   // (append-only: a slot's place is its place in the code)
+export const SLOT_NAMES = { top: 'Tops', jacket: 'Jackets', bottoms: 'Bottoms', set: 'Dresses & sets', shoes: 'Shoes', hat: 'Hats', glasses: 'Glasses & masks', jewel: 'Jewelry', bag: 'Bags', under: 'Underwear', socks: 'Socks' };
 export const STYLES = [
   ['hifashion', 'High fashion'], ['business', 'Business'], ['smart', 'Smart casual'], ['streetwear', 'Streetwear'], ['street', 'Street'],
   ['casual', 'Casual'], ['skater', 'Skater'], ['beach', 'Beach'], ['lounge', 'Lounge'], ['nightclub', 'Nightclub'], ['punk', 'Punk'],
@@ -412,6 +412,16 @@ add('under', 'Strapless set', 'f', 'lounge nightclub', 50, 'boutique', { k: 'bik
 add('under', 'Lace bodysuit', 'f', 'lounge nightclub hifashion alt', 90, 'boutique', { k: 'swimsuit', bk: 'bikini', lace: 1 }, 'navy', 'silver');
 add('under', 'Teddy', 'f', 'lounge nightclub hifashion', 95, 'boutique', { k: 'swimsuit', bk: 'bikini', gloss: 1 }, 'wine', 'blush');
 add('under', 'Silk slip', 'f', 'lounge nightclub hifashion', 85, 'boutique', { k: 'dress', len: 1, bk: 'bikini', gloss: 1 }, 'cream', 'cream');
+// socks (pass 3, gap 14): a slot. d.h where on the leg they start (0 hip, 0.5 knee, 1 ankle), d.stripes in the trim
+// colour and d.warm (leg warmers, over trousers too) the polish pass's. On a bare leg only. Never in random looks.
+add('socks', 'Ankle socks', 'mf', 'casual athletic', 5, 'clothing', { h: 0.9 }, 'white');
+add('socks', 'Crew socks', 'mf', 'casual athletic skater streetwear', 6, 'clothing', { h: 0.8 }, 'white');
+add('socks', 'Striped crew socks', 'mf', 'skater streetwear retro', 8, 'clothing', { h: 0.8, stripes: 1 }, 'white', 'navy');
+add('socks', 'Tube socks', 'mf', 'skater retro athletic streetwear', 9, 'sports', { h: 0.7, stripes: 2 }, 'white', 'red');
+add('socks', 'Knee socks', 'mf', 'preppy alt casual lounge', 12, 'clothing', { h: 0.56, stripes: 1 }, 'white', 'navy');
+add('socks', 'Thigh-high socks', 'f', 'alt nightclub lounge', 18, 'boutique', { h: 0.34, stripes: 1 }, 'black', 'white');
+add('socks', 'Tights', 'f', 'smart business alt winter', 15, 'clothing', { h: 0 }, 'black');
+add('socks', 'Leg warmers', 'mf', 'retro athletic lounge', 14, 'sports', { h: 0.54, warm: 1 }, 'hot pink', 'white');
 // the rest of the concepts' wardrobe (pass 2, docs/characters/CONCEPTS.md's gap list; SF/SM1-23, C2, C3, CC3-5): the
 // jobs' looks (d.bands: reflective bands, drawn by the polish pass), neckwear and gloves, headphones, camo, the odd
 // costume - each drawn with a kind the renderer already has
@@ -504,15 +514,17 @@ export function encodeLook(L) {
   for (const v of n) s += AB[v & 63];
   for (const k of SLOTS) {
     const it = L.outfit[k];
-    if (!it) { if (k !== 'under') s += '00000'; continue; }   // (no underwear picked: the code as short as before the slot - most looks, every NPC's)
-    s += AB[(it.id >> 6) & 63] + AB[it.id & 63] + AB[it.c & 63] + AB[it.t & 63] + AB[it.p & 63];
+    s += it ? AB[(it.id >> 6) & 63] + AB[it.id & 63] + AB[it.c & 63] + AB[it.t & 63] + AB[it.p & 63] : '00000';
   }
+  // (the slots added since - underwear, socks - are left off the end while empty: most looks, every NPC's, keep the 66
+  // letters they had; 71 with underwear, 76 with socks)
+  while (s.length > LOOK_CODE_LEN && s.endsWith('00000')) s = s.slice(0, -5);
   return s;
 }
-export const LOOK_CODE_LEN = 21 + (SLOTS.length - 1) * 5;   // (5 more with underwear on)
+export const LOOK_CODE_LEN = 21 + 9 * 5, LOOK_CODE_MAX = 21 + SLOTS.length * 5;
 export function decodeLook(s) {
-  if (typeof s === 'string' && s.length === LOOK_CODE_LEN) s += '00000';
-  if (typeof s !== 'string' || s.length !== LOOK_CODE_LEN + 5) return null;
+  if (typeof s !== 'string' || s.length < LOOK_CODE_LEN || s.length > LOOK_CODE_MAX || (s.length - LOOK_CODE_LEN) % 5) return null;
+  s = s.padEnd(LOOK_CODE_MAX, '0');
   const v = [];
   for (let i = 0; i < s.length; i++) { const x = AV[s[i]]; if (x === undefined) return null; v.push(x); }
   if (v[0] !== LOOK_VERSION) return null;
@@ -615,6 +627,8 @@ export function lookArt(L, opt = {}) {
     }
     if (set && (set.d.k === 'dress' || set.d.k === 'gown')) A.top.dressUnder = set.d.k === 'gown' ? -1 : set.d.len || 0;
   }
+  const so = P('socks');
+  if (so) A.socks = { ...so.d, color: HEX(O.socks.c), trim: HEX(O.socks.t) };
   const sh = P('shoes');
   if (sh) {
     A.shoes = HEX(O.shoes.c); A.shoeKind = sh.d.k; A.shoeTrim = HEX(O.shoes.t); if (sh.d.tall) A.bootTall = sh.d.tall; if (sh.d.hi) A.hiTop = 1;

@@ -145,6 +145,21 @@ export const POLISH = {
       wrap('arm', (R, Q) => (R === W.top && Q.part === 'ua' && Math.abs(Q.l0 - 0.72) < 0.14 ? lit(Q) : R));
       wrap('leg', (R, Q) => (R === W.bot && Q.part === 'sh' && Math.abs(Q.l0 - 0.55) < 0.12 ? lit(Q) : R));
     }
+    // socks (pass 3; lookcore.js 'socks': A.socks { h, stripes, warm }): stripes in the trim colour under the top's edge, a
+    // darker row at the top (the cuff); leg warmers over leggings and trousers too, slouched in folds
+    const SK = A.socks;
+    if (SK) {
+      const sc = cloth(SK.color), st = cloth(SK.trim);
+      wrap('leg', (R, Q) => {
+        const al = Q.part === 'th' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5, d = al - SK.h;
+        if (SK.warm && d > 0 && al < 0.95 && R !== sc) { Q.k += Math.floor(al * 22) & 1 ? -0.14 : 0.05; return sc; }
+        if (R !== sc || d < 0) return R;
+        if (SK.warm) { Q.k += Math.floor(al * 22) & 1 ? -0.14 : 0.05; return R; }
+        if (SK.stripes && d > 0.035 && d < 0.035 + SK.stripes * 0.075 && (SK.stripes < 2 || Math.abs(d - 0.11) > 0.02)) return st;
+        if (d < 0.03) Q.k -= 0.12;
+        return R;
+      });
+    }
     wrap('pel', (R, Q) => { if (bothDark && R === W.bot && Q.z > (T.tuck ? 1.4 : -1.9) && Q.z < (T.tuck ? 2.2 : -0.9)) Q.k += 0.3; return fix(R); });
   },
   // hair (CB3-M, CB3-F, CC2): the six shapes the concepts have that the list lacked, each on a style the renderer

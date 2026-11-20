@@ -50,3 +50,48 @@ test('hair as the concepts draw it: every style a mass in clean tones with a lit
   assert.ok(lum(long, 2) > lum(long, 7) + 8, `lit top ${lum(long, 2).toFixed(0)} over ${lum(long, 7).toFixed(0)}`);
   assert.ok(cleaner >= n * 0.8, `fewer tones, not more: ${cleaner} of ${n} heads`);
 });
+
+test('the socks slot: its own slot and tab, eight pieces, a pair in the starter wardrobe; the look\'s code grows only when they are worn', async () => {
+  const W = await import('../shared/wardrobe.js'), { STARTER_WARDROBE } = await import('../shared/rules.js');
+  assert.equal(LK.SLOTS[LK.SLOTS.length - 1], 'socks'); assert.equal(LK.SLOT_NAMES.socks, 'Socks');
+  const SOCKS = LK.PIECES.filter((p) => p && p.slot === 'socks');
+  assert.deepEqual(SOCKS.map((p) => p.name), ['Ankle socks', 'Crew socks', 'Striped crew socks', 'Tube socks', 'Knee socks', 'Thigh-high socks', 'Tights', 'Leg warmers']);
+  assert.ok(STARTER_WARDROBE.includes('Crew socks') && W.owns([], LK.byName('Crew socks')));
+  for (const p of SOCKS) if (p.name !== 'Crew socks') assert.ok(W.sellerOf(p.i), `${p.name}: a store sells it`);
+  // the code: 66 letters without, 71 with underwear only, 76 with socks (the underwear's five letters zeros if none)
+  const old = LK.STARTERS[0].look, c0 = LK.encodeLook(old);
+  assert.equal(c0.length, LK.LOOK_CODE_LEN); assert.equal(LK.decodeLook(c0).outfit.socks, null);
+  const L = structuredClone(old); L.outfit.socks = LK.item('Tube socks', 'white', 'royal blue');
+  const c1 = LK.encodeLook(L);
+  assert.equal(c1.length, LK.LOOK_CODE_LEN + 10); assert.ok(c1.startsWith(c0 + '00000'));
+  assert.deepEqual(LK.decodeLook(c1).outfit.socks, L.outfit.socks); assert.equal(LK.decodeLook(c1).outfit.under, null);
+  L.outfit.under = LK.item('Boxers');
+  assert.deepEqual(LK.decodeLook(LK.encodeLook(L)).outfit, LK.validLook(L).outfit);
+  L.outfit.socks = null;
+  assert.equal(LK.encodeLook(L).length, LK.LOOK_CODE_LEN + 5, 'underwear alone: 71, as before');
+  for (const bad of [c1.slice(0, -1), c1 + '0', c1 + '00000']) assert.equal(LK.decodeLook(bad), null);
+  // the city's people don't fill the slot
+  for (let k = 1; k < 500; k++) assert.equal(LK.randomLook(k * 7919).outfit.socks, null);
+});
+
+test('socks show on a bare leg - the pass on or off - and never through trousers; leg warmers go over leggings with the pass on', () => {
+  // (without: the same figure - its look's own seed - with the socks taken off)
+  const wearAs = (base, as, bottoms) => { const A = wear(base, as, bottoms); delete A.socks; return A; };
+  const wear = (base, socks, bottoms) => { const A = plain(base, (L) => { L.outfit.bottoms = LK.item(bottoms); L.outfit.socks = LK.item(socks || 'Crew socks'); }); if (!socks) delete A.socks; return A; };
+  const names = LK.PIECES.filter((q) => q && q.slot === 'socks').map((q) => q.name);
+  for (const p of LK.PIECES.filter((q) => q && q.slot === 'socks')) for (const base of ['m', 'f']) {
+    for (const on of [false, true]) {
+      const f = () => [baked(wear(base, p.name, 'Shorts'), 1), baked(wearAs(base, p.name, 'Shorts'), 1), baked(wear(base, p.name, 'Jeans'), 1), baked(wearAs(base, p.name, 'Jeans'), 1)];
+      const [a, b, c, d] = on ? withPass(f) : f();
+      assert.ok(diff(a, b) >= (p.d.h >= 0.9 ? 1 : 2), `${p.name} on ${base}, pass ${on ? 'on' : 'off'}: on a bare leg (${diff(a, b)})`);
+      assert.equal(diff(c, d), p.d.warm && on ? diff(c, d) : 0, `${p.name}: nothing through jeans`);
+      if (p.d.warm && on) assert.ok(diff(c, d) >= 2, 'leg warmers over trousers');
+    }
+    // every pose draws with them on
+    withPass(() => { for (const pose of ['walk0', 'run', 'sit', 'kneel', 'swim', 'down']) assert.ok(person(wear(base, p.name, 'Shorts'), 2, pose, 1, { tight: true }).w > 6, pose); });
+  }
+  // stripes in the trim colour with the pass on
+  const red = (G) => { let n = 0; for (let o = 0; o < G.w * G.h * 4; o += 4) if (G.p0[o + 3] && G.p0[o] > 110 && G.p0[o + 1] < 70 && G.p0[o + 2] < 80 && o / 4 > G.w * G.h * 0.7) n++; return n; };   // (red, at the shins)
+  const tube = wear('m', 'Tube socks', 'Shorts');
+  assert.ok(withPass(() => red(baked(tube, 0))) > red(baked(tube, 0)), 'the tube socks\' red stripes');
+});

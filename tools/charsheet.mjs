@@ -338,6 +338,12 @@ async function p3hair(out) {
   for (let i = 0; i < HS.length; i += per) for (const p2 of [true, false]) rows.push([p2 ? 'PASS 2' : 'PASS 3', HS.slice(i, i + per).flatMap((h, j) => dirs.map((d, n) => ({ L: mk(h, i + j), d, p2, opt: { region: 'head' }, head: 1, t: !p2 || n ? '' : LK.HAIR_STYLES[h][0] })))]);
   await grid(out, 'EVERY HAIRSTYLE, S SE E N: PASS 2 OVER PASS 3 (AN OUTLINE AND A LIT TOP, AS THE CONCEPTS DRAW HAIR)', rows, { k: 6, rh: 19, cw: 13, label: 80 });
 }
+// a slot's pieces on both bases: front, front quarter, side, back, walking - the pass on; then the pass off; then without
+const pieceRows = (slot, wear, names = null) => LK.PIECES.filter((p) => p && p.slot === slot && (!names || names.includes(p.name))).flatMap((p) => ['m', 'f'].filter((b) => !names || p.b.includes(b) || slot !== 'socks').map((base) => { const L = wear(base, p), N = wear(base, null); return [p.name.replace(' and ', ' +|') + '|' + (base === 'm' ? 'MAN' : 'WOMAN'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 6 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 2, pose: 'run', f: 2 }, { L, d: 1, pose: 'sit', f: 0 }, { L, d: 1, on: false, t: 'off' }, { L: N, d: 1, t: 'without' }]]; }));
+async function p3socks(out) {
+  const wear = (base, p) => dressed(base, { top: ['Plain tee', base === 'm' ? 'grey' : 'white'], bottoms: p && p.d.warm ? ['Leggings', 'black'] : base === 'm' ? ['Shorts', 'navy'] : ['Mini skirt', 'burgundy'], shoes: ['Sneakers', 'white'], ...(p ? { socks: p.name } : {}) }, { skin: base === 'm' ? 2 : 9 }, { hair: { style: base === 'f' ? 20 : 6 } });
+  await grid(out, 'SOCKS (THE NEW SLOT): S, SE, E, N, W, WALKING, RUNNING, SITTING; THE PASS OFF; WITHOUT', pieceRows('socks', wear), { k: 6, rh: 32 });
+}
 // every animation with the pass on: a pose a row, its eight facings (S, SE, E, NE, N, NW, W, SW) then a second frame S and E
 const HELD = { aim: 'pistol', aimw: 'pistol', swing: 'bat', held: 'phone' };
 async function anim(out) {
@@ -420,5 +426,6 @@ else if (mode === 'under') await under(arg('out', join(P2, 'underwear.png')));
 else if (mode === 'p3police') await p3police(arg('out', join(P3, 'police.png')));
 else if (mode === 'p3mouth') await p3mouth(arg('out', join(P3, 'faces-mouth.png')));
 else if (mode === 'p3hair') await p3hair(arg('out', join(P3, 'hair.png')));
+else if (mode === 'p3socks') await p3socks(arg('out', join(P3, 'socks.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }
