@@ -35,7 +35,11 @@ to them as the game's sprite size allows, with everything they show.
      basic). List in NOTES.md every concept outfit: already in / added / didn't fit.
    - **Underwear for both bases (the owner, 11-19):** a full base layer for men and women, drawn for the new body -
      men: boxers, briefs, boxer briefs, an undershirt and a tank; women: bra and briefs, a sports bra and shorts, a
-     tank and briefs - several colours each. Everyday and modest (the game is 13+: no lingerie, nothing see-through).
+     tank and briefs - several colours each; plus lingerie styles as more underwear choices (the owner, 11-19: "add the
+     lingerie in... other underwear styles, don't need to stay too modest") - e.g. lace bra and panties, a bralette, a
+     bodysuit / teddy, a slip; for men silk boxers, a fitted trunk. Opaque at sprite size, never nude or see-through
+     (the game's nudity rule stands). NPCs don't walk the streets in underwear or lingerie (the NPC wardrobe skips the
+     slot).
      It's what a character wears under clothes and what shows with no top or bottoms on (the creator's body tab, the
      fitting room, the shower at home); free for everyone (in the starter wardrobe), its own slot in the creator.
 3. **Every animation checked with the pass on** (fix what's wrong): all 8 directions of standing, walking (add the walk
