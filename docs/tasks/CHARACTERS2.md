@@ -44,8 +44,8 @@ to them as the game's sprite size allows, with everything they show.
      on, the game's built-in censor covers the private areas - the pixelated mosaic in `client/art2/people.js` (and
      `shared/lookcore.js`'s "Nothing" set) - redrawn so it sits right on the new body (proportions A), in every pose and
      direction; the "censored nudity" setting still shows swimwear instead. Check where "none" may be worn today (the
-     bathhouses issue "Nothing"; the creator, the fitting room and home are new) and list in NOTES.md where it's
-     allowed, for the owner to confirm (default: the creator's preview, at home, the bathhouses - not the street).
+     bathhouses issue "Nothing"): the owner decided (11-19) it may be worn **anywhere, the street included** - the
+     mosaic covers it for everyone, and players with "censored nudity" on see swimwear. Make the wardrobe allow it.
      It's what a character wears under clothes and what shows with no top or bottoms on (the creator's body tab, the
      fitting room, the shower at home); free for everyone (in the starter wardrobe), its own slot in the creator.
 3. **Every animation checked with the pass on** (fix what's wrong): all 8 directions of standing, walking (add the walk
