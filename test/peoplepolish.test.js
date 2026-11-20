@@ -71,7 +71,7 @@ test('on: a longer body under the head, for both bases and every build (the head
   for (const base of ['m', 'f']) for (let b = 0; b < LK.BUILDS.length; b++) {
     const A = look(base, { build: b, skin: 2 });
     setPolish(null); const before = headsOf(baked(A));
-    setPolish(POLISH); const after = headsOf(baked(A)); setPolish(null);
+    setPolish({ ...POLISH, mouthOn: true }); const after = headsOf(baked(A)); setPolish(null);   // (measured as pass 1 was, the mouth drawn: without it the middle column's first white row is a row lower on some builds - the same body)
     const who = `${base} ${LK.BUILDS[b].name}: ${before.heads.toFixed(2)} -> ${after.heads.toFixed(2)} (${before.tall} -> ${after.tall} art px tall, the head and neck ${before.head} -> ${after.head})`;
     assert.ok(after.heads >= 2.55 && after.heads >= before.heads + 0.15, who);
     assert.ok(after.head >= 9, `the head keeps room for a face, over a neck: ${who}`);

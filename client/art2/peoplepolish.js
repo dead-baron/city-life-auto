@@ -20,6 +20,7 @@ const outOf = (cx, e) => (e.p.x < cx.at(0, 1, 0).x ? -1 : 1);
 export const POLISH = {
   K: [1.3, 1.06, 1.0, 1.02, 1.0],
   eyeZ: 0.02,
+  mouthOn: false,   // (pass 3, the owner 11-19: the concepts' small figures have no mouth - off; true draws pass 1's. Painted lips - lipstick, glam, goth, a clown's - always show)
   noseK: 1.0,
   dims(D, A, b) {
     const fem = D.fem, mu = D.mu, w = D.w, h = D.h;
@@ -85,7 +86,8 @@ export const POLISH = {
   // the mouth: two rows under the eyes, across the face's middle - a man's a short line in the skin's shadow, a woman's in
   // her lips' colour; turned to the side, one pixel
   mouth(cx, m, lip, L5, my) {
-    const { put, skin, D, e0 } = cx, fem = D.fem;
+    const { put, skin, D, e0, A } = cx, fem = D.fem, mk = A.makeup;
+    if (!this.mouthOn && !(mk && mk.kind !== 'blush') && !(A.fmask && A.fmask.k === 'clown')) return;
     const q = e0 ? { bx: m.bx, by: Math.max(m.by, e0.by + 4) } : m, side = cx.turn > 0.3;
     const c = fem ? mix(lip, skin[2], 0.2) : mix(skin[1], [92, 52, 56], 0.35), soft = mix(c, skin[3], 0.5), dark = mix(c, skin[0], 0.5), hi = mix(c, [255, 236, 226], 0.3);
     // medium, thin, full, wide, bow, small

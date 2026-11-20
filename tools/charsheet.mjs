@@ -306,6 +306,29 @@ async function p3police(out) {
   const row = (f, more = {}) => J.flatMap(([n, L]) => [{ L: f(L), d: 1, t: n, ...more }, { L: f(L), d: 5, ...more }, { L: f(L), d: 0, pose: 'walk0', f: 1, ...more }]);
   await grid(out, 'POLICE BY RANK: FRONT QUARTER, BACK QUARTER, WALKING - THE PATROL SHIRT NAVY (BEFORE) OVER LIGHT BLUE', [['BEFORE|(NAVY)', row(navy)], ['AFTER|(LIGHT BLUE)', row((L) => L)], ['AFTER,|PASS OFF', row((L) => L, { on: false })], ['AFTER,|NIGHT', row((L) => L, { bg: [34, 38, 62], tint: [0.5, 0.52, 0.72] })]], { k: 6, rh: 33, cw: 18, label: 120 });
 }
+// the mouth (the owner, 11-19; gap 10): heads at 6x and whole figures at game scale x 2, with pass 1's mouth and without
+// it, side by side - six skins, a man facing S and a woman facing SE, each lip option; then painted lips (they stay)
+async function p3mouth(out) {
+  await polish(true);
+  const K = 10, CW = 30 * K, RH = 17 * K, cols = 6, sh = new Sheet(110 + cols * CW + 8, 30 + 5 * RH + 4 * 96 + 60);
+  sh.text('THE MOUTH: WITH (PASS 1 AND 2) | WITHOUT (PASS 3, AS THE CONCEPTS) - EACH PAIR THE SAME FACE', 8, 6, 2);
+  const mk = (base, i, more = {}) => { const L = LK.emptyLook(base); L.face = { ...L.face, lips: i % 6, eyeColor: 1 + i % 4, ...(more.face || {}) }; L.body.skin = [1, 3, 9, 12, 5, 14][i % 6]; L.hair = { ...L.hair, style: base === 'f' ? [5, 21, 20, 16, 9, 24][i % 6] : [1, 6, 2, 8, 10, 3][i % 6], color: 1 + (i % 3), facial: more.facial || 0 }; Object.assign(L.extras, more.extras || {}); L.outfit.top = LK.item('Plain tee', ['grey', 'red', 'navy', 'white', 'forest', 'black'][i % 6]); L.outfit.bottoms = LK.item('Jeans'); L.outfit.shoes = LK.item('Sneakers'); return LK.lookArt(LK.validLook(L)); };
+  const head = (A, d) => { const s = baked(A, d, 'idle', 0, { region: 'head' }); return { ...s, ax: s.w >> 1, ay: s.h }; };
+  const ROWS = [['MAN, S', (i) => mk('m', i), 0], ['WOMAN, SE', (i) => mk('f', i), 1], ['WOMAN, S', (i) => mk('f', i + 3), 0], ['MAN, BEARD,|SE', (i) => mk('m', i, { facial: 1 + i }), 1], ['PAINTED:|LIPSTICK,|GLAM, GOTH', (i) => mk('f', i, { extras: { makeup: [2, 5, 6][i % 3], makeupColor: i } }), i => i % 2]];
+  let y = 30;
+  for (const [name, f, d] of ROWS) {
+    name.split('|').forEach((t, i) => sh.text(t, 6, y + 40 + i * 12, 2));
+    for (let i = 0; i < cols; i++) for (const [j, on] of [[0, true], [1, false]]) { setPolish({ ...POLISH, mouthOn: on }); sh.sprite(head(f(i), typeof d === 'function' ? d(i) : d), 110 + i * CW + (j + 0.5) * CW / 2, y + RH - 8, K, null, false); }
+    y += RH;
+  }
+  sh.text('AT GAME SCALE X 2 (WHOLE FIGURES): WITH | WITHOUT', 8, y + 8, 2); y += 24;
+  for (const [ri, [bg, tint]] of [[[150, 146, 140], null], [[92, 140, 70], null], [[78, 80, 88], null], [[34, 38, 62], [0.5, 0.52, 0.72]]].entries()) {
+    sh.rect(110, y, cols * CW, 92, bg); sh.text(['PAVEMENT', 'GRASS', 'ASPHALT', 'NIGHT'][ri], 6, y + 40, 2);
+    for (let i = 0; i < cols * 2; i++) for (const [j, on] of [[0, true], [1, false]]) { setPolish({ ...POLISH, mouthOn: on }); sh.sprite(baked(mk(i % 2 ? 'f' : 'm', i + ri), [0, 1, 7, 0][(i + ri) % 4]), Math.round(110 + i * CW / 2 + (j + 0.5) * CW / 4), y + 84, 4, tint); }
+    y += 96;
+  }
+  sh.save(out);
+}
 // every animation with the pass on: a pose a row, its eight facings (S, SE, E, NE, N, NW, W, SW) then a second frame S and E
 const HELD = { aim: 'pistol', aimw: 'pistol', swing: 'bat', held: 'phone' };
 async function anim(out) {
@@ -386,5 +409,6 @@ else if (mode === 'anim') await anim(arg('out', join(P2, 'anim.png')));
 else if (mode === 'lineup') await lineup2(arg('out', join(P2, 'lineup.png')));
 else if (mode === 'under') await under(arg('out', join(P2, 'underwear.png')));
 else if (mode === 'p3police') await p3police(arg('out', join(P3, 'police.png')));
+else if (mode === 'p3mouth') await p3mouth(arg('out', join(P3, 'faces-mouth.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }
