@@ -60,3 +60,9 @@ detail, people should blink, or everyone stares.
 - Eyes: options shown (`POLISH.eyeMode` 0-3, a blink frame: `person(..., { blink: 1 })`) - HIS PICK PENDING. Blinking for everyone wanted.
 - Paper hat: was inside the hair's volume - lifted and bigger. Women's briefs: a strap row round the hip (HIP), the bra's band
   on round the side. From the side a hanging arm covers nearly the whole body on the chunky build: one art pixel of the bottoms shows.
+
+## 13:56
+- Eyes: he picks D (the color with a white beside it). Built: `POLISH.eyeMode: 3`, the six eye shapes on it. Blinking: to build
+  (the frame exists: `person(..., { blink: 1 })`; the game has to ask for it - peds.js - standing and sitting first).
+- Panties: the strap is the triangle's top row run across the hips (under4). A woman's chest and seat: a little fuller (people.js).
+- The far arm's scrap behind the shoulder in a side view: folded into the outline.

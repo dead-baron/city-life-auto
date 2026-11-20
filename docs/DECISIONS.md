@@ -189,6 +189,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Small briefs and panties keep their triangle and get a strap round the hip; bras show their straps from the side; stripes on clothes follow the garment, not one screen line; striped underwear is added. (11-20; chat - OPEN: built in the next steps)
 - The Founding Citizen jacket: all gold, a bomber that shines and sparkles - a premium item; a small VFX if it's cheap. (11-20; chat - OPEN)
 - Jackets stay open for now; a zipped option is revisited after the beta. (11-20 13:42; chat)
+- Eyes: an eye is its picked color with a white beside it (option D of four shown), for everyone; and everyone blinks. (11-20 13:56; chat: "I think D might look the best" - built as the polish pass's default; blinking OPEN)
+- A woman's briefs and panties keep a strap that goes round the hip; women's chest and seat get "a little shape", as long as it doesn't break the character system. (11-20 13:56; chat)
 - A layering check for the people: clothing, features and customizations must come together without stray pixels at every angle - to become a permanent test. (11-20; chat)
 - For the character work the renderer's code budget goes to 440 KB and the bake's to 1030 KB (the people's drawing is in both). (11-20; told to the owner in chat under his 11-19 "raise it rather than cut corners" - TO CONFIRM at his review)
 - Underwear: the basics free (starter wardrobe), lingerie sold. Patrol police in a light-blue shirt (the concepts' clearest police read). (11-19; chat) - built in pass 3: officers, rookies and K9 handlers; a sergeant's stays navy under the chevrons, the dress uniform unchanged - OPEN: sergeants too? - SETTLED 11-19: sergeants stay navy (the rank reads). (docs/tasks/CHARACTERS4.md)

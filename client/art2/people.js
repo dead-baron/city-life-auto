@@ -1194,7 +1194,10 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   const sb = (s) => vadd(S.pel, mv(S.SP, [s * (D.shX - 1.3), -0.5, D.shUp - 0.5 + P.breath]));
   C(sb(-1), sb(1), D.shBar, D.shBar, GR.TORSO, 'shb', W.torso);
   if (D.belly) E(vadd(S.pel, mv(S.SH, [0, 1.6 + D.belly * 1.4, 4.4])), S.SH, [(7.2 + D.belly * 1.4) * D.w, 4.4 + D.belly * 2.2, 6.0 + D.belly * 0.6], GR.TORSO, 'belly', W.torso);
-  if (fem) for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.5, D.chestR[1] - 1.5, 1.0])), S.SP, [2.3, 1.9, 2.0], GR.TORSO, 'bust', W.torso);
+  if (fem && PL) {   // (the polish pass, the owner 11-20: "a little shape" to a woman's chest and seat - enough to show from the side)
+    for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.6, D.chestR[1] - 0.9, 0.9])), S.SP, [2.6, 2.5, 2.3], GR.TORSO, 'bust', W.torso);
+    E(vadd(S.pel, mv(S.PF, [0, -D.pelR[1] * 0.62, -0.9])), S.PF, [D.pelR[0] * 0.86, 2.6, 2.9], GR.TORSO, 'pel', W.pel);
+  } else if (fem) for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.5, D.chestR[1] - 1.5, 1.0])), S.SP, [2.3, 1.9, 2.0], GR.TORSO, 'bust', W.torso);
   if (W.T.hood && hat !== 'hood') E(vadd(S.neck, mv(S.SP, [0, -3.0, -0.2])), S.SP, [4.8, 2.4, 2.8], GR.TORSO, 'hood', W.hood);
   if (W.T.fur) E(vadd(S.neck, mv(S.SP, [0, 0.4, -1.2])), S.SP, [6.6, 5.2, 2.2], GR.TORSO, 'fur', W.fur);
   else if (W.T.open && W.T.open > 0.15 && !W.T.hood) E(vadd(S.neck, mv(S.SP, [0, -0.5, -1.7])), S.SP, [D.neckR + 2.0, D.neckR + 1.6, 1.25], GR.TORSO, 'collar', W.collar, (a, b) => b < 0.5 - Math.abs(a) * 0.2);   // (SF/SM: a jacket's collar, a layer over the top)
@@ -1851,6 +1854,17 @@ function render(fig, P, S, X, D, A, opt) {
       const q = by * bw + bx;
       if (BA[q] >= 2 && !DM[q] && bg(q) === GR.HAIR && BA[q - 1] < 2 && BA[q + 1] < 2 && BA[q - bw] < 2) DM[q] = 1;
     }
+    // (a scrap of the far arm at the figure's edge - one or two art pixels of it out behind the body in a side view, a bump on
+    // the shoulder: the outline there)
+    { const armG = (q) => { const g = bg(q); return BA[q] >= 2 && !DM[q] && (g === GR.ARML || g === GR.ARMR) ? g : 0; }, same = (q, g) => [q - 1, q + 1, q - bw, q + bw].filter((r) => r >= 0 && r < bw * bh && armG(r) === g);
+      const hit = [];
+      for (let by = 1; by < bh - 1; by++) for (let bx = 1; bx < bw - 1; bx++) {
+        const q = by * bw + bx, g = armG(q);
+        if (!g || !(BA[q - 1] < 2 || BA[q + 1] < 2)) continue;
+        const n = same(q, g);
+        if (n.length === 0 || (n.length === 1 && same(n[0], g).length <= 1)) hit.push(q, ...n);
+      }
+      for (const q of hit) DM[q] = 1; }
     // (a sole's last pixel out beyond the shoe - the far foot's at an angle, a toe's under the near one: on its own it's a
     // white pixel beside the foot, not a sole)
     for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {

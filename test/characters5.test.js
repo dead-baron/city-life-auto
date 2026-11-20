@@ -94,15 +94,16 @@ test('no underwear picked: boxers for a man, a bra and panties for a woman', () 
   assert.ok(pale(set) >= 18 && Math.abs(pale(fb) - pale(set)) <= 3, `a woman's basics are a bra and briefs (${pale(fb)} pale art pixels against the set's ${pale(set)})`);
 });
 
-test('a woman\'s briefs and panties: smaller than a man\'s, a level waist and a triangle to the leg', () => {
+test('a woman\'s briefs and panties: a strap round the hips and a small triangle to the leg under it', () => {
   for (const n of ['Briefs', 'Bra and briefs', 'Lace bra and panties']) {
     // (the rows under the bra, on the chunky build of 11-20: a small wedge - three or four art pixels across at its widest, two at the leg)
     const px = own('f', n).filter(([, y]) => y > 15), ys = [...new Set(px.map((p) => p[1]))].sort((a, b) => a - b), w = ys.map((y) => px.filter((p) => p[1] === y).length), top = Math.max(...w);
     assert.ok(w.length >= 2 && w.length <= 4, `${n}: ${w.length} rows (${w})`);
-    assert.ok(top >= 4 && top <= 7, `${n}: small, and wide enough to read (${w})`);
-    assert.ok(w[w.length - 1] <= top - 2, `${n}: narrowing to the leg (${w})`);
+    // (11-20, the owner: "a visible strap that goes around the hip" - the triangle's top row runs on across the hips)
+    assert.ok(top >= 6 && top <= 10, `${n}: a strap across the hips (${w})`);
+    assert.ok(w[w.length - 1] <= top - 3, `${n}: narrowing to the leg under it (${w})`);
   }
-  assert.ok(own('f', 'Briefs').filter(([, y]) => y > 15).length < own('m', 'Briefs').length, 'smaller than a man\'s');
+  assert.ok(own('f', 'Briefs').filter(([, y]) => y > 15).length <= own('m', 'Briefs').length + 2, 'no bigger than a man\'s');
 });
 
 test('the union suit has no buttons; the slip is its own cloth again (pass 3\'s look)', () => {

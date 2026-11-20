@@ -89,7 +89,10 @@ test('on: the eyes are eyes on every skin - two pixels well darker than the face
       let eyes = 0;
       for (let y = 2; y < 9; y++) for (let x = 1; x < D.w - 1; x++) {
         const o = (y * D.w + x) * 4, l = lum(D.p0, o);
-        if (D.p0[o + 3] && D.p0[o - 1] && D.p0[o + 7] && lum(D.p0, o - 4) >= l + 0.15 && lum(D.p0, o + 4) >= l + 0.15) eyes++;
+        // (11-20, the eye's colour with a white beside it: an eye pixel stands off both its neighbours - darker than both, or
+        // well apart from both in colour, as a light eye on dark skin is)
+        const far = (q) => Math.hypot(D.p0[o] - D.p0[q], D.p0[o + 1] - D.p0[q + 1], D.p0[o + 2] - D.p0[q + 2]) >= 70;
+        if (D.p0[o + 3] && D.p0[o - 1] && D.p0[o + 7] && ((lum(D.p0, o - 4) >= l + 0.15 && lum(D.p0, o + 4) >= l + 0.15) || (far(o - 4) && far(o + 4)))) eyes++;
       }
       assert.ok(eyes >= 2, `skin ${skin} (${base}): ${eyes} eye pixels standing out`);
     }
