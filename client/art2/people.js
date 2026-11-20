@@ -1755,7 +1755,8 @@ function render(fig, P, S, X, D, A, opt) {
   }
   // (at the game's scale an inner line is a whole art pixel after the bake: a step darker, as SPEC asks, not the
   // outline's near-black, which made a busy figure of every overlap)
-  if (R === 1) { const hk = (PL && PL.lnHead) || 0; for (let i = 0; i < n; i++) if (LN[i]) { const k = hk && PID[i] < prims.length && prims[PID[i]].g === GR.HEAD ? hk : 0; CR[i] = CR[i] * (0.52 + k) + 8; CG[i] = CG[i] * (0.48 + k) + 6; CB[i] = CB[i] * (0.56 + k) + 14; } }   // (PL.lnHead: the line a fringe or a hat draws on the face, softer - a shadow, not a headband)
+  if (R === 1) { const hk = (PL && PL.lnHead) || 0, sm = PL && PL.lnSkin ? MID.get(fig.W.skin) | 0 : 0; for (let i = 0; i < n; i++) if (LN[i]) { const k = hk && PID[i] < prims.length && prims[PID[i]].g === GR.HEAD ? hk : sm && MTL[i] === sm ? PL.lnSkin : 0;   // (PL.lnSkin: a line on bare skin - an arm on a bare chest, a thigh on a thigh - softer too: at full strength a bare body was blotched with brown)
+    CR[i] = CR[i] * (0.52 + k) + 8; CG[i] = CG[i] * (0.48 + k) + 6; CB[i] = CB[i] * (0.56 + k) + 14; } }   // (PL.lnHead: the line a fringe or a hat draws on the face, softer - a shadow, not a headband)
   else for (let i = 0; i < n; i++) if (LN[i]) { CR[i] = CR[i] * 0.3 + 12; CG[i] = CG[i] * 0.26 + 8; CB[i] = CB[i] * 0.34 + 18; }
   if (PL && PL.post && R === 1) PL.post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, AX, AY, GR, fig, A, D, P });
   // pack: colour, a soft normal (half the shape's own, half facing the camera and up), height, glow, flags; then the

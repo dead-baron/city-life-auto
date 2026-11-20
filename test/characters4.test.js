@@ -87,7 +87,8 @@ test('underwear: clean tones on every skin - a piece is a few tones of its own, 
     // (...and none of its tones is one of the body's - bar the art pixels a hand in front of it shares)
     const shared = px.filter((i) => rest.has(key(G, i))).length;
     const warm = px.filter((i) => G.p0[i * 4] - G.p0[i * 4 + 2] > 30).length;   // (white shaded warm: the renderer's ramp, skin-like)
-    assert.ok(Math.max(shared, warm) <= Math.max(2, px.length * 0.25), `${p.name} on ${base}, skin ${skin}, facing ${d}: of ${px.length} art pixels ${shared} are in a tone the body has too, ${warm} are warm`);
+    // (up to 5: the softer lines on bare skin of 11-20 are light enough to be counted, and a look's colours seed a few of them)
+    assert.ok(Math.max(shared, warm) <= Math.max(5, px.length * 0.25), `${p.name} on ${base}, skin ${skin}, facing ${d}: of ${px.length} art pixels ${shared} are in a tone the body has too, ${warm} are warm`);
   }
 });
 

@@ -36,6 +36,7 @@ export const POLISH = {
   tipKeep: ['spiky', 'mohawk', 'quiff', 'shag'],
   eye2: true,         // a face at an angle keeps its far eye (people.js face)
   lnHead: 0.24,       // the line a fringe or a hat draws on the face: this much lighter (people.js: a shadow, not a headband)
+  lnSkin: 0.2,        // ...and the lines on bare skin (an arm on a bare chest)
   // the outline, on the art grid (people.js): [lit side: how much of the colour it borders, its brightest; the same in the shade]
   // (the owner, 11-20: the concepts' soft outline in the colour of what it outlines, "slightly darker" so the people sit with
   // the world's benches and lamps - and never bright enough to read as more skin: in the game a paler one made blobs of heads and hands)
@@ -361,7 +362,8 @@ export const POLISH = {
       if (LN[i] || (gi !== GR.TORSO && gi !== GR.SKIRT && gi !== GR.LEGL && gi !== GR.LEGR)) continue;
       for (const j of [i - 1, i + 1]) if (arm(g(j)) && NEAR[j] > NEAR[i] + 0.2 && !(this.lnC && Math.abs(CR[i] - CR[j]) + Math.abs(CG[i] - CG[j]) + Math.abs(CB[i] - CB[j]) > this.lnC)) { hit.push(i); break; }   // (lnC: not where the colours part them already)
     }
-    for (const i of hit) { LN[i] = 1; CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; }
+    const sk = fig.W.skin, isSkin = (i) => sk.some((c) => c[0] === CR[i] && c[1] === CG[i] && c[2] === CB[i]);
+    for (const i of hit) { const k = this.lnSkin && isSkin(i) ? this.lnSkin : 0; LN[i] = 1; CR[i] = CR[i] * (0.52 + k) + 8; CG[i] = CG[i] * (0.48 + k) + 6; CB[i] = CB[i] * (0.56 + k) + 14; }
   },
 };
 // ---- pass 3 (docs/tasks/CHARACTERS3.md; gap 7): every hairstyle drawn as the concepts draw hair (CB3, CC2, C4) - a mass
@@ -418,7 +420,7 @@ function cut4(S, c, l) {
   if (!c) {
     if (bt === 'trunk') return l.al < 0.33 ? 2 : 0;
     if (bt === 'boxer') return l.al < 0.41 ? 2 : 0;
-    if (bt === 'brief' && fem) return l.sd < 0.2 && l.al < 0.16 + 0.1 * (0.2 - l.sd) ? 2 : 0;   // (pass 5: a woman's briefs smaller)
+    if (bt === 'brief' && fem) return l.sd < -0.25 && l.al < 0.16 + 0.1 * (0.2 - l.sd) ? 2 : 0;   // (11-20: the inside of the thigh only - on the chunky build's two rows the wider cut was a band, not a triangle)   // (pass 5: a woman's briefs smaller)
     return bt && l.al < (bt === 'body' ? 0.21 + 0.06 * Math.max(0, Math.min(1.4, 0.5 - l.sd)) : 0.24 + 0.09 * Math.max(0, Math.min(1.4, 0.5 - l.sd))) ? 2 : 0;   // (the leg line: from the hip down to the inside of the thigh)
   }
   const u = c.u, au = Math.abs(u), z = c.z, front = c.f > 0, has = (a) => (c.u0 <= a && a <= c.u1) || (c.u0 <= -a && -a <= c.u1), row = (v) => c.z0 <= v && v <= c.z1;
@@ -470,6 +472,15 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
   // (a waist is level at this size: the bottom half runs on across an art pixel that has it on both sides)
   for (const [key, c] of cells) if (!c.g && !c.leg) { const a = cells.get(key - 1), b = cells.get(key + 1); if (a && b && a.g === 2 && b.g === 2) c.fill = 1; }
   for (const c of cells.values()) if (c.fill) c.g = 2;
+  // (11-20, the chunky build: a piece cut on a dozen art pixels of torso - fewer at an angle, half of it behind an arm - is
+  // tidied as a shape. A hole in it closes; a two-piece's halves never touch (the lowest art pixel of the top gives way: a
+  // bra and briefs were one blob at an angle); an art pixel of it on its own goes.)
+  const gk = (key) => { const c = cells.get(key); return c ? c.g : 0; }, N4 = (key) => [key - 1, key + 1, key - K, key + K];
+  for (const [key, c] of cells) if (!c.g && !c.leg) { const n = N4(key).map(gk).filter((g) => g); if (n.length >= 3) c.fill = n[0] === 3 || n[0] === 4 ? 1 : n[0]; }
+  for (const c of cells.values()) if (c.fill > 0 && !c.g) c.g = c.fill;
+  if (S.bt && S.bt !== 'body' && tt && tt !== 'tee' && tt !== 'tank') for (const [key, c] of cells) if (c.g && c.g !== 2 && gk(key + K) === 2) c.g = 0;
+  for (const [key, c] of cells) if (c.g && !N4(key).some(gk)) c.lone = 1;
+  for (const c of cells.values()) if (c.lone) c.g = 0;
   const G = (key) => { const c = cells.get(key); return c ? c.g : -1; }, tee = tt === 'tee', RB = tee ? RT : RC, RBAND = tee ? RC : RT, tones = new Map();
   // (clean tones: an art pixel between two of the piece's in one tone takes it - no speckle from the body's dither)
   for (const [key, c] of cells) { const a = cells.get(key - 1), b = cells.get(key + 1); tones.set(key, c.g && a && b && a.g && b.g && a.i === b.i ? a.i : c.i); }
@@ -482,7 +493,7 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
     else if (U.lace && up === 0) j++;                                                                 // (...and its top edge a lighter band)
     else if (c.g === 2 && c.leg && dn === 0) j--;                                                     // (the hem of trunks and boxers, a step darker)
     else if (c.g === 2 && !c.leg && c.z < -2.6) j--;                                                  // (under the curve)
-    if (U.gloss && i >= 3) j++;
+    if (U.gloss && i >= 4) j++;   // (a sheen on the lightest tone only: from tone 3 a red teddy was half pale pink)
     j = Math.max(0, Math.min(4, j));
     if (edge && j && dist(R[j], SK[c.i]) < 120) j--;                                                  // (pale cloth on pale skin: its edge a step darker, so the piece has a shape)
     const C = R[j], L = R[Math.max(0, j - 2)];                                                        // (a line the renderer drew on the body there - under the bust, beside an arm - a fold of the cloth)
