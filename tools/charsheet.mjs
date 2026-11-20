@@ -238,7 +238,7 @@ const PASS1 = () => ({ ...POLISH, dress: null, post: null, hairK: null, pass1: t
 // (pass 2 as it was: pass 3's additions to the pass switched off - each is a key of its own on POLISH)
 const PASS2 = () => ({ ...POLISH, ...Object.fromEntries(P3_KEYS.map((k) => [k, null])), mouthOn: true });
 const P3_KEYS = ['hairLit', 'selfie'];
-async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 150 } = {}) {
+async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 150, ret = false } = {}) {
   const CW = cw * k, RH = rh * k, n = Math.max(...rows.map((r) => r[1].length)), sh = new Sheet(label + n * CW + 8, 24 + rows.length * RH + 8, bg);
   sh.text(title, 8, 6, 2);
   for (const [ri, [name, cells]] of rows.entries()) {
@@ -257,6 +257,7 @@ async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 15
       if (c.t) sh.text(c.t, x - CW / 2 + 3, y - RH + 2 * k + 3, 1, [225, 225, 230]);
     }
   }
+  if (ret) return sh;
   sh.save(out);
 }
 const dressed = (base, outfit, body = {}, more = {}) => { const L = LK.emptyLook(base); Object.assign(L.body, body); if (more.hair) Object.assign(L.hair, more.hair); if (more.face) Object.assign(L.face, more.face); if (more.extras) Object.assign(L.extras, more.extras); for (const [s, v] of Object.entries(outfit)) L.outfit[s] = typeof v === 'string' ? LK.item(v) : Array.isArray(v) ? LK.item(...v) : v; return LK.validLook(L); };
@@ -270,6 +271,26 @@ async function under(out) {
   const half = Math.ceil(rows.length / 2);
   await grid(out.replace('.png', '-1.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF', rows.slice(0, half), { k: 6, rh: 32 });
   await grid(out.replace('.png', '-2.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF', rows.slice(half), { k: 6, rh: 32 });
+}
+// pass 4 (docs/tasks/CHARACTERS4.md): every underwear piece on both bases - S, SE, E, N, walking (front and side), then
+// on the lightest and the darkest skin. Pass 3's half is a picture kept from the commit before the redraw
+// (--snap writes one: pass4/underwear-pass3.png); the sheet is that picture beside today's drawing.
+async function p4under(out) {
+  const U = LK.PIECES.filter((p) => p && p.slot === 'under'), rows = [], SK = [2, 9, 5, 12, 0, 7, 13, 4];
+  for (const base of ['m', 'f']) for (const [i, p] of [null, ...U.filter((q) => q.b.includes(base))].entries()) {
+    const mk = (skin) => dressed(base, p ? { under: p.name } : {}, { skin, build: base === 'm' ? [1, 2, 0, 4][i % 4] : [3, 1, 0, 2][i % 4] }, { hair: { style: base === 'f' ? [20, 21, 16, 9][i % 4] : [6, 2, 8, 1][i % 4], color: [3, 0, 5, 1][i % 4] } });
+    const L = mk(SK[i % SK.length]);
+    rows.push([(p ? p.name : 'basic (none picked)').replace(' and ', ' +|') + '|' + (base === 'm' ? 'MAN' : 'WOMAN'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 2, pose: 'walk0', f: 3 }, { L: mk(0), d: 1 }, { L: mk(13), d: 1 }, { L: mk(13), d: 5 }]]);
+  }
+  const snap = argv.includes('--snap'), file = join(P4, 'underwear-pass3.png'), o = { k: 6, rh: 32, cw: 20, label: 150, ret: true };
+  const now = await grid(out, snap ? 'PASS 3' : 'PASS 4: S, SE, E, N, WALKING (S, E), LIGHTEST AND DARKEST SKIN (SE, SE, NW)', rows, o);
+  if (snap) return now.save(file);
+  const I = readPng(file), sh = new Sheet(I.w + now.w - o.label + 12, now.h);
+  pasteScaled(sh, I, 0, 0, I.w);
+  for (let y = 0; y < now.h; y++) for (let x = o.label; x < now.w; x++) { const q = (y * now.w + x) * 3; sh.rect(I.w + 12 + x - o.label, y, 1, 1, [now.d[q], now.d[q + 1], now.d[q + 2]]); }
+  sh.rect(0, 0, sh.w, 22, [107, 111, 120]);
+  sh.text('UNDERWEAR: PASS 3 (LEFT) | PASS 4 (RIGHT) - S, SE, E, N, WALKING (S, E), LIGHTEST AND DARKEST SKIN (SE, SE, NW)', 8, 6, 2);
+  sh.save(out);
 }
 // every uniform and job look, then the city's archetypes (server entities.js) as the game draws them
 const JOBS = () => {
@@ -448,7 +469,7 @@ async function versus(outDir) {
     sh.save(join(outDir, 'vs-' + img + '.png'));
   }
 }
-const DOCS = join(ROOT, 'docs', 'characters'), P2 = join(DOCS, 'pass2'), P3 = join(DOCS, 'pass3');
+const DOCS = join(ROOT, 'docs', 'characters'), P2 = join(DOCS, 'pass2'), P3 = join(DOCS, 'pass3'), P4 = join(DOCS, 'pass4');
 if (mode === 'before') await lineup(false, arg('out', join(DOCS, 'before.png')), 'TODAY\'S PEOPLE (BEFORE)');
 else if (mode === 'after') await lineup(true, arg('out', join(DOCS, 'after.png')), 'AFTER: THE POLISH PASS');
 else if (mode === 'side') await sides(arg('out', DOCS));
@@ -472,5 +493,6 @@ else if (mode === 'p3body') await p3body(arg('out', join(P3, 'body.png')));
 else if (mode === 'p3drapes') await p3drapes(arg('out', join(P3, 'drapes.png')));
 else if (mode === 'p3phone') await p3phone(arg('out', join(P3, 'phone.png')));
 else if (mode === 'p3props') await p3props(arg('out', join(P3, 'props.png')));
+else if (mode === 'p4under') await p4under(arg('out', join(P4, 'underwear.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

@@ -25259,3 +25259,10 @@ for pixel what they were. Notes and what reads well or weakly: `docs/characters/
   a line in `client/creator.js` (a syntax error) - fixed, and both pass again.
   Sheets: `node tools/charsheet.mjs p3police | p3mouth | p3hair | p3socks | p3gear | p3body | p3drapes | p3phone |
   p3props | anim`. Not seen running in a browser; not stamped (this checkout can't): stamp on merge.
+
+## 2026-11-19 · Characters, polish pass 4: the owner's calls, underwear redrawn (branch characters, staged)
+
+- **The owner's calls:** sergeants stay navy; the nine pieces only the pass draws are out of the stores' stock while the pass is off (`shared/wardrobe.js` `PASS_SOLD` - set it true when the pass goes live); the five draped pieces are out of random looks (still sold).
+- **Underwear** (behind the switch): every piece is cut on the art grid after the figure is lit (`client/art2/peoplepolish.js` `cut4`, `under4`) - whole-pixel edges, one-pixel straps and waistbands, briefs that show from the front, pale cloth shaded cool instead of the skin's brown, lace as a lighter edge and a bow. Sheet: `docs/characters/pass4/underwear.png` (pass 3 | pass 4).
+- **Budget:** the renderer's limit stays 414 KB. The owner allowed up to 430 for this work; it was not needed here - the redraw is all in the pass's own file, which is in no budget, and no file the renderer loads changed.
+- **Not done:** the task's item 3 (the weak pieces' geometry). Notes: `docs/characters/NOTES.md`, "Pass 4".

@@ -114,28 +114,36 @@ export const POLISH = {
     const wrap = (k, f) => { const o = W[k]; if (o) W[k] = (Q) => f(o(Q), Q); };
     for (const k of ['torso', 'arm', 'leg', 'skirt', 'hood', 'collar', 'shoe', 'sole', 'hat', 'brim', 'lining', 'apron', 'pack', 'leather', 'case', 'beltbag']) wrap(k, fix);
     const bothDark = isDark(W.top) && isDark(W.bot) && !T.dress && !T.long && !T.bib;
-    // underwear (lookcore.js 'under': A.under, on the halves no clothes cover): briefs that are briefs - full, cut at the
-    // leg - trunks and boxers with a waistband in the trim colour, boxers a little down the thigh, a sports bra a wide
-    // band, lace the trim colour scattered through it, silk a sheen
-    const U = A.under, ub = U && A.bottom && A.bottom.under && W.bk !== 'none', ut = U && A.top && A.top.under, band = U && cloth(U.trim), hs = (Q, n) => ((Math.floor(Q.x / 2) * 7 + Math.floor(Q.y / 2) * 13 + n) % 5 === 0);
-    const lace = (R, Q) => { if (U.gloss) Q.gloss = 0.7; return U.lace && hs(Q, 1) ? band : R; };
-    if (ub) {
-      const brief = W.bk === 'bikini', o = W.pel;
-      W.pel = (Q) => {
-        const R = o(Q), z = Q.z, au = Math.abs(Q.u);
-        if (R !== W.bot && R !== W.skin) return R;
-        const top = brief ? 1.7 : 2.5;
-        if (z > top || (brief && au > 0.66 && z < -0.2)) return W.skin;
-        return U.band && z > top - 0.75 ? band : lace(W.bot, Q);
+    // underwear (lookcore.js 'under': A.under, on the halves no clothes cover) - pass 4, under4 below: the body under it
+    // is handed to the renderer as skin and every pixel's place on the body kept; post() cuts the piece on the art grid
+    // (no piece picked: the plain basics every look has - lookcore.js lookArt - cut the same way)
+    const basic = (h) => !!h && !h.under && h.trim === undefined && h.color === '#e8e4dc', U = A.under || ((basic(A.top) || basic(A.bottom)) && { color: '#e8e4dc', trim: '#c8ccd4', band: 1, fit: 1 });
+    const cells = U && !T.dress && !T.long, ub = cells && A.bottom && (A.bottom.under || basic(A.bottom)) && W.bk !== 'none', ut = cells && A.top && (A.top.under || basic(A.top));
+    const bt = !ub ? 0 : T.swimsuit ? 'body' : W.bk === 'bikini' ? 'brief' : W.bk === 'trunks' ? (U.fit ? 'trunk' : 'boxer') : 0;
+    const tt = !ut ? 0 : T.swimsuit ? 'body' : T.bikini ? (W.tk === 'bikini' ? 'bandeau' : U.sport ? (U.lace ? 'bralette' : 'sport') : 'bra') : W.tk === 'tank' ? 'tank' : W.tk === 'under' ? 'tee' : 0;
+    if (bt || tt) {
+      const S = W.u4 = { rec: [], U, bt, tt, cu: D.chestUp, su: D.shUp, fem: D.fem, SK: W.skin, RC: pale4(far4(cloth(U.color), W.skin)), RT: pale4(relit(cloth(U.trim))) };
+      const hemZ = T.tuck ? 3.3 : T.bare || T.bikini || T.towel || T.crop ? 9 : T.tank ? 0.4 : -0.9, mine = new Set([W.top, relit(W.top)]), ours = new Set([W.bot, relit(W.bot)]);
+      const body = (R, Q) => {
+        const low = Q.part === 'pel' && Q.z <= hemZ;
+        if (low ? !bt || (R !== W.skin && !ours.has(R)) : R !== W.skin && !(tt && mine.has(R))) return R;
+        if (Q.res !== 1) { const g = cut4(S, { n: 1, bust: Q.part === 'bust' ? 1 : 0, u: Q.u, z: Q.z, f: Q.f, u0: Q.u - 0.06, u1: Q.u + 0.06, z0: Q.z - 0.5, z1: Q.z + 0.5 }, null); return g ? (g === 2 && tt === 'tee' ? S.RT : S.RC) : W.skin; }   // (close up: cut pixel by pixel)
+        S.rec.push(Q.x, Q.y, Q.part === 'bust' ? 1 : 0, Q.u, Q.z, Q.f);
+        return W.skin;
       };
-      if (!brief && !U.fit) wrap('leg', (R, Q) => (Q.part === 'th' && Q.l0 < 0.62 ? lace(W.bot, Q) : R));
+      wrap('torso', body); wrap('pel', body);
+      if (bt) wrap('leg', (R, Q) => {
+        if (Q.part !== 'th' || (R !== W.skin && !ours.has(R))) return R;
+        const al = Q.l0 * 0.5, sd = Q.l1 * Q.side;
+        if (Q.res !== 1) return cut4(S, null, { al, sd }) ? (tt === 'tee' ? S.RT : S.RC) : W.skin;
+        S.rec.push(Q.x, Q.y, 2, al, sd, Q.l2);
+        return W.skin;
+      });
     }
-    if (ut && T.bikini) wrap('torso', (R, Q) => {
-      const z = Q.z, au = Math.abs(Q.u);
-      if (U.sport && z > D.chestUp - 1.5 && z < D.shUp - 1.3 && (z < D.chestUp + 1.9 || (au > 0.22 && au < 0.42))) return W.top;
-      return R === W.top ? lace(R, Q) : R;
-    });
-    else if (ut && U.lace) wrap('torso', (R, Q) => (R === W.top ? lace(R, Q) : R));
+    // (the pieces the renderer has a shape for: a union suit's buttons down the front, a slip's hem in a lighter band)
+    if (U && A.top && A.top.under && W.tk === 'longsleeve') wrap('torso', (R, Q) => (Q.f > 0.05 && Math.abs(Q.u) < 0.07 && (Math.floor(Q.y / 2) & 1) ? cloth(U.trim) : R));
+    // (...and a pale one of them - a slip, an undershirt's sleeves - shaded cool like the rest: pale4)
+    if (U && A.top && A.top.under && (T.dress || W.tk === 'under' || W.tk === 'longsleeve')) { const t0 = relit(W.top), t1 = pale4(t0); for (const k of ['torso', 'arm', 'skirt', 'pel', 'leg']) wrap(k, (R, Q) => { if (R !== t0 && R !== W.top) return R; if (T.dress && k === 'skirt' && Q.l0 > 0.82) Q.k += 0.22; if (U.gloss) Q.gloss = 0.7; return t1; }); }
     // uniforms that read at a glance (C3, CC5, SF21, SM21). The police's (T.duty): a badge big enough to be an art pixel
     // of gold, a shoulder patch, a gold buckle on the black belt. A plain work uniform (chef, postal, paramedic) has no
     // badge and no holster. Reflective bands (lookcore d.bands) round the chest, the arms and the shins.
@@ -266,7 +274,9 @@ export const POLISH = {
   // the arm over the body: a line on the body's pixels beside an arm in front of them, however close the two are (the
   // renderer's own lines want a clear step in depth: an arm hanging by a chest has none, and the two were one mass)
   post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, GR, AX, AY, fig, A }) {
-    if (this.hairLit && fig.W.hairR) hairLit(fig.W.hairR, A.hair && A.hair.style, PID, CR, CG, CB, prims, w, h, GR, Math.round(AX) & 1, Math.round(AY) & 1);
+    const gx = Math.round(AX) & 1, gy = Math.round(AY) & 1;   // (where the art grid falls: the bake pairs world pixels from the anchor)
+    if (this.hairLit && fig.W.hairR) hairLit(fig.W.hairR, A.hair && A.hair.style, PID, CR, CG, CB, prims, w, h, GR, gx, gy);
+    if (fig.W.u4) under4(fig.W.u4, LN, CR, CG, CB, w, AX, AY, gx, gy);
     const g = (i) => { const k = PID[i]; return k >= 0 && k < 32000 && !NOO[i] ? prims[k].g : 0; }, arm = (x) => x === GR.ARML || x === GR.ARMR;
     const hit = [];
     for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
@@ -314,6 +324,93 @@ function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
     const c = TN[t]; CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2];
   }
 }
+// ---- pass 4 (docs/tasks/CHARACTERS4.md): underwear cut on the art grid (SF23-A..G, SM23). The renderer's own underwear
+// is a colour by where a world pixel sits on the body - at the game's size its edges fall between art pixels and blend
+// with the skin, and the waist's own shape hides briefs from the front. Here every art pixel of the bare body is one
+// thing: skin, the piece, its band or a strap. cut4 says which, by the art pixel's place on the body - c: the torso and
+// the pelvis (u across in chest half-widths, z up from the hips, f forward; u0..u1, z0..z1 what the art pixel spans, so
+// a strap or a band is the one art pixel its line runs through), l: a thigh (al 0 the hip .. 0.5 the knee - the first
+// quarter is inside the hips - sd -1 the inside .. 1 the outside). 0 skin, 1 the top half, 2 the bottom half, 3 a
+// strap, 4 between a bra's cups.
+function cut4(S, c, l) {
+  const { tt, bt, cu, su, fem } = S;
+  if (!c) {
+    if (bt === 'trunk') return l.al < 0.33 ? 2 : 0;
+    if (bt === 'boxer') return l.al < 0.41 ? 2 : 0;
+    return bt && l.al < (bt === 'body' ? 0.21 + 0.06 * Math.max(0, Math.min(1.4, 0.5 - l.sd)) : 0.24 + 0.09 * Math.max(0, Math.min(1.4, 0.5 - l.sd))) ? 2 : 0;   // (the leg line: from the hip down to the inside of the thigh)
+  }
+  const u = c.u, au = Math.abs(u), z = c.z, front = c.f > 0, has = (a) => (c.u0 <= a && a <= c.u1) || (c.u0 <= -a && -a <= c.u1), row = (v) => c.z0 <= v && v <= c.z1;
+  const high = (k) => au > k + (front ? 0 : 0.14) + (z + 2.6) * 0.16;   // (cut high at the leg, fuller behind)
+  if (tt === 'body' || bt === 'body') {   // a bodysuit, a teddy: a V at the neck, a low back, thin straps, the leg cut high
+    if (z < 1.5) return bt && !high(0.3) ? 2 : 0;
+    if (!tt) return 0;
+    const neck = front ? cu + 3.4 - Math.max(0, 0.32 - au) * 5 : cu + 0.8;
+    if (z < neck && !(au > 0.56 && z > cu + 1.6)) return 1;
+    return has(0.36) && z < su + 0.6 ? 3 : 0;
+  }
+  if (tt === 'bra') {   // two cups apart, a band under them and round the back, a strap over each shoulder
+    if (z > cu - 1.6 && z < cu + 2.8 && (front ? au < 0.68 && !(au < 0.1 && z > cu + 1.4) : z < cu + 0.4)) return front && au < 0.1 && z > cu - 0.4 ? 4 : 1;   // (4: between the cups - a lace set's bow)
+    if (has(0.36) && z > cu && z < su + 0.6) return 3;
+  } else if (tt === 'sport') {   // a wide band to under the bust, a scooped neck, broad straps
+    if (z > cu - 2.2 && z < su + 0.8 && !(au > 0.52 && z > cu + 1.4) && !(front ? au < 0.2 && z > cu + 3.6 : au < 0.16 && z > cu + 3.8)) return 1;
+  } else if (tt === 'bralette') {   // triangle cups on a longer band, thin straps
+    if (z > cu - 2.4 && z < (front ? cu + 3.4 - Math.abs(au - 0.34) * 8 : cu - 0.4)) return 1;
+    if (has(0.34) && z > cu - 0.4 && z < su + 0.6) return 3;
+  } else if (tt === 'bandeau') {   // strapless: a band round the chest
+    if (z > cu - 1.4 && z < cu + 2.6) return 1;
+  } else if (tt === 'tank') {   // a ribbed tank: cut in at the arms, a scooped neck, its hem on the hips
+    if (z > 1.2 && !(au > 0.5 && z > cu + 0.8) && !(front ? au < 0.22 && z > cu + 3.2 - (0.22 - au) * 4 : au < 0.18 && z > su - 1)) return 1;
+  } else if (tt === 'tee') {
+    if (z > -0.8 && !(front && au < 0.2 && z > su - 1.2)) return 1;
+  }
+  if (bt === 'brief') return z < (fem ? 2.8 : 3.4) && !high(0.52) ? 2 : 0;
+  return bt && z < (fem ? 3.0 : 3.4) ? 2 : 0;
+}
+function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
+  const { rec, U, SK, RC, RT, tt } = S, cells = new Map(), K = 4096;
+  for (let n = 0; n < rec.length; n += 6) {
+    const x = Math.round(rec[n] + AX), y = Math.round(rec[n + 1] + AY), key = ((y + oy) >> 1) * K + ((x + ox) >> 1), k = rec[n + 2], a = rec[n + 3], b = rec[n + 4];
+    let c = cells.get(key);
+    if (!c) cells.set(key, c = { px: [], n: 0, bust: 0, u: 0, z: 0, f: 0, u0: 9, u1: -9, z0: 99, z1: -99, ln: 0, al: 0, sd: 0, g: 0, i: 2 });
+    c.px.push(y * w + x);
+    if (k === 2) { c.ln++; c.al += a; c.sd += b; }
+    else { c.n++; c.bust += k; c.u += a; c.z += b; c.f += rec[n + 5]; c.u0 = Math.min(c.u0, a); c.u1 = Math.max(c.u1, a); c.z0 = Math.min(c.z0, b); c.z1 = Math.max(c.z1, b); }
+  }
+  for (const c of cells.values()) {
+    c.leg = c.ln > c.n;
+    if (c.leg) { c.al /= c.ln; c.sd /= c.ln; c.g = cut4(S, null, c); }
+    else { c.u /= c.n; c.z /= c.n; c.f /= c.n; c.g = cut4(S, c, null); }
+    // its tone: the body's own light on that art pixel (the skin's step there), on the cloth's ramp
+    let i = 0, m = 0;
+    for (const p of c.px) for (let q = 0; q < 5; q++) if (SK[q][0] === CR[p] && SK[q][1] === CG[p] && SK[q][2] === CB[p]) { i += q; m++; break; }
+    if (m) c.i = Math.round(i / m);
+  }
+  // (a waist is level at this size: the bottom half runs on across an art pixel that has it on both sides)
+  for (const [key, c] of cells) if (!c.g && !c.leg) { const a = cells.get(key - 1), b = cells.get(key + 1); if (a && b && a.g === 2 && b.g === 2) c.fill = 1; }
+  for (const c of cells.values()) if (c.fill) c.g = 2;
+  const G = (key) => { const c = cells.get(key); return c ? c.g : -1; }, tee = tt === 'tee', RB = tee ? RT : RC, RBAND = tee ? RC : RT, tones = new Map();
+  // (clean tones: an art pixel between two of the piece's in one tone takes it - no speckle from the body's dither)
+  for (const [key, c] of cells) { const a = cells.get(key - 1), b = cells.get(key + 1); tones.set(key, c.g && a && b && a.g && b.g && a.i === b.i ? a.i : c.i); }
+  for (const [key, c] of cells) {
+    if (!c.g) continue;
+    const up = G(key - K), dn = G(key + K), i = tones.get(key), edge = !up || !dn || !G(key - 1) || !G(key + 1);
+    let R = c.g === 2 ? RB : RC, j = i;
+    if (c.g === 2 && !c.leg && U.band && up !== 2 && (up !== 1 || tee || tt === 'tank')) R = RBAND;                    // (the waistband: the top art pixel)
+    else if (U.lace && (c.g === 4 || (c.g === 2 && !c.leg && up !== 2 && c.f > 0 && c.u0 <= 0 && c.u1 >= 0))) { R = RT; j = 4; }   // (lace: a bow in the trim colour between the cups and on the waist)
+    else if (U.lace && up === 0) j++;                                                                 // (...and its top edge a lighter band)
+    else if (c.g === 2 && c.leg && dn === 0) j--;                                                     // (the hem of trunks and boxers, a step darker)
+    else if (c.g === 2 && !c.leg && c.z < -2.6) j--;                                                  // (under the curve)
+    if (U.gloss && i >= 3) j++;
+    j = Math.max(0, Math.min(4, j));
+    if (edge && j && dist(R[j], SK[c.i]) < 120) j--;                                                  // (pale cloth on pale skin: its edge a step darker, so the piece has a shape)
+    const C = R[j], L = R[Math.max(0, j - 2)];                                                        // (a line the renderer drew on the body there - under the bust, beside an arm - a fold of the cloth)
+    for (const p of c.px) { const q = LN[p] ? L : C; CR[p] = q[0]; CG[p] = q[1]; CB[p] = q[2]; }
+  }
+}
+// (a pale cloth's ramp shades to a warm brown - on a bare body, the skin's own tones: underwear's pale cloth shades cool instead)
+// (a dark cloth on dark skin stays dark: re-lit to charcoal it would be the skin's own lightness)
+const far4 = (R, SK) => { const N = relit(R); return dist(N[2], SK[2]) < dist(R[2], SK[2]) ? R : N; };
+const pale4 = (R) => (lum(R[3]) > 0.68 ? R.map((c, i) => mix(R[4], [118, 128, 160], [0.6, 0.45, 0.3, 0.14, 0][i])) : R);
 // a dark ramp re-lit (kept per ramp; a re-lit ramp is its own)
 const RELIT = new WeakMap(), DARK_L = [0.06, 0.11, 0.185, 0.3, 0.44];
 const isDark = (R) => Array.isArray(R) && R.length === 5 && lum(R[3]) < 0.27;

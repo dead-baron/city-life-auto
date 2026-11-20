@@ -342,3 +342,85 @@ on an older build cannot read a longer code and draws that player's stand-in unt
 3. **Pieces only the pass draws** (gear, props, body options) are hidden in the creator while it is off but are in
    the stores' stock lists. If the pass stays off for long, say if they should be held back from the stores too.
 4. **The name tag's height on large screens** (above).
+
+---
+
+# Pass 4 - notes (2026-11-19): the owner's calls, underwear redrawn
+
+The task is `docs/tasks/CHARACTERS4.md`. Items 1 and 2 are built, each its own commit. Item 3 (the pieces that read
+weakly) was **not started** - the credit went on the underwear. Nothing was pushed; not seen running in a browser;
+not stamped (stamp on merge).
+
+## The owner's calls (11-19)
+
+1. **Sergeants stay navy.** Already so; the open question is closed in the decisions register and a test holds it.
+2. **Pieces only the pass draws are not sold while the pass is off:** `shared/wardrobe.js` `PASS_SOLD` (false). The
+   nine of them (knee, elbow and skate pads, wallet chain, tool belt, climbing harness, camera, bouquet, parasol) are
+   out of every store's stock; **set it to `true` the day the pass goes live.** A tester with the pass switched on in
+   their own browser sees them in the creator padlocked, with no store named.
+3. **The five draped pieces are out of the city's random looks** (`shared/look.js` `pieceList`: no `d.dr`): hooded
+   cloak, cape coat, sari, ghillie suit, morning dress. Still sold and wearable. This also takes them out of the
+   creator's Randomise and the fitting rooms' suggested outfits, which draw from the same list.
+
+## Underwear (`docs/characters/pass4/underwear.png`: pass 3 left, pass 4 right)
+
+Sheet: `node tools/charsheet.mjs p4under` (the left half is a picture kept from the commit before the redraw,
+`underwear-pass3.png`; `--snap` would rewrite it from today's drawing, so don't). Every piece on both bases: S, SE, E,
+N, walking from the front and the side, then the lightest and the darkest skin.
+
+**What was wrong in pass 3,** found by reading the sprites' pixels: (a) briefs were all but invisible from the front -
+the waist's own shape is drawn over the hips and was always skin; (b) a piece's edge fell between art pixels and
+blended with the skin; (c) white and cream cloth shade to a warm brown in the renderer's ramps, which on a bare body
+is the skin's own colour - the "blotches"; (d) lace was the trim colour scattered at random.
+
+**What pass 4 does** (`client/art2/peoplepolish.js` `cut4`, `under4`; behind the switch, like the rest of the pass):
+the body under a piece is handed to the renderer as bare skin, each pixel's place on the body is kept, and after the
+figure is lit the piece is cut one art pixel at a time - skin, the piece, its band, or a strap. So an edge is always a
+whole art pixel, a strap or a band is one art pixel wide, and the cloth takes the body's own light (the skin's step
+there, on the cloth's ramp) - one tone an art pixel.
+
+- **Briefs:** a level waist, a leg line cut from the hip down to the inside of the thigh, fuller behind; a waistband
+  in the trim colour where the piece has one. **Boxers** reach down the thigh, **trunks and boxer briefs** a little
+  less, both with a darker hem.
+- **Bra:** one block across the chest with a notch between the cups, a band round the back, a strap over each
+  shoulder. **Sports bra:** a wide band, scooped neck, broad straps. **Bralette:** triangle cups on a longer band.
+  **Strapless:** a band round the chest. **Bodysuit and teddy:** a V neck, a low back, thin straps, the leg cut high.
+  **Tank:** cut in at the arms, a scooped neck, its hem on the hips with the briefs' band under it.
+  **Undershirt and boxers:** the boxers are in the trim colour now (they were white under a white tee).
+- **Lace:** a lighter band along the piece's top edge and a bow in the trim colour (between the cups, on the waist) -
+  no scatter. Opaque.
+- **Pale cloth shades cool** (a blue-grey) instead of warm brown, the slip and the undershirt's sleeves too. Pale
+  cloth on pale skin gets its edge a step darker, so the piece has a shape. **Black on dark skin stays black**
+  (re-lit to charcoal it was the skin's own lightness).
+- **No piece picked** ("Basic") is cut the same way: fitted white trunks for a man, a tank and briefs for a woman.
+- **Left to the renderer** (shapes it has): the union suit (buttons down the front now) and the silk slip.
+- **Nothing on** is untouched: the mosaic, as before. With the pass off every piece draws as it did.
+
+**How well they read.** Good: boxers, boxer briefs, fitted trunks, silk boxers, briefs, bra and briefs, tank and
+briefs, the strapless set, the teddy, the slip. Fair: the sports set (a grey band and grey shorts - two blocks, no
+detail), the bralette set (reads as a green set; the triangle cups don't show as triangles at this size). Weakest:
+the lace set and the lace bodysuit on dark skin - a dark piece on dark skin is a dark shape with a light bow; and
+long hair worn forward covers most of a bra.
+
+## Budgets and tests
+
+- **The renderer's budget is unchanged: 414 KB, not raised.** All of the redraw is in `peoplepolish.js`, which loads
+  only when the pass is on and is in no budget; no file in the renderer's closure changed, so it stands where pass 3
+  measured it (413.97, by hand). The allowance to 430 is unused - item 3's geometry is what would need it.
+- `test/characters4.test.js` (7 tests): the three calls; every piece shows from five sides and in the walk on both
+  bases; briefs read from the front; white on every other skin tone stays a few cool tones of its own.
+- A mistake caught on the way: I "fixed" the art grid's alignment for cropped figures, the hair test failed, and
+  measuring showed the crop cancels out - pass 3's alignment was right. Reverted; `people.js` is untouched.
+
+## What's left
+
+- **Item 3, all of it:** the sari's drape and sash, the cape apart from the coat, the open parasol, a thinner
+  prosthetic, elbow pads, the wallet chain, the bouquet; sheet `pass4/weak.png`.
+- Underwear: stripes and prints on a piece (SF23's striped set, SM23's plaid boxers) - patterns are not carried into
+  the cut; the close-up renderer (`R > 1`) cuts pixel by pixel, without bands or lace - not looked at.
+- As before: nothing here was seen in the game's lighting.
+
+## The owner's choices
+
+1. **Look at `pass4/underwear.png`** - approve, or say which pieces to push further.
+2. **Undershirt and boxers:** the boxers now take the trim colour. Say if they should stay the piece's colour.
