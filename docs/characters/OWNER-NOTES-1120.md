@@ -75,3 +75,8 @@ detail, people should blink, or everyone stares.
 - Reminder from him: glasses a size bigger (the size-ups batch).
 - Body: her upper back flatter (the bump behind the shoulder), the seat fuller "like the chest is". Good as it is otherwise.
 - Straps must join their top: a tank top's and a swimsuit's are a whole art pixel wide now.
+
+## 15:06
+- The renderer's budget raised on his word (470 KB; the bake's 1045): tools/perf.mjs, DEVLOG, DECISIONS.
+- A woman's side shape "is looking good"; the neckline over the bust comes in now (the bust lower and out, the chest over it set back).
+- Shown across the five builds, women and men. A big build's belly stays bare between a bra and briefs (it took the cups).

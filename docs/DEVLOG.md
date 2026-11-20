@@ -25289,3 +25289,13 @@ The owner picked the direction from sheets and shots in the real game: **the con
 - **Going live re-keys the art:** `people.js` is one of the files the art hash reads, so merging this (as with passes 1-5) makes the server bake every chunk again. Merge it with the world batch: one redraw.
 - **Not done yet:** every wardrobe piece and animation checked under the new look, the 77 missing concept pieces and the weak ones, bare feet (two points), underwear at an angle, name tags and vehicles in the game. Not approved for main.
 
+## 2026-11-20 · Characters, the afternoon: the owner's notes on the wardrobe sheets (branch characters, staged)
+
+After the morning's entry the owner went through three sheets of every wardrobe piece and wrote some forty notes (`docs/characters/OWNER-NOTES-1120.md`: each one, and what's done). So far:
+- **Hair, five rounds of his notes** - volume, knots on ties, a ponytail out behind the head, locks over the shoulders so long hair reads from the front, cropped sides in the hair's color, stubble where a style is shaved, neutral hair bands, no ear or shirt through the hair. He: "let's call hair good for now".
+- **Eyes: the picked color with a white beside it** (his pick of four shown; `POLISH.eyeMode`), the six eye shapes on it, the white behind the color in profile. **Blinking**: each person's own irregular moments (`peds.js` `blinkAt`), in still poses.
+- **Underwear**: tidied as a shape on the art grid, a strap round the hips on a woman's briefs, the bra's band round the side; the set "Underwear" is your underwear or the basics; "Nothing" is two mosaic patches. **A woman's body**: a little shape to the chest and the seat (curves, not points), a flatter upper back.
+- **Small fixes**: a paper hat on top of the hair, wide-brim hats from behind, a tank top's straps joined to it, lines on bare skin softer.
+- **Budgets raised: the renderer's code 440 -> 470 KB, the bake's 1030 -> 1045 KB** (`tools/perf.mjs`). Why: the owner's notes are drawing work in `client/art2/people.js` and `peoplepolish.js` - 439 KB with a third of them done. He: "Lets up the render's size budget" (15:06).
+- **Still to do from his notes**: stripes that follow the garment, the size-ups (glasses, necklaces, masks, bags, things held), hats, the gold Founding Citizen jacket, striped underwear. Not approved for main.
+

@@ -68,7 +68,7 @@ export const POLISH = {
     { const l0 = b.limb || 1, k = (1 + (l0 - 1) * 0.55) / l0; for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * k); D.fist *= k; }
     if (mu) { const k = (1 + mu * 0.1) / (1 + mu * 0.2), k2 = (1 + mu * 0.06) / (1 + mu * 0.12), k3 = (1 + mu * 0.05) / (1 + mu * 0.1); D.armR = [D.armR[0] * k, D.armR[1] * k2]; D.foreR[0] *= (1 + mu * 0.08) / (1 + mu * 0.15); D.shX *= k3; D.chestR[0] *= k3; }
     // a body with depth (the concepts' side views are a barrel, not a plank), and a big build's belly out in front
-    D.chestR[1] *= fem ? 0.96 : 1.1; D.waistR[1] *= fem ? 1.0 : 1.1; D.pelR[1] *= 1.08;   // (a woman's back flatter: her upper back stood out behind the shoulder in a side view - the owner, 11-20; her shape is the bust's and the seat's)
+    D.chestR[1] *= fem ? 0.84 : 1.1; D.waistR[1] *= fem ? 1.0 : 1.1; D.pelR[1] *= 1.08;   // (a woman's back flatter: her upper back stood out behind the shoulder in a side view - the owner, 11-20; her shape is the bust's and the seat's)
     if (b.belly >= 1.2) { D.waistR[0] *= 1.12; D.waistR[1] *= 1.12; D.chestR[0] *= 1.06; D.shX *= 1.05; }
     D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;
   },
@@ -180,6 +180,7 @@ export const POLISH = {
       const hemZ = T.tuck ? 3.3 : T.bare || T.bikini || T.towel || T.crop ? 9 : T.tank ? 0.4 : -0.9, mine = new Set([W.top, relit(W.top)]), ours = new Set([W.bot, relit(W.bot)]);
       const body = (R, Q) => {
         const low = Q.part === 'pel' && Q.z <= hemZ;
+        if (Q.part === 'belly' && Q.z > 3.4 && (tt === 'bra' || tt === 'sport' || tt === 'bralette' || tt === 'bandeau')) return R;   // (a big build's belly is bare between a bra and briefs: at chest height it stands out beyond the bust, and took the cups - a red ball from the side)
         if (low ? !bt || (R !== W.skin && !ours.has(R)) : R !== W.skin && !(tt && mine.has(R))) return R;
         if (Q.res !== 1) { const g = cut4(S, { n: 1, bust: Q.part === 'bust' ? 1 : 0, u: Q.u, z: Q.z, f: Q.f, u0: Q.u - 0.06, u1: Q.u + 0.06, z0: Q.z - 0.5, z1: Q.z + 0.5 }, null); return g ? (g === 2 && tt === 'tee' ? S.RT : S.RC) : W.skin; }   // (close up: cut pixel by pixel)
         S.rec.push(Q.x, Q.y, Q.part === 'bust' ? 1 : 0, Q.u, Q.z, Q.f);
