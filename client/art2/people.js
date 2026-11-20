@@ -1305,7 +1305,7 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
     undercut: [0.42, 0.42, 0.32, 0.42, 0.25], fade: [0.46, 0.42, 0.05, 0.28, -0.15], mullet: [0.42, 0.38, -0.28, 0.1, -0.6], topknot: [0.46, 0.42, -0.1, 0.12, -0.5],
     pixie: [0.3, 0.28, -0.25, 0.08, -0.55], twinbuns: [0.42, 0.38, -0.08, 0.06, -0.55], pigtails: [0.38, 0.36, -0.1, 0.0, -0.6], braid: [0.42, 0.38, -0.08, 0.06, -0.55],
     curlylong: [0.36, 0.3, -0.75, -0.75, -1.1], shag: [0.28, 0.24, -0.6, -0.6, -0.8], cornrows: [0.5, 0.44, -0.12, 0.2, -0.5], curtains: [0.3, 0.26, -0.3, 0.08, -0.6],
-    halfup: [0.4, 0.34, -0.75, -0.75, -1.1] }[st] || [0.42, 0.38, -0.28, 0.1, -0.6], LN = (PL && PL.hairLN && PL.hairLN[st]) || LN0;
+    halfup: [0.4, 0.34, -0.75, -0.75, -1.1] }[st] || [0.42, 0.38, -0.28, 0.1, -0.6], LN = (PL && PL.hairLN && (PL.hairLN[ex] || PL.hairLN[st])) || LN0;
   const AZ = [0, 0.8, 1.2, 1.32, 1.5, 1.64, 2.2, Math.PI], HV = [LN[0], LN[0], LN[1], LN[2], LN[2], LN[3], LN[3] - 0.04, LN[4]];
   const jag = st === 'spiky' || st === 'short' || st === 'curly' || st === 'bob' || st === 'pixie' || st === 'shag' || st === 'curtains' || st === 'mullet';
   const cut = hatOn ? 0.18 : (PL && PL.hairCut && PL.hairCut[ex]) || 9;

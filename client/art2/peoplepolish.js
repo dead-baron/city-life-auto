@@ -32,7 +32,7 @@ export const POLISH = {
   // hair, the owner's notes of 11-20: locs and braids hang at the sides of the face too (from the front they were a bowl cut:
   // people.js's hairline, [forehead, temple, sideburn, above the ear, nape]); a one-pixel point on top of the hair is taken
   // off, bar the styles that are points
-  hairLN: { dreads: [0.4, 0.36, -0.78, -0.78, -1.1], braids: [0.42, 0.36, -0.78, -0.78, -1.1] },
+  hairLN: { dreads: [0.4, 0.36, -0.78, -0.78, -1.1], braids: [0.42, 0.36, -0.78, -0.78, -1.1], shavedside: [0.42, 0.4, 0.2, 0.1, -0.62] },   // (the shaved-side style keeps its hair down the back: from behind it was a bare head under a cap)
   tipKeep: ['spiky', 'mohawk', 'quiff', 'shag'],
   eye2: true,         // a face at an angle keeps its far eye (people.js face)
   lnHead: 0.24,       // the line a fringe or a hat draws on the face: this much lighter (people.js: a shadow, not a headband)
@@ -297,10 +297,19 @@ export const POLISH = {
   hairCut: { balding: 0.42 },
   hair(ex, { E, at, nk, sw, lock, bumps, W, hr, HD, backY, GR, mmul, rx, ry }) {
     const M = W.hairM, e = (c, F, r, part) => E(at(c), F, r, GR.HAIR, part, M);
+    // (11-20, the owner: from the front long hair was a short cut - it all hangs behind the head and shoulders. A lock from
+    // each temple falls forward over the shoulder, to the collarbone or, for the longest, the chest)
+    // (an undercut's shaved sides and back, and the shaved-side style's: stubble - the skin with the hair's colour in it - where
+    // the hair would grow. Bare skin there was a bald head under a lid, and from behind a second face)
+    if ((ex === 'undercut' || ex === 'shavedside') && W.hairR) {
+      const SR = W.skin.map((c, i) => mix(c, W.hairR[Math.min(4, i + 1)], 0.6));
+      E(at([0, -0.04, 0.02]), HD, [hr[0] + 0.5, hr[1] + 0.55, hr[2] + 0.4], GR.HAIR, 'stubble', () => SR, (a, b, c) => c > (b > 0.3 ? 0.42 : b > -0.2 ? 0.42 - (0.3 - b) * 1.24 : -0.2 + (b + 0.2) * 0.5));
+    }
+    if (FRONT[ex]) for (const s of [-1, 1]) { const a = at([s * 0.96, 0.18, -0.12]), b = sw(nk(s * (hr[0] * 0.86), 1.5, FRONT[ex][0]), 0.35); lock(a, b, FRONT[ex][1], FRONT[ex][2], 'front'); }
     if (ex === 'flattop') e([0, -0.02, 0.86], HD, [hr[0] * 0.92, hr[1] * 0.9, 4.2], 'top'), E(at([0, -0.02, 1.02]), HD, [hr[0] * 0.98, hr[1] * 0.96, 2.2], GR.HAIR, 'top', M, (a, b, c) => c < 0.55);   // (a block, its top cut level)
     else if (ex === 'pompadour') { e([0, 0.5, 1.02], mmul(HD, rx(-0.45)), [hr[0] * 0.62, 3.9, 3.9], 'quiff'); e([0, -0.1, 0.98], HD, [hr[0] * 0.6, 4.2, 1.8], 'quiff'); }   // (11-20: narrower than the head - from the front it was a box)   // (a roll standing over the forehead, swept back)
     else if (ex === 'puffs') for (const s of [-1, 1]) { const c = at([s * 0.78, -0.2, 0.9]); E(c, HD, [3.7, 3.6, 3.5], GR.HAIR, 'afro', M); bumps(c, [3.7, 3.6, 3.5], 7, 1.5, -0.2, 1.3, 2, 0.95); }   // (two round puffs high at the sides)
-    else if (ex === 'lowpony') { const r0 = at([0, -0.96, -0.28]); E(r0, HD, [1.3, 1.1, 1.2], GR.HAIR, 'tie', () => cloth('#2a2226')); lock(r0, sw(nk(0, backY - 0.4, -3.4), 0.5), 2.1, 1.8, 'tail'); lock(sw(nk(0, backY - 0.4, -3.4), 0.5), sw(nk(0, backY - 0.7, -8.6), 1), 1.8, 0.7, 'tail'); }   // (tied at the nape, hanging down the back)
+    else if (ex === 'lowpony') { const r0 = at([0, -0.96, -0.28]); E(r0, HD, [1.3, 1.1, 1.2], GR.HAIR, 'tie', () => cloth('#2a2226')); const m1 = sw(nk(0.5, backY - 1.3, -2.6), 0.5), m2 = sw(nk(0.9, backY - 1.5, -5.6), 0.8); lock(r0, m1, 1.7, 2.9, 'tail'); lock(m1, m2, 2.9, 2.2, 'tail'); lock(m2, sw(nk(0.3, backY - 1.0, -8.8), 1), 2.2, 0.6, 'tail'); }   // (11-20: full under the tie, a slight curve, a point - it was a straight bar)   // (tied at the nape, hanging down the back)
     else if (ex === 'shavedside') { lock(at([-0.25, 0.2, 1.06]), at([1.16, 0.22, -0.15]), 3.5, 2.9, 'sweep'); lock(at([1.0, 0.1, 0.1]), sw(nk(hr[0] + 1.2, 0.5, -3.6), 0.4), 2.9, 1.8, 'sweep'); }   // (11-20: the long side is long - swept over and down past the jaw; it was a few thin locks)
     else if (ex === 'emo') { e([0.36, 0.7, 0.42], mmul(HD, ry(0.62)), [hr[0] * 0.74, 2.5, 2.9], 'sweep'); e([-0.5, 0.5, 0.74], HD, [hr[0] * 0.5, 2.2, 1.6], 'sweep'); }   // (a long fringe swept across one eye)
   },
@@ -327,7 +336,7 @@ export const POLISH = {
     if (ex === 'halfup') { tie([0, -0.3, 1.3], [2.0, 1.9, 1.5]); ball([0, -0.34, 1.9], [5.1, 4.7, 3.4]); return true; }   // (CB3-F: a knot on the crown over long hair)
     if (ex === 'pigtails') {
       // (11-20: thicker, further out and longer - two tails you can count from the front and from behind)
-      for (const s of [-1, 1]) { const r0 = at([s * 1.0, -0.36, 0.18]), m = sw(at([s * 1.72, -0.4, -0.06]), 0.4), e = sw(nk(s * (hr[0] + 4.2), -1.6, -6.4), 1); tie([s * 1.06, -0.36, 0.18], [1.7, 1.6, 1.7], '#c8302c'); lock(r0, m, 2.6, 3.2, 'tail'); lock(m, e, 3.2, 1.7, 'tail'); }
+      for (const s of [-1, 1]) { const r0 = at([s * 1.0, -0.36, 0.18]), m = sw(at([s * 1.58, -0.4, -0.08]), 0.4), e = sw(nk(s * (hr[0] + 3.0), -1.4, -5.2), 1); tie([s * 1.04, -0.36, 0.18], [1.6, 1.5, 1.6], '#c8302c'); lock(r0, m, 2.3, 2.7, 'tail'); lock(m, e, 2.7, 1.2, 'tail'); }
       return true;
     }
     if (ex === 'mohawk') {   // (a crest from the forehead over the crown to the nape, highest over the crown)
@@ -358,6 +367,7 @@ export const POLISH = {
 // 8 art pixels a speckle; here each art pixel of hair takes its tone from where it sits in the mass. Only the hair's
 // own tones are redrawn: shaved sides, a parting, ties, cuffs and the lines between locks stay as they are.
 // Curls keep a broken tone, braids and locs their strands.
+const FRONT = { long: [-4.6, 2.5, 1.7], wavy: [-4.8, 2.7, 1.9], curlylong: [-4.8, 2.9, 2.2], bigcurls: [-4.4, 3.0, 2.3], halfup: [-4.4, 2.4, 1.7], shoulder: [-2.4, 2.4, 1.8], dreads: [-4.2, 2.5, 1.9], boxbraids: [-4.6, 2.4, 1.8], braids: [-4.6, 2.4, 1.8], shag: [-1.8, 2.2, 1.6], braid: [-1.6, 2.0, 1.5] };   // (how far down the neck's frame a front lock ends, its width at the temple and at its tip)
 const HAIR_TEX = { afro: 1, curly: 1, curlylong: 1, bigcurls: 1, puffs: 1, dreads: 2, boxbraids: 2, braids: 2, braid: 2, cornrows: 2 };
 function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
   const bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, H = new Uint8Array(bw * bh), F = new Uint8Array(bw * bh), T = new Uint8Array(w * h), tex = HAIR_TEX[style] | 0;
@@ -370,7 +380,7 @@ function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
   }
   const hair = (x, y) => x >= 0 && y >= 0 && x < bw && y < bh && H[y * bw + x] >= 2, fig = (x, y) => x >= 0 && y >= 0 && x < bw && y < bh && F[y * bw + x] >= 2;
   const pale = lum(R[4]) > 0.6;
-  const tone = new Int8Array(bw * bh).fill(-1), TN = [R[1], R[2], R[3], R[4], mix(R[4], [255, 244, 226], 0.28)];   // (underside, far side, body, lit, highlight)
+  const tone = new Int8Array(bw * bh).fill(-1), TN = [R[1], R[2], R[3], pale ? mix(R[3], R[4], 0.55) : R[4], mix(R[4], [255, 244, 226], 0.28)], hsh = (x, y) => { const v = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return v - Math.floor(v); };   // (underside, far side, body, lit, highlight)
   for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
     if (!hair(x, y)) continue;
     let d = 0; while (d < 9 && hair(x, y - d - 1)) d++;
@@ -379,8 +389,8 @@ function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
     let t = 2;
     if (under && (d > 0 || !fig(x, y + 1))) t = 0;                      // (the underside: tips, a fringe's lower row)
     else if (far && wide > 2 && !fig(x + 1, y)) t = 1;                  // (the side away from the light)
-    else if (d <= (hair(x, y + 4) ? 2 : 1) && rel < 0.72) t = d === (hair(x, y + 2) ? 1 : 0) && wide > 3 && rel > 0.2 && rel < 0.55 ? 4 : 3;   // (the lit top, a highlight in it)
-    if (tex === 1 && t > 0 && (y & 1) && ((x + (y >> 1)) & 1)) t--;     // (curls: dots of a darker tone, each row of them set off from the last - diagonals of them read as stripes, the owner 11-20)
+    else if (d <= (hair(x, y + 4) ? 1 : 0) && rel > 0.1 && rel < 0.64) t = d === (hair(x, y + 2) ? 1 : 0) && wide > 3 && rel > 0.2 && rel < 0.55 ? 4 : 3;   // (the lit top, a highlight in it - 11-20: a band along the top, not the top third: on ginger hair that was a bald spot)
+    if (tex === 1 && t > 1 && (hsh(x, y) > 0.84 || hsh(x - 1, y) > 0.9)) t--;   // (curls: a few short clumps of a darker tone, scattered - the owner 11-20: neither diagonal stripes nor a grid of dots)
     if (t === 2 && tex === 2 && d > 1 && (x & 1)) t = 1;   // (braids and locs: strands; long straight hair is one clean mass - its strand shadows were stripes)
     if (t === 4 && pale) t = 3;                            // (fair and ginger hair: no highlight - a tone lighter still is skin, a bald spot)
     tone[y * bw + x] = t;
