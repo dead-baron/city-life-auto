@@ -468,12 +468,15 @@ export const byName = (n) => PIECE_IDS[n] || 0;
 export const fits = (p, base) => !!p && p.b.includes(base);
 
 // ---- a look ----------------------------------------------------------------------------------------------------------
+// body options (pass 3, gap 16; CB1): body.marks - bit 1 freckles on the body, bit 2 vitiligo; body.limb - a prosthetic
+// (LIMBS). Drawn by the polish pass; one more letter on the end of a look's code when either is set.
+export const LIMBS = ['None', 'Left arm', 'Right arm', 'Left leg', 'Right leg'];
 export const clampI = (v, lo, hi, d) => { v = Number(v); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : d; };
 export function emptyLook(base = 'm') {
   const o = {}; for (const s of SLOTS) o[s] = null;
   return {
     v: LOOK_VERSION,
-    body: { base, build: 1, height: 2, skin: 1, age: 0 },
+    body: { base, build: 1, height: 2, skin: 1, age: 0, marks: 0, limb: 0 },
     face: { shape: 0, eyes: 0, eyeColor: 0, brows: 0, nose: 0, lips: 0, freckles: 0, mole: 0, dimples: 0 },
     hair: { style: base === 'f' ? 16 : 2, color: 2, facial: 0 },
     extras: { makeup: 0, makeupColor: 0, tattoos: 0, piercings: 0, scar: 0 },
@@ -487,7 +490,7 @@ export function validLook(L) {
   if (!L || typeof L !== 'object') return null;
   const b = L.body || {}, base = b.base === 'f' ? 'f' : 'm';
   const out = emptyLook(base);
-  out.body = { base, build: clampI(b.build, 0, BUILDS.length - 1, 1), height: clampI(b.height, 0, HEIGHTS.length - 1, 2), skin: clampI(b.skin, 0, SKIN_TONES.length - 1, 1), age: clampI(b.age, 0, AGES.length - 1, 0) };
+  out.body = { base, build: clampI(b.build, 0, BUILDS.length - 1, 1), height: clampI(b.height, 0, HEIGHTS.length - 1, 2), skin: clampI(b.skin, 0, SKIN_TONES.length - 1, 1), age: clampI(b.age, 0, AGES.length - 1, 0), marks: clampI(b.marks, 0, 3, 0), limb: clampI(b.limb, 0, LIMBS.length - 1, 0) };
   const f = L.face || {};
   for (const k of ['shape', 'eyes', 'brows', 'nose', 'lips']) out.face[k] = clampI(f[k], 0, FACE_OPTS[k].length - 1, 0);
   out.face.eyeColor = clampI(f.eyeColor, 0, EYE_COLORS.length - 1, 0);
@@ -526,19 +529,20 @@ export function encodeLook(L) {
   }
   // (the slots added since - underwear, socks - are left off the end while empty: most looks, every NPC's, keep the 66
   // letters they had; 71 with underwear, 76 with socks)
+  if (b.marks || b.limb) return s + AB[b.marks | (b.limb << 2)];
   while (s.length > LOOK_CODE_LEN && s.endsWith('00000')) s = s.slice(0, -5);
   return s;
 }
-export const LOOK_CODE_LEN = 21 + 9 * 5, LOOK_CODE_MAX = 21 + SLOTS.length * 5;
+export const LOOK_CODE_LEN = 21 + 9 * 5, LOOK_CODE_MAX = 22 + SLOTS.length * 5;
 export function decodeLook(s) {
-  if (typeof s !== 'string' || s.length < LOOK_CODE_LEN || s.length > LOOK_CODE_MAX || (s.length - LOOK_CODE_LEN) % 5) return null;
+  if (typeof s !== 'string' || s.length < LOOK_CODE_LEN || s.length > LOOK_CODE_MAX || (s.length < LOOK_CODE_MAX && (s.length - LOOK_CODE_LEN) % 5)) return null;
   s = s.padEnd(LOOK_CODE_MAX, '0');
   const v = [];
   for (let i = 0; i < s.length; i++) { const x = AV[s[i]]; if (x === undefined) return null; v.push(x); }
   if (v[0] !== LOOK_VERSION) return null;
   const L = {
     v: LOOK_VERSION,
-    body: { base: v[1] ? 'f' : 'm', build: v[2], height: v[3], skin: v[4], age: v[5] },
+    body: { base: v[1] ? 'f' : 'm', build: v[2], height: v[3], skin: v[4], age: v[5], marks: v[LOOK_CODE_MAX - 1] & 3, limb: v[LOOK_CODE_MAX - 1] >> 2 },
     face: { shape: v[6], eyes: v[7], eyeColor: v[8], brows: v[9], nose: v[10], lips: v[11], freckles: v[12] & 1, mole: (v[12] >> 1) & 1, dimples: (v[12] >> 2) & 1 },
     hair: { style: v[13], color: v[14], facial: v[15] },
     extras: { makeup: v[16], makeupColor: v[17], tattoos: v[18], piercings: v[19], scar: v[20] },
@@ -635,6 +639,8 @@ export function lookArt(L, opt = {}) {
     }
     if (set && (set.d.k === 'dress' || set.d.k === 'gown')) A.top.dressUnder = set.d.k === 'gown' ? -1 : set.d.len || 0;
   }
+  if (L.body.marks) A.bmarks = L.body.marks;
+  if (L.body.limb) A.limb = L.body.limb;
   const so = P('socks');
   if (so) A.socks = { ...so.d, color: HEX(O.socks.c), trim: HEX(O.socks.t) };
   const sh = P('shoes');

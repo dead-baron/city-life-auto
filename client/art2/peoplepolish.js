@@ -180,6 +180,22 @@ export const POLISH = {
       else wrap('torso', (R, Q) => (Q.z > 0.2 && Q.z < 1.7 ? band(Q) : R));
       if (J.tbelt) wrap('pel', (R, Q) => (Math.abs(Q.u) > 0.3 && Q.z < (T.tuck ? 0.9 : 0.2) ? DK : R));
     }
+    // body options (pass 3; lookcore.js body.marks, body.limb -> A.bmarks, A.limb): freckles on the body - darker specks
+    // on the shoulders, arms, chest and back; vitiligo - pale patches, on the face and hands too; a prosthetic arm or leg
+    // - dark metal in place of the skin (under a sleeve or trousers it doesn't show), its joint and its hand lit. The
+    // patches sit in each part's own space, so they stay put as it moves.
+    const BM = A.bmarks | 0, LG = [0, 5, 6, 7, 8][A.limb | 0];   // (the renderer's part groups: GR.ARML, ARMR, LEGL, LEGR)
+    if (BM || LG) {
+      const SK0 = W.skin, PALE = SK0.map((c) => mix(c, [250, 230, 222], 0.66)), FRK = SK0.map((c) => mix(c, [146, 80, 56], 0.34)), METAL = cloth('#4c525c');
+      const cell = (Q, n) => { let v = (Math.floor((Q.l0 + 2) * n) * 374761393 + Math.floor((Q.l1 + 2) * n) * 668265263 + Math.floor((Q.l2 + 2) * n) * 362437 + Q.part.charCodeAt(0) * 9176 + (Q.g | 0) * 131) | 0; v = Math.imul(v ^ (v >>> 13), 1274126177); return ((v ^ (v >>> 16)) >>> 0) / 4294967296; };
+      for (const k of ['torso', 'arm', 'leg', 'pel', 'hand', 'head', 'skinM', 'shoe']) wrap(k, (R, Q) => {
+        if (R !== SK0) return R;
+        if (LG && Q.g === LG && k !== 'torso' && k !== 'pel' && k !== 'head') { const j = Q.part === 'fa' || Q.part === 'sh' ? Q.l0 < 0.14 : k === 'hand' || k === 'shoe'; Q.gloss = 1; Q.k += j ? 0.3 : (Math.floor(Q.l0 * 5) & 1) * -0.08; return METAL; }
+        if ((BM & 2) && k !== 'shoe' && cell(Q, k === 'head' || k === 'hand' ? 2.2 : 1.4) < 0.3) return PALE;
+        if ((BM & 1) && k !== 'head' && k !== 'hand' && k !== 'pel' && k !== 'shoe' && Q.part !== 'sh' && cell(Q, 4.6) < 0.2) return FRK;
+        return R;
+      });
+    }
     wrap('pel', (R, Q) => { if (bothDark && R === W.bot && Q.z > (T.tuck ? 1.4 : -1.9) && Q.z < (T.tuck ? 2.2 : -0.9)) Q.k += 0.3; return fix(R); });
   },
   // hair (CB3-M, CB3-F, CC2): the six shapes the concepts have that the list lacked, each on a style the renderer

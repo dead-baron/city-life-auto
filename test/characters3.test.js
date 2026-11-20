@@ -69,7 +69,7 @@ test('the socks slot: its own slot and tab, eight pieces, a pair in the starter 
   assert.deepEqual(LK.decodeLook(LK.encodeLook(L)).outfit, LK.validLook(L).outfit);
   L.outfit.socks = null;
   assert.equal(LK.encodeLook(L).length, LK.LOOK_CODE_LEN + 5, 'underwear alone: 71, as before');
-  for (const bad of [c1.slice(0, -1), c1 + '0', c1 + '00000']) assert.equal(LK.decodeLook(bad), null);
+  for (const bad of [c1.slice(0, -1), c1 + '00', c1 + '00000']) assert.equal(LK.decodeLook(bad), null);
   // the city's people don't fill the slot
   for (let k = 1; k < 500; k++) assert.equal(LK.randomLook(k * 7919).outfit.socks, null);
 });
@@ -114,4 +114,40 @@ test('small gear (knee and elbow pads, a wallet chain, a tool belt, a harness): 
     }
   }
   assert.ok(/!p\.d\.pp \|\| passOn\(\)/.test(readFileSync(new URL('../client/creator.js', import.meta.url), 'utf8')), 'the creator hides the pass\'s pieces while it is off');
+});
+
+test('body options (body freckles, vitiligo, a prosthetic arm or leg): kept in the look, one letter more on its code, drawn by the pass', async () => {
+  const W = await import('../shared/wardrobe.js'), { readFileSync } = await import('node:fs');
+  assert.deepEqual(LK.LIMBS, ['None', 'Left arm', 'Right arm', 'Left leg', 'Right leg']);
+  const base = LK.STARTERS[0].look, c0 = LK.encodeLook(base);
+  assert.deepEqual([LK.decodeLook(c0).body.marks, LK.decodeLook(c0).body.limb], [0, 0], 'an old code: none');
+  for (const [marks, limb] of [[1, 0], [2, 0], [3, 4], [0, 1], [0, 2], [0, 3]]) {
+    const L = structuredClone(base); L.body.marks = marks; L.body.limb = limb;
+    const c = LK.encodeLook(L);
+    assert.equal(c.length, LK.LOOK_CODE_MAX); assert.ok(c.startsWith(c0));
+    const back = LK.decodeLook(c);
+    assert.deepEqual([back.body.marks, back.body.limb], [marks, limb]);
+    assert.equal(LK.encodeLook(back), c);
+    assert.ok(W.changes(base, back).body, 'a change of body: the mirror at home');
+  }
+  assert.equal(LK.validLook({ ...base, body: { ...base.body, marks: 9, limb: 9 } }).body.limb, 4);
+  for (let k = 1; k < 300; k++) { const b = LK.randomLook(k * 7919).body; assert.equal(b.marks | b.limb, 0, 'the city\'s people: none'); }
+  // drawn: with the pass on each option changes the bare figure, a prosthetic only on its own side; off, nothing
+  const bare = (b, body) => { const L = LK.emptyLook(b); L.hair.style = 2; Object.assign(L.body, body); L.outfit.bottoms = LK.item('Shorts'); L.outfit.top = LK.item('Tank top'); return LK.lookArt(LK.validLook(L)); };
+  const half = (a, b) => { let l = 0, r = 0; for (let y = 0; y < a.h; y++) for (let x = 0; x < a.w; x++) { const o = (y * a.w + x) * 4; if (a.p0[o] !== b.p0[o] || a.p0[o + 1] !== b.p0[o + 1]) { if (x < a.w / 2) l++; else r++; } } return [l, r]; };
+  for (const b of ['m', 'f']) {
+    for (const body of [{ marks: 1 }, { marks: 2 }, { limb: 1 }, { limb: 2 }, { limb: 3 }, { limb: 4 }]) {
+      const A = bare(b, body), N = strip(A, 'bmarks', 'limb');
+      const [l, r] = withPass(() => half(baked(A, 0), baked(N, 0)));
+      assert.ok(l + r >= 3, `${b} ${JSON.stringify(body)}: ${l + r} art pixels`);
+      // (facing the camera, the figure's left is on the picture's right)
+      if (body.limb) assert.ok(body.limb & 1 ? r > l * 3 : l > r * 3, `${b} ${LK.LIMBS[body.limb]}: on its own side (${l} | ${r})`);
+      assert.equal(diff(baked(A, 0), baked(N, 0)), 0, 'the pass off: not drawn');
+      withPass(() => { for (const pose of ['walk0', 'run', 'sit', 'swim', 'down', 'punch']) for (const d of [0, 3, 6]) assert.ok(person(A, d, pose, 1, { tight: true }).w > 6, pose); });
+    }
+    // under a long sleeve and trousers a prosthetic doesn't show
+    const cov = (limb) => { const L = LK.emptyLook(b); L.body.limb = limb; L.outfit.top = LK.item('Long-sleeve tee'); L.outfit.bottoms = LK.item('Jeans'); L.outfit.shoes = LK.item('Sneakers'); L.outfit.jewel = LK.item('Work gloves'); return LK.lookArt(LK.validLook(L)); };
+    for (const limb of [1, 4]) { const A = cov(limb); assert.equal(withPass(() => diff(baked(A, 0), baked(strip(A, 'limb'), 0))), 0, 'covered'); }
+  }
+  assert.ok(/passOn\(\) \? row\('Skin marks'/.test(readFileSync(new URL('../client/creator.js', import.meta.url), 'utf8')), 'the creator offers them while the pass is on');
 });

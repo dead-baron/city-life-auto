@@ -349,6 +349,16 @@ async function p3gear(out) {
   const wear = (base, p) => dressed(base, { top: ['Plain tee', base === 'm' ? 'grey' : 'white'], bottoms: p && p.d.tbelt ? ['Work pants', 'khaki'] : p && p.d.harness ? ['Leggings', 'charcoal'] : base === 'm' ? ['Jeans', 'sky'] : ['Shorts', 'olive'], shoes: ['Sneakers', 'white'], ...(p ? { jewel: p.name } : {}) }, { skin: base === 'm' ? 1 : 4 }, { hair: { style: base === 'f' ? 20 : 6 } });
   await grid(out, 'SMALL GEAR (ACCESSORIES): S, SE, E, N, W, WALKING, RUNNING, SITTING; THE PASS OFF (NOT DRAWN); WITHOUT', pieceRows('jewel', wear, N), { k: 6, rh: 32 });
 }
+// body options on both bases: S, SE, E, N, W, walking, running, sitting, dressed; then without
+async function p3body(out) {
+  const rows = [];
+  for (const [name, body] of [['BODY FRECKLES', { marks: 1 }], ['VITILIGO', { marks: 2 }], ['VITILIGO,|DARK SKIN', { marks: 2, skin: 12 }], ['PROSTHETIC|LEFT ARM', { limb: 1 }], ['PROSTHETIC|RIGHT ARM', { limb: 2 }], ['PROSTHETIC|LEFT LEG', { limb: 3 }], ['PROSTHETIC|RIGHT LEG', { limb: 4 }]]) for (const base of ['m', 'f']) {
+    const mk = (b, o) => dressed(base, o || (base === 'm' ? { bottoms: ['Swim trunks', 'navy'] } : { top: ['Tank top', 'white'], bottoms: ['Shorts', 'denim'] }), { skin: base === 'm' ? 1 : 0, ...b }, { hair: { style: base === 'f' ? 20 : 6, color: 5 } });
+    const L = mk(body), N = mk({ ...body, marks: 0, limb: 0 }), C = mk(body, { top: ['Plain tee', 'grey'], bottoms: ['Jeans', 'denim'], shoes: 'Sneakers' });
+    rows.push([name + '|' + (base === 'm' ? 'MAN' : 'WOMAN'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 6 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 2, pose: 'run', f: 2 }, { L, d: 1, pose: 'sit', f: 0 }, { L: C, d: 1, t: 'dressed' }, { L: N, d: 1, t: 'without' }]]);
+  }
+  await grid(out, 'BODY OPTIONS: S, SE, E, N, W, WALKING, RUNNING, SITTING; IN A TEE AND JEANS; WITHOUT', rows, { k: 6, rh: 32 });
+}
 // every animation with the pass on: a pose a row, its eight facings (S, SE, E, NE, N, NW, W, SW) then a second frame S and E
 const HELD = { aim: 'pistol', aimw: 'pistol', swing: 'bat', held: 'phone' };
 async function anim(out) {
@@ -433,5 +443,6 @@ else if (mode === 'p3mouth') await p3mouth(arg('out', join(P3, 'faces-mouth.png'
 else if (mode === 'p3hair') await p3hair(arg('out', join(P3, 'hair.png')));
 else if (mode === 'p3socks') await p3socks(arg('out', join(P3, 'socks.png')));
 else if (mode === 'p3gear') await p3gear(arg('out', join(P3, 'gear.png')));
+else if (mode === 'p3body') await p3body(arg('out', join(P3, 'body.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

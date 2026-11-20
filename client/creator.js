@@ -570,7 +570,9 @@ function renderPage() {
       + row('Build', `<div class="cc-grid">${LK.BUILDS.map((b, i) => `<button class="cc-card sm ${B.build === i ? 'on' : ''}" data-act="build" data-v="${i}">${th(variant((V) => { V.body.build = i; }))}<span>${b.name}</span></button>`).join('')}</div>`)
       + row(`Height <b>${LK.HEIGHT_NAMES[B.height]}</b>`, `<input class="cc-range" type="range" min="0" max="${LK.HEIGHTS.length - 1}" step="1" value="${B.height}" data-act="height" aria-label="Height">`)
       + row('Skin tone', LK.SKIN_ORDER.map((i) => sw('skin', i, LK.SKIN_TONES[i], B.skin === i, `Skin tone ${i + 1}`)).join(''))
-      + row('Age', LK.AGES.map((a, i) => chip('age', i, a, B.age === i)).join(''));
+      + row('Age', LK.AGES.map((a, i) => chip('age', i, a, B.age === i)).join(''))
+      // (pass 3: body freckles, vitiligo, a prosthetic arm or leg - the polish pass draws them: offered while it is on)
+      + (passOn() ? row('Skin marks', chip('bmark', 1, 'Body freckles', B.marks & 1) + chip('bmark', 2, 'Vitiligo', B.marks & 2)) + row('Prosthetic', LK.LIMBS.map((n, i) => chip('limb', i, n, (B.limb | 0) === i)).join('')) : '');
   } else if (tab === 'face') {
     const F = L.face, o = LK.FACE_OPTS;
     // each option a close-up of your own face wearing it (CC8)
@@ -727,6 +729,8 @@ function act(a, v, el) {
     case 'build': setL((L) => { L.body.build = Number(v); }); return;
     case 'skin': setL((L) => { L.body.skin = Number(v); }); return;
     case 'age': setL((L) => { L.body.age = Number(v); }); return;
+    case 'bmark': setL((L) => { L.body.marks ^= Number(v); }); return;
+    case 'limb': setL((L) => { L.body.limb = Number(v); }); return;
     case 'face': { const [k, n] = v.split(':'); setL((L) => { L.face[k] = Number(n); }); return; }
     case 'ftog': setL((L) => { L.face[v] = L.face[v] ? 0 : 1; }); return;
     case 'rface': { const R = LK.randomLook(newSeed(), look.body.base); setL((L) => { L.face = R.face; }); return; }
