@@ -69,3 +69,40 @@ test('every hairstyle still draws apart from every other, and with the pass off 
   assert.equal(diff(off, baked(A, 0)), 0);
   assert.ok(diff(off, withPass(() => baked(A, 0), { hairRe: null })) > 0);
 });
+
+// ---- the owner's notes on pass 4's underwear ---------------------------------------------------------------------------
+const wear = (base, name, c, t = c, skin = 2) => { const L = LK.emptyLook(base); L.body.skin = skin; L.hair.style = 2; if (name) L.outfit.under = LK.item(name, c, t); return LK.lookArt(LK.validLook(L)); };
+// the art pixels a piece's colour reaches: where the same figure in two colours differs
+const own = (base, name, d = 0) => withPass(() => { const a = baked(wear(base, name, 'hot pink'), d), b = baked(wear(base, name, 'teal'), d), px = []; for (let i = 0; i < a.w * a.h; i++) if (a.p0[i * 4 + 3] && (a.p0[i * 4] !== b.p0[i * 4] || a.p0[i * 4 + 1] !== b.p0[i * 4 + 1])) px.push([i % a.w, Math.floor(i / a.w)]); return px; });
+
+test('no underwear picked: boxers for a man, a bra and panties for a woman', () => {
+  const m = LK.lookArt(LK.emptyLook('m')), f = LK.lookArt(LK.emptyLook('f'));
+  assert.equal(m.bottom.kind, 'trunks'); assert.equal(m.top.kind, 'none');
+  assert.equal(f.top.kind, 'bra'); assert.equal(f.bottom.kind, 'bikini');
+  // drawn by the pass as the pieces are: a man's as long as Boxers (not fitted trunks), a woman's as Bra and briefs
+  const span = (G) => { let a = 99, b = 0; for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) { const o = (y * G.w + x) * 4; if (G.p0[o + 3] && G.p0[o + 2] > 190 && G.p0[o] > 170 && Math.abs(G.p0[o] - G.p0[o + 2]) < 40) { a = Math.min(a, y); b = Math.max(b, y); } } return b - a; };
+  const basic = withPass(() => baked(wear('m', null), 0)), boxers = withPass(() => baked(wear('m', 'Boxers', 'white'), 0)), trunks = withPass(() => baked(wear('m', 'Fitted trunks', 'white'), 0));
+  assert.equal(span(basic), span(boxers), 'the basics reach as far down the thigh as boxers');
+  assert.ok(span(basic) >= span(trunks), 'and no less than fitted trunks');
+  const fb = withPass(() => baked(wear('f', null, null, null, 9), 0)), set = withPass(() => baked(wear('f', 'Bra and briefs', 'white', 'white', 9), 0));
+  const pale = (G) => { let n = 0; for (let o = 0; o < G.w * G.h * 4; o += 4) if (G.p0[o + 3] && G.p0[o + 2] > 170 && G.p0[o] > 160) n++; return n; };
+  assert.ok(pale(set) >= 18 && Math.abs(pale(fb) - pale(set)) <= 3, `a woman's basics are a bra and briefs (${pale(fb)} pale art pixels against the set's ${pale(set)})`);
+});
+
+test('a woman\'s briefs and panties: smaller than a man\'s, a level waist and a triangle to the leg', () => {
+  for (const n of ['Briefs', 'Bra and briefs', 'Lace bra and panties']) {
+    const px = own('f', n).filter(([, y]) => y > 13), ys = [...new Set(px.map((p) => p[1]))].sort((a, b) => a - b), w = ys.map((y) => px.filter((p) => p[1] === y).length);
+    assert.ok(w.length >= 2 && w.length <= 4, `${n}: ${w.length} rows (${w})`);
+    assert.ok(w[0] >= 6, `${n}: a waist right across (${w})`);
+    assert.ok(w[w.length - 1] <= w[0] - 3 && w.every((v, i) => !i || v <= w[i - 1]), `${n}: narrowing to the leg (${w})`);
+  }
+  assert.ok(own('f', 'Briefs').filter(([, y]) => y > 13).length < own('m', 'Briefs').length, 'smaller than a man\'s');
+});
+
+test('the union suit has no buttons; the slip is its own cloth again (pass 3\'s look)', () => {
+  // (below the head: a look's colours seed its face)
+  for (const base of ['m', 'f']) { const a = withPass(() => baked(wear(base, 'Union suit', 'red', 'white'), 0)), b = withPass(() => baked(wear(base, 'Union suit', 'red', 'black'), 0)); for (let i = 9 * a.w; i < a.w * a.h; i++) assert.equal(a.p0[i * 4], b.p0[i * 4], `${base}: nothing in the trim colour down the front`); }
+  const G = withPass(() => baked(wear('f', 'Silk slip', 'cream', 'cream'), 0)); let warm = 0, cool = 0;
+  for (let o = 0; o < G.w * G.h * 4; o += 4) if (G.p0[o + 3] && G.p0[o] > 150 && G.p0[o + 1] > 140) { if (G.p0[o] - G.p0[o + 2] > 24) warm++; else if (G.p0[o + 2] >= G.p0[o]) cool++; }
+  assert.ok(warm > 12 && cool < 4, `the slip is cream, not blue-grey (${warm} warm, ${cool} cool)`);
+});

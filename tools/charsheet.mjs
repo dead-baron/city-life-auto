@@ -275,21 +275,23 @@ async function under(out) {
 // pass 4 (docs/tasks/CHARACTERS4.md): every underwear piece on both bases - S, SE, E, N, walking (front and side), then
 // on the lightest and the darkest skin. Pass 3's half is a picture kept from the commit before the redraw
 // (--snap writes one: pass4/underwear-pass3.png); the sheet is that picture beside today's drawing.
-async function p4under(out) {
-  const U = LK.PIECES.filter((p) => p && p.slot === 'under'), rows = [], SK = [2, 9, 5, 12, 0, 7, 13, 4];
-  for (const base of ['m', 'f']) for (const [i, p] of [null, ...U.filter((q) => q.b.includes(base))].entries()) {
+// (pass 5, the owner's notes on that sheet: the same rows for the pieces they touch - pass 4 | pass 5, pass 4's half kept the same way: pass5/underwear-pass4.png)
+const P5_UNDER = ['Briefs', 'Tank and briefs', 'Bra and briefs', 'Lace bra and panties', 'Bralette set', 'Strapless set', 'Union suit', 'Silk slip'];
+async function p4under(out, v5 = false) {
+  const U = LK.PIECES.filter((p) => p && p.slot === 'under' && (!v5 || P5_UNDER.includes(p.name))), rows = [], SK = [2, 9, 5, 12, 0, 7, 13, 4];
+  for (const base of ['m', 'f']) for (const [i, p] of [null, ...U.filter((q) => q.b.includes(base) && (!v5 || base === 'f' || q.name === 'Union suit'))].entries()) {
     const mk = (skin) => dressed(base, p ? { under: p.name } : {}, { skin, build: base === 'm' ? [1, 2, 0, 4][i % 4] : [3, 1, 0, 2][i % 4] }, { hair: { style: base === 'f' ? [20, 21, 16, 9][i % 4] : [6, 2, 8, 1][i % 4], color: [3, 0, 5, 1][i % 4] } });
     const L = mk(SK[i % SK.length]);
     rows.push([(p ? p.name : 'basic (none picked)').replace(' and ', ' +|') + '|' + (base === 'm' ? 'MAN' : 'WOMAN'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 2, pose: 'walk0', f: 3 }, { L: mk(0), d: 1 }, { L: mk(13), d: 1 }, { L: mk(13), d: 5 }]]);
   }
-  const snap = argv.includes('--snap'), file = join(P4, 'underwear-pass3.png'), o = { k: 6, rh: 32, cw: 20, label: 150, ret: true };
-  const now = await grid(out, snap ? 'PASS 3' : 'PASS 4: S, SE, E, N, WALKING (S, E), LIGHTEST AND DARKEST SKIN (SE, SE, NW)', rows, o);
+  const snap = argv.includes('--snap'), file = v5 ? join(P5, 'underwear-pass4.png') : join(P4, 'underwear-pass3.png'), was = v5 ? 4 : 3, o = { k: 6, rh: 32, cw: 20, label: 150, ret: true };
+  const now = await grid(out, snap ? 'PASS ' + was : 'PASS ' + (was + 1) + ': S, SE, E, N, WALKING (S, E), LIGHTEST AND DARKEST SKIN (SE, SE, NW)', rows, o);
   if (snap) return now.save(file);
   const I = readPng(file), sh = new Sheet(I.w + now.w - o.label + 12, now.h);
   pasteScaled(sh, I, 0, 0, I.w);
   for (let y = 0; y < now.h; y++) for (let x = o.label; x < now.w; x++) { const q = (y * now.w + x) * 3; sh.rect(I.w + 12 + x - o.label, y, 1, 1, [now.d[q], now.d[q + 1], now.d[q + 2]]); }
   sh.rect(0, 0, sh.w, 22, [107, 111, 120]);
-  sh.text('UNDERWEAR: PASS 3 (LEFT) | PASS 4 (RIGHT) - S, SE, E, N, WALKING (S, E), LIGHTEST AND DARKEST SKIN (SE, SE, NW)', 8, 6, 2);
+  sh.text('UNDERWEAR: PASS ' + was + ' (LEFT) | PASS ' + (was + 1) + ' (RIGHT) - S, SE, E, N, WALKING (S, E), LIGHTEST AND DARKEST SKIN (SE, SE, NW)', 8, 6, 2);
   sh.save(out);
 }
 // every uniform and job look, then the city's archetypes (server entities.js) as the game draws them
@@ -505,6 +507,7 @@ else if (mode === 'p3drapes') await p3drapes(arg('out', join(P3, 'drapes.png')))
 else if (mode === 'p3phone') await p3phone(arg('out', join(P3, 'phone.png')));
 else if (mode === 'p3props') await p3props(arg('out', join(P3, 'props.png')));
 else if (mode === 'p4under') await p4under(arg('out', join(P4, 'underwear.png')));
+else if (mode === 'p5under') await p4under(arg('out', join(P5, 'underwear.png')), true);
 else if (mode === 'p5hair') await p5hair(arg('out', join(P5, 'hair.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

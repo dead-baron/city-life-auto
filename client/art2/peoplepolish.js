@@ -116,8 +116,8 @@ export const POLISH = {
     const bothDark = isDark(W.top) && isDark(W.bot) && !T.dress && !T.long && !T.bib;
     // underwear (lookcore.js 'under': A.under, on the halves no clothes cover) - pass 4, under4 below: the body under it
     // is handed to the renderer as skin and every pixel's place on the body kept; post() cuts the piece on the art grid
-    // (no piece picked: the plain basics every look has - lookcore.js lookArt - cut the same way)
-    const basic = (h) => !!h && !h.under && h.trim === undefined && h.color === '#e8e4dc', U = A.under || ((basic(A.top) || basic(A.bottom)) && { color: '#e8e4dc', trim: '#c8ccd4', band: 1, fit: 1 });
+    // (no piece picked: the plain basics every look has - lookcore.js lookArt: boxers, a bra and panties - cut the same way)
+    const basic = (h) => !!h && !h.under && h.trim === undefined && h.color === '#e8e4dc', U = A.under || ((basic(A.top) || basic(A.bottom)) && { color: '#e8e4dc', trim: '#c8ccd4', band: 1 });   // (pass 5, the owner: the basics are boxers for a man, a bra and panties for a woman)
     const cells = U && !T.dress && !T.long, ub = cells && A.bottom && (A.bottom.under || basic(A.bottom)) && W.bk !== 'none', ut = cells && A.top && (A.top.under || basic(A.top));
     const bt = !ub ? 0 : T.swimsuit ? 'body' : W.bk === 'bikini' ? 'brief' : W.bk === 'trunks' ? (U.fit ? 'trunk' : 'boxer') : 0;
     const tt = !ut ? 0 : T.swimsuit ? 'body' : T.bikini ? (W.tk === 'bikini' ? 'bandeau' : U.sport ? (U.lace ? 'bralette' : 'sport') : 'bra') : W.tk === 'tank' ? 'tank' : W.tk === 'under' ? 'tee' : 0;
@@ -140,10 +140,10 @@ export const POLISH = {
         return W.skin;
       });
     }
-    // (the pieces the renderer has a shape for: a union suit's buttons down the front, a slip's hem in a lighter band)
-    if (U && A.top && A.top.under && W.tk === 'longsleeve') wrap('torso', (R, Q) => (Q.f > 0.05 && Math.abs(Q.u) < 0.07 && (Math.floor(Q.y / 2) & 1) ? cloth(U.trim) : R));
-    // (...and a pale one of them - a slip, an undershirt's sleeves - shaded cool like the rest: pale4)
-    if (U && A.top && A.top.under && (T.dress || W.tk === 'under' || W.tk === 'longsleeve')) { const t0 = relit(W.top), t1 = pale4(t0); for (const k of ['torso', 'arm', 'skirt', 'pel', 'leg']) wrap(k, (R, Q) => { if (R !== t0 && R !== W.top) return R; if (T.dress && k === 'skirt' && Q.l0 > 0.82) Q.k += 0.22; if (U.gloss) Q.gloss = 0.7; return t1; }); }
+    // (the pieces the renderer has a shape for - a union suit, plain: no buttons; a slip, as pass 3 drew it: its own cloth and a sheen - the owner, pass 5)
+    if (U && U.gloss && T.dress && A.top && A.top.under) for (const k of ['torso', 'skirt']) wrap(k, (R, Q) => { if (R === W.top) Q.gloss = 0.7; return R; });
+    // (a pale one of the others - an undershirt's sleeves, a union suit - shaded cool like the rest: pale4)
+    if (U && A.top && A.top.under && (W.tk === 'under' || W.tk === 'longsleeve')) { const t0 = relit(W.top), t1 = pale4(t0); for (const k of ['torso', 'arm', 'pel', 'leg']) wrap(k, (R) => (R !== t0 && R !== W.top ? R : t1)); }
     // uniforms that read at a glance (C3, CC5, SF21, SM21). The police's (T.duty): a badge big enough to be an art pixel
     // of gold, a shoulder patch, a gold buckle on the black belt. A plain work uniform (chef, postal, paramedic) has no
     // badge and no holster. Reflective bands (lookcore d.bands) round the chest, the arms and the shins.
@@ -367,6 +367,7 @@ function cut4(S, c, l) {
   if (!c) {
     if (bt === 'trunk') return l.al < 0.33 ? 2 : 0;
     if (bt === 'boxer') return l.al < 0.41 ? 2 : 0;
+    if (bt === 'brief' && fem) return l.sd < 0.2 && l.al < 0.16 + 0.1 * (0.2 - l.sd) ? 2 : 0;   // (pass 5: a woman's briefs smaller)
     return bt && l.al < (bt === 'body' ? 0.21 + 0.06 * Math.max(0, Math.min(1.4, 0.5 - l.sd)) : 0.24 + 0.09 * Math.max(0, Math.min(1.4, 0.5 - l.sd))) ? 2 : 0;   // (the leg line: from the hip down to the inside of the thigh)
   }
   const u = c.u, au = Math.abs(u), z = c.z, front = c.f > 0, has = (a) => (c.u0 <= a && a <= c.u1) || (c.u0 <= -a && -a <= c.u1), row = (v) => c.z0 <= v && v <= c.z1;
@@ -393,7 +394,7 @@ function cut4(S, c, l) {
   } else if (tt === 'tee') {
     if (z > -0.8 && !(front && au < 0.2 && z > su - 1.2)) return 1;
   }
-  if (bt === 'brief') return z < (fem ? 2.8 : 3.4) && !high(0.52) ? 2 : 0;
+  if (bt === 'brief') return fem ? (z - 3 * Math.max(0, c.f) < (front ? 0.9 : 2.0) && au < 0.24 + (front ? 0 : 0.12) + (z + 2.6) * 0.2 ? 2 : 0) : z < 3.4 && !high(0.52) ? 2 : 0;   // (pass 5, the owner: a woman's briefs and panties pass 3's smaller cut - a level waist (the belly stands forward of the hips: the line follows it), a triangle to the leg)
   return bt && z < (fem ? 3.0 : 3.4) ? 2 : 0;
 }
 function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
