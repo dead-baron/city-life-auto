@@ -91,13 +91,21 @@ export const POLISH = {
     const sk = lum(skin[3]), dk = sk < 0.4, hairC = W.hairR ? W.hairR[1] : EYE;
     // (the iris's colour kept - task #429 - and darkened, hue and all, until it's well under the skin it sits on)
     let pupil = eyeC; for (let k = 0; k < 10 && (lum(skin[3]) - lum(pupil) < (dk ? 0.17 : 0.22) || dist(pupil, skin[3]) < 100); k++) pupil = pupil.map((v) => Math.round(v * 0.86));
+    let iris = F.eyeColor ? cx.hexRgb(F.eyeColor) : EYE; for (let k = 0; k < 8 && dist(iris, skin[3]) < 110; k++) iris = iris.map((v) => Math.round(v * 0.88));   // (the picked colour itself, darkened only as far as it takes to stand off the skin)
     const lid = mix(skin[1], LASH, 0.35), white = mix(WHITE, skin[4], dk ? 0.2 : 0.1), lash = mix(LASH, skin[0], 0.15);
     // (a brow is never as dark as the eye under it, or the two read as one tall bar)
     const brow0 = off(mix(hairC, EYE, 0.2), skin[3], 84), brow = mix(brow0, skin[2], 0.3), browS = mix(brow0, skin[2], 0.55);
     for (const e of eyes) {
       const o = outOf(cx, e), q = e.p;
-      if (!P.eyes) { put(q, lid); continue; }   // (shut: the lid's line)
-      put(q, pupil);
+      // (this.eyeMode - options for the owner, 11-20: how an eye's colour shows. 0 today's, the colour mixed into one dark
+      // pixel; 1 the colour under a dark lash line; 2 a dark pupil with the colour beside it; 3 the colour with a white beside it)
+      const mode = this.eyeMode | 0;
+      if (!P.eyes) { put(q, lid); if (mode >= 2) put(q, lid, o, 0); continue; }   // (shut: the lid's line)
+      if (mode === 1) { put(q, iris); put(q, lash, 0, -1); }
+      else if (mode === 2) { put(q, pupil); put(q, iris, o, 0); }
+      else if (mode === 3) { put(q, iris); put(q, white, o, 0); }
+      else put(q, pupil);
+      if (mode) { const up1 = mode === 1 ? 1 : 0; put(q, fem ? browS : brow, 0, -1 - up1); if (mode >= 2) put(q, browS, o, -1); continue; }
       // almond the eye alone; round a lash over it; narrow a squint's line running out; hooded the lid's shadow over it;
       // big a lash over and the white beside; sleepy a heavy lid over and out
       if (E5 === 1 || E5 === 4) put(q, lash, 0, -1);
@@ -415,6 +423,7 @@ function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
 // a strap or a band is the one art pixel its line runs through), l: a thigh (al 0 the hip .. 0.5 the knee - the first
 // quarter is inside the hips - sd -1 the inside .. 1 the outside). 0 skin, 1 the top half, 2 the bottom half, 3 a
 // strap, 4 between a bra's cups.
+const HIP = 0.9;   // (how high on the hips a brief's strap runs: the triangle's top)
 function cut4(S, c, l) {
   const { tt, bt, cu, su, fem } = S;
   if (!c) {
@@ -433,7 +442,7 @@ function cut4(S, c, l) {
     return has(0.36) && z < su + 0.6 ? 3 : 0;
   }
   if (tt === 'bra') {   // two cups apart, a band under them and round the back, a strap over each shoulder
-    if (z > cu - 1.6 && z < cu + 2.8 && (front ? au < 0.68 && !(au < 0.1 && z > cu + 1.4) : z < cu + 0.4)) return front && au < 0.1 && z > cu - 0.4 ? 4 : 1;   // (4: between the cups - a lace set's bow)
+    if (z > cu - 1.6 && z < cu + 2.8 && (front && au < 0.68 ? !(au < 0.1 && z > cu + 1.4) : z < cu + 0.4)) return front && au < 0.1 && z > cu - 0.4 ? 4 : 1;   // (11-20: the band runs on round the side - from the side a bra stopped at the cup)   // (4: between the cups - a lace set's bow)
     if (has(0.36) && z > cu && z < su + 0.6) return 3;
   } else if (tt === 'sport') {   // a wide band to under the bust, a scooped neck, broad straps
     if (z > cu - 2.2 && z < su + 0.8 && !(au > 0.52 && z > cu + 1.4) && !(front ? au < 0.2 && z > cu + 3.6 : au < 0.16 && z > cu + 3.8)) return 1;
@@ -447,6 +456,7 @@ function cut4(S, c, l) {
   } else if (tt === 'tee') {
     if (z > -0.8 && !(front && au < 0.2 && z > su - 1.2)) return 1;
   }
+  if (bt === 'brief' && fem && row(HIP)) return 2;   // (11-20, the owner: a strap round the hip holds the triangle up - one art pixel, all the way round)
   if (bt === 'brief') return fem ? (z - 3 * Math.max(0, c.f) < (front ? 0.9 : 2.0) && au < 0.24 + (front ? 0 : 0.12) + (z + 2.6) * 0.2 ? 2 : 0) : z < 3.4 && !high(0.52) ? 2 : 0;   // (pass 5, the owner: a woman's briefs and panties pass 3's smaller cut - a level waist (the belly stands forward of the hips: the line follows it), a triangle to the leg)
   return bt && z < (fem ? 3.0 : 3.4) ? 2 : 0;
 }
@@ -479,7 +489,7 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
   for (const [key, c] of cells) if (!c.g && !c.leg) { const n = N4(key).map(gk).filter((g) => g); if (n.length >= 3) c.fill = n[0] === 3 || n[0] === 4 ? 1 : n[0]; }
   for (const c of cells.values()) if (c.fill > 0 && !c.g) c.g = c.fill;
   if (S.bt && S.bt !== 'body' && tt && tt !== 'tee' && tt !== 'tank') for (const [key, c] of cells) if (c.g && c.g !== 2 && gk(key + K) === 2) c.g = 0;
-  for (const [key, c] of cells) if (c.g && !N4(key).some(gk)) c.lone = 1;
+  for (const [key, c] of cells) if (c.g && c.g !== 2 && !N4(key).some(gk)) c.lone = 1;   // (the bottom half's stays: from the side, behind a hanging arm, one art pixel at the hip is all there is of it)
   for (const c of cells.values()) if (c.lone) c.g = 0;
   const G = (key) => { const c = cells.get(key); return c ? c.g : -1; }, tee = tt === 'tee', RB = tee ? RT : RC, RBAND = tee ? RC : RT, tones = new Map();
   // (clean tones: an art pixel between two of the piece's in one tone takes it - no speckle from the body's dither)

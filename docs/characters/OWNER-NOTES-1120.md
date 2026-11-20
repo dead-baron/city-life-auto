@@ -13,7 +13,7 @@ things are ... than to have the details totally lost."
 - [x] "Nothing": no shoes (the sheet had put sneakers on it). The mosaic differs top and bottom: one style, over the hips and over the chest separately, like The Sims.
 - [x] The set labelled "Underwear": default is a bra and panties (women), boxers (men); today's stays as another option.
 - [x] Some hats show two black dots at the back (hair through the brim: fixed).
-- [ ] Jackets over bare skin read as "pants missing a top part". Are all jackets unzipped? Zipped as an option, if it isn't too much work.
+- [x] Jackets over bare skin read as "pants missing a top part" (the sheet: no shirt under them). All jackets are open; zipped as an option: AFTER THE BETA (the owner, 13:42).
 
 ## Underwear
 - [ ] Small briefs / panties: the triangle is right, but a visible strap round the hip holds it up (not a bare V).
@@ -55,3 +55,8 @@ things are ... than to have the details totally lost."
 ## Eyes (he asks for suggestions)
 One-pixel dark eyes look good; a changed eye color gets lost. "Big" adds a white, which looks good. If eyes get more
 detail, people should blink, or everyone stares.
+
+## 13:42
+- Eyes: options shown (`POLISH.eyeMode` 0-3, a blink frame: `person(..., { blink: 1 })`) - HIS PICK PENDING. Blinking for everyone wanted.
+- Paper hat: was inside the hair's volume - lifted and bigger. Women's briefs: a strap row round the hip (HIP), the bra's band
+  on round the side. From the side a hanging arm covers nearly the whole body on the chunky build: one art pixel of the bottoms shows.

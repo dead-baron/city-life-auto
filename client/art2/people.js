@@ -1535,7 +1535,8 @@ function hatPrims(E, C, A, D, S, W, at, k) {
     C(b0, vadd(b0, mv(HD, [0, -0.2, 2.4])), hr[0] * 0.9, hr[0] * 0.9, GR.HAT, 'band', W.hat);
     E(vadd(b0, mv(HD, [0, -0.3, 6.2])), HD, [hr[0] * 1.1, hr[1] * 1.08, 4.4], GR.HAT, 'crown', W.hat);
   } else if (k === 'paper') {   // the diner's paper hat: a folded garrison cap, front to back on top
-    E(at([0, 0, 0.8]), HD, [hr[0] * 0.5, hr[1] * 1.02, 1.7], GR.HAT, 'crown', W.hat, (a, b, c) => c > -0.3);
+    if (PL) E(at([0, 0, 1.12]), HD, [hr[0] * 0.62, hr[1] * 1.08, 3.0], GR.HAT, 'crown', W.hat, (a, b, c) => c > -0.35);   // (the polish pass: on top of the hair's volume and big enough to see - at its old place it was inside the hair)
+    else E(at([0, 0, 0.8]), HD, [hr[0] * 0.5, hr[1] * 1.02, 1.7], GR.HAT, 'crown', W.hat, (a, b, c) => c > -0.3);
   } else if (k === 'veil') {   // a bride's veil: back from a comb on the crown, down over the shoulders behind
     E(at([0, -0.45, 0.3]), HD, [hr[0] + 1.1, hr[1] + 0.8, hr[2] + 0.7], GR.HAT, 'crown', W.hat, (a, b, c) => b < 0.3 - c * 0.3);
     E(vadd(S.neck, mv(S.SP, [0, -1.6, -1.8])), S.SP, [D.shX * 0.75, 0.9, 3.8], GR.HAT, 'drape', W.hat);
@@ -2162,6 +2163,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
   const D = dims(A), P = rig(D, A, pn, f, kind, acc);
+  if (opt.blink) P.eyes = 0;   // (a blink: the figure as it stands, the eyes shut)
   if (A.founder && pn === 'idle' && !kind) { const h0 = P.hands; P.hands = (S) => { if (h0) h0(S); P.hR = vadd(S.shR, mv(S.SP, [7.6, 1.6, 8.0 + (f & 1) * 0.5])); P.elR = [1, 0, -0.6]; P.peace = 1; }; }
   if (!P.root) P.camYaw = 0.3 * Math.cos(th);                       // E +, W -: the face turns toward the camera (south)
   const S = solve(D, P);
