@@ -1737,7 +1737,7 @@ function render(fig, P, S, X, D, A, opt) {
   }
   // (at the game's scale an inner line is a whole art pixel after the bake: a step darker, as SPEC asks, not the
   // outline's near-black, which made a busy figure of every overlap)
-  if (R === 1) { for (let i = 0; i < n; i++) if (LN[i]) { CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; } }
+  if (R === 1) { const hk = (PL && PL.lnHead) || 0; for (let i = 0; i < n; i++) if (LN[i]) { const k = hk && PID[i] < prims.length && prims[PID[i]].g === GR.HEAD ? hk : 0; CR[i] = CR[i] * (0.52 + k) + 8; CG[i] = CG[i] * (0.48 + k) + 6; CB[i] = CB[i] * (0.56 + k) + 14; } }   // (PL.lnHead: the line a fringe or a hat draws on the face, softer - a shadow, not a headband)
   else for (let i = 0; i < n; i++) if (LN[i]) { CR[i] = CR[i] * 0.3 + 12; CG[i] = CG[i] * 0.26 + 8; CB[i] = CB[i] * 0.34 + 18; }
   if (PL && PL.post && R === 1) PL.post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, AX, AY, GR, fig, A, D, P });
   // pack: colour, a soft normal (half the shape's own, half facing the camera and up), height, glow, flags; then the
@@ -1753,31 +1753,56 @@ function render(fig, P, S, X, D, A, opt) {
   // the colour of what it outlines (the concepts' edges), lighter on the lit side (left and above) than in the shade.
   let OL = null, BS = null, BC = null, BN = null;
   if (PL && PL.ol && R === 1) {
-    const ox = AX & 1, oy = AY & 1, bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, BA = new Uint8Array(bw * bh);
+    const ox = AX & 1, oy = AY & 1, bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, BA = new Uint8Array(bw * bh), BL = new Uint8Array(bw * bh), DM = new Uint8Array(bw * bh);
     BN = new Uint8Array(bw * bh); BS = new Int32Array(bw * bh).fill(-1); BC = new Float32Array(bw * bh * 3); OL = new Int32Array(n);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const i = y * w + x, q = ((y + oy) >> 1) * bw + ((x + ox) >> 1);
       if (PID[i] < 0) continue;
       BA[q]++;
       if (NOO[i] || PID[i] === FOAMID) continue;
-      BN[q]++; BC[q * 3] += CR[i]; BC[q * 3 + 1] += CG[i]; BC[q * 3 + 2] += CB[i];
+      BN[q]++; BL[q] += LN[i]; BC[q * 3] += CR[i]; BC[q * 3 + 1] += CG[i]; BC[q * 3 + 2] += CB[i];
       if (BS[q] < 0 || NEAR[i] > NEAR[BS[q]]) BS[q] = i;
+    }
+    const bg = (q) => (BS[q] < 0 || PID[BS[q]] >= prims.length ? 0 : prims[PID[BS[q]]].g);
+    // (a sliver: an art pixel at the figure's edge that's all inner line - the far arm or shoulder a pixel out from behind
+    // the body at an angle, which with an outline round it was a dark strap down the figure's side: it is the outline there)
+    for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+      const q = by * bw + bx;
+      if (BA[q] < 2 || !BN[q]) continue;
+      if (!DM[q] && BL[q] === BN[q] && ((bx > 0 && BA[q - 1] < 2) || (bx < bw - 1 && BA[q + 1] < 2) || (by > 0 && BA[q - bw] < 2) || (by < bh - 1 && BA[q + bw] < 2))) DM[q] = 1;
+      // (and the far shoulder's cap beside the cheek: one art pixel of arm between the head and nothing)
+      const g = bg(q);
+      if ((g === GR.ARML || g === GR.ARMR || g === GR.TORSO) && bx > 0 && bx < bw - 1 && ((BA[q - 1] < 2 && bg(q + 1) === GR.HEAD) || (BA[q + 1] < 2 && bg(q - 1) === GR.HEAD))) {
+        DM[q] = 1;
+        // (what's left of it in the cheek's own art pixel takes the cheek's colour: half a pixel of dark sleeve there was a black pixel on the face)
+        const hb = BA[q - 1] < 2 ? q + 1 : q - 1, hx = 2 * (hb % bw) - ox, hy = 2 * by - oy, T4 = [];
+        let r = 0, gg = 0, b = 0, c = 0;
+        for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+          const x = hx + dx, y = hy + dy, i = y * w + x;
+          if (x < 0 || y < 0 || x >= w || y >= h || PID[i] < 0 || PID[i] >= prims.length) continue;
+          if (prims[PID[i]].g === GR.HEAD && !LN[i]) { r += CR[i]; gg += CG[i]; b += CB[i]; c++; } else T4.push(i);
+        }
+        if (c) for (const i of T4) { CR[i] = r / c; CG[i] = gg / c; CB[i] = b / c; }
+        const ob = BA[q - 1] < 2 ? q - 1 : q + 1;   // (and its last half pixel out beyond: gone)
+        if (BA[ob]) DM[ob] = 2;
+      }
     }
     for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
       const q = by * bw + bx;
-      if (BA[q] >= 2) continue;
+      if (BA[q] >= 2 && !DM[q]) continue;
       let sb = -1;
-      const t = (r) => { if (BN[r] >= 2 && (sb < 0 || NEAR[BS[r]] > NEAR[BS[sb]])) sb = r; };
+      const t = (r) => { if (BN[r] >= 2 && !DM[r] && (sb < 0 || NEAR[BS[r]] > NEAR[BS[sb]])) sb = r; };
       if (bx > 0) t(q - 1); if (bx < bw - 1) t(q + 1); if (by > 0) t(q - bw); if (by < bh - 1) t(q + bw);
-      if (sb < 0) continue;
-      const v = sb === q + 1 || sb === q + bw ? sb + 1 : -(sb + 1);   // (+: the lit side - this pixel is left of or above what it outlines)
+      if (sb < 0 && DM[q] !== 2) continue;
+      const v0 = sb < 0 ? 1 << 30 : 0;
+      const v = v0 || (sb === q + 1 || sb === q + bw ? sb + 1 : -(sb + 1));   // (+: the lit side - this pixel is left of or above what it outlines)
       for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const x = 2 * bx - ox + dx, y = 2 * by - oy + dy; if (x >= 0 && y >= 0 && x < w && y < h) OL[y * w + x] = v; }
     }
   }
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x, o = i * 4;
     let j = i, ob = -1;
-    if (OL) { if (OL[i]) { ob = Math.abs(OL[i]) - 1; j = BS[ob]; } else if (PID[i] < 0) continue; }
+    if (OL) { if (OL[i] === 1 << 30) continue; if (OL[i]) { ob = Math.abs(OL[i]) - 1; j = BS[ob]; } else if (PID[i] < 0) continue; }
     else if (PID[i] < 0) {
       j = -1;
       if (x > 0) j = cand(i - 1, j);
@@ -1889,6 +1914,13 @@ function face(fig, P, A, D, w, h, AX, AY) {
   const azE = (s) => ((A.founder ? 33 : 24) + (s === near ? 16 * turn : 0)) * Math.PI / 180;
   let eyes = [-1, 1].map((s) => { const a = azE(s); return { s, p: at(s * Math.sin(a), Math.cos(a) * 0.99, PL ? PL.eyeZ : 0.12) }; }).filter((e) => e.p.fc > 0.28 && onHead(e.p.x, e.p.y));
   if (eyes.length === 2 && eyes[0].p.bx === eyes[1].p.bx) eyes = [eyes[0].p.fc > eyes[1].p.fc ? eyes[0] : eyes[1]];   // (one pixel wide: the nearer eye)
+  // (the polish pass, 11-20: a face at an angle keeps its far eye - two art pixels on from the near one, a pixel of skin
+  // between, where the face has room for it; with one eye it read as a broken face)
+  if (PL && PL.eye2 && eyes.length === 1 && turn > 0.2 && turn < 0.9) {
+    const e = eyes[0], s2 = -e.s, a2 = azE(s2), p2 = at(s2 * Math.sin(a2), Math.cos(a2) * 0.99, PL.eyeZ), dx = Math.sign(p2.x - e.p.x) || (M[1] > 0 ? 1 : -1), bx = e.p.bx + dx * 4;
+    let c = 0; for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) if (onHead(bx + i, e.p.by + j) && onHead(bx + dx * 2 + i, e.p.by + j)) c++;   // (with a pixel of cheek beyond it: an eye on the face's edge is a notch in it)
+    if (c >= 3) eyes.push({ s: s2, p: { ...p2, x: bx, y: e.p.by, bx, by: e.p.by } });
+  }
   const glasses = A.glasses, F = A.face || {}, mk = A.makeup || null, fm = A.fmask ? A.fmask.k : null;
   // (#429: the eye's one pixel takes the iris's colour - it was mostly the dark base, and every colour looked the same -
   // darkened only as far as it takes to stand out from the skin round it)

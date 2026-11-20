@@ -22,6 +22,8 @@ export const POLISH = {
   // big head under a big mass of hair, a wide deep body, thick arms, short legs: today's chunky measures, not pass 1's 3.1 heads)
   K: [1.38, 0.87, 0.96, 1.24, 1.1],
   hairVol: 2.6,       // the hair cap's thickness over the skull, times people.js's per-style volume (at 1 it's under an art pixel)
+  eye2: true,         // a face at an angle keeps its far eye (people.js face)
+  lnHead: 0.24,       // the line a fringe or a hat draws on the face: this much lighter (people.js: a shadow, not a headband)
   // the outline, on the art grid (people.js): [lit side: how much of the colour it borders, its brightest; the same in the shade]
   // (the owner, 11-20: the concepts' soft outline in the colour of what it outlines, "slightly darker" so the people sit with
   // the world's benches and lamps - and never bright enough to read as more skin: in the game a paler one made blobs of heads and hands)
@@ -44,7 +46,7 @@ export const POLISH = {
     if (fem && b.belly > 0 && b.belly < 1.2) { D.pelR[0] *= 1.08; D.hipX *= 1.05; D.waistR[0] *= 0.95; }   // (curvy: the hips, not the waist)
     // hands: never smaller than an art pixel and a half across, whatever the limbs' thickness
     D.fist = Math.max(D.fist, fem ? 2.75 : 3.0);
-    D.foot = D.foot.map((v, i) => v * [1.3, 1.15, 1.6][i]);   // (the concepts' shoes: big, and tall enough to be more than a white line)
+    D.foot[2] *= 1.45;   // (shoes the same size, a little taller: from the side and from behind one was a single white line)
     // a body with depth (the concepts' side views are a barrel, not a plank), and a big build's belly out in front
     D.chestR[1] *= 1.1; D.waistR[1] *= 1.1; D.pelR[1] *= 1.08;
     if (b.belly >= 1.2) { D.waistR[0] *= 1.12; D.waistR[1] *= 1.12; D.chestR[0] *= 1.06; D.shX *= 1.05; }
@@ -54,6 +56,7 @@ export const POLISH = {
   nose(cx, n) {
     const { put, e0, skin, F } = cx, k = F.nose | 0, q = { bx: n.bx, by: e0.by + 2 };
     const sh = mix(skin[2], skin[1], 0.45), soft = mix(skin[3], skin[2], 0.7);
+    if (cx.turn > 0.2 && cx.turn < 0.9) return void (k >= 3 && put(q, soft));   // (at an angle a nose's shadow lands on the far cheek's edge: a blotch - only the big noses keep a soft pixel)
     // straight, small, button, wide, long, hooked
     if (k === 1) return void put(q, soft);
     put(q, k === 2 ? mix(skin[4], skin[3], 0.4) : sh);
