@@ -300,17 +300,18 @@ export const POLISH = {
   hairRe(ex, { E, C, at, nk, sw, lock, W, hr, HD, backY, GR, hatOn }) {
     const M = W.hairM, ball = (c, r) => E(at(c), HD, r, GR.HAIR, 'bun', M), tie = (c, r, col = '#2a2226') => E(at(c), HD, r, GR.HAIR, 'tie', () => cloth(col));
     if (ex === 'pony') {   // (tied at the back of the crown; the tail out a little, then down the back of the neck)
-      const r0 = at([0, -0.9, 0.5]), m = sw(at([0, -1.42, 0.12]), 0.25), e = sw(nk(3.2, backY - 0.6, hatOn ? -5.5 : -6.5), 1);
-      E(r0, HD, [1.7, 1.5, 1.6], GR.HAIR, 'tie', () => cloth('#c8302c')); lock(r0, m, 2.6, 2.5, 'tail'); lock(m, e, 2.5, 1.0, 'tail');
+      // (11-20: out behind the head first - a tail you can tell from long hair from the side - then down, well clear of the neck)
+      const r0 = at([0, -1.05, 0.22]), m = sw(at([0, -1.8, -0.08]), 0.25), e = sw(nk(1.6, backY - 3.4, hatOn ? -4.4 : -5.0), 1);
+      E(r0, HD, [1.9, 1.7, 1.8], GR.HAIR, 'tie', () => cloth('#c8302c')); lock(r0, m, 2.7, 3.3, 'tail'); lock(m, e, 3.3, 1.5, 'tail');
       return true;
     }
     if (hatOn) return false;
-    if (ex === 'bun') { tie([0, -0.3, 1.02], [2.6, 2.5, 1.3], '#3a2a30'); ball([0, -0.34, 1.5], [4.1, 3.9, 3.5]); return true; }
-    if (ex === 'topknot') { tie([0, -0.02, 1.0], [2.4, 2.2, 1.1]); ball([0, -0.04, 1.3], [3.9, 3.6, 2.7]); return true; }
+    if (ex === 'bun') { tie([0, -0.3, 1.26], [2.0, 1.9, 1.5], '#3a2a30'); ball([0, -0.34, 1.78], [4.4, 4.2, 3.3]); return true; }   // (11-20: up out of the thicker hair - the tie a dark band between the knot and the head, or the three were one cone)
+    if (ex === 'topknot') { tie([0, -0.02, 1.22], [1.9, 1.8, 1.3]); ball([0, -0.04, 1.7], [3.7, 3.5, 2.8]); return true; }
     if (ex === 'manbun') { tie([0, -0.9, 0.2], [1.9, 1.4, 1.8]); ball([0, -1.22, 0.16], [3.4, 3.0, 3.3]); return true; }
     if (ex === 'twinbuns') { for (const s of [-1, 1]) { ball([s * 0.95, -0.22, 1.02], [4.0, 3.8, 3.5]); } return true; }
     if (ex === 'puffs') { for (const s of [-1, 1]) E(at([s * 0.98, -0.25, 1.0]), HD, [4.3, 4.1, 4.0], GR.HAIR, 'afro', M); return true; }
-    if (ex === 'halfup') { tie([0, -0.3, 1.1], [2.6, 2.5, 1.3]); ball([0, -0.34, 1.54], [4.1, 3.9, 3.4]); return true; }   // (CB3-F: a knot on the crown over long hair)
+    if (ex === 'halfup') { tie([0, -0.3, 1.3], [2.0, 1.9, 1.5]); ball([0, -0.34, 1.9], [5.1, 4.7, 3.4]); return true; }   // (CB3-F: a knot on the crown over long hair)
     if (ex === 'pigtails') {
       for (const s of [-1, 1]) { const r0 = at([s * 0.98, -0.3, 0.2]), m = sw(at([s * 1.5, -0.3, -0.1]), 0.4), e = sw(nk(s * (hr[0] + 2.3), -1.0, -4.6), 1); tie([s * 0.98, -0.3, 0.2], [1.5, 1.4, 1.5], '#c8302c'); lock(r0, m, 2.2, 2.5, 'tail'); lock(m, e, 2.5, 1.1, 'tail'); }
       return true;
@@ -332,7 +333,7 @@ export const POLISH = {
     for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
       const i = y * w + x, gi = g(i);
       if (LN[i] || (gi !== GR.TORSO && gi !== GR.SKIRT && gi !== GR.LEGL && gi !== GR.LEGR)) continue;
-      for (const j of [i - 1, i + 1]) if (arm(g(j)) && NEAR[j] > NEAR[i] + 0.2) { hit.push(i); break; }
+      for (const j of [i - 1, i + 1]) if (arm(g(j)) && NEAR[j] > NEAR[i] + 0.2 && !(this.lnC && Math.abs(CR[i] - CR[j]) + Math.abs(CG[i] - CG[j]) + Math.abs(CB[i] - CB[j]) > this.lnC)) { hit.push(i); break; }   // (lnC: not where the colours part them already)
     }
     for (const i of hit) { LN[i] = 1; CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; }
   },

@@ -48,7 +48,7 @@ const own = (base, name, d, pose = 'idle', f = 0, skin = 2, color = 'hot pink') 
     const i = y * a.w + x, bx = x - a.ax + b.ax, by = y - a.ay + b.ay, j = by * b.w + bx, inb = bx >= 0 && by >= 0 && bx < b.w && by < b.h;
     if (a.p0[i * 4 + 3] && !a.line(i) && inb && b.p0[j * 4 + 3] && (a.p0[i * 4] !== b.p0[j * 4] || a.p0[i * 4 + 1] !== b.p0[j * 4 + 1] || a.p0[i * 4 + 2] !== b.p0[j * 4 + 2])) px.push(i);
   }
-  return { G: a, px };
+  return { G: a, B: b, px };
 });
 const UNDER = LK.PIECES.filter((p) => p && p.slot === 'under' && p.name !== 'Nothing on');
 const CUT = UNDER.filter((p) => !['Union suit', 'Silk slip'].includes(p.name));   // (those two are shapes the renderer has)
@@ -74,10 +74,14 @@ test('underwear: clean tones on every skin - a piece is a few tones of its own, 
   const key = (G, i) => G.p0[i * 4] << 16 | G.p0[i * 4 + 1] << 8 | G.p0[i * 4 + 2];
   for (const p of CUT) for (const base of p.b) for (let skin = 0; skin < LK.SKIN_TONES.length; skin += 2) for (const d of [0, 4]) {
     // (in white, the hardest colour: the renderer shades white to a warm brown - on a bare body, the skin's tones)
-    const G = withPass(() => baked(wear(base, p.name, 'white', skin, 'white'), d)), px = own(base, p.name, d, 'idle', 0, skin).px.filter((i) => 0.3 * G.p0[i * 4] + 0.59 * G.p0[i * 4 + 1] + 0.11 * G.p0[i * 4 + 2] > 90);   // (not the outline round it, which takes a tint from the cloth)
+    // (the piece's art pixels: where three colours of it give three colours, the figures laid feet on feet - a look's colours seed
+    // its hair and a step of its skin's shading here and there, which two colours alone would count as the piece)
+    const G = withPass(() => baked(wear(base, p.name, 'white', skin, 'white'), d)), O = own(base, p.name, d, 'idle', 0, skin), px = O.px.map((i) => { const x = i % O.G.w - O.G.ax + G.ax, y = Math.floor(i / O.G.w) - O.G.ay + G.ay; const bx = x - G.ax + O.B.ax, by = y - G.ay + O.B.ay, j = (by * O.B.w + bx) * 4, k = (y * G.w + x) * 4; return x >= 0 && y >= 0 && x < G.w && y < G.h && (O.B.p0[j] !== G.p0[k] || O.B.p0[j + 1] !== G.p0[k + 1] || O.B.p0[j + 2] !== G.p0[k + 2]) ? y * G.w + x : -1; }).filter((i) => i >= 0 && G.p0[i * 4 + 3] && !G.line(i) && 0.3 * G.p0[i * 4] + 0.59 * G.p0[i * 4 + 1] + 0.11 * G.p0[i * 4 + 2] > 90);   // (not the outline round it, which takes a tint from the cloth)
     const cnt = new Map(); for (const i of px) cnt.set(key(G, i), (cnt.get(key(G, i)) || 0) + 1);
     const set = new Set(px), rest = new Set(), top = [...cnt.values()].sort((x, y) => y - x).slice(0, 5).reduce((x, y) => x + y, 0);
-    for (let i = 0; i < G.w * G.h; i++) if (G.p0[i * 4 + 3] && !set.has(i)) rest.add(key(G, i));
+    // (the body: what is the same in all three colours)
+    const at = (S, i) => { const x = i % G.w - G.ax + S.ax, y = Math.floor(i / G.w) - G.ay + S.ay; return x >= 0 && y >= 0 && x < S.w && y < S.h && S.p0[(y * S.w + x) * 4 + 3] ? key(S, y * S.w + x) : -1; };
+    for (let i = 0; i < G.w * G.h; i++) if (G.p0[i * 4 + 3] && !set.has(i) && at(O.G, i) === key(G, i) && at(O.B, i) === key(G, i)) rest.add(key(G, i));
     // (five tones or fewer make up nearly all of it: the rest are the art pixels it shares with a hand or the outline)
     assert.ok(top >= px.length * 0.7, `${p.name} on ${base}, skin ${skin}, facing ${d}: its five commonest tones are ${top} of ${px.length} art pixels`);
     // (...and none of its tones is one of the body's - bar the art pixels a hand in front of it shares)

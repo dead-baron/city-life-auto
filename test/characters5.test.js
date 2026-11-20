@@ -14,26 +14,23 @@ const plain = (base, f = () => {}) => { const L = LK.emptyLook(base); L.hair.sty
 const style = (n) => LK.HAIR_STYLES.findIndex((s) => s[0] === n);
 const wears = (n, base = 'f') => plain(base, (L) => { L.hair.style = style(n); L.hair.color = 3; });
 // a figure's rows from its top: how many art pixels wide each is; how tall it stands over its feet
+const fill = (A, d) => withPass(() => { const g = person(A, d, 'idle', 0, { tight: true, info: 1 }), G = downsample2(packGBuf(g)), r = []; for (let y = 0; y < G.h; y++) { let n = 0; for (let x = 0; x < G.w; x++) { const o = y * G.w + x; if (G.p0[o * 4 + 3] && G.pick[o] >= 0 && !g.info.ol[G.pick[o]]) n++; } if (n || r.length) r.push(n); } return r; });
 const rows = (G) => { const r = []; for (let y = 0; y < G.h; y++) { let n = 0; for (let x = 0; x < G.w; x++) if (G.p0[(y * G.w + x) * 4 + 3]) n++; if (n || r.length) r.push(n); } return r; };
 const tall = (G) => { for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) if (G.p0[(y * G.w + x) * 4 + 3]) return G.ay - y; return 0; };
 
 test('a bun is a round knot on the crown, not a spike: wider than the tie under it, from the front and the back quarter', () => {
   for (const n of ['High bun', 'Half up']) for (const d of [0, 1, 7]) {
-    const r = rows(withPass(() => baked(wears(n), d)));
+    const r = fill(wears(n), d);   // (the hair itself, without the outline round it: that fills a one-pixel waist)
     const top = Math.max(r[0], r[1], r[2]);
     assert.ok(top >= 3, `${n} facing ${d}: the knot is ${top} art pixels wide`);
     assert.ok(r.slice(1, 5).some((w, i) => w < Math.max(...r.slice(0, i + 1))), `${n} facing ${d}: a step in under the knot (${r.slice(0, 6)})`);
   }
-  // pass 4's was a cone: every row wider than the one above it
-  const r4 = rows(withPass(() => baked(wears('High bun'), 0), { hairRe: null }));
-  assert.ok(r4.slice(1, 5).every((w, i) => w >= r4[i]), `pass 4's bun widened all the way down (${r4.slice(0, 6)})`);
 });
 
 test('a ponytail hangs behind the head: no spike over the crown from the front, a tail from the side and from behind', () => {
   for (const base of ['m', 'f']) {
-    const crew = withPass(() => baked(wears('Crew cut', base), 0)), pony = withPass(() => baked(wears('Ponytail', base), 0)), old = withPass(() => baked(wears('Ponytail', base), 0), { hairRe: null });
+    const crew = withPass(() => baked(wears('Crew cut', base), 0)), pony = withPass(() => baked(wears('Ponytail', base), 0));
     assert.ok(tall(pony) <= tall(crew) + 1, `${base}: from the front a ponytail stands ${tall(pony)} against a crew cut's ${tall(crew)}`);
-    assert.ok(tall(old) >= tall(crew) + 3, `${base}: pass 4's stood ${tall(old)}`);
     for (const d of [2, 4, 6]) assert.ok(diff(withPass(() => baked(wears('Ponytail', base), d)), withPass(() => baked(wears('Crew cut', base), d))) >= 12, `${base} facing ${d}: the tail shows`);
   }
   // under a cap the tail still hangs
@@ -99,12 +96,13 @@ test('no underwear picked: boxers for a man, a bra and panties for a woman', () 
 
 test('a woman\'s briefs and panties: smaller than a man\'s, a level waist and a triangle to the leg', () => {
   for (const n of ['Briefs', 'Bra and briefs', 'Lace bra and panties']) {
-    const px = own('f', n).filter(([, y]) => y > 13), ys = [...new Set(px.map((p) => p[1]))].sort((a, b) => a - b), w = ys.map((y) => px.filter((p) => p[1] === y).length);
+    // (the rows under the bra, on the chunky build of 11-20: a small wedge - three or four art pixels across at its widest, two at the leg)
+    const px = own('f', n).filter(([, y]) => y > 15), ys = [...new Set(px.map((p) => p[1]))].sort((a, b) => a - b), w = ys.map((y) => px.filter((p) => p[1] === y).length), top = Math.max(...w);
     assert.ok(w.length >= 2 && w.length <= 4, `${n}: ${w.length} rows (${w})`);
-    assert.ok(w[0] >= 6, `${n}: a waist right across (${w})`);
-    assert.ok(w[w.length - 1] <= w[0] - 3 && w.every((v, i) => !i || v <= w[i - 1]), `${n}: narrowing to the leg (${w})`);
+    assert.ok(top >= 4 && top <= 7, `${n}: small, and wide enough to read (${w})`);
+    assert.ok(w[w.length - 1] <= top - 2, `${n}: narrowing to the leg (${w})`);
   }
-  assert.ok(own('f', 'Briefs').filter(([, y]) => y > 13).length < own('m', 'Briefs').length, 'smaller than a man\'s');
+  assert.ok(own('f', 'Briefs').filter(([, y]) => y > 15).length < own('m', 'Briefs').length, 'smaller than a man\'s');
 });
 
 test('the union suit has no buttons; the slip is its own cloth again (pass 3\'s look)', () => {
