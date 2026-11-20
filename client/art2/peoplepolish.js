@@ -8,6 +8,7 @@
 // POLISH.eyeZ          how high on the head the eyes sit (in head radii; today 0.12 - under most fringes there's no room for a brow)
 // POLISH.nose / eyes / mouth(cx, ...)   the face's art pixels: people.js face() hands in cx = { at, put, onHead, eyes, e0, A, D, P,
 //                      F (the look's face), W (the wardrobe's ramps), skin (5-step ramp, dark to light), eyeC, near, turn, ... }
+import { cloth } from './people.js';
 const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
 const lum = (c) => (0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]) / 255;
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
@@ -103,6 +104,28 @@ export const POLISH = {
     const wrap = (k, f) => { const o = W[k]; if (o) W[k] = (Q) => f(o(Q), Q); };
     for (const k of ['torso', 'arm', 'leg', 'skirt', 'hood', 'collar', 'shoe', 'sole', 'hat', 'brim', 'lining', 'apron', 'pack', 'leather', 'case', 'beltbag']) wrap(k, fix);
     const bothDark = isDark(W.top) && isDark(W.bot) && !T.dress && !T.long && !T.bib;
+    // underwear (lookcore.js 'under': A.under, on the halves no clothes cover): briefs that are briefs - full, cut at the
+    // leg - trunks and boxers with a waistband in the trim colour, boxers a little down the thigh, a sports bra a wide
+    // band, lace the trim colour scattered through it, silk a sheen
+    const U = A.under, ub = U && A.bottom && A.bottom.under && W.bk !== 'none', ut = U && A.top && A.top.under, band = U && cloth(U.trim), hs = (Q, n) => ((Math.floor(Q.x / 2) * 7 + Math.floor(Q.y / 2) * 13 + n) % 5 === 0);
+    const lace = (R, Q) => { if (U.gloss) Q.gloss = 0.7; return U.lace && hs(Q, 1) ? band : R; };
+    if (ub) {
+      const brief = W.bk === 'bikini', o = W.pel;
+      W.pel = (Q) => {
+        const R = o(Q), z = Q.z, au = Math.abs(Q.u);
+        if (R !== W.bot && R !== W.skin) return R;
+        const top = brief ? 1.7 : 2.5;
+        if (z > top || (brief && au > 0.66 && z < -0.2)) return W.skin;
+        return U.band && z > top - 0.75 ? band : lace(W.bot, Q);
+      };
+      if (!brief && !U.fit) wrap('leg', (R, Q) => (Q.part === 'th' && Q.l0 < 0.62 ? lace(W.bot, Q) : R));
+    }
+    if (ut && T.bikini) wrap('torso', (R, Q) => {
+      const z = Q.z, au = Math.abs(Q.u);
+      if (U.sport && z > D.chestUp - 1.5 && z < D.shUp - 1.3 && (z < D.chestUp + 1.9 || (au > 0.22 && au < 0.42))) return W.top;
+      return R === W.top ? lace(R, Q) : R;
+    });
+    else if (ut && U.lace) wrap('torso', (R, Q) => (R === W.top ? lace(R, Q) : R));
     wrap('pel', (R, Q) => { if (bothDark && R === W.bot && Q.z > (T.tuck ? 1.4 : -1.9) && Q.z < (T.tuck ? 2.2 : -0.9)) Q.k += 0.3; return fix(R); });
   },
   // the arm over the body: a line on the body's pixels beside an arm in front of them, however close the two are (the

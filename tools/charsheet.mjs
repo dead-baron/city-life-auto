@@ -230,7 +230,38 @@ async function builds(out) {
   }
   sh.save(out);
 }
-const DOCS = join(ROOT, 'docs', 'characters');
+// ---- pass 2's sheets (docs/tasks/CHARACTERS2.md): docs/characters/pass2/ ----
+// a grid of figures: rows [label, [cell...]], a cell { L (a look) | A (an app), d, pose, f, opt, on (the pass: default on), tint, t (a caption) }
+async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 150 } = {}) {
+  const CW = cw * k, RH = rh * k, n = Math.max(...rows.map((r) => r[1].length)), sh = new Sheet(label + n * CW + 8, 24 + rows.length * RH + 8, bg);
+  sh.text(title, 8, 6, 2);
+  for (const [ri, [name, cells]] of rows.entries()) {
+    const y = 24 + (ri + 1) * RH - 2 * k;
+    String(name).split('|').forEach((t, i) => sh.text(t, 6, y - RH / 2 + i * 12, 2));
+    for (const [ci, c] of cells.entries()) {
+      if (!c) continue;
+      await polish(c.on !== false);
+      const x = label + ci * CW + CW / 2;
+      if (c.bg) sh.rect(x - CW / 2, y - RH + 2 * k, CW, RH, c.bg);
+      sh.sprite(baked(c.A || LK.lookArt(c.L, c.art), c.d ?? 1, c.pose || 'idle', c.f || 0, c.opt || {}), x, y - 2 * k, k, c.tint || null);
+      if (c.t) sh.text(c.t, x - CW / 2 + 3, y - RH + 2 * k + 3, 1, [225, 225, 230]);
+    }
+  }
+  sh.save(out);
+}
+const dressed = (base, outfit, body = {}, more = {}) => { const L = LK.emptyLook(base); Object.assign(L.body, body); if (more.hair) Object.assign(L.hair, more.hair); if (more.face) Object.assign(L.face, more.face); if (more.extras) Object.assign(L.extras, more.extras); for (const [s, v] of Object.entries(outfit)) L.outfit[s] = typeof v === 'string' ? LK.item(v) : Array.isArray(v) ? LK.item(...v) : v; return LK.validLook(L); };
+// every underwear piece on both bases, front and back, at the big scale and the game's
+async function under(out) {
+  const U = LK.PIECES.filter((p) => p && p.slot === 'under'), rows = [];
+  for (const base of ['m', 'f']) for (const p of [null, ...U.filter((q) => q.b.includes(base))]) {
+    const L = dressed(base, p ? { under: p.name } : {}, { skin: base === 'm' ? 2 : 9, build: base === 'm' ? 1 : 3 }, { hair: { style: base === 'f' ? 20 : 6 } });
+    rows.push([(p ? p.name : 'basic (none picked)').replace(' and ', ' +|'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 0, on: false, t: 'off' }, { L, d: 0, art: { censored: true }, t: 'censored' }]]);
+  }
+  const half = Math.ceil(rows.length / 2);
+  await grid(out.replace('.png', '-1.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF; CENSORED NUDITY ON', rows.slice(0, half), { k: 6, rh: 32 });
+  await grid(out.replace('.png', '-2.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF; CENSORED NUDITY ON', rows.slice(half), { k: 6, rh: 32 });
+}
+const DOCS = join(ROOT, 'docs', 'characters'), P2 = join(DOCS, 'pass2');
 if (mode === 'before') await lineup(false, arg('out', join(DOCS, 'before.png')), 'TODAY\'S PEOPLE (BEFORE)');
 else if (mode === 'after') await lineup(true, arg('out', join(DOCS, 'after.png')), 'AFTER: THE POLISH PASS');
 else if (mode === 'side') await sides(arg('out', DOCS));
@@ -240,5 +271,6 @@ else if (mode === 'variants') await variants(arg('out', join(DOCS, 'variants.png
 else if (mode === 'poses') await poses(arg('out', join(DOCS, 'poses.png')));
 else if (mode === 'hair') await hair(arg('out', join(DOCS, 'hair.png')));
 else if (mode === 'builds') await builds(arg('out', join(DOCS, 'builds.png')));
+else if (mode === 'under') await under(arg('out', join(P2, 'underwear.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

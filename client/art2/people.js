@@ -1968,6 +1968,7 @@ function water(w, h, AX, AY, X, S, P, R = 1) {
 function censor(fig, S, X, D, w, h, AX, AY, R = 1) {
   const W = fig.W, spots = [];
   if (W.bk === 'none') spots.push([vadd(S.pel, mv(S.PF, [0, D.pelR[1] * 0.95, -D.pelR[2] * 0.3])), 10, 8]);
+  if (PL && W.bk === 'none') spots.push([vadd(S.pel, mv(S.PF, [0, -D.pelR[1] * 0.95, -D.pelR[2] * 0.25])), 10, 8]);   // (pass 2: from behind too)
   if (W.tk === 'none' && D.fem) spots.push([vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.2, 1.0])), 14, 6]);
   const B = 2 * R;
   for (const [p, bw, bh] of spots) {
@@ -1985,7 +1986,7 @@ function censor(fig, S, X, D, w, h, AX, AY, R = 1) {
       // (averaged over the block and a pixel round it: soft, like a blur, the neighbours' tones bleeding in)
       for (let y = by - 1; y < by + B + 1; y++) for (let x = bx - 1; x < bx + B + 1; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; r += CR[i]; g += CG[i]; b += CB[i]; m++; }
       if (!m) continue;
-      const jt = ((j + k) & 1 ? 1.12 : 0.86) + (hash(k + Math.round(cx / B), j + Math.round(cy / B), 41) - 0.5) * 0.14;   // (each block its own shade, neighbours apart: the squares show)
+      const jt = ((j + k) & 1 ? (PL ? 1.2 : 1.12) : PL ? 0.76 : 0.86) + (hash(k + Math.round(cx / B), j + Math.round(cy / B), 41) - 0.5) * 0.14;   // (each block its own shade, neighbours apart: the squares show)
       r = r / m * jt; g = g / m * jt; b = b / m * jt;
       for (let y = by; y < by + B; y++) for (let x = bx; x < bx + B; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; CR[i] = r; CG[i] = g; CB[i] = b; AO[i] = -1; }
     }

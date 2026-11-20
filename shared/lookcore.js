@@ -8,10 +8,13 @@
 //   hair   { style (HAIR_STYLES index), color (HAIR_COLORS), facial (FACIAL_HAIR index) }
 //   extras { makeup (MAKEUP), makeupColor (MAKEUP_COLORS), tattoos (TATTOO_AREAS bits), piercings (PIERCINGS bits),
 //            scar (SCARS) }
-//   outfit { top, jacket, bottoms, set, shoes, hat, glasses, jewel, bag }: each null or { id (PIECES index), c main
-//            colour, t trim colour (CLOTH indexes), p pattern (PATTERNS) }. A set (dresses, suits, tracksuits,
-//            swimwear) is worn instead of a top and bottoms.
-// encodeLook(look) -> a short string (66 characters) for saving and the network; decodeLook(code) -> look or null.
+//   outfit { top, jacket, bottoms, set, shoes, hat, glasses, jewel, bag, under }: each null or { id (PIECES index), c
+//            main colour, t trim colour (CLOTH indexes), p pattern (PATTERNS) }. A set (dresses, suits, tracksuits,
+//            swimwear) is worn instead of a top and bottoms. under: the underwear - what shows where there's no top
+//            or no bottoms (null: the plain white basics every look had before the slot; 'Nothing on': bare, the
+//            renderer's mosaic over the private areas).
+// encodeLook(look) -> a short string (66 characters, 71 with underwear picked) for saving and the network;
+// decodeLook(code) -> look or null.
 // validLook(look) -> a clamped copy (anything unknown goes back to a default) - the server's check.
 // (shared/look.js adds randomLook, CC9's STARTERS, policeLook and lookFromOutfit, and re-exports all of this: the
 // game's renderer imports this core alone, the creator and the server look.js.)
@@ -20,8 +23,8 @@
 // The catalogue is append-only: a piece's index is its id on the wire and in saves.
 
 export const LOOK_VERSION = 1;
-export const SLOTS = ['top', 'jacket', 'bottoms', 'set', 'shoes', 'hat', 'glasses', 'jewel', 'bag'];
-export const SLOT_NAMES = { top: 'Tops', jacket: 'Jackets', bottoms: 'Bottoms', set: 'Dresses & sets', shoes: 'Shoes', hat: 'Hats', glasses: 'Glasses & masks', jewel: 'Jewelry', bag: 'Bags' };
+export const SLOTS = ['top', 'jacket', 'bottoms', 'set', 'shoes', 'hat', 'glasses', 'jewel', 'bag', 'under'];   // (append-only: a slot's place is its place in the code)
+export const SLOT_NAMES = { top: 'Tops', jacket: 'Jackets', bottoms: 'Bottoms', set: 'Dresses & sets', shoes: 'Shoes', hat: 'Hats', glasses: 'Glasses & masks', jewel: 'Jewelry', bag: 'Bags', under: 'Underwear' };
 export const STYLES = [
   ['hifashion', 'High fashion'], ['business', 'Business'], ['smart', 'Smart casual'], ['streetwear', 'Streetwear'], ['street', 'Street'],
   ['casual', 'Casual'], ['skater', 'Skater'], ['beach', 'Beach'], ['lounge', 'Lounge'], ['nightclub', 'Nightclub'], ['punk', 'Punk'],
@@ -383,6 +386,29 @@ add('set', 'Nothing', 'mf', 'lounge', 0, 'bathhouse', { k: 'none', bk: 'none', i
 // a random look; the creator shows it only to its owners): Season 0's Founding Citizen jacket (server/systems/cosmetics.js,
 // shared/rules.js COSMETICS.beta) - the varsity jacket's art in black and gold, no new sprite art
 add('jacket', 'Founding Citizen jacket', 'mf', 'preppy streetwear retro', 0, 'gift', { k: 'jacket', varsity: 1, gift: 1 }, 'black', 'gold');
+// underwear (the owner, 2026-11-19; concept sheets SF23-A..G, SM23): a base layer for both bases, its own slot - what a
+// character has on under the clothes, seen where there's no top or no bottoms. d.k the top half's art kind (none: a
+// bare chest - a woman's gets a plain bra with it), d.bk the bottom half's. The basics are everyone's (rules.js
+// STARTER_WARDROBE); the lingerie is sold. Opaque, never see-through. 'Nothing on' is free: the renderer's mosaic covers
+// the private areas (people.js censor), and "censored nudity" shows swimwear. Random looks - the city's people - never
+// fill the slot (shared/look.js randomLook).
+add('under', 'Nothing on', 'mf', 'lounge', 0, 'clothing', { k: 'none', bk: 'none' }, 'white');
+add('under', 'Boxers', 'm', 'lounge casual', 10, 'clothing', { bk: 'trunks', band: 1 }, 'sky', 'white');
+add('under', 'Briefs', 'mf', 'lounge casual', 8, 'clothing', { bk: 'bikini', band: 1 }, 'white', 'light grey');
+add('under', 'Boxer briefs', 'm', 'lounge athletic', 12, 'clothing', { bk: 'trunks', fit: 1, band: 1 }, 'black', 'light grey');
+add('under', 'Undershirt and boxers', 'm', 'lounge casual', 16, 'clothing', { k: 'under', bk: 'trunks', band: 1 }, 'white', 'sky');
+add('under', 'Tank and briefs', 'mf', 'lounge casual', 14, 'clothing', { k: 'tank', bk: 'bikini', band: 1 }, 'white', 'light grey');
+add('under', 'Bra and briefs', 'f', 'lounge casual', 14, 'clothing', { k: 'bra', bk: 'bikini' }, 'white', 'white');
+add('under', 'Sports bra and shorts', 'f', 'lounge athletic', 18, 'sports', { k: 'bra', sport: 1, bk: 'trunks', fit: 1, band: 1 }, 'grey', 'white');
+add('under', 'Union suit', 'mf', 'lounge winter western', 30, 'outdoor', { k: 'longsleeve', bk: 'leggings' }, 'red', 'white');
+add('under', 'Silk boxers', 'm', 'lounge nightclub hifashion', 60, 'boutique', { bk: 'trunks', gloss: 1, band: 1 }, 'burgundy', 'gold');
+add('under', 'Fitted trunks', 'm', 'lounge nightclub athletic', 35, 'boutique', { bk: 'trunks', fit: 1, band: 1 }, 'navy', 'white');
+add('under', 'Lace bra and panties', 'f', 'lounge nightclub hifashion', 70, 'boutique', { k: 'bra', bk: 'bikini', lace: 1 }, 'black', 'gold');
+add('under', 'Bralette set', 'f', 'lounge nightclub casual', 45, 'boutique', { k: 'bra', sport: 1, bk: 'bikini', lace: 1 }, 'forest', 'cream');
+add('under', 'Strapless set', 'f', 'lounge nightclub', 50, 'boutique', { k: 'bikini', bk: 'bikini' }, 'red', 'red');
+add('under', 'Lace bodysuit', 'f', 'lounge nightclub hifashion alt', 90, 'boutique', { k: 'swimsuit', bk: 'bikini', lace: 1 }, 'navy', 'silver');
+add('under', 'Teddy', 'f', 'lounge nightclub hifashion', 95, 'boutique', { k: 'swimsuit', bk: 'bikini', gloss: 1 }, 'wine', 'blush');
+add('under', 'Silk slip', 'f', 'lounge nightclub hifashion', 85, 'boutique', { k: 'dress', len: 1, bk: 'bikini', gloss: 1 }, 'cream', 'cream');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
@@ -443,14 +469,15 @@ export function encodeLook(L) {
   for (const v of n) s += AB[v & 63];
   for (const k of SLOTS) {
     const it = L.outfit[k];
-    if (!it) { s += '00000'; continue; }
+    if (!it) { if (k !== 'under') s += '00000'; continue; }   // (no underwear picked: the code as short as before the slot - most looks, every NPC's)
     s += AB[(it.id >> 6) & 63] + AB[it.id & 63] + AB[it.c & 63] + AB[it.t & 63] + AB[it.p & 63];
   }
   return s;
 }
-export const LOOK_CODE_LEN = 21 + SLOTS.length * 5;
+export const LOOK_CODE_LEN = 21 + (SLOTS.length - 1) * 5;   // (5 more with underwear on)
 export function decodeLook(s) {
-  if (typeof s !== 'string' || s.length !== LOOK_CODE_LEN) return null;
+  if (typeof s === 'string' && s.length === LOOK_CODE_LEN) s += '00000';
+  if (typeof s !== 'string' || s.length !== LOOK_CODE_LEN + 5) return null;
   const v = [];
   for (let i = 0; i < s.length; i++) { const x = AV[s[i]]; if (x === undefined) return null; v.push(x); }
   if (v[0] !== LOOK_VERSION) return null;
@@ -528,14 +555,19 @@ export function lookArt(L, opt = {}) {
   if (ex.piercings) A.piercings = ex.piercings;
   if (ex.scar) A.scar = ex.scar;
   // clothes
-  const set = P('set'), top = P('top'), jk = P('jacket'), bot = P('bottoms');
+  const set = P('set'), top = P('top'), jk = P('jacket'), bot = P('bottoms'), un = P('under');
   const pat = (o) => PATTERNS[o.p] && o.p ? PATTERNS[o.p] : undefined;
+  // the underwear: its halves stand in where there's no top or no bottoms (A.under: what the polish pass draws finer)
+  const uc = un && HEX(O.under.c), ut = un && HEX(O.under.t);
+  if (un) A.under = { ...un.d, color: uc, trim: ut };
+  const uTop = un && { kind: un.d.k || (fem ? 'bra' : 'none'), color: uc, color2: ut, trim: ut, pattern: pat(O.under), len: un.d.len || 0, under: 1 };
+  const uBot = un && { kind: un.d.bk, color: uc, color2: ut, trim: ut, pattern: pat(O.under), gloss: un.d.gloss ? 1 : 0, under: 1 };
   if (set) {
     A.top = { kind: set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0 };
     A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined };
   } else {
-    A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0, chevrons: top.d.chevrons ? 1 : 0 } : { kind: fem ? 'tank' : 'none', color: '#e8e4dc' };
-    A.bottom = bot ? { kind: bot.d.k, color: HEX(O.bottoms.c), color2: HEX(O.bottoms.t), trim: HEX(O.bottoms.t), pattern: pat(O.bottoms) || (bot.d.ripped ? 'ripped' : undefined), len: bot.d.len || 0, gloss: bot.d.gloss ? 1 : 0, stripe: bot.d.k === 'track' ? HEX(O.bottoms.t) : undefined } : { kind: fem ? 'bikini' : 'trunks', color: '#e8e4dc' };
+    A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0, chevrons: top.d.chevrons ? 1 : 0 } : uTop || { kind: fem ? 'tank' : 'none', color: '#e8e4dc' };
+    A.bottom = bot ? { kind: bot.d.k, color: HEX(O.bottoms.c), color2: HEX(O.bottoms.t), trim: HEX(O.bottoms.t), pattern: pat(O.bottoms) || (bot.d.ripped ? 'ripped' : undefined), len: bot.d.len || 0, gloss: bot.d.gloss ? 1 : 0, stripe: bot.d.k === 'track' ? HEX(O.bottoms.t) : undefined } : uBot || { kind: fem ? 'bikini' : 'trunks', color: '#e8e4dc' };
   }
   if (jk) {   // worn open over the top: the top's colour down the front
     const under = A.top;

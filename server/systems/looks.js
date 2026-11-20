@@ -101,7 +101,7 @@ export function wear(world, p, code, give = false) {
 export function freshOutfit(prof, seed, ownedOnly = false) {
   ensureLook(prof);
   const cur = decodeLook(prof.look), r = randomLook(seed >>> 0, cur.body.base);
-  for (const s of SLOTS) cur.outfit[s] = r.outfit[s];
+  for (const s of SLOTS) if (s !== 'under') cur.outfit[s] = r.outfit[s];   // (a random outfit has no underwear: yours stays on)
   if (ownedOnly) {
     const rr = mulberry32((seed >>> 0) ^ 0x77a1);
     const pick = (s) => {

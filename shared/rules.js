@@ -802,7 +802,8 @@ export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];
 export const STARTER_WARDROBE = ['Plain tee', 'Graphic tee', 'Long-sleeve tee', 'Tank top', 'Hoodie', 'Flannel shirt', 'Blouse', 'Crop top',
   'Jeans', 'Black jeans', 'Chinos', 'Joggers', 'Shorts', 'Skirt', 'Leggings', 'Sundress',
   'Sneakers', 'Skate shoes', 'Slip-ons', 'Sandals', 'Ballet flats',
-  'Zip hoodie', 'Denim jacket', 'Baseball cap', 'Beanie', 'Sunglasses'];   // what every player owns from the start (with the starting look's pieces)
+  'Zip hoodie', 'Denim jacket', 'Baseball cap', 'Beanie', 'Sunglasses',
+  'Boxers', 'Briefs', 'Boxer briefs', 'Undershirt and boxers', 'Tank and briefs', 'Bra and briefs', 'Sports bra and shorts'];   // (the underwear basics: the owner, 11-19)   // what every player owns from the start (with the starting look's pieces)
 // the barbershop and the hair salon (ST3): what each change costs; the salon charges SALON_K times as much
 export const BARBER_PRICES = { cut: 15, colour: 25, beard: 12, moustache: 8 };
 export const SALON_K = 2;

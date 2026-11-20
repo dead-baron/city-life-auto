@@ -595,7 +595,7 @@ function renderPage() {
     // each tile: you wearing it (a top or a set without the jacket over it; hats, glasses and masks as a close-up)
     const crop = outSlot === 'hat' || outSlot === 'glasses' ? 'head' : 'full';
     const dress = (V, id) => { V.outfit[outSlot] = id; if (outSlot === 'set' && id) { V.outfit.top = null; V.outfit.bottoms = null; } if ((outSlot === 'top' || outSlot === 'set') && id) V.outfit.jacket = null; if (outSlot === 'hair' || crop === 'head') V.outfit.glasses = outSlot === 'glasses' ? id : V.outfit.glasses; };
-    const none = outSlot !== 'shoes' ? `<button class="cc-card sm ${!slotItem ? 'on' : ''}" data-act="piece" data-v="0">${th(variant((V) => dress(V, null)), crop)}<span>None</span></button>` : '';
+    const none = outSlot !== 'shoes' ? `<button class="cc-card sm ${!slotItem ? 'on' : ''}" data-act="piece" data-v="0">${th(variant((V) => dress(V, null)), crop)}<span>${outSlot === 'under' ? 'Basic' : 'None'}</span></button>` : '';   // (underwear: no piece picked is the plain basics; 'Nothing on' is a piece)
     const tiles = pieces.map((p) => { const mine = slotItem && slotItem.id === p.i, lk = owned(p.i) ? '' : lockTag(p.i); return `<button class="cc-card sm ${mine ? 'on' : ''} ${lk ? 'locked' : ''}" data-act="piece" data-v="${p.i}">${th(variant((V) => dress(V, { id: p.i, c: mine ? slotItem.c : p.c, t: mine ? slotItem.t : p.t, p: mine ? slotItem.p : p.d.p || 0 })), crop)}<span>${esc(p.name)}</span>${lk}</button>`; }).join('');
     const strip = completeLooks().map((V, i) => `<button class="cc-card sm" data-act="complete" data-v="${i}">${th(V)}</button>`).join('');
     // Owned / All (CC1): what's in your wardrobe, or the whole catalogue - the rest padlocked, with the store that sells it
