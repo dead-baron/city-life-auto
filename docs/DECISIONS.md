@@ -175,6 +175,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Placeholder art, markers and waypoints get replaced with real SNES-style art game-wide. (11-13; queue)
 - Characters: keep the system (it generally looks good); make every look option read clearly - premium hats and glasses; same bar for NPCs. (11-13; queue)
 - The player characters keep the game's current sprite art; never swap in the high-detail close-up renderer (the menu avatar uses the game sprite, scaled up). Character polish later is staged and switchable, approved sheet by sheet. (11-14; chat: "Lets not revert the player character art back to what is showing in the avatar")
+- Character polish: proportions A (about 3.1 heads: a neck, shoulders, longer legs, hands, full faces), as built on the `characters` branch; still behind its switch until the owner approves it in the game. Next passes take the people toward all the character concepts (docs/characters/concepts). (11-19; chat)
 - Character polish pass on Fable: staged, review sheets per pass (faces, then hands/arms, then clothing), the owner approves each before live. (11-14; beta-checklist 11-14*, queue)
 - Title card avatar: a portrait (head to waist), centered, every face in the same spot; non-looping idles (blink, glance...). (11-14; DEVLOG 11-14) - SUPERSEDES the whole-figure avatar (11-14).
 - Logo: the owner's neon design, rebuilt in-engine - no black outlines; D3 = his letters cleaned + a fresh crisp skyline on an even grid; fonts only if he asks. (11-14 15:04; queue) - OPEN: owner picks the variant.
