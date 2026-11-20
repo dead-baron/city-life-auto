@@ -1146,7 +1146,7 @@ function wardrobe(A, D, TF, seed) {
     if (hk === 'police' && Q.part === 'crown' && Q.l1 > 0.85 && Math.abs(Q.l0) < 0.16 && Q.l2 > -0.4) { Q.gloss = 1; return gold; }
     if (hk === 'hard' && Math.abs(Q.l0) < 0.12 && Q.part === 'crown') Q.k += 0.18;
     if (hk === 'beanie' && Q.part === 'crown') { if (Q.l2 < 0.42) Q.k -= Q.l2 > 0.3 ? 0.36 : 0.18; if ((Math.round(Math.atan2(Q.l0, Q.l1) * 6) & 1)) Q.k -= 0.08; }
-    if ((hk === 'fedora' || hk === 'cowboy' || hk === 'sunhat') && Q.part === 'crown' && Q.l2 < 0.12) return W.band();
+    if ((hk === 'fedora' || hk === 'cowboy' || hk === 'sunhat') && Q.part === 'crown' && Q.l2 < 0.12 && !(PL && Q.res === 1 && Q.l1 < -0.25)) return W.band();   // (the polish pass: no band round the back at the game's size - from behind the crown's band was a smile on a face)
     if ((hk === 'fedora' || hk === 'cowboy') && Q.part === 'crown' && Q.l2 > 0.5 && Math.abs(Q.l0) < 0.15) Q.k -= 0.4;   // (the dent along the top)
     if (hk === 'helmet' && Q.part === 'crown' && Math.abs(Q.l2 - 0.1) < 0.07) Q.k -= 0.25;
     if (hk === 'hard' || hk === 'helmet' || hk === 'police') Q.gloss = 0.7;
@@ -1502,7 +1502,7 @@ function hatPrims(E, C, A, D, S, W, at, k) {
     // a bucket or a sun hat
     E(at([0, -0.1, k === 'bucket' ? 0.56 : tall ? 0.86 : 0.68]), HD, tall ? [hr[0] * 0.84, hr[1] * 0.8, hr[2] * 0.72] : [hr[0] + 0.5, hr[1] + 0.45, hr[2] * 0.78], GR.HAT, 'crown', W.hat, (a, b, c) => c > (tall ? -0.6 : -0.1));
     E(vadd(S.head, mv(HDw, [0, -0.4, hr[2] * 0.5])), HDw, [hr[0] + big, hr[1] + big * 0.85, 1.05], GR.HAT, 'brim', W.brim);
-    if (k === 'cowboy' && !A.hat.flat) for (const s of [-1, 1]) E(vadd(S.head, mv(HDw, [s * (hr[0] + big - 1.0), -0.4, hr[2] * 0.66])), HDw, [1.3, hr[1] + 1.8, 1.3], GR.HAT, 'brim', W.brim);
+    if (k === 'cowboy' && !A.hat.flat) for (const s of [-1, 1]) E(vadd(S.head, mv(HDw, [s * (hr[0] + big - 1.0), -0.4, hr[2] * 0.66])), HDw, PL ? [1.3, hr[1] * 0.62, 1.2] : [1.3, hr[1] + 1.8, 1.3], GR.HAT, 'brim', W.brim);   // (the polish pass: the curl at the sides only - run the brim's whole length, it stood as two walls from behind and the hat was a box)
   } else if (k === 'helmet') {
     E(at([0, -0.2, 0.15]), HD, [hr[0] + 1.9, hr[1] + 2.0, hr[2] + 1.0], GR.HAT, 'crown', W.hat, (a, b, c) => c > (b > 0.4 ? -0.08 : -0.42));
     if (!A.hat.plain) E(at([0, 1.0, 0.16]), HD, [hr[0] * 0.78, 1.3, 1.6], GR.HAT, 'goggles', W.glass);
