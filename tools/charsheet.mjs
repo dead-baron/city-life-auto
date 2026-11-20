@@ -235,6 +235,9 @@ async function builds(out) {
 // a grid of figures: rows [label, [cell...]], a cell { L (a look) | A (an app), d, pose, f, opt, on (the pass: default on), tint, t (a caption) }
 // pass 1 alone: the pass without pass 2's hooks (for the side-by-side sheets)
 const PASS1 = () => ({ ...POLISH, dress: null, post: null, hairK: null, pass1: true });
+// (pass 2 as it was: pass 3's additions to the pass switched off - each is a key of its own on POLISH)
+const PASS2 = () => ({ ...POLISH, ...Object.fromEntries(P3_KEYS.map((k) => [k, null])), mouthOn: true });
+const P3_KEYS = ['hairLit'];
 async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 150 } = {}) {
   const CW = cw * k, RH = rh * k, n = Math.max(...rows.map((r) => r[1].length)), sh = new Sheet(label + n * CW + 8, 24 + rows.length * RH + 8, bg);
   sh.text(title, 8, 6, 2);
@@ -243,7 +246,7 @@ async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 15
     String(name).split('|').forEach((t, i) => sh.text(t, 6, Math.round(y - RH / 2) + i * 12, 2));
     for (const [ci, c] of cells.entries()) {
       if (!c) continue;
-      await polish(c.on !== false); if (c.p1) setPolish(PASS1());
+      await polish(c.on !== false); if (c.p1) setPolish(PASS1()); if (c.p2) setPolish(PASS2());
       const x = label + ci * CW + CW / 2;
       if (c.bg) sh.rect(x - CW / 2, y - RH + 2 * k, CW, RH, c.bg);
       if (c.busy) for (let j = 0; j < RH; j += 2) for (let i = 0; i < CW; i += 2) { const q = Math.sin((x + i) * 12.9898 + (y + j) * 78.233) * 43758.5453, f = q - Math.floor(q); if (f < 0.34) sh.rect(x - CW / 2 + i, y - RH + 2 * k + j, 2, 2, c.bg.map((v, n) => Math.max(0, Math.min(255, v + (f < 0.12 ? c.busy[n] : f < 0.22 ? -c.busy[n] : c.busy[n] / 2))))); }
@@ -295,6 +298,13 @@ async function lineup2(out) {
   const ar = Object.keys(ARCHETYPES), rows2 = [];
   for (let i = 0; i < ar.length; i += per) rows2.push(['', ar.slice(i, i + per).flatMap((a, j) => [0, 1].map((v) => ({ A: adaptApp(makeAppearance(mulberry32(i * 31 + j * 7 + v * 101 + 5), a), a), d: v ? 5 : 1, t: v ? '' : a })))]);
   await grid(out.replace('.png', '-npc.png'), 'THE CITY ARCHETYPES (TWO OF EACH), PASS 2 ON', rows2, { k: 6, rh: 33, cw: 18, label: 12 });
+}
+// ---- pass 3 (docs/tasks/CHARACTERS3.md): before (pass 2) | after ----
+// the patrol's light-blue shirt (the owner, 11-19): the police by rank, front quarter, back quarter and walking
+async function p3police(out) {
+  const J = JOBS().slice(0, 6), navy = (L) => { const N = structuredClone(L); if (LK.PIECES[N.outfit.top?.id]?.name === 'Uniform shirt') N.outfit.top = LK.item('Uniform shirt', 'navy', 'gold'); return LK.validLook(N); };
+  const row = (f, more = {}) => J.flatMap(([n, L]) => [{ L: f(L), d: 1, t: n, ...more }, { L: f(L), d: 5, ...more }, { L: f(L), d: 0, pose: 'walk0', f: 1, ...more }]);
+  await grid(out, 'POLICE BY RANK: FRONT QUARTER, BACK QUARTER, WALKING - THE PATROL SHIRT NAVY (BEFORE) OVER LIGHT BLUE', [['BEFORE|(NAVY)', row(navy)], ['AFTER|(LIGHT BLUE)', row((L) => L)], ['AFTER,|PASS OFF', row((L) => L, { on: false })], ['AFTER,|NIGHT', row((L) => L, { bg: [34, 38, 62], tint: [0.5, 0.52, 0.72] })]], { k: 6, rh: 33, cw: 18, label: 120 });
 }
 // every animation with the pass on: a pose a row, its eight facings (S, SE, E, NE, N, NW, W, SW) then a second frame S and E
 const HELD = { aim: 'pistol', aimw: 'pistol', swing: 'bat', held: 'phone' };
@@ -360,7 +370,7 @@ async function versus(outDir) {
     sh.save(join(outDir, 'vs-' + img + '.png'));
   }
 }
-const DOCS = join(ROOT, 'docs', 'characters'), P2 = join(DOCS, 'pass2');
+const DOCS = join(ROOT, 'docs', 'characters'), P2 = join(DOCS, 'pass2'), P3 = join(DOCS, 'pass3');
 if (mode === 'before') await lineup(false, arg('out', join(DOCS, 'before.png')), 'TODAY\'S PEOPLE (BEFORE)');
 else if (mode === 'after') await lineup(true, arg('out', join(DOCS, 'after.png')), 'AFTER: THE POLISH PASS');
 else if (mode === 'side') await sides(arg('out', DOCS));
@@ -375,5 +385,6 @@ else if (mode === 'versus') await versus(arg('out', P2));
 else if (mode === 'anim') await anim(arg('out', join(P2, 'anim.png')));
 else if (mode === 'lineup') await lineup2(arg('out', join(P2, 'lineup.png')));
 else if (mode === 'under') await under(arg('out', join(P2, 'underwear.png')));
+else if (mode === 'p3police') await p3police(arg('out', join(P3, 'police.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

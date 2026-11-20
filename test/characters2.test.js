@@ -140,11 +140,19 @@ test('the pass on: dark clothing has tones to be drawn in - a black suit is not 
 });
 
 test('the pass on: uniforms read - the police\'s gold badge and buckle, reflective bands, no badge on a cook', () => {
-  const gold = (G) => { let n = 0; for (let i = 0; i < G.w * G.h; i++) { const y = Math.floor(i / G.w); if (G.p0[i * 4 + 3] && y > G.h * 0.4 && y < G.h * 0.75 && G.p0[i * 4] > 170 && G.p0[i * 4 + 1] > 150 && G.p0[i * 4 + 2] < 75) n++; } return n; };   // (on the chest and at the belt, not the cap's)
+  const gold = (G, gMin = 150) => { let n = 0; for (let i = 0; i < G.w * G.h; i++) { const y = Math.floor(i / G.w); if (G.p0[i * 4 + 3] && y > G.h * 0.4 && y < G.h * 0.75 && G.p0[i * 4] > 170 && G.p0[i * 4 + 1] > gMin && G.p0[i * 4 + 2] < 75) n++; } return n; };   // (on the chest and at the belt, not the cap's; gMin 125: gold in the chest's shade too)
   const cop = LK.lookArt(LK.policeLook(LK.emptyLook('m'), 0));
   let g0 = 0, g1 = 0;
-  for (const d of [0, 7]) { g0 += gold(baked(cop, d)); const n = withPass(() => gold(baked(cop, d))); assert.ok(n >= 2, `facing ${d}: the badge and the buckle are art pixels of gold (${n})`); g1 += n; }
-  assert.ok(g1 > g0, `more gold on the officer: ${g0} -> ${g1}`);
+  for (const d of [0, 7]) { g0 += gold(baked(cop, d)); const n = withPass(() => gold(baked(cop, d), 125)); assert.ok(n >= 2, `facing ${d}: the badge and the buckle are art pixels of gold (${n})`); g1 += n; }
+  // (on a navy shirt with gold trim the pass adds gold: the patch and the buckle; the patrol's light blue has a navy patch)
+  const NL = LK.policeLook(LK.emptyLook('m'), 0); NL.outfit.top = LK.item('Uniform shirt', 'navy', 'gold');
+  const nv = LK.lookArt(NL); g0 = g1 = 0;
+  for (const d of [0, 7]) { g0 += gold(baked(nv, d)); g1 += withPass(() => gold(baked(nv, d))); }
+  assert.ok(g1 > g0, `more gold on navy: ${g0} -> ${g1}`);
+  // the patrol's shirt is light blue (the owner, 11-19) - rookies and K9 handlers too; a sergeant's stays navy under the chevrons
+  const shirt = (L) => { const o = L.outfit.top; return [LK.PIECES[o.id].name, LK.CLOTH[o.c][1]]; };
+  for (const [rank, kind] of [[0, null], [1, null], [0, 'rookie'], [0, 'k9']]) assert.deepEqual(shirt(LK.policeLook(LK.emptyLook('f'), rank, kind)), ['Uniform shirt', 'Sky']);
+  assert.deepEqual(shirt(LK.policeLook(LK.emptyLook('m'), 2)), ["Sergeant's shirt", 'Navy']);
   const pale = (G) => count(G, (r, g, b) => r > 200 && g > 200 && b > 150 && b < 235);
   const medic = wearing('f', { set: 'Paramedic uniform', shoes: 'Work boots' });
   assert.ok(withPass(() => pale(baked(medic, 0))) >= pale(baked(medic, 0)) + 6, 'the paramedic\'s reflective bands');

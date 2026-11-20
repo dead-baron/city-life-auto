@@ -81,8 +81,8 @@ export const STARTERS = [
 
 // ---- the police's uniform (CC5) --------------------------------------------------------------------------------------------
 // A look in the uniform by rank (shared/rules.js POLICE_RANKS: 0 Officer .. 5 Chief of Police), keeping the body, face and
-// hair: the patrol shirt and the police cap; a sergeant's chevrons; from lieutenant the dress uniform and the braided cap;
-// the chief's white gloves. kind 'rookie': a light blue shirt and a ball cap; 'k9': a tactical vest over the shirt and a
+// hair: the patrol shirt - light blue (the owner, 2026-11-19: the concepts' clearest police read) - and the police cap; a sergeant's chevrons on navy; from lieutenant the dress uniform and the braided cap;
+// the chief's white gloves. kind 'rookie': a ball cap; 'k9': a tactical vest over the shirt and a
 // ball cap. shades: sunglasses (half the street's officers wear them).
 export function policeLook(L, rank = 0, kind = null, shades = false) {
   const V = validLook(L) || emptyLook('m'), O = V.outfit;
@@ -91,7 +91,7 @@ export function policeLook(L, rank = 0, kind = null, shades = false) {
     O.set = item('Dress uniform'); O.hat = item("Officer's cap"); O.shoes = item('Oxfords', 'black');
     if (rank >= 5) O.jewel = item('Dress gloves');
   } else {
-    O.top = item(rank >= 2 ? "Sergeant's shirt" : 'Uniform shirt', kind === 'rookie' ? 'sky' : 'navy', 'gold');
+    O.top = rank >= 2 ? item("Sergeant's shirt", 'navy', 'gold') : item('Uniform shirt', 'sky', 'navy');
     O.bottoms = item('Uniform pants', 'navy');
     O.shoes = item('Work boots', 'black');
     O.hat = kind === 'rookie' || kind === 'k9' ? item('Baseball cap', 'navy', 'gold') : item('Police cap');
