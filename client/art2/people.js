@@ -1095,7 +1095,7 @@ function wardrobe(A, D, TF, seed) {
   const stubble = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.62 + skin[i][j] * 0.38)));
   // (at the game's size a buzz cut must still read as hair - a dark cap - and a fade's or an undercut's shaved sides as
   // skin under the hair on top: the plain stubble mix read as the same brown for all three)
-  const buzzR = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.84 + skin[i][j] * 0.16))), shK = PL ? 0.62 : 0.36, shavedR = hairR.map((c, i) => c.map((v, j) => Math.round(v * shK + skin[i][j] * (1 - shK))));   // (the polish pass: short hair is still mostly the hair's colour - at 0.36 a dark crop's sides were skin, and the hair on top a cap)
+  const buzzR = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.84 + skin[i][j] * 0.16))), shK = PL ? 0.62 : 0.36, shD = PL && lum(hairR[3]) > 0.45 ? 2 : 0, shavedR = hairR.map((c, i) => c.map((v, j) => Math.round(hairR[Math.max(0, i - shD)][j] * shK + skin[Math.max(0, i - (shD ? 1 : 0))][j] * (1 - shK))));   // (fair hair's stubble two tones down: at its own tone you couldn't tell the shaved part from the rest, the owner 11-20)   // (the polish pass: short hair is still mostly the hair's colour - at 0.36 a dark crop's sides were skin, and the hair on top a cap)
   W.hairM = (Q) => {
     // clumps: darker grooves radiating from the crown, a sheen band
     const az = Math.atan2(Q.l0, Q.l1), ex = A.hair?.style, st = BASE_HAIR[ex] || ex;

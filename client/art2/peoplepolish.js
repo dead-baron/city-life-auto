@@ -302,7 +302,7 @@ export const POLISH = {
     // (an undercut's shaved sides and back, and the shaved-side style's: stubble - the skin with the hair's colour in it - where
     // the hair would grow. Bare skin there was a bald head under a lid, and from behind a second face)
     if ((ex === 'undercut' || ex === 'shavedside') && W.hairR) {
-      const SR = W.skin.map((c, i) => mix(c, W.hairR[Math.min(4, i + 1)], 0.6));
+      const fair = lum(W.hairR[3]) > 0.45, SR = W.skin.map((c, i) => mix(W.skin[Math.max(0, i - (fair ? 1 : 0))], W.hairR[fair ? Math.max(0, i - 2) : Math.min(4, i + 1)], 0.6));   // (fair hair's stubble two tones down, as people.js's)
       E(at([0, -0.04, 0.02]), HD, [hr[0] + 0.5, hr[1] + 0.55, hr[2] + 0.4], GR.HAIR, 'stubble', () => SR, (a, b, c) => c > (b > 0.3 ? 0.42 : b > -0.2 ? 0.42 - (0.3 - b) * 1.24 : -0.2 + (b + 0.2) * 0.5));
     }
     if (ex === 'dreads' || ex === 'boxbraids' || ex === 'braids') lock(at([0, -0.9, -0.2]), sw(nk(0, backY - 0.7, -3.6), 0.3), 4.6, 3.6, 'back');   // (the hair behind the neck, under the locs: the shirt showed between them - a window in the hair from behind)
@@ -311,7 +311,7 @@ export const POLISH = {
     else if (ex === 'pompadour') { e([0, 0.5, 1.02], mmul(HD, rx(-0.45)), [hr[0] * 0.62, 3.9, 3.9], 'quiff'); e([0, -0.1, 0.98], HD, [hr[0] * 0.6, 4.2, 1.8], 'quiff'); }   // (11-20: narrower than the head - from the front it was a box)   // (a roll standing over the forehead, swept back)
     else if (ex === 'puffs') for (const s of [-1, 1]) { const c = at([s * 0.78, -0.2, 0.9]); E(c, HD, [3.7, 3.6, 3.5], GR.HAIR, 'afro', M); bumps(c, [3.7, 3.6, 3.5], 7, 1.5, -0.2, 1.3, 2, 0.95); }   // (two round puffs high at the sides)
     else if (ex === 'lowpony') { const r0 = at([0, -0.96, -0.28]); E(r0, HD, [1.3, 1.1, 1.2], GR.HAIR, 'tie', () => cloth('#2a2226')); const m1 = sw(nk(0.5, backY - 1.3, -2.6), 0.5), m2 = sw(nk(0.9, backY - 1.5, -5.6), 0.8); lock(r0, m1, 1.7, 2.9, 'tail'); lock(m1, m2, 2.9, 2.2, 'tail'); lock(m2, sw(nk(0.3, backY - 1.0, -8.8), 1), 2.2, 0.6, 'tail'); }   // (11-20: full under the tie, a slight curve, a point - it was a straight bar)   // (tied at the nape, hanging down the back)
-    else if (ex === 'shavedside') { lock(at([-0.25, 0.2, 1.06]), at([1.16, 0.22, -0.15]), 3.5, 2.9, 'sweep'); lock(at([1.0, 0.1, 0.1]), sw(nk(hr[0] + 1.2, 0.5, -3.6), 0.4), 2.9, 1.8, 'sweep'); }   // (11-20: the long side is long - swept over and down past the jaw; it was a few thin locks)
+    else if (ex === 'shavedside') { lock(at([-0.25, 0.2, 1.06]), at([1.16, 0.22, -0.15]), 3.5, 2.9, 'sweep'); lock(at([1.0, 0.1, 0.1]), sw(nk(hr[0] + 1.2, 0.5, -3.6), 0.4), 2.9, 1.8, 'sweep'); lock(at([0.1, -0.5, 0.98]), at([0.98, -0.72, 0.0]), 3.6, 3.2, 'sweep'); lock(at([0.98, -0.72, 0.0]), sw(nk(hr[0] + 0.6, -1.6, -4.0), 0.5), 3.2, 1.7, 'sweep'); }   // (...and down the back on the same side: from behind, hair on one half of the head, stubble on the other)   // (11-20: the long side is long - swept over and down past the jaw; it was a few thin locks)
     else if (ex === 'emo') { e([0.36, 0.7, 0.42], mmul(HD, ry(0.62)), [hr[0] * 0.74, 2.5, 2.9], 'sweep'); e([-0.5, 0.5, 0.74], HD, [hr[0] * 0.5, 2.2, 1.6], 'sweep'); }   // (a long fringe swept across one eye)
   },
   // ---- pass 5 (docs/tasks/CHARACTERS5.md; the owner's shot, docs/characters/owner-hair-1119.png): the tied and the tall
@@ -337,7 +337,7 @@ export const POLISH = {
     if (ex === 'halfup') { tie([0, -0.3, 1.3], [2.0, 1.9, 1.5]); ball([0, -0.34, 1.9], [5.1, 4.7, 3.4]); return true; }   // (CB3-F: a knot on the crown over long hair)
     if (ex === 'pigtails') {
       // (11-20: thicker, further out and longer - two tails you can count from the front and from behind)
-      for (const s of [-1, 1]) { const r0 = at([s * 1.0, -0.36, 0.18]), m = sw(at([s * 1.58, -0.4, -0.08]), 0.4), e = sw(nk(s * (hr[0] + 3.0), -1.4, -5.2), 1); tie([s * 1.04, -0.36, 0.18], [1.6, 1.5, 1.6], '#c8302c'); lock(r0, m, 2.3, 2.7, 'tail'); lock(m, e, 2.7, 1.2, 'tail'); }
+      for (const s of [-1, 1]) { const r0 = at([s * 1.0, -0.36, 0.18]), m = sw(at([s * 1.58, -0.4, -0.08]), 0.4), e = sw(nk(s * (hr[0] + 3.0), -1.4, -5.2), 1); tie(sw(at([s * 1.2, -0.38, 0.1]), 0.1) && [s * 1.2, -0.38, 0.1], [2.5, 2.4, 2.3], '#c8302c'); lock(r0, m, 1.7, 2.8, 'tail'); lock(m, e, 2.8, 1.2, 'tail'); }   // (a band you can see where each tail leaves the head: the tail narrow at it, then full)
       return true;
     }
     if (ex === 'mohawk') {   // (a crest from the forehead over the crown to the nape, highest over the crown)
