@@ -93,7 +93,7 @@ waistbands, lace or reflective bands until the pass is on). The six new hairstyl
 | File | Mode | What it shows |
 | --- | --- | --- |
 | `vs-C1`, `vs-C3`, `vs-CC5-B`, `vs-SM12`, `vs-SF12`, `vs-SF23-A`, `vs-SM23`, `vs-CB3-M` | `versus` | The concept image, then matching looks: pass 1 over pass 2 |
-| `anim-1` .. `anim-7` | `anim` | Every pose (63), eight facings and more frames, pass 2 on |
+| `anim-1` .. `anim-7` | `anim` | Every pose (68), eight facings and more frames, pass 2 on |
 | `grounds.png` | `grounds2` | The eight and three dark outfits on pavement, cobbles, asphalt, grass, sand, leaf litter, at night (plain and busy) and in rain: pass 1 over pass 2. Flat or speckled colours and a tint - not the game's lighting |
 | `lineup.png`, `lineup-npc.png` | `lineup` | 21 uniforms and job looks, pass 2 over pass 1; the city's 22 archetypes as the server dresses them, pass 2 |
 | `underwear-1`, `underwear-2` | `under` | Every underwear piece on both bases: S, SE, E, N, walking; the pass off; *Censored nudity* on |
@@ -171,8 +171,9 @@ Always (the wardrobe):
 - **Every pose, eight facings, pass on** (`pass2/anim-*.png`): I looked closely at sheets 1-3 (standing, the four
   gaits, punch, swing, aim, carry, hands up, fish, kneel, roll, down, dead, swim, ride, pedal, sit, drive, held, sitting
   low, cuffed, stagger, limp, crawl, the downs and deads, chop): all whole, limbs attached, held things in the hand.
-  Sheets 4-7 (the motorbike tuck, saddle, skate and surf tricks, dances, push-ups, carts, the statue, escorts, bars)
-  were rendered and are covered by the test that every pose draws whole, but I did not study them frame by frame.
+  Sheet 5 too (sit-ups, the skate tricks, the surf poses): the same. Sheets 4, 6 and 7 (the motorbike tuck, saddle,
+  the walks' styles, dances, push-ups, carts, the statue, the cue, escorts, bars) were rendered and are covered by the
+  test that every pose draws whole, but I did not study them frame by frame.
   Nothing needed fixing in what I looked at.
 - **The walk's bob:** already there - the head rides one art pixel up and down through the stride (25 / 26 / 26 / 25 /
   26 / 26 art px tall over six frames). Left as it is.
@@ -181,7 +182,9 @@ Always (the wardrobe):
   and on bikes, horses, boats and kayaks (the poses draw; their fit to the vehicle's art shows only in the game), the
   creator's stage and the title portrait, and the new Settings switch.
 - **Tests:** `test/characters2.test.js` (10), with `peoplepolish*.test.js`, `look`, `peoplelook`, `outfits`,
-  `wardrobe`, `starter`, `npcpeople`, `bathhouse*`, `guide`: all pass. `test/perf.test.js` cannot run on this Windows
+  `wardrobe`, `starter`, `npcpeople`, `bathhouse*`, `guide`: all pass. The whole suite: 2129 of 2188 pass here against 2118 of 2178 on the commit before pass 2 - the same
+  failures on both (this checkout's doubled paths and CRLF endings in the tests that read source), bar two timing
+  tests (the firefighter's burning car, district reputation) that fail now and then on either. `test/perf.test.js` cannot run on this Windows
   checkout (four of its six tests fail the same way on the commit before pass 2: paths and the stamp); sizes were
   measured by hand with LF endings. Not stamped: stamp on merge.
 
