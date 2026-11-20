@@ -1298,14 +1298,14 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
     undercut: 0.75, fade: 0.45, mullet: 0.9, topknot: 0.6, pixie: 0.85, twinbuns: 0.7, pigtails: 0.75, braid: 0.7, curlylong: 1.3, shag: 1.15, cornrows: 0.3, curtains: 1.0, halfup: 0.95 }[st] ?? 0.9) * ((PL && PL.hairVol) || 1);
   // the hairline in the cap's own unit coords, by the angle round the head from the face: [forehead, temple, sideburn,
   // above the ear, nape]; the face, temples and ears stay clear so a profile still shows the eye, nose and ear
-  const LN = { buzz: [0.5, 0.44, -0.12, 0.2, -0.5], slick: [0.5, 0.44, -0.2, 0.14, -0.55], short: [0.42, 0.38, -0.28, 0.1, -0.6], spiky: [0.5, 0.42, -0.24, 0.1, -0.62],
+  const LN0 = { buzz: [0.5, 0.44, -0.12, 0.2, -0.5], slick: [0.5, 0.44, -0.2, 0.14, -0.55], short: [0.42, 0.38, -0.28, 0.1, -0.6], spiky: [0.5, 0.42, -0.24, 0.1, -0.62],
     curly: [0.42, 0.36, -0.22, 0.02, -0.62], afro: [0.42, 0.36, -0.12, -0.15, -0.7], long: [0.4, 0.34, -0.75, -0.75, -1.1], wavy: [0.38, 0.32, -0.75, -0.75, -1.1],
     pony: [0.42, 0.38, -0.08, 0.06, -0.55], bun: [0.42, 0.38, -0.08, 0.06, -0.55], braids: [0.42, 0.36, -0.32, -0.3, -1.1], dreads: [0.4, 0.36, -0.32, -0.32, -1.1],
     mohawk: [0.6, 0.54, 0.0, 0.25, -0.45], bob: [0.3, 0.26, -0.62, -0.62, -0.75],
     undercut: [0.42, 0.42, 0.32, 0.42, 0.25], fade: [0.46, 0.42, 0.05, 0.28, -0.15], mullet: [0.42, 0.38, -0.28, 0.1, -0.6], topknot: [0.46, 0.42, -0.1, 0.12, -0.5],
     pixie: [0.3, 0.28, -0.25, 0.08, -0.55], twinbuns: [0.42, 0.38, -0.08, 0.06, -0.55], pigtails: [0.38, 0.36, -0.1, 0.0, -0.6], braid: [0.42, 0.38, -0.08, 0.06, -0.55],
     curlylong: [0.36, 0.3, -0.75, -0.75, -1.1], shag: [0.28, 0.24, -0.6, -0.6, -0.8], cornrows: [0.5, 0.44, -0.12, 0.2, -0.5], curtains: [0.3, 0.26, -0.3, 0.08, -0.6],
-    halfup: [0.4, 0.34, -0.75, -0.75, -1.1] }[st] || [0.42, 0.38, -0.28, 0.1, -0.6];
+    halfup: [0.4, 0.34, -0.75, -0.75, -1.1] }[st] || [0.42, 0.38, -0.28, 0.1, -0.6], LN = (PL && PL.hairLN && PL.hairLN[st]) || LN0;
   const AZ = [0, 0.8, 1.2, 1.32, 1.5, 1.64, 2.2, Math.PI], HV = [LN[0], LN[0], LN[1], LN[2], LN[2], LN[3], LN[3] - 0.04, LN[4]];
   const jag = st === 'spiky' || st === 'short' || st === 'curly' || st === 'bob' || st === 'pixie' || st === 'shag' || st === 'curtains' || st === 'mullet';
   const cut = hatOn ? 0.18 : (PL && PL.hairCut && PL.hairCut[ex]) || 9;
@@ -1832,6 +1832,11 @@ function render(fig, P, S, X, D, A, opt) {
         const ob = BA[q - 1] < 2 ? q - 1 : q + 1;   // (and its last half pixel out beyond: gone)
         if (BA[ob]) DM[ob] = 2;
       }
+    }
+    // (a point on top of the hair: one art pixel with nothing beside or over it - a dome's top row. Off, bar the styles that are points)
+    if (!(PL.tipKeep && PL.tipKeep.includes(A.hair && A.hair.style))) for (let by = 1; by < bh; by++) for (let bx = 1; bx < bw - 1; bx++) {
+      const q = by * bw + bx;
+      if (BA[q] >= 2 && !DM[q] && bg(q) === GR.HAIR && BA[q - 1] < 2 && BA[q + 1] < 2 && BA[q - bw] < 2) DM[q] = 1;
     }
     // (a sole's last pixel out beyond the shoe - the far foot's at an angle, a toe's under the near one: on its own it's a
     // white pixel beside the foot, not a sole)
