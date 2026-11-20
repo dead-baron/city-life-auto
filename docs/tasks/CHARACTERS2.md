@@ -40,6 +40,12 @@ to them as the game's sprite size allows, with everything they show.
      bodysuit / teddy, a slip; for men silk boxers, a fitted trunk. Opaque at sprite size, never nude or see-through
      (the game's nudity rule stands). NPCs don't walk the streets in underwear or lingerie (the NPC wardrobe skips the
      slot).
+   - **Underwear off = the existing mosaic** (the owner, 11-19): the underwear slot has a "none" choice. With nothing
+     on, the game's built-in censor covers the private areas - the pixelated mosaic in `client/art2/people.js` (and
+     `shared/lookcore.js`'s "Nothing" set) - redrawn so it sits right on the new body (proportions A), in every pose and
+     direction; the "censored nudity" setting still shows swimwear instead. Check where "none" may be worn today (the
+     bathhouses issue "Nothing"; the creator, the fitting room and home are new) and list in NOTES.md where it's
+     allowed, for the owner to confirm (default: the creator's preview, at home, the bathhouses - not the street).
      It's what a character wears under clothes and what shows with no top or bottoms on (the creator's body tab, the
      fitting room, the shower at home); free for everyone (in the starter wardrobe), its own slot in the creator.
 3. **Every animation checked with the pass on** (fix what's wrong): all 8 directions of standing, walking (add the walk
