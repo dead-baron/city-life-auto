@@ -372,6 +372,12 @@ async function p5hair(out) {
   for (let i = 0; i < half; i++) rows.push(['', [...cells(HS[i]), ...(HS[i + half] !== undefined ? cells(HS[i + half]) : [])]]);
   await grid(out, 'EVERY HAIRSTYLE: PASS 4 | PASS 5, S SE E N, BOTH BASES (MAN, WOMAN; ONE BASE ONLY: TWICE)', rows, { k, rh: 19, cw: 13, label: 8 });
 }
+// the checklist's quick pieces (docs/characters/CHECKLIST.md): front quarter, back quarter, walking - the pass on, then off
+async function p5pieces(out) {
+  const W = [['Striped tee', { top: 'Striped tee', bottoms: 'Jeans' }], ['Breton top', { top: 'Breton top', bottoms: ['Chinos', 'navy'] }], ['Tie-dye tee', { top: 'Tie-dye tee', bottoms: 'Denim shorts' }], ['Gingham shirt', { top: 'Gingham shirt', bottoms: 'Jeans' }], ['Tartan trousers', { top: ['Plain tee', 'black'], bottoms: 'Tartan trousers' }], ['Camo pants', { top: ['Tank top', 'black'], bottoms: 'Camo pants' }], ['Hunting vest', { top: ['Flannel shirt', 'forest', 'black'], jacket: 'Hunting vest', bottoms: 'Camo pants' }]];
+  const rows = W.map(([n, o], i) => { const L = dressed(i % 2 ? 'f' : 'm', { ...o, shoes: 'Sneakers' }, { skin: [1, 9, 4, 12][i % 4] }, { hair: { style: i % 2 ? 20 : 6 } }); return [n.replace(' ', '|'), [{ L, d: 1 }, { L, d: 0 }, { L, d: 5 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 1, on: false, t: 'off' }, { L, d: 5, on: false, t: 'off' }]]; });
+  await grid(out, 'PASS 5, NEW PIECES: SE, S, NW, WALKING; THE PASS OFF', rows, { k: 6, rh: 32, cw: 20 });
+}
 // a slot's pieces on both bases: front, front quarter, side, back, walking - the pass on; then the pass off; then without
 const pieceRows = (slot, wear, names = null) => LK.PIECES.filter((p) => p && p.slot === slot && (!names || names.includes(p.name))).flatMap((p) => ['m', 'f'].filter((b) => !names || p.b.includes(b) || slot !== 'socks').map((base) => { const L = wear(base, p), N = wear(base, null); return [p.name.replace(' and ', ' +|') + '|' + (base === 'm' ? 'MAN' : 'WOMAN'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 6 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 2, pose: 'run', f: 2 }, { L, d: 1, pose: 'sit', f: 0 }, { L, d: 1, on: false, t: 'off' }, { L: N, d: 1, t: 'without' }]]; }));
 async function p3socks(out) {
@@ -508,6 +514,7 @@ else if (mode === 'p3phone') await p3phone(arg('out', join(P3, 'phone.png')));
 else if (mode === 'p3props') await p3props(arg('out', join(P3, 'props.png')));
 else if (mode === 'p4under') await p4under(arg('out', join(P4, 'underwear.png')));
 else if (mode === 'p5under') await p4under(arg('out', join(P5, 'underwear.png')), true);
+else if (mode === 'p5pieces') await p5pieces(arg('out', join(P5, 'pieces.png')));
 else if (mode === 'p5hair') await p5hair(arg('out', join(P5, 'hair.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

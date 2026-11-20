@@ -463,6 +463,14 @@ add('hat', 'Camo cap', 'mf', 'outdoors disguise street', 25, 'costume', { k: 'ca
 add('glasses', 'Bear mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', nostreet: 1 }, 'brown');
 add('glasses', 'Panda mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', nostreet: 1 }, 'white', 'black');
 add('bag', 'Walking cane', 'mf', 'retro formal smart', 40, 'boutique', { carry: 'cane' }, 'brown');
+// pass 5 (docs/characters/CHECKLIST.md): concept pieces that are a pattern or a colour of a piece we draw
+add('top', 'Striped tee', 'mf', 'casual skater preppy retro', 24, 'clothing', { k: 'tee', p: 1 }, 'white', 'navy');
+add('top', 'Breton top', 'mf', 'preppy hifashion casual', 38, 'clothing', { k: 'longsleeve', p: 1 }, 'cream', 'navy');
+add('top', 'Tie-dye tee', 'mf', 'festival retro casual', 26, 'clothing', { k: 'tee', p: 5 }, 'yellow', 'hot pink');
+add('top', 'Gingham shirt', 'mf', 'western preppy casual', 42, 'clothing', { k: 'shirt', p: 2 }, 'red', 'white');
+add('bottoms', 'Tartan trousers', 'mf', 'punk alt retro', 55, 'clothing', { k: 'pants', p: 2 }, 'red', 'black');
+add('bottoms', 'Camo pants', 'mf', 'outdoors street disguise', 55, 'costume', { k: 'cargo', p: 3 }, 'olive', 'khaki');
+add('jacket', 'Hunting vest', 'mf', 'outdoors', 60, 'outdoor', { k: 'vest', pockets: 1 }, 'orange', 'charcoal');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
