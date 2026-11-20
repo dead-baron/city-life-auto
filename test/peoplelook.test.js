@@ -91,7 +91,7 @@ test('no two hairstyles are drawn alike (CB3: each its own shape)', () => {
     const base = variant(LK.starterFor(b === 'm' ? 0 : 1), (V) => { V.body.base = b; V.outfit.hat = null; V.outfit.glasses = null; V.hair.facial = 0; });
     const seen = new Map();
     LK.HAIR_STYLES.forEach((s, i) => {
-      if (!s[1].includes(b)) return;
+      if (!s[1].includes(b) || (s[3] && !globalThis.CLA_TEST_POLISH)) return;   // (the polish pass's styles have their shapes only with the pass on: peoplepolish-wardrobe.test.js)
       const G = person(LK.lookArt(variant(base, (V) => { V.hair.style = i; })), 1, 'idle', 0, { tight: true, res: 2 });
       const key = `${G.w}x${G.h}:` + Buffer.from(G.col).toString('base64');
       assert.ok(!seen.has(key), `${s[0]} is drawn just like ${seen.get(key)}`);

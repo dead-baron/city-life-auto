@@ -107,7 +107,7 @@ export const HAIR_STYLES = ['spiky', 'short', 'buzz', 'bald', 'afro', 'long', 'w
 // the look system's variants (shared/look.js HAIR_STYLES), each drawn from a base style with its own touch (hairPrims):
 // short back and sides (a faded crew cut), a side part, a quiff, a man bun, shoulder length, box braids with cuffs, big
 // curls, a shaved side
-const BASE_HAIR = { sides: 'fade', sidepart: 'slick', quiff: 'short', manbun: 'slick', shoulder: 'long', boxbraids: 'dreads', bigcurls: 'curlylong', shavedside: 'undercut' };
+const BASE_HAIR = { sides: 'fade', sidepart: 'slick', quiff: 'short', manbun: 'slick', shoulder: 'long', boxbraids: 'dreads', bigcurls: 'curlylong', shavedside: 'undercut', balding: 'short', flattop: 'short', pompadour: 'slick', puffs: 'twinbuns', lowpony: 'slick', emo: 'short' };   // (the last six: pass 2's, their shapes the polish pass's - PL.hair)
 export const TOP_KINDS = ['tee', 'tank', 'polo', 'shirt', 'hoodie', 'jacket', 'suit', 'leather', 'puffer', 'flannel', 'hawaiian', 'vest', 'hivis', 'uniform', 'tactical', 'scrubs', 'apron', 'overalls', 'tracksuit', 'jersey', 'coat', 'cardigan', 'dress', 'fur', 'none', 'bikini', 'swimsuit', 'towel'];
 
 // ---- colour -----------------------------------------------------------------------------------------------------
@@ -1305,7 +1305,7 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
     halfup: [0.4, 0.34, -0.75, -0.75, -1.1] }[st] || [0.42, 0.38, -0.28, 0.1, -0.6];
   const AZ = [0, 0.8, 1.2, 1.32, 1.5, 1.64, 2.2, Math.PI], HV = [LN[0], LN[0], LN[1], LN[2], LN[2], LN[3], LN[3] - 0.04, LN[4]];
   const jag = st === 'spiky' || st === 'short' || st === 'curly' || st === 'bob' || st === 'pixie' || st === 'shag' || st === 'curtains' || st === 'mullet';
-  const cut = hatOn ? 0.18 : 9;
+  const cut = hatOn ? 0.18 : (PL && PL.hairCut && PL.hairCut[ex]) || 9;
   const clip = (a, b, c) => {
     const az = Math.abs(Math.atan2(a, b));
     let k = 1; while (k < AZ.length - 1 && az > AZ[k]) k++;
@@ -1403,6 +1403,7 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
     else if (ex === 'bigcurls') bumps(vadd(capC, mv(HD, [0, -0.4, -1.2])), [hr[0] + 1.9, hr[1] + 1.6, hr[2] + 0.9], 18, 2.4, -0.55, 1.05, 0.45, 1);
     else if (ex === 'shavedside') { lock(at([-0.35, 0.25, 1.02]), at([1.0, 0.3, -0.1]), 2.7, 1.8); lock(at([0.2, -0.3, 0.98]), sw(at([1.08, -0.4, -0.6]), 0.3), 2.5, 1.6); lock(at([0.6, 0.0, 0.5]), at([1.12, 0.05, -0.75]), 1.6, 0.6); }
   }
+  if (PL && PL.hair && !hatOn) PL.hair(ex, { E, at, nk, sw, lock, bumps, W, S, D, hr, HD, backY, GR, capC, mmul, rx, ry });
   if (st === 'long' || st === 'wavy' || st === 'braids' || st === 'dreads' || st === 'bob' || st === 'curlylong' || st === 'halfup' || st === 'shag') {
     const curls = st === 'curlylong', wav = st === 'wavy' || st === 'curlylong' || st === 'halfup';
     if (st === 'curlylong' || st === 'halfup') st = 'wavy'; else if (st === 'shag') st = 'bob';

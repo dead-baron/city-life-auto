@@ -209,10 +209,11 @@ async function poses(out) {
 }
 // every hairstyle (facing SW, then from behind), before over after, on a man and a woman
 async function hair(out) {
-  const HS = LK.HAIR_STYLES.map((h, i) => i), CW = 19 * KB, RH = stripH() - 6 * KB, per = 14, nr = Math.ceil(HS.length / per), sh = new Sheet(8 + per * 2 * CW, nr * 2 * RH + 12);
+  const from = +arg('from', 0), HS = LK.HAIR_STYLES.map((h, i) => i).slice(from), CW = 19 * KB, RH = stripH() - 6 * KB, per = +arg('per', 14), nr = Math.ceil(HS.length / per), sh = new Sheet(8 + per * 2 * CW, nr * 2 * RH + 12);
   for (const [k, on] of [[0, false], [1, true]]) {
     await polish(on);
-    HS.forEach((h, i) => { const L = LK.emptyLook(i % 2 ? 'f' : 'm'); L.hair.style = h; L.hair.color = 1 + i % 5; L.body.skin = [1, 4, 9, 12][i % 4]; L.outfit.top = LK.item('Plain tee'); L.outfit.bottoms = LK.item('Jeans');
+    if (arg('on', null) && !on) continue;
+    HS.forEach((h, i) => { const L = LK.emptyLook((LK.HAIR_STYLES[h][1].length > 1 ? i % 2 : LK.HAIR_STYLES[h][1] === 'f') ? 'f' : 'm'); L.hair.style = h; L.hair.color = 1 + i % 5; L.body.skin = [1, 4, 9, 12][i % 4]; L.outfit.top = LK.item('Plain tee'); L.outfit.bottoms = LK.item('Jeans');
       const A = LK.lookArt(LK.validLook(L)), x = 8 + (i % per) * 2 * CW, y = (Math.floor(i / per) * 2 + k + 1) * RH;
       sh.sprite(baked(A, 7, 'idle', 0), x + CW / 2, y, KB); sh.sprite(baked(A, 4, 'idle', 0), x + CW + CW / 2, y, KB); });
   }

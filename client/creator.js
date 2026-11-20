@@ -544,7 +544,7 @@ function renderPage() {
     const cur = LK.decodeLook(state.cur) || look, k = shop.kind;
     const price = (what, same) => `<span class="cc-price">${same ? 'yours' : '$' + WD.hairPrice(k, what)}</span>`;
     const heads = (list, what) => `<div class="cc-grid">${list.map(([n, i, fn, on, same]) => `<button class="cc-card hd ${on ? 'on' : ''}" data-act="${what}" data-v="${i}">${th(variant(fn), 'head')}<span>${esc(n)}</span>${price(hairTab, same)}</button>`).join('')}</div>`;
-    if (hairTab === 'cut') h = heads(LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base)).map(([s, i]) => [s[0], i, (V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }, L.hair.style === i, cur.hair.style === i]), 'hb-style');
+    if (hairTab === 'cut') h = heads(LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base) && hairShown(s)).map(([s, i]) => [s[0], i, (V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }, L.hair.style === i, cur.hair.style === i]), 'hb-style');
     else if (hairTab === 'colour') h = row(`Color <b>${WD.hairPrice(k, 'colour') ? '$' + WD.hairPrice(k, 'colour') : ''}</b>`, LK.HAIR_COLORS.map(([hx, n], i) => sw('hb-col', i, hx, L.hair.color === i, n)).join(''));
     else h = heads((hairTab === 'beard' ? WD.BEARDS : WD.MOUSTACHES).map((i) => [i ? LK.FACIAL_HAIR[i][0] : 'Clean shaven', i, (V) => { V.hair.facial = i; V.outfit.glasses = null; }, L.hair.facial === i, cur.hair.facial === i]), 'hb-fac');
     h = `<p class="cc-note">${k === 'salon' ? 'Cuts and color' : 'Cuts, color, beards and mustaches'}: see it on you, then Confirm to pay.</p>` + h;
@@ -583,7 +583,7 @@ function renderPage() {
   } else if (tab === 'hair') {
     const LEN = { bald: 's', buzz: 's', short: 's', slick: 's', spiky: 's', curly: 's', undercut: 's', fade: 's', cornrows: 's', pixie: 's', curtains: 's', mohawk: 's', sides: 's', sidepart: 's', quiff: 's' };
     const lenOf = (st) => LEN[st] ? 'short' : ['long', 'wavy', 'braids', 'dreads', 'boxbraids', 'curlylong', 'braid', 'halfup'].includes(st) ? 'long' : 'medium';
-    const styles = LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base) && (hairLen === 'all' || lenOf(s[2]) === hairLen));
+    const styles = LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base) && hairShown(s) && (hairLen === 'all' || lenOf(s[2]) === hairLen));
     h = row('Hair length', ['all', 'short', 'medium', 'long'].map((k) => chip('hlen', k, k[0].toUpperCase() + k.slice(1), hairLen === k)).join(''))
       + row('Hairstyle', `<div class="cc-grid">${styles.map(([s, i]) => `<button class="cc-card hd ${L.hair.style === i ? 'on' : ''}" data-act="hair" data-v="${i}">${th(variant((V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }), 'head')}<span>${esc(s[0])}</span></button>`).join('')}</div>`)
       + row('Hair color', LK.HAIR_COLORS.map(([hx, n], i) => sw('hcol', i, hx, L.hair.color === i, n)).join(''))
@@ -645,6 +645,9 @@ function renderPage() {
 // a random outfit made only of what you can wear (the owner, 11-17: "don't show complete outfits the player doesn't own
 // the things for"): each locked piece of the random one swapped for an owned piece of the same slot that fits - in its
 // style if one is - an optional slot left empty if there's none; free players and the dev's wear: anything
+// the polish pass's hairstyles (lookcore.js HAIR_STYLES' fourth field) are offered only while the pass is switched on:
+// off, each would draw as the style it's built on
+function hairShown(s) { try { return !s[3] || localStorage.getItem('cla.polish') === '1'; } catch { return !s[3]; } }
 function wearable(R, base, seed) {
   if (state.free || devWear) return R.outfit;
   const O = { ...R.outfit };

@@ -24,7 +24,7 @@ export function randomLook(seed, base = null, style = null) {
   for (const k of ['shape', 'eyes', 'brows', 'nose', 'lips']) L.face[k] = rint(r, FACE_OPTS[k].length);
   L.face.eyeColor = rpick(r, [0, 0, 1, 1, 2, 3, 4, 5, 6, 7]);
   L.face.freckles = r() < 0.15 ? 1 : 0; L.face.mole = r() < 0.12 ? 1 : 0; L.face.dimples = r() < 0.15 ? 1 : 0;
-  const styles = HAIR_STYLES.map((h, i) => [h, i]).filter(([h]) => h[1].includes(base));
+  const styles = HAIR_STYLES.map((h, i) => [h, i]).filter(([h]) => h[1].includes(base) && !h[3]);   // (not the polish pass's styles: lookcore.js)
   L.hair.style = rpick(r, styles)[1];
   L.hair.color = L.body.age >= 4 && r() < 0.7 ? rpick(r, [12, 13]) : r() < 0.08 ? 14 + rint(r, 5) : rint(r, 12);
   L.hair.facial = base === 'm' && r() < 0.45 ? 1 + rint(r, FACIAL_HAIR.length - 1) : 0;

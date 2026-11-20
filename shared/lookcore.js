@@ -83,6 +83,9 @@ export const HAIR_STYLES = [
   ['Pixie', 'f', 'pixie'], ['Bob', 'f', 'bob'], ['Ponytail', 'mf', 'pony'], ['High bun', 'f', 'bun'], ['Top knot', 'mf', 'topknot'], ['Braids', 'f', 'braids'],
   ['Box braids', 'f', 'boxbraids'], ['Space buns', 'f', 'twinbuns'], ['Pigtails', 'f', 'pigtails'], ['Single braid', 'f', 'braid'], ['Curly long', 'f', 'curlylong'], ['Shag', 'mf', 'shag'],
   ['Cornrows', 'mf', 'cornrows'], ['Fade', 'm', 'fade'], ['Curtains', 'm', 'curtains'], ['Big curls', 'f', 'bigcurls'], ['Half up', 'f', 'halfup'], ['Shaved side', 'f', 'shavedside'],
+  // (pass 2, CB3-M / CB3-F / CC2: shapes the concepts have that the list lacked; drawn by the polish pass)
+  // (the fourth field: only with the pass on - the creator lists them then, random looks never pick them; off, each draws as its base style)
+  ['Balding', 'm', 'balding', 1], ['Flat top', 'm', 'flattop', 1], ['Pompadour', 'm', 'pompadour', 1], ['Afro puffs', 'f', 'puffs', 1], ['Low ponytail', 'mf', 'lowpony', 1], ['Side fringe', 'mf', 'emo', 1],
 ];
 // facial hair (CB4)
 export const FACIAL_HAIR = [['None', null], ['Stubble', 'stubble'], ['Short beard', 'short'], ['Full beard', 'full'], ['Long beard', 'long'], ['Goatee', 'goatee'],

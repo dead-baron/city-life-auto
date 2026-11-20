@@ -144,6 +144,17 @@ export const POLISH = {
     }
     wrap('pel', (R, Q) => { if (bothDark && R === W.bot && Q.z > (T.tuck ? 1.4 : -1.9) && Q.z < (T.tuck ? 2.2 : -0.9)) Q.k += 0.3; return fix(R); });
   },
+  // hair (CB3-M, CB3-F, CC2): the six shapes the concepts have that the list lacked, each on a style the renderer
+  // already draws (people.js BASE_HAIR). Balding: the cap cut off above the temples - a ring of hair round a bare crown.
+  hairCut: { balding: 0.42 },
+  hair(ex, { E, at, nk, sw, lock, bumps, W, hr, HD, backY, GR, mmul, rx, ry }) {
+    const M = W.hairM, e = (c, F, r, part) => E(at(c), F, r, GR.HAIR, part, M);
+    if (ex === 'flattop') e([0, -0.02, 0.86], HD, [hr[0] * 0.92, hr[1] * 0.9, 4.2], 'top'), E(at([0, -0.02, 1.02]), HD, [hr[0] * 0.98, hr[1] * 0.96, 2.2], GR.HAIR, 'top', M, (a, b, c) => c < 0.55);   // (a block, its top cut level)
+    else if (ex === 'pompadour') { e([0, 0.52, 1.0], mmul(HD, rx(-0.45)), [hr[0] * 0.8, 3.9, 3.7], 'quiff'); e([0, -0.1, 1.0], HD, [hr[0] * 0.72, 4.2, 2.0], 'quiff'); }   // (a roll standing over the forehead, swept back)
+    else if (ex === 'puffs') for (const s of [-1, 1]) { const c = at([s * 0.78, -0.2, 0.9]); E(c, HD, [3.7, 3.6, 3.5], GR.HAIR, 'afro', M); bumps(c, [3.7, 3.6, 3.5], 7, 1.5, -0.2, 1.3, 2, 0.95); }   // (two round puffs high at the sides)
+    else if (ex === 'lowpony') { const r0 = at([0, -0.96, -0.28]); E(r0, HD, [1.3, 1.1, 1.2], GR.HAIR, 'tie', () => cloth('#2a2226')); lock(r0, sw(nk(0, backY - 0.4, -3.4), 0.5), 2.1, 1.8, 'tail'); lock(sw(nk(0, backY - 0.4, -3.4), 0.5), sw(nk(0, backY - 0.7, -8.6), 1), 1.8, 0.7, 'tail'); }   // (tied at the nape, hanging down the back)
+    else if (ex === 'emo') { e([0.36, 0.7, 0.42], mmul(HD, ry(0.62)), [hr[0] * 0.74, 2.5, 2.9], 'sweep'); e([-0.5, 0.5, 0.74], HD, [hr[0] * 0.5, 2.2, 1.6], 'sweep'); }   // (a long fringe swept across one eye)
+  },
   // the arm over the body: a line on the body's pixels beside an arm in front of them, however close the two are (the
   // renderer's own lines want a clear step in depth: an arm hanging by a chest has none, and the two were one mass)
   post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, GR }) {
