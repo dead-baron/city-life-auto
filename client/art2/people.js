@@ -1095,7 +1095,7 @@ function wardrobe(A, D, TF, seed) {
   const stubble = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.62 + skin[i][j] * 0.38)));
   // (at the game's size a buzz cut must still read as hair - a dark cap - and a fade's or an undercut's shaved sides as
   // skin under the hair on top: the plain stubble mix read as the same brown for all three)
-  const buzzR = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.84 + skin[i][j] * 0.16))), shavedR = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.36 + skin[i][j] * 0.64)));
+  const buzzR = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.84 + skin[i][j] * 0.16))), shK = PL ? 0.62 : 0.36, shavedR = hairR.map((c, i) => c.map((v, j) => Math.round(v * shK + skin[i][j] * (1 - shK))));   // (the polish pass: short hair is still mostly the hair's colour - at 0.36 a dark crop's sides were skin, and the hair on top a cap)
   W.hairM = (Q) => {
     // clumps: darker grooves radiating from the crown, a sheen band
     const az = Math.atan2(Q.l0, Q.l1), ex = A.hair?.style, st = BASE_HAIR[ex] || ex;
@@ -1103,7 +1103,7 @@ function wardrobe(A, D, TF, seed) {
     if (st === 'buzz' && Q.part === 'hair') { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return Q.res > 1 ? stubble : buzzR; }
     if (st === 'mohawk' && Q.part === 'hair') return Q.res > 1 ? stubble : shavedR;
     if (st === 'cornrows') { if (Math.round(Q.l0 * (Q.res > 1 ? 8 : 4.5)) & 1) Q.k -= 0.34; return hairR; }   // (rows two art pixels wide at the game's size)
-    if ((st === 'undercut' || st === 'fade') && Q.l2 < 0.45) { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return Q.res > 1 ? stubble : shavedR; }
+    if ((st === 'undercut' || st === 'fade') && Q.l2 < 0.45 && !(PL && Q.res === 1 && Q.part !== 'hair')) { if (!(PL && Q.res === 1)) Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return Q.res > 1 ? stubble : shavedR; }   // (the polish pass: the short sides are the cap's alone and one clean tone - the block on top is all hair, or it came out mottled)
     if (st === 'slick') { Q.gloss = 0.8; if ((Math.round(Q.l0 * 7) & 1) && Q.l2 > 0) Q.k -= 0.15; return hairR; }
     Q.k -= Q.res > 1 ? 0.1 : 0.04;
     if (Q.res > 1) {

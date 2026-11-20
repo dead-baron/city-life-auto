@@ -369,7 +369,7 @@ export const POLISH = {
 // own tones are redrawn: shaved sides, a parting, ties, cuffs and the lines between locks stay as they are.
 // Curls keep a broken tone, braids and locs their strands.
 const FRONT = { long: [-4.6, 2.5, 1.7], wavy: [-4.8, 2.7, 1.9], curlylong: [-4.8, 2.9, 2.2], bigcurls: [-4.4, 3.0, 2.3], halfup: [-4.4, 2.4, 1.7], shoulder: [-2.4, 2.4, 1.8], dreads: [-4.2, 2.5, 1.9], boxbraids: [-4.6, 2.4, 1.8], braids: [-4.6, 2.4, 1.8], shag: [-1.8, 2.2, 1.6], braid: [-1.6, 2.0, 1.5] };   // (how far down the neck's frame a front lock ends, its width at the temple and at its tip)
-const SHORT = { buzz: 1, fade: 1, sides: 1, balding: 1, cornrows: 1, short: 1 };
+const SHORT = { buzz: 1, fade: 1, sides: 1, balding: 1, cornrows: 1, short: 1, undercut: 1, shavedside: 1 };
 const HAIR_TEX = { afro: 1, curly: 1, curlylong: 1, bigcurls: 1, puffs: 1, dreads: 2, boxbraids: 2, braids: 2, braid: 2, cornrows: 2 };
 function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
   const bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, H = new Uint8Array(bw * bh), F = new Uint8Array(bw * bh), T = new Uint8Array(w * h), tex = HAIR_TEX[style] | 0;
