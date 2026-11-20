@@ -18,7 +18,7 @@ test('the mouth is off behind one constant (the concepts\' small figures have no
   for (const base of ['m', 'f']) {
     const A = plain(base), off = withPass(() => baked(A)), on = withPass(() => baked(A), { mouthOn: true });
     const n = diff(off, on);
-    assert.ok(n >= 1 && n <= 4, `${base}: the mouth is a pixel or two, and only that (${n})`);
+    assert.ok(n >= 1 && n <= 6, `${base}: the mouth is a few pixels, and only that (${n})`);   // (11-20: the chunky build's bigger face has room for a woman's whole mouth - 3 over 2)
     // with it on, the six lip shapes are six mouths
     const lips = LK.FACE_OPTS.lips.map((_, i) => withPass(() => baked(plain(base, (L) => { L.face.lips = i; }), 0, 'idle', 0, { region: 'head' }), { mouthOn: true }));
     for (let i = 0; i < lips.length; i++) for (let j = i + 1; j < lips.length; j++) assert.ok(diff(lips[i], lips[j]) >= 1, `${base}: ${LK.FACE_OPTS.lips[i]} and ${LK.FACE_OPTS.lips[j]} drawn alike`);

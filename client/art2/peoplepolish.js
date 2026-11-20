@@ -27,6 +27,7 @@ export const POLISH = {
   // lighter (shK: today 0.32) and the dither between two tones fainter (dith: today 0.18) - a yellow shirt was five tones
   // from cream to dark red, which read as stains and as the arm beside it
   rampSoft: 0.4, vMin: 0.3, shK: 0.18, dith: 0.08,
+  lnC: 120,           // no inner line between two parts whose colours already differ by this much (r + g + b): a bare arm on a white shirt needs none
   eye2: true,         // a face at an angle keeps its far eye (people.js face)
   lnHead: 0.24,       // the line a fringe or a hat draws on the face: this much lighter (people.js: a shadow, not a headband)
   // the outline, on the art grid (people.js): [lit side: how much of the colour it borders, its brightest; the same in the shade]

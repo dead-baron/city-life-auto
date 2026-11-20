@@ -67,15 +67,17 @@ test('the pass is loaded only when switched on: it is in nobody\'s code - the pa
   assert.ok(/'cla\.polish'\) === '1'/.test(readFileSync(new URL('client/art2/game/host.js', ROOT), 'utf8')), 'the renderer reads the switch');
 });
 
-test('on: a longer body under the head, for both bases and every build (the head and neck: under 2.4 of the height today)', () => {
+// (the owner, 2026-11-20: "stay chunky" and closer to the concepts - which, shrunk to the game's size, are a big head on a
+// wide body: about two and a half heads. Pass 1 asked for a longer body, 2.55 heads and up; that moved away from them.)
+test('on: the concepts\' chunky build for both bases and every build - about two and a half heads, the head with room for a face', () => {
   for (const base of ['m', 'f']) for (let b = 0; b < LK.BUILDS.length; b++) {
     const A = look(base, { build: b, skin: 2 });
     setPolish(null); const before = headsOf(baked(A));
     setPolish({ ...POLISH, mouthOn: true }); const after = headsOf(baked(A)); setPolish(null);   // (measured as pass 1 was, the mouth drawn: without it the middle column's first white row is a row lower on some builds - the same body)
     const who = `${base} ${LK.BUILDS[b].name}: ${before.heads.toFixed(2)} -> ${after.heads.toFixed(2)} (${before.tall} -> ${after.tall} art px tall, the head and neck ${before.head} -> ${after.head})`;
-    assert.ok(after.heads >= 2.55 && after.heads >= before.heads + 0.15, who);
+    assert.ok(after.heads >= 2.25 && after.heads <= 2.8, who);
     assert.ok(after.head >= 9, `the head keeps room for a face, over a neck: ${who}`);
-    assert.ok(after.tall <= before.tall + 3, `no giant: ${who}`);
+    assert.ok(after.tall <= before.tall + 3 && after.tall >= before.tall - 1, `today's height, give or take the outline: ${who}`);
   }
 });
 

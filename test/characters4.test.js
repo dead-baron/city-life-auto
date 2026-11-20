@@ -36,14 +36,18 @@ test('the five draped pieces stay out of the city\'s random looks (and are still
 });
 
 // ---- underwear, cut on the art grid ------------------------------------------------------------------------------------
-const baked = (A, d = 0, pose = 'idle', f = 0) => downsample2(packGBuf(person(A, d, pose, f, { tight: true })));
+// (line(o): is this art pixel the figure's outline - the polish pass draws it in a tone of what it borders, so it changes with a piece's colour and isn't the piece)
+const baked = (A, d = 0, pose = 'idle', f = 0) => { const g = person(A, d, pose, f, { tight: true, info: 1 }), s = downsample2(packGBuf(g)); s.line = (o) => s.pick[o] >= 0 && (g.info.ol[s.pick[o]] === 1 || g.info.grp[s.pick[o]] <= 3); return s; };   // (nor the head and hair: a look's seed moves a lock)
 const withPass = (f) => { setPolish(POLISH); try { return f(); } finally { setPolish(null); } };
 const wear = (base, name, color, skin = 2, trim) => { const L = LK.emptyLook(base); L.hair.style = 2; L.body.skin = skin; L.outfit.under = LK.item(name, color, trim); return LK.lookArt(LK.validLook(L)); };
 // the piece's own art pixels: where the same figure in another colour differs (both colours, the trim too)
 const own = (base, name, d, pose = 'idle', f = 0, skin = 2, color = 'hot pink') => withPass(() => {
+  // (the two figures laid feet on feet: a look's seed moves a lock of hair, and with it the sprite's box)
   const a = baked(wear(base, name, color, skin, color), d, pose, f), b = baked(wear(base, name, 'teal', skin, 'teal'), d, pose, f), px = [];
-  assert.equal(a.w, b.w); assert.equal(a.h, b.h);
-  for (let i = 0; i < a.w * a.h; i++) if (a.p0[i * 4 + 3] && (a.p0[i * 4] !== b.p0[i * 4] || a.p0[i * 4 + 1] !== b.p0[i * 4 + 1] || a.p0[i * 4 + 2] !== b.p0[i * 4 + 2])) px.push(i);
+  for (let y = 0; y < a.h; y++) for (let x = 0; x < a.w; x++) {
+    const i = y * a.w + x, bx = x - a.ax + b.ax, by = y - a.ay + b.ay, j = by * b.w + bx, inb = bx >= 0 && by >= 0 && bx < b.w && by < b.h;
+    if (a.p0[i * 4 + 3] && !a.line(i) && inb && b.p0[j * 4 + 3] && (a.p0[i * 4] !== b.p0[j * 4] || a.p0[i * 4 + 1] !== b.p0[j * 4 + 1] || a.p0[i * 4 + 2] !== b.p0[j * 4 + 2])) px.push(i);
+  }
   return { G: a, px };
 });
 const UNDER = LK.PIECES.filter((p) => p && p.slot === 'under' && p.name !== 'Nothing on');

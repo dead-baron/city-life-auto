@@ -73,7 +73,15 @@ test('every hairstyle still draws apart from every other, and with the pass off 
 // ---- the owner's notes on pass 4's underwear ---------------------------------------------------------------------------
 const wear = (base, name, c, t = c, skin = 2) => { const L = LK.emptyLook(base); L.body.skin = skin; L.hair.style = 2; if (name) L.outfit.under = LK.item(name, c, t); return LK.lookArt(LK.validLook(L)); };
 // the art pixels a piece's colour reaches: where the same figure in two colours differs
-const own = (base, name, d = 0) => withPass(() => { const a = baked(wear(base, name, 'hot pink'), d), b = baked(wear(base, name, 'teal'), d), px = []; for (let i = 0; i < a.w * a.h; i++) if (a.p0[i * 4 + 3] && (a.p0[i * 4] !== b.p0[i * 4] || a.p0[i * 4 + 1] !== b.p0[i * 4 + 1])) px.push([i % a.w, Math.floor(i / a.w)]); return px; });
+const own = (base, name, d = 0) => withPass(() => {
+  const bk = (A) => { const g = person(A, d, 'idle', 0, { tight: true, info: 1 }), s = downsample2(packGBuf(g)); s.line = (o) => s.pick[o] >= 0 && (g.info.ol[s.pick[o]] === 1 || g.info.grp[s.pick[o]] <= 3); return s; };   // (nor the head and hair: a look's seed moves a lock)   // (line: the outline, which takes a tone of the piece but isn't the piece)
+  const a = bk(wear(base, name, 'hot pink')), b = bk(wear(base, name, 'teal')), px = [];
+  for (let y = 0; y < a.h; y++) for (let x = 0; x < a.w; x++) {
+    const i = y * a.w + x, bx = x - a.ax + b.ax, by = y - a.ay + b.ay, j = by * b.w + bx;
+    if (a.p0[i * 4 + 3] && !a.line(i) && bx >= 0 && by >= 0 && bx < b.w && by < b.h && b.p0[j * 4 + 3] && (a.p0[i * 4] !== b.p0[j * 4] || a.p0[i * 4 + 1] !== b.p0[j * 4 + 1])) px.push([x, y]);
+  }
+  return px;
+});
 
 test('no underwear picked: boxers for a man, a bra and panties for a woman', () => {
   const m = LK.lookArt(LK.emptyLook('m')), f = LK.lookArt(LK.emptyLook('f'));

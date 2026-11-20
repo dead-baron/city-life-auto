@@ -1571,13 +1571,13 @@ function hatPrims(E, C, A, D, S, W, at, k) {
 }
 
 // ---- rendering ----------------------------------------------------------------------------------------------------------------
-let CAP = 0, NEAR, PID, NX, NY, NZ, L0, L1, L2, ZW, CR, CG, CB, EM, NOO, LN, AO, FL, MTL;
+let CAP = 0, NEAR, PID, NX, NY, NZ, L0, L1, L2, ZW, CR, CG, CB, EM, NOO, LN, AO, FL, MTL, LG;
 function scratch(n) {
   if (n <= CAP) return;
   CAP = n;
   NEAR = new Float32Array(n); PID = new Int16Array(n); NX = new Float32Array(n); NY = new Float32Array(n); NZ = new Float32Array(n);
   L0 = new Float32Array(n); L1 = new Float32Array(n); L2 = new Float32Array(n); ZW = new Float32Array(n);
-  CR = new Uint8ClampedArray(n); CG = new Uint8ClampedArray(n); CB = new Uint8ClampedArray(n); EM = new Array(n).fill(null); NOO = new Uint8Array(n); LN = new Uint8Array(n); AO = new Float32Array(n); FL = new Uint8Array(n); MTL = new Uint16Array(n);
+  CR = new Uint8ClampedArray(n); CG = new Uint8ClampedArray(n); CB = new Uint8ClampedArray(n); EM = new Array(n).fill(null); NOO = new Uint8Array(n); LN = new Uint8Array(n); AO = new Float32Array(n); FL = new Uint8Array(n); MTL = new Uint16Array(n); LG = new Uint8Array(n);
 }
 const Q = { X: 0, Y: 0, Z: 0, nx: 0, ny: 0, nz: 0, l0: 0, l1: 0, l2: 0, x: 0, y: 0, k: 0, e: null, gloss: 0, part: '', side: 0, u: 0, f: 0, z: 0 };
 const ITEMID = 32000, FOAMID = 32001;
@@ -1636,7 +1636,7 @@ function render(fig, P, S, X, D, A, opt) {
   const R = opt.res > 1 ? Math.min(8, opt.res | 0) : 1, iR = 1 / R;
   const w = Math.min(200 * R, (x1 - x0) * R), h = Math.min(200 * R, (y1 - y0) * R), AX = -x0 * R, AY = -y0 * R, n = w * h;
   scratch(n);
-  NEAR.fill(-1e9, 0, n); PID.fill(-1, 0, n); NOO.fill(0, 0, n); LN.fill(0, 0, n); AO.fill(0, 0, n); FL.fill(0, 0, n); EM.fill(null, 0, n); MTL.fill(0, 0, n);
+  NEAR.fill(-1e9, 0, n); PID.fill(-1, 0, n); NOO.fill(0, 0, n); LN.fill(0, 0, n); AO.fill(0, 0, n); FL.fill(0, 0, n); EM.fill(null, 0, n); MTL.fill(0, 0, n); LG.fill(0, 0, n);
   const MID = new Map();   // (each material's ramp, numbered: what a pixel is made of - the outline pass's tidy-up reads it)
   // 1. ray-cast every primitive into the depth buffer
   const smaxOf = (p) => p.bc[1] * CA + p.bc[2] * SA + p.br;          // the nearest any of a primitive's points can be
@@ -1730,6 +1730,7 @@ function render(fig, P, S, X, D, A, opt) {
   if (fig.W.bare) censor(fig, S, X, D, w, h, AX, AY, R);
   // 8. lines between overlapping parts (on the farther pixel), then the outline round the figure
   const grp = (k) => (k === ITEMID ? GR.ITEM : prims[k].g);
+  const LNC = (PL && R === 1 && PL.lnC) || 0;
   const step = (i, j, g) => {   // is neighbour j a separate part standing clearly in front of pixel i?
     const kj = PID[j];
     if (kj < 0 || NOO[j] || kj === FOAMID) return false;
@@ -1740,7 +1741,16 @@ function render(fig, P, S, X, D, A, opt) {
     const i = y * w + x, k = PID[i];
     if (k < 0 || NOO[i] || k === FOAMID || AO[i] < 0) continue;      // (AO -1: a censor block, kept whole)
     const g = grp(k);
-    if ((x > 0 && step(i, i - 1, g)) || (x < w - 1 && step(i, i + 1, g)) || (y > 0 && step(i, i - w, g)) || (y < h - 1 && step(i, i + w, g))) LN[i] = 1;
+    // (the polish pass, PL.lnC: the line's drawn only where the two parts' colours don't already part them - a bare arm on a
+    // white shirt needs none. LG keeps where a line belongs by shape alone: the outline pass reads that, so a figure's
+    // outline never moves with its colours)
+    let ln = 0, lg = 0;
+    for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1]) {
+      if (j < 0 || !step(i, j, g)) continue;
+      lg = 1;
+      if (!LNC || Math.abs(CR[i] - CR[j]) + Math.abs(CG[i] - CG[j]) + Math.abs(CB[i] - CB[j]) <= LNC) { ln = 1; break; }
+    }
+    LN[i] = ln; LG[i] = lg;
   }
   // (at the game's scale an inner line is a whole art pixel after the bake: a step darker, as SPEC asks, not the
   // outline's near-black, which made a busy figure of every overlap)
@@ -1795,7 +1805,7 @@ function render(fig, P, S, X, D, A, opt) {
       if (PID[i] < 0) continue;
       BA[q]++;
       if (NOO[i] || PID[i] === FOAMID) continue;
-      BN[q]++; BL[q] += LN[i]; BC[q * 3] += CR[i]; BC[q * 3 + 1] += CG[i]; BC[q * 3 + 2] += CB[i];
+      BN[q]++; BL[q] += LG[i]; BC[q * 3] += CR[i]; BC[q * 3 + 1] += CG[i]; BC[q * 3 + 2] += CB[i];
       if (BS[q] < 0 || NEAR[i] > NEAR[BS[q]]) BS[q] = i;
     }
     const bg = (q) => (BS[q] < 0 || PID[BS[q]] >= prims.length ? 0 : prims[PID[BS[q]]].g);
@@ -1821,6 +1831,15 @@ function render(fig, P, S, X, D, A, opt) {
         const ob = BA[q - 1] < 2 ? q - 1 : q + 1;   // (and its last half pixel out beyond: gone)
         if (BA[ob]) DM[ob] = 2;
       }
+    }
+    // (a sole's last pixel out beyond the shoe - the far foot's at an angle, a toe's under the near one: on its own it's a
+    // white pixel beside the foot, not a sole)
+    for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+      const q = by * bw + bx;
+      if (BA[q] < 2 || DM[q] || BS[q] < 0 || PID[BS[q]] >= prims.length || prims[PID[BS[q]]].part !== 'sole') continue;
+      let c = 0;
+      if (bx > 0 && BA[q - 1] >= 2 && !DM[q - 1]) c++; if (bx < bw - 1 && BA[q + 1] >= 2 && !DM[q + 1]) c++; if (by > 0 && BA[q - bw] >= 2 && !DM[q - bw]) c++; if (by < bh - 1 && BA[q + bw] >= 2 && !DM[q + bw]) c++;
+      if (c <= 1) DM[q] = c ? 1 : 2;
     }
     for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
       const q = by * bw + bx;
@@ -1864,6 +1883,8 @@ function render(fig, P, S, X, D, A, opt) {
       gc[o] = r; gc[o + 1] = g; gc[o + 2] = b; gf[i] = F_CHAR | FL[j];
     } else { gc[o] = 24 + CR[j] * 0.12; gc[o + 1] = 16 + CG[j] * 0.09; gc[o + 2] = 26 + CB[j] * 0.13; gf[i] = F_CHAR | FL[j]; }
   }
+  // (opt.info, for the tools and the layering test: what each pixel is - its material's number, its part's group, 1 where it's outline)
+  if (opt.info) { const mtl = MTL.slice(0, n), grp = new Uint8Array(n), ol = new Uint8Array(n), part = new Array(n).fill(''); for (let i = 0; i < n; i++) { if (OL && OL[i]) { ol[i] = 1; mtl[i] = 0; } else if (PID[i] < 0) mtl[i] = 0; else { grp[i] = PID[i] >= prims.length ? GR.ITEM : prims[PID[i]].g; part[i] = PID[i] >= prims.length ? 'item' : prims[PID[i]].part; } } G.info = { mtl, grp, ol, part }; }
   return opt.tight ? crop(G) : G;
 }
 function crop(G) {
@@ -1877,6 +1898,7 @@ function crop(G) {
     O.col.set(G.col.subarray(si * 4, (si + w) * 4), di * 4); O.nrm.set(G.nrm.subarray(si * 4, (si + w) * 4), di * 4); O.emi.set(G.emi.subarray(si * 4, (si + w) * 4), di * 4);
     O.z.set(G.z.subarray(si, si + w), di); O.flag.set(G.flag.subarray(si, si + w), di);
   }
+  if (G.info) { O.info = {}; for (const k in G.info) { const s = G.info[k], d = O.info[k] = s.slice(0, w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) d[y * w + x] = s[(y + y0) * G.w + x0 + x]; } }
   return O;
 }
 // a held item: items.js draws it flat along the item's axis; its plane is turned toward the camera when it would be

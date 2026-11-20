@@ -66,9 +66,10 @@ test('every hairstyle, face option, mark, makeup, facial hair, build and piece d
 test('the close renders are the game\'s figure, finer: the same shape, R times the size', () => {
   for (let i = 0; i < 12; i++) {
     const A = LK.lookArt(LK.STARTERS[i].look), g = person(A, 1, 'idle', 0, { tight: true }), c = person(A, 1, 'idle', 0, { tight: true, res: 4 });
-    // (the game's figure has its 1 px outline and samples whole px: up to 2.5 world px more, 10 px at 4)
-    assert.ok(Math.abs(c.h - g.h * 4) <= 10 && Math.abs(c.w - g.w * 4) <= 10, `${LK.STARTERS[i].name}: ${g.w}x${g.h} at 1, ${c.w}x${c.h} at 4`);
-    assert.ok(Math.abs(c.ay - g.ay * 4) <= 6, 'the feet stay the anchor');
+    // (the game's figure has its outline and samples whole px: 1 px of it, up to 2.5 world px more, 10 px at 4 - or the
+    // polish pass's, a whole art pixel each side: up to 6 world px more, 24 at 4)
+    assert.ok(Math.abs(c.h - g.h * 4) <= 24 && Math.abs(c.w - g.w * 4) <= 24, `${LK.STARTERS[i].name}: ${g.w}x${g.h} at 1, ${c.w}x${c.h} at 4`);
+    assert.ok(Math.abs(c.ay - g.ay * 4) <= 12, 'the feet stay the anchor');
   }
   // the face close up is client/art2/peopleclose.js's (the game never loads it): given it, eyes, brows and a mouth
   const A = LK.lookArt(LK.STARTERS[0].look), key = (G) => Buffer.from(G.col).toString('base64');
