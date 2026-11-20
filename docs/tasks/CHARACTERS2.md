@@ -29,8 +29,15 @@ to them as the game's sprite size allows, with everything they show.
      (paramedic, firefighter, workers...).
    - **Hair:** the concepts' hair shapes on the new head (pass 1 only fitted them).
    - **Faces and skin:** the concepts' expressions, eyes, facial hair, glasses and accessories that fit.
-   - **Outfits and accessories** the concepts show (bags, hats, jewellery, tattoos...) - into the wardrobe where they're
-     new pieces (follow how the wardrobe adds a piece: `shared/wardrobe.js`, `shared/rules.js` lists).
+   - **Every outfit and accessory in the concepts** (bags, hats, jewellery, tattoos...): each one checked against the
+     wardrobe and **added as a wearable piece where it's missing** (follow how the wardrobe adds a piece:
+     `shared/wardrobe.js`, `shared/rules.js` lists; give it a store that sells it, or the starter wardrobe if it's
+     basic). List in NOTES.md every concept outfit: already in / added / didn't fit.
+   - **Underwear for both bases (the owner, 11-19):** a full base layer for men and women, drawn for the new body -
+     men: boxers, briefs, boxer briefs, an undershirt and a tank; women: bra and briefs, a sports bra and shorts, a
+     tank and briefs - several colours each. Everyday and modest (the game is 13+: no lingerie, nothing see-through).
+     It's what a character wears under clothes and what shows with no top or bottoms on (the creator's body tab, the
+     fitting room, the shower at home); free for everyone (in the starter wardrobe), its own slot in the creator.
 3. **Every animation checked with the pass on** (fix what's wrong): all 8 directions of standing, walking (add the walk
    bob if the concepts show one), running, idle, sitting (benches, cars' seats, bikes, horses, boats, kayaks), swimming,
    diving / rolling, carrying (crates, boards), punching, aiming, fishing, dancing, emotes, knocked down, in the
