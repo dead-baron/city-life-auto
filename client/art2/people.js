@@ -1290,7 +1290,7 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
   const ex = A.hair?.style || 'short';
   let st = BASE_HAIR[ex] || ex;
   if (A.mask || (A.fmask && (A.fmask.k === 'pig' || A.fmask.k === 'alien'))) return;   // a balaclava, a ski mask or a costume head hides the hair completely
-  const hatOn = hat && !['bandana', 'headband', 'visor', 'flowers', 'tiara', 'earmuffs', 'catears', 'veil'].includes(hat);   // (a crown of flowers, a tiara, earmuffs, cat ears or a veil sit on the hair as it is)
+  const hatOn = hat && !['bandana', 'headband', 'visor', 'flowers', 'tiara', 'earmuffs', 'catears', 'veil'].includes(hat) && !(PL && hat === 'paper');   // (the polish pass: a paper hat is a narrow cap on top of the hair - cut as under a hat, the head was bald round it)   // (a crown of flowers, a tiara, earmuffs, cat ears or a veil sit on the hair as it is)
   if (hatOn) { if (st === 'afro' || st === 'spiky' || st === 'curly' || st === 'mohawk' || st === 'topknot' || st === 'twinbuns' || st === 'curtains' || st === 'shag') st = 'short'; if (['hood', 'helmet', 'hijab', 'turban', 'durag', 'wrap', 'moto', 'skatehelmet'].includes(hat)) return; }   // (all the hair under a hood, a helmet, a hijab, a turban, a durag or a wrap)
   if (st === 'bald') return;
   const hr = D.head, HD = S.HD;
@@ -1791,14 +1791,15 @@ function render(fig, P, S, X, D, A, opt) {
       if (skip || !mixed) continue;
       let maj = -1, mc = 0, mn = -1e9;
       for (const i of T) { let c = 0, nr = -1e9; for (const j of T) if (MTL[j] === MTL[i]) { c++; if (NEAR[j] > nr) nr = NEAR[j]; } if (c > mc || (c === mc && nr > mn)) { mc = c; mn = nr; maj = MTL[i]; } }
-      let r = 0, g = 0, b = 0;
-      for (const i of T) if (MTL[i] === maj) { r += CR[i]; g += CG[i]; b += CB[i]; }
+      let r = 0, g = 0, b = 0, majG = 0;
+      const peekG = (i) => { const q = prims[PID[i]].g; return q === GR.HAIR || q === GR.HEAD ? q : 0; };
+      for (const i of T) if (MTL[i] === maj) { r += CR[i]; g += CG[i]; b += CB[i]; majG = prims[PID[i]].g; }
       for (const i of T) {
         const m = MTL[i];
         if (m === maj) continue;
         let c = 0;
         for (let y = Math.max(0, y0 - 1); y <= Math.min(h - 1, y0 + 2); y++) for (let x = Math.max(0, x0 - 1); x <= Math.min(w - 1, x0 + 2); x++) if ((x < x0 || x > x0 + 1 || y < y0 || y > y0 + 1) && PID[y * w + x] >= 0 && MTL[y * w + x] === m) c++;
-        if (c < 3) continue;
+        if (c < 3 && !(peekG(i) && majG !== peekG(i) && (majG === GR.HAT || majG === GR.HAIR))) continue;   // (...but hair through a hat's brim, or the head through hair, is no detail: two dark dots at the back of a sun hat)
         CR[i] = r / mc; CG[i] = g / mc; CB[i] = b / mc; MTL[i] = maj; LN[i] = 0;
       }
     }
@@ -2112,9 +2113,10 @@ function water(w, h, AX, AY, X, S, P, R = 1) {
 // mosaic is a little larger than what it hides, and no crease or outline line crosses it (AO -1).
 function censor(fig, S, X, D, w, h, AX, AY, R = 1) {
   const W = fig.W, spots = [];
-  if (W.bk === 'none') spots.push([vadd(S.pel, mv(S.PF, [0, D.pelR[1] * 0.95, -D.pelR[2] * 0.3])), 10, 8]);
-  if (PL && W.bk === 'none') spots.push([vadd(S.pel, mv(S.PF, [0, -D.pelR[1] * 0.95, -D.pelR[2] * 0.25])), 10, 8]);   // (pass 2: from behind too)
-  if (W.tk === 'none' && D.fem) spots.push([vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.2, 1.0])), 14, 6]);
+  // (the polish pass, the owner 11-20: two patches apart, like The Sims' - the hips' and the chest's, a row of skin between them on the chunky build)
+  if (W.bk === 'none') spots.push([vadd(S.pel, mv(S.PF, [0, D.pelR[1] * 0.95, -D.pelR[2] * (PL ? 0.55 : 0.3)])), PL ? 8 : 10, PL ? 6 : 8]);
+  if (PL && W.bk === 'none') spots.push([vadd(S.pel, mv(S.PF, [0, -D.pelR[1] * 0.95, -D.pelR[2] * 0.5])), 8, 6]);   // (pass 2: from behind too)
+  if (W.tk === 'none' && D.fem) spots.push([vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.2, PL ? 1.6 : 1.0])), PL ? 12 : 14, PL ? 4 : 6]);
   const B = 2 * R;
   for (const [p, bw, bh] of spots) {
     const q = X.pt(p), s = q[1] * CA + q[2] * SA, cx = Math.round(AX + q[0] * R), cy = Math.round(AY + (q[1] * SA - q[2] * CA) * R);
@@ -2122,7 +2124,8 @@ function censor(fig, S, X, D, w, h, AX, AY, R = 1) {
     for (let dy = -R; dy <= R && !seen; dy++) for (let dx = -R; dx <= R; dx++) { const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < w && y < h && PID[y * w + x] >= 0 && NEAR[y * w + x] - s < 4) { seen = true; break; } }
     if (!seen) continue;
     const nx = Math.max(2, Math.round(bw * R / B)), ny = Math.max(2, Math.round(bh * R / B));
-    const xa = cx - ((nx * B) >> 1), ya = cy - ((ny * B) >> 1);
+    let xa = cx - ((nx * B) >> 1), ya = cy - ((ny * B) >> 1);
+    if (PL && R === 1) { xa -= (xa + (Math.round(AX) & 1)) & 1; ya -= (ya + (Math.round(AY) & 1)) & 1; }   // (the polish pass: its squares are art pixels - off the grid the chest's came out a blur and the hips' a checker, the owner 11-20)
     for (let j = 0; j < ny; j++) for (let k = 0; k < nx; k++) {
       // (the corners left out: a rounded patch, as the game's mosaic reads)
       if ((j === 0 || j === ny - 1) && (k === 0 || k === nx - 1) && nx > 3 && ny > 3) continue;
@@ -2131,7 +2134,7 @@ function censor(fig, S, X, D, w, h, AX, AY, R = 1) {
       // (averaged over the block and a pixel round it: soft, like a blur, the neighbours' tones bleeding in)
       for (let y = by - 1; y < by + B + 1; y++) for (let x = bx - 1; x < bx + B + 1; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; r += CR[i]; g += CG[i]; b += CB[i]; m++; }
       if (!m) continue;
-      const jt = ((j + k) & 1 ? (PL ? 1.2 : 1.12) : PL ? 0.76 : 0.86) + (hash(k + Math.round(cx / B), j + Math.round(cy / B), 41) - 0.5) * 0.14;   // (each block its own shade, neighbours apart: the squares show)
+      const jt = ((j + k) & 1 ? (PL ? 1.26 : 1.12) : PL ? 0.64 : 0.86) + (hash(k + Math.round(cx / B), j + Math.round(cy / B), 41) - 0.5) * 0.14;   // (each block its own shade, neighbours apart: the squares show)
       r = r / m * jt; g = g / m * jt; b = b / m * jt;
       for (let y = by; y < by + B; y++) for (let x = bx; x < bx + B; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; CR[i] = r; CG[i] = g; CB[i] = b; AO[i] = -1; }
     }

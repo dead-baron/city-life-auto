@@ -186,7 +186,7 @@ add('set', 'Scrubs', 'mf', 'work disguise', 45, 'workwear', { k: 'scrubs', bk: '
 add('set', 'Swimsuit', 'f', 'beach athletic', 45, 'beach', { k: 'swimsuit', bk: 'bikini' }, 'red');
 add('set', 'Pajamas', 'mf', 'lounge', 45, 'clothing', { k: 'shirt', bk: 'pants', p: 1 }, 'sky', 'white');
 add('set', 'Wetsuit', 'mf', 'beach outdoors athletic', 110, 'beach', { k: 'longsleeve', bk: 'leggings' }, 'black', 'teal');
-add('set', 'Underwear', 'mf', 'lounge', 15, 'clothing', { k: 'under', bk: 'trunks' }, 'white');
+add('set', 'Underwear', 'mf', 'lounge', 15, 'clothing', { k: 'under', bk: 'trunks', basic: 1 }, 'white');   // (the owner, 11-20: just your underwear - the piece you wear under, or the basics: boxers; a bra and panties. The undershirt and trunks it was: 'Undershirt and trunks', the catalogue's last)
 add('set', 'Ski suit', 'mf', 'winter outdoors', 210, 'outdoor', { k: 'puffer', bk: 'cargo' }, 'red', 'black');
 add('set', 'Bodysuit', 'f', 'nightclub athletic alt', 70, 'boutique', { k: 'swimsuit', bk: 'leggings' }, 'black');
 // shoes (CP4)
@@ -471,6 +471,7 @@ add('top', 'Gingham shirt', 'mf', 'western preppy casual', 42, 'clothing', { k: 
 add('bottoms', 'Tartan trousers', 'mf', 'punk alt retro', 55, 'clothing', { k: 'pants', p: 2 }, 'red', 'black');
 add('bottoms', 'Camo pants', 'mf', 'outdoors street disguise', 55, 'costume', { k: 'cargo', p: 3 }, 'olive', 'khaki');
 add('jacket', 'Hunting vest', 'mf', 'outdoors', 60, 'outdoor', { k: 'vest', pockets: 1 }, 'orange', 'charcoal');
+add('set', 'Undershirt and trunks', 'mf', 'lounge', 15, 'clothing', { k: 'under', bk: 'trunks' }, 'white');   // (what the 'Underwear' set was until 11-20)
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
@@ -627,7 +628,12 @@ export function lookArt(L, opt = {}) {
   if (un) A.under = { ...un.d, color: uc, trim: ut };
   const uTop = un && { kind: un.d.k || (fem ? 'bra' : 'none'), color: uc, color2: ut, trim: ut, pattern: pat(O.under), len: un.d.len || 0, under: 1 };
   const uBot = un && { kind: un.d.bk, color: uc, color2: ut, trim: ut, pattern: pat(O.under), gloss: un.d.gloss ? 1 : 0, under: 1 };
-  if (set) {
+  if (set && set.d.basic) {   // (the 'Underwear' set: the underwear worn under, or the basics in the set's colour)
+    const c = HEX(O.set.c);
+    if (!un) A.under = { k: fem ? 'bra' : undefined, bk: fem ? 'bikini' : 'trunks', band: 1, color: c, trim: HEX(O.set.t) };
+    A.top = uTop || { kind: fem ? 'bra' : 'none', color: c, under: 1 };
+    A.bottom = uBot || { kind: fem ? 'bikini' : 'trunks', color: c, under: 1 };
+  } else if (set) {
     A.top = { kind: set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0, plain: set.d.plain ? 1 : 0, bands: set.d.bands ? 1 : 0 };
     A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined };
   } else {
