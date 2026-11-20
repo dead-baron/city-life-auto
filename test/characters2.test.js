@@ -104,3 +104,44 @@ test('the basics are everyone\'s from the start; the lingerie is sold; the city\
   }
   for (const st of LK.STARTERS) assert.equal(st.look.outfit.under, null);
 });
+
+// ---- the concepts' wardrobe, the uniforms, dark clothing -------------------------------------------------------------
+const ADDED = ['Paramedic uniform', 'Turnout gear', 'Hi-vis coverall', 'Fire helmet', 'Security shirt', 'Rash guard', 'Camisole', 'Sweater vest', 'Camo jacket', 'Sherwani', 'Kilt', 'Leather chaps', 'Onesie', 'Sequin dress',
+  'Scarf', 'Neckerchief', 'Bolo tie', 'Lanyard', 'Evening gloves', 'Biker gloves', 'Sweatbands', 'Glow bracelets', 'Headphones', 'Towel wrap', 'Boonie hat', 'Camo cap', 'Bear mask', 'Panda mask', 'Walking cane'];
+const wearing = (base, o) => { const L = LK.emptyLook(base); L.hair.style = 2; for (const [s, v] of Object.entries(o)) L.outfit[s] = Array.isArray(v) ? LK.item(...v) : LK.item(v); return LK.lookArt(LK.validLook(L)); };
+const count = (G, f) => { let n = 0; for (let i = 0; i < G.w * G.h; i++) if (G.p0[i * 4 + 3] && f(G.p0[i * 4], G.p0[i * 4 + 1], G.p0[i * 4 + 2])) n++; return n; };
+const lumOf = (r, g, b) => (0.3 * r + 0.59 * g + 0.11 * b) / 255;
+
+test('the concepts\' pieces are in the catalogue: each has a store that sells it, and draws on both bases with the pass on and off', () => {
+  for (const n of ADDED) {
+    const id = LK.byName(n), P = LK.PIECES[id];
+    assert.ok(id, n);
+    assert.ok(W.sellerOf(id), `${n}: a store sells it`);
+    for (const on of [false, true]) {
+      setPolish(on ? POLISH : null);
+      try { for (const base of ['m', 'f']) { const o = { [P.slot]: n }; if (P.slot !== 'set') { o.top ||= 'Plain tee'; o.bottoms ||= 'Jeans'; } assert.ok(baked(wearing(base, o), 1).h > 16, `${n} on ${base}`); } } finally { setPolish(null); }
+    }
+  }
+});
+
+test('the pass on: dark clothing has tones to be drawn in - a black suit is not one flat mass', () => {
+  const A = wearing('m', { set: ['Business suit', 'black', 'black'], shoes: ['Oxfords', 'black'] });
+  // (below the collar, of the dark pixels: how much of them is the one commonest tone)
+  const flat = (G) => { const h = new Array(6).fill(0); for (let i = 0; i < G.w * G.h; i++) { const l = lumOf(G.p0[i * 4], G.p0[i * 4 + 1], G.p0[i * 4 + 2]); if (G.p0[i * 4 + 3] && Math.floor(i / G.w) > G.h * 0.45 && l < 0.25) h[Math.floor(l * 24)]++; } return Math.max(...h) / h.reduce((a, b) => a + b, 0); };
+  const off = flat(baked(A, 0)), on = withPass(() => flat(baked(A, 0)));
+  assert.ok(off > 0.55, `today the suit is one tone: ${off.toFixed(2)}`);
+  assert.ok(on < off - 0.06, `with the pass its commonest tone is less of it: ${off.toFixed(2)} -> ${on.toFixed(2)}`);
+});
+
+test('the pass on: uniforms read - the police\'s gold badge and buckle, reflective bands, no badge on a cook', () => {
+  const gold = (G) => { let n = 0; for (let i = 0; i < G.w * G.h; i++) { const y = Math.floor(i / G.w); if (G.p0[i * 4 + 3] && y > G.h * 0.4 && y < G.h * 0.75 && G.p0[i * 4] > 170 && G.p0[i * 4 + 1] > 150 && G.p0[i * 4 + 2] < 75) n++; } return n; };   // (on the chest and at the belt, not the cap's)
+  const cop = LK.lookArt(LK.policeLook(LK.emptyLook('m'), 0));
+  let g0 = 0, g1 = 0;
+  for (const d of [0, 7]) { g0 += gold(baked(cop, d)); const n = withPass(() => gold(baked(cop, d))); assert.ok(n >= 2, `facing ${d}: the badge and the buckle are art pixels of gold (${n})`); g1 += n; }
+  assert.ok(g1 > g0, `more gold on the officer: ${g0} -> ${g1}`);
+  const pale = (G) => count(G, (r, g, b) => r > 200 && g > 200 && b > 150 && b < 235);
+  const medic = wearing('f', { set: 'Paramedic uniform', shoes: 'Work boots' });
+  assert.ok(withPass(() => pale(baked(medic, 0))) >= pale(baked(medic, 0)) + 6, 'the paramedic\'s reflective bands');
+  const cook = wearing('m', { top: 'Chef whites', bottoms: ['Chinos', 'black'], shoes: 'Sneakers' });
+  assert.equal(withPass(() => gold(baked(cook, 0))), 0, 'no badge on the chef\'s whites');
+});

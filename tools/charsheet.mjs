@@ -232,6 +232,8 @@ async function builds(out) {
 }
 // ---- pass 2's sheets (docs/tasks/CHARACTERS2.md): docs/characters/pass2/ ----
 // a grid of figures: rows [label, [cell...]], a cell { L (a look) | A (an app), d, pose, f, opt, on (the pass: default on), tint, t (a caption) }
+// pass 1 alone: the pass without pass 2's hooks (for the side-by-side sheets)
+const PASS1 = () => ({ ...POLISH, dress: null, post: null, hairK: null, pass1: true });
 async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 150 } = {}) {
   const CW = cw * k, RH = rh * k, n = Math.max(...rows.map((r) => r[1].length)), sh = new Sheet(label + n * CW + 8, 24 + rows.length * RH + 8, bg);
   sh.text(title, 8, 6, 2);
@@ -240,7 +242,7 @@ async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 15
     String(name).split('|').forEach((t, i) => sh.text(t, 6, y - RH / 2 + i * 12, 2));
     for (const [ci, c] of cells.entries()) {
       if (!c) continue;
-      await polish(c.on !== false);
+      await polish(c.on !== false); if (c.p1) setPolish(PASS1());
       const x = label + ci * CW + CW / 2;
       if (c.bg) sh.rect(x - CW / 2, y - RH + 2 * k, CW, RH, c.bg);
       sh.sprite(baked(c.A || LK.lookArt(c.L, c.art), c.d ?? 1, c.pose || 'idle', c.f || 0, c.opt || {}), x, y - 2 * k, k, c.tint || null);
@@ -261,6 +263,36 @@ async function under(out) {
   await grid(out.replace('.png', '-1.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF; CENSORED NUDITY ON', rows.slice(0, half), { k: 6, rh: 32 });
   await grid(out.replace('.png', '-2.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF; CENSORED NUDITY ON', rows.slice(half), { k: 6, rh: 32 });
 }
+// every uniform and job look, then the city's archetypes (server entities.js) as the game draws them
+const JOBS = () => {
+  const P = (rank, kind, sh) => LK.policeLook(dressed('m', {}, { skin: 2 + rank }, { hair: { style: 2 } }), rank, kind, sh);
+  const J = (n, base, o, b = {}, m = {}) => [n, dressed(base, o, b, m)];
+  return [['POLICE', P(0)], ['ROOKIE', P(0, 'rookie')], ['K9', P(0, 'k9', true)], ['SERGEANT', P(2)], ['DRESS', P(3)], ['CHIEF', P(5)],
+    J('PARAMEDIC', 'f', { set: 'Paramedic uniform', shoes: ['Work boots', 'black'], bag: ['Duffel bag', 'red'] }, { skin: 8 }, { hair: { style: 20 } }),
+    J('FIRE', 'm', { set: 'Turnout gear', hat: 'Fire helmet', shoes: ['Work boots', 'black'], jewel: ['Work gloves', 'black'] }, { skin: 1, build: 2 }),
+    J('HI-VIS', 'm', { set: 'Hi-vis coverall', shoes: 'Work boots', jewel: 'Work gloves' }, { skin: 12 }),
+    J('BUILDER', 'm', { top: ['Hi-vis vest', 'orange', 'royal blue'], bottoms: 'Jeans', hat: 'Hard hat', shoes: 'Work boots' }, { skin: 3, build: 4 }),
+    J('SECURITY', 'm', { top: 'Security shirt', bottoms: ['Work pants', 'black'], hat: ['Baseball cap', 'grey'], shoes: ['Work boots', 'black'] }, { skin: 13 }),
+    J('CHEF', 'm', { top: 'Chef whites', jacket: ['Apron', 'black', 'white'], bottoms: ['Chinos', 'charcoal'], hat: "Chef's hat", shoes: ['Clogs', 'black'] }, { skin: 9 }),
+    J('DOCTOR', 'f', { set: 'Scrubs', jacket: 'Lab coat', jewel: 'Stethoscope', shoes: ['Sneakers', 'white'] }, { skin: 14 }, { hair: { style: 21 } }),
+    J('MECHANIC', 'm', { set: ['Coveralls', 'navy', 'red'], hat: ['Baseball cap', 'navy'], shoes: 'Work boots' }, { skin: 2 }, { hair: { facial: 3 } }),
+    J('POSTAL', 'f', { top: 'Postal shirt', bottoms: ['Shorts', 'navy'], bag: 'Mail satchel', shoes: ['Sneakers', 'black'] }, { skin: 4 }),
+    J('COURIER', 'm', { top: ['Plain tee', 'pink'], bottoms: ['Shorts', 'black'], hat: ['Baseball cap', 'pink'], bag: ['Delivery pack', 'pink'], shoes: 'Skate shoes' }, { skin: 10 }),
+    J('RANGER', 'f', { top: ['Work shirt', 'khaki'], bottoms: ['Cargo pants', 'olive'], hat: 'Ranger hat', shoes: 'Hiking boots' }, { skin: 1 }),
+    J('LIFEGUARD', 'm', { top: 'Bare chest', bottoms: ['Swim trunks', 'red'], jewel: 'Lifeguard whistle', bag: 'Rescue tube', shoes: 'Flip-flops' }, { skin: 11, build: 2 }),
+    J('OFFICE', 'm', { top: 'Button-up shirt', bottoms: ['Suit pants', 'navy'], jewel: 'Lanyard', glasses: 'Square glasses', shoes: ['Brogues', 'brown'] }, { skin: 0 }),
+    J('DETECTIVE', 'm', { set: ['Business suit', 'charcoal', 'red'], glasses: 'Sunglasses', shoes: ['Brogues', 'brown'] }, { skin: 1 }, { hair: { facial: 2 } }),
+    J('BARISTA', 'f', { top: ['Plain tee', 'black'], jacket: 'Apron', bottoms: ['Jeans', 'denim'], shoes: ['High-tops', 'black', 'white'] }, { skin: 8 }, { hair: { style: 21, color: 5 } })];
+};
+async function lineup2(out) {
+  const { ARCHETYPES, makeAppearance } = await import('../server/entities.js'), { adaptApp } = await import('../client/art2/game/peds.js'), { mulberry32 } = await import('../shared/rng.js');
+  const jobs = JOBS(), rows = [], per = 7;
+  for (let i = 0; i < jobs.length; i += per) { rows.push(['PASS 2', jobs.slice(i, i + per).flatMap(([n, L]) => [{ L, d: 1, t: n }, { L, d: 5 }])]); rows.push(['PASS 1|(NO PASS 2)', jobs.slice(i, i + per).flatMap(([, L]) => [{ L, d: 1, p1: true }, { L, d: 5, p1: true }])]); }
+  await grid(out, 'EVERY UNIFORM AND JOB LOOK: FRONT QUARTER AND BACK QUARTER - PASS 2 OVER PASS 1', rows, { k: 6, rh: 33, cw: 18, label: 120 });
+  const ar = Object.keys(ARCHETYPES), rows2 = [];
+  for (let i = 0; i < ar.length; i += per) rows2.push(['', ar.slice(i, i + per).flatMap((a, j) => [0, 1].map((v) => ({ A: adaptApp(makeAppearance(mulberry32(i * 31 + j * 7 + v * 101 + 5), a), a), d: v ? 5 : 1, t: v ? '' : a })))]);
+  await grid(out.replace('.png', '-npc.png'), 'THE CITY ARCHETYPES (TWO OF EACH), PASS 2 ON', rows2, { k: 6, rh: 33, cw: 18, label: 12 });
+}
 const DOCS = join(ROOT, 'docs', 'characters'), P2 = join(DOCS, 'pass2');
 if (mode === 'before') await lineup(false, arg('out', join(DOCS, 'before.png')), 'TODAY\'S PEOPLE (BEFORE)');
 else if (mode === 'after') await lineup(true, arg('out', join(DOCS, 'after.png')), 'AFTER: THE POLISH PASS');
@@ -271,6 +303,7 @@ else if (mode === 'variants') await variants(arg('out', join(DOCS, 'variants.png
 else if (mode === 'poses') await poses(arg('out', join(DOCS, 'poses.png')));
 else if (mode === 'hair') await hair(arg('out', join(DOCS, 'hair.png')));
 else if (mode === 'builds') await builds(arg('out', join(DOCS, 'builds.png')));
+else if (mode === 'lineup') await lineup2(arg('out', join(P2, 'lineup.png')));
 else if (mode === 'under') await under(arg('out', join(P2, 'underwear.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

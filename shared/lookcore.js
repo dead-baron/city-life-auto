@@ -409,6 +409,38 @@ add('under', 'Strapless set', 'f', 'lounge nightclub', 50, 'boutique', { k: 'bik
 add('under', 'Lace bodysuit', 'f', 'lounge nightclub hifashion alt', 90, 'boutique', { k: 'swimsuit', bk: 'bikini', lace: 1 }, 'navy', 'silver');
 add('under', 'Teddy', 'f', 'lounge nightclub hifashion', 95, 'boutique', { k: 'swimsuit', bk: 'bikini', gloss: 1 }, 'wine', 'blush');
 add('under', 'Silk slip', 'f', 'lounge nightclub hifashion', 85, 'boutique', { k: 'dress', len: 1, bk: 'bikini', gloss: 1 }, 'cream', 'cream');
+// the rest of the concepts' wardrobe (pass 2, docs/characters/CONCEPTS.md's gap list; SF/SM1-23, C2, C3, CC3-5): the
+// jobs' looks (d.bands: reflective bands, drawn by the polish pass), neckwear and gloves, headphones, camo, the odd
+// costume - each drawn with a kind the renderer already has
+add('set', 'Paramedic uniform', 'mf', 'work', 70, 'workwear', { k: 'uniform', plain: 1, bk: 'cargo', bands: 1 }, 'forest', 'white');
+add('set', 'Turnout gear', 'mf', 'work', 120, 'workwear', { k: 'jacket', bk: 'cargo', bands: 1 }, 'tan', 'yellow');
+add('set', 'Hi-vis coverall', 'mf', 'work', 60, 'workwear', { k: 'longsleeve', bk: 'cargo', zip: 1, bands: 1 }, 'orange', 'silver');
+add('hat', 'Fire helmet', 'mf', 'work', 60, 'workwear', { k: 'hard' }, 'red', 'yellow');
+add('top', 'Security shirt', 'mf', 'work', 35, 'workwear', { k: 'uniform' }, 'grey', 'gold');
+add('top', 'Rash guard', 'mf', 'beach athletic', 35, 'beach', { k: 'longsleeve' }, 'black', 'teal');
+add('top', 'Camisole', 'f', 'casual nightclub smart', 24, 'clothing', { k: 'tank' }, 'red');
+add('jacket', 'Sweater vest', 'mf', 'preppy retro smart', 45, 'clothing', { k: 'vest' }, 'forest', 'white');
+add('jacket', 'Camo jacket', 'mf', 'outdoors disguise street', 85, 'costume', { k: 'jacket', p: 3 }, 'olive', 'khaki');
+add('jacket', 'Sherwani', 'm', 'formal hifashion', 260, 'boutique', { k: 'coat' }, 'cream', 'gold');
+add('bottoms', 'Kilt', 'mf', 'formal retro punk', 90, 'boutique', { k: 'skirt', p: 2 }, 'forest', 'navy');
+add('bottoms', 'Leather chaps', 'mf', 'western punk', 130, 'boutique', { k: 'pants', gloss: 1 }, 'brown');
+add('set', 'Onesie', 'mf', 'lounge festival', 55, 'clothing', { k: 'hoodie', bk: 'pants' }, 'brown', 'cream');
+add('set', 'Sequin dress', 'f', 'nightclub formal hifashion', 180, 'boutique', { k: 'dress', len: 1, p: 4 }, 'gold', 'cream');
+add('jewel', 'Scarf', 'mf', 'winter smart casual', 25, 'clothing', { choker: 1, chain: 2 }, 'red');
+add('jewel', 'Neckerchief', 'mf', 'western work festival', 12, 'clothing', { choker: 1 }, 'red');
+add('jewel', 'Bolo tie', 'mf', 'western formal', 45, 'boutique', { chain: 1, pendant: 1 }, 'teal', 'silver');
+add('jewel', 'Lanyard', 'mf', 'work business smart', 6, 'workwear', { chain: 1, pendant: 1 }, 'royal blue', 'white');
+add('jewel', 'Evening gloves', 'f', 'formal hifashion nightclub', 60, 'boutique', { gloves: 1 }, 'black');
+add('jewel', 'Biker gloves', 'mf', 'punk street western', 35, 'boutique', { gloves: 1 }, 'black');
+add('jewel', 'Sweatbands', 'mf', 'athletic retro', 10, 'sports', { cuffband: 1 }, 'white');
+add('jewel', 'Glow bracelets', 'mf', 'festival nightclub', 8, 'boutique', { bangles: 1 }, 'neon green');
+add('hat', 'Headphones', 'mf', 'streetwear casual skater athletic', 60, 'clothing', { k: 'earmuffs' }, 'black', 'royal blue');
+add('hat', 'Towel wrap', 'mf', 'lounge beach', 10, 'clothing', { k: 'turban' }, 'white');
+add('hat', 'Boonie hat', 'mf', 'outdoors disguise', 30, 'costume', { k: 'bucket', p: 3 }, 'olive', 'khaki');
+add('hat', 'Camo cap', 'mf', 'outdoors disguise street', 25, 'costume', { k: 'cap', p: 3 }, 'olive', 'khaki');
+add('glasses', 'Bear mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', nostreet: 1 }, 'brown');
+add('glasses', 'Panda mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', nostreet: 1 }, 'white', 'black');
+add('bag', 'Walking cane', 'mf', 'retro formal smart', 40, 'boutique', { carry: 'cane' }, 'brown');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
@@ -563,7 +595,7 @@ export function lookArt(L, opt = {}) {
   const uTop = un && { kind: un.d.k || (fem ? 'bra' : 'none'), color: uc, color2: ut, trim: ut, pattern: pat(O.under), len: un.d.len || 0, under: 1 };
   const uBot = un && { kind: un.d.bk, color: uc, color2: ut, trim: ut, pattern: pat(O.under), gloss: un.d.gloss ? 1 : 0, under: 1 };
   if (set) {
-    A.top = { kind: set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0 };
+    A.top = { kind: set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0, plain: set.d.plain ? 1 : 0, bands: set.d.bands ? 1 : 0 };
     A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined };
   } else {
     A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0, chevrons: top.d.chevrons ? 1 : 0 } : uTop || { kind: fem ? 'tank' : 'none', color: '#e8e4dc' };

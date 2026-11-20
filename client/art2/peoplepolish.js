@@ -126,6 +126,22 @@ export const POLISH = {
       return R === W.top ? lace(R, Q) : R;
     });
     else if (ut && U.lace) wrap('torso', (R, Q) => (R === W.top ? lace(R, Q) : R));
+    // uniforms that read at a glance (C3, CC5, SF21, SM21). The police's (T.duty): a badge big enough to be an art pixel
+    // of gold, a shoulder patch, a gold buckle on the black belt. A plain work uniform (chef, postal, paramedic) has no
+    // badge and no holster. Reflective bands (lookcore d.bands) round the chest, the arms and the shins.
+    const plain = A.top && A.top.plain, GOLD = cloth('gold'), SILVER = cloth('#c8ccd4'), REFL = cloth('#eef0c8');
+    if (T.duty && plain) { W.T = { ...T, duty: 0 }; wrap('torso', (R) => (R === GOLD ? W.top : R)); }
+    else if (T.duty) {
+      wrap('torso', (R, Q) => { if (Q.f > 0.05 && Math.abs(Q.u + 0.42) < 0.25 && Math.abs(Q.z - D.chestUp - 1.2) < 1.7) { Q.gloss = 1; return GOLD; } return R; });
+      wrap('arm', (R, Q) => { if (R === W.top && Q.part === 'ua' && Q.l0 > 0.18 && Q.l0 < 0.42 && Q.l1 > -0.2 && !(A.top && A.top.chevrons)) { Q.gloss = 0.5; return W.top2; } return R; });
+      wrap('pel', (R) => (R === SILVER ? GOLD : R));
+    }
+    if (A.top && A.top.bands) {
+      const lit = (Q) => { Q.k += 0.2; return REFL; };
+      wrap('torso', (R, Q) => (R === W.top && (Math.abs(Q.z - D.chestUp + 1.4) < 0.55 || Math.abs(Q.z - D.waistUp + 0.6) < 0.55) ? lit(Q) : R));
+      wrap('arm', (R, Q) => (R === W.top && Q.part === 'ua' && Math.abs(Q.l0 - 0.72) < 0.14 ? lit(Q) : R));
+      wrap('leg', (R, Q) => (R === W.bot && Q.part === 'sh' && Math.abs(Q.l0 - 0.55) < 0.12 ? lit(Q) : R));
+    }
     wrap('pel', (R, Q) => { if (bothDark && R === W.bot && Q.z > (T.tuck ? 1.4 : -1.9) && Q.z < (T.tuck ? 2.2 : -0.9)) Q.k += 0.3; return fix(R); });
   },
   // the arm over the body: a line on the body's pixels beside an arm in front of them, however close the two are (the
