@@ -1198,8 +1198,9 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   C(sb(-1), sb(1), D.shBar, D.shBar, GR.TORSO, 'shb', W.torso);
   if (D.belly) E(vadd(S.pel, mv(S.SH, [0, 1.6 + D.belly * 1.4, 4.4])), S.SH, [(7.2 + D.belly * 1.4) * D.w, 4.4 + D.belly * 2.2, 6.0 + D.belly * 0.6], GR.TORSO, 'belly', W.torso);
   if (fem && PL) {   // (the polish pass, the owner 11-20: "a little shape" to a woman's chest and seat - enough to show from the side)
-    for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.6, D.chestR[1] - 0.9, 0.9])), S.SP, [2.6, 2.5, 2.3], GR.TORSO, 'bust', W.torso);
-    E(vadd(S.pel, mv(S.PF, [0, -D.pelR[1] * 0.8, -1.3])), S.PF, [D.pelR[0] * 0.88, 3.1, 3.2], GR.TORSO, 'pel', W.pel);
+    // (a curve two art pixels tall and one out, never a point: tall, shallow shapes - the owner, 11-20: "they shouldn't have a point")
+    for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.6, D.chestR[1] - 1.5, 0.7])), S.SP, [2.6, 2.6, 3.6], GR.TORSO, 'bust', W.torso);
+    E(vadd(S.pel, mv(S.PF, [0, -D.pelR[1] * 0.72, -1.0])), S.PF, [D.pelR[0] * 0.88, 2.7, 4.6], GR.TORSO, 'pel', W.pel);
   } else if (fem) for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.5, D.chestR[1] - 1.5, 1.0])), S.SP, [2.3, 1.9, 2.0], GR.TORSO, 'bust', W.torso);
   if (W.T.hood && hat !== 'hood') E(vadd(S.neck, mv(S.SP, [0, -3.0, -0.2])), S.SP, [4.8, 2.4, 2.8], GR.TORSO, 'hood', W.hood);
   if (W.T.fur) E(vadd(S.neck, mv(S.SP, [0, 0.4, -1.2])), S.SP, [6.6, 5.2, 2.2], GR.TORSO, 'fur', W.fur);
