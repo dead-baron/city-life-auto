@@ -305,6 +305,7 @@ export const POLISH = {
       const SR = W.skin.map((c, i) => mix(c, W.hairR[Math.min(4, i + 1)], 0.6));
       E(at([0, -0.04, 0.02]), HD, [hr[0] + 0.5, hr[1] + 0.55, hr[2] + 0.4], GR.HAIR, 'stubble', () => SR, (a, b, c) => c > (b > 0.3 ? 0.42 : b > -0.2 ? 0.42 - (0.3 - b) * 1.24 : -0.2 + (b + 0.2) * 0.5));
     }
+    if (ex === 'dreads' || ex === 'boxbraids' || ex === 'braids') lock(at([0, -0.9, -0.2]), sw(nk(0, backY - 0.7, -3.6), 0.3), 4.6, 3.6, 'back');   // (the hair behind the neck, under the locs: the shirt showed between them - a window in the hair from behind)
     if (FRONT[ex]) for (const s of [-1, 1]) { const a = at([s * 0.96, 0.18, -0.12]), b = sw(nk(s * (hr[0] * 0.86), 1.5, FRONT[ex][0]), 0.35); lock(a, b, FRONT[ex][1], FRONT[ex][2], 'front'); }
     if (ex === 'flattop') e([0, -0.02, 0.86], HD, [hr[0] * 0.92, hr[1] * 0.9, 4.2], 'top'), E(at([0, -0.02, 1.02]), HD, [hr[0] * 0.98, hr[1] * 0.96, 2.2], GR.HAIR, 'top', M, (a, b, c) => c < 0.55);   // (a block, its top cut level)
     else if (ex === 'pompadour') { e([0, 0.5, 1.02], mmul(HD, rx(-0.45)), [hr[0] * 0.62, 3.9, 3.9], 'quiff'); e([0, -0.1, 0.98], HD, [hr[0] * 0.6, 4.2, 1.8], 'quiff'); }   // (11-20: narrower than the head - from the front it was a box)   // (a roll standing over the forehead, swept back)
@@ -368,6 +369,7 @@ export const POLISH = {
 // own tones are redrawn: shaved sides, a parting, ties, cuffs and the lines between locks stay as they are.
 // Curls keep a broken tone, braids and locs their strands.
 const FRONT = { long: [-4.6, 2.5, 1.7], wavy: [-4.8, 2.7, 1.9], curlylong: [-4.8, 2.9, 2.2], bigcurls: [-4.4, 3.0, 2.3], halfup: [-4.4, 2.4, 1.7], shoulder: [-2.4, 2.4, 1.8], dreads: [-4.2, 2.5, 1.9], boxbraids: [-4.6, 2.4, 1.8], braids: [-4.6, 2.4, 1.8], shag: [-1.8, 2.2, 1.6], braid: [-1.6, 2.0, 1.5] };   // (how far down the neck's frame a front lock ends, its width at the temple and at its tip)
+const SHORT = { buzz: 1, fade: 1, sides: 1, balding: 1, cornrows: 1, short: 1 };
 const HAIR_TEX = { afro: 1, curly: 1, curlylong: 1, bigcurls: 1, puffs: 1, dreads: 2, boxbraids: 2, braids: 2, braid: 2, cornrows: 2 };
 function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
   const bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, H = new Uint8Array(bw * bh), F = new Uint8Array(bw * bh), T = new Uint8Array(w * h), tex = HAIR_TEX[style] | 0;
@@ -380,7 +382,7 @@ function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
   }
   const hair = (x, y) => x >= 0 && y >= 0 && x < bw && y < bh && H[y * bw + x] >= 2, fig = (x, y) => x >= 0 && y >= 0 && x < bw && y < bh && F[y * bw + x] >= 2;
   const pale = lum(R[4]) > 0.6;
-  const tone = new Int8Array(bw * bh).fill(-1), TN = [R[1], R[2], R[3], pale ? mix(R[3], R[4], 0.55) : R[4], mix(R[4], [255, 244, 226], 0.28)], hsh = (x, y) => { const v = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return v - Math.floor(v); };   // (underside, far side, body, lit, highlight)
+  const tone = new Int8Array(bw * bh).fill(-1), TN = [R[1], R[2], R[3], mix(R[3], R[4], pale ? 0.4 : 0.55), pale ? mix(R[3], R[4], 0.4) : R[4]], hsh = (x, y) => { const v = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return v - Math.floor(v); };   // (underside, far side, body, lit, highlight)
   for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
     if (!hair(x, y)) continue;
     let d = 0; while (d < 9 && hair(x, y - d - 1)) d++;
@@ -392,7 +394,7 @@ function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
     else if (d <= (hair(x, y + 4) ? 1 : 0) && rel > 0.1 && rel < 0.64) t = d === (hair(x, y + 2) ? 1 : 0) && wide > 3 && rel > 0.2 && rel < 0.55 ? 4 : 3;   // (the lit top, a highlight in it - 11-20: a band along the top, not the top third: on ginger hair that was a bald spot)
     if (tex === 1 && t > 1 && (hsh(x, y) > 0.84 || hsh(x - 1, y) > 0.9)) t--;   // (curls: a few short clumps of a darker tone, scattered - the owner 11-20: neither diagonal stripes nor a grid of dots)
     if (t === 2 && tex === 2 && d > 1 && (x & 1)) t = 1;   // (braids and locs: strands; long straight hair is one clean mass - its strand shadows were stripes)
-    if (t === 4 && pale) t = 3;                            // (fair and ginger hair: no highlight - a tone lighter still is skin, a bald spot)
+    if (t === 0 && SHORT[style] && fig(x, y + 1)) t = 2;   // (a crop's lower edge on the head: no dark rim - on a fade or a buzz cut it was a band round the head)
     tone[y * bw + x] = t;
   }
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {

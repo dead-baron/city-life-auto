@@ -1099,7 +1099,7 @@ function wardrobe(A, D, TF, seed) {
   W.hairM = (Q) => {
     // clumps: darker grooves radiating from the crown, a sheen band
     const az = Math.atan2(Q.l0, Q.l1), ex = A.hair?.style, st = BASE_HAIR[ex] || ex;
-    if (ex === 'sidepart' && Q.part === 'hair' && Math.abs(Q.l0 + 0.36) < (Q.res > 1 ? 0.045 : 0.13) && Q.l1 > -0.2 && Q.l2 > 0.45) { if (Q.res > 1) { Q.k -= 0.4; return hairR; } return skin; }   // (the parting: a line of scalp, wide enough to be a whole art pixel)
+    if (ex === 'sidepart' && Q.part === 'hair' && Math.abs(Q.l0 + 0.36) < (Q.res > 1 ? 0.045 : 0.13) && Q.l1 > -0.2 && Q.l2 > 0.45) { if (Q.res > 1 || PL) { Q.k -= 0.4; return hairR; } return skin; }   // (the parting: a line of scalp, wide enough to be a whole art pixel - under the polish pass a shadow in the hair: the scalp read as a bald spot, the owner 11-20)
     if (st === 'buzz' && Q.part === 'hair') { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return Q.res > 1 ? stubble : buzzR; }
     if (st === 'mohawk' && Q.part === 'hair') return Q.res > 1 ? stubble : shavedR;
     if (st === 'cornrows') { if (Math.round(Q.l0 * (Q.res > 1 ? 8 : 4.5)) & 1) Q.k -= 0.34; return hairR; }   // (rows two art pixels wide at the game's size)
@@ -1832,6 +1832,16 @@ function render(fig, P, S, X, D, A, opt) {
         const ob = BA[q - 1] < 2 ? q - 1 : q + 1;   // (and its last half pixel out beyond: gone)
         if (BA[ob]) DM[ob] = 2;
       }
+    }
+    // (a lone art pixel of the head inside the hair - an ear's tip through hair that hangs over it, seen from the side or from
+    // behind: hair, like the hair on both sides of it)
+    for (let by = 1; by < bh - 1; by++) for (let bx = 1; bx < bw - 1; bx++) {
+      const q = by * bw + bx;
+      if (BA[q] < 2 || bg(q) !== GR.HEAD) continue;
+      const nb = [q - 1, q + 1, q - bw, q + bw], hn = nb.filter((r) => BN[r] >= 2 && bg(r) === GR.HAIR);
+      if (hn.length < 2 || nb.some((r) => BN[r] >= 2 && !DM[r] && bg(r) !== GR.HAIR)) continue;   // (hair or nothing on every side)
+      const r = hn[0], k = 1 / BN[r];
+      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const x = 2 * bx - ox + dx, y = 2 * by - oy + dy, i = y * w + x; if (x >= 0 && y >= 0 && x < w && y < h && PID[i] >= 0) { CR[i] = BC[r * 3] * k; CG[i] = BC[r * 3 + 1] * k; CB[i] = BC[r * 3 + 2] * k; } }
     }
     // (a point on top of the hair: one art pixel with nothing beside or over it - a dome's top row. Off, bar the styles that are points)
     if (!(PL.tipKeep && PL.tipKeep.includes(A.hair && A.hair.style))) for (let by = 1; by < bh; by++) for (let bx = 1; bx < bw - 1; bx++) {
