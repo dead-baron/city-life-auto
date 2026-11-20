@@ -1055,6 +1055,7 @@ function wardrobe(A, D, TF, seed) {
     if (sk === 'barefoot') return socks || skin;
     if (sk === 'sandal') {
       if (Q.l2 < -0.3) return shoe;
+      if (PL && Q.res === 1) return socks || skin;   // (the polish pass: at the game's size a sandal is its sole under the foot - the straps were stray pixels on it; close up they're drawn)
       const st = A.shoe_strap | 0;
       return (st === 1 ? Math.abs(Q.l1 - 0.3) < 0.1 && Q.l2 > -0.1 : st === 2 ? Math.abs(Q.l1 - 0.05) < 0.32 && Q.l2 > -0.2 : Math.abs(Q.l1 - 0.25) < 0.12 || Math.abs(Q.l1 + 0.3) < 0.1) ? shoe : socks || skin;
     }
@@ -1066,7 +1067,7 @@ function wardrobe(A, D, TF, seed) {
     else if (sk === 'shoe' || sk === 'heel' || sk === 'boot') Q.gloss = 0.6;
     return (shoePat && shoePat(Q)) || shoe;
   };
-  W.sole = () => sole;
+  W.sole = () => (PL && sk === 'sandal' ? shoe : sole);   // (the polish pass: a sandal's sole shows round the foot)
   // head: skin, beard / stubble / moustache, a face bandana, a balaclava; CP2's masks (A.fmask): a pig's or an alien's
   // whole head, a clown's or a skull's face (the nose red, or a hole), a gas mask's rubber, a neck gaiter to the nose
   const bandana = A.bandana ? cloth(typeof A.bandana === 'string' ? A.bandana : 'red') : null, maskR = cloth(typeof A.mask === 'string' ? A.mask : '#24242a');
@@ -1225,11 +1226,11 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     const hp = S['hip' + k], kn = S['kn' + k], an = S['an' + k], side = mv(S.PF, [s, 0, 0]);
     C(hp, kn, D.thighR[0], D.thighR[1], g, 'th', W.leg, null, side, mv(S.PF, [0, 1, 0])).side = 1;
     C(kn, an, D.shinR[0], D.shinR[1], g, 'sh', W.leg, null, side, mv(S.PF, [0, 1, 0])).side = 1;
-    const FF = mmul(rz(P.pelYaw + s * P.splay), rx(P['toe' + k])), fr = W.shoeKind === 'barefoot' || W.shoeKind === 'sandal' ? [D.foot[0] * 0.8, D.foot[1] * 0.9, D.foot[2] * 0.75] : W.shoeKind === 'heel' ? [D.foot[0] * 0.85, D.foot[1] * 0.92, D.foot[2] * 0.9] : D.foot;
+    const FF = mmul(rz(P.pelYaw + s * P.splay), rx(P['toe' + k])), fr = W.shoeKind === 'barefoot' || W.shoeKind === 'sandal' ? (PL && PL.bareK ? D.foot.map((v, i) => v * PL.bareK[i]) : [D.foot[0] * 0.8, D.foot[1] * 0.9, D.foot[2] * 0.75]) : W.shoeKind === 'heel' ? [D.foot[0] * 0.85, D.foot[1] * 0.92, D.foot[2] * 0.9] : D.foot;
     const fc = vadd(an, mv(FF, [0, 1.5, -1.62]));
     E(fc, FF, fr, g, 'shoe', W.shoe, (a, b, c) => c > -0.62);
     const th = A.shoe_platform || A.shoe_chunky ? 1.05 : 0.55;   // (a platform or a chunky sole: taller, from the same ground)
-    if (W.shoeKind !== 'barefoot' && W.shoeKind !== 'sandal') E(vadd(fc, mv(FF, [0, 0.1, -fr[2] * 0.6 + th - 0.55])), FF, [fr[0] + (A.shoe_chunky ? 0.4 : 0.12), fr[1] + 0.2, th], g, 'sole', W.sole);
+    if (PL || (W.shoeKind !== 'barefoot' && W.shoeKind !== 'sandal')) E(vadd(fc, mv(FF, [0, 0.1, -fr[2] * 0.6 + th - 0.55])), FF, [fr[0] + (A.shoe_chunky ? 0.4 : 0.12), fr[1] + 0.2, th], g, 'sole', W.sole);
     if (W.shoeKind === 'boot' || (A.hiTop && W.shoeKind === 'sneaker')) { const bt = A.bootTall === 2 ? 8.5 : A.bootTall ? 5 : A.hiTop ? 2.2 : 2.6; C(vadd(an, [0, 0, -0.6]), vadd(an, mv(S.PF, [0, -0.2, bt])), D.shinR[1] + 0.55, D.shinR[1] + (bt > 3 ? 0.65 : 0.45), g, 'boot', W.shoe); }
   }
   // skirts, dresses, coat tails

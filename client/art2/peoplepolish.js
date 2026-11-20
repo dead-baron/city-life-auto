@@ -28,6 +28,7 @@ export const POLISH = {
   // from cream to dark red, which read as stains and as the arm beside it
   rampSoft: 0.4, vMin: 0.3, shK: 0.18, dith: 0.08,
   lnC: 120,           // no inner line between two parts whose colours already differ by this much (r + g + b): a bare arm on a white shirt needs none
+  bareK: [0.95, 0.94, 0.86],   // a bare or sandalled foot against a shoe (today 0.8, 0.9, 0.75: at the game's size two points)
   eye2: true,         // a face at an angle keeps its far eye (people.js face)
   lnHead: 0.24,       // the line a fringe or a hat draws on the face: this much lighter (people.js: a shadow, not a headband)
   // the outline, on the art grid (people.js): [lit side: how much of the colour it borders, its brightest; the same in the shade]
@@ -53,6 +54,12 @@ export const POLISH = {
     // hands: never smaller than an art pixel and a half across, whatever the limbs' thickness
     D.fist = Math.max(D.fist, fem ? 2.75 : 3.0);
     D.foot[2] *= 1.45;   // (shoes the same size, a little taller: from the side and from behind one was a single white line)
+    // a muscular build's arms and shoulders: half the boost - on the chunky build's thick limbs the far shoulder at an angle
+    // stood beside the face as big as the face
+    // (...and a build's limbs: its thick or thin kept at a little over half - on limbs already 1.24 as thick, an athletic or a
+    // big build's arm was half as wide again as an average one's)
+    { const l0 = b.limb || 1, k = (1 + (l0 - 1) * 0.55) / l0; for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * k); D.fist *= k; }
+    if (mu) { const k = (1 + mu * 0.1) / (1 + mu * 0.2), k2 = (1 + mu * 0.06) / (1 + mu * 0.12), k3 = (1 + mu * 0.05) / (1 + mu * 0.1); D.armR = [D.armR[0] * k, D.armR[1] * k2]; D.foreR[0] *= (1 + mu * 0.08) / (1 + mu * 0.15); D.shX *= k3; D.chestR[0] *= k3; }
     // a body with depth (the concepts' side views are a barrel, not a plank), and a big build's belly out in front
     D.chestR[1] *= 1.1; D.waistR[1] *= 1.1; D.pelR[1] *= 1.08;
     if (b.belly >= 1.2) { D.waistR[0] *= 1.12; D.waistR[1] *= 1.12; D.chestR[0] *= 1.06; D.shX *= 1.05; }
