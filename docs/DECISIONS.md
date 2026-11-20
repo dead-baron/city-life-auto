@@ -176,7 +176,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Characters: keep the system (it generally looks good); make every look option read clearly - premium hats and glasses; same bar for NPCs. (11-13; queue)
 - The player characters keep the game's current sprite art; never swap in the high-detail close-up renderer (the menu avatar uses the game sprite, scaled up). Character polish later is staged and switchable, approved sheet by sheet. (11-14; chat: "Lets not revert the player character art back to what is showing in the avatar")
 - Character polish: proportions A (about 3.1 heads: a neck, shoulders, longer legs, hands, full faces), as built on the `characters` branch; still behind its switch until the owner approves it in the game. Next passes take the people toward all the character concepts (docs/characters/concepts). (11-19; chat)
-- Underwear for both bases (lingerie styles included; opaque) with a "none" choice: underwear off shows the built-in mosaic, and a character may go with nothing on anywhere, the street included; "censored nudity" shows swimwear instead; NPCs never undressed. (11-19; chat)
+- Underwear for both bases (lingerie styles included; opaque) with a "none" choice: underwear off shows the built-in mosaic, and a character may go with nothing on anywhere, the street included; "censored nudity" shows swimwear instead; NPCs never undressed. (11-19; chat) - built on the characters branch: an Underwear slot, the basics in the starter wardrobe; "Censored nudity" is a new Settings switch, off by default - OPEN: its default, and whether the lingerie is sold or free (docs/characters/NOTES.md).
 - Character polish pass on Fable: staged, review sheets per pass (faces, then hands/arms, then clothing), the owner approves each before live. (11-14; beta-checklist 11-14*, queue)
 - Title card avatar: a portrait (head to waist), centered, every face in the same spot; non-looping idles (blink, glance...). (11-14; DEVLOG 11-14) - SUPERSEDES the whole-figure avatar (11-14).
 - Logo: the owner's neon design, rebuilt in-engine - no black outlines; D3 = his letters cleaned + a fresh crisp skyline on an even grid; fonts only if he asks. (11-14 15:04; queue) - OPEN: owner picks the variant.
@@ -350,6 +350,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Delete capture frames and temporary builds once looked at (fixed disk). (11-13; agent-rules)
 - Reports short (under 200 words); 2-3 small screenshots at most. (11-12; agent-rules)
 - Raising a performance budget is a decision: say why in the DEVLOG. Page budget now 540 KB (11-07, "a modest raise is fine"). (CLAUDE.md; DEVLOG 10-21, 10-26, 11-07)
+- The renderer's code budget 411 -> 414 KB for character pass 2 (the catalogue's underwear, concept pieces and hairstyles). (11-19; DEVLOG 11-19, docs/characters/NOTES.md) - OPEN: raised by Claude on the characters branch, the owner to confirm.
 - Each art change costs ~5 h of server rebake: batch art changes; avoid re-keying world/art unless the task needs it. (11-07; queue, agent-rules)
 - Don't slow the server's start (health window). (agent-rules)
 - Stamp before every commit; a DEVLOG entry per feature (American English); README controls table current. (CLAUDE.md)

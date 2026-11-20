@@ -25187,3 +25187,34 @@ on in one browser (`cla.polish`). The pass is `client/art2/peoplepolish.js`, loa
 are handed its address, as for the aircraft), so it is in no budget; `people.js` and `game/peds.js` carry small hooks
 (the renderer's code +0.5 KB, inside its 411 KB). The world's baked art doesn't change. Review sheets and the owner's
 choices: `docs/characters/` (`NOTES.md`), drawn by `tools/charsheet.mjs`. Not yet seen running in a browser.
+
+## 2026-11-19 - Character polish, pass 2: the concepts, underwear, every animation checked
+
+The owner chose proportions A and added 94 concept images; pass 2 takes the people toward them. Still staged: the
+drawing is behind the same switch (`cla.polish`, off), so today's people are pixel for pixel what they were.
+
+- **The catalogue:** `docs/characters/CONCEPTS.md` - every concept image in a line, then the gap list (20 gaps ranked,
+  each marked fits / too small).
+- **With the pass on:** dark clothing reads (a dark cloth's ramp lifted step by step to the concepts' warm charcoal, a
+  line where an arm hangs over the body, a waist line between a dark top and dark bottoms, lighter soles); uniforms
+  read (the police's badge an art pixel of gold, a shoulder patch, a gold buckle; reflective bands; no badge or holster
+  on a cook, a mail carrier or a paramedic); underwear drawn finer (full briefs, waistbands, lace, boxers down the
+  thigh); the mosaic from behind too; six hairstyles from the concepts (balding, flat top, pompadour, afro puffs, low
+  ponytail, side fringe - offered in the creator only while the pass is on).
+- **Wardrobe (live with or without the pass):** an **Underwear** slot (the tenth; a look without underwear keeps its
+  66-letter code, one with it is 71) with 17 pieces for both bases - the basics in the starter wardrobe, the lingerie
+  sold at Velvet & Vine, Afterglow and the department store - and **Nothing on**: free, worn anywhere, the built-in
+  mosaic over it (the owner, 11-19). 28 more pieces from the concepts: paramedic uniform, turnout gear and fire helmet,
+  hi-vis coverall, security shirt, scarf, neckerchief, bolo tie, lanyard, gloves, sweatbands, glow bracelets,
+  headphones, camo, a kilt, a sherwani, a onesie... each drawn with a kind the renderer already had. Random looks -
+  the city's people - never fill the underwear slot.
+- **Settings > Censored nudity** (new, off by default): the renderer always could dress a bare body in swimwear, but
+  nothing on the page asked it to. With people free to wear nothing, the switch is in Settings now.
+- **Checked:** every pose in all eight facings with the pass on (`docs/characters/pass2/anim-1..7.png`); the walk bobs
+  one art pixel already. Speech bubbles and the marks over a head sit 4 px higher with the pass on.
+- **Budget (a decision - the owner to confirm):** the renderer's code 411 -> 414 KB (measured 413.4 with LF endings).
+  The catalogue (`shared/lookcore.js`) is what every renderer reads to draw a look, so its 51 new lines land there
+  (+2 KB); the hooks are +0.3 KB; the pass's own drawing is in `peoplepolish.js` (6 KB), loaded only when on, in no
+  budget. Page 532 / 540, bake 1018 / 1020.
+- Tests: `test/characters2.test.js`. Sheets: `node tools/charsheet.mjs versus | grounds2 | anim | lineup | under | hair`.
+  Not seen running in a browser; not stamped (this checkout can't): stamp on merge.

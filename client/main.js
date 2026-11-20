@@ -2641,7 +2641,7 @@ function syncSettings() {
   $('s-padfire').checked = settings.padStickFire;
   $('s-blade').value = String((S.me && S.me.blade) | 0); $('s-blade').disabled = !S.welcomed;   // (kept with your character: the server's)
   $('s-safety').checked = !!(S.me && S.me.safety); $('s-safety').disabled = !S.welcomed;   // (Safety mode: the server's too - server/systems/safety.js)
-  $('s-vibrate').checked = settings.vibrate;
+  $('s-vibrate').checked = settings.vibrate; $('s-censor').checked = !!settings.censor;
   $('s-shopmarks').checked = settings.shopMarks !== false;
   $('s-tips').checked = !(S.me && S.me.tips === 0); $('s-tips').disabled = !S.welcomed;   // (First-time tips: the server's - server/systems/ftue.js)
   $('s-autofs').checked = settings.autoFullscreen !== false;
@@ -2712,6 +2712,7 @@ $('s-blade').innerHTML = BLADE_COLORS.map((b, i) => `<option value="${i}">${b.na
 $('s-blade').onchange = (e) => { if (S.welcomed) send({ t: 'look', a: 'blade', c: Number(e.target.value) }); };
 $('s-safety').onchange = (e) => { if (S.welcomed) send({ t: 'safety', on: e.target.checked }); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
+$('s-censor').onchange = (e) => { settings.censor = globalThis.CLA_CENSOR = e.target.checked; saveSettings(); if (S.art2 && S.art2.adapted) S.art2.adapted = new WeakMap(); };   // (everyone on screen is dressed again at once)
 $('s-shopmarks').onchange = (e) => { settings.shopMarks = e.target.checked; saveSettings(); };
 $('s-tips').onchange = (e) => { if (S.welcomed) send({ t: 'intro', a: 'tipset', on: e.target.checked }); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };

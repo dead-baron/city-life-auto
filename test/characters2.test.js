@@ -128,9 +128,11 @@ test('the pass on: dark clothing has tones to be drawn in - a black suit is not 
   const A = wearing('m', { set: ['Business suit', 'black', 'black'], shoes: ['Oxfords', 'black'] });
   // (below the collar, of the dark pixels: how much of them is the one commonest tone)
   const flat = (G) => { const h = new Array(6).fill(0); for (let i = 0; i < G.w * G.h; i++) { const l = lumOf(G.p0[i * 4], G.p0[i * 4 + 1], G.p0[i * 4 + 2]); if (G.p0[i * 4 + 3] && Math.floor(i / G.w) > G.h * 0.45 && l < 0.25) h[Math.floor(l * 24)]++; } return Math.max(...h) / h.reduce((a, b) => a + b, 0); };
-  const off = flat(baked(A, 0)), on = withPass(() => flat(baked(A, 0)));
-  assert.ok(off > 0.55, `today the suit is one tone: ${off.toFixed(2)}`);
-  assert.ok(on < off - 0.06, `with the pass its commonest tone is less of it: ${off.toFixed(2)} -> ${on.toFixed(2)}`);
+  const black = (G) => count(G, (r, g, b) => lumOf(r, g, b) < 0.13), off = baked(A, 0), on = withPass(() => baked(A, 0));
+  assert.ok(flat(off) > 0.55, `today the suit is one tone: ${flat(off).toFixed(2)}`);
+  assert.ok(black(on) < black(off) * 0.8, `with the pass much less of it is near-black: ${black(off)} -> ${black(on)} art pixels`);
+  // (and it is still a dark suit: nothing of it as light as a mid grey)
+  assert.ok(withPass(() => count(baked(A, 0), (r, g, b) => Math.abs(r - b) < 16 && lumOf(r, g, b) > 0.5 && lumOf(r, g, b) < 0.8)) <= count(off, (r, g, b) => Math.abs(r - b) < 16 && lumOf(r, g, b) > 0.5 && lumOf(r, g, b) < 0.8) + 4, 'still dark');
 });
 
 test('the pass on: uniforms read - the police\'s gold badge and buckle, reflective bands, no badge on a cook', () => {
@@ -159,4 +161,16 @@ test('the concepts\' six more hairstyles: their own shapes with the pass on, the
     withPass(() => assert.ok(!same(head(base, i, 5), plain[0]) || !same(head(base, i, 1), plain[1]), `${s[0]}: on, its own shape`));
   }
   for (let k = 1; k < 800; k++) assert.ok(!LK.HAIR_STYLES[LK.randomLook(k * 104729).hair.style][3], 'a random look keeps to the styles drawn without the pass');
+});
+
+test('"Censored nudity" is a setting: the renderer dresses a bare body in swimwear for whoever has it on', async () => {
+  const { readFileSync } = await import('node:fs');
+  const PD = await import('../client/art2/game/peds.js');
+  const code = LK.encodeLook(bare('f', 'Nothing on')), A = PD.adaptApp({ lk: code }, null, { censored: true }), B = PD.adaptApp({ lk: code });
+  assert.ok(A.censored && !B.censored);
+  assert.notEqual(PD.pedKey(A, 'idle', 0, 0, 0), PD.pedKey(B, 'idle', 0, 0, 0), 'its own sprites');
+  assert.ok(!same(baked(A, 0), baked(B, 0)));
+  const src = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  assert.ok(/censored: !!globalThis\.CLA_CENSOR/.test(src('client/art2/game/host.js')), 'the renderer reads the setting');
+  assert.ok(/id="s-censor"/.test(src('index.html')) && /\$\('s-censor'\)\.onchange/.test(src('client/main.js')) && /censor: false/.test(src('client/input.js')), 'Settings has the switch, off by default');
 });
