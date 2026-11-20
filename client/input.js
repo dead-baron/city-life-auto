@@ -32,9 +32,8 @@ export const input = {
 };
 
 // ---- player settings (per browser) ----------------------------------------------------------
-export const settings = { kbDrive: 'car', padDrive: 'triggers', touchEdgeFire: true, padStickFire: false, vibrate: true, censor: false };
+export const settings = { kbDrive: 'car', padDrive: 'triggers', touchEdgeFire: true, padStickFire: false, vibrate: true };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('cla.settings') || '{}')); } catch { /* private mode */ }
-globalThis.CLA_CENSOR = !!settings.censor;   // ("censored nudity": the renderer dresses a bare body in swimwear - art2/game/host.js _app)
 export function saveSettings() { try { localStorage.setItem('cla.settings', JSON.stringify(settings)); } catch { /* ignore */ } }
 // (task #301: the pad's stick-ring fire is off by default and now covers drive-bys too - and moving down Settings with a
 // pad could switch it on unseen: everyone starts this build with it off, once; switched on again, it stays on)

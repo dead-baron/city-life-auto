@@ -63,11 +63,11 @@ test('every underwear piece draws on both bases, the pass on and off, and each l
   }
 });
 
-test('"Nothing on": free for everyone, the mosaic over it from the front and from behind, swimwear with "censored nudity" on', () => {
+test('"Nothing on": free for everyone, the mosaic over it from the front and from behind - always, for everyone (no "censored" setting: the owner, 11-19)', async () => {
   const id = LK.byName('Nothing on');
   assert.ok(W.free(id) && W.owns([], id), 'anyone may go without');
   for (const base of ['m', 'f']) {
-    const L = bare(base, 'Nothing on'), A = LK.lookArt(L), C = LK.lookArt(L, { censored: true });
+    const L = bare(base, 'Nothing on'), A = LK.lookArt(L), C = { ...A, top: { kind: base === 'f' ? 'bikini' : 'none' }, bottom: { kind: base === 'f' ? 'bikini' : 'trunks' } };   // (the same body in swimwear)
     assert.equal(A.bottom.kind, 'none'); assert.equal(A.top.kind, 'none');
     assert.equal(W.unowned([], L).length, 0, 'wearable with an empty wardrobe');
     for (const on of [false, true]) {
@@ -75,7 +75,7 @@ test('"Nothing on": free for everyone, the mosaic over it from the front and fro
       try {
         for (const d of on ? [0, 1, 3, 4, 5, 7] : [0, 1, 7]) {
           const a = baked(A, d), c = baked(C, d);
-          assert.ok(!same(a, c), `${base} facing ${d} (pass ${on ? 'on' : 'off'}): censored nudity draws swimwear instead`);
+          assert.ok(!same(a, c), `${base} facing ${d} (pass ${on ? 'on' : 'off'}): the mosaic is drawn`);
         }
         // the mosaic is there: the same body in skin-coloured briefs (no mosaic) is not the same picture
         for (const d of on ? [0, 4] : [0]) {
@@ -86,7 +86,11 @@ test('"Nothing on": free for everyone, the mosaic over it from the front and fro
       } finally { setPolish(null); }
     }
   }
-  // (the pass adds the patch from behind: facing north, on and censored differ only where the mosaic and the swimwear are)
+  // nothing asks for swimwear in its place any more: no option on the look, the renderer or the page
+  assert.equal(LK.lookArt(bare('f', 'Nothing on'), { censored: true }).top.kind, 'none');
+  const { readFileSync } = await import('node:fs'), src = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  for (const f of ['index.html', 'client/main.js', 'client/input.js', 'client/art2/game/host.js', 'client/art2/game/peds.js', 'shared/guide.js']) assert.ok(!/censor/i.test(src(f)), f + ': no censored setting');
+  assert.ok(!/A.censored|opt.censored/.test(src('client/art2/people.js') + src('shared/lookcore.js')), 'the swimwear path is gone');
   withPass(() => { const A = LK.lookArt(bare('m', 'Nothing on')); for (const pose of ['walk0', 'sit', 'swim', 'down', 'kneel']) assert.ok(person(A, 4, pose, 1, { tight: true }).w > 6, pose); });
 });
 
@@ -161,16 +165,4 @@ test('the concepts\' six more hairstyles: their own shapes with the pass on, the
     withPass(() => assert.ok(!same(head(base, i, 5), plain[0]) || !same(head(base, i, 1), plain[1]), `${s[0]}: on, its own shape`));
   }
   for (let k = 1; k < 800; k++) assert.ok(!LK.HAIR_STYLES[LK.randomLook(k * 104729).hair.style][3], 'a random look keeps to the styles drawn without the pass');
-});
-
-test('"Censored nudity" is a setting: the renderer dresses a bare body in swimwear for whoever has it on', async () => {
-  const { readFileSync } = await import('node:fs');
-  const PD = await import('../client/art2/game/peds.js');
-  const code = LK.encodeLook(bare('f', 'Nothing on')), A = PD.adaptApp({ lk: code }, null, { censored: true }), B = PD.adaptApp({ lk: code });
-  assert.ok(A.censored && !B.censored);
-  assert.notEqual(PD.pedKey(A, 'idle', 0, 0, 0), PD.pedKey(B, 'idle', 0, 0, 0), 'its own sprites');
-  assert.ok(!same(baked(A, 0), baked(B, 0)));
-  const src = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
-  assert.ok(/censored: !!globalThis\.CLA_CENSOR/.test(src('client/art2/game/host.js')), 'the renderer reads the setting');
-  assert.ok(/id="s-censor"/.test(src('index.html')) && /\$\('s-censor'\)\.onchange/.test(src('client/main.js')) && /censor: false/.test(src('client/input.js')), 'Settings has the switch, off by default');
 });

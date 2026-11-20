@@ -1679,7 +1679,7 @@ export class World2 {
   _app(a, ar) {
     if (!this.Pd || !this.Pd.adaptApp || !a) return a;
     let v = this.adapted.get(a);
-    if (!v) { v = this.Pd.adaptApp(a, ar || null, { censored: !!globalThis.CLA_CENSOR }); this.adapted.set(a, v); }   // (Settings' "censored nudity": swimwear, no mosaic)
+    if (!v) { v = this.Pd.adaptApp(a, ar || null); this.adapted.set(a, v); }
     return v;
   }
   // ...with a street personality's prop (the descriptor's pp: a cane, a trolley, a cart, dog leads, a guitar: peds.js withProp)

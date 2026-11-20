@@ -260,11 +260,11 @@ async function under(out) {
   const U = LK.PIECES.filter((p) => p && p.slot === 'under'), rows = [];
   for (const base of ['m', 'f']) for (const p of [null, ...U.filter((q) => q.b.includes(base))]) {
     const L = dressed(base, p ? { under: p.name } : {}, { skin: base === 'm' ? 2 : 9, build: base === 'm' ? 1 : 3 }, { hair: { style: base === 'f' ? 20 : 6 } });
-    rows.push([(p ? p.name : 'basic (none picked)').replace(' and ', ' +|'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 0, on: false, t: 'off' }, { L, d: 0, art: { censored: true }, t: 'censored' }]]);
+    rows.push([(p ? p.name : 'basic (none picked)').replace(' and ', ' +|'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 0, on: false, t: 'off' }]]);
   }
   const half = Math.ceil(rows.length / 2);
-  await grid(out.replace('.png', '-1.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF; CENSORED NUDITY ON', rows.slice(0, half), { k: 6, rh: 32 });
-  await grid(out.replace('.png', '-2.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF; CENSORED NUDITY ON', rows.slice(half), { k: 6, rh: 32 });
+  await grid(out.replace('.png', '-1.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF', rows.slice(0, half), { k: 6, rh: 32 });
+  await grid(out.replace('.png', '-2.png'), 'UNDERWEAR (PASS ON): S, SE, E, N, WALKING; THE PASS OFF', rows.slice(half), { k: 6, rh: 32 });
 }
 // every uniform and job look, then the city's archetypes (server entities.js) as the game draws them
 const JOBS = () => {

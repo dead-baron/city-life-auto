@@ -17,7 +17,7 @@
 // app: { skin 0-5, build 0 slim | 1 average | 2 heavy | 3 tall, body {h, w, limb, belly, muscle} (overrides build),
 //   fem, hair {style, color}, beard 'short'|'full'|'stubble', top {kind, color, color2, pattern, tie}, bottom {kind, color},
 //   shoes (colour), shoeKind, hat {kind, color}, glasses 'sun'|'round', mask, bandana (colour), chain, carry, held,
-//   back 'backpack', backColor, gloves (colour), tattoo, seed, censored }
+//   back 'backpack', backColor, gloves (colour), tattoo, seed }
 // The look system (shared/look.js lookArt) adds: skin 0-15, age 0-5 (posture), face {shape, eyes, eyeColor, brows, nose,
 //   lips, freckles, mole, dimples}, makeup {kind, color}, tattoo (bits: 1 arms 2 legs 4 neck 8 chest 16 face), piercings
 //   (bits: 1 ears 2 nose 4 brow 8 lip), scar 1-5, top {inner, trim, sleeve, len, pattern: stripes check camo floral tiedye},
@@ -33,7 +33,7 @@
 //   hats: cap trucker police beanie bucket sunhat cowboy fedora hard helmet bandana headband hood
 //   carry: briefcase bag purse toolbag shopping coffee phone cane board, or any items.js kind (held)
 // Undressed bodies (a 'none' bottom, or a 'none' top on a woman) get a pixelated mosaic, the Sims' way, over the
-// private areas only; app.censored dresses them in swimwear instead. Adults only.
+// private areas only, always and for everyone (the owner, 2026-11-19: no "censored" setting). Adults only.
 // Dither and texture patterns are anchored to the feet, so they hold still from frame to frame.
 // Also exported: POSES (frames per pose), SEATS (seat heights), PERSON_CAM, HAIR_STYLES, TOP_KINDS, SKIN_TONES,
 // cloth(colour) -> 5-step ramp. (Named looks for scenes, ARCHETYPES and randomPerson: client/art2/peoplepresets.js; the face
@@ -824,11 +824,7 @@ function founderWings(E, A, D, S, P) {
 }
 function wardrobe(A, D, TF, seed) {
   if (A.carry === 'statue') A = statueApp(A);
-  let tk = A.top?.kind || 'tee', bk = A.bottom?.kind || 'jeans';
-  if (A.censored && !A.founder) {   // the "censored nudity" setting: swimwear instead of nothing
-    if (tk === 'none' && D.fem) tk = 'bikini';
-    if (bk === 'none') bk = D.fem ? 'bikini' : 'trunks';
-  }
+  const tk = A.top?.kind || 'tee', bk = A.bottom?.kind || 'jeans';
   const T = TOP[tk] || TOP.tee, skin = A.founder ? BONE : A.bronze ? BRONZE_SKIN : SKIN[clamp(A.skin ?? 1, 0, SKIN.length - 1) | 0];
   const top = cloth(A.top?.color || (tk === 'bikini' || tk === 'swimsuit' ? 'teal' : tk === 'towel' ? 'white' : 'grey')), top2 = cloth(A.top?.color2 || 'white');
   const bot = cloth(A.bottom?.color || (bk === 'jeans' ? 'denim' : bk === 'trunks' || bk === 'bikini' ? (A.top?.color || 'red') : bk === 'towel' ? 'white' : 'black'));

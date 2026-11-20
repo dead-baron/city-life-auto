@@ -4,7 +4,7 @@
 //
 //   adaptApp(app, ar, opt) -> art2 app      app: the server appearance { s, h, hc, t, tc, tc2, l, sh, ht, htc, b, bd,
 //                                           bandana } (server entities.js); ar: the archetype (e.d.ar: 'player', an NPC
-//                                           archetype, 'medic', ...); opt.censored dresses undressed bodies in swimwear.
+//                                           archetype, 'medic', ...).
 //                                           The server's few fields are spread into C2/C3-style looks: the archetype picks
 //                                           the outfit family (suits, hi-vis, uniforms, gang vests, fur coats...), and a
 //                                           hash of the record picks the details (hair cut, bottoms, beard, glasses, bags).
@@ -102,13 +102,13 @@ export function adaptApp(app, ar = null, opt = {}) {
   // the founder's look (server net.js app.fd)
   if (a.fd) return FOUNDER;
   // a player's look (shared/look.js): its code says it all
-  if (a.lk) { const L = decodeLook(a.lk); if (L) return lookArt(L, { code: a.lk, censored: !!opt.censored }); }
+  if (a.lk) { const L = decodeLook(a.lk); if (L) return lookArt(L, { code: a.lk }); }
   const H = seedOf(a, ar), r = (k) => hash(H & 0xfffff, k, 131), pick = (arr, k) => arr[Math.floor(r(k) * arr.length) % arr.length];
   const t = a.t ?? 0, tc = a.tc || '#888888', tc2 = a.tc2 || '#dddddd', l = a.l || '#334455', sh = a.sh || '#222222';
   const fem = a.h === 2 || a.h === 5 || t === 5;
   const police = t === 6 && blueish(tc) && lumOf(tc) < 0.3, medic = ar === 'medic' || (t === 6 && lumOf(tc) > 0.8), sweeper = t === 6 && !police && !medic;
   const swat = ar === 'swat' || (t === 3 && lumOf(tc) < 0.1 && a.ht === 5), soldier = ar === 'soldier', agent = ar === 'agent';
-  const out = { seed: H & 0xffff, skin: Math.max(0, Math.min(5, a.s ?? 1)), fem, ar, censored: !!opt.censored };
+  const out = { seed: H & 0xffff, skin: Math.max(0, Math.min(5, a.s ?? 1)), fem, ar };
   // ---- body: the server's build (frail .. brute), a gut on some brutes and seniors
   const bd = Math.max(0, Math.min(3, a.bd ?? 1));
   out.body = { ...BODIES[bd] };
@@ -258,9 +258,9 @@ function art2Key(A) {
   let k = KEYS.get(A);
   if (k) return k;
   if (A.founder) { k = 'F' + Object.keys(A).filter((f) => A[f] !== FOUNDER[f]).sort().map((f) => `;${f}=${JSON.stringify(A[f])}`).join(''); KEYS.set(A, k); return k; }
-  if (A.lk) { k = 'L' + A.lk + (A.censored ? 'c' : '') + (A.pp ? '+' + A.pp : '') + (A.back === 'moneybag' ? '$' : ''); KEYS.set(A, k); return k; }
+  if (A.lk) { k = 'L' + A.lk + (A.pp ? '+' + A.pp : '') + (A.back === 'moneybag' ? '$' : ''); KEYS.set(A, k); return k; }
   const parts = [];
-  for (const f of ['seed', 'skin', 'fem', 'build', 'body', 'hair', 'beard', 'top', 'bottom', 'shoes', 'shoeKind', 'hat', 'glasses', 'mask', 'bandana', 'chain', 'carry', 'held', 'back', 'backColor', 'gloves', 'tattoo', 'censored', 'pet']) {
+  for (const f of ['seed', 'skin', 'fem', 'build', 'body', 'hair', 'beard', 'top', 'bottom', 'shoes', 'shoeKind', 'hat', 'glasses', 'mask', 'bandana', 'chain', 'carry', 'held', 'back', 'backColor', 'gloves', 'tattoo', 'pet']) {
     const v = A[f];
     if (v === undefined || v === null || v === false) continue;
     parts.push(f + ':' + (typeof v === 'object' ? Object.keys(v).sort().map((q) => q + '=' + v[q]).join(',') : v));
@@ -271,8 +271,8 @@ function art2Key(A) {
 }
 export function appKey(app, opt = {}) {
   if (app && app.fd) return 'F';
-  if (app && app.lk && app.top === undefined) return 'L' + app.lk + (opt.censored ? 'c' : '');
-  if (isServer(app)) return 'S' + [app.s, app.h, app.hc, app.t, app.tc, app.tc2, app.l, app.sh, app.ht, app.htc, app.b, app.bd, app.bandana ? 1 : 0, opt.ar || app.ar || '', opt.censored ? 1 : 0].join(',');
+  if (app && app.lk && app.top === undefined) return 'L' + app.lk;
+  if (isServer(app)) return 'S' + [app.s, app.h, app.hc, app.t, app.tc, app.tc2, app.l, app.sh, app.ht, app.htc, app.b, app.bd, app.bandana ? 1 : 0, opt.ar || app.ar || ''].join(',');
   return art2Key(app || {});
 }
 const normPose = (p) => (p && p.startsWith('move') ? 'walk' + (p[4] || '0') : p || 'idle');

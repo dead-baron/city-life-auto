@@ -393,7 +393,7 @@ add('jacket', 'Founding Citizen jacket', 'mf', 'preppy streetwear retro', 0, 'gi
 // character has on under the clothes, seen where there's no top or no bottoms. d.k the top half's art kind (none: a
 // bare chest - a woman's gets a plain bra with it), d.bk the bottom half's. The basics are everyone's (rules.js
 // STARTER_WARDROBE); the lingerie is sold. Opaque, never see-through. 'Nothing on' is free: the renderer's mosaic covers
-// the private areas (people.js censor), and "censored nudity" shows swimwear. Random looks - the city's people - never
+// the private areas (people.js censor), always and for everyone. Random looks - the city's people - never
 // fill the slot (shared/look.js randomLook).
 add('under', 'Nothing on', 'mf', 'lounge', 0, 'clothing', { k: 'none', bk: 'none' }, 'white');
 add('under', 'Boxers', 'm', 'lounge casual', 10, 'clothing', { bk: 'trunks', band: 1 }, 'sky', 'white');
@@ -574,7 +574,7 @@ export function lookArt(L, opt = {}) {
   L = L || emptyLook('m');
   const O = L.outfit, P = (s) => (O[s] ? PIECES[O[s].id] : null), fem = L.body.base === 'f', B = BUILDS[L.body.build] || BUILDS[1];
   const H = HEIGHTS[L.body.height] ?? 1, age = L.body.age;
-  const A = { fem, skin: L.body.skin, age, censored: !!opt.censored, lk: opt.code || encodeLook(L) };
+  const A = { fem, skin: L.body.skin, age, lk: opt.code || encodeLook(L) };
   A.seed = 0; for (let i = 0; i < A.lk.length; i++) A.seed = (A.seed * 31 + A.lk.charCodeAt(i)) & 0xffff;
   A.body = { h: B.h * H, w: B.w, limb: B.limb, belly: (B.belly || 0) + (age >= 3 && L.body.build >= 3 ? 0.3 : 0), muscle: B.muscle || 0 };
   // hair: greys with age (dyed colours stay)
