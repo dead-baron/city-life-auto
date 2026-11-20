@@ -1625,6 +1625,7 @@ function render(fig, P, S, X, D, A, opt) {
     const hc = prims[fig.head].c, hx = hc[0], hy = hc[1] * SA - hc[2] * CA;
     x0 = Math.max(x0, hx + RB[0]); x1 = Math.min(x1, hx + RB[2]); y0 = Math.max(y0, hy + RB[1]); y1 = Math.min(y1, hy + RB[3]);
   }
+  if (PL && PL.ol) { x0 -= 2; y0 -= 2; x1 += 2; y1 += 2; }   // (room for the outline on the art grid, below)
   x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.ceil(x1); y1 = Math.ceil(y1);
   // R: pixels per world px. 1 in the game (and the creator, which shows the game's own sprite); a close render (tools,
   // tests) casts R x R rays per world px - the same shapes, light and materials, finer - and, given opt.closeFace
@@ -1744,10 +1745,40 @@ function render(fig, P, S, X, D, A, opt) {
   const G = new GBuf(w, h), gc = G.col, gn = G.nrm, gz = G.z, ge = G.emi, gf = G.flag;
   G.ax = AX; G.ay = AY;
   const cand = (q, j) => (PID[q] >= 0 && !NOO[q] && PID[q] !== FOAMID && (j < 0 || NEAR[q] > NEAR[j]) ? q : j);
+  // The polish pass's outline (PL.ol, 11-20): drawn on the art grid, not at this buffer's - the game shows a figure at 2 x 2
+  // of these pixels (gbuf.js downsample2, blocks counted from the anchor), and a one-pixel line here came out there as a
+  // whole art pixel in one place, half a one mixed into the body in the next and nothing in a third. So: the art pixels
+  // the figure fills (2 of a block's 4 or more) stay as they are; each empty one beside them (not across a corner) is
+  // filled whole with a darker tone of the art pixel it borders - an outline one art pixel wide all the way round, in
+  // the colour of what it outlines (the concepts' edges), lighter on the lit side (left and above) than in the shade.
+  let OL = null, BS = null, BC = null, BN = null;
+  if (PL && PL.ol && R === 1) {
+    const ox = AX & 1, oy = AY & 1, bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, BA = new Uint8Array(bw * bh);
+    BN = new Uint8Array(bw * bh); BS = new Int32Array(bw * bh).fill(-1); BC = new Float32Array(bw * bh * 3); OL = new Int32Array(n);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x, q = ((y + oy) >> 1) * bw + ((x + ox) >> 1);
+      if (PID[i] < 0) continue;
+      BA[q]++;
+      if (NOO[i] || PID[i] === FOAMID) continue;
+      BN[q]++; BC[q * 3] += CR[i]; BC[q * 3 + 1] += CG[i]; BC[q * 3 + 2] += CB[i];
+      if (BS[q] < 0 || NEAR[i] > NEAR[BS[q]]) BS[q] = i;
+    }
+    for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+      const q = by * bw + bx;
+      if (BA[q] >= 2) continue;
+      let sb = -1;
+      const t = (r) => { if (BN[r] >= 2 && (sb < 0 || NEAR[BS[r]] > NEAR[BS[sb]])) sb = r; };
+      if (bx > 0) t(q - 1); if (bx < bw - 1) t(q + 1); if (by > 0) t(q - bw); if (by < bh - 1) t(q + bw);
+      if (sb < 0) continue;
+      const v = sb === q + 1 || sb === q + bw ? sb + 1 : -(sb + 1);   // (+: the lit side - this pixel is left of or above what it outlines)
+      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const x = 2 * bx - ox + dx, y = 2 * by - oy + dy; if (x >= 0 && y >= 0 && x < w && y < h) OL[y * w + x] = v; }
+    }
+  }
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x, o = i * 4;
-    let j = i;
-    if (PID[i] < 0) {
+    let j = i, ob = -1;
+    if (OL) { if (OL[i]) { ob = Math.abs(OL[i]) - 1; j = BS[ob]; } else if (PID[i] < 0) continue; }
+    else if (PID[i] < 0) {
       j = -1;
       if (x > 0) j = cand(i - 1, j);
       if (x < w - 1) j = cand(i + 1, j);
@@ -1765,6 +1796,12 @@ function render(fig, P, S, X, D, A, opt) {
       if (e) { ge[o] = e[0]; ge[o + 1] = e[1]; ge[o + 2] = e[2]; ge[o + 3] = e[3] ?? 255; }
     } else if (e && e[3] > 180) {
       gc[o] = e[0] * 0.45; gc[o + 1] = e[1] * 0.55; gc[o + 2] = e[2] * 0.85; ge[o] = e[0]; ge[o + 1] = e[1]; ge[o + 2] = e[2]; ge[o + 3] = 140; gf[i] = F_CHAR | F_NOCAST;
+    } else if (ob >= 0) {
+      const lit = OL[i] > 0 ? 0 : 2, m = PL.ol[lit] / BN[ob];
+      let r = 24 + BC[ob * 3] * m, g = 16 + BC[ob * 3 + 1] * m * 0.92, b = 26 + BC[ob * 3 + 2] * m;
+      const L = r * 0.3 + g * 0.59 + b * 0.11, cap = PL.ol[lit + 1];
+      if (L > cap) { r *= cap / L; g *= cap / L; b *= cap / L; }
+      gc[o] = r; gc[o + 1] = g; gc[o + 2] = b; gf[i] = F_CHAR | FL[j];
     } else { gc[o] = 24 + CR[j] * 0.12; gc[o + 1] = 16 + CG[j] * 0.09; gc[o + 2] = 26 + CB[j] * 0.13; gf[i] = F_CHAR | FL[j]; }
   }
   return opt.tight ? crop(G) : G;
