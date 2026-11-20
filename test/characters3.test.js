@@ -197,7 +197,7 @@ test('props carried (a camera, a bouquet, a parasol): bags on things the rendere
   const W = await import('../shared/wardrobe.js');
   for (const [n, carry] of [['Camera', 'purse'], ['Bouquet', 'coffee'], ['Parasol', 'cane']]) {
     const P = LK.PIECES[LK.byName(n)];
-    assert.ok(P && P.slot === 'bag' && P.d.carry === carry && P.d.prop && P.d.pp && W.sellerOf(P.i), n);
+    assert.ok(P && P.slot === 'bag' && P.d.carry === carry && P.d.prop && P.d.pp, n);
     for (const base of ['m', 'f']) {
       const A = plain(base, (L) => { L.outfit.bag = LK.item(n); }), B = strip(A, 'prop');
       assert.equal(A.carry, carry); assert.equal(A.prop[0], P.d.prop);

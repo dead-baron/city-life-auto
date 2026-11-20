@@ -12,7 +12,7 @@ export * from './lookcore.js';
 // ---- random looks -------------------------------------------------------------------------------------------------------
 const rint = (r, n) => Math.floor(r() * n) % n;
 const rpick = (r, a) => a[rint(r, a.length)];
-const pieceList = (slot, base, style) => PIECES.filter((p) => p && p.slot === slot && fits(p, base) && !p.d.issued && !p.d.gift && !p.d.pp && (!style || p.tags.includes(style)));   // (never an issued uniform, a season's gift, or a piece only the polish pass draws)
+const pieceList = (slot, base, style) => PIECES.filter((p) => p && p.slot === slot && fits(p, base) && !p.d.issued && !p.d.gift && !p.d.pp && !p.d.dr && (!style || p.tags.includes(style)));   // (never an issued uniform, a season's gift, a piece only the polish pass draws, or a draped piece - the owner, 11-19: not until they read better)
 const EVERYDAY_GLASSES = ['sun', 'round', 'frames', 'browline', 'rimless', 'roundsun'];   // (the glasses anyone might have on; the rest by style)
 const NEUTRAL = ['white', 'black', 'charcoal', 'grey', 'navy', 'denim', 'cream', 'khaki', 'brown', 'tan', 'olive'].map(col);
 // A whole random look from a seed. base: 'm' | 'f' | null (either); style: a STYLES id to dress in (null: any).
