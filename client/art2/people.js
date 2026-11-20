@@ -150,11 +150,14 @@ function hramp(rgb, n, k, dark, light, sd = 0.22, sl = 0.1, keepSat = 0) {
 // cloth lands, very dark colours keep two lighter steps (black still reads), very light ones four darker steps
 export function cloth(c) {
   if (Array.isArray(c) && Array.isArray(c[0])) return c;
-  const key = Array.isArray(c) ? c.join(',') : String(c || 'grey');
+  const sf = PL && PL.rampSoft, key = (sf ? '~' : '') + (Array.isArray(c) ? c.join(',') : String(c || 'grey'));
   let R = RC.get(key);
   if (R) return R;
-  const rgb = Array.isArray(c) ? c : hexRgb(NAMED[key] || (key[0] === '#' ? key : NAMED.grey)), l = rgbHsl(rgb[0], rgb[1], rgb[2])[2];
-  R = l < 0.17 ? hramp(rgb, 5, 2, 0.45, 0.26, 0.2, 0.04) : l > 0.8 ? hramp(rgb, 5, 4, 0.48, 0, 0.3) : hramp(rgb, 5, 3, 0.62, 0.28, 0.32, 0.1);
+  const k0 = sf ? key.slice(1) : key, rgb = Array.isArray(c) ? c : hexRgb(NAMED[k0] || (k0[0] === '#' ? k0 : NAMED.grey)), l = rgbHsl(rgb[0], rgb[1], rgb[2])[2];
+  // (the polish pass, PL.rampSoft: a light colour's shadows turn less toward red and go less dark - a yellow shirt's
+  // were rust and dark red, a white one's dusty rose: stains at the game's size, and a brown arm's own colours)
+  if (sf && l > 0.42) R = l > 0.8 ? hramp(rgb, 5, 4, 0.4, 0, 0.3 * sf) : hramp(rgb, 5, 3, 0.62 - (1 - sf) * 0.16, 0.28, 0.32 * sf, 0.1);
+  else R = l < 0.17 ? hramp(rgb, 5, 2, 0.45, 0.26, 0.2, 0.04) : l > 0.8 ? hramp(rgb, 5, 4, 0.48, 0, 0.3) : hramp(rgb, 5, 3, 0.62, 0.28, 0.32, 0.1);
   if (RC.size > 4000) RC.clear(); // (custom colours are endless: a long session doesn't keep them all)
   RC.set(key, R);
   return R;
@@ -1058,7 +1061,7 @@ function wardrobe(A, D, TF, seed) {
     if (Q.l2 < -0.32) return sole;
     if (furC && (Q.part === 'boot' ? Q.l0 > 0.7 : Q.l2 > 0.3 && Q.l1 < 0.2)) { Q.k += hash(Q.x, Q.y, 5) * 0.2 - 0.1; return furC; }
     if (A.shoe_buckle && Q.part === 'boot' && Math.abs(Q.l0 - 0.45) < 0.11) { if (Math.abs(Q.l1) > 0.55) { Q.gloss = 1; return silver; } Q.k -= 0.28; }
-    if (sk === 'sneaker' && Q.l1 > 0.05 && Q.l1 < 0.6 && Math.abs(Q.l0) < 0.3 && Q.l2 > 0.25 && ((Math.round(Q.l1 * 8)) & 1)) return white;
+    if (sk === 'sneaker' && !(PL && Q.res === 1) && Q.l1 > 0.05 && Q.l1 < 0.6 && Math.abs(Q.l0) < 0.3 && Q.l2 > 0.25 && ((Math.round(Q.l1 * 8)) & 1)) return white;   // (laces: close up only under the polish pass - at the game's size they were a stray white pixel on the ankle)
     if (A.shoe_gloss) Q.gloss = 1;
     else if (sk === 'shoe' || sk === 'heel' || sk === 'boot') Q.gloss = 0.6;
     return (shoePat && shoePat(Q)) || shoe;
@@ -1568,13 +1571,13 @@ function hatPrims(E, C, A, D, S, W, at, k) {
 }
 
 // ---- rendering ----------------------------------------------------------------------------------------------------------------
-let CAP = 0, NEAR, PID, NX, NY, NZ, L0, L1, L2, ZW, CR, CG, CB, EM, NOO, LN, AO, FL;
+let CAP = 0, NEAR, PID, NX, NY, NZ, L0, L1, L2, ZW, CR, CG, CB, EM, NOO, LN, AO, FL, MTL;
 function scratch(n) {
   if (n <= CAP) return;
   CAP = n;
   NEAR = new Float32Array(n); PID = new Int16Array(n); NX = new Float32Array(n); NY = new Float32Array(n); NZ = new Float32Array(n);
   L0 = new Float32Array(n); L1 = new Float32Array(n); L2 = new Float32Array(n); ZW = new Float32Array(n);
-  CR = new Uint8ClampedArray(n); CG = new Uint8ClampedArray(n); CB = new Uint8ClampedArray(n); EM = new Array(n).fill(null); NOO = new Uint8Array(n); LN = new Uint8Array(n); AO = new Float32Array(n); FL = new Uint8Array(n);
+  CR = new Uint8ClampedArray(n); CG = new Uint8ClampedArray(n); CB = new Uint8ClampedArray(n); EM = new Array(n).fill(null); NOO = new Uint8Array(n); LN = new Uint8Array(n); AO = new Float32Array(n); FL = new Uint8Array(n); MTL = new Uint16Array(n);
 }
 const Q = { X: 0, Y: 0, Z: 0, nx: 0, ny: 0, nz: 0, l0: 0, l1: 0, l2: 0, x: 0, y: 0, k: 0, e: null, gloss: 0, part: '', side: 0, u: 0, f: 0, z: 0 };
 const ITEMID = 32000, FOAMID = 32001;
@@ -1633,7 +1636,8 @@ function render(fig, P, S, X, D, A, opt) {
   const R = opt.res > 1 ? Math.min(8, opt.res | 0) : 1, iR = 1 / R;
   const w = Math.min(200 * R, (x1 - x0) * R), h = Math.min(200 * R, (y1 - y0) * R), AX = -x0 * R, AY = -y0 * R, n = w * h;
   scratch(n);
-  NEAR.fill(-1e9, 0, n); PID.fill(-1, 0, n); NOO.fill(0, 0, n); LN.fill(0, 0, n); AO.fill(0, 0, n); FL.fill(0, 0, n); EM.fill(null, 0, n);
+  NEAR.fill(-1e9, 0, n); PID.fill(-1, 0, n); NOO.fill(0, 0, n); LN.fill(0, 0, n); AO.fill(0, 0, n); FL.fill(0, 0, n); EM.fill(null, 0, n); MTL.fill(0, 0, n);
+  const MID = new Map();   // (each material's ramp, numbered: what a pixel is made of - the outline pass's tidy-up reads it)
   // 1. ray-cast every primitive into the depth buffer
   const smaxOf = (p) => p.bc[1] * CA + p.bc[2] * SA + p.br;          // the nearest any of a primitive's points can be
   const order = prims.map((p, k) => k).sort((a, b) => smaxOf(prims[b]) - smaxOf(prims[a]) || a - b);   // front to back
@@ -1694,7 +1698,9 @@ function render(fig, P, S, X, D, A, opt) {
     Q.X = (x + 0.5 - AX) * iR; Q.Y = sy * SA + s * CA; Q.Z = -sy * CA + s * SA;
     Q.nx = NX[i]; Q.ny = NY[i]; Q.nz = NZ[i]; Q.l0 = L0[i]; Q.l1 = L1[i]; Q.l2 = L2[i]; Q.x = x - AX; Q.y = y - AY; Q.k = 0; Q.e = null; Q.gloss = 0; Q.part = p.part; Q.side = p.side || 0; Q.g = p.g; Q.res = R;
     const RM = p.m(Q);
-    let c;
+    let c, mi = MID.get(RM);
+    if (!mi) MID.set(RM, mi = MID.size + 1);
+    MTL[i] = mi;
     if (RM.length === 3 && !Array.isArray(RM[0])) c = RM;
     else {
       const ndl = Q.nx * LT[0] + Q.ny * LT[1] + Q.nz * LT[2];
@@ -1703,12 +1709,13 @@ function render(fig, P, S, X, D, A, opt) {
         let sh;
         if (R === 1) sh = occluded(prims, k, Q.X + Q.nx * 0.45, Q.Y + Q.ny * 0.45, Q.Z + Q.nz * 0.45);
         else { const cell = ((y * iR) | 0) * OCW + ((x * iR) | 0); if (OCK[cell] === k + 1) sh = OCV[cell] === 1; else { sh = occluded(prims, k, Q.X + Q.nx * 0.45, Q.Y + Q.ny * 0.45, Q.Z + Q.nz * 0.45); OCK[cell] = k + 1; OCV[cell] = sh ? 1 : 0; } }
-        if (sh) v -= 0.32 * Math.min(1, ndl * 2.4);
+        if (sh) v -= (PL && PL.shK !== undefined ? PL.shK : 0.32) * Math.min(1, ndl * 2.4);
       }
       if (Q.gloss && R > 1) v += 0.3 * Q.gloss * sm(clamp((ndl - 0.5) / 0.4, 0, 1));   // (close up: the sheen fades in)
       else if (Q.gloss && ndl > 0.72) v += 0.3 * Q.gloss;
+      if (PL && PL.vMin && R === 1 && v < PL.vMin) v = PL.vMin;   // (the ramp's darkest step is the lines' and the outline's, not a patch of shade)
       if (R > 1) { const F2 = fine(RM); c = F2[clamp(Math.round(v * (F2.length - 1) + bayer(x - AX, y - AY) * 0.9), 0, F2.length - 1)]; }   // (close up: twice the steps, dithered)
-      else c = RM[clamp(Math.round(v * (RM.length - 1) + bayer(Math.floor((x - AX) / 2), Math.floor((y - AY) / 2)) * 0.18), 0, RM.length - 1)];   // (the dither on the art grid: whole art pixels after the bake, not a blur; light - at 24 art pixels tall C1 shows two or three clean tones a cloth, not a checker)
+      else c = RM[clamp(Math.round(v * (RM.length - 1) + bayer(Math.floor((x - AX) / 2), Math.floor((y - AY) / 2)) * (PL && PL.dith !== undefined ? PL.dith : 0.18)), 0, RM.length - 1)];   // (the dither on the art grid: whole art pixels after the bake, not a blur; light - at 24 art pixels tall C1 shows two or three clean tones a cloth, not a checker)
     }
     CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2]; ZW[i] = Q.Z; EM[i] = Q.e;
     if (opt.debug) { const hh = hash(k, 1, 77), part = p.part; CR[i] = 60 + hash(k, 2, 5) * 195; CG[i] = 60 + hh * 195; CB[i] = part === 'head' ? 255 : 60 + hash(k, 3, 9) * 120; }
@@ -1755,6 +1762,34 @@ function render(fig, P, S, X, D, A, opt) {
   if (PL && PL.ol && R === 1) {
     const ox = AX & 1, oy = AY & 1, bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, BA = new Uint8Array(bw * bh), BL = new Uint8Array(bw * bh), DM = new Uint8Array(bw * bh);
     BN = new Uint8Array(bw * bh); BS = new Int32Array(bw * bh).fill(-1); BC = new Float32Array(bw * bh * 3); OL = new Int32Array(n);
+    // First, where two materials meet inside one art pixel (a shirt's hem over shorts, a sock over a shoe, a sleeve over
+    // an arm): the art pixel goes to the one with more of it (a tie: the one in front). The bake's own rule there keeps the
+    // texel that differs most - right for a button, but along a hem it threw single pixels of one garment into the other.
+    // A material with nothing more of it round the art pixel is a detail (a button, a buckle) and stays.
+    for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+      const T = [], x0 = 2 * bx - ox, y0 = 2 * by - oy;
+      let mixed = false, skip = false;
+      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+        const x = x0 + dx, y = y0 + dy, i = y * w + x;
+        if (x < 0 || y < 0 || x >= w || y >= h || PID[i] < 0) continue;
+        if (NOO[i] || PID[i] >= prims.length || !MTL[i] || EM[i]) { skip = true; continue; }
+        if (T.length && MTL[i] !== MTL[T[0]]) mixed = true;
+        T.push(i);
+      }
+      if (skip || !mixed) continue;
+      let maj = -1, mc = 0, mn = -1e9;
+      for (const i of T) { let c = 0, nr = -1e9; for (const j of T) if (MTL[j] === MTL[i]) { c++; if (NEAR[j] > nr) nr = NEAR[j]; } if (c > mc || (c === mc && nr > mn)) { mc = c; mn = nr; maj = MTL[i]; } }
+      let r = 0, g = 0, b = 0;
+      for (const i of T) if (MTL[i] === maj) { r += CR[i]; g += CG[i]; b += CB[i]; }
+      for (const i of T) {
+        const m = MTL[i];
+        if (m === maj) continue;
+        let c = 0;
+        for (let y = Math.max(0, y0 - 1); y <= Math.min(h - 1, y0 + 2); y++) for (let x = Math.max(0, x0 - 1); x <= Math.min(w - 1, x0 + 2); x++) if ((x < x0 || x > x0 + 1 || y < y0 || y > y0 + 1) && PID[y * w + x] >= 0 && MTL[y * w + x] === m) c++;
+        if (c < 3) continue;
+        CR[i] = r / mc; CG[i] = g / mc; CB[i] = b / mc; MTL[i] = maj; LN[i] = 0;
+      }
+    }
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const i = y * w + x, q = ((y + oy) >> 1) * bw + ((x + ox) >> 1);
       if (PID[i] < 0) continue;

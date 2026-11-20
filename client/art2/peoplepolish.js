@@ -22,6 +22,11 @@ export const POLISH = {
   // big head under a big mass of hair, a wide deep body, thick arms, short legs: today's chunky measures, not pass 1's 3.1 heads)
   K: [1.38, 0.87, 0.96, 1.24, 1.1],
   hairVol: 2.6,       // the hair cap's thickness over the skull, times people.js's per-style volume (at 1 it's under an art pixel)
+  // shading at the game's size (people.js): a light colour's shadow tones turn less toward red and go less dark (rampSoft:
+  // 1 as today, 0 none of the turn), the ramp's darkest step is kept for lines (vMin), a part's shadow on another is
+  // lighter (shK: today 0.32) and the dither between two tones fainter (dith: today 0.18) - a yellow shirt was five tones
+  // from cream to dark red, which read as stains and as the arm beside it
+  rampSoft: 0.4, vMin: 0.3, shK: 0.18, dith: 0.08,
   eye2: true,         // a face at an angle keeps its far eye (people.js face)
   lnHead: 0.24,       // the line a fringe or a hat draws on the face: this much lighter (people.js: a shadow, not a headband)
   // the outline, on the art grid (people.js): [lit side: how much of the colour it borders, its brightest; the same in the shade]
