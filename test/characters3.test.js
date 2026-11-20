@@ -189,11 +189,15 @@ test('phone poses: texting, the texting walk and a call draw with the pass on; a
   assert.ok(/ped\.filming = 3/.test(src('server/systems/personas.js')), 'the selfie persona says so');
 });
 
+test('nobody in the city wears a piece only the pass draws (gear, props)', () => {
+  for (let k = 1; k < 1500; k++) for (const o of Object.values(LK.randomLook(k * 104729).outfit)) if (o) assert.ok(!LK.PIECES[o.id].d.pp, LK.PIECES[o.id].name);
+});
+
 test('props carried (a camera, a bouquet, a parasol): bags on things the renderer puts in the hand, redrawn by the pass', async () => {
   const W = await import('../shared/wardrobe.js');
   for (const [n, carry] of [['Camera', 'purse'], ['Bouquet', 'coffee'], ['Parasol', 'cane']]) {
     const P = LK.PIECES[LK.byName(n)];
-    assert.ok(P && P.slot === 'bag' && P.d.carry === carry && P.d.prop && W.sellerOf(P.i), n);
+    assert.ok(P && P.slot === 'bag' && P.d.carry === carry && P.d.prop && P.d.pp && W.sellerOf(P.i), n);
     for (const base of ['m', 'f']) {
       const A = plain(base, (L) => { L.outfit.bag = LK.item(n); }), B = strip(A, 'prop');
       assert.equal(A.carry, carry); assert.equal(A.prop[0], P.d.prop);
@@ -202,5 +206,20 @@ test('props carried (a camera, a bouquet, a parasol): bags on things the rendere
       assert.equal(diff(baked(A, 1), baked(B, 1)), 0, 'off: the thing it is built on');
       withPass(() => { for (const pose of ['walk0', 'run', 'sit', 'down']) assert.ok(person(A, 1, pose, 1, { tight: true }).w > 6, pose); });
     }
+  }
+});
+
+test('over the taller head: the name tag rises with the head, as the bubbles and the marks do; every pose keeps its parts together with the pass on', async () => {
+  const { readFileSync } = await import('node:fs'), main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
+  assert.ok(/const SKULL_HEAD = window\.CLA_POLISH \? 50 : 46;/.test(main) && /const y = py - 26 \/ z - \(SKULL_HEAD - 46\);/.test(main), 'the name: up by the pass\'s two art pixels, and where it was with the pass off');
+  // the head's top really is two art pixels (4 world px) higher: a standing figure, the pass off and on
+  const A = plain('m'), off = baked(A, 0), on = withPass(() => baked(A, 0));
+  assert.ok(on.ay - off.ay >= 1 && on.ay - off.ay <= 3, `feet to the top of the sprite: ${off.ay} -> ${on.ay} art px`);
+  // animation sheets 4, 6 and 7's poses (and the rest): no frame breaks into more pieces with the pass on than off
+  const { POSES } = await import('../client/art2/people.js');
+  const pieces = (s) => { const seen = new Uint8Array(s.w * s.h); let n = 0; for (let i = 0; i < s.w * s.h; i++) { if (seen[i] || s.p0[i * 4 + 3] < 128) continue; let c = 0; const st = [i]; seen[i] = 1; while (st.length) { const j = st.pop(); c++; const x = j % s.w, y = (j / s.w) | 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= s.w || yy >= s.h) continue; const k = yy * s.w + xx; if (!seen[k] && s.p0[k * 4 + 3] >= 128) { seen[k] = 1; st.push(k); } } } if (c > 1) n++; } return n; };   // (a lone art pixel - the water's foam - isn't a part)
+  for (const p of ['tuck', 'saddle', 'hood', 'hunch', 'strut', 'skate', 'blade', 'dance', 'push', 'lean', 'pushup', 'surfair', 'cartkick', 'cartride', 'cartsit', 'statue', 'statuebow', 'cue', 'escortR', 'escortL', 'sitx', 'bars', 'bang', 'thump']) {
+    assert.ok(POSES[p], p);
+    for (let f = 0; f < POSES[p]; f++) for (const d of [0, 1, 2, 4, 6]) assert.ok(withPass(() => pieces(baked(A, d, p, f))) <= pieces(baked(A, d, p, f)), `${p} frame ${f} facing ${d}`);
   }
 });

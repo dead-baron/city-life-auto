@@ -214,3 +214,128 @@ Always (the wardrobe):
 5. **Drop the mouth?** The concepts' small figures have eyes and a brow and no mouth. Pass 1's mouth is two faint pixels.
 6. **Approve by sheet:** dark clothing and uniforms (`vs-SM12`, `vs-SF12`, `vs-C3`, `grounds`) could go live apart from
    the proportions if you prefer to stage it.
+
+---
+
+# Pass 3 - notes (2026-11-19): the owner's decisions, the rest of the gap list
+
+The task is `docs/tasks/CHARACTERS3.md`. All eleven items are built, each its own commit; the sheets are in
+`pass3/`. Nothing was pushed. Not seen running in a browser (as passes 1 and 2); not stamped (stamp on merge).
+
+**Live on merge, with or without the pass:** no "censored nudity" setting; the patrol's light-blue shirt; the Socks
+slot and its eight pieces (drawn plain by today's renderer: one colour down from where they start); the five draped
+pieces as the plain shapes they are built on; the selfie persona's descriptor (`ph` 3 - drawn as the filming hold, as
+today, until the pass is on); the look's code can be longer (below). **Behind the switch:** everything else here. With
+the pass off every look that existed before draws pixel for pixel as it did (`test/peoplepolish.test.js`).
+
+## The sheets (`docs/characters/pass3/`, `node tools/charsheet.mjs <mode>`)
+
+| File | Mode | What it shows |
+| --- | --- | --- |
+| `police.png` | `p3police` | The police by rank: the patrol shirt navy (before) over light blue; the pass off; at night |
+| `faces-mouth.png` | `p3mouth` | The same faces with pass 1's mouth and without it, side by side, heads at 5x and whole figures on four grounds |
+| `hair.png` | `p3hair` | All 42 hairstyles, S SE E N: pass 2 over pass 3 |
+| `socks.png` | `p3socks` | The eight sock pieces on both bases: five facings, walking, running, sitting; the pass off; without |
+| `gear.png` | `p3gear` | Knee pads, elbow pads, skate pads, wallet chain, tool belt, climbing harness, the same way |
+| `body.png` | `p3body` | Body freckles, vitiligo (light and dark skin), a prosthetic arm and leg on each side; dressed; without |
+| `drapes.png` | `p3drapes` | Hooded cloak, cape coat, sari, ghillie suit, morning dress; the pass off (the shape each is built on) |
+| `phone.png` | `p3phone` | Texting, the texting walk, a call, filming and the selfie in eight facings; pass 2's selfie; the pass off |
+| `props.png` | `p3props` | Camera, bouquet, parasol; the pass off; without |
+| `anim-4`, `anim-6`, `anim-7` | `anim` | The three animation sheets pass 2 did not study, the pass on |
+
+## The owner's decisions (11-19)
+
+1. **No "censored nudity" setting.** The Settings switch, `CLA_CENSOR`, the renderer's swimwear path (`censored` on the
+   look's art, in `peds.js`, `host.js`, `lookcore.js`, `people.js`), the Guide's sentence and the test are out. Nothing
+   on is always under the mosaic. A browser that had the setting saved keeps a stray `censor` key in `cla.settings`;
+   nothing reads it.
+2. **Patrol police in the light-blue shirt:** officers (ranks 0 and 1), rookies (still told apart by the ball cap) and
+   K9 handlers. A sergeant keeps navy under the gold chevrons - on light blue the chevrons would not read - and the
+   dress uniform is unchanged. With the pass on the patch on a light shirt is navy, the badge and buckle gold. On the
+   light shirt the badge is two art pixels of gold against light blue: it reads less than it did on navy.
+3. **The mouth is off**, behind one line: `POLISH.mouthOn` in `client/art2/peoplepolish.js` (`true` draws pass 1's
+   mouth). Painted lips - lipstick, glam, goth, a clown's - are drawn either way. The six lip shapes therefore show only
+   with the mouth on or with painted lips; the creator still offers them.
+
+## The gap list's rows
+
+- **Hair (gap 7).** Every style is now a mass in clean tones on the art grid, placed by where an art pixel sits in the
+  mass rather than by its own lighting: a lit top with a highlight in it, the body of the hair, a darker far side, a
+  dark underside (the fringe's lower row, the tips). Curls keep a broken tone, braids and locs their strands, long hair
+  a strand's shadow now and then. Shaved sides, a parting, ties and cuffs and the lines between locks are left alone.
+  It is one rule for all 42 styles (`hairLit`), not 36 hand-drawn shapes: the silhouettes are the styles' own, not one
+  pixel of outline moves (tested). The outline is the figure's own dark outline, as before.
+- **Socks (gap 14).** An eleventh slot, "Socks", with a tab in the creator: Ankle, Crew (in the starter wardrobe),
+  Striped crew, Tube, Knee, Thigh-high, Tights, Leg warmers. They show on a bare leg and never through trousers; with
+  the pass on the stripes are the trim colour and leg warmers go over leggings and trousers. White crew socks over
+  white sneakers barely show - that is the colours, not a fault. The city's people don't wear the slot.
+- **Small gear (gap 15).** Six accessories (the Jewelry slot): Knee pads, Elbow pads, Skate pads, Wallet chain, Tool
+  belt, Climbing harness. Only the pass draws them (`d.pp`), so the creator offers them only while it is on and random
+  looks never pick them. They are 2-6 art pixels each: the harness and the tool belt read; knee pads read on light
+  trousers and bare legs; **elbow pads and the wallet chain are at the edge of what shows** - a dark pixel or two.
+- **Body options (gap 16).** Body freckles, vitiligo and a prosthetic arm or leg (left or right) on the creator's Body
+  tab, offered while the pass is on; kept in the look (`body.marks`, `body.limb`). Vitiligo is pale patches fixed to
+  each body part; a prosthetic is dark metal with a lit joint in place of the skin - the same thickness as the limb it
+  replaces (a thinner limb would need its own geometry), and hidden by a sleeve, trousers or gloves. Freckles are
+  faint. Changing them counts as a change of body (the mirror at home).
+- **Drapes (gap 17).** Five wearable pieces, each on a shape the renderer already has, so they are worn with the pass
+  off too (a hooded long coat, a long coat, a gown, a hooded camo suit, a long coat and trousers): Hooded cloak (the
+  hood up unless you wear a hat), Cape coat, Sari, Ghillie suit, Morning dress. The pass adds what makes each its own.
+  **How well they read:** the ghillie suit, the cloak and the morning dress read; the sari is a red gown with a gold
+  border and a faint pallu; the cape coat's hem line is weak - it still looks like a coat. None has a silhouette of its
+  own (no cape flare, no train).
+- **Phone poses (gap 13).** Texting, the texting walk and a call already existed (the texter and caller personas, the
+  player's phone-out hold); checked with the pass on - the phone is in the hands and at the ear. What was missing was
+  the selfie: the selfie persona used the two-handed filming hold. Now the server marks it (`ph` 3) and the pass draws
+  one arm out and up with the chin turned to it. No new emote for players (emotes round 3 is deferred, DECISIONS).
+- **Props carried (gap 20).** Camera, Bouquet and Parasol as bags, drawn by the pass over the block, cup and cane the
+  renderer puts in the hand (`d.pp`: offered while the pass is on, never in random looks). The parasol is carried
+  closed - an open one needs a canopy the figure renderer doesn't have. The bouquet is held low at the hip, a few pink
+  and green pixels; the camera hangs from the hand with the bag's strap across the chest.
+- **Animation sheets 4, 6, 7** (tuck, saddle, hood, the walk styles, dance, push, lean, push-ups; the surf air, carts,
+  the statue, the cue, escorts, sitting on a bench, bars; bang, thump): looked at frame by frame - limbs attached, held
+  things in the hand, nothing to fix. A check over all 114 poses (the 68 here and the 46 emotes, dances and lasting
+  poses), every frame, found no frame that breaks into more parts with the pass on, bar one stray foam pixel beside the
+  shoulder in two swim frames, left as it is.
+- **The name tag.** By the code (`client/main.js` `drawWorldLabels`) a name's baseline is 26 screen px above the feet at
+  any zoom - it is not tied to the top of the head. The pass's people are two art pixels (4 world px) taller, so the
+  name now rises by the same 4 world px with the pass on and keeps its place against the head; off, it is where it was.
+  **For the owner to look at in the game:** since the distance is in screen px and a figure is 46 world px tall, on a
+  large monitor (zoom about 1.25) the name should sit lower against the figure than on a phone. I could not see it
+  running, so I left that as it is.
+
+## The look's code
+
+66 letters as before for a look with none of the new things; 71 with underwear; 76 with socks (the underwear's five
+letters are zeros if there is none); 77 with a body option (one more letter). Old codes read as before. A page still
+on an older build cannot read a longer code and draws that player's stand-in until it reloads (as with pass 2's 71).
+
+## Budgets and tests
+
+- The renderer's code: **413.97 KB of 414**, measured by hand with LF endings (`tools/perf.mjs` can't run on this
+  checkout). It is full. The catalogue's 27 new lines and the hooks cost about 1.2 KB; removing the swimwear path and
+  shortening the catalogue's comments paid for it. Page 531.8 / 540, bake worker 1019.0 / 1020. The pass's own
+  drawing is in `peoplepolish.js`, loaded only when on, in no budget. **Making the pass the default will need a
+  budget decision** (its file is about 10 KB gzipped, or it stays a second file).
+- `test/characters3.test.js` (11 tests). Two older tests changed because they were passing on the hair's speckle, which
+  differs with every look's seed and is gone with clean hair: with the pass on, `peoplelook.test.js` now counts a pair
+  of glasses' own pixels (6 or more, was 10) and a small step between two face options; the lip shapes are checked in
+  the new file with the mouth on. `peoplepolish.test.js` measures the head with the mouth drawn, as pass 1 did.
+- The whole suite: see the DEVLOG entry for the count against the commit before this pass.
+
+## What's left
+
+- Nothing of the task's eleven items. Weak spots, in order: the cape coat, the sari, elbow pads, the wallet chain, the
+  bouquet (above).
+- From the gap list, still not built: an open parasol, a towel over the shoulder, a thinner prosthetic, a real cape or
+  train silhouette - each needs geometry in the renderer, which has no room in its budget.
+- The dark-cloth lift and the hair's tones are tuned on sheets, not in the game's lighting.
+
+## The owner's choices
+
+1. **Approve by sheet.** `hair.png` and `faces-mouth.png` change every person; the rest are pieces you choose to wear.
+2. **A sergeant in navy, patrol in light blue** - say if sergeants should be light blue too (one word in
+   `shared/look.js` `policeLook`).
+3. **Pieces only the pass draws** (gear, props, body options) are hidden in the creator while it is off but are in
+   the stores' stock lists. If the pass stays off for long, say if they should be held back from the stores too.
+4. **The name tag's height on large screens** (above).

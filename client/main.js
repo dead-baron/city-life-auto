@@ -5312,7 +5312,7 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
       if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
     }
     if ((!only || only.tags) && p.d.pl && p.d.n && p.id !== S.myPedId) {
-      const y = py - 26 / z;
+      const y = py - 26 / z - (SKULL_HEAD - 46);   // (the polish pass's taller people: the name keeps its place against the head - pass 3)
       const np = p.d.np, nm = np && np.k ? `[${np.k}] ${p.d.n}` : p.d.n;   // (their name color, title plate and crew tag: server cosmetics.js)
       const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade, a faint shadow and no edge; members bright, with a dark edge all round - told apart by lightness and the edge, no word: the owner, 11-16)
       if (gu) { g.fillStyle = 'rgba(0,0,0,.45)'; g.fillText(nm, p.rx + 1 / z, y + 1 / z); }

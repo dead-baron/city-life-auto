@@ -1,7 +1,7 @@
 # The character concepts: a catalogue (2026-11-19, pass 2)
 
 Every image in `docs/characters/concepts/` (94), looked at one by one, then the gap list: what the concepts show that
-the game's people lacked, ranked by how much a player would notice. No sheet has labels except the three creator
+the game's people lacked, ranked by how much a player would notice (its last column brought up to pass 3). No sheet has labels except the three creator
 mock-ups (CC1). The game's figure is about 25 art pixels tall with a head 8 wide; "at game scale" means that.
 
 What every sheet shares: a 3/4 view from above, light from the upper left, a blue-violet shadow to the lower right;
@@ -131,25 +131,25 @@ tee, trim, metal pixels or contrasting shoes; identity from the hat or hair outl
 Ranked by how much a player would notice. *Fits* = fits at sprite size; *too small* = cannot be shown on a 25-px
 figure. "Built" refers to pass 2 (behind the switch unless it is a wardrobe piece); the rest is in `NOTES.md`.
 
-| # | The concepts show | The game had | At sprite size | Pass 2 |
+| # | The concepts show | The game had | At sprite size | Pass (2, then 3) |
 | --- | --- | --- | --- | --- |
 | 1 | Dark clothing as warm charcoal or navy with lighter folds, never flat black (SF12, SM12, C2, NP1-B) | Black, charcoal and navy closing up into one mass | Fits | Built: dark cloth re-lit |
 | 2 | An inner outline where the arm hangs over the body (every sheet) | A line only where there was a clear step in depth | Fits | Built |
 | 3 | A dark top parted from dark bottoms and dark shoes: a belt or waist line, a lighter sole (SM3, SF22, CP4) | One mass from collar to floor | Fits | Built: a waist line, lighter soles |
-| 4 | Police that read at once: gold badge and buckle on navy, a black belt line, the cap's badge, a light-blue patrol shirt (C3, CC5, SF21, SM21) | A navy figure with a cap | Fits | Built: brighter badge, buckle, shoulder patch; the light-blue shirt is the owner's choice |
+| 4 | Police that read at once: gold badge and buckle on navy, a black belt line, the cap's badge, a light-blue patrol shirt (C3, CC5, SF21, SM21) | A navy figure with a cap | Fits | Built: brighter badge, buckle, shoulder patch. **Pass 3:** the patrol's shirt light blue (the owner, 11-19; a sergeant's stays navy) |
 | 5 | The other jobs: paramedic (green, reflective bands), firefighter (red helmet, tan coat, yellow bands), security guard, detective, mechanic, courier, chef, doctor, ranger, lifeguard, builder (C3, SF21, SM21) | Chef, scrubs, hi-vis, coveralls, ranger, lifeguard, courier pack were in; no paramedic or firefighter uniform a player could wear, no reflective bands | Fits | Built: paramedic uniform, turnout gear, fire helmet, security shirt, reflective bands |
-| 6 | Underwear for both bases, front and back; lingerie; a hoodie over briefs (SF23-A..G, SM23) | One "Underwear" set; plain white basics under missing clothes | Fits (two colour blocks, a 1-px waistband) | Built: its own slot, 17 pieces, "Nothing on" with the mosaic |
-| 7 | Hair as an outline with a lit top; shapes the game lacked: bald on top with side hair, flat top, pompadour, afro puffs, a low ponytail, an emo fringe (CB3, CC2, C4) | 36 styles; none of those six | Fits (height above the skull, the tail) | Built: see NOTES |
+| 6 | Underwear for both bases, front and back; lingerie; a hoodie over briefs (SF23-A..G, SM23) | One "Underwear" set; plain white basics under missing clothes | Fits (two colour blocks, a 1-px waistband) | Built: its own slot, 17 pieces, "Nothing on" with the mosaic. **Pass 3:** no "censored" setting - always the mosaic |
+| 7 | Hair as an outline with a lit top; shapes the game lacked: bald on top with side hair, flat top, pompadour, afro puffs, a low ponytail, an emo fringe (CB3, CC2, C4) | 36 styles; none of those six | Fits (height above the skull, the tail) | Pass 2: the six shapes. **Pass 3:** every style (42) a mass in clean tones with a lit top, in every direction |
 | 8 | Outfits and accessories the wardrobe lacked (SF/SM, CC3-4, CP): a scarf, a neckerchief, a lanyard, a bolo tie, evening gloves, biker gloves, sweatbands, glow bracelets, headphones, a towel wrap, a boonie hat, a camo cap, animal masks, a kilt, a sherwani, a onesie, a sequin dress, a rash guard, a camisole, a sweater vest, a camo jacket, a cane, chaps (and a surfboard to carry) | Not in the catalogue | Fits (each is a colour block, a band or a silhouette change) | Built: added as wearable pieces, all but the surfboard (the list in NOTES) |
 | 9 | The body bobbing over a still shadow in the walk; arms swinging clear (C5, NP1-A) | A bob from the planted feet, small; arms inside the outline | Fits (one row) | Checked on the animation sheet: see NOTES |
-| 10 | Faces: two dark eyes under a brow, no mouth; sunglasses as a bar; beards as a jaw mask in six classes (CB2, CB4, CC2) | Pass 1's face (eyes, brow, nose shadow, a mouth) | Fits | Kept pass 1's; the mouth is fainter than the eyes on purpose. Owner's choice: drop the mouth as the concepts do |
+| 10 | Faces: two dark eyes under a brow, no mouth; sunglasses as a bar; beards as a jaw mask in six classes (CB2, CB4, CC2) | Pass 1's face (eyes, brow, nose shadow, a mouth) | Fits | Kept pass 1's. **Pass 3:** the mouth off behind one constant (the owner, 11-19); painted lips stay |
 | 11 | Gang colours carried on hat, stripe and shoes; a biker's back patch (C3, CC5, NP4) | Club patches and gang colours exist (clubs.js, the syndicate's stripe) | Fits | Already in; checked in the line-up |
 | 12 | Posture as personality: an elder's stoop, a swagger, a sway (NP1-A, NP2-B, CB1) | Walk styles exist for personas (gt: hunch...) | Fits | Already in (server personas); not changed |
-| 13 | Phone poses: text, call, selfie, a texting walk (CC6) | A phone prop and a look-at-phone pose | Fits (a 2-px glow) | Not built: left for an animation pass |
-| 14 | Tube socks, crew socks with stripes, knee socks, leg warmers (SF4, SF7, SF23) | Socks only under slides | Fits (a 1-px band) | Not built: needs a socks slot; in NOTES |
-| 15 | Knee pads, elbow pads, a wallet chain, a tool belt, a harness (SF7, SM7, SM21, SF16) | None | Fits, barely (2-4 px) | Not built |
-| 16 | Prosthetic limbs, vitiligo, freckles on the body (CB1) | Face freckles only | Fits (a dark thin limb) | Not built: a body option, not a wardrobe piece |
-| 17 | A sari, a ghillie suit, morning dress with tails, a hooded cloak, a cape-coat, a ball gown's veil and bouquet (SF17, SM17, CC4, SF12, SF1) | Evening gown, wedding dress and veil | The drape is the silhouette: needs its own shapes | Didn't fit this pass |
+| 13 | Phone poses: text, call, selfie, a texting walk (CC6) | A phone prop and a look-at-phone pose | Fits (a 2-px glow) | **Pass 3:** texting, the texting walk and a call were already in (checked with the pass on); the selfie built - an arm out and up |
+| 14 | Tube socks, crew socks with stripes, knee socks, leg warmers (SF4, SF7, SF23) | Socks only under slides | Fits (a 1-px band) | **Pass 3:** built - a Socks slot, eight pieces |
+| 15 | Knee pads, elbow pads, a wallet chain, a tool belt, a harness (SF7, SM7, SM21, SF16) | None | Fits, barely (2-4 px) | **Pass 3:** built as accessories the pass draws; elbow pads and the wallet chain at the edge of what shows |
+| 16 | Prosthetic limbs, vitiligo, freckles on the body (CB1) | Face freckles only | Fits (a dark thin limb) | **Pass 3:** built as body options (the limb dark, not thinner) |
+| 17 | A sari, a ghillie suit, morning dress with tails, a hooded cloak, a cape-coat, a ball gown's veil and bouquet (SF17, SM17, CC4, SF12, SF1) | Evening gown, wedding dress and veil | The drape is the silhouette: needs its own shapes | **Pass 3:** cloak, cape coat, sari, ghillie suit, morning dress built on shapes the renderer has (no silhouette of their own; the cape and the sari read weakly). Not built: a veil's bouquet as part of a gown |
 | 18 | Rings, nail polish, press-on nails, cufflinks, a tie bar, a pocket square, safety-pin earrings, a gold tooth, wrinkles, eye shapes (CP3, CB2, SM2) | - | **Too small to show** | - |
 | 19 | Lettering, band logos, patch text, embroidery, lace patterns, fishnet (SF11, SF12, SM15) | A print blob, a number, a patch | **Too small to show** beyond a blob or a dither | Lace is the trim colour scattered through the piece |
-| 20 | Props that are their own things: a shopping trolley, dogs on leads, a bicycle with a basket, a parasol, a bouquet, a camera (NP1-B, C2) | Carts, dogs and bikes exist as world things; no camera or parasol to carry | Fits | Not wardrobe: out of this pass |
+| 20 | Props that are their own things: a shopping trolley, dogs on leads, a bicycle with a basket, a parasol, a bouquet, a camera (NP1-B, C2) | Carts, dogs and bikes exist as world things; no camera or parasol to carry | Fits | **Pass 3:** a camera, a bouquet, a parasol (closed) to carry. Trolleys, dogs and bikes are world things, as before |

@@ -392,7 +392,7 @@ async function anim(out) {
   const per = +arg('per', 11);
   for (let i = 0, n = 1; i < names.length; i += per, n++) {
     const rows = names.slice(i, i + per).map((p) => { const nf = POSES[p], opt = HELD[p] ? { held: HELD[p] } : {}; return [p, [...[0, 1, 2, 3, 4, 5, 6, 7].map((d) => ({ L, d, pose: p, f: 0, opt })), ...[0, 2].map((d) => ({ L, d, pose: p, f: Math.max(1, nf >> 1), opt })), ...(nf > 3 ? [{ L, d: 1, pose: p, f: nf - 1, opt }] : [])]]; });
-    await grid(out.replace('.png', `-${n}.png`), 'ANIMATIONS, PASS 2 ON: S SE E NE N NW W SW, THEN ANOTHER FRAME S, E (SE)', rows, { k: 4, rh: 34, cw: 26, label: 90 });
+    await grid(out.replace('.png', `-${n}.png`), 'ANIMATIONS, THE PASS ON: S SE E NE N NW W SW, THEN ANOTHER FRAME S, E (SE)', rows, { k: 4, rh: 34, cw: 26, label: 90 });
   }
 }
 // the eight and three dark outfits on the grounds they walk - busy ones too - by day, at night, in rain: pass 1 over pass 2

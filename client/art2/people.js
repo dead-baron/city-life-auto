@@ -33,7 +33,7 @@
 //   hats: cap trucker police beanie bucket sunhat cowboy fedora hard helmet bandana headband hood
 //   carry: briefcase bag purse toolbag shopping coffee phone cane board, or any items.js kind (held)
 // Undressed bodies (a 'none' bottom, or a 'none' top on a woman) get a pixelated mosaic, the Sims' way, over the
-// private areas only, always and for everyone (the owner, 2026-11-19: no "censored" setting). Adults only.
+// private areas only, for everyone. Adults only.
 // Dither and texture patterns are anchored to the feet, so they hold still from frame to frame.
 // Also exported: POSES (frames per pose), SEATS (seat heights), PERSON_CAM, HAIR_STYLES, TOP_KINDS, SKIN_TONES,
 // cloth(colour) -> 5-step ramp. (Named looks for scenes, ARCHETYPES and randomPerson: client/art2/peoplepresets.js; the face
@@ -318,7 +318,7 @@ const ICLS = {
 };
 // ---- lights to carry and felling trees (#358, #359): the axe swung like a sledge, the lantern carried by its bail ----
 Object.assign(ICLS, { axe: 'big', lantern: 'bill', pickaxe: 'big', phoneSelfie: 'phoneup' });   // (pickaxe: a miner's - server activities.js)
-ITEMS.phoneSelfie = ITEMS.phoneUp;   // (a selfie: the phone held up as for a photo - the polish pass's own hold, PL.selfie)
+ITEMS.phoneSelfie = ITEMS.phoneUp;   // (a selfie: PL.selfie's hold)
 // ---- end ----
 // The umbrella's hold, in body space (x right, y forward, z up): the right hand in front of the right shoulder at a
 // set height whatever the build, the shaft UMBRELLA_LEN long straight up, so its top - where the renderer puts the
@@ -1023,7 +1023,7 @@ function wardrobe(A, D, TF, seed) {
     if (A.founder) { if (Math.abs(along - 0.5) < 0.07) Q.k -= 0.22; return skin; }
     if (legSkin || (bk === 'shorts' && along > 0.33) || (bk === 'trunks' && along > 0.18)) {
       if (bk === 'shorts' && along < 0.37) Q.k -= 0.2;
-      if (sox && along > A.socks.h) return sox;   // (the socks slot: on a bare leg, down from where they start)
+      if (sox && along > A.socks.h) return sox;   // (the socks slot)
       if ((tat & 2) && along < 0.4 && side > 0.3 && hash(Math.floor(along * 16), Math.floor((Q.l2 + 2) * 2), seed + 1) > 0.6) return ink;
       return skin;
     }
