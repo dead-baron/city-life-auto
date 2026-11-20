@@ -1290,8 +1290,8 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
   if (hatOn) { if (st === 'afro' || st === 'spiky' || st === 'curly' || st === 'mohawk' || st === 'topknot' || st === 'twinbuns' || st === 'curtains' || st === 'shag') st = 'short'; if (['hood', 'helmet', 'hijab', 'turban', 'durag', 'wrap', 'moto', 'skatehelmet'].includes(hat)) return; }   // (all the hair under a hood, a helmet, a hijab, a turban, a durag or a wrap)
   if (st === 'bald') return;
   const hr = D.head, HD = S.HD;
-  const vol = { sides: 0.7, quiff: 0.7, sidepart: 0.75, bigcurls: 1.2, shoulder: 0.95, boxbraids: 0.55 }[ex] ?? { buzz: 0.25, slick: 0.55, short: 0.85, spiky: 0.9, curly: 1.05, afro: 1.0, long: 0.95, wavy: 1.15, pony: 0.7, bun: 0.7, braids: 0.6, dreads: 0.85, mohawk: 0.22, bob: 1.25,
-    undercut: 0.75, fade: 0.45, mullet: 0.9, topknot: 0.6, pixie: 0.85, twinbuns: 0.7, pigtails: 0.75, braid: 0.7, curlylong: 1.3, shag: 1.15, cornrows: 0.3, curtains: 1.0, halfup: 0.95 }[st] ?? 0.9;
+  const vol = ({ sides: 0.7, quiff: 0.7, sidepart: 0.75, bigcurls: 1.2, shoulder: 0.95, boxbraids: 0.55 }[ex] ?? { buzz: 0.25, slick: 0.55, short: 0.85, spiky: 0.9, curly: 1.05, afro: 1.0, long: 0.95, wavy: 1.15, pony: 0.7, bun: 0.7, braids: 0.6, dreads: 0.85, mohawk: 0.22, bob: 1.25,
+    undercut: 0.75, fade: 0.45, mullet: 0.9, topknot: 0.6, pixie: 0.85, twinbuns: 0.7, pigtails: 0.75, braid: 0.7, curlylong: 1.3, shag: 1.15, cornrows: 0.3, curtains: 1.0, halfup: 0.95 }[st] ?? 0.9) * ((PL && PL.hairVol) || 1);
   // the hairline in the cap's own unit coords, by the angle round the head from the face: [forehead, temple, sideburn,
   // above the ear, nape]; the face, temples and ears stay clear so a profile still shows the eye, nose and ear
   const LN = { buzz: [0.5, 0.44, -0.12, 0.2, -0.5], slick: [0.5, 0.44, -0.2, 0.14, -0.55], short: [0.42, 0.38, -0.28, 0.1, -0.6], spiky: [0.5, 0.42, -0.24, 0.1, -0.62],

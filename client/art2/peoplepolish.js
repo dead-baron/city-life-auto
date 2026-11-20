@@ -18,7 +18,10 @@ const off = (c, skin, min) => { let o = c; for (let k = 0; k < 6 && dist(o, skin
 const outOf = (cx, e) => (e.p.x < cx.at(0, 1, 0).x ? -1 : 1);
 
 export const POLISH = {
-  K: [1.3, 1.06, 1.0, 1.02, 1.0],
+  // (11-20, the owner: "stay chunky" and "closer to the concepts" - the concepts shrunk to the game's 26 art pixels are a
+  // big head under a big mass of hair, a wide deep body, thick arms, short legs: today's chunky measures, not pass 1's 3.1 heads)
+  K: [1.38, 0.87, 0.96, 1.24, 1.1],
+  hairVol: 2.6,       // the hair cap's thickness over the skull, times people.js's per-style volume (at 1 it's under an art pixel)
   eyeZ: 0.02,
   hairLit: true,    // (pass 3: hair as a mass with a lit top - hairLit below)
   mouthOn: false,   // (pass 3, the owner 11-19: the concepts' small figures have no mouth - off; true draws pass 1's. Painted lips - lipstick, glam, goth, a clown's - always show)
@@ -37,6 +40,9 @@ export const POLISH = {
     if (fem && b.belly > 0 && b.belly < 1.2) { D.pelR[0] *= 1.08; D.hipX *= 1.05; D.waistR[0] *= 0.95; }   // (curvy: the hips, not the waist)
     // hands: never smaller than an art pixel and a half across, whatever the limbs' thickness
     D.fist = Math.max(D.fist, fem ? 2.75 : 3.0);
+    // a body with depth (the concepts' side views are a barrel, not a plank), and a big build's belly out in front
+    D.chestR[1] *= 1.1; D.waistR[1] *= 1.1; D.pelR[1] *= 1.08;
+    if (b.belly >= 1.2) { D.waistR[0] *= 1.12; D.waistR[1] *= 1.12; D.chestR[0] *= 1.06; D.shX *= 1.05; }
     D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;
   },
   // the nose: a shadow on the side away from the light (the light's from the left), on the row under the eyes
