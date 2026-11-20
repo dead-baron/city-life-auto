@@ -129,15 +129,15 @@ export function showGate(onDone, { into = null } = {}) {
   const ov = el(`<div class="${into ? 'acc-in' : css}" role="dialog" aria-modal="${into ? 'false' : 'true'}" data-cla-modal="1"><div class="${box}">
     <h2 class="acc-h">Before you play</h2>
     <p>City Life Auto has crime, shooting, cartoon blood and police chases, and online play and chat with other players who are strangers. Never share personal information in chat.</p>
-    <label class="acc-check"><input type="checkbox" id="g-age" ${g.age17 ? 'checked' : ''}> I'm 13 or older (under 18: with a parent or guardian's permission)</label>
-    <p class="acc-lbl">We'd like to use Google Analytics to see how people find and play the game. Essential only keeps it off.</p>
+    <p>By playing you confirm you're 13 or older (under 18: with a parent or guardian's permission).</p>
     <div><button id="g-all" class="${btn}">Accept</button><button id="g-ess" class="${btn2}">Essential only</button></div>
+    <p class="acc-lbl">Accept also turns on Google Analytics, to see how people find and play the game; Essential only keeps it off.</p>
     <p id="g-msg" class="acc-msg acc-err"></p></div></div>`);
   (into || document.body).appendChild(ov);
   modals.push(ov); padIdx = 0;
   keyboardDialog(ov);
   const go = (consent) => {
-    if (!ov.querySelector('#g-age').checked) { ov.querySelector('#g-msg').textContent = 'You need to be 13 or older to play.'; return; }
+    // (no checkbox: pressing a button is the confirmation - the owner, 11-20; the text above says so)
     const v = { age17: g.age17 || Date.now(), consent, at: Date.now(), v: 1 };
     ls.set(GATE_KEY, JSON.stringify(v));
     closeModal(ov);

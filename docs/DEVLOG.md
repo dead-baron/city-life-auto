@@ -25275,3 +25275,10 @@ then frames - and each one's camera travels, so the page side of "shots that don
 with the shots' own anchors; the live cause (a place whose anchors or cast don't resolve, the camera holding its last
 spot) needs a World v3 run to find. Not done: shots of NPCs playing their games (pool, cards, hoops) - new scenes with
 the watchable games' server sims, a server change.
+
+## 2026-11-20 - The "Before you play" screen: no checkbox
+
+The owner (11-20): smoother, without the tick box. The screen now says "By playing you confirm you're 13 or older
+(under 18: with a parent or guardian's permission)" and either button confirms it: **Accept** (with Google Analytics) or
+**Essential only** (without) - side by side, equally easy, as Europe's consent rules want; the analytics line is a small
+note under them. Shown once and remembered, as before. `client/account.js` showGate.

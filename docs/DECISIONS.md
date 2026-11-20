@@ -118,6 +118,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Ads account (AdSense / Ad Placement API) is the owner's sign-up. (11-03; launch-plan 11-03) - OPEN: when.
 
 ## HUD and controls
+- The "Before you play" screen has no 13+ checkbox: its text says playing confirms 13+ (under 18 with permission) and either button (Accept / Essential only) confirms it; analytics as a small note, the two buttons equally easy. Shown once. (11-20; chat)
 - Car soccer: no goal replay (it confused) - a goal shows GOAL! and the scorer, the ball stays in the net, then kick-off puts the ball and every car back at the start. (11-17 21:05; chat)
 - Minimal HUD: a dot or one fading line, never a new on-screen panel; new UI lives in the phone. (10-24; agent-rules, chat)
 - World events (someone collapsed, a fire...): no arrow pointing at them off screen - you see one when it's on screen, marked by an SNES-style pixel highlight (corner brackets and a chevron in its colour); the radar still shows them. (11-17 20:34; chat)
