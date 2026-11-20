@@ -1343,7 +1343,9 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
     }
   };
   if (cut < 9) { if (!['pony', 'long', 'wavy', 'braids', 'dreads', 'bob', 'pigtails', 'braid', 'curlylong', 'halfup', 'mullet'].includes(st)) return; }
-  if (st === 'spiky') {
+  const HX = PL && { E, C, at, nk, sw, lock, bumps, W, S, D, hr, HD, backY, GR, capC, mmul, rx, ry, hatOn }, re = HX && PL.hairRe && PL.hairRe(ex, HX);   // (pass 5: the styles the pass draws in shapes of its own)
+  if (re) { /* drawn */ }
+  else if (st === 'spiky') {
     spike(12, 4.6, 0.3, 1.35, 2.3);
     for (let i = 0; i < 4; i++) { const a = -0.55 + i * 0.36; C(at([a * 0.9, 0.5, 0.92]), at([a * 1.2, 1.2, 0.55 + rnd(i, 9) * 0.12]), 1.6, 0.4, GR.HAIR, 'spike', W.hairM); }
   }
@@ -1395,14 +1397,14 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
     const az = 0.9 + (i / 11) * (2 * Math.PI - 1.8) + rnd(i, 6) * 0.2, el = -0.45 + rnd(i, 7) * 0.4;
     C(onCap(az, el + 0.4, -1.2), onCap(az, el - 0.25, 0.6 + rnd(i, 8) * 0.9), 1.5, 0.4, GR.HAIR, 'spike', W.hairM);
   }
-  if (!hatOn) {
+  if (!hatOn && !re) {
     if (ex === 'quiff') { E(at([0.04, 0.5, 1.02]), mmul(HD, rx(-0.5)), [hr[0] * 0.72, 3.2, 2.9], GR.HAIR, 'quiff', W.hairM); E(at([0.02, 0.05, 1.04]), HD, [hr[0] * 0.66, 3.6, 1.8], GR.HAIR, 'quiff', W.hairM); }
     else if (ex === 'sidepart') E(at([0.28, 0.32, 0.9]), mmul(HD, ry(0.25)), [hr[0] * 0.62, hr[1] * 0.62, 1.8], GR.HAIR, 'sweep', W.hairM);
     else if (ex === 'manbun') { E(at([0, -0.66, 0.84]), HD, [2.6, 2.5, 2.5], GR.HAIR, 'bun', W.hairM); E(at([0, -0.52, 0.72]), HD, [1.6, 1.0, 1.4], GR.HAIR, 'tie', () => cloth('#2a2226')); }
     else if (ex === 'bigcurls') bumps(vadd(capC, mv(HD, [0, -0.4, -1.2])), [hr[0] + 1.9, hr[1] + 1.6, hr[2] + 0.9], 18, 2.4, -0.55, 1.05, 0.45, 1);
     else if (ex === 'shavedside') { lock(at([-0.35, 0.25, 1.02]), at([1.0, 0.3, -0.1]), 2.7, 1.8); lock(at([0.2, -0.3, 0.98]), sw(at([1.08, -0.4, -0.6]), 0.3), 2.5, 1.6); lock(at([0.6, 0.0, 0.5]), at([1.12, 0.05, -0.75]), 1.6, 0.6); }
   }
-  if (PL && PL.hair && !hatOn) PL.hair(ex, { E, at, nk, sw, lock, bumps, W, S, D, hr, HD, backY, GR, capC, mmul, rx, ry });
+  if (HX && PL.hair && !hatOn && !re) PL.hair(ex, HX);
   if (st === 'long' || st === 'wavy' || st === 'braids' || st === 'dreads' || st === 'bob' || st === 'curlylong' || st === 'halfup' || st === 'shag') {
     const curls = st === 'curlylong', wav = st === 'wavy' || st === 'curlylong' || st === 'halfup';
     if (st === 'curlylong' || st === 'halfup') st = 'wavy'; else if (st === 'shag') st = 'bob';

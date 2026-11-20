@@ -271,6 +271,36 @@ export const POLISH = {
     else if (ex === 'lowpony') { const r0 = at([0, -0.96, -0.28]); E(r0, HD, [1.3, 1.1, 1.2], GR.HAIR, 'tie', () => cloth('#2a2226')); lock(r0, sw(nk(0, backY - 0.4, -3.4), 0.5), 2.1, 1.8, 'tail'); lock(sw(nk(0, backY - 0.4, -3.4), 0.5), sw(nk(0, backY - 0.7, -8.6), 1), 1.8, 0.7, 'tail'); }   // (tied at the nape, hanging down the back)
     else if (ex === 'emo') { e([0.36, 0.7, 0.42], mmul(HD, ry(0.62)), [hr[0] * 0.74, 2.5, 2.9], 'sweep'); e([-0.5, 0.5, 0.74], HD, [hr[0] * 0.5, 2.2, 1.6], 'sweep'); }   // (a long fringe swept across one eye)
   },
+  // ---- pass 5 (docs/tasks/CHARACTERS5.md; the owner's shot, docs/characters/owner-hair-1119.png): the tied and the tall
+  // styles in shapes that read from every side (CB3-F, CB3-M, CC2-A). The camera looks down, so anything behind the
+  // crown shows above it: a bun was a point on a point (a cone), a ponytail's rising tail a spike. Here a knot is a
+  // ball wider than the crown under it, on a dark tie - a step in the outline; a tail leaves the back of the head and
+  // hangs; twin buns and puffs are balls apart at the top corners; pigtails stand out from the sides; a mohawk is a
+  // crest two art pixels wide. Returns true when it drew the style (people.js hairPrims then leaves its own shape out).
+  hairRe(ex, { E, C, at, nk, sw, lock, W, hr, HD, backY, GR, hatOn }) {
+    const M = W.hairM, ball = (c, r) => E(at(c), HD, r, GR.HAIR, 'bun', M), tie = (c, r, col = '#2a2226') => E(at(c), HD, r, GR.HAIR, 'tie', () => cloth(col));
+    if (ex === 'pony') {   // (tied at the back of the crown; the tail out a little, then down the back of the neck)
+      const r0 = at([0, -0.9, 0.5]), m = sw(at([0, -1.42, 0.12]), 0.25), e = sw(nk(3.2, backY - 0.6, hatOn ? -5.5 : -6.5), 1);
+      E(r0, HD, [1.7, 1.5, 1.6], GR.HAIR, 'tie', () => cloth('#c8302c')); lock(r0, m, 2.6, 2.5, 'tail'); lock(m, e, 2.5, 1.0, 'tail');
+      return true;
+    }
+    if (hatOn) return false;
+    if (ex === 'bun') { tie([0, -0.3, 1.02], [2.6, 2.5, 1.3], '#3a2a30'); ball([0, -0.34, 1.5], [4.1, 3.9, 3.5]); return true; }
+    if (ex === 'topknot') { tie([0, -0.02, 1.0], [2.4, 2.2, 1.1]); ball([0, -0.04, 1.3], [3.9, 3.6, 2.7]); return true; }
+    if (ex === 'manbun') { tie([0, -0.9, 0.2], [1.9, 1.4, 1.8]); ball([0, -1.22, 0.16], [3.4, 3.0, 3.3]); return true; }
+    if (ex === 'twinbuns') { for (const s of [-1, 1]) { ball([s * 0.95, -0.22, 1.02], [4.0, 3.8, 3.5]); } return true; }
+    if (ex === 'puffs') { for (const s of [-1, 1]) E(at([s * 0.98, -0.25, 1.0]), HD, [4.3, 4.1, 4.0], GR.HAIR, 'afro', M); return true; }
+    if (ex === 'halfup') { tie([0, -0.3, 1.1], [2.6, 2.5, 1.3]); ball([0, -0.34, 1.54], [4.1, 3.9, 3.4]); return true; }   // (CB3-F: a knot on the crown over long hair)
+    if (ex === 'pigtails') {
+      for (const s of [-1, 1]) { const r0 = at([s * 0.98, -0.3, 0.2]), m = sw(at([s * 1.5, -0.3, -0.1]), 0.4), e = sw(nk(s * (hr[0] + 2.3), -1.0, -4.6), 1); tie([s * 0.98, -0.3, 0.2], [1.5, 1.4, 1.5], '#c8302c'); lock(r0, m, 2.2, 2.5, 'tail'); lock(m, e, 2.5, 1.1, 'tail'); }
+      return true;
+    }
+    if (ex === 'mohawk') {   // (a crest from the forehead over the crown to the nape, highest over the crown)
+      for (let i = 0; i < 6; i++) { const t = i / 5, a = 0.85 - t * 2.2, k = 1.28 + 0.34 * Math.sin(Math.PI * Math.min(1, t * 1.2)); C(at([0, Math.sin(a) * 0.7, Math.cos(a) * 0.7]), at([0, Math.sin(a) * k, Math.cos(a) * k]), 2.5, 1.5, GR.HAIR, 'spike', M); }
+      return true;
+    }
+    return false;
+  },
   // the arm over the body: a line on the body's pixels beside an arm in front of them, however close the two are (the
   // renderer's own lines want a clear step in depth: an arm hanging by a chest has none, and the two were one mass)
   post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, GR, AX, AY, fig, A }) {

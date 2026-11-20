@@ -246,7 +246,7 @@ async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 15
     String(name).split('|').forEach((t, i) => sh.text(t, 6, Math.round(y - RH / 2) + i * 12, 2));
     for (const [ci, c] of cells.entries()) {
       if (!c) continue;
-      await polish(c.on !== false); if (c.p1) setPolish(PASS1()); if (c.p2) setPolish(PASS2());
+      await polish(c.on !== false); if (c.p1) setPolish(PASS1()); if (c.p2) setPolish(PASS2()); if (c.p4) setPolish(PASS4());
       const x = label + ci * CW + CW / 2;
       if (c.bg) sh.rect(x - CW / 2, y - RH + 2 * k, CW, RH, c.bg);
       if (c.busy) for (let j = 0; j < RH; j += 2) for (let i = 0; i < CW; i += 2) { const q = Math.sin((x + i) * 12.9898 + (y + j) * 78.233) * 43758.5453, f = q - Math.floor(q); if (f < 0.34) sh.rect(x - CW / 2 + i, y - RH + 2 * k + j, 2, 2, c.bg.map((v, n) => Math.max(0, Math.min(255, v + (f < 0.12 ? c.busy[n] : f < 0.22 ? -c.busy[n] : c.busy[n] / 2))))); }
@@ -359,6 +359,17 @@ async function p3hair(out) {
   for (let i = 0; i < HS.length; i += per) for (const p2 of [true, false]) rows.push([p2 ? 'PASS 2' : 'PASS 3', HS.slice(i, i + per).flatMap((h, j) => dirs.map((d, n) => ({ L: mk(h, i + j), d, p2, opt: { region: 'head' }, head: 1, t: !p2 || n ? '' : LK.HAIR_STYLES[h][0] })))]);
   await grid(out, 'EVERY HAIRSTYLE, S SE E N: PASS 2 OVER PASS 3 (AN OUTLINE AND A LIT TOP, AS THE CONCEPTS DRAW HAIR)', rows, { k: 6, rh: 19, cw: 13, label: 80 });
 }
+// ---- pass 5 (docs/tasks/CHARACTERS5.md): every hairstyle, pass 4 | pass 5, S SE E N, on both bases (a style one base
+// wears: that base twice, another colour). --only 20,21 for some styles, --k 8 for bigger
+const P5_KEYS = ['hairRe'];
+const PASS4 = () => ({ ...POLISH, ...Object.fromEntries(P5_KEYS.map((k) => [k, null])) });
+async function p5hair(out) {
+  const only = arg('only', null), HS = LK.HAIR_STYLES.map((h, i) => i).filter((i) => !only || only.split(',').map(Number).includes(i)), dirs = [0, 1, 2, 4], k = +arg('k', 4), rows = [], half = only ? HS.length : Math.ceil(HS.length / 2);
+  const mk = (h, base, n) => { const L = LK.emptyLook(base); L.hair.style = h; L.hair.color = [1, 3, 0, 5, 2, 12, 4][(h + n * 3) % 7]; L.body.skin = [1, 4, 9, 12][(h + n) % 4]; L.outfit.top = LK.item('Plain tee'); L.outfit.bottoms = LK.item('Jeans'); return LK.validLook(L); };
+  const cells = (h) => { const s = LK.HAIR_STYLES[h], bs = s[1].length > 1 ? ['m', 'f'] : [s[1], s[1]]; return bs.flatMap((b, n) => [true, false].flatMap((p4) => dirs.map((d, j) => ({ L: mk(h, b, n), d, p4, opt: { region: 'head' }, head: 1, t: !n && p4 && !j ? s[0] : !j ? (p4 ? '4' : '5') : '' })))); };
+  for (let i = 0; i < half; i++) rows.push(['', [...cells(HS[i]), ...(HS[i + half] !== undefined ? cells(HS[i + half]) : [])]]);
+  await grid(out, 'EVERY HAIRSTYLE: PASS 4 | PASS 5, S SE E N, BOTH BASES (MAN, WOMAN; ONE BASE ONLY: TWICE)', rows, { k, rh: 19, cw: 13, label: 8 });
+}
 // a slot's pieces on both bases: front, front quarter, side, back, walking - the pass on; then the pass off; then without
 const pieceRows = (slot, wear, names = null) => LK.PIECES.filter((p) => p && p.slot === slot && (!names || names.includes(p.name))).flatMap((p) => ['m', 'f'].filter((b) => !names || p.b.includes(b) || slot !== 'socks').map((base) => { const L = wear(base, p), N = wear(base, null); return [p.name.replace(' and ', ' +|') + '|' + (base === 'm' ? 'MAN' : 'WOMAN'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 6 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 2, pose: 'run', f: 2 }, { L, d: 1, pose: 'sit', f: 0 }, { L, d: 1, on: false, t: 'off' }, { L: N, d: 1, t: 'without' }]]; }));
 async function p3socks(out) {
@@ -469,7 +480,7 @@ async function versus(outDir) {
     sh.save(join(outDir, 'vs-' + img + '.png'));
   }
 }
-const DOCS = join(ROOT, 'docs', 'characters'), P2 = join(DOCS, 'pass2'), P3 = join(DOCS, 'pass3'), P4 = join(DOCS, 'pass4');
+const DOCS = join(ROOT, 'docs', 'characters'), P2 = join(DOCS, 'pass2'), P3 = join(DOCS, 'pass3'), P4 = join(DOCS, 'pass4'), P5 = join(DOCS, 'pass5');
 if (mode === 'before') await lineup(false, arg('out', join(DOCS, 'before.png')), 'TODAY\'S PEOPLE (BEFORE)');
 else if (mode === 'after') await lineup(true, arg('out', join(DOCS, 'after.png')), 'AFTER: THE POLISH PASS');
 else if (mode === 'side') await sides(arg('out', DOCS));
@@ -494,5 +505,6 @@ else if (mode === 'p3drapes') await p3drapes(arg('out', join(P3, 'drapes.png')))
 else if (mode === 'p3phone') await p3phone(arg('out', join(P3, 'phone.png')));
 else if (mode === 'p3props') await p3props(arg('out', join(P3, 'props.png')));
 else if (mode === 'p4under') await p4under(arg('out', join(P4, 'underwear.png')));
+else if (mode === 'p5hair') await p5hair(arg('out', join(P5, 'hair.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

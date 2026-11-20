@@ -42,7 +42,7 @@ test('off by default, and off is today\'s people: switching the pass on and off 
 });
 
 test('the game\'s switch: a polished sprite has its own key, and nothing is polished until the pass is loaded', async () => {
-  const app = { lk: LK.encodeLook(LK.STARTERS[1].look) }, A = PD.adaptApp(app);
+  const app = { lk: LK.encodeLook(LK.STARTERS[0].look) }, A = PD.adaptApp(app);   // (not the Beachgoer: pass 5 took the spike off her ponytail, which stood over the crown as high as the pass's longer legs)
   PD.usePolish(true);   // (not loaded yet: stays off)
   const k0 = PD.pedKey(A, 'idle', 0, 0, 0), g0 = PD.pedSprite(A, 'idle', 0, 0, 0);
   assert.ok(k0[0] !== '~');

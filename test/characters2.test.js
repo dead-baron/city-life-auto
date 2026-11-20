@@ -168,7 +168,7 @@ test('the concepts\' six more hairstyles: their own shapes with the pass on, the
     const base = s[1][0];
     assert.ok(head(base, i, 5).h > 16, `${s[0]}: off, it draws (as the style it is built on)`);
     // (the same head with the pass's hair left out: the shape is the pass's)
-    setPolish({ ...POLISH, hair: null, hairCut: null });
+    setPolish({ ...POLISH, hair: null, hairCut: null, hairRe: null });
     let plain; try { plain = [head(base, i, 5), head(base, i, 1)]; } finally { setPolish(null); }
     withPass(() => assert.ok(!same(head(base, i, 5), plain[0]) || !same(head(base, i, 1), plain[1]), `${s[0]}: on, its own shape`));
   }
