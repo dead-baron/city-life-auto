@@ -239,6 +239,17 @@ export const POLISH = {
       wrap('pel', (R, Q) => (Q.f > 0 ? stripe(Q) : R));
       wrap('torso', (R, Q) => (R !== SKN && Q.f > 0.05 && Math.abs(Q.u) < 0.34 && Q.z < D.chestUp + 0.6 && Q.z > D.waistUp - 1.2 ? t2 : R));
     }
+    // props carried (pass 3, gap 20; lookcore.js d.prop -> A.prop [what, its trim colour]), each the thing the renderer
+    // puts in the hand, redrawn: a camera - a dark body, a silver top, the lens' glint (the small bag's block); a bouquet
+    // - green stems under a head of flowers, specks of the trim colour (the cup's cone); a parasol - carried closed: the
+    // cloth furled in a spiral of its two colours, a pale handle (the cane)
+    const PR = A.prop;
+    if (PR) {
+      const pc = cloth(A.bagColor), pt = cloth(PR[1]), GREEN = cloth('#3f7a34'), spk = (Q, n) => ((Math.floor((Q.l0 + 2) * n) + Math.floor((Q.l1 + 2) * n) * 3 + Math.floor((Q.l2 + 2) * n) * 5) % 3 === 0);
+      if (PR[0] === 'camera') wrap('leather', (R, Q) => { if (Q.l2 > 0.55) { Q.gloss = 1; return pt; } if (Math.abs(Q.l0) < 0.5 && Math.abs(Q.l2) < 0.5) { Q.gloss = 1; Q.k += 0.3; return cloth('#7fa6c4'); } Q.gloss = 0; return pc; });
+      if (PR[0] === 'bouquet') wrap('cup', (R, Q) => (Q.l0 < 0.42 ? GREEN : spk(Q, 3) ? pt : (Q.k += 0.08, pc)));
+      if (PR[0] === 'parasol') wrap('wood', (R, Q) => (Q.l0 < 0.1 ? cloth('#d8c8a8') : Q.l0 > 0.96 ? cloth('#2a2226') : Math.floor(Q.l0 * 9 + Q.l1 * 1.5 + 2) & 1 ? pt : pc));
+    }
     wrap('pel', (R, Q) => { if (bothDark && R === W.bot && Q.z > (T.tuck ? 1.4 : -1.9) && Q.z < (T.tuck ? 2.2 : -0.9)) Q.k += 0.3; return fix(R); });
   },
   // hair (CB3-M, CB3-F, CC2): the six shapes the concepts have that the list lacked, each on a style the renderer

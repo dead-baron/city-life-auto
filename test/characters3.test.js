@@ -188,3 +188,19 @@ test('phone poses: texting, the texting walk and a call draw with the pass on; a
   assert.ok(/p\.d\.ph === 3 \? 'phoneSelfie'/.test(src('client/art2/game/host.js')), 'the renderer draws ph 3 as a selfie');
   assert.ok(/ped\.filming = 3/.test(src('server/systems/personas.js')), 'the selfie persona says so');
 });
+
+test('props carried (a camera, a bouquet, a parasol): bags on things the renderer puts in the hand, redrawn by the pass', async () => {
+  const W = await import('../shared/wardrobe.js');
+  for (const [n, carry] of [['Camera', 'purse'], ['Bouquet', 'coffee'], ['Parasol', 'cane']]) {
+    const P = LK.PIECES[LK.byName(n)];
+    assert.ok(P && P.slot === 'bag' && P.d.carry === carry && P.d.prop && W.sellerOf(P.i), n);
+    for (const base of ['m', 'f']) {
+      const A = plain(base, (L) => { L.outfit.bag = LK.item(n); }), B = strip(A, 'prop');
+      assert.equal(A.carry, carry); assert.equal(A.prop[0], P.d.prop);
+      const seen = [0, 1, 2, 6, 7].map((d) => withPass(() => diff(baked(A, d), baked(B, d))));
+      assert.ok(Math.max(...seen) >= 2 && seen.filter((v) => v > 0).length >= 3, `${n} on ${base}: ${seen}`);
+      assert.equal(diff(baked(A, 1), baked(B, 1)), 0, 'off: the thing it is built on');
+      withPass(() => { for (const pose of ['walk0', 'run', 'sit', 'down']) assert.ok(person(A, 1, pose, 1, { tight: true }).w > 6, pose); });
+    }
+  }
+});

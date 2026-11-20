@@ -424,6 +424,10 @@ add('jacket', 'Cape coat', 'f', 'hifashion smart winter', 220, 'boutique', { k: 
 add('set', 'Sari', 'f', 'formal festival hifashion', 260, 'boutique', { k: 'gown', dr: 'sari' }, 'red', 'gold');
 add('set', 'Ghillie suit', 'mf', 'outdoors disguise', 150, 'costume', { k: 'hoodie', bk: 'cargo', p: 3, dr: 'ghillie' }, 'olive', 'khaki');
 add('set', 'Morning dress', 'm', 'formal', 450, 'boutique', { k: 'coat', bk: 'pants', dr: 'tails' }, 'charcoal', 'light grey');
+// props carried (pass 3): d.prop what the polish pass makes of the thing in the hand
+add('bag', 'Camera', 'mf', 'casual outdoors retro', 140, 'clothing', { carry: 'purse', prop: 'camera' }, 'charcoal', 'silver');
+add('bag', 'Bouquet', 'mf', 'formal festival', 25, 'clothing', { carry: 'coffee', prop: 'bouquet' }, 'pink', 'white');
+add('bag', 'Parasol', 'mf', 'alt retro hifashion', 60, 'boutique', { carry: 'cane', prop: 'parasol' }, 'black', 'burgundy');
 // small gear (pass 3). d.pp: only the polish pass draws it (the creator offers it while that is on)
 add('jewel', 'Knee pads', 'mf', 'skater work athletic', 22, 'sports', { knee: 1, pp: 1 }, 'charcoal');
 add('jewel', 'Elbow pads', 'mf', 'skater athletic', 20, 'sports', { elbow: 1, pp: 1 }, 'charcoal');
@@ -679,7 +683,7 @@ export function lookArt(L, opt = {}) {
     if (bg.d.back) { A.back = bg.d.back === 2 ? 'guitarcase' : 'backpack'; A.backColor = HEX(O.bag.c); if (bg.d.big) A.backBig = 1; if (bg.d.box) A.backBox = 1; }
     else if (bg.d.belt) A.beltBag = HEX(O.bag.c);
     else if (bg.d.rig) A.rig = HEX(O.bag.c);
-    else { A.carry = bg.d.carry; A.bagColor = HEX(O.bag.c); if (bg.d.small) A.bagSmall = 1; if (bg.d.big) A.bagBig = 1; }
+    else { A.carry = bg.d.carry; A.bagColor = HEX(O.bag.c); if (bg.d.prop) A.prop = [bg.d.prop, HEX(O.bag.t)]; if (bg.d.small) A.bagSmall = 1; if (bg.d.big) A.bagBig = 1; }
   }
   return A;
 }
