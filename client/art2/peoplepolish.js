@@ -20,6 +20,7 @@ const outOf = (cx, e) => (e.p.x < cx.at(0, 1, 0).x ? -1 : 1);
 export const POLISH = {
   K: [1.3, 1.06, 1.0, 1.02, 1.0],
   eyeZ: 0.02,
+  hairLit: true,    // (pass 3: hair as a mass with a lit top - hairLit below)
   mouthOn: false,   // (pass 3, the owner 11-19: the concepts' small figures have no mouth - off; true draws pass 1's. Painted lips - lipstick, glam, goth, a clown's - always show)
   noseK: 1.0,
   dims(D, A, b) {
@@ -159,7 +160,8 @@ export const POLISH = {
   },
   // the arm over the body: a line on the body's pixels beside an arm in front of them, however close the two are (the
   // renderer's own lines want a clear step in depth: an arm hanging by a chest has none, and the two were one mass)
-  post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, GR }) {
+  post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, GR, AX, AY, fig, A }) {
+    if (this.hairLit && fig.W.hairR) hairLit(fig.W.hairR, A.hair && A.hair.style, PID, CR, CG, CB, prims, w, h, GR, Math.round(AX) & 1, Math.round(AY) & 1);
     const g = (i) => { const k = PID[i]; return k >= 0 && k < 32000 && !NOO[i] ? prims[k].g : 0; }, arm = (x) => x === GR.ARML || x === GR.ARMR;
     const hit = [];
     for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
@@ -170,6 +172,43 @@ export const POLISH = {
     for (const i of hit) { LN[i] = 1; CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; }
   },
 };
+// ---- pass 3 (docs/tasks/CHARACTERS3.md; gap 7): every hairstyle drawn as the concepts draw hair (CB3, CC2, C4) - a mass
+// in clean tones on the art grid: a lit top (the crown's upper left, a highlight in it), the body of the hair, a dark
+// underside and far edge (the figure's outline is beyond it). The renderer's own hair is a form lit pixel by pixel - at
+// 8 art pixels a speckle; here each art pixel of hair takes its tone from where it sits in the mass. Only the hair's
+// own tones are redrawn: shaved sides, a parting, ties, cuffs and the lines between locks stay as they are.
+// Curls keep a broken tone, braids and locs their strands.
+const HAIR_TEX = { afro: 1, curly: 1, curlylong: 1, bigcurls: 1, puffs: 1, dreads: 2, boxbraids: 2, braids: 2, braid: 2, cornrows: 2 };
+function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
+  const bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, H = new Uint8Array(bw * bh), F = new Uint8Array(bw * bh), T = new Uint8Array(w * h), tex = HAIR_TEX[style] | 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x, k = PID[i], b = ((y + oy) >> 1) * bw + ((x + ox) >> 1);
+    if (k < 0 || k >= 32000) continue;
+    F[b]++;
+    if (prims[k].g !== GR.HAIR) continue;
+    for (const c of R) if (c[0] === CR[i] && c[1] === CG[i] && c[2] === CB[i]) { T[i] = 1; H[b]++; break; }
+  }
+  const hair = (x, y) => x >= 0 && y >= 0 && x < bw && y < bh && H[y * bw + x] >= 2, fig = (x, y) => x >= 0 && y >= 0 && x < bw && y < bh && F[y * bw + x] >= 2;
+  const tone = new Int8Array(bw * bh).fill(-1), TN = [R[1], R[2], R[3], R[4], mix(R[4], [255, 244, 226], 0.28)];   // (underside, far side, body, lit, highlight)
+  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
+    if (!hair(x, y)) continue;
+    let d = 0; while (d < 9 && hair(x, y - d - 1)) d++;
+    let xa = x, xb = x; while (hair(xa - 1, y)) xa--; while (hair(xb + 1, y)) xb++;
+    const rel = (x - xa + 0.5) / (xb - xa + 1), wide = xb - xa + 1, under = !hair(x, y + 1), far = !hair(x + 1, y);
+    let t = 2;
+    if (under && (d > 0 || !fig(x, y + 1))) t = 0;                      // (the underside: tips, a fringe's lower row)
+    else if (far && wide > 2 && !fig(x + 1, y)) t = 1;                  // (the side away from the light)
+    else if (d <= (hair(x, y + 4) ? 2 : 1) && rel < 0.72) t = d === (hair(x, y + 2) ? 1 : 0) && wide > 3 && rel > 0.2 && rel < 0.55 ? 4 : 3;   // (the lit top, a highlight in it)
+    if (tex === 1 && t > 0 && (x * 7 + y * 13) % 3 === 0) t--;          // (curls: a broken tone)
+    if (t === 2 && (tex === 2 ? d > 1 && (x & 1) : !tex && d > 3 && x % 3 === 0)) t = 1;   // (braids and locs: strands; long hair: a strand's shadow now and then)
+    tone[y * bw + x] = t;
+  }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x; if (!T[i]) continue;
+    const t = tone[((y + oy) >> 1) * bw + ((x + ox) >> 1)]; if (t < 0) continue;
+    const c = TN[t]; CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2];
+  }
+}
 // a dark ramp re-lit (kept per ramp; a re-lit ramp is its own)
 const RELIT = new WeakMap(), DARK_L = [0.06, 0.11, 0.185, 0.3, 0.44];
 const isDark = (R) => Array.isArray(R) && R.length === 5 && lum(R[3]) < 0.27;

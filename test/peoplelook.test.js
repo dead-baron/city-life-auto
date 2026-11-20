@@ -137,17 +137,22 @@ test('the eye colour shows at the game\'s size: the eye\'s pixel takes the colou
 test('at the game\'s size every pair of glasses and every face option shows', async () => {
   const { packGBuf, downsample2 } = await import('../client/art2/gbuf.js');
   const img = (L) => downsample2(packGBuf(person(LK.lookArt(L), 0, 'idle', 0, { tight: true, region: 'head' })));
-  const strong = (a, b) => { assert.equal(a.w * a.h, b.w * b.h); let n = 0; for (let o = 0; o < a.w * a.h * 4; o += 4) if (Math.hypot(a.p0[o] - b.p0[o], a.p0[o + 1] - b.p0[o + 1], a.p0[o + 2] - b.p0[o + 2]) > 40) n++; return n; };
+  const strong = (a, b, min = 40) => { assert.equal(a.w * a.h, b.w * b.h); let n = 0; for (let o = 0; o < a.w * a.h * 4; o += 4) if (Math.hypot(a.p0[o] - b.p0[o], a.p0[o + 1] - b.p0[o + 1], a.p0[o + 2] - b.p0[o + 2]) > min) n++; return n; };
+  // (with the polish pass on - peoplepolish-wardrobe.test.js - the hair is clean tones, no speckle that changes with the
+  // look's seed: an option's own pixels are all that differ, a brow against a lash a small step; and the mouth is off
+  // there - the lip shapes are checked in characters3.test.js with it on)
+  // (and the glasses' own pixels are counted alone: 6 or more - a monocle is one lens and its cord)
+  const POL = !!globalThis.CLA_TEST_POLISH;
   for (const b of ['m', 'f']) {
     const base = LK.emptyLook(b); base.hair.style = b === 'm' ? 2 : 21; base.outfit.top = LK.item('Plain tee');
     const none = img(base);
     for (const P of LK.PIECES.filter((p) => p && p.slot === 'glasses' && !p.d.issued && !p.d.nostreet && !['balaclava', 'skimask', 'bandana', 'gaiter'].includes(p.d.k))) {
       const n = strong(img(variant(base, (V) => { V.outfit.glasses = LK.item(P.name); })), none);
-      assert.ok(n >= 10, `${P.name} (${b}): ${n} art pixels of it at the game's size`);
+      assert.ok(n >= (POL ? 6 : 10), `${P.name} (${b}): ${n} art pixels of it at the game's size`);
     }
-    for (const k of ['eyes', 'nose', 'lips']) {
+    for (const k of POL ? ['eyes', 'nose'] : ['eyes', 'nose', 'lips']) {
       const I = LK.FACE_OPTS[k].map((_, i) => img(variant(base, (V) => { V.face[k] = i; })));
-      for (let i = 0; i < I.length; i++) for (let j = i + 1; j < I.length; j++) assert.ok(strong(I[i], I[j]) >= 1, `${k}: ${LK.FACE_OPTS[k][i]} and ${LK.FACE_OPTS[k][j]} (${b}) drawn alike`);
+      for (let i = 0; i < I.length; i++) for (let j = i + 1; j < I.length; j++) assert.ok(strong(I[i], I[j], POL ? 6 : 40) >= 1, `${k}: ${LK.FACE_OPTS[k][i]} and ${LK.FACE_OPTS[k][j]} (${b}) drawn alike`);
     }
   }
 });

@@ -251,7 +251,9 @@ async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 15
       if (c.bg) sh.rect(x - CW / 2, y - RH + 2 * k, CW, RH, c.bg);
       if (c.busy) for (let j = 0; j < RH; j += 2) for (let i = 0; i < CW; i += 2) { const q = Math.sin((x + i) * 12.9898 + (y + j) * 78.233) * 43758.5453, f = q - Math.floor(q); if (f < 0.34) sh.rect(x - CW / 2 + i, y - RH + 2 * k + j, 2, 2, c.bg.map((v, n) => Math.max(0, Math.min(255, v + (f < 0.12 ? c.busy[n] : f < 0.22 ? -c.busy[n] : c.busy[n] / 2))))); }
       if (c.rain) for (let i = 0; i < 14; i++) sh.rect(x - CW / 2 + (i * 53 + ri * 17) % CW, y - RH + 2 * k + (i * 97) % (RH - 6), 1, 5, [150, 160, 176]);
-      sh.sprite(baked(c.A || LK.lookArt(c.L, c.art), c.d ?? 1, c.pose || 'idle', c.f || 0, c.opt || {}), x, y - 2 * k, k, c.tint || null);
+      const sp = baked(c.A || LK.lookArt(c.L, c.art), c.d ?? 1, c.pose || 'idle', c.f || 0, c.opt || {});
+      if (c.head) sh.sprite({ ...sp, ax: sp.w >> 1, ay: sp.h }, x, y - 2 * k, k, c.tint || null, false);   // (a head: placed by its box)
+      else sh.sprite(sp, x, y - 2 * k, k, c.tint || null);
       if (c.t) sh.text(c.t, x - CW / 2 + 3, y - RH + 2 * k + 3, 1, [225, 225, 230]);
     }
   }
@@ -328,6 +330,13 @@ async function p3mouth(out) {
     y += 96;
   }
   sh.save(out);
+}
+// every hairstyle (the 36 and pass 2's six) in four directions - S, SE, E, N - at 3x game scale: pass 2 over pass 3
+async function p3hair(out) {
+  const HS = LK.HAIR_STYLES.map((h, i) => i), per = +arg('per', 7), rows = [], dirs = [0, 1, 2, 4];
+  const mk = (h, i) => { const s = LK.HAIR_STYLES[h], L = LK.emptyLook((s[1].length > 1 ? i % 2 : s[1] === 'f') ? 'f' : 'm'); L.hair.style = h; L.hair.color = [1, 3, 0, 5, 2, 12, 4][i % 7]; L.body.skin = [1, 4, 9, 12][i % 4]; L.outfit.top = LK.item('Plain tee'); L.outfit.bottoms = LK.item('Jeans'); return LK.validLook(L); };
+  for (let i = 0; i < HS.length; i += per) for (const p2 of [true, false]) rows.push([p2 ? 'PASS 2' : 'PASS 3', HS.slice(i, i + per).flatMap((h, j) => dirs.map((d, n) => ({ L: mk(h, i + j), d, p2, opt: { region: 'head' }, head: 1, t: !p2 || n ? '' : LK.HAIR_STYLES[h][0] })))]);
+  await grid(out, 'EVERY HAIRSTYLE, S SE E N: PASS 2 OVER PASS 3 (AN OUTLINE AND A LIT TOP, AS THE CONCEPTS DRAW HAIR)', rows, { k: 6, rh: 19, cw: 13, label: 80 });
 }
 // every animation with the pass on: a pose a row, its eight facings (S, SE, E, NE, N, NW, W, SW) then a second frame S and E
 const HELD = { aim: 'pistol', aimw: 'pistol', swing: 'bat', held: 'phone' };
@@ -410,5 +419,6 @@ else if (mode === 'lineup') await lineup2(arg('out', join(P2, 'lineup.png')));
 else if (mode === 'under') await under(arg('out', join(P2, 'underwear.png')));
 else if (mode === 'p3police') await p3police(arg('out', join(P3, 'police.png')));
 else if (mode === 'p3mouth') await p3mouth(arg('out', join(P3, 'faces-mouth.png')));
+else if (mode === 'p3hair') await p3hair(arg('out', join(P3, 'hair.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }
