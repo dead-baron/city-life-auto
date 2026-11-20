@@ -169,7 +169,7 @@ export const POLISH = {
   },
 };
 // a dark ramp re-lit (kept per ramp; a re-lit ramp is its own)
-const RELIT = new WeakMap();
+const RELIT = new WeakMap(), DARK_L = [0.06, 0.11, 0.185, 0.3, 0.44];
 const isDark = (R) => Array.isArray(R) && R.length === 5 && lum(R[3]) < 0.27;
 function relit(R) {
   let N = RELIT.get(R);
@@ -177,8 +177,10 @@ function relit(R) {
   if (!isDark(R)) N = R;
   else {
     // (the concepts' black is a warm charcoal with lighter folds, never flat; a dark colour - navy, forest, wine - keeps its hue)
-    const b = R[2], sat = Math.max(...b) - Math.min(...b), cool = sat < 14 ? [b[0] + 30, b[1] + 25, b[2] + 27] : b.map((v) => v * 1.3 + 14), k = Math.max(0, 0.2 - lum(R[2])) * 2.2;
-    N = [mix(R[0], [14, 10, 22], 0.35), R[1], mix(R[2], cool, 0.12 + k * 0.7), mix(R[3], cool.map((v) => v + 24), 0.4 + k), mix(R[4], cool.map((v) => v + 62), 0.6 + k * 0.5)];
+    // each step lifted to the lightness the concepts give that step of a dark cloth (the shadows stay dark: the folds are
+    // drawn between them and the lit steps), in the cloth's own hue - a neutral black a touch warm in the light
+    const b = R[2], mx = Math.max(...b, 1), sat = mx - Math.min(...b), tint = sat < 14 ? [1.04, 0.97, 1.0] : b.map((v) => 0.55 + 0.6 * v / mx);
+    N = R.map((c, i) => { const d = Math.max(0, DARK_L[i] - lum(c)) * 255; return c.map((v, j) => Math.min(255, Math.round(v + d * tint[j]))); });
   }
   RELIT.set(R, N); RELIT.set(N, N);
   return N;

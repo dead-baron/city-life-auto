@@ -7,8 +7,8 @@
 //   node tools/charsheet.mjs grounds           -> docs/characters/grounds.png     (before over after on pavement, grass, sand, night, rain)
 //   node tools/charsheet.mjs faces             -> docs/characters/faces.png       (heads at 8x, before over after: every eye, brow, nose and lip option)
 //   options: --out file.png, --rows 0,3 (which archetypes), --zoom 4 (the big figures)
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { deflateSync, crc32 } from 'node:zlib';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { deflateSync, inflateSync, crc32 } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { person, setPolish } from '../client/art2/people.js';
@@ -240,12 +240,14 @@ async function grid(out, title, rows, { k = KB, cw = 22, rh = 34, bg, label = 15
   sh.text(title, 8, 6, 2);
   for (const [ri, [name, cells]] of rows.entries()) {
     const y = 24 + (ri + 1) * RH - 2 * k;
-    String(name).split('|').forEach((t, i) => sh.text(t, 6, y - RH / 2 + i * 12, 2));
+    String(name).split('|').forEach((t, i) => sh.text(t, 6, Math.round(y - RH / 2) + i * 12, 2));
     for (const [ci, c] of cells.entries()) {
       if (!c) continue;
       await polish(c.on !== false); if (c.p1) setPolish(PASS1());
       const x = label + ci * CW + CW / 2;
       if (c.bg) sh.rect(x - CW / 2, y - RH + 2 * k, CW, RH, c.bg);
+      if (c.busy) for (let j = 0; j < RH; j += 2) for (let i = 0; i < CW; i += 2) { const q = Math.sin((x + i) * 12.9898 + (y + j) * 78.233) * 43758.5453, f = q - Math.floor(q); if (f < 0.34) sh.rect(x - CW / 2 + i, y - RH + 2 * k + j, 2, 2, c.bg.map((v, n) => Math.max(0, Math.min(255, v + (f < 0.12 ? c.busy[n] : f < 0.22 ? -c.busy[n] : c.busy[n] / 2))))); }
+      if (c.rain) for (let i = 0; i < 14; i++) sh.rect(x - CW / 2 + (i * 53 + ri * 17) % CW, y - RH + 2 * k + (i * 97) % (RH - 6), 1, 5, [150, 160, 176]);
       sh.sprite(baked(c.A || LK.lookArt(c.L, c.art), c.d ?? 1, c.pose || 'idle', c.f || 0, c.opt || {}), x, y - 2 * k, k, c.tint || null);
       if (c.t) sh.text(c.t, x - CW / 2 + 3, y - RH + 2 * k + 3, 1, [225, 225, 230]);
     }
@@ -294,6 +296,70 @@ async function lineup2(out) {
   for (let i = 0; i < ar.length; i += per) rows2.push(['', ar.slice(i, i + per).flatMap((a, j) => [0, 1].map((v) => ({ A: adaptApp(makeAppearance(mulberry32(i * 31 + j * 7 + v * 101 + 5), a), a), d: v ? 5 : 1, t: v ? '' : a })))]);
   await grid(out.replace('.png', '-npc.png'), 'THE CITY ARCHETYPES (TWO OF EACH), PASS 2 ON', rows2, { k: 6, rh: 33, cw: 18, label: 12 });
 }
+// every animation with the pass on: a pose a row, its eight facings (S, SE, E, NE, N, NW, W, SW) then a second frame S and E
+const HELD = { aim: 'pistol', aimw: 'pistol', swing: 'bat', held: 'phone' };
+async function anim(out) {
+  const { POSES } = await import('../client/art2/people.js');
+  const L = dressed('m', { top: ['Hoodie', 'red'], bottoms: 'Jeans', shoes: ['High-tops', 'red', 'white'] }, { skin: 1 }, { hair: { style: 6, color: 3 } }), names = Object.keys(POSES).filter((p) => !(arg('poses', null) || '').length || arg('poses').split(',').includes(p));
+  const per = +arg('per', 11);
+  for (let i = 0, n = 1; i < names.length; i += per, n++) {
+    const rows = names.slice(i, i + per).map((p) => { const nf = POSES[p], opt = HELD[p] ? { held: HELD[p] } : {}; return [p, [...[0, 1, 2, 3, 4, 5, 6, 7].map((d) => ({ L, d, pose: p, f: 0, opt })), ...[0, 2].map((d) => ({ L, d, pose: p, f: Math.max(1, nf >> 1), opt })), ...(nf > 3 ? [{ L, d: 1, pose: p, f: nf - 1, opt }] : [])]]; });
+    await grid(out.replace('.png', `-${n}.png`), 'ANIMATIONS, PASS 2 ON: S SE E NE N NW W SW, THEN ANOTHER FRAME S, E (SE)', rows, { k: 4, rh: 34, cw: 26, label: 90 });
+  }
+}
+// the eight and three dark outfits on the grounds they walk - busy ones too - by day, at night, in rain: pass 1 over pass 2
+async function grounds2(out) {
+  const dark = [dressed('m', { top: ['Hoodie', 'black'], bottoms: ['Black jeans', 'black'], shoes: ['Combat boots', 'black'], hat: ['Beanie', 'black'] }, { skin: 12 }), dressed('f', { set: ['Mini dress', 'black'], jacket: ['Leather jacket', 'black'], shoes: ['Knee boots', 'black'] }, { skin: 0 }, { hair: { style: 16, color: 0 } }), LK.policeLook(LK.emptyLook('m'), 0)];
+  const who = [...EIGHT.map((e) => e[2]), ...dark];
+  const GR = [['PAVEMENT', [150, 146, 140]], ['COBBLES|(BUSY)', [128, 122, 116], [22, 20, 18]], ['ASPHALT', [78, 80, 88]], ['GRASS|(BUSY)', [92, 140, 70], [26, 30, 18]], ['SAND', [214, 196, 150]], ['LEAF LITTER|(BUSY)', [112, 92, 60], [40, 28, 14]], ['NIGHT', [34, 38, 62], null, [0.5, 0.52, 0.72]], ['NIGHT, BUSY', [38, 44, 60], [14, 14, 18], [0.5, 0.52, 0.72]], ['RAIN', [84, 90, 100], null, [0.78, 0.8, 0.86], 1]];
+  const rows = [];
+  for (const [name, bg, busy, tint, rain] of GR) for (const p1 of [true, false]) rows.push([p1 ? name : 'PASS 2', who.map((L, i) => ({ L, d: i % 2 ? 4 : 1, pose: i % 3 ? 'idle' : 'walk0', f: 1, bg, busy, tint, rain, p1 }))]);
+  await grid(out, 'ON THE GROUNDS THEY WALK, GAME SCALE x 1.5: PASS 1 (THE NAMED ROW) OVER PASS 2 - THE EIGHT, THEN THREE DARK OUTFITS', rows, { k: 3, rh: 31, cw: 20, label: 130 });
+}
+// a concept beside the game's people: the concept image (scaled to fit), then matching looks - pass 1 over pass 2
+function readPng(file) {
+  const b = readFileSync(file); let o = 8, w = 0, h = 0, ct = 0; const idat = [];
+  while (o < b.length) { const n = b.readUInt32BE(o), t = b.toString('ascii', o + 4, o + 8); if (t === 'IHDR') { w = b.readUInt32BE(o + 8); h = b.readUInt32BE(o + 12); ct = b[o + 17]; if (b[o + 16] !== 8 || (ct !== 2 && ct !== 6) || b[o + 20]) throw new Error('png: 8-bit RGB(A) only'); } else if (t === 'IDAT') idat.push(b.subarray(o + 8, o + 8 + n)); o += 12 + n; }
+  const bpp = ct === 6 ? 4 : 3, raw = inflateSync(Buffer.concat(idat)), st = w * bpp, px = Buffer.alloc(st * h);
+  for (let y = 0; y < h; y++) { const f = raw[y * (st + 1)], r = y * (st + 1) + 1, q = y * st;
+    for (let x = 0; x < st; x++) { const a = x >= bpp ? px[q + x - bpp] : 0, u = y ? px[q - st + x] : 0, c = x >= bpp && y ? px[q - st + x - bpp] : 0; let v = raw[r + x];
+      if (f === 1) v += a; else if (f === 2) v += u; else if (f === 3) v += (a + u) >> 1; else if (f === 4) { const p = a + u - c, pa = Math.abs(p - a), pb = Math.abs(p - u), pc = Math.abs(p - c); v += pa <= pb && pa <= pc ? a : pb <= pc ? u : c; }
+      px[q + x] = v & 255; } }
+  return { w, h, bpp, px };
+}
+function pasteScaled(sh, I, x0, y0, W) {   // (a box filter: every source pixel of a target pixel averaged)
+  const s = I.w / W, H = Math.round(I.h / s);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let r = 0, g = 0, bl = 0, n = 0;
+    for (let j = Math.floor(y * s); j < Math.min(I.h, Math.ceil((y + 1) * s)); j++) for (let i = Math.floor(x * s); i < Math.min(I.w, Math.ceil((x + 1) * s)); i++) { const q = (j * I.w + i) * I.bpp; r += I.px[q]; g += I.px[q + 1]; bl += I.px[q + 2]; n++; }
+    sh.rect(x0 + x, y0 + y, 1, 1, [r / n, g / n, bl / n].map(Math.round)); }
+  return H;
+}
+async function versus(outDir) {
+  const J = Object.fromEntries(JOBS()), st = (n) => LK.STARTERS.find((s) => s.name === n).look, tee = (base, body, hair) => dressed(base, { top: ['Plain tee', 'grey'], bottoms: ['Jeans', 'navy'], shoes: 'Sneakers' }, body, { hair });
+  const U = (base, n, body, hair) => dressed(base, { under: n }, body, { hair });
+  const SETS = [
+    ['C1', 'THE BASE FIGURE', [tee('m', { skin: 1 }, { style: 6, color: 3 }), tee('f', { skin: 1 }, { style: 20, color: 3 }), tee('m', { skin: 1, build: 4 }, { style: 6, color: 3 }), tee('m', { skin: 12, build: 0, height: 4 }, { style: 8, color: 1 })], [0, 1, 2, 3, 4]],
+    ['C3', 'SERVICES', [J.POLICE, J.K9, J.PARAMEDIC, J.FIRE, J.SECURITY, J.COURIER, J.BUILDER, J.LIFEGUARD], [1]],
+    ['CC5-B', 'POLICE BY RANK', [J.ROOKIE, J.POLICE, J.K9, J.SERGEANT, J.DETECTIVE, J.DRESS, J.CHIEF], [1]],
+    ['SM12', 'DARK CLOTHING (MEN)', [dressed('m', { top: ['Plain tee', 'black'], jacket: ['Trench coat', 'black'], bottoms: ['Black jeans', 'black'], shoes: ['Platform boots', 'black'], jewel: 'Pendant chain' }, { skin: 0 }, { hair: { style: 16, color: 0 } }), dressed('m', { top: ['Hoodie', 'black'], bottoms: ['Cargo pants', 'black'], shoes: ['Combat boots', 'black'] }, { skin: 1 }, { hair: { style: 1 } }), dressed('m', { top: ['Plain tee', 'black'], jacket: ['Leather jacket', 'black'], bottoms: ['Ripped jeans', 'black'], shoes: ['Combat boots', 'black'] }, { skin: 9 }, { hair: { style: 10, color: 18 } }), st('The Executive'), st('The Punk')], [1, 5]],
+    ['SF12', 'DARK CLOTHING (WOMEN)', [dressed('f', { set: ['Evening gown', 'black'], jewel: ['Choker', 'black'], shoes: ['Platform boots', 'black'] }, { skin: 6 }, { hair: { style: 16, color: 0 } }), dressed('f', { top: ['Corset top', 'black', 'wine'], bottoms: ['Maxi skirt', 'wine'], shoes: ['Platform boots', 'black'] }, { skin: 0 }, { hair: { style: 17, color: 5 } }), dressed('f', { top: ['Sweater', 'black'], bottoms: ['Plaid skirt', 'red', 'black'], shoes: ['Combat boots', 'black'] }, { skin: 7 }, { hair: { style: 19, color: 0 } }), dressed('f', { set: ['Slip dress', 'black'], jacket: ['Cardigan', 'olive'], shoes: ['Ankle boots', 'black'] }, { skin: 1 }, { hair: { style: 16, color: 13 } })], [1, 5]],
+    ['SF23-A', 'UNDERWEAR (WOMEN)', ['Bra and briefs', 'Lace bra and panties', 'Sports bra and shorts', 'Strapless set', 'Tank and briefs', 'Lace bodysuit'].map((n, i) => U('f', n, { skin: [1, 9, 12, 0, 4, 14][i], build: [1, 3, 2, 0, 1, 3][i] }, { style: [21, 9, 20, 19, 16, 24][i], color: [3, 0, 10, 0, 5, 0][i] })), [0, 4]],
+    ['SM23', 'UNDERWEAR (MEN)', ['Briefs', 'Boxers', 'Boxer briefs', 'Fitted trunks', 'Tank and briefs', 'Undershirt and boxers', 'Union suit'].map((n, i) => U('m', n, { skin: [1, 9, 12, 0, 4, 14, 2][i], build: [1, 0, 2, 1, 4, 1, 1][i] }, { style: [6, 2, 1, 8, 2, 10, 3][i], color: [3, 0, 1, 3, 12, 14, 5][i], facial: i === 4 ? 3 : 0 })), [0, 4]],
+    ['CB3-M', 'HAIR (THE SIX ADDED: ONLY PASS 2 DRAWS THEM)', LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[3]).map(([s, i], n) => tee(s[1][0], { skin: [1, 12, 2, 13, 0, 9][n] }, { style: i, color: [12, 0, 1, 0, 4, 0][n] })), [1, 5]],
+  ];
+  for (const [img, title, looks, dirs] of SETS) {
+    const I = readPng(join(DOCS, 'concepts', img + '.png')), CW0 = 520, k = 6, cw = 19 * k, RH = 33 * k, n = looks.length * dirs.length, W = CW0 + 24 + Math.max(n * cw, 600), H0 = Math.round(I.h * CW0 / I.w), H = Math.max(H0, 2 * RH + 40) + 34;
+    const sh = new Sheet(W, H);
+    sh.text(img + ': ' + title + ' - THE CONCEPT | PASS 1 OVER PASS 2', 8, 6, 2);
+    pasteScaled(sh, I, 8, 26, CW0);
+    for (const [r, p1] of [[0, true], [1, false]]) {
+      sh.text(p1 ? 'PASS 1' : 'PASS 2', CW0 + 24, 30 + r * (RH + 10), 2, p1 ? [240, 200, 160] : [170, 240, 170]);
+      await polish(true); if (p1) setPolish(PASS1());
+      looks.forEach((L, i) => dirs.forEach((d, j) => sh.sprite(baked(LK.lookArt(L), d), CW0 + 24 + (i * dirs.length + j) * cw + cw / 2, 30 + (r + 1) * (RH + 10) - 16, k)));
+    }
+    sh.save(join(outDir, 'vs-' + img + '.png'));
+  }
+}
 const DOCS = join(ROOT, 'docs', 'characters'), P2 = join(DOCS, 'pass2');
 if (mode === 'before') await lineup(false, arg('out', join(DOCS, 'before.png')), 'TODAY\'S PEOPLE (BEFORE)');
 else if (mode === 'after') await lineup(true, arg('out', join(DOCS, 'after.png')), 'AFTER: THE POLISH PASS');
@@ -304,6 +370,9 @@ else if (mode === 'variants') await variants(arg('out', join(DOCS, 'variants.png
 else if (mode === 'poses') await poses(arg('out', join(DOCS, 'poses.png')));
 else if (mode === 'hair') await hair(arg('out', join(DOCS, 'hair.png')));
 else if (mode === 'builds') await builds(arg('out', join(DOCS, 'builds.png')));
+else if (mode === 'grounds2') await grounds2(arg('out', join(P2, 'grounds.png')));
+else if (mode === 'versus') await versus(arg('out', P2));
+else if (mode === 'anim') await anim(arg('out', join(P2, 'anim.png')));
 else if (mode === 'lineup') await lineup2(arg('out', join(P2, 'lineup.png')));
 else if (mode === 'under') await under(arg('out', join(P2, 'underwear.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));

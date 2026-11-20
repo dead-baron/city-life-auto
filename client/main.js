@@ -5163,7 +5163,7 @@ function drawSpanWire(sg, n) {
 // to see - the target too. A little pixel skull, made once and drawn crisp at any zoom, with a slow gold glow.
 const SKULL = ['...#####...', '.#########.', '###########', '###########', '##...#...##', '##...#...##', '###########', '.####.####.', '..#######..', '..#.#.#.#..', '..#######..'];
 let skullImg = null;
-const SKULL_HEAD = 46;   // world px from a standing person's feet to the top of their head (art v2 people)
+const SKULL_HEAD = window.CLA_POLISH ? 50 : 46;   // (the polish pass's people stand two art pixels taller: line 115)  // world px from a standing person's feet to the top of their head (art v2 people)
 const EM_HEAD = { sit: 30, crouch: 30, kneel: 36, lie: 14, sleep: 16, faceplant: 12, pushups: 16 };   // (the same, sat, crouched, knelt or lying: an emote's pose - client/art2/poses.js)
 function skullSprite() {
   if (skullImg) return skullImg;
