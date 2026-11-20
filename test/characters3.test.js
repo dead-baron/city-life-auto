@@ -151,3 +151,22 @@ test('body options (body freckles, vitiligo, a prosthetic arm or leg): kept in t
   }
   assert.ok(/passOn\(\) \? row\('Skin marks'/.test(readFileSync(new URL('../client/creator.js', import.meta.url), 'utf8')), 'the creator offers them while the pass is on');
 });
+
+test('drapes (a hooded cloak, a cape-coat, a sari, a ghillie suit, morning dress): wearable pieces on shapes the renderer has, each made its own by the pass', async () => {
+  const W = await import('../shared/wardrobe.js');
+  for (const [n, slot, dr] of [['Hooded cloak', 'jacket', 'cloak'], ['Cape coat', 'jacket', 'cape'], ['Sari', 'set', 'sari'], ['Ghillie suit', 'set', 'ghillie'], ['Morning dress', 'set', 'tails']]) {
+    const P = LK.PIECES[LK.byName(n)];
+    assert.ok(P && P.slot === slot && P.d.dr === dr && W.sellerOf(P.i), `${n}: in the catalogue, sold`);
+    const base = P.b[0], A = plain(base, (L) => { if (slot === 'set') L.outfit.top = L.outfit.bottoms = null; L.outfit[slot] = LK.item(n); });
+    assert.equal(A.drape, dr);
+    if (dr === 'cloak' || dr === 'ghillie') assert.equal(A.hat.kind, 'hood', `${n}: the hood up`);
+    const B = strip(A, 'drape');
+    for (const d of [1, 5]) assert.ok(withPass(() => diff(baked(A, d), baked(B, d))) >= 4, `${n} facing ${d}: the pass draws it its own`);
+    assert.equal(diff(baked(A, 1), baked(B, 1)), 0, `${n}: off, the shape it is built on`);
+    withPass(() => { for (const pose of ['walk0', 'run', 'sit', 'kneel', 'down', 'drive']) for (const d of [0, 2, 4]) assert.ok(person(A, d, pose, 1, { tight: true }).w > 6, pose); });
+  }
+  // a hat of your own stays on over a cloak
+  const H = plain('m', (L) => { L.outfit.jacket = LK.item('Hooded cloak'); L.outfit.hat = LK.item('Beanie'); });
+  assert.notEqual(H.hat.kind, 'hood');
+  assert.equal(plain('m').drape, undefined);
+});

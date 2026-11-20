@@ -196,6 +196,42 @@ export const POLISH = {
         return R;
       });
     }
+    // drapes (pass 3; lookcore.js d.dr -> A.drape), each on a shape the renderer has: a hooded cloak - closed down the
+    // front, a clasp at the throat; a cape-coat - the cape's hem across the chest and the upper arms, the sleeves in its
+    // shade under it; a sari - the pallu over one shoulder and a border at the hem in the trim colour, the waist bare at
+    // the side; a ghillie suit - three greens in tufts all over, hood and all; morning dress - the coat cut away in front
+    // over striped grey trousers, its tails behind, a pale waistcoat
+    const DR = A.drape, SKN = W.skin, t2 = W.top2;
+    if (DR === 'cloak') wrap('torso', (R, Q) => (R === SKN ? R : Q.f > 0 && Math.abs(Q.u) < 0.13 && Math.abs(Q.z - D.shUp + 1.5) < 0.8 ? (Q.gloss = 1, t2) : W.top));
+    if (DR === 'cape') {
+      wrap('torso', (R, Q) => { if (R === W.top && Math.abs(Q.z - D.chestUp + 1.2) < 0.55) Q.k -= 0.3; else if (R === W.top && Q.z < D.chestUp - 1.2) Q.k -= 0.1; return R; });
+      wrap('arm', (R, Q) => { const al = Q.part === 'ua' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5; if (R === W.top) Q.k -= al > 0.56 ? 0.16 : al > 0.44 ? 0.34 : -0.06; return R; });
+    }
+    if (DR === 'sari') {
+      wrap('torso', (R, Q) => {
+        if (R === SKN) return R;
+        const v = (Q.z - D.waistUp) / (D.shUp - D.waistUp), band = v - Q.u * 0.62;
+        if (band > 0.42 && band < 0.74 && v < 1.02) { if (band > 0.66) { Q.gloss = 1; return t2; } Q.k += 0.1; return R; }
+        return v > 0.02 && v < 0.2 && Q.u > 0.18 ? SKN : R;
+      });
+      wrap('skirt', (R, Q) => (Q.l0 > 0.86 ? (Q.gloss = 1, t2) : R));
+    }
+    if (DR === 'ghillie') {
+      const GH = [cloth('#3c4a26'), cloth('#6b6a3a'), cloth('#26301c')];
+      for (const k of ['torso', 'arm', 'leg', 'pel', 'hood', 'hat', 'brim']) wrap(k, (R, Q) => {
+        if (R === SKN) return R;
+        let v = (Math.floor((Q.l0 + 2) * 3.1) * 374761393 + Math.floor((Q.l1 + 2) * 2.3) * 668265263 + Math.floor((Q.l2 + 2) * 2.3) * 362437 + Q.part.charCodeAt(0) * 9176) | 0; v = Math.imul(v ^ (v >>> 13), 1274126177); v = ((v ^ (v >>> 16)) >>> 0) / 4294967296;
+        Q.k += v > 0.5 ? 0.1 : -0.12;
+        return v < 0.3 ? GH[0] : v < 0.5 ? GH[1] : v > 0.86 ? GH[2] : R;
+      });
+    }
+    if (DR === 'tails') {
+      const GREY = cloth('#8a8a92'), stripe = (Q) => { if (Math.floor((Q.l1 + 2) * 5) & 1) Q.k -= 0.16; return GREY; };
+      wrap('skirt', (R, Q) => (Q.l2 > -0.05 ? stripe(Q) : R));
+      wrap('leg', (R, Q) => (R === SKN ? R : stripe(Q)));
+      wrap('pel', (R, Q) => (Q.f > 0 ? stripe(Q) : R));
+      wrap('torso', (R, Q) => (R !== SKN && Q.f > 0.05 && Math.abs(Q.u) < 0.34 && Q.z < D.chestUp + 0.6 && Q.z > D.waistUp - 1.2 ? t2 : R));
+    }
     wrap('pel', (R, Q) => { if (bothDark && R === W.bot && Q.z > (T.tuck ? 1.4 : -1.9) && Q.z < (T.tuck ? 2.2 : -0.9)) Q.k += 0.3; return fix(R); });
   },
   // hair (CB3-M, CB3-F, CC2): the six shapes the concepts have that the list lacked, each on a style the renderer

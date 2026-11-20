@@ -359,6 +359,16 @@ async function p3body(out) {
   }
   await grid(out, 'BODY OPTIONS: S, SE, E, N, W, WALKING, RUNNING, SITTING; IN A TEE AND JEANS; WITHOUT', rows, { k: 6, rh: 32 });
 }
+// the draped pieces: S, SE, E, N, W, walking, running, sitting; the pass off (the shape each is built on)
+async function p3drapes(out) {
+  const rows = [];
+  for (const n of ['Hooded cloak', 'Cape coat', 'Sari', 'Ghillie suit', 'Morning dress']) { const p = LK.PIECES[LK.byName(n)];
+    for (const base of ['m', 'f'].filter((b) => p.b.includes(b))) {
+      const o = p.slot === 'jacket' ? { top: ['Turtleneck', n === 'Cape coat' ? 'black' : 'charcoal'], bottoms: [base === 'f' ? 'Skirt' : 'Suit pants', 'charcoal'], jacket: n, shoes: ['Chelsea boots', 'black'] } : { set: n, shoes: n === 'Sari' ? ['Sandals', 'gold'] : n === 'Morning dress' ? ['Oxfords', 'black'] : ['Hiking boots', 'brown'], ...(n === 'Morning dress' ? { hat: 'Top hat' } : {}) };
+      const L = dressed(base, o, { skin: n === 'Sari' ? 4 : base === 'm' ? 1 : 0 }, { hair: { style: base === 'f' ? 21 : 6, color: 1 } });
+      rows.push([n.replace(' ', '|') + '|' + (base === 'm' ? 'MAN' : 'WOMAN'), [{ L, d: 0 }, { L, d: 1 }, { L, d: 2 }, { L, d: 4 }, { L, d: 6 }, { L, d: 0, pose: 'walk0', f: 1 }, { L, d: 2, pose: 'run', f: 2 }, { L, d: 1, pose: 'sit', f: 0 }, { L, d: 1, on: false, t: 'off' }, { L, d: 5, on: false, t: 'off' }]]); } }
+  await grid(out, 'DRAPES: S, SE, E, N, W, WALKING, RUNNING, SITTING; THE PASS OFF, FRONT AND BACK QUARTER', rows, { k: 6, rh: 33 });
+}
 // every animation with the pass on: a pose a row, its eight facings (S, SE, E, NE, N, NW, W, SW) then a second frame S and E
 const HELD = { aim: 'pistol', aimw: 'pistol', swing: 'bat', held: 'phone' };
 async function anim(out) {
@@ -444,5 +454,6 @@ else if (mode === 'p3hair') await p3hair(arg('out', join(P3, 'hair.png')));
 else if (mode === 'p3socks') await p3socks(arg('out', join(P3, 'socks.png')));
 else if (mode === 'p3gear') await p3gear(arg('out', join(P3, 'gear.png')));
 else if (mode === 'p3body') await p3body(arg('out', join(P3, 'body.png')));
+else if (mode === 'p3drapes') await p3drapes(arg('out', join(P3, 'drapes.png')));
 else if (mode === 'dev') await dev(arg('out', 'dev.png'));
 else { console.error('charsheet: before | after | side | grounds | faces'); process.exit(1); }

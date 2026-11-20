@@ -389,12 +389,9 @@ add('set', 'Nothing', 'mf', 'lounge', 0, 'bathhouse', { k: 'none', bk: 'none', i
 // a random look; the creator shows it only to its owners): Season 0's Founding Citizen jacket (server/systems/cosmetics.js,
 // shared/rules.js COSMETICS.beta) - the varsity jacket's art in black and gold, no new sprite art
 add('jacket', 'Founding Citizen jacket', 'mf', 'preppy streetwear retro', 0, 'gift', { k: 'jacket', varsity: 1, gift: 1 }, 'black', 'gold');
-// underwear (the owner, 2026-11-19; concept sheets SF23-A..G, SM23): a base layer for both bases, its own slot - what a
-// character has on under the clothes, seen where there's no top or no bottoms. d.k the top half's art kind (none: a
-// bare chest - a woman's gets a plain bra with it), d.bk the bottom half's. The basics are everyone's (rules.js
-// STARTER_WARDROBE); the lingerie is sold. Opaque, never see-through. 'Nothing on' is free: the renderer's mosaic covers
-// the private areas (people.js censor), always and for everyone. Random looks - the city's people - never
-// fill the slot (shared/look.js randomLook).
+// underwear (the owner, 2026-11-19; docs/characters/NOTES.md): a slot, seen where there's no top or no bottoms. d.k the
+// top half's art kind (none: a woman's gets a plain bra), d.bk the bottom's. 'Nothing on': the mosaic, for everyone.
+// Never in random looks.
 add('under', 'Nothing on', 'mf', 'lounge', 0, 'clothing', { k: 'none', bk: 'none' }, 'white');
 add('under', 'Boxers', 'm', 'lounge casual', 10, 'clothing', { bk: 'trunks', band: 1 }, 'sky', 'white');
 add('under', 'Briefs', 'mf', 'lounge casual', 8, 'clothing', { bk: 'bikini', band: 1 }, 'white', 'light grey');
@@ -412,8 +409,7 @@ add('under', 'Strapless set', 'f', 'lounge nightclub', 50, 'boutique', { k: 'bik
 add('under', 'Lace bodysuit', 'f', 'lounge nightclub hifashion alt', 90, 'boutique', { k: 'swimsuit', bk: 'bikini', lace: 1 }, 'navy', 'silver');
 add('under', 'Teddy', 'f', 'lounge nightclub hifashion', 95, 'boutique', { k: 'swimsuit', bk: 'bikini', gloss: 1 }, 'wine', 'blush');
 add('under', 'Silk slip', 'f', 'lounge nightclub hifashion', 85, 'boutique', { k: 'dress', len: 1, bk: 'bikini', gloss: 1 }, 'cream', 'cream');
-// socks (pass 3, gap 14): a slot. d.h where on the leg they start (0 hip, 0.5 knee, 1 ankle), d.stripes in the trim
-// colour and d.warm (leg warmers, over trousers too) the polish pass's. On a bare leg only. Never in random looks.
+// socks (pass 3): a slot. d.h where on the leg they start (0 hip .. 1 ankle); d.stripes, d.warm: the polish pass's
 add('socks', 'Ankle socks', 'mf', 'casual athletic', 5, 'clothing', { h: 0.9 }, 'white');
 add('socks', 'Crew socks', 'mf', 'casual athletic skater streetwear', 6, 'clothing', { h: 0.8 }, 'white');
 add('socks', 'Striped crew socks', 'mf', 'skater streetwear retro', 8, 'clothing', { h: 0.8, stripes: 1 }, 'white', 'navy');
@@ -422,17 +418,21 @@ add('socks', 'Knee socks', 'mf', 'preppy alt casual lounge', 12, 'clothing', { h
 add('socks', 'Thigh-high socks', 'f', 'alt nightclub lounge', 18, 'boutique', { h: 0.34, stripes: 1 }, 'black', 'white');
 add('socks', 'Tights', 'f', 'smart business alt winter', 15, 'clothing', { h: 0 }, 'black');
 add('socks', 'Leg warmers', 'mf', 'retro athletic lounge', 14, 'sports', { h: 0.54, warm: 1 }, 'hot pink', 'white');
-// small gear (pass 3, gap 15; SF7, SM7, SM21, SF16), worn as an accessory. d.pp: drawn by the polish pass only (the
-// creator offers these while it is on)
+// drapes (pass 3): d.dr what the polish pass makes of the shape
+add('jacket', 'Hooded cloak', 'mf', 'alt disguise winter', 120, 'boutique', { k: 'coat', dr: 'cloak' }, 'black', 'gold');
+add('jacket', 'Cape coat', 'f', 'hifashion smart winter', 220, 'boutique', { k: 'coat', dr: 'cape' }, 'red');
+add('set', 'Sari', 'f', 'formal festival hifashion', 260, 'boutique', { k: 'gown', dr: 'sari' }, 'red', 'gold');
+add('set', 'Ghillie suit', 'mf', 'outdoors disguise', 150, 'costume', { k: 'hoodie', bk: 'cargo', p: 3, dr: 'ghillie' }, 'olive', 'khaki');
+add('set', 'Morning dress', 'm', 'formal', 450, 'boutique', { k: 'coat', bk: 'pants', dr: 'tails' }, 'charcoal', 'light grey');
+// small gear (pass 3). d.pp: only the polish pass draws it (the creator offers it while that is on)
 add('jewel', 'Knee pads', 'mf', 'skater work athletic', 22, 'sports', { knee: 1, pp: 1 }, 'charcoal');
 add('jewel', 'Elbow pads', 'mf', 'skater athletic', 20, 'sports', { elbow: 1, pp: 1 }, 'charcoal');
 add('jewel', 'Skate pads', 'mf', 'skater', 38, 'sports', { knee: 1, elbow: 1, pp: 1 }, 'charcoal');
 add('jewel', 'Wallet chain', 'mf', 'skater punk alt street', 18, 'clothing', { wchain: 1, pp: 1 }, 'silver');
 add('jewel', 'Tool belt', 'mf', 'work', 40, 'workwear', { tbelt: 1, pp: 1 }, 'brown', 'yellow');
 add('jewel', 'Climbing harness', 'mf', 'outdoors athletic', 55, 'outdoor', { harness: 1, pp: 1 }, 'orange', 'silver');
-// the rest of the concepts' wardrobe (pass 2, docs/characters/CONCEPTS.md's gap list; SF/SM1-23, C2, C3, CC3-5): the
-// jobs' looks (d.bands: reflective bands, drawn by the polish pass), neckwear and gloves, headphones, camo, the odd
-// costume - each drawn with a kind the renderer already has
+// the rest of the concepts' wardrobe (pass 2; docs/characters/CONCEPTS.md): each on a kind the renderer has (d.bands:
+// reflective bands, the polish pass's)
 add('set', 'Paramedic uniform', 'mf', 'work', 70, 'workwear', { k: 'uniform', plain: 1, bk: 'cargo', bands: 1 }, 'forest', 'white');
 add('set', 'Turnout gear', 'mf', 'work', 120, 'workwear', { k: 'jacket', bk: 'cargo', bands: 1 }, 'tan', 'yellow');
 add('set', 'Hi-vis coverall', 'mf', 'work', 60, 'workwear', { k: 'longsleeve', bk: 'cargo', zip: 1, bands: 1 }, 'orange', 'silver');
@@ -468,8 +468,7 @@ export const byName = (n) => PIECE_IDS[n] || 0;
 export const fits = (p, base) => !!p && p.b.includes(base);
 
 // ---- a look ----------------------------------------------------------------------------------------------------------
-// body options (pass 3, gap 16; CB1): body.marks - bit 1 freckles on the body, bit 2 vitiligo; body.limb - a prosthetic
-// (LIMBS). Drawn by the polish pass; one more letter on the end of a look's code when either is set.
+// body options (pass 3): body.marks (1 body freckles, 2 vitiligo), body.limb (a prosthetic); the polish pass's
 export const LIMBS = ['None', 'Left arm', 'Right arm', 'Left leg', 'Right leg'];
 export const clampI = (v, lo, hi, d) => { v = Number(v); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : d; };
 export function emptyLook(base = 'm') {
@@ -527,8 +526,7 @@ export function encodeLook(L) {
     const it = L.outfit[k];
     s += it ? AB[(it.id >> 6) & 63] + AB[it.id & 63] + AB[it.c & 63] + AB[it.t & 63] + AB[it.p & 63] : '00000';
   }
-  // (the slots added since - underwear, socks - are left off the end while empty: most looks, every NPC's, keep the 66
-  // letters they had; 71 with underwear, 76 with socks)
+  // (underwear and socks are left off the end while empty: most looks keep their 66 letters)
   if (b.marks || b.limb) return s + AB[b.marks | (b.limb << 2)];
   while (s.length > LOOK_CODE_LEN && s.endsWith('00000')) s = s.slice(0, -5);
   return s;
@@ -654,6 +652,8 @@ export function lookArt(L, opt = {}) {
   const hat = P('hat');
   if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat), ...(hat.d.flat ? { flat: 1 } : null) };
   if (hat && hat.d.k === 'hood') A.hat.color = A.top.color;
+  A.drape = (jk || set || A).d?.dr;
+  if (!hat && (A.drape === 'cloak' || A.drape === 'ghillie')) A.hat = { kind: 'hood', color: A.top.color };   // (the hood up)
   const gl = P('glasses');
   if (gl) {
     const k = gl.d.k;
