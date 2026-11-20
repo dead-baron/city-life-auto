@@ -359,6 +359,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Reports short (under 200 words); 2-3 small screenshots at most. (11-12; agent-rules)
 - Raising a performance budget is a decision: say why in the DEVLOG. Page budget now 540 KB (11-07, "a modest raise is fine"). (CLAUDE.md; DEVLOG 10-21, 10-26, 11-07)
 - The renderer's code budget 411 -> 414 KB for character pass 2 (the catalogue's underwear, concept pieces and hairstyles). (11-19; DEVLOG 11-19, docs/characters/NOTES.md) - OPEN: raised by Claude on the characters branch, the owner to confirm. - CONFIRMED by the owner 11-19 (Art direction, above); pass 3 stays inside it (413.97 KB).
+- The renderer's code budget 414 -> 429 KB, 28 -> 29 files for character pass 5: the pass's own file (`client/art2/peoplepolish.js`, 14.3 KB) is counted in it now, as the task told (it sat in no budget); 428.6 KB measured by hand, inside the 430 the owner allows for the character work. (11-19; docs/tasks/CHARACTERS5.md, DEVLOG 11-19)
 - Each art change costs ~5 h of server rebake: batch art changes; avoid re-keying world/art unless the task needs it. (11-07; queue, agent-rules)
 - Don't slow the server's start (health window). (agent-rules)
 - Stamp before every commit; a DEVLOG entry per feature (American English); README controls table current. (CLAUDE.md)
