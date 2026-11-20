@@ -321,7 +321,10 @@ on an older build cannot read a longer code and draws that player's stand-in unt
   differs with every look's seed and is gone with clean hair: with the pass on, `peoplelook.test.js` now counts a pair
   of glasses' own pixels (6 or more, was 10) and a small step between two face options; the lip shapes are checked in
   the new file with the mouth on. `peoplepolish.test.js` measures the head with the mouth drawn, as pass 1 did.
-- The whole suite: see the DEVLOG entry for the count against the commit before this pass.
+- The whole suite: 2136 of 2197 pass here against 2126 of 2188 on the commit before the pass - the same failures on
+  both (this checkout's paths, CRLF endings and missing stamp), bar three timing tests that failed only before and two
+  that failed only in this run: a comment had cut off a line in `client/creator.js` (a syntax error; the character
+  tests don't load the creator) - fixed, and `test/pagemodules.test.js` and `menupolish.test.js` pass again.
 
 ## What's left
 

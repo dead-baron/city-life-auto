@@ -25218,3 +25218,44 @@ drawing is behind the same switch (`cla.polish`, off), so today's people are pix
   budget. Page 532 / 540, bake 1018 / 1020.
 - Tests: `test/characters2.test.js`. Sheets: `node tools/charsheet.mjs versus | grounds2 | anim | lineup | under | hair`.
   Not seen running in a browser; not stamped (this checkout can't): stamp on merge.
+
+## 2026-11-19 - Character polish, pass 3: the owner's decisions, the rest of the concepts
+
+Pass 3 (`docs/tasks/CHARACTERS3.md`) takes the owner's three decisions of 11-19 and builds the gap list's open rows
+(`docs/characters/CONCEPTS.md`). The drawing is still behind the switch (`cla.polish`, off): today's people are pixel
+for pixel what they were. Notes and what reads well or weakly: `docs/characters/NOTES.md`; sheets:
+`docs/characters/pass3/`.
+
+- **No "censored nudity" setting** (the owner): pass 2's Settings switch, the renderer's swimwear path and its test
+  are out. Nothing on is always under the mosaic, for everyone.
+- **Patrol police wear the light-blue shirt** (the owner): officers, rookies and K9 handlers; a sergeant's stays navy
+  under the gold chevrons, the dress uniform as it was. Live on merge.
+- **The mouth is off** behind one constant (`POLISH.mouthOn`); painted lips stay. `pass3/faces-mouth.png` shows the same
+  faces with and without.
+- **With the pass on:** every hairstyle (all 42) drawn as the concepts draw hair - a mass in clean tones with a lit
+  top, a dark underside, curls broken, braids in strands, in every direction; socks' stripes and leg warmers; small
+  gear (knee, elbow and skate pads, a wallet chain, a tool belt, a climbing harness); body options on the creator's
+  Body tab (body freckles, vitiligo, a prosthetic arm or leg); five draped pieces made their own (hooded cloak, cape
+  coat, sari, ghillie suit, morning dress); a selfie with one arm out and up; a camera, a bouquet and a parasol to
+  carry. The name tag rises with the taller head, as the bubbles did.
+- **Wardrobe (live with or without the pass):** a **Socks** slot (the eleventh; a tab in the creator and the fitting
+  rooms) - ankle, crew (in the starter wardrobe), striped crew, tube, knee, thigh-high, tights, leg warmers - on a bare
+  leg, never through trousers; the five draped pieces as the plain shapes they are built on. The gear and the props
+  are drawn only by the pass, so the creator offers them only while it is on and random looks never pick them.
+- **The look's code:** 66 letters as before; 71 with underwear, 76 with socks, 77 with a body option. Old codes read
+  as before.
+- **The selfie persona** sends `ph` 3 (was 2, the filming hold): drawn as the filming hold until the pass is on.
+- **Checked:** animation sheets 4, 6 and 7 frame by frame with the pass on, and all 114 poses for parts that come
+  apart: nothing to fix. Texting, the texting walk and a call were already in the game and sit right on the new body.
+- **Budget:** the renderer's code 413.97 of 414 KB, measured by hand with LF endings - full. The 27 new catalogue
+  lines and the hooks (+1.2 KB) were paid for by removing the swimwear path and shortening the catalogue's comments.
+  Page 531.8 / 540, bake worker 1019.0 / 1020. No budget raised.
+- The Guide's "Your look" entry: the mosaic for everyone, and the socks' tab.
+- Tests: `test/characters3.test.js` (11). With the pass on, two older checks leaned on the hair's speckle (it differs
+  with every look's seed and is gone now): `peoplelook.test.js` counts a pair of glasses' own pixels there, and the
+  lip shapes are checked with the mouth on. The whole suite: 2136 of 2197 pass here against 2126
+  of 2188 on the commit before the pass - the same failures on both (this checkout's paths, CRLF endings and missing
+  stamp), bar three timing tests that failed only before, and two that failed only in this run: a comment had cut off
+  a line in `client/creator.js` (a syntax error) - fixed, and both pass again.
+  Sheets: `node tools/charsheet.mjs p3police | p3mouth | p3hair | p3socks | p3gear | p3body | p3drapes | p3phone |
+  p3props | anim`. Not seen running in a browser; not stamped (this checkout can't): stamp on merge.
