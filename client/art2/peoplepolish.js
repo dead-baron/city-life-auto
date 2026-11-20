@@ -61,6 +61,17 @@ export const POLISH = {
     // hands: never smaller than an art pixel and a half across, whatever the limbs' thickness
     D.fist = Math.max(D.fist, fem ? 2.75 : 3.0);
     D.foot[2] *= 1.45;   // (shoes the same size, a little taller: from the side and from behind one was a single white line)
+    // (women's builds, the owner 11-20: athletic is average with a little more shape - no big arms; curvy is athletic with a
+    // little more shape - not a belly; big keeps a belly, as its own shape under the bust. D.shape: how far the bust and the seat stand out)
+    if (fem) {
+      if (mu) { const k = (1 + mu * 0.03) / (1 + mu * 0.2); D.armR = D.armR.map((v) => v * k); D.foreR[0] *= 1 / (1 + mu * 0.15); D.shX *= 1.02 / (1 + mu * 0.1); D.chestR[0] *= 1.02 / (1 + mu * 0.1); for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * (1.04 / (b.limb || 1))); }
+      D.shape = b.belly > 0 && b.belly < 1.2 ? 1.18 : mu ? 1.08 : b.belly >= 1.2 ? 1.12 : 1;
+      if (b.belly > 0 && b.belly < 1.2) {   // (curvy)
+        const kw = 1.05 / (b.w || 1), kl = 1.04 / (b.limb || 1);
+        D.belly = 0; D.waistR[0] = (D.waistR[0] - b.belly * 1.4 * 1.1) * kw; D.waistR[1] = (D.waistR[1] - b.belly * 1.2) * kw; D.chestR[0] *= kw; D.chestR[1] *= kw; D.shX *= kw; D.shBar *= kw; D.pelR[0] *= 1.1 / (b.w || 1); D.pelR[1] *= kw; D.hipX *= 1.1 / (b.w || 1); D.w = 1.05;
+        for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * kl);
+      }
+    }
     // a muscular build's arms and shoulders: half the boost - on the chunky build's thick limbs the far shoulder at an angle
     // stood beside the face as big as the face
     // (...and a build's limbs: its thick or thin kept at a little over half - on limbs already 1.24 as thick, an athletic or a
@@ -499,7 +510,7 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
   // tidied as a shape. A hole in it closes; a two-piece's halves never touch (the lowest art pixel of the top gives way: a
   // bra and briefs were one blob at an angle); an art pixel of it on its own goes.)
   const gk = (key) => { const c = cells.get(key); return c ? c.g : 0; }, N4 = (key) => [key - 1, key + 1, key - K, key + K];
-  for (const [key, c] of cells) if (!c.g && !c.leg) { const n = N4(key).map(gk).filter((g) => g); if (n.length >= 3) c.fill = n[0] === 3 || n[0] === 4 ? 1 : n[0]; }
+  for (const [key, c] of cells) if (!c.g && !c.leg) { const n = N4(key).map(gk).filter((g) => g); if (n.length >= 3 && !(n.includes(2) && n.some((g) => g !== 2))) c.fill = n[0] === 3 || n[0] === 4 ? 1 : n[0]; }   // (never the row of skin between a top half and a bottom half: on a short waist that made one ball of a bra and briefs)
   for (const c of cells.values()) if (c.fill > 0 && !c.g) c.g = c.fill;
   if (S.bt && S.bt !== 'body' && tt && tt !== 'tee' && tt !== 'tank') for (const [key, c] of cells) if (c.g && c.g !== 2 && gk(key + K) === 2) c.g = 0;
   // (the owner, 11-20: a strap round the hip holds a woman's briefs up - the triangle's top row runs on across every art pixel

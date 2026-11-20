@@ -1196,11 +1196,17 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   E(S.chest, S.SP, D.chestR, GR.TORSO, 'chest', W.torso);
   const sb = (s) => vadd(S.pel, mv(S.SP, [s * (D.shX - 1.3), -0.5, D.shUp - 0.5 + P.breath]));
   C(sb(-1), sb(1), D.shBar, D.shBar, GR.TORSO, 'shb', W.torso);
-  if (D.belly) E(vadd(S.pel, mv(S.SH, [0, 1.6 + D.belly * 1.4, 4.4])), S.SH, [(7.2 + D.belly * 1.4) * D.w, 4.4 + D.belly * 2.2, 6.0 + D.belly * 0.6], GR.TORSO, 'belly', W.torso);
+  // (the polish pass, the owner 11-20: a belly is its own shape, low and in front - the old one was a ball round the whole trunk,
+  // out at the back as far as at the front, and the bust was lost in it)
+  if (D.belly && PL) E(vadd(S.pel, mv(S.SH, [0, 2.6 + D.belly * 1.5, 3.4])), S.SH, [(6.3 + D.belly * 0.9) * D.w, 2.6 + D.belly * 1.5, 4.0 + D.belly * 0.5], GR.TORSO, 'belly', W.torso);
+  else if (D.belly) E(vadd(S.pel, mv(S.SH, [0, 1.6 + D.belly * 1.4, 4.4])), S.SH, [(7.2 + D.belly * 1.4) * D.w, 4.4 + D.belly * 2.2, 6.0 + D.belly * 0.6], GR.TORSO, 'belly', W.torso);
   if (fem && PL) {   // (the polish pass, the owner 11-20: "a little shape" to a woman's chest and seat - enough to show from the side)
     // (a curve two art pixels tall and one out, never a point: tall, shallow shapes - the owner, 11-20: "they shouldn't have a point")
-    for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.6, D.chestR[1] - 0.3, -1.2])), S.SP, [2.6, 2.6, 2.9], GR.TORSO, 'bust', W.torso);   // (...and the chest over them set back: a neckline that comes in over the bust)
-    E(vadd(S.pel, mv(S.PF, [0, -D.pelR[1] * 0.72, -1.0])), S.PF, [D.pelR[0] * 0.88, 2.7, 4.6], GR.TORSO, 'pel', W.pel);
+    // (the bust two art pixels tall and one out, low enough that the row under the neck stays in - a neckline; the seat the
+    // same step out on every build - a slim one's pelvis is smaller, and a seat of one size stood out of it as a point)
+    const bk = D.shape || 1;
+    for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.6 * D.w, D.chestR[1] - 0.9, -1.7])), S.SP, [2.7 * D.w, 2.6 * bk, 3.5], GR.TORSO, 'bust', W.torso);
+    E(vadd(S.pel, mv(S.PF, [0, -(D.pelR[1] + 1.6 * bk - 4.6), -1.5])), S.PF, [D.pelR[0] * 0.88, 4.6, 6.6], GR.TORSO, 'pel', W.pel);   // (a broad shallow curve: three art pixels tall, one out)
   } else if (fem) for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 2.5, D.chestR[1] - 1.5, 1.0])), S.SP, [2.3, 1.9, 2.0], GR.TORSO, 'bust', W.torso);
   if (W.T.hood && hat !== 'hood') E(vadd(S.neck, mv(S.SP, [0, -3.0, -0.2])), S.SP, [4.8, 2.4, 2.8], GR.TORSO, 'hood', W.hood);
   if (W.T.fur) E(vadd(S.neck, mv(S.SP, [0, 0.4, -1.2])), S.SP, [6.6, 5.2, 2.2], GR.TORSO, 'fur', W.fur);
@@ -1869,6 +1875,15 @@ function render(fig, P, S, X, D, A, opt) {
         if (n.length === 0 || (n.length === 1 && same(n[0], g).length <= 1)) hit.push(q, ...n);
       }
       for (const q of hit) DM[q] = 1; }
+    // (a point on the trunk: one art pixel of it out to the side with nothing over or under it - the tip of a curve, a bust's
+    // or a seat's. The outline there: a curve at this size is a step two pixels tall or none - the owner, 11-20)
+    for (let pass = 0; pass < 2; pass++) { const hit = [], on = (r) => BA[r] >= 2 && DM[r] !== 2;   // (twice: a point two art pixels long goes whole - its tip dropped, the next the outline)
+      for (let by = 1; by < bh - 1; by++) for (let bx = 1; bx < bw - 1; bx++) {
+        const q = by * bw + bx;
+        if (!on(q) || DM[q] || bg(q) !== GR.TORSO || on(q - bw) || on(q + bw)) continue;
+        if (on(q - 1) !== on(q + 1)) hit.push(q);
+      }
+      for (const q of hit) { const inner = BA[q - 1] >= 2 ? q - 1 : q + 1; DM[q] = !on(inner - bw) && !on(inner + bw) && bg(inner) === GR.TORSO ? 2 : 1; } }
     // (a sole's last pixel out beyond the shoe - the far foot's at an angle, a toe's under the near one: on its own it's a
     // white pixel beside the foot, not a sole)
     for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {

@@ -80,3 +80,12 @@ detail, people should blink, or everyone stares.
 - The renderer's budget raised on his word (470 KB; the bake's 1045): tools/perf.mjs, DEVLOG, DECISIONS.
 - A woman's side shape "is looking good"; the neckline over the bust comes in now (the bust lower and out, the chest over it set back).
 - Shown across the five builds, women and men. A big build's belly stays bare between a bra and briefs (it took the cups).
+
+## 15:20 - the women's builds (his notes on the body-type sheet)
+- Slim: a pointy seat -> the seat is one broad curve on every build; a one-pixel point on the trunk is folded into the outline.
+- Average: a spike at the chest, and the neckline (his red arrows) -> the bust lower and level, the row under the neck in.
+- Athletic: arms too big -> "like average with a little more shape": the muscle's arm boost off for women, a touch more bust and seat.
+- Curvy: "like athletic with slightly more shape", the underwear wrong from behind -> no belly, the waist in, the most bust and seat.
+- Big: the stomach and back one huge circle -> the belly its own shape, low and in front (men's too), a bust over it.
+- STILL WEAK: athletic and curvy in a bra and briefs from the front read busy (the two halves close together on a short waist).
+- D.shape (peoplepolish.js dims) is how far the bust and the seat stand out per build.
