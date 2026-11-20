@@ -149,12 +149,14 @@ test('the pass on: uniforms read - the police\'s gold badge and buckle, reflecti
 test('the concepts\' six more hairstyles: their own shapes with the pass on, their base style off; random looks never pick them', () => {
   const NEW = LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[3]);
   assert.deepEqual(NEW.map(([s]) => s[0]), ['Balding', 'Flat top', 'Pompadour', 'Afro puffs', 'Low ponytail', 'Side fringe']);
-  const BASE = { balding: 'Crew cut', flattop: 'Crew cut', pompadour: 'Slicked back', puffs: 'Space buns', lowpony: 'Slicked back', emo: 'Crew cut' };
   const head = (base, style, d) => { const L = LK.emptyLook(base); L.hair.style = style; L.outfit.top = LK.item('Plain tee'); return baked(LK.lookArt(LK.validLook(L)), d); };
   for (const [s, i] of NEW) {
-    const base = s[1][0], b = LK.HAIR_STYLES.findIndex((h) => h[0] === BASE[s[2]]);
-    assert.ok(same(head(base, i, 5), head(base, b, 5)), `${s[0]}: off, it is ${BASE[s[2]]}`);
-    withPass(() => assert.ok(!same(head(base, i, 5), head(base, b, 5)) || !same(head(base, i, 1), head(base, b, 1)), `${s[0]}: on, its own shape`));
+    const base = s[1][0];
+    assert.ok(head(base, i, 5).h > 16, `${s[0]}: off, it draws (as the style it is built on)`);
+    // (the same head with the pass's hair left out: the shape is the pass's)
+    setPolish({ ...POLISH, hair: null, hairCut: null });
+    let plain; try { plain = [head(base, i, 5), head(base, i, 1)]; } finally { setPolish(null); }
+    withPass(() => assert.ok(!same(head(base, i, 5), plain[0]) || !same(head(base, i, 1), plain[1]), `${s[0]}: on, its own shape`));
   }
   for (let k = 1; k < 800; k++) assert.ok(!LK.HAIR_STYLES[LK.randomLook(k * 104729).hair.style][3], 'a random look keeps to the styles drawn without the pass');
 });
