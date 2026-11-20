@@ -89,3 +89,11 @@ detail, people should blink, or everyone stares.
 - Big: the stomach and back one huge circle -> the belly its own shape, low and in front (men's too), a bust over it.
 - STILL WEAK: athletic and curvy in a bra and briefs from the front read busy (the two halves close together on a short waist).
 - D.shape (peoplepolish.js dims) is how far the bust and the seat stand out per build.
+
+## 15:28 - the women's builds, second round
+- Big in underwear "does not look right": the waist was as deep as the belly at the back (a ball) - a flat back now, the belly
+  lower and smaller, bare between a bra and briefs (it took the briefs' band too), the strap's row found robustly.
+- Curvy "a spike coming out of her arm": the hand - a fist bigger than its thinned arm. Fists scale with the limbs and are
+  capped at a third over the wrist; a one-pixel point of an elbow or a hand at the side is folded into the outline.
+- Slim "one pixel high" seat: three art pixels tall now. Athletic: the neck without the muscle's thickening.
+- Left: a small point at the hand in curvy's angle view.

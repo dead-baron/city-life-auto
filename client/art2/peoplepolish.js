@@ -63,13 +63,15 @@ export const POLISH = {
     D.foot[2] *= 1.45;   // (shoes the same size, a little taller: from the side and from behind one was a single white line)
     // (women's builds, the owner 11-20: athletic is average with a little more shape - no big arms; curvy is athletic with a
     // little more shape - not a belly; big keeps a belly, as its own shape under the bust. D.shape: how far the bust and the seat stand out)
+    // (LIMB(k): the limbs and the fists as thick as a build of limb k - the fists with them, or a hand stands out of a thin arm as a point)
+    const LIMB = (k) => { const l0 = b.limb || 1, q = (1 + (k - 1) * 0.55) / (1 + (l0 - 1) * 0.55); for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * q); D.fist *= q; };
     if (fem) {
-      if (mu) { const k = (1 + mu * 0.03) / (1 + mu * 0.2); D.armR = D.armR.map((v) => v * k); D.foreR[0] *= 1 / (1 + mu * 0.15); D.shX *= 1.02 / (1 + mu * 0.1); D.chestR[0] *= 1.02 / (1 + mu * 0.1); for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * (1.04 / (b.limb || 1))); }
-      D.shape = b.belly > 0 && b.belly < 1.2 ? 1.18 : mu ? 1.08 : b.belly >= 1.2 ? 1.12 : 1;
+      if (mu) { const k = (1 + mu * 0.03) / (1 + mu * 0.2); D.armR = D.armR.map((v) => v * k); D.foreR[0] *= 1 / (1 + mu * 0.15); D.shX *= 1.02 / (1 + mu * 0.1); D.chestR[0] *= 1.02 / (1 + mu * 0.1); D.neckR /= 1 + mu * 0.2; LIMB(1.04); }
+      D.shape = b.belly > 0 && b.belly < 1.2 ? 1.18 : mu ? 1.08 : b.belly >= 1.2 ? 1.28 : 1;
       if (b.belly > 0 && b.belly < 1.2) {   // (curvy)
-        const kw = 1.05 / (b.w || 1), kl = 1.04 / (b.limb || 1);
+        const kw = 1.05 / (b.w || 1);
         D.belly = 0; D.waistR[0] = (D.waistR[0] - b.belly * 1.4 * 1.1) * kw; D.waistR[1] = (D.waistR[1] - b.belly * 1.2) * kw; D.chestR[0] *= kw; D.chestR[1] *= kw; D.shX *= kw; D.shBar *= kw; D.pelR[0] *= 1.1 / (b.w || 1); D.pelR[1] *= kw; D.hipX *= 1.1 / (b.w || 1); D.w = 1.05;
-        for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * kl);
+        LIMB(1.04);
       }
     }
     // a muscular build's arms and shoulders: half the boost - on the chunky build's thick limbs the far shoulder at an angle
@@ -77,10 +79,13 @@ export const POLISH = {
     // (...and a build's limbs: its thick or thin kept at a little over half - on limbs already 1.24 as thick, an athletic or a
     // big build's arm was half as wide again as an average one's)
     { const l0 = b.limb || 1, k = (1 + (l0 - 1) * 0.55) / l0; for (const key of ['armR', 'foreR', 'thighR', 'shinR']) D[key] = D[key].map((v) => v * k); D.fist *= k; }
-    if (mu) { const k = (1 + mu * 0.1) / (1 + mu * 0.2), k2 = (1 + mu * 0.06) / (1 + mu * 0.12), k3 = (1 + mu * 0.05) / (1 + mu * 0.1); D.armR = [D.armR[0] * k, D.armR[1] * k2]; D.foreR[0] *= (1 + mu * 0.08) / (1 + mu * 0.15); D.shX *= k3; D.chestR[0] *= k3; }
+    if (mu && !fem) { const k = (1 + mu * 0.1) / (1 + mu * 0.2), k2 = (1 + mu * 0.06) / (1 + mu * 0.12), k3 = (1 + mu * 0.05) / (1 + mu * 0.1); D.armR = [D.armR[0] * k, D.armR[1] * k2]; D.foreR[0] *= (1 + mu * 0.08) / (1 + mu * 0.15); D.shX *= k3; D.chestR[0] *= k3; }
     // a body with depth (the concepts' side views are a barrel, not a plank), and a big build's belly out in front
     D.chestR[1] *= fem ? 0.84 : 1.1; D.waistR[1] *= fem ? 1.0 : 1.1; D.pelR[1] *= 1.08;   // (a woman's back flatter: her upper back stood out behind the shoulder in a side view - the owner, 11-20; her shape is the bust's and the seat's)
     if (b.belly >= 1.2) { D.waistR[0] *= 1.12; D.waistR[1] *= 1.12; D.chestR[0] *= 1.06; D.shX *= 1.05; }
+    D.fist = Math.min(D.fist, D.foreR[1] * 1.35);   // (a hand no more than a third wider than its wrist: on a slim build's arm it stood out at the hip as a point, and from the side behind it)
+    // (a big build's back is a back: the waist no deeper than the chest - the belly is its own shape in front, people.js)
+    if (b.belly >= 1.2) D.waistR[1] = Math.min(D.waistR[1], D.chestR[1] * 1.04);
     D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;
   },
   // the nose: a shadow on the side away from the light (the light's from the left), on the row under the eyes
@@ -191,7 +196,7 @@ export const POLISH = {
       const hemZ = T.tuck ? 3.3 : T.bare || T.bikini || T.towel || T.crop ? 9 : T.tank ? 0.4 : -0.9, mine = new Set([W.top, relit(W.top)]), ours = new Set([W.bot, relit(W.bot)]);
       const body = (R, Q) => {
         const low = Q.part === 'pel' && Q.z <= hemZ;
-        if (Q.part === 'belly' && Q.z > 3.4 && (tt === 'bra' || tt === 'sport' || tt === 'bralette' || tt === 'bandeau')) return R;   // (a big build's belly is bare between a bra and briefs: at chest height it stands out beyond the bust, and took the cups - a red ball from the side)
+        if (Q.part === 'belly' && (!tt || tt === 'bra' || tt === 'sport' || tt === 'bralette' || tt === 'bandeau')) return R;   // (a big build's belly is bare between a bra and briefs: at chest height it stands out beyond the bust, and took the cups - a red ball from the side)
         if (low ? !bt || (R !== W.skin && !ours.has(R)) : R !== W.skin && !(tt && mine.has(R))) return R;
         if (Q.res !== 1) { const g = cut4(S, { n: 1, bust: Q.part === 'bust' ? 1 : 0, u: Q.u, z: Q.z, f: Q.f, u0: Q.u - 0.06, u1: Q.u + 0.06, z0: Q.z - 0.5, z1: Q.z + 0.5 }, null); return g ? (g === 2 && tt === 'tee' ? S.RT : S.RC) : W.skin; }   // (close up: cut pixel by pixel)
         S.rec.push(Q.x, Q.y, Q.part === 'bust' ? 1 : 0, Q.u, Q.z, Q.f);
@@ -516,8 +521,12 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
   // (the owner, 11-20: a strap round the hip holds a woman's briefs up - the triangle's top row runs on across every art pixel
   // of the hips in it, as far as the arms let it show; from the side and from behind it is the strap)
   if (S.bt === 'brief' && S.fem) {
-    let top = Infinity;
-    for (const [key, c] of cells) if (c.g === 2 && !c.leg) top = Math.min(top, Math.floor(key / K));
+    // (the strap's row: the highest with three art pixels of the piece or more - one stray one higher up, on a big build's waist, made a second band)
+    let top = Infinity; const rows = new Map();
+    for (const [key, c] of cells) if (c.g === 2 && !c.leg) rows.set(Math.floor(key / K), (rows.get(Math.floor(key / K)) || 0) + 1);
+    for (const [r, n] of rows) if (n >= 3 && r < top) top = r;
+    if (top === Infinity) for (const r of rows.keys()) top = Math.min(top, r);
+    for (const [key, c] of cells) if (c.g === 2 && !c.leg && Math.floor(key / K) < top) c.g = 0;
     if (top < Infinity) for (const [key, c] of cells) if (!c.g && Math.floor(key / K) === top && (c.leg ? c.al < 0.2 : c.z < 4)) c.g = 2;
   }
   for (const [key, c] of cells) if (c.g && c.g !== 2 && !N4(key).some(gk)) c.lone = 1;   // (the bottom half's stays: from the side, behind a hanging arm, one art pixel at the hip is all there is of it)
