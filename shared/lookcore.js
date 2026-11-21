@@ -472,6 +472,10 @@ add('bottoms', 'Tartan trousers', 'mf', 'punk alt retro', 55, 'clothing', { k: '
 add('bottoms', 'Camo pants', 'mf', 'outdoors street disguise', 55, 'costume', { k: 'cargo', p: 3 }, 'olive', 'khaki');
 add('jacket', 'Hunting vest', 'mf', 'outdoors', 60, 'outdoor', { k: 'vest', pockets: 1 }, 'orange', 'charcoal');
 add('set', 'Undershirt and trunks', 'mf', 'lounge', 15, 'clothing', { k: 'under', bk: 'trunks' }, 'white');   // (what the 'Underwear' set was until 11-20)
+// (the owner, 11-20: "add striped panties/underwear" - cut and striped on the art grid, client/art2/peoplepolish.js under4)
+add('under', 'Striped boxers', 'm', 'lounge casual', 12, 'clothing', { bk: 'trunks', band: 1, stripe: 1 }, 'navy', 'white');
+add('under', 'Striped briefs', 'mf', 'lounge casual', 10, 'clothing', { bk: 'bikini', stripe: 1 }, 'red', 'white');
+add('under', 'Striped bra and panties', 'f', 'lounge casual', 16, 'clothing', { k: 'bra', bk: 'bikini', stripe: 1 }, 'pink', 'white');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;

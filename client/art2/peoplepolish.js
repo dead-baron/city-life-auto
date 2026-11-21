@@ -205,12 +205,17 @@ export const POLISH = {
     // underwear (lookcore.js 'under': A.under, on the halves no clothes cover) - pass 4, under4 below: the body under it
     // is handed to the renderer as skin and every pixel's place on the body kept; post() cuts the piece on the art grid
     // (no piece picked: the plain basics every look has - lookcore.js lookArt: boxers, a bra and panties - cut the same way)
-    const basic = (h) => !!h && !h.under && h.trim === undefined && h.color === '#e8e4dc', U = A.under || ((basic(A.top) || basic(A.bottom)) && { color: '#e8e4dc', trim: '#c8ccd4', band: 1 });   // (pass 5, the owner: the basics are boxers for a man, a bra and panties for a woman)
-    const cells = U && !T.dress && !T.long, ub = cells && A.bottom && (A.bottom.under || basic(A.bottom)) && W.bk !== 'none', ut = cells && A.top && (A.top.under || basic(A.top));
+    // (the wardrobe's own sports bra, bikini top and bikini bottoms are cut the same way - the owner, 11-20: "sports
+    // bra one thin line", "bikini top two pixels", a strap on the bikini bottoms. Each half in its own piece's color.)
+    const basic = (h) => !!h && !h.under && h.trim === undefined && h.color === '#e8e4dc';
+    const wearT = !!A.top && !A.top.under && !basic(A.top) && (A.top.kind === 'bra' || A.top.kind === 'bikini'), wearB = !!A.bottom && !A.bottom.under && !basic(A.bottom) && A.bottom.kind === 'bikini' && !T.swimsuit;   // (a swimsuit is one piece: the renderer's own)
+    const U = A.under || ((basic(A.top) || basic(A.bottom)) && { color: '#e8e4dc', trim: '#c8ccd4', band: 1 }) || ((wearT || wearB) && { color: (wearT ? A.top : A.bottom).color, trim: (wearT ? A.top : A.bottom).trim });   // (pass 5, the owner: the basics are boxers for a man, a bra and panties for a woman)
+    const cells = U && !T.dress && !T.long, ub = cells && A.bottom && (A.bottom.under || basic(A.bottom) || wearB) && W.bk !== 'none', ut = cells && A.top && (A.top.under || basic(A.top) || wearT);
     const bt = !ub ? 0 : T.swimsuit ? 'body' : W.bk === 'bikini' ? 'brief' : W.bk === 'trunks' ? (U.fit ? 'trunk' : 'boxer') : 0;
-    const tt = !ut ? 0 : T.swimsuit ? 'body' : T.bikini ? (W.tk === 'bikini' ? 'bandeau' : U.sport ? (U.lace ? 'bralette' : 'sport') : 'bra') : W.tk === 'tank' ? 'tank' : W.tk === 'under' ? 'tee' : 0;
+    const tt = !ut ? 0 : T.swimsuit ? 'body' : wearT ? (A.top.kind === 'bra' ? 'sport' : 'bra') : T.bikini ? (W.tk === 'bikini' ? 'bandeau' : U.sport ? (U.lace ? 'bralette' : 'sport') : 'bra') : W.tk === 'tank' ? 'tank' : W.tk === 'under' ? 'tee' : 0;
     if (bt || tt) {
-      const S = W.u4 = { rec: [], U, bt, tt, cu: D.chestUp, su: D.shUp, fem: D.fem, SK: W.skin, RC: pale4(far4(cloth(U.color), W.skin)), RT: pale4(relit(cloth(U.trim))) };
+      const S = W.u4 = { rec: [], U, bt, tt, cu: D.chestUp, su: D.shUp, fem: D.fem, SK: W.skin, RC: pale4(far4(cloth(wearT ? A.top.color : U.color), W.skin)), RT: pale4(relit(cloth(U.trim))) };
+      if (wearT !== wearB || (wearT && wearB && A.top.color !== A.bottom.color)) S.RCb = pale4(far4(cloth(wearB ? A.bottom.color : U.color), W.skin));   // (two pieces, two colors: the bottom half's own)
       const hemZ = T.tuck ? 3.3 : T.bare || T.bikini || T.towel || T.crop ? 9 : T.tank ? 0.4 : -0.9, mine = new Set([W.top, relit(W.top)]), ours = new Set([W.bot, relit(W.bot)]);
       const body = (R, Q) => {
         const low = Q.part === 'pel' && Q.z <= hemZ;
@@ -644,14 +649,14 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
   }
   for (const [key, c] of cells) if (c.g && c.g !== 2 && !N4(key).some(gk)) c.lone = 1;   // (the bottom half's stays: from the side, behind a hanging arm, one art pixel at the hip is all there is of it)
   for (const c of cells.values()) if (c.lone) c.g = 0;
-  const G = (key) => { const c = cells.get(key); return c ? c.g : -1; }, tee = tt === 'tee', RB = tee ? RT : RC, RBAND = tee ? RC : RT, tones = new Map();
+  const G = (key) => { const c = cells.get(key); return c ? c.g : -1; }, tee = tt === 'tee', RB = tee ? RT : S.RCb || RC, RBAND = tee ? RC : RT, tones = new Map();
   // (clean tones: an art pixel between two of the piece's in one tone takes it - no speckle from the body's dither)
   for (const [key, c] of cells) { const a = cells.get(key - 1), b = cells.get(key + 1); tones.set(key, c.g && a && b && a.g && b.g && a.i === b.i ? a.i : c.i); }
   for (const [key, c] of cells) {
     if (!c.g) continue;
     const up = G(key - K), dn = G(key + K), i = tones.get(key), edge = !up || !dn || !G(key - 1) || !G(key + 1);
     let R = c.g === 2 ? RB : RC, j = i;
-    if (c.g === 2 && !c.leg && U.band && up !== 2 && (up !== 1 || tee || tt === 'tank')) R = RBAND;                    // (the waistband: the top art pixel)
+    if (c.g === 2 && !c.leg && U.band && !S.RCb && up !== 2 && (up !== 1 || tee || tt === 'tank')) R = RBAND;                    // (the waistband: the top art pixel)
     else if (U.lace && (c.g === 4 || (c.g === 2 && !c.leg && up !== 2 && c.f > 0 && c.u0 <= 0 && c.u1 >= 0))) { R = RT; j = 4; }   // (lace: a bow in the trim colour between the cups and on the waist)
     else if (U.lace && up === 0) j++;                                                                 // (...and its top edge a lighter band)
     else if (c.g === 2 && c.leg && dn === 0) j--;                                                     // (the hem of trunks and boxers, a step darker)
@@ -659,14 +664,17 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
     if (U.gloss && i >= 4) j++;   // (a sheen on the lightest tone only: from tone 3 a red teddy was half pale pink)
     j = Math.max(0, Math.min(4, j));
     if (edge && j && dist(R[j], SK[c.i]) < 120) j--;                                                  // (pale cloth on pale skin: its edge a step darker, so the piece has a shape)
+    // (stripes, the owner 11-20: in the trim's color, every other art pixel - down a boxer's legs, across briefs and a bra)
+    if (U.stripe && R !== RBAND && (c.g === 1 || c.g === 2) && ((S.bt === 'boxer' || S.bt === 'trunk') && c.g === 2 ? key % K : Math.floor(key / K)) & 1) R = RT;
     const C = R[j], L = R[Math.max(0, j - 2)];                                                        // (a line the renderer drew on the body there - under the bust, beside an arm - a fold of the cloth)
     for (const p of c.px) { const q = LN[p] ? L : C; CR[p] = q[0]; CG[p] = q[1]; CB[p] = q[2]; }
   }
 }
 // (a pale cloth's ramp shades to a warm brown - on a bare body, the skin's own tones: underwear's pale cloth shades cool instead)
 // (a dark cloth on dark skin stays dark: re-lit to charcoal it would be the skin's own lightness)
+// (pale4: a white or a pale grey piece's shades go a cool grey, so it has a shape on skin - not a yellow or a pink one: its own shades, or a yellow bikini is sand)
 const far4 = (R, SK) => { const N = relit(R); return dist(N[2], SK[2]) < dist(R[2], SK[2]) ? R : N; };
-const pale4 = (R) => (lum(R[3]) > 0.68 ? R.map((c, i) => mix(R[4], [118, 128, 160], [0.6, 0.45, 0.3, 0.14, 0][i])) : R);
+const pale4 = (R) => (lum(R[3]) > 0.68 && Math.max(...R[3]) - Math.min(...R[3]) < 48 ? R.map((c, i) => mix(R[4], [118, 128, 160], [0.6, 0.45, 0.3, 0.14, 0][i])) : R);
 // a dark ramp re-lit (kept per ramp; a re-lit ramp is its own)
 const RELIT = new WeakMap(), DARK_L = [0.06, 0.11, 0.185, 0.3, 0.44];
 const isDark = (R) => Array.isArray(R) && R.length === 5 && lum(R[3]) < 0.27;

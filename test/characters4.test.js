@@ -53,8 +53,8 @@ const own = (base, name, d, pose = 'idle', f = 0, skin = 2, color = 'hot pink') 
 const UNDER = LK.PIECES.filter((p) => p && p.slot === 'under' && p.name !== 'Nothing on');
 const CUT = UNDER.filter((p) => !['Union suit', 'Silk slip'].includes(p.name));   // (those two are shapes the renderer has)
 
-test('underwear: 16 pieces and Nothing on; every piece shows on both bases from every side and in the walk', () => {
-  assert.equal(UNDER.length, 16);
+test('underwear: 19 pieces and Nothing on; every piece shows on both bases from every side and in the walk', () => {
+  assert.equal(UNDER.length, 19);   // (16, and the three striped ones the owner asked for on 11-20)
   for (const p of UNDER) for (const base of p.b) {
     for (const d of [0, 1, 2, 4, 6]) { const n = own(base, p.name, d).px.length; assert.ok(n >= (d === 2 || d === 6 ? 3 : 6), `${p.name} on ${base}, facing ${d}: ${n} art pixels`); }
     for (const f of [1, 3, 4]) { const n = own(base, p.name, 0, 'walk0', f).px.length; assert.ok(n >= 6, `${p.name} on ${base}, walking, frame ${f}: ${n} art pixels`); }

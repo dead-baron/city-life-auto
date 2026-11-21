@@ -25332,3 +25332,12 @@ The owner's last two notes on the bodies - "a random blue pixel here and there",
 - Left: in profile the hanging arm parts a garment, and the bit of it in front of the hand can be a single pixel; walking frames have their own one-pixel peeks.
 - **The owner: the outline stays (option A); the bodies are good - on to the wardrobe notes.**
 
+## 2026-11-20 · Characters, wardrobe notes 1: sports bra, bikini, striped underwear (branch characters, staged)
+
+First batch of the owner's wardrobe notes, now that the bodies are passed.
+- **Sports bra, bikini top, bikini bottoms** ("one thin line", "two pixels", "a strap"): the renderer drew them as a color by where a world pixel sits on the body, and at the game's size their edges fell between art pixels. They are cut on the art grid like the underwear now (`peoplepolish.js` `dress`: `wearT`, `wearB`; `under4`) - a sports bra a band with broad straps, a bikini top two cups with straps, the bottoms a triangle with a strap round the hips - each half in its own piece's color (`S.RCb`). The swimsuit stays the renderer's own: cut this way its edge was ragged.
+- **A yellow or a pink piece keeps its color** (`pale4`): pale pieces had their shades pulled to a cool grey so white underwear has a shape on skin - on a yellow bikini that was sand. Only near-neutral pale colors now.
+- **Striped underwear, three new pieces** at the end of the catalogue (`shared/lookcore.js`): Striped boxers, Striped briefs, Striped bra and panties (`stripe: 1`). Stripes in the trim's color on the art grid: down a boxer's legs, across briefs and a bra.
+- Measured against the wardrobe snapshot: only Sports bra, Bikini top, Bikini bottoms and the three new pieces differ. Tests: the underwear count 16 -> 19; a new test for these pieces in `test/bodyshape.test.js`.
+- Next from his notes: stripes that follow the garment on clothes; the size-ups (glasses, eye patch, necklaces, tiara, bow tie, stethoscope, bracelets, lanyard, smartwatch, pads, camera); masks; hats, earmuffs, headphones; bags and held things, bib straps; shirt buttons, tactical vest, ghillie suit, the gold Founding Citizen jacket.
+

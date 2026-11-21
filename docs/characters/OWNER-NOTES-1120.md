@@ -137,3 +137,9 @@ Each fix made against a snapshot of every figure; what it touched is in the DEVL
 - [x] A random blue pixel / a random white pixel (men, three quarters) - a thigh's top over the hem line is under the shirt.
 - Outline: A (as it is). Bodies: passed. Next: the wardrobe notes above, in the order of the queue.
 
+## 18:10 - wardrobe notes, batch 1 (after the bodies were passed)
+- [x] Sports bra "one thin line" - a band with broad straps, cut on the art grid.
+- [x] Bikini top "two pixels" - two cups with straps. Bikini bottoms - a triangle with a strap round the hips, in its own color.
+- [x] "Add striped panties/underwear" - Striped boxers, Striped briefs, Striped bra and panties (new pieces, the catalogue's last three).
+- Shown: `characters-wardrobe-batch1-swim-and-stripes.png`. Not yet seen by him.
+
