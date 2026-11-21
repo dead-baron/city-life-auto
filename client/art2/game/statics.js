@@ -2260,11 +2260,17 @@ const SPECIES = {
   weed: [FL.weedTuft, 31, 36], dryTuft: [(s) => FL.dryGrass(s, 0.6), 34, 31],
   sunflowers: [FL.sunflowers, 35, 69], wildflowers: [(s) => FL.wildflowerLawn(s), 68, 47],
 };
+// The species made at the art pixel (flora.js floraArt: the maker run at half size, a pixel of it an art pixel) - every
+// one whose maker follows the flora size (floraScale). The owner's nature kit pass, 2026-11-21.
+const ART_FLORA = new Set(['street', 'streetPl', 'ginkgo', 'redMaple', 'young', 'flowerTree', 'magnolia', 'cherry', 'maple', 'mapleAutumn', 'oak', 'birch', 'aspen', 'willow',
+  'apple', 'orange', 'fir', 'cedar', 'pondPine', 'pine', 'spruce', 'mtnPine', 'mtnFir', 'whitePine', 'larch', 'mesquite', 'paloVerde', 'joshua',
+  'coconut', 'cocoUp', 'royal', 'leaning', 'fanSkirt', 'date', 'desertFan', 'saguaroBig', 'saguaroMid', 'saguaroSmall']);
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
 function makeFlora(r) {
   const sp = SPECIES[r.sp];
   if (!sp) return EMPTY;
   const k = r.k || 1, mk = () => (r.bare ? FL.floraBare(() => sp[0](r.s)) : sp[0](r.s));
+  if (ART_FLORA.has(r.sp)) return FL.floraArt(k, mk);   // (made at the art pixel: flora.js floraArt)
   let G = k !== 1 && FL.floraScale ? FL.floraScale(k, mk) : mk();
   if (G && G.render) G = G.render(0);
   return G;
