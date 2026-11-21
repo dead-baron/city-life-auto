@@ -146,7 +146,8 @@ function build(C, tack, o) {
   const hd = tube(poll, tip, (t) => 3.9 + 1.1 * Math.exp(-(((t - 0.3) / 0.2) ** 2)) - 1.2 * t, (t) => 3.7 - 1.1 * t + (t > 0.85 ? 0.5 : 0), (t) => -0.9 * Math.exp(-(((t - 0.32) / 0.18) ** 2)), face, 6);
   const at = (a, c, s) => [xc + poll[0] + hd.hx * a + hd.nx * c, cy + s, poll[1] + hd.hz * a + hd.nz * c];
   for (const sd of [-1, 1]) {
-    const [ex, ey, ez] = at(4.6, 1.4, sd * 3.3); m.box(ex - 0.6, ey - 0.6, ez - 0.6, ex + 0.7, ey + 0.7, ez + 0.7, eye);               // the eyes
+    const [ex, ey, ez] = at(4.6, 1.4, sd * 3.3);               // the eyes: a feature each - one art pixel in the game's picture (animals.js renderArt)
+    m.box(Math.round(ex - 1), Math.round(ey - 1), Math.round(ez - 1), Math.round(ex + 1), Math.round(ey + 1), Math.round(ez + 1), m.mat({ ramp: m.mats[eye].ramp, k: 1, feat: 1, flat: 1, min: 1, as: R(C.coat), name: sd < 0 ? 'eyeL' : 'eyeR', side: sd }));
     const [nx2, ny2, nz2] = at(Lh - 0.6, 0.6, sd * 1.5); m.box(nx2 - 0.6, ny2 - 0.5, nz2 - 0.6, nx2 + 0.6, ny2 + 0.6, nz2 + 0.6, dark);   // the nostrils
     // the ears: up off the poll, a little forward (one turned back now and then)
     const flick = o.idle === 2 && sd > 0 ? 0.6 : o.alert ? -0.25 : 0, ea = -ha + Math.PI / 2 + 0.55 - 0.4 + flick;

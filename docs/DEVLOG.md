@@ -25592,3 +25592,105 @@ note under them. Shown once and remembered, as before. `client/account.js` showG
   it's on. It's now the first row of Graphics, a plain switch that shows the state - F11, Esc and the title's button move
   it too (fullscreenchange), and a browser that refuses puts it back. The title's FULLSCREEN button stays hidden with a
   keyboard and mouse (F11 does it on a desktop) and shows on touch and gamepad.
+
+## 2026-11-21 - The animals drawn at the art pixel: faces, eyes, legs that hold (first pass, branch `animals`)
+The owner (11-21): "I'd like to polish the animal/wildlife art up, some dont look very good at all. I'd like to get it
+close to the concepts." A sheet of every land animal and bird as the game drew it, beside its concept, showed it was
+nearly all of them, and one cause: the models are 1 world px a voxel, the game's art pixel is 2, and the picture was
+made with one ray per art pixel - whatever was thinner than the pixel (a leg, a tail, an eye) was lost or doubled by
+chance, the eyes were buried inside the head, and the bodies were too thin to carry a face from the front.
+
+- **The picture** (`client/art2/animals.js` `renderArt`, used whenever `px` > 1; the old one-ray picture stays for the
+  previews at px 1). Every art pixel looks at each world px under it, down the line of sight a world px of depth at a
+  time: the material most of the pixel shows, in its average tone; a thin part (a material's `thin`: a tail, an
+  antler, an ear, a bill) fills the pixel it only half covers; the legs on the far side of the body (`limb`) a tone
+  darker, so four legs read as four; the shading in three clean bands from the surface's own direction, never the
+  ramp's last tone; and the features (`feat`: an eye, a nose, a tongue - each its own material) one art pixel each,
+  where the middle of what shows of it lands - seen through 2 px of coat, so an eye sits where it reads from the
+  front and from the side both; the far eye not seen side on, none from behind; two eyes never touching.
+- **The rig**: the pets of A1 chunky - the head big and carried high over the back, sturdy legs set apart, ears a
+  shade off the coat - and each breed's own marks (the spaniel's brown head and white blaze, the shepherd's black
+  muzzle and saddle, the husky's white face and legs and blue eyes, the bulldog's and the pit bull's white, the
+  dalmatian's spots an art pixel each, the tabbies' bands, the cats' eye colours). The farm: the cow's pink muzzle and
+  black ears, the sheep's black face and legs, the pig, the goat. The wild ones: antlers, horns and tusks that hold,
+  the moose's palms laid back, the wolf sturdier with yellow eyes, the raccoon's mask, the bobcat.
+- **A bug found on the way: the birds had no heads.** In `client/art2/birds.js` every bird's table gave `head` twice -
+  its size, then its colour - so the colour overwrote the size and the head, the eyes, the bill and a quail's topknot
+  were never drawn (a radius of '#3e3a46'). The colour is `headC` now. The small birds are drawn a little bigger than
+  the table's sizes (`GROW`: a quail 1.3) - the picture only; nothing the server measures.
+- **Budget**: the renderer's code 411 -> 419 KB (`tools/perf.mjs`): `renderArt` and the rig's markings join the
+  renderer's first load, as the animals' code always has. A sprite takes about twice as long to draw as before
+  (measured here: 12 -> 23 ms each over 192 sprites); they are drawn once and kept.
+- **Tests**: `test/animalart.test.js` - every four-legged animal has two eyes from the front, apart and level; one eye
+  from the side and none from behind, for the animals and the birds; a bird's head is a size and `headC` a colour;
+  fore and hind feet apart on the ground; the px-1 picture still there. `test/wildart.test.js` unchanged and passing.
+- Not done yet: the moose's antlers and the deer's rack from the front, the mountain goat, the birds' wings in flight,
+  the shark and the sea life, the fish in the water and on the catch card (to be judged on sheets), the animals in
+  motion in the game. Not on `main`: the owner sees the sheets first.
+
+## 2026-11-21 - Animals, second pass: the birds that fly round you, antlers, the horse's eye, richer coats
+- **The pigeons, gulls and sparrows were smudges** (the owner: "even the birds you see flying around as a world
+  detail"). `critters.js` paints them 1 world px a pixel, right for the chunks' scenery; as live sprites the game
+  halved each to the 2 px art pixel and a ten-pixel pigeon lost its head, wing and bill. The ones that fly round the
+  player are now their own pictures at that size (`client/art2/game/actors.js` `critterArt`, a pixel at a time: the pigeon on the
+  ground, taking off and three wingbeats, the gull's four, the sparrow, the three butterflies, the dragonfly, the
+  bee, the frog); `actors.js` `critterSprite` hands them out at art pixel 2 (the painted frames at 1, and for the
+  scenery as before). The verge's rabbit, the squirrel on a trunk and the pond's heron are the same models as the ones
+  you hunt, so a kind has one look. Kept in `actors.js`: `critters.js` is part of the chunks' bake (a change to it is
+  a new build of every chunk), and the renderer is at its file budget for a file of its own.
+- **Antlers and horns**: the moose's palms stand like open hands with fingers along the top (from the side a palm
+  and its points, not a block on its head); a deer's rack spreads from the front; the mountain goat's black horns
+  show, its head carried higher.
+- **The horse** (`horse.js`) has an eye a pixel in the picture, like the others.
+- **Coats**: the back and the flank keep the coat's own colour, lit only along the upper left and shaded underneath
+  (they were a tone too pale all over - the bears most); a belly stays its own colour in the body's shadow (the deer's
+  had turned to a red stripe).
+- **Left as they are**: the 91 fish of the catch card and the Fish log (`client/fishart.js`, 11-16) and the fish seen
+  in the water (`waterlife.js`) - judged on a sheet, they hold up.
+- **Budget**: the bake worker's code 1020 -> 1024 KB (`tools/perf.mjs`; it counts the sprite providers): the art-pixel
+  critters' pictures. No chunk is rebuilt: the art hashes are unchanged.
+- `tools/playtest.py --ls` brought over from the `characters` branch (the local gate) for the in-game captures.
+- Tests: `test/animalart.test.js` + the critters at the art pixel (their frames, mirrored, what the game hands out).
+
+## 2026-11-21 - Animals: the owner's notes of 09:27
+"The critters looked a bit better before than after ... return back to the before but just see if a little more polish
+makes it look better. Like the sparrow looks better after." / the moose's body "not moose like" / the bear's body
+"strange" / the heron's legs "really thick" from the front and back / the cats "look like small dogs".
+- **The critters are their painted frames again** (`critters.js`, untouched), the redrawn ones gone - but for the
+  sparrow, which he preferred. The light polish: `actors.js` `tidyDown` halves a painted frame to the art pixel with one
+  rule changed - a block that holds any of the creature shows the creature, not the ink line round it (a lone bright
+  eye or bill kept) - so each keeps its size and shape exactly and reads less as an outline: the pigeon, the gull, the
+  bee, the frog, the rabbit, the squirrel, the pond's heron. The butterflies and the dragonfly are left exactly as the
+  game halves them (their wings' dark veins are the picture). A before / after sheet went to him: it is his call
+  whether the polish stays.
+- **The moose**: a shorter body on longer legs, the withers high over a sloping back (`slope`), the long head carried
+  forward and down from the shoulders on a real neck (`hfwd`, `hdrop`), a darker muzzle.
+- **The bears**: a rounder barrel with an arched back (`arch`), the black bear's rump over its shoulders, the grizzly's
+  hump broader and lower; the head big, low and forward of the shoulders, not perched on the back like a dog's.
+- **The heron** (and every bird): the legs a voxel wide on whole voxels either side of the middle of an even-width
+  model, and drawn `bare` - no ink line round them (`renderArt`) - so from the front and from behind they are two thin
+  legs with the ground between, not a post.
+- **The cats**: a face wider than it is deep and flat in front (`catFace`), bigger ears set wide, a pink nose, a long
+  thin tail up in an S with the tip curling over (`tail: 'cat'`), slimmer legs, a lower head.
+- Tests: `test/animalart.test.js` - the painted critters keep their size, shape and anchor and carry no more ink than
+  before; the butterflies, dragonfly, leaves and motes untouched; the sparrow its own picture.
+
+## 2026-11-21 - Animals: the owner's notes of 09:55 (branch `animals`)
+- **Cats.** The face is its eyes: the nose pixel is gone (beside an eye it read as a second eye), and every cat's
+  collar is a different colour from its eyes (the tabby's eyes amber). The ears are bigger and set wide, so the front
+  and the back show two triangles with the crown between them. The tail goes up behind and hooks back at its tip,
+  a little to one side - it no longer stands over the head as a spire from the front (`tail: 'cat'`; the tail
+  helper takes a sideways offset).
+- **Grizzly.** The hump is a slight one (`hump` 1.5 -> 0.7, `arch` 0.26 -> 0.14) and the bear stands taller on its
+  legs (`h` 31 -> 34), so it reads as a bear and not a mound.
+- **Moose.** Slim legs (`legK` 0.62: it had the thick legs of a humped animal). The antlers are tan as in AN4 and
+  defined: a palm that sweeps back from the brow, darker in its hollow than its rim, separate points up off the top
+  edge and one brow point forward.
+- **Monarch (and the other two butterflies)** and **the rabbit** are their own pictures at the art pixel now, as the
+  sparrow is (`actors.js` `CART`, a palette per kind, a frame may carry its own anchor column): the butterflies from
+  above - black-edged wings with pale tip spots either side of the body, open / rising / closed / falling; the
+  rabbit sitting up, leaping, stretched out, landing, with the pink inside its ear, a white tail and a cream chest.
+  The pigeon, gull, bee, frog, squirrel and heron stay the painted frames with the light clean-up; the dragonfly
+  as painted. `critters.js` is untouched (the art hashes don't move).
+- `test/animalart.test.js`: the butterflies are the same either side and open and close; the rabbit has pink in
+  its ears in every frame.
