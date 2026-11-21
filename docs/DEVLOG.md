@@ -25220,6 +25220,12 @@ best-looking trees in the game.
   grass keep fewer blades and set them against each other by tone (`nu`); the agave fewer, broader leaves; the
   tumbleweed fewer hoops; a hedge and the topiary a fine, even face (`clip`); the ocotillo its canes; the cattails'
   glints at the water a few, not a line.
+- **The small ground cover** too (`ground.js` `coverSprite(kind, v, art)`, stamped by `groundbake.js` in 2 x 2 blocks
+  on the art grid): the flowers, ferns, reeds, tall tufts, pebbles, cones and shells strewn over the ground are one
+  art pixel to the pixel. Not the dense turf: a lawn of blades one art pixel wide, each with its sunlit tip, came out
+  as yellow static in the running game - halved and averaged by the bake it stays the soft mottled grass it was.
+- **Birch and aspen**: fewer stems, set apart (six in a bundle read as a stone pillar at the art pixel). The grasses'
+  outline is softer (`GOL`): a blade is a pixel wide, a full-dark ring was most of the plant.
 - **The olive, the Italian cypress and the small fan palm** came from the older painters (`trees.js`): made in
   `flora.js` now (`oliveTree`, `italianCypress`, `smallFanPalm`), so they are at the art pixel with the rest;
   `statics.js` no longer loads `trees.js`.
@@ -25236,5 +25242,6 @@ best-looking trees in the game.
   the server's bake). The bake itself draws a quarter of the pixels per plant; `node tools/perf.mjs` is within every
   budget (bake 87 files, 1014 KB; `trees.js` no longer in it).
 - Seen as the game draws it (`tools/area-shot.mjs`, six places before and after): a mountain meadow, a pasture, a
-  desert oasis, a cove, a redwood road, a town block.
+  desert oasis, a cove, a redwood road, a town block. And in the running game (a local copy: the mountain tarn, a pasture, the
+  Giants Loop trail, the canyon oasis).
 - Not live: on the branch until the owner has seen it.

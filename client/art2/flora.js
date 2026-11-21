@@ -83,7 +83,7 @@ const cv = (fn, ...a) => { const c = CAN; CAN = true; try { return fn(...a); } f
 const ds = (fn, ...a) => { const c = CAN; CAN = false; try { return fn(...a); } finally { CAN = c; } };
 // (nu: how many blades, rings or stalks a plant made at the art pixel keeps - a blade is a pixel wide either way, so
 // as many of them in a quarter of the room would close into a flat mass)
-const GOL = () => (U < 1 ? 0.6 : 0.42);   // (a grass's outline at the art pixel: softer - a blade is a pixel wide, a full-dark ring would be most of the plant)
+const GOL = () => (U < 1 ? 0.74 : 0.42);   // (a grass's outline at the art pixel: softer - a blade is a pixel wide, a full-dark ring would be most of the plant)
 const nu = (n, k = 0.6) => (U === 1 ? n : Math.max(1, Math.round(n * k)));
 const CQ = () => Math.pow(U, 0.4), zu = (o) => (o && o.z > 0 ? { ...o, z: Math.max(1, o.z * U) } : o);
 const sq = () => Math.sqrt(SIZE), tk = () => Math.pow(SIZE, 0.8), uq = () => Math.sqrt(U);   // (uq: what a leaf cluster shrinks by at the art pixel - less than the plant, so its clumps stay readable)
