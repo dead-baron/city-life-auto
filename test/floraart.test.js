@@ -13,8 +13,9 @@ const OWN = new Set(['redwood', 'redwood2', 'giantL', 'giant', 'giantS', 'gate',
 
 test('every species the world plants is made at the art pixel, and its picture fits the room its item claims', () => {
   assert.ok(FLORA_SPECIES.length > 100, 'the species');
-  for (const sp of FLORA_SPECIES) for (const [k, s] of [[1, 3], [1.4, 7]]) {
-    const G = makeStatic({ t: 'f', sp, s, k });
+  // (every shape the world draws: statics.js seeds a species' shapes 1000 + v * 37 + its name's length * 7)
+  for (const sp of FLORA_SPECIES) for (const k of [1, 1.4]) for (let v = 0; v < 8; v++) {
+    const G = makeStatic({ t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k });
     assert.ok(G && G.w > 1 && G.h > 1, `${sp}: a picture`);
     if (sp !== 'sorrel') assert.equal(G.ap2, 2, `${sp}: at the art pixel`);   // (the redwood floor's sorrel: a flat carpet in world px, redwoods.js)
     const b = box(G);
@@ -25,14 +26,23 @@ test('every species the world plants is made at the art pixel, and its picture f
   }
 });
 
-test('a tree keeps its size: about as tall and as wide at the art pixel as it was in world px', () => {
+test('a species keeps its size on the whole, and its shapes differ in build: taller and shorter, wider and narrower', () => {
   const mk = { oak: FL.bigOak, fir: FL.douglasFir, birch: FL.birchClump, pondPine: FL.ponderosaPine, coconut: FL.coconutPalm, saguaroBig: (s) => FL.saguaro(s, 128), street: FL.streetTree, joshua: FL.joshuaTree };
   for (const [sp, fn] of Object.entries(mk)) {
-    const k = 1.4, A = makeStatic({ t: 'f', sp, s: 5, k }), W = FL.floraScale(k, () => fn(5)), a = box(A), w = box(W);
-    const ah = (a.y1 - a.y0 + 1) * 2, wh = w.y1 - w.y0 + 1, aw = (a.x1 - a.x0 + 1) * 2, ww = w.x1 - w.x0 + 1;
-    assert.ok(Math.abs(ah - wh) <= wh * 0.14, `${sp}: as tall (${ah} against ${wh} world px)`);
-    assert.ok(Math.abs(aw - ww) <= ww * 0.3, `${sp}: about as wide (${aw} against ${ww} world px)`);
+    const k = 1.4, hs = [], ws = [];
+    let wh = 0, ww = 0;
+    for (let v = 0; v < 8; v++) {
+      const s = 1000 + v * 37 + sp.length * 7, a = box(makeStatic({ t: 'f', sp, s, k })), w = box(FL.floraScale(k, () => fn(s)));
+      hs.push((a.y1 - a.y0 + 1) * 2); ws.push((a.x1 - a.x0 + 1) * 2); wh += (w.y1 - w.y0 + 1) / 8; ww += (w.x1 - w.x0 + 1) / 8;
+    }
+    const mean = (a) => a.reduce((p, q) => p + q, 0) / a.length;
+    assert.ok(Math.abs(mean(hs) - wh) <= wh * 0.14, `${sp}: as tall on the whole (${mean(hs) | 0} against ${wh | 0} world px)`);
+    assert.ok(Math.abs(mean(ws) - ww) <= ww * 0.3, `${sp}: about as wide on the whole (${mean(ws) | 0} against ${ww | 0} world px)`);
+    assert.ok(Math.max(...hs) >= Math.min(...hs) * 1.1, `${sp}: its shapes differ in height (${Math.min(...hs)} to ${Math.max(...hs)})`);
   }
+  // a palm leans either way, a saguaro has none to three arms (its picture's width tells)
+  const side = (sp) => { const out = new Set(); for (let v = 0; v < 8; v++) { const G = makeStatic({ t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k: 1.25 }); let sx = 0, n = 0; for (let x = 0; x < G.w; x++) if (G.col[(2 * G.w + x) * 4 + 3] || G.col[(6 * G.w + x) * 4 + 3]) { sx += x; n++; } out.add(n && sx / n * 2 < G.ax ? 'L' : 'R'); } return out; };
+  assert.equal(side('leaning').size, 2, 'the leaning palms lean both ways');
 });
 
 test('floraArt leaves the makers as it found them, and a recipe always makes the same picture', () => {

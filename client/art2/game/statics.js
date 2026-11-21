@@ -2253,7 +2253,7 @@ const SPECIES = {
   dryGrass: [FL.dryGrass, 28, 38], tumble: [FL.tumbleweed, 18, 32], agave: [FL.agave, 29, 39], yucca: [FL.yucca, 33, 62], pear: [FL.pricklyPear, 46, 57], barrel: [FL.barrelCacti, 23, 36], cholla: [FL.cholla, 36, 52],
   ocotillo: [FL.ocotillo, 36, 93], saguaroBig: [(s) => FL.saguaro(s, 128), 34, 140], saguaroMid: [FL.saguaroMid, 18, 80], saguaroSmall: [FL.saguaroSmall, 12, 52],
   hibiscus: [FL.hibiscus, 41, 58], bougain: [FL.bougainvillea, 41, 74], monstera: [FL.monstera, 35, 58], elephant: [FL.elephantEar, 33, 51], bird: [FL.birdOfParadise, 45, 83],
-  duneGrass: [FL.duneGrass, 48, 61], beachGrass: [FL.beachGrass, 43, 45], icePlant: [FL.icePlant, 56, 33], flHedge: [FL.floweringHedge, 62, 55], poppies: [FL.poppies, 33, 45], lupines: [FL.lupines, 27, 64],
+  duneGrass: [FL.duneGrass, 48, 61], beachGrass: [FL.beachGrass, 46, 45], icePlant: [FL.icePlant, 56, 33], flHedge: [FL.floweringHedge, 62, 55], poppies: [FL.poppies, 33, 45], lupines: [FL.lupines, 27, 64],
   daisies: [FL.daisies, 35, 37], tallGrass: [FL.tallGrass, 51, 57], cattails: [FL.cattails, 27, 69], reeds: [FL.reeds, 26, 70], juniper: [FL.juniperMat, 63, 53], twisted: [FL.twistedShrub, 56, 73],
   berryShrub: [FL.berryShrub, 40, 56], aLupine: [FL.alpineLupine, 27, 60], paintbrush: [FL.paintbrush, 27, 51], heather: [FL.heather, 31, 36], aDaisies: [FL.alpineDaisies, 31, 33],
   weed: [FL.weedTuft, 31, 36], dryTuft: [(s) => FL.dryGrass(s, 0.6), 34, 31],
@@ -2262,7 +2262,7 @@ const SPECIES = {
 // Every plant is made at the art pixel (flora.js floraArt: the maker run at half size, a pixel of it an art pixel) - the
 // owner's nature kit pass, 2026-11-21 - but the redwoods' own (redwoods.js: at the art pixel already).
 const OWN_ART_FLORA = new Set(['redwood', 'redwood2', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
-export const FLORA_SPECIES = Object.keys(SPECIES), floraExt = (sp, k = 1) => { const S = SPECIES[sp] || [null, 30, 60]; return [Math.ceil(S[1] * k) + 10, Math.ceil(S[2] * k) + 16, Math.ceil(S[1] * k) + 10, 30]; };   // (the tests: every species, and the room an item claims for its picture)
+export const FLORA_SPECIES = Object.keys(SPECIES), floraExt = (sp, k = 1) => { const S = SPECIES[sp] || [null, 30, 60]; return [Math.ceil(S[1] * k * 1.2) + 10, Math.ceil(S[2] * k * 1.16) + 16, Math.ceil(S[1] * k * 1.2) + 10, 30]; };   // (every species; the room an item claims for its picture - a fifth over the species' size: each shape has its own build, flora.js VARY)
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
 function makeFlora(r) {
   const sp = SPECIES[r.sp];
@@ -2389,7 +2389,7 @@ const PLANTS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_
 // trunk (or the sprays just round it) covers you fades - fbox, narrower than the picture - not every crown nearby.
 export const TREE_FADE = 1e6;
 const RW_R = { giantL: 70, giant: 54, giantS: 40, redwood2: 16, gate: 78 };
-const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'cocoUp', 'royal', 'mtnPine', 'maple']), NV = (sp) => (NV5.has(sp) ? 4 : 3);
+const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'cocoUp', 'royal', 'mtnPine', 'maple']), NV = (sp) => (NV5.has(sp) ? 8 : 6);   // (how many shapes of a species the world draws - doubled 2026-11-21, the owner: "a lot of variety throughout the world in nature"; a plant made at the art pixel is a quarter of the pixels to make and to keep)
 
 // ================================================================================================
 // props
@@ -2553,9 +2553,9 @@ function propItems(c, p, pi, I) {
     case 'rwlight': { const col = { w: '#f0eee0', g: '#3ae070', r: '#e83a30', b: '#3a6ae8' }[p.c] || '#f0eee0'; V(`rw:${p.c}`, 'runwayLight', [col]); lightAt(I, x, y, 6, 50, L01(col), 1.1, 'lamp', 1); return; }
     case 'boulder': {
       const bio = c.biome(x, y), st = c.dist(x, y).style, size = p.s || [20, 26, 34][Math.floor(hh(x, y, 17) * 3)]; // (p.s: an outcrop)
-      if (!WILDS.has(st) && !p.rock) { V(`bld:${size}:${seed % 3}`, 'boulder', [seed % 3 + 1, size - 4, pick(['#8a8478', '#7a7068', '#9a9488'], seed / 6)]); return; }
+      if (!WILDS.has(st) && !p.rock) { V(`bld:${size}:${seed % 5}`, 'boulder', [seed % 5 + 1, size - 4, pick(['#8a8478', '#7a7068', '#9a9488'], seed / 6)]); return; }
       const isle = SEA_ISLES.has(c.di(x, y)), style = p.style || (isle ? 'basalt' : bio === 3 || st === 'desert' ? 'sandstone' : bio === 5 ? 'basalt' : 'granite'), moss = p.moss || bio === 2 ? 1 : 0, barn = p.barn ? 1 : 0;
-      put(I, { key: `rk:${style}:${size}:${seed % 2}:${moss}:${barn}`, recipe: { t: 'rock', style, size, s: seed % 2, moss: moss ? 0.5 : 0, barn }, x, y, ext: [size * 1.4 + 16, size * 1.8 + 24, size * 1.4 + 16, size + 14], pi });
+      put(I, { key: `rk:${style}:${size}:${seed % 4}:${moss}:${barn}`, recipe: { t: 'rock', style, size, s: seed % 4, moss: moss ? 0.5 : 0, barn }, x, y, ext: [size * 1.4 + 16, size * 1.8 + 24, size * 1.4 + 16, size + 14], pi });
       return;
     }
     case 'mapboard': V('mapb', 'mapBoard', []); return;
