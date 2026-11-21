@@ -1758,6 +1758,10 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag-cell.on { background: var(--pick), var(--navy); }
 .bc-ic { display: grid; place-items: center; height: 40px; font-size: var(--fs-5); line-height: 1; }
 .bc-ic canvas { max-width: 64px; max-height: 36px; image-rendering: pixelated; }
+/* the things' and the weapons' own pixel pictures (client/itemart.js: 24 x 24, shown at whole multiples) */
+.iti { display: block; image-rendering: pixelated; width: 48px; height: 48px; }
+.bc-ic:has(.iti) { height: 48px; } .bd-ic .iti { width: 72px; height: 72px; } .bq-gl .iti, .wheel-slot .ic .iti { width: 24px; height: 24px; } .wheel-slot .ic .iti { margin: 0 auto; }
+@media (max-height: 560px) { .bd-ic .iti { width: 48px; height: 48px; } }
 .bc-nm { max-width: 100%; text-align: center; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dim); }
 .bc-n { position: absolute; right: 4px; bottom: 2px; font: 700 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--halo-s); }
 .bag-cell .bc-nm { margin-bottom: 8px; }
@@ -1799,6 +1803,7 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
   .bag-wheel > small { display: none; }
   .bag-slot2 { min-height: 64px; padding: var(--s1); } .bag-slot2 .bc-ic { height: 24px; } .bag-gear, .bag-caps { display: none; }
   .bc-ic { height: 28px; font-size: var(--fs-4); }
+  .bc-ic .iti { width: 24px; height: 24px; } .bc-ic:has(.iti) { height: 28px; }
   .bag-detail { padding: var(--s2); }
   .bd-ic { width: 48px; height: 48px; font-size: var(--fs-5); }
   .bd-what { margin-top: var(--s2); font-size: var(--fs-2); }

@@ -8,17 +8,19 @@ import { WEAPONS, ITEMS, BLADE_COLORS } from '../shared/items.js';
 import { keyName } from './glyphs.js';
 import { input } from './input.js';
 import { glyph, glyphOfWeapon, addGlyphs } from './touchicons.js';
+import { itemIcon, weaponIcon } from './itemart.js';
 
 // a weapon's picture in a tile: its class's line icon (pistol, rifle, knife, bat...: the touch buttons' family,
 // client/touchicons.js) - the top-down sprites are thin bars or blocks at this size and read as broken art (11-04 review)
 function wIcon(id, w, h) {
   const s = document.createElement('span');
   s.className = 'bc-gl';
-  s.innerHTML = glyph(glyphOfWeapon(id, (WEAPONS[id] || {}).type), Math.round(h * 1.15));
+  s.innerHTML = weaponIcon(id) || glyph(glyphOfWeapon(id, (WEAPONS[id] || {}).type), Math.round(h * 1.15));   // (its own pixel picture - client/itemart.js; the class's line icon for one without)
   return s;
 }
-// a thing's picture: its line icon too (the owner, 11-05: the bag's icons "don't look very good" - the emoji went), by the
-// first pattern its id matches, else by what it is
+// a thing's picture: its own pixel picture (client/itemart.js - the owner, 11-21: "Items are looking good"), and for a
+// thing without one its family's line icon (11-05: the emoji went), by the first pattern its id matches, else by what it is
+const pic = (id, px) => itemIcon(id) || glyph(itemGlyph(id), px);
 const ITEM_GLYPH = [
   [/^legend_|^prize_|goldStar/, 'trophy'], [/^seed_/, 'sprout'], [/^medkit/, 'briefcase-medical'], [/bandage/, 'bandage'], [/revivekit/, 'heart-pulse'],
   [/Gloves|moccasins|furHat|Jacket|Coat|camo/, 'shirt'],
@@ -212,7 +214,7 @@ export function createBag({ el, send, me, refocus }) {
     b.className = 'bag-cell' + (t.k === sel ? ' sel' : '') + (on ? ' on' : '');
     b.dataset.k = t.k; b.setAttribute('role', 'listitem');
     b.title = t.name;
-    b.innerHTML = `<span class="bc-ic">${t.kind === 'i' ? glyph(itemGlyph(t.id), 32) : ''}</span><span class="bc-nm">${esc(t.name)}</span>`
+    b.innerHTML = `<span class="bc-ic">${t.kind === 'i' ? pic(t.id, 32) : ''}</span><span class="bc-nm">${esc(t.name)}</span>`
       + (t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n">${t.w.mag}|${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '')
       + (on ? '<span class="bc-tag">IN HAND</span>' : pin >= 0 ? `<span class="bc-tag">SLOT ${pin + 1}</span>` : '');
     if (t.kind === 'w') b.querySelector('.bc-ic').appendChild(wIcon(t.id, 64, 36));
@@ -239,7 +241,7 @@ export function createBag({ el, send, me, refocus }) {
     if (t.n > 1 && t.id !== 'fists') acts += `<button class="btn btn-x bd-all" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>`;
     if (t.id === 'plasma') acts += `<div class="bag-blade"><small>Blade color</small>${BLADE_COLORS.map((bc, i) => `<button class="sw${i === (m.blade | 0) ? ' on' : ''}" data-blade="${i}" aria-label="${esc(bc.name)}" style="--sw:${esc(bc.c)};--swc:${esc(bc.core)}"></button>`).join('')}</div>`;
     if (canUse) acts += `<div class="bag-pins"><small>Quick bar slot</small>${Array.from({ length: SLOTS }, (_, i) => `<button class="btn bag-pin${quick[i] === t.id ? ' on' : ''}" data-pin="${i}" aria-pressed="${quick[i] === t.id}">${i + 1}</button>`).join('')}</div>`;
-    d.innerHTML = `<div class="bd-head"><span class="bd-ic">${t.kind === 'i' ? glyph(itemGlyph(t.id), 48) : ''}</span><div><h3>${esc(t.name)}</h3><small>${esc(BAG_CATS.find((c) => c[0] === t.cat)[1])}</small></div>`
+    d.innerHTML = `<div class="bd-head"><span class="bd-ic">${t.kind === 'i' ? pic(t.id, 48) : ''}</span><div><h3>${esc(t.name)}</h3><small>${esc(BAG_CATS.find((c) => c[0] === t.cat)[1])}</small></div>`
       + '<button class="x bd-x" data-a="close" aria-label="Back to the bag">✕</button></div>'
       + `<p class="bd-what">${esc(what)}</p>${count ? `<p class="bd-n">${esc(count)}</p>` : ''}<div class="bd-acts">${acts}</div>`;
     d.querySelector('.bd-head small').textContent = t.kind === 'w' ? (carryKind(t.id) === 'gun' ? 'Gun' : carryKind(t.id) === 'melee' ? 'Melee' : carryKind(t.id) === 'throw' ? 'Throwable' : 'Weapon') : (usable(t.id) ? 'Consumable · ' : '') + BAG_CATS.find((c) => c[0] === t.cat)[1];
@@ -304,7 +306,7 @@ export function createBag({ el, send, me, refocus }) {
     detail(all.find((t) => t.k === sel) || null, m);
     // the quick wheel as it stands (a slot picks its item; pin from an item's details)
     const quick = m.quick || [];
-    $q('.bag-wheel').innerHTML = `<small>QUICK BAR</small>${Array.from({ length: SLOTS }, (_, i) => { const id = quick[i], n = id ? m.inv[id] || 0 : 0; return `<button class="bag-slot${id ? '' : ' empty'}" data-slot="${i}"${id ? '' : ' disabled'}><b>${i + 1}</b>${id ? `<span class="bq-gl">${glyph(itemGlyph(id), 20)}</span>${esc(ITEMS[id].name)}${n ? '' : ' (none left)'}` : 'empty'}</button>`; }).join('')}`;
+    $q('.bag-wheel').innerHTML = `<small>QUICK BAR</small>${Array.from({ length: SLOTS }, (_, i) => { const id = quick[i], n = id ? m.inv[id] || 0 : 0; return `<button class="bag-slot${id ? '' : ' empty'}" data-slot="${i}"${id ? '' : ' disabled'}><b>${i + 1}</b>${id ? `<span class="bq-gl">${pic(id, 20)}</span>${esc(ITEMS[id].name)}${n ? '' : ' (none left)'}` : 'empty'}</button>`; }).join('')}`;
     for (const b of el.querySelectorAll('[data-slot]')) b.onclick = () => { const id = quick[Number(b.dataset.slot)]; if (id) { sel = 'i:' + id; render(); } };
     cue(grid);
     refocus?.();
