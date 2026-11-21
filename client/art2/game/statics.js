@@ -2243,6 +2243,7 @@ const SPECIES = {
   smallPalm: [FL.smallFanPalm, 36, 76], coastCypress: [FL.coastalCypress, 90, 98], banana: [FL.banana, 60, 99],
   // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
   giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
+  redwoodB: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.48, cone: 1 }), 110, 405], redwoodC: [(s) => RW.giantRedwoodArt(s, 380, 20, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 110, 405],   // (11-21: two higher crowns for the common redwood, for the owner's pick - not planted)
   redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 100, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
   gate: [(s) => RW.giantRedwoodArt(s, 760, 78, { tunnel: { w: 46, h: 60 } }), 270, 815],   // (Giant's Gate, the drive-through: shared/world3-drivetree.js)
   fernR: [(s) => RW.swordFernArt(s, 78 + (s % 3) * 8), 52, 64],
@@ -2267,7 +2268,7 @@ const SPECIES = {
 };
 // Every plant is made at the art pixel (flora.js floraArt: the maker run at half size, a pixel of it an art pixel) - the
 // owner's nature kit pass, 2026-11-21 - but the redwoods' own (redwoods.js: at the art pixel already).
-const OWN_ART_FLORA = new Set(['redwood', 'redwood2', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
+const OWN_ART_FLORA = new Set(['redwood', 'redwoodB', 'redwoodC', 'redwood2', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
 export const FLORA_SPECIES = Object.keys(SPECIES), floraExt = (sp, k = 1) => { const S = SPECIES[sp] || [null, 30, 60]; return [Math.ceil(S[1] * k * 1.2) + 10, Math.ceil(S[2] * k * 1.16) + 16, Math.ceil(S[1] * k * 1.2) + 10, 30]; };   // (every species; the room an item claims for its picture - a fifth over the species' size: each shape has its own build, flora.js VARY)
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
 function makeFlora(r) {
