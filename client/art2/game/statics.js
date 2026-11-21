@@ -235,7 +235,7 @@ export const dropIndex = (M) => INDEX.delete(M);   // (tools/tallblocks.mjs: the
 export function staticIndex(M) {
   let I = INDEX.get(M);
   if (!I) {
-    I = { cells: new Map(), lights: new Map(), byB: new Map(), garages: new Map(), fronts: [], n: 0 };
+    I = { cells: new Map(), lights: new Map(), byB: new Map(), garages: new Map(), fronts: [], n: 0, fl: [] };
     const c = ctxOf(M);
     I.c = c;
     addBuildings(c, I);
@@ -393,15 +393,15 @@ export function makeStatic(r) {
     case 'court': return makeCourt(r);
     case 'skatepad': return makeSkatePad(r);
     case 'hbox': return GD.hedgeBox(r.w, r.d, r.h, { seed: r.s || 1, R: FL.FOL(r.c || '#3a7226'), flowers: r.fl ? ramp(r.fl, 6, 3, { light: 0.6 }) : null, fk: 0.1, ragged: 1 });
-    case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', r.j ? { veg: { kind: 'shrub', density: 0.1, band: 2 }, hang: { kind: 'vine', amount: 0.4 }, moss: 0.18, wet: 6, tiers: [[0, r.h * 0.78], [Math.min(r.w, r.d) * 0.16, r.h]] } : { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });   // (j: a jungle's black rock - vines down its faces, shrubs on its ledges: shared/world3-tropic.js)
+    case 'outcrop': { const w = r.w / 2, d = r.d / 2, h = r.h / 2; return artRock(outcrop(r.s + 7, w, d, h, r.style || 'granite', r.j ? { veg: { kind: 'shrub', density: 0.1, band: 1 }, hang: { kind: 'vine', amount: 0.4 }, moss: 0.18, wet: 3, tiers: [[0, h * 0.78], [Math.min(w, d) * 0.16, h]] } : { veg: { kind: 'grass', density: 0.06, band: 1 }, moss: 0.1 })); }   // (j: a jungle's black rock - vines down its faces, shrubs on its ledges: shared/world3-tropic.js)
     case 'towel': return makeTowel(r);
     case 'blanket': return makeBlanket(r);
-    case 'stack': return seaStack(r.s || 1, r.r || 26, r.h || 150, 'basalt', { hang: { kind: 'kelp', amount: 0.5 }, veg: { kind: 'grass', density: 0.1, band: 2 } });
-    case 'sealrock': return outcrop(r.s || 3, r.w || 120, r.d || 70, r.h || 26, 'basalt', { barnacles: 0.8, wet: 12, hang: { kind: 'kelp', amount: 0.6 }, tiers: [[0, (r.h || 26) * 0.7], [8, r.h || 26]] });
+    case 'stack': return artRock(seaStack(r.s || 1, (r.r || 26) / 2, (r.h || 150) / 2, 'basalt', { hang: { kind: 'kelp', amount: 0.5 }, veg: { kind: 'grass', density: 0.1, band: 1 } }));
+    case 'sealrock': { const h = (r.h || 26) / 2; return artRock(outcrop(r.s || 3, (r.w || 120) / 2, (r.d || 70) / 2, h, 'basalt', { barnacles: 0.8, wet: 6, hang: { kind: 'kelp', amount: 0.6 }, tiers: [[0, h * 0.7], [4, h]] })); }
     case 'surf': return TP.surfBand(r.len, r.s, r.v, r.w);   // (the surf over a reef band, the white water at a falls' foot: shared/world3-tropic.js)
     case 'crit': return r.k === 'starfish' ? WL.starfish(r.col || '#d8583a', r.glow ? 6 : 5, r.s || 1, r.glow || 0) : r.k === 'urchin' ? WL.urchin(4, r.s || 1, r.col || '#3a2448') : WL.anemone(4, r.s || 1);
     case 'mesas': return makeMesas(r);
-    case 'rstack': return redStack(r.s || 1, r.w || 90, r.d || 60, r.h || 110, !!r.l);   // (the red rock's stacked towers: shared/redrock.js)
+    case 'rstack': return artRock(redStack(r.s || 1, (r.w || 90) / 2, (r.d || 60) / 2, (r.h || 110) / 2, !!r.l));   // (the red rock's stacked towers: shared/redrock.js)
     case 'adecal': return AL.decal(r.k, r.v || 0);   // (the back alleys: puddles, oil, leaves, litter, cracks, weeds, drains)
     default: return EMPTY;
   }
@@ -2260,6 +2260,7 @@ const SPECIES = {
   sunflowers: [FL.sunflowers, 35, 69], wildflowers: [(s) => FL.wildflowerLawn(s), 68, 47],
   // the forest floor and the meadows' small things, drawn for the kit sheets (E3b, E3e, E3f) and never planted till the
   // nature kit pass (2026-11-21, the owner: "pulling everything we can from the concepts to create a really full kit")
+  stones: [FL.looseStones, 36, 20], stonesRed: [(s) => FL.looseStones(s, '#b8603a'), 36, 20], stonesDark: [(s) => FL.looseStones(s, '#5a5a60'), 36, 20], toadstools: [FL.toadstools, 30, 20],   // (at a rock's foot, by a rotting log: coverItems)
   trillium: [FL.trillium, 40, 28], twigs: [FL.fallenBranches, 45, 23], cones: [FL.pineCones, 23, 17], litter: [(s) => FL.leafLitter(s), 34, 16], sapling: [FL.sapling, 15, 30],
   columbine: [FL.columbine, 32, 46], buttercups: [FL.buttercups, 32, 27], clover: [FL.clover, 34, 30], strawberries: [FL.strawberries, 33, 27], rushes: [FL.rushes, 30, 60],
 };
@@ -2880,9 +2881,13 @@ function makeDebris(r) {
   }
   return G;
 }
+// (the nature kit, 11-21: a rock shaped at the art pixel - half the size, each pixel laid over 2 x 2 by the bake - like
+// the plants: shaped in world px its grain, moss and outline were halved to speckle)
+const artRock = (G) => { G.ax *= 2; G.ay *= 2; G.ap2 = 2; return G; };
 function makeRock(r) {
-  if (r.style === 'sandstone' && r.size > 28) return outcrop(r.s + 3, r.size * 1.6, r.size * 1.1, r.size * 0.9, 'sandstone', {});
-  return rockLump(r.s * 7 + r.size, r.size, r.style, { moss: r.moss || 0, barnacles: r.barn ? 0.85 : 0, hang: r.barn ? { kind: 'kelp', amount: 0.5 } : undefined });
+  const z = r.size * 0.5;
+  return artRock(r.style === 'sandstone' && r.size > 28 ? outcrop(r.s + 3, z * 1.6, z * 1.1, z * 0.9, 'sandstone', {})
+    : rockLump(r.s * 7 + r.size, z, r.style, { moss: (r.moss || 0) * 0.8, barnacles: r.barn ? 0.85 : 0, hang: r.barn ? { kind: 'kelp', amount: 0.5 } : undefined }));
 }
 
 // ================================================================================================
@@ -3493,8 +3498,10 @@ function makeEl(r) {
 // ================================================================================================
 function fenceLine(I, kind, x0, y0, x1, y1, opt = {}, keyX = '') {
   const ns = Math.abs(x1 - x0) < Math.abs(y1 - y0), len = Math.hypot(x1 - x0, y1 - y0);
+  const fl = I.fl;   // (the index's own lines - the alleys', the set pieces', the farms': addGreenery keeps the undergrowth out of their tiles; a prop's line it reads from the prop)
   for (let s = 0; s < len - 4; s += 80) {
     const l = Math.round(Math.min(80, len - s)), t = (s + l / 2) / len, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
+    if (fl) { if (ns) fl.push(x, y - l / 2, x, y + l / 2); else fl.push(x - l / 2, y, x + l / 2, y); }   // (each piece as it stands: a slanted line is laid in steps)
     if (kind === 'wall') put(I, vitem(`cw:${l}`, 'compoundWall', [l, 40, true], x, y, ns ? PI / 2 : 0));
     else if (kind === 'hedge') put(I, vitem(`hg:${l}:${ns ? 1 : 0}`, 'hedge', [l, opt.h || 14], x, y, ns ? PI / 2 : 0));
     else if (kind === 'rail') put(I, vitem(`fk:rail:${l}:${ns ? 1 : 0}`, 'fenceKind', ['rail', l], x, y, ns ? PI / 2 : 0));
@@ -3932,6 +3939,7 @@ function addLots(c, I) {
 const YARD = { houses: ['rose', 'hydrangea', 'lavender', 'topBall', 'hydrangea', 'boxStone'], luxury: ['topBall', 'topCone', 'lavender', 'rose', 'topBall'], beach: ['hibiscus', 'bougain', 'bird', 'monstera'],
   rural: ['berryShrub', 'rose', 'lupines', 'hydrangea'], desert: ['agave', 'yucca', 'barrel', 'pear'], southside: ['tallGrass', 'dryGrass', 'berryShrub', 'rose'], oldtown: ['lavender', 'rose', 'boxIron', 'hydrangea'], arts: ['lavender', 'boxIron', 'rose', 'pampas'] };
 const HOUSEY = new Set(['house', 'villa', 'farmhouse', 'cabin', 'cottage', 'mansion']);
+const COVER = { cv: 1 };   // (marks what the greenery grows by rule, not a hand's or the map's placing: test/undergrowth.test.js)
 function flora1(I, sp, k, x, y, bare = true) { const v = Math.floor(hh(x, y, 13) * NV(sp)); put(I, fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k, null, bare)); }
 function addYards(c, I) {
   c.M.buildings.forEach((b, bi) => {
@@ -4006,12 +4014,37 @@ function addFrontage(c, I) {
   }
 }
 // Parks keep a few flower beds in the index; the wilds' ground cover is made per chunk (coverItems, below).
+const FENCE_RUN = new Set(['yfence', 'chainfence', 'fenceline', 'hedgerun', 'rail']);   // (the props fenceLine lays as a run: addProp)
 function addGreenery(c, I) {
   const M = c.M, W = c.W, H = c.H;
   // tiles next to a map prop (rocks, set pieces, furniture; not the trees and plants - ferns grow under trees):
   // the ground cover leaves room round them
-  const taken = new Uint8Array(W * H);
-  for (const p of M.props) { if (!p || PLANTS.has(p.t)) continue; const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = tx + dx, y = ty + dy; if (M.inside(x, y)) taken[M.idx(x, y)] = 1; } }
+  // (the nature kit, 11-21; concepts NR1-A, NS1-B: a rock never stands alone on bare ground) a wild boulder and a fallen
+  // log keep only their own tiles clear: the undergrowth comes up to them, and the tiles beside them are `near` - loose
+  // stones at a rock's foot (1), ferns and mushrooms along a log (2): coverItems
+  const taken = new Uint8Array(W * H), near = new Uint8Array(W * H);
+  const mark = (tx, ty, nat) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = tx + dx, y = ty + dy; if (!M.inside(x, y)) continue; const i = M.idx(x, y); if (nat && (dx || dy)) { if (!near[i]) near[i] = nat; } else taken[i] = 1; } };
+  for (const p of M.props) {
+    if (!p || PLANTS.has(p.t)) continue;
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    if (p.t === 'log') { const l = Math.min(160, p.len || 110) / 2, ux = Math.cos(p.a || 0), uy = Math.sin(p.a || 0); for (let d = -l; d <= l; d += 16) mark(Math.floor((p.x + ux * d) / TILE), Math.floor((p.y + uy * d) / TILE), 2); continue; }
+    mark(tx, ty, p.t === 'boulder' && (p.s || 0) <= 34 && (p.rock || WILDS.has(c.dist(p.x, p.y).style)) ? 1 : 0);
+  }
+  I.near = near;
+  // (the owner, 11-21: plants "through fences") a fence, wall or hedge is a line, not a prop at a point: the tiles it
+  // crosses, end to end (every one is laid by fenceLine) - no bed, drift or tuft stands in them
+  // ... and the map's own fence props (made when their chunk is baked, not here): the same pieces, from the prop
+  const fl = I.fl || [];
+  for (const p of M.props) {
+    if (!p || !FENCE_RUN.has(p.t)) continue;
+    const x1 = p.t === 'yfence' ? p.x1 : p.x + (p.tx || 0), y1 = p.t === 'yfence' ? p.y1 : p.y + (p.ty || 0), ns = Math.abs(x1 - p.x) < Math.abs(y1 - p.y), len = Math.hypot(x1 - p.x, y1 - p.y);
+    for (let q = 0; q < len - 4; q += 80) { const l = Math.round(Math.min(80, len - q)), t = (q + l / 2) / len, x = p.x + (x1 - p.x) * t, y = p.y + (y1 - p.y) * t; if (ns) fl.push(x, y - l / 2, x, y + l / 2); else fl.push(x - l / 2, y, x + l / 2, y); }
+  }
+  for (let k = 0; k < fl.length; k += 4) {
+    const dx = fl[k + 2] - fl[k], dy = fl[k + 3] - fl[k + 1], n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 12));
+    for (let j = 0; j <= n; j++) { const x = Math.floor((fl[k] + dx * j / n) / TILE), y = Math.floor((fl[k + 1] + dy * j / n) / TILE); if (M.inside(x, y)) taken[M.idx(x, y)] = 1; }
+  }
+  I.fl = null;
   I.taken = taken;
   for (let ty = (M.y0 + 1) | 1; ty < M.y0 + H - 1; ty += 2) for (let tx = (M.x0 + 1) | 1; tx < M.x0 + W - 1; tx += 2) {   // (odd tiles, as on the whole map)
     const i = M.idx(tx, ty);
@@ -4020,7 +4053,10 @@ function addGreenery(c, I) {
     const h = hash(tx, ty, 7001);
     if (h >= 0.05 || !coverClear(c, tx, ty, 1)) continue;
     const x = Math.round((tx + 0.5 + (hash(tx, ty, 7005) - 0.5) * 1.6) * TILE), y = Math.round((ty + 0.5 + (hash(tx, ty, 7007) - 0.5) * 1.6) * TILE);
-    flora1(I, pick(['hydrangea', 'rose', 'lavender', 'flHedge', 'tulips', 'daisies', 'berryShrub'], hash(tx, ty, 7003)), 1, x, y);
+    const li = M.inside(Math.floor(x / TILE), Math.floor(y / TILE)) ? M.idx(Math.floor(x / TILE), Math.floor(y / TILE)) : i;
+    if (taken[li]) continue;   // (it lands up to most of a tile off its own: not onto a fence's tile or a prop's)
+    const sp = pick(['hydrangea', 'rose', 'lavender', 'flHedge', 'tulips', 'daisies', 'berryShrub'], hash(tx, ty, 7003)), v = Math.floor(hh(x, y, 13) * NV(sp));
+    put(I, fitem(`f:${sp}:${v}:1`, sp, 1000 + v * 37 + sp.length * 7, x, y, 1, COVER, true));
   }
 }
 const COVER_HARD = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.WALL, T.SIDEWALK, T.PLAZA, T.LOT, T.FIELD, T.DOCK, T.WATER, T.DEEP, T.FLOOR, T.COUNTER]);
@@ -4213,8 +4249,9 @@ function stepTiles(M) {
   STEPS.set(M, s);
   return s;
 }
+const NEAR_T = new Set([T.GRASS, T.DIRT, T.SAND]);
 function coverItems(c, I, cx, cy) {
-  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M), trk = trackClear(c.M), sight = sightTiles(c.M), steps = stepTiles(c.M);
+  const out = [], W = c.W, H = c.H, taken = I.taken, near = I.near, rails = railClear(c.M), trk = trackClear(c.M), sight = sightTiles(c.M), steps = stepTiles(c.M);
   // (World v3's orchards and the lavender and sunflower rows, the nature sites' orchard and vineyard: farmed - no wild
   // flowers or scrub among the rows, a tuft of grass now and then just outside them: shared/world3-biomes.js m.orchards)
   const X0 = cx * CH - 120, Y0 = cy * CH - 80, X1 = (cx + 1) * CH + 120, Y1 = (cy + 1) * CH + 140;
@@ -4234,6 +4271,12 @@ function coverItems(c, I, cx, cy) {
       if (o) { if (orch.some((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h)) continue; weed = true; }   // (among the rows nothing; along the strip's edge a tuft now and then)
     }
     let r = coverAt(c, tx, ty, x, y);
+    const nr = near ? near[i] : 0;
+    if (nr && !r && NEAR_T.has(c.M.tiles[i])) {   // (bare ground beside a rock or a log: its stones, its ferns and mushrooms)
+      const hn = hash(tx, ty, 7191), bio = c.biome(x, y);
+      if (nr === 1) { if (hn < 0.6) r = [SEA_ISLES.has(c.di(x, y)) || bio === 5 ? 'stonesDark' : bio === 3 || c.dist(x, y).style === 'desert' ? 'stonesRed' : 'stones', 1]; }
+      else if (hn < 0.5 && bio !== 3) r = [hn < 0.22 ? 'toadstools' : 'fern', 1];
+    }
     if (!r || !(lush ? coverClearWet(c, tx, ty) : coverClear(c, tx, ty, 1))) continue;
     if (weed) {
       if (hash(tx, ty, 7177) > 0.3) continue;
@@ -4242,7 +4285,7 @@ function coverItems(c, I, cx, cy) {
     const [sp, k] = r, v = Math.floor(hash(tx, ty, 13) * NV(sp));
     if (sight.has(i) && (SPECIES[sp] ? SPECIES[sp][2] : 0) * k > 80) continue;
     if ((SPECIES[sp] ? SPECIES[sp][1] : 0) * k > 50 && TOWN_COVER[(DISTRICTS[c.M.dist[i]] || {}).style] && !coverClear(c, tx, ty, 2)) continue;   // (a wide drift in town: two tiles clear of a path or a drive, not one - its spread reaches over - the owner, 11-14)
-    out.push(fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k));
+    out.push(fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k, COVER));
   }
   return out;
 }

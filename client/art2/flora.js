@@ -82,7 +82,7 @@ const SIDE = 1;   // (how much of the painted light comes from the upper left, 0
 // stand it grows in has (floraArt's tint: statics.js gives a drift of flowers one colour, with a few strays). All of
 // them the palette's own reds, oranges, yellows, pinks, purples, blues and whites.
 const tc = (list) => list[TINT % list.length];
-export const FLORA_TINTS = { rose: 4, hydrangea: 4, tulips: 3, daffodils: 2, boxStone: 2, boxIron: 3, berry: 3, huckle: 2, foxglove: 3, brittle: 2, dPoppies: 3, hibiscus: 4, bougain: 4, flHedge: 3, poppies: 4, lupines: 4, daisies: 3,
+export const FLORA_TINTS = { rose: 4, hydrangea: 4, tulips: 3, daffodils: 2, boxStone: 2, boxIron: 3, berry: 3, huckle: 2, foxglove: 3, brittle: 2, dPoppies: 3, hibiscus: 4, bougain: 4, flHedge: 3, toadstools: 3, poppies: 4, lupines: 4, daisies: 3,
   berryShrub: 3, aLupine: 3, paintbrush: 3, heather: 3, aDaisies: 2, icePlant: 2, pear: 3, barrel: 3 };
 const bv = (seed, i, amt) => (VARY ? 1 + (hash(seed, i, 911) - 0.5) * 2 * amt : 1), bu = (seed, i) => (VARY ? hash(seed, i, 913) : -1);
 const uu = (v) => (CAN || U === 1 ? v : v * U), UD = () => !CAN && U !== 1;
@@ -903,7 +903,9 @@ export function fern(seed = 1, size = 30, R = FOL('#4a8a2c'), o = {}) {
   return done(G);
 }
 export const swordFern = (seed = 1) => fern(seed, 38, FOL('#3e8a2a'), { n: 19 });
-export const deadBracken = (seed = 1) => fern(seed, 36, FOL('#b8642a', { cool: 20, shiftD: 0.5, warm: 48, shift: 0.5 }), { droop: 0.05, n: 18 });
+// (at the art pixel the dead fronds read whole - a hot orange star on a green floor: most bracken stands green there,
+// one in three gone a dull russet)
+export const deadBracken = (seed = 1) => fern(seed, 36, !VARY ? FOL('#b8642a', { cool: 20, shiftD: 0.5, warm: 48, shift: 0.5 }) : bu(seed, 3) < 0.66 ? FOL('#5a8a2c') : FOL('#8e6238', { cool: 20, shiftD: 0.5, warm: 30, shift: 0.4 }), { droop: 0.05, n: 18 });
 
 // ---- rocks and logs (Vox) ------------------------------------------------------------------------------------
 // a boulder: o: color, moss / lichen / snow (0..1 coverage), tall (height / size), seed
@@ -1117,10 +1119,43 @@ export function trillium(seed = 1) {
   }
   return done(G);
 }
+// loose stones on the ground, a few sizes, a tuft of grass among them (the concepts' rocks never stand alone: NR1-A, NS1-B).
+// cols: the rock they broke from
+export function looseStones(seed = 1, col = null) {
+  const rnd = mulberry32(seed * 181 + 3), G = sprite(72, 36, 14), cx = G.ax, foot = G.ay, R = col ? RR(col, 7, 3, { dark: 0.55, light: 0.45, shift: 0.18 }) : STONE;
+  const n = 3 + Math.floor(rnd() * 4), sx = bu(seed, 2) > 0.5 ? -1 : 1, st = [];
+  // one or two a hand's size up, the rest small; a lump each: a low dome, flat to the ground, lit from the upper left
+  for (let i = 0; i < n; i++) { const big = i < 1 + (rnd() < 0.4 ? 1 : 0), rx = big ? 6 + rnd() * 4 : 2.6 + rnd() * 2.4; st.push([cx + sx * ((i / (n - 1) - 0.5) * 44 + (rnd() - 0.5) * 12), foot - 2 - rnd() * 9, rx, rx * (0.78 + rnd() * 0.24)]); }
+  st.sort((p, q) => p[1] - q[1]);
+  if (rnd() < 0.7) tufts(G, cx - sx * 6, foot - 3, 3, 16, seed, G_LEAF, 6);
+  for (const [x, y, rx, ry] of st) for (let b = -Math.ceil(ry); b <= ry * 0.4; b++) for (let a = -Math.ceil(rx); a <= rx; a++) {
+    const u = a / rx, v = b < 0 ? b / ry : b / (ry * 0.4); if (u * u + v * v > 1) continue;
+    px(G, x + a, y + b, step(R, 0.62 - u * 0.3 - v * 0.34 + (u + v < -0.85 ? 0.22 : 0) - (v > 0.3 ? 0.25 : 0), Math.round(x + a), Math.round(y + b), 0.25), sN(u, v, Math.sqrt(Math.max(0, 1 - u * u - v * v))), 0, Math.max(1, Math.round(-b + 1)));
+  }
+  return done(G);
+}
+// a troop of mushrooms: caps on short pale stalks, where a log rots (NS1-B). o.cap: the cap's colour
+export function toadstools(seed = 1, o = {}) {
+  const rnd = mulberry32(seed * 191 + 5), G = sprite(60, 34, 8), cx = G.ax, foot = G.ay;
+  const C = RR(o.cap || tc(['#c8642a', '#b8482c', '#c8a05a']), 6, 3, { dark: 0.55, light: 0.5 }), S = RR('#e8dcc0', 5, 2, { dark: 0.45, light: 0.4 });
+  const n = 3 + Math.floor(rnd() * 3), m = [];
+  for (let i = 0; i < n; i++) m.push([cx + (rnd() - 0.5) * 40, foot - rnd() * 8, 2.6 + rnd() * 2.6, 3 + rnd() * 4]);
+  m.sort((a, b) => a[1] - b[1]);
+  for (const [x, y, r, h] of m) {
+    for (let k = 0; k < h; k++) for (let a = -1; a <= 0; a++) px(G, x + a, y - k, step(S, a ? 0.6 : 0.35, x | 0, (y - k) | 0, 0), [a ? -0.5 : 0.5, 0.3, 0.8], 0, k + 1);
+    for (let b = -Math.ceil(r * 0.7); b <= 0; b++) for (let a = -Math.ceil(r); a <= r; a++) {
+      const u = a / r, v = b / (r * 0.7); if (u * u + v * v > 1) continue;
+      px(G, x + a, y - h + b + 1, step(C, 0.62 - u * 0.3 - v * 0.35 + (u + v < -0.8 ? 0.22 : 0), Math.round(x + a), Math.round(y + b), 0.2), sN(u, v - 0.3, Math.sqrt(Math.max(0, 1 - u * u - v * v))), 0, Math.round(h - b + 1));
+    }
+  }
+  return done(G);
+}
 // sticks lying on the ground
 export function fallenBranches(seed = 1) {
   const rnd = mulberry32(seed * 163 + 1), G = sprite(100, 44, 22), cx = G.ax, foot = G.ay, B = RR('#8a6a4e', 7, 3, { dark: 0.6, light: 0.5 });
-  const sticks = [[-40, -10, 28, -16, 2.2], [-34, 8, 40, 2, 2.6], [-6, 16, 18, -6, 1.6]];
+  // (each shape its own fall: flipped, the sticks at their own slant, the short one there or not)
+  const fx = bu(seed, 2) > 0.5 ? -1 : 1, sl = (i) => (VARY ? (hash(seed, i, 917) - 0.5) * 12 : 0);
+  const sticks = [[-40, -10, 28, -16, 2.2], [-34, 8, 40, 2, 2.6], [-6, 16, 18, -6, 1.6]].filter((q, i) => i < 2 || bu(seed, 4) < 0.6).map(([x0, y0, x1, y1, w], i) => [x0 * fx, y0 + sl(i), x1 * fx * bv(seed, 5 + i, 0.2), y1 - sl(i), w]);
   for (const [x0, y0, x1, y1, w] of sticks) {
     const p0 = [cx + x0, foot + y0], p2 = [cx + x1, foot + y1], p1 = [(p0[0] + p2[0]) / 2 + (rnd() - 0.5) * 6, (p0[1] + p2[1]) / 2 - 2];
     limb(G, p0, p1, p2, w, w * 0.55, B, { seed, z: 2, k: 0.55 });
@@ -1147,7 +1182,7 @@ export function pineCones(seed = 1) {
 // a scatter of fallen leaves (lies on the ground)
 export function leafLitter(seed = 1, r = 30, cols = null) {
   const rnd = mulberry32(seed * 173 + 1), G = sprite(r * 2 + 10, r + 12, r * 0.5 + 6), cx = G.ax, foot = G.ay;
-  const C = cols || [RR('#b8702a', 5, 2), RR('#9a4a28', 5, 2), RR('#c89a3a', 5, 2), RR('#7a5030', 5, 2)];
+  const C = cols || (VARY ? ['#8e6034', '#74482c', '#a48440', '#5e4630'] : ['#b8702a', '#9a4a28', '#c89a3a', '#7a5030']).map((h) => RR(h, 5, 2));   // (at the art pixel: last year's leaves, browns - not confetti)
   for (let i = 0; i < r * 9; i++) {
     const a = rnd() * TAU, q = Math.sqrt(rnd()), x = cx + Math.cos(a) * q * r, y = foot + Math.sin(a) * q * r * 0.42;
     if (q > 0.85 && rnd() < 0.6) continue;

@@ -25276,11 +25276,33 @@ best-looking trees in the game.
   `NAT_SP`): trillium, fallen branches, pine cones, leaf litter, conifer saplings and wild strawberries on the forest
   floor (trillium, branches and saplings under the redwoods too); daisies, buttercups and clover as two more kinds of
   meadow drift; columbine and buttercups in the alpine ground; rushes at the water's edge.
+- **Nothing grows through a fence (the owner, 12:20).** The undergrowth is made per tile on the page and kept off the
+  map's props by the tile each prop stands on - but a fence is a line, and only its first tile was kept clear, so a
+  drift of lupines grew through a pasture's rails. Every fence, wall and hedge line is laid by `fenceLine`; it now hands
+  its line to `addGreenery`, which keeps beds, drifts and tufts out of every tile the line crosses
+  (`test/undergrowth.test.js`: one world build, the pastures, farms and a sample of the map's own fences). The audit of
+  11-19 has no row for this (its fence row is railings over water) and fixed nothing itself: its plants-on-walkways
+  list (2,914) is the towns' placed trees, shrubs, hedges and palms - the world batch's, not touched here.
+- **Rocks at the art pixel.** The wild's boulders, outcrops, sea stacks, seal rocks and the red rock's stacks were shaped
+  in world pixels and halved like the plants were: grain, moss and outline came out as speckle. They are shaped at
+  half size now and laid 2 x 2 by the bake (`statics.js` `artRock`, the mesas' way), so a rock reads as planes with a
+  lit top, a shaded side and one outline. Fallen logs and stumps are voxel models and already read cleanly; the cliff
+  faces keep their world-pixel outline (it is the solid rock's own shape) and wait for their biome.
+- **A rock never stands alone (concepts NR1-A, NS1-B).** The undergrowth used to keep a tile clear all round every
+  prop, so each boulder sat on a bare patch. A wild boulder and a fallen log keep only their own tiles now: ferns and
+  flowers come up to them, loose stones lie at a rock's foot (`flora.js` `looseStones`, in the rock's own stone -
+  granite, red sandstone, basalt) and mushrooms and ferns grow along a log (`toadstools`, three cap colors by stand).
+  `test/undergrowth.test.js` counts them over the built world.
+- **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
+  three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
+  per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
 - **Cost.** One art batch: the art hash changes, so the world re-bakes once when this goes live (about five hours of
   the server's bake). The bake itself draws a quarter of the pixels per plant; `node tools/perf.mjs` is within every
-  budget with twice the shapes (bake 87 files, 1016 KB of 1020; `trees.js` no longer in it; the bakes 57x of 90x).
-  The `animals` branch raised that budget to 1024 for its own 4 KB: merged together the two may need a couple of KB
-  more - a decision for that merge.
+  budget with twice the shapes (`trees.js` no longer in the bake; the bakes 57x of 90x). **The bake's code budget goes
+  from 1020 to 1022 KB** (a decision, per the rule): the art-pixel kit stood at 1016, and the forest floor's pieces,
+  the loose stones and mushrooms and the fences' lines brought it to 1021. The workers load this after the page, so
+  it costs no start-up time. The `animals` branch raised the same number to 1024 for its own 4 KB: merged, the two
+  need 1026.
 - Seen as the game draws it (`tools/area-shot.mjs`, six places before and after): a mountain meadow, a pasture, a
   desert oasis, a cove, a redwood road, a town block. And in the running game (a local copy: the mountain tarn, a pasture, the
   Giants Loop trail, the canyon oasis).
