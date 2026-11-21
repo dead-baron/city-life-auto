@@ -850,7 +850,14 @@ function wardrobe(A, D, TF, seed) {
     const p = spec && spec.pattern;
     if (!p || !spec.trim || p === 'ripped' || p === 'quilt') return null;   // (the look system's always have a trim; the NPCs' old camo and florals keep their own)
     const a = cloth(spec.color || 'grey'), b = cloth(spec.trim || spec.color2 || 'white'), m = cloth(mixHex(spec.color || '#888888', spec.trim || '#ffffff', 0.5));
-    if (p === 'stripes') return (Q) => (Q.res > 1 ? (Math.floor((Q.Z + 64) / 1.6) & 1) : (((Math.floor(Q.y / 2) % 3) + 3) % 3 === 0)) ? b : null;
+    // (the polish pass, the owner 11-20: "stripes ... not one horizontal line at any angle". Every third art-pixel row of the
+    // SCREEN was a ruler laid across the chest and both sleeves, the same from every side. A stripe is a ring round the part
+    // it is on: Q.sv is how far up the trunk, or down the sleeve or the leg, a pixel sits (set by the part's own colour
+    // function). On the trunk that is its level on the screen plus a third (PL.stripeTilt) of what the high camera adds for a
+    // point nearer to it: a stripe dips a little in front and leans a little on a body turned three quarters - all of it was
+    // a sash from shoulder to hip. Down a sleeve or a leg it is the limb's own length: the rings turn with the arm and sit
+    // at the arm's height, not the chest's. The art grid's own rules make whole art pixels of it.)
+    if (p === 'stripes') return (Q) => { if (PL && PL.stripeK && Q.res === 1 && Q.sv !== undefined) { const k = PL.stripeK; return ((Q.sv % k) + k) % k < k / 3 ? b : null; } return (Q.res > 1 ? (Math.floor((Q.Z + 64) / 1.6) & 1) : (((Math.floor(Q.y / 2) % 3) + 3) % 3 === 0)) ? b : null; };
     if (p === 'check') return (Q) => { const i = Q.res > 1 ? Math.floor((Q.X + Q.Y + 128) / 2.1) : Math.floor(Q.x / 4), j = Q.res > 1 ? Math.floor((Q.Z + 64) / 2.1) : Math.floor(Q.y / 4); if ((i & 1) && (j & 1)) return b; if ((i + j) & 1) return m; return null; };
     if (p === 'floral') return (Q) => { const n = Q.res > 1 ? hash(Math.floor(Q.X / 1.5), Math.floor(Q.Z / 1.5) + Math.floor(Q.Y / 1.5) * 7, seed + 5) : hash(Math.floor(Q.x / 2), Math.floor(Q.y / 2), seed + 5); return n > 0.8 ? b : n < 0.08 ? m : null; };
     if (p === 'camo') { const d = cloth(mixHex(spec.color || '#888888', '#000000', 0.45)); return (Q) => { const n = Q.res > 1 ? hash(Math.floor(Q.X / 2.6), Math.floor(Q.Y / 2.6) + Math.floor(Q.Z / 2.2) * 7, seed + 31) : hash(Math.floor(Q.x / 4), Math.floor(Q.y / 4), seed + 31); return n < 0.24 ? b : n < 0.4 ? d : null; }; }
@@ -967,7 +974,7 @@ function wardrobe(A, D, TF, seed) {
     if (!T.bare && !T.long && z > D.waistUp - 2.2 && z < D.waistUp - 0.6 && (Math.floor((u + 2) * 4.5) & 1)) Q.k -= 0.08;   // bunched over the belt
     if (T.gloss) Q.gloss = T.gloss;
     if (T.swimsuit && z < D.waistUp - 1) R = top;
-    if (R === top && topPat) return topPat(Q) || R;
+    if (R === top && topPat) { Q.sv = Q.zs + (z - Q.zs) * (PL ? PL.stripeTilt || 0 : 0) + 3.0; return topPat(Q) || R; }
     if (R === top && A.top?.pattern === 'camo') return camo(Q) || R;
     return R;
   };
@@ -975,7 +982,7 @@ function wardrobe(A, D, TF, seed) {
   W.pel = (Q) => {
     tco(TF, Q);
     const z = Q.z, front = Q.f > 0.05, au = Math.abs(Q.u);
-    if (T.dress || T.swimsuit || T.long || (T.towel && bk !== 'none')) { if (T.swimsuit && z < -0.3 && au > 0.42) return skin; return (topPat && topPat(Q)) || top; }
+    if (T.dress || T.swimsuit || T.long || (T.towel && bk !== 'none')) { if (T.swimsuit && z < -0.3 && au > 0.42) return skin; Q.sv = Q.zs + (z - Q.zs) * (PL ? PL.stripeTilt || 0 : 0) + 3.0; return (topPat && topPat(Q)) || top; }
     if (T.bib) return top;
     const hemZ = HEMZ;
     // (the polish pass, the owner 11-20: a hem is level on the screen. Level in the world it was a V from the high camera - low
@@ -989,7 +996,7 @@ function wardrobe(A, D, TF, seed) {
     if (bk === 'skirt' || bk === 'towel') return bot;
     if (bk === 'jeans' && front && Math.abs(au - 0.52) < 0.05 && z > -0.5) Q.k -= 0.2;   // pocket seams
     if (A.beltBag && front && z > 0.6 && z < 1.6) return cloth('#2a2a2e');            // the belt bag's strap
-    return (botPat && botPat(Q)) || bot;
+    Q.sv = Q.zs + (z - Q.zs) * (PL ? PL.stripeTilt || 0 : 0) + 3.0; return (botPat && botPat(Q)) || bot;
   };
   W.neck = (Q) => {
     if (T.turtle) return top;
@@ -1019,7 +1026,7 @@ function wardrobe(A, D, TF, seed) {
       if (T.dressuni && along > slv - 0.1) { Q.gloss = 0.8; return gold; }                  // (gold cuffs)
       if (T.check || ((T.bib || T.apron) && A.top?.innerKind === 'flannel')) { if (Q.res > 1) { const a = Math.floor(along * 9), b = Math.floor((Q.l2 + 1) * 1.6); if ((a + b) & 1) Q.k -= 0.22; } else { const g = gridCheck(Q, sleeve); if (g) return g; } }
       if (A.top?.varsity && sleeve === top) return trim;
-      if (sleeve === top && topPat) return topPat(Q) || sleeve;
+      if (sleeve === top && topPat) { Q.sv = 4.9 - along * (D.upper + D.fore); return topPat(Q) || sleeve; }   // (rings down the sleeve: the first a little under the shoulder, so a short sleeve has one)
       if (sleeve === top && A.top?.pattern === 'camo') return camo(Q) || sleeve;
       return sleeve;
     }
@@ -1060,7 +1067,7 @@ function wardrobe(A, D, TF, seed) {
     if (along > 0.93) Q.k -= 0.12;                                       // the trouser cuff
     if (tk === 'tactical' && Math.abs(along - 0.5) < 0.08 && Q.l2 > 0.3) return cloth('#30343a');   // knee pads
     if (tk === 'uniform' && side > 0.85) Q.k -= 0.18;
-    if (botPat) return botPat(Q) || bot;
+    if (botPat) { Q.sv = -along * (D.thigh + D.shin); return botPat(Q) || bot; }
     if (A.bottom?.pattern === 'camo') return camo(Q) || bot;
     return bot;
   };
@@ -1731,7 +1738,7 @@ function render(fig, P, S, X, D, A, opt) {
     if (k < 0) continue;
     const p = prims[k], s = NEAR[i], sy = (y + 0.5 - AY) * iR;
     Q.X = (x + 0.5 - AX) * iR; Q.Y = sy * SA + s * CA; Q.Z = -sy * CA + s * SA;
-    Q.nx = NX[i]; Q.ny = NY[i]; Q.nz = NZ[i]; Q.l0 = L0[i]; Q.l1 = L1[i]; Q.l2 = L2[i]; Q.x = x - AX; Q.y = y - AY; Q.k = 0; Q.e = null; Q.gloss = 0; Q.part = p.part; Q.side = p.side || 0; Q.g = p.g; Q.res = R;
+    Q.nx = NX[i]; Q.ny = NY[i]; Q.nz = NZ[i]; Q.l0 = L0[i]; Q.l1 = L1[i]; Q.l2 = L2[i]; Q.x = x - AX; Q.y = y - AY; Q.sv = undefined; Q.k = 0; Q.e = null; Q.gloss = 0; Q.part = p.part; Q.side = p.side || 0; Q.g = p.g; Q.res = R;
     const RM = p.m(Q);
     let c, mi = MID.get(RM);
     if (!mi) MID.set(RM, mi = MID.size + 1);

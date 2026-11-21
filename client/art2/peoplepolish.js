@@ -42,6 +42,7 @@ export const POLISH = {
   vLight: 0.56,       // a white or pale cloth's darkest shade (vMin's for the rest)
   inseam: true,
   vSkin: 0.4,
+  stripeK: 7.3, stripeTilt: 0.35,   // (a stripe every 7.3 px up the body - three art pixels - a third of it the stripe: rings round each part, people.js patFn)
   armLift: 1, armLiftMax: 8.5,   // (in profile the near arm is lifted by what the high camera drops it, 8.5 px at most - people.js person())
   clean: true,   // (the body's shading tidied on the art grid: one tone an art pixel, none alone in its tone - people.js)       // the line between the legs runs up to the crotch, front and back (people.js)
   // the outline, on the art grid (people.js): [lit side: how much of the colour it borders, its brightest; the same in the shade]
@@ -652,6 +653,7 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
   const G = (key) => { const c = cells.get(key); return c ? c.g : -1; }, tee = tt === 'tee', RB = tee ? RT : S.RCb || RC, RBAND = tee ? RC : RT, tones = new Map();
   // (clean tones: an art pixel between two of the piece's in one tone takes it - no speckle from the body's dither)
   for (const [key, c] of cells) { const a = cells.get(key - 1), b = cells.get(key + 1); tones.set(key, c.g && a && b && a.g && b.g && a.i === b.i ? a.i : c.i); }
+  const zRow = new Map(); if (U.stripe) { const acc = new Map(); for (const [key, c] of cells) if (c.g && !c.leg) { const r = Math.floor(key / K), e = acc.get(r) || acc.set(r, [0, 0]).get(r); e[0] += c.z; e[1]++; } for (const [r, e] of acc) zRow.set(r, e[0] / e[1]); }   // (each row's mean height on the body: what a stripe bends from)
   for (const [key, c] of cells) {
     if (!c.g) continue;
     const up = G(key - K), dn = G(key + K), i = tones.get(key), edge = !up || !dn || !G(key - 1) || !G(key + 1);
@@ -665,7 +667,7 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
     j = Math.max(0, Math.min(4, j));
     if (edge && j && dist(R[j], SK[c.i]) < 120) j--;                                                  // (pale cloth on pale skin: its edge a step darker, so the piece has a shape)
     // (stripes, the owner 11-20: in the trim's color, every other art pixel - down a boxer's legs, across briefs and a bra)
-    if (U.stripe && R !== RBAND && (c.g === 1 || c.g === 2) && ((S.bt === 'boxer' || S.bt === 'trunk') && c.g === 2 ? key % K : Math.floor(key / K)) & 1) R = RT;
+    if (U.stripe && R !== RBAND && (c.g === 1 || c.g === 2) && ((S.bt === 'boxer' || S.bt === 'trunk') && c.g === 2 ? key % K : c.leg ? Math.floor(key / K) : Math.floor(Math.floor(key / K) - 0.35 * (c.z - (zRow.get(Math.floor(key / K)) ?? c.z)) / 2.44 + 0.5)) & 1) R = RT;   // (across the trunk: the screen's row, bent a third of the way to the body's own height there - the stripe dips a little in front, like the body it is on)
     const C = R[j], L = R[Math.max(0, j - 2)];                                                        // (a line the renderer drew on the body there - under the bust, beside an arm - a fold of the cloth)
     for (const p of c.px) { const q = LN[p] ? L : C; CR[p] = q[0]; CG[p] = q[1]; CB[p] = q[2]; }
   }

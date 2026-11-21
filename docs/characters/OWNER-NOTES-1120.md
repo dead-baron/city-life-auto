@@ -143,3 +143,6 @@ Each fix made against a snapshot of every figure; what it touched is in the DEVL
 - [x] "Add striped panties/underwear" - Striped boxers, Striped briefs, Striped bra and panties (new pieces, the catalogue's last three).
 - Shown: `characters-wardrobe-batch1-swim-and-stripes.png`. Not yet seen by him.
 
+## 18:54 - "the stripes are still drawn perfectly horizontally ... is that still an option?"
+- [x] Stripes follow the garment: rings round the trunk (a slight dip in front, a slight lean at an angle), rings down the sleeves and legs at the limb's own height. Rugby shirt, Striped tee, Breton top, Pajamas, Poncho, the striped underwear. Shown: `characters-stripes-before-after.png`. Not yet seen by him.
+

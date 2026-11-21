@@ -25341,3 +25341,11 @@ First batch of the owner's wardrobe notes, now that the bodies are passed.
 - Measured against the wardrobe snapshot: only Sports bra, Bikini top, Bikini bottoms and the three new pieces differ. Tests: the underwear count 16 -> 19; a new test for these pieces in `test/bodyshape.test.js`.
 - Next from his notes: stripes that follow the garment on clothes; the size-ups (glasses, eye patch, necklaces, tiara, bow tie, stethoscope, bracelets, lanyard, smartwatch, pads, camera); masks; hats, earmuffs, headphones; bags and held things, bib straps; shirt buttons, tactical vest, ghillie suit, the gold Founding Citizen jacket.
 
+## 2026-11-20 · Characters, wardrobe notes 2: stripes that follow the garment (branch characters, staged)
+
+The owner, on the striped underwear of an hour before: "the stripes are still drawn perfectly horizontally, I had left a note earlier about figuring out a better way to do stripes." His note was "not one horizontal line at any angle"; the stripes pattern was every third art-pixel row of the screen - a ruler across the chest and both sleeves, the same from every side - and the new underwear had copied it.
+- **A stripe is a ring round the part it is on** (`people.js` `patFn`, `Q.sv`; `POLISH.stripeK`, `stripeTilt`): on the trunk, its level on the screen plus a third of what the high camera adds for a point nearer to it - it dips a little in front and leans a little on a body turned three quarters; down a sleeve or a trouser leg, the limb's own length - rings that sit at the arm's height, not the chest's, and turn with the arm.
+- Tried first and dropped: the whole of the camera's effect (true rings). On a wide chest at three quarters that is a sash from shoulder to hip.
+- Striped underwear bends the same way (`under4`: the screen's row, a third of the way to the body's own height there).
+- Against the wardrobe snapshot: Rugby shirt, Striped tee, Breton top, Pajamas, Poncho and the striped underwear - 27 figures - and nothing else. With the pass off the old rows are drawn, exactly as before.
+
