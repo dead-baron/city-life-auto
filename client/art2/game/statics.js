@@ -352,7 +352,7 @@ export function makeStatic(r) {
     case 'debris': return makeDebris(r);
     case 'rock': return makeRock(r);
     case 'rk': return rkSprite(r);
-    case 'fall': return WT.waterfall({ art: WT.FALL_LOOK.v > 0, kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams, stone: r.stone, rock: r.rock });
+    case 'fall': return WT.waterfall({ art: WT.FALL_LOOK.v > 0, src: r.src || 0, kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams, stone: r.stone, rock: r.rock });
     case 'sbridge': return makeStoneBridge(r);
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
     case 'festoon': return makeFestoon(r);
@@ -2640,7 +2640,7 @@ function propItems(c, p, pi, I) {
     case 'aboard': V('chalk', 'chalkboard', []); return;   // (a terrace's menu board: shared/world3-craft.js)
     case 'bleachers': { const len = Math.round((p.len || 120) / 8) * 8, rows = p.rows || 4; V(`blch:${len}:${rows}`, 'bleachers', [len, rows]); return; }
     case 'cliffwall': { const len = Math.round((p.len || 160) / 8) * 8, h = p.h || 70, dp = p.d || 60, sd = p.s || 1; put(I, vitem(`cliffw:${len}:${h}:${sd}:${dp}`, 'cliffWall', [len, h, dp, sd], x, y, 0, null, { pi })); return; }
-    case 'coastfall': { const w = p.w || 28, drop = p.drop || 66, sd = p.s || 11; put(I, { key: `fall:c:${w}:${drop}:${sd}${p.kind && p.kind !== 'cliff' ? ':' + p.kind : ''}${p.stone ? ':' + p.stone : ''}`, recipe: { t: 'fall', kind: p.kind || 'cliff', w, drop, seed: sd, mist: p.mist ?? 0.7, ...(p.stone ? { stone: p.stone } : {}) }, x, y, ext: [w / 2 + 80, drop + 130, w / 2 + 80, 50], pi }); lightAt(I, x, y + 10, 12, 130, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }
+    case 'coastfall': { const w = p.w || 28, drop = p.drop || 66, sd = p.s || 11; putFall(c, I, { key: `fall:c:${w}:${drop}:${sd}${p.kind && p.kind !== 'cliff' ? ':' + p.kind : ''}${p.stone ? ':' + p.stone : ''}`, recipe: { t: 'fall', kind: p.kind || 'cliff', w, drop, seed: sd, mist: p.mist ?? 0.7, ...(p.stone ? { stone: p.stone } : {}) }, x, y, ext: [w / 2 + 80, drop + 130, w / 2 + 80, 50], pi }); lightAt(I, x, y + 10, 12, 130, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }
     case 'wslide': {
       const dx = Math.round(p.dx || 0), len = Math.round(p.len || 240), z0 = p.z || 84, kind = p.kind || 'flume', col = p.c || '#d8342e', wig = 34;
       const x0 = 22 + (dx < 0 ? Math.abs(dx) : 0) + wig;
@@ -2904,6 +2904,18 @@ function makeDebris(r) {
 }
 // (the nature kit, 11-21: a rock shaped at the art pixel - half the size, each pixel laid over 2 x 2 by the bake - like
 // the plants: shaped in world px its grain, moss and outline were halved to speckle)
+// Where a fall's water comes from (the owner, 11-21 14:34: "one body of water flowing into the waterfall into another body
+// of water"): the river or lake on the ground above its lip (src 1: the fall draws none of its own up there, water.js),
+// or nothing - then a spring out of the rock (src 2). Read off the map where the fall stands; a resort's or a garden's
+// built fall (stone 'sand') keeps its own pool.
+function putFall(c, I, it) {
+  const r = it.recipe, wet = (x, y) => { const t = c.at(x, y); return t === T.WATER || t === T.DEEP; };
+  if (r.stone !== 'sand') {
+    const yy = it.y - 8 - (r.drop || 60), open = wet(it.x, yy - 14) && wet(it.x, yy - 40);
+    r.src = open ? 1 : 2; it.key += open ? ':o' : ':s';
+  }
+  put(I, it);
+}
 const artRock = (G) => { G.ax *= 2; G.ay *= 2; G.ap2 = 2; return G; };
 function makeRock(r) {
   const z = r.size * 0.5;
@@ -3772,31 +3784,31 @@ function addNature(c, I) {
   for (const s of c.M.natureSites || []) {
     if (s.kind === 'oasis') {   // the spring down the cliff into the pool
       const f = s.spring;
-      if (f.red) put(I, { key: `fall:o:${f.w}:${f.h}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.h, seed: 21, mist: 0.4, stone: 'red' }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.h + 100, f.w / 2 + 60, 50] });   // (Red Rock Canyon by hand: the spring down the red rock in two tiers)
+      if (f.red) putFall(c, I, { key: `fall:o:${f.w}:${f.h}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.h, seed: 21, mist: 0.4, stone: 'red' }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.h + 100, f.w / 2 + 60, 50] });   // (Red Rock Canyon by hand: the spring down the red rock in two tiers)
       else put(I, { key: `curt:${f.w}:${f.h}`, recipe: { t: 'curtain', w: f.w, h: f.h, seed: 4 }, x: f.x, y: f.y, ext: [f.w + 20, f.h + 30, f.w + 20, 30] });
       lightAt(I, f.x, f.y + 10, 8, 90, [0.8, 0.95, 1], 0.4, 'sign', 0);
       continue;
     }
     if (s.kind === 'rainforest') {   // the falls in the jungle: over a mossy basalt ledge into the pool
       const f = s.falls;
-      put(I, { key: `fall:r:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'ledge', w: f.w, drop: f.drop, seed: 13, mist: 0.6 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
+      putFall(c, I, { key: `fall:r:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'ledge', w: f.w, drop: f.drop, seed: 13, mist: 0.6 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
       continue;
     }
     if (s.kind === 'ledgefall') {
       // (notes 2: not one ruled row - each piece a little forward or back of the next, a little higher or lower)
       for (const g of s.segs) { if (g.dry) { const len = Math.round((g.w + 34) / 8) * 8, h = g.d + 6; put(I, vitem(`cliffw:${len}:${h}:${g.s}:44`, 'cliffWall', [len, h, 44, g.s, 0], g.x, g.y - 12, 0)); continue; }   // (a dry stretch of the lip: a bluff of rock the water parts round)
-        const j = (Math.imul(g.x | 0, 0x9e3779b1) >>> 0) / 4294967296, d = g.d + (Math.floor(j * 3) - 1) * 4; put(I, { key: `fall:l:${g.k}:${g.w}:${d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8 + Math.round(((j * 7) % 1 - 0.5) * 14), ext: [g.w / 2 + 60, d + 120, g.w / 2 + 60, 40] }); }
+        const j = (Math.imul(g.x | 0, 0x9e3779b1) >>> 0) / 4294967296, d = g.d + (Math.floor(j * 3) - 1) * 4; putFall(c, I, { key: `fall:l:${g.k}:${g.w}:${d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8 + Math.round(((j * 7) % 1 - 0.5) * 14), ext: [g.w / 2 + 60, d + 120, g.w / 2 + 60, 40] }); }
       continue;
     }
     if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge
       const f = s.falls, w = Math.max(f.w, FALLS_LOOK.tarn.w), drop = Math.max(f.drop, FALLS_LOOK.tarn.drop);
-      put(I, { key: `fall:t:${w}:${drop}`, recipe: { t: 'fall', kind: 'twoTier', w, drop, seed: 9, mist: FALLS_LOOK.tarn.mist }, x: f.x, y: f.y + 8, ext: [w / 2 + 60, drop + 100, w / 2 + 60, 50] });
+      putFall(c, I, { key: `fall:t:${w}:${drop}`, recipe: { t: 'fall', kind: 'twoTier', w, drop, seed: 9, mist: FALLS_LOOK.tarn.mist }, x: f.x, y: f.y + 8, ext: [w / 2 + 60, drop + 100, w / 2 + 60, 50] });
       continue;
     }
     if (s.kind === 'river') {
       const f = s.falls;
       fallWalls(I, s.cliffs, f.x, f.w / 2 + 36);
-      put(I, { key: `fall:w:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.drop, seed: 17, mist: 0.8, upper: [[-64, -34], [-26, 6], [14, 38], [46, 64]], streams: [[-62, -40], [-30, -6], [4, 28], [38, 62]] }, x: Math.round(f.x), y: Math.round(f.y), ext: [f.w / 2 + 80, f.drop + 120, f.w / 2 + 80, 60] });
+      putFall(c, I, { key: `fall:w:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.drop, seed: 17, mist: 0.8, upper: [[-64, -34], [-26, 6], [14, 38], [46, 64]], streams: [[-62, -40], [-30, -6], [4, 28], [38, 62]] }, x: Math.round(f.x), y: Math.round(f.y), ext: [f.w / 2 + 80, f.drop + 120, f.w / 2 + 80, 60] });
       lightAt(I, f.x, f.y + 10, 12, 140, [0.75, 0.9, 1], 0.5, 'sign', 0);
       const b = s.bridge, len = Math.round(b.half * 2 + 20);
       put(I, { key: `sbr:${len}:${b.roadHw}:${qa(b.a, 64).toFixed(3)}`, recipe: { t: 'sbridge', len, roadW: b.roadHw * 2, faceH: 46, hd: qa(b.a, 64) }, x: Math.round(b.x), y: Math.round(b.y), ext: [len / 2 + 30, b.roadHw + 60, len / 2 + 30, b.roadHw + 90] });
@@ -3809,7 +3821,7 @@ function addNature(c, I) {
     }
     if (s.kind === 'towncreek') {
       const f = s.falls;
-      put(I, { key: `fall:t:${f.w}:${f.drop}`, recipe: { t: 'fall', w: f.w, drop: f.drop, seed: 9, mist: 0.3 }, x: Math.round(f.x), y: Math.round(f.y + 8), ext: [f.w / 2 + 60, f.drop + 90, f.w / 2 + 60, 40] });
+      putFall(c, I, { key: `fall:t:${f.w}:${f.drop}`, recipe: { t: 'fall', w: f.w, drop: f.drop, seed: 9, mist: 0.3 }, x: Math.round(f.x), y: Math.round(f.y + 8), ext: [f.w / 2 + 60, f.drop + 90, f.w / 2 + 60, 40] });
       lightAt(I, f.x, f.y + 16, 8, 100, [0.75, 0.9, 1], 0.4, 'sign', 0);
       // the culvert's headwalls on the road's two edges: the arch faces down the creek (south) on the downstream side,
       // up it on the upstream side (its plain back to the road)
@@ -3826,7 +3838,7 @@ function addNature(c, I) {
     // same rock, the gorge's walls drawn on to meet them
     const f = s.falls, fd = Math.max(f.drop, FALLS_LOOK.creek.drop), fr = FALLS_LOOK.creek.rock;   // (2026-10-21: the creek's fall over its ledge, a little higher)
     if (!s.bowl) fallWalls(I, s.gorge, f.x, f.w / 2 + fr);   // (s.bowl: the falls and its walls are the redwoods' kit's props - shared/world3-redwoods.js)
-    if (!s.bowl) put(I, { key: `fall:${f.w}:${fd}:${fr}`, recipe: { t: 'fall', w: f.w, drop: fd, seed: 5, mist: FALLS_LOOK.creek.mist, rock: fr }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + fr + 24, fd + 90, f.w / 2 + fr + 24, 40] });
+    if (!s.bowl) putFall(c, I, { key: `fall:${f.w}:${fd}:${fr}`, recipe: { t: 'fall', w: f.w, drop: fd, seed: 5, mist: FALLS_LOOK.creek.mist, rock: fr }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + fr + 24, fd + 90, f.w / 2 + fr + 24, 40] });
     if (!s.bowl) lightAt(I, f.x, f.y + 20, 10, 120, [0.75, 0.9, 1], 0.5, 'sign', 0);   // (the white water catches the light)
     // the footbridge across the creek below the pool
     const fb = s.footbridge, fh = qa(fb.a, 16);

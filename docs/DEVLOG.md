@@ -25313,6 +25313,14 @@ best-looking trees in the game.
   its own from wet rock to white; the lip's water darker. A world's fall is drawn at the art pixel (`waterfall`
   `o.art`, the bake's ap2). Not done: the settings - Summit Tarn's fall still stands on flat ground and the ledge
   falls still read low; their rock changes the world's solid ground and goes in with the world batch.
+- **Waterfalls, second step: where the water comes from (the owner, 14:34).** Look 2 is his pick. A fall carried its
+  own little pool on top, pool-blue against the river's teal, and stood the same whether a river reached it or not.
+  `statics.js` `putFall` reads the map where each fall stands: if a river or lake lies on the ground above its lip
+  (`src` 1) the fall draws no water of its own up there - the source's own moving water runs to the lip under a
+  see-through glassy tongue (`water.js` `waterfall`); if nothing does (`src` 2: Coral Cay's, the canyon oasis') it comes
+  out of a dark cleft in a hood of rock, a spring. A fall's own pools (its shelf, a spring's tongue) are in the rivers'
+  teal. A resort's built fall keeps its pool. Seen in the world: the redwood horseshoe, Twin Falls, Summit Tarn,
+  Coral Cay.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
