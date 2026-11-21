@@ -205,6 +205,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The Founding Citizen jacket is a gold bomber - all of it gold, dark ribbing, shining - not the varsity jacket with gold sleeves. (11-20 13:33, built 19:23; `shared/lookcore.js` `shine`; docs/characters/OWNER-NOTES-1120.md)
 - Jackets are worn open or done up, the player's choice (Front: Open / Zipped, or Buttoned on a coat, a cardigan or a blazer), "and we can test out how it works"; the Founding Citizen jacket is zipped unless opened. (11-20 20:53; chat: "Let's do a zipper and unzipped version and give players the option" - SUPERSEDES "jackets open till after the beta", 11-20 13:42; shared/lookcore.js canZip)
 - The renderer's code budget is raised (470 -> 510 KB): "Is there a reason not to raise the render budget? If not lets raise it." (11-20 20:53; chat; tools/perf.mjs)
+- No cravat as a piece of its own: "probably dont need this as an item by itself" - built, then taken out. (11-20 21:55; chat)
+- Pieces are named in American English: suspenders, not braces ("Not sure what braces are do you mean suspenders?"). (11-20 21:55; chat)
 - A bow tie is comically large: "one step bigger to give it a clear bowtie look". (11-20 20:53; chat)
 - All of the characters' missing work goes ahead now: "Go ahead and start on all of it we are missing let's knock this out." (11-20 20:53; chat)
 - The bake's code budget is raised (1045 -> 1080 KB): "Is it bad to raise the bake code? I feel like we should raise it?" (11-20 20:15; chat; tools/perf.mjs)

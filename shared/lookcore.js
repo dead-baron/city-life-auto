@@ -31,7 +31,8 @@ export const STYLES = [
   ['alt', 'Alt'], ['athletic', 'Athletic'], ['retro', 'Retro'], ['western', 'Western'], ['outdoors', 'Outdoors'], ['formal', 'Formal'],
   ['winter', 'Winter'], ['festival', 'Festival'], ['preppy', 'Preppy'], ['work', 'Work'], ['disguise', 'Disguise'],
 ];
-export const PATTERNS = ['plain', 'stripes', 'check', 'camo', 'floral', 'tiedye'];
+export const PATTERNS = ['plain', 'stripes', 'check', 'camo', 'floral', 'tiedye', 'dots', 'pinstripe'];   // (append-only: a look's code holds the place)
+export const PASS_PATTERNS = 6;   // (from here on, the polish pass's own: dots, a stripe that runs down - offered while it is on)
 
 // ---- palettes ---------------------------------------------------------------------------------------------------
 // skin: the first six are the old renderer's six tones (indexes kept); SKIN_ORDER lists all 16 light to deep
@@ -81,8 +82,8 @@ export const HAIR_STYLES = [
   ['Spiky', 'mf', 'spiky'], ['Quiff', 'm', 'quiff'], ['Curly crop', 'mf', 'curly'], ['Afro', 'mf', 'afro'], ['Mohawk', 'mf', 'mohawk'], ['Dreadlocks', 'mf', 'dreads'],
   ['Undercut', 'mf', 'undercut'], ['Mullet', 'mf', 'mullet'], ['Man bun', 'm', 'manbun'], ['Shoulder length', 'mf', 'shoulder'], ['Long straight', 'mf', 'long'], ['Long waves', 'mf', 'wavy'],
   ['Pixie', 'f', 'pixie'], ['Bob', 'f', 'bob'], ['Ponytail', 'mf', 'pony'], ['High bun', 'f', 'bun'], ['Top knot', 'mf', 'topknot'], ['Braids', 'f', 'braids'],
-  ['Box braids', 'f', 'boxbraids'], ['Space buns', 'f', 'twinbuns'], ['Pigtails', 'f', 'pigtails'], ['Single braid', 'f', 'braid'], ['Curly long', 'f', 'curlylong'], ['Shag', 'mf', 'shag'],
-  ['Cornrows', 'mf', 'cornrows'], ['Fade', 'm', 'fade'], ['Curtains', 'm', 'curtains'], ['Big curls', 'f', 'bigcurls'], ['Half up', 'f', 'halfup'], ['Shaved side', 'f', 'shavedside'],
+  ['Box braids', 'mf', 'boxbraids'], ['Space buns', 'f', 'twinbuns'], ['Pigtails', 'f', 'pigtails'], ['Single braid', 'f', 'braid'], ['Curly long', 'mf', 'curlylong'], ['Shag', 'mf', 'shag'],
+  ['Cornrows', 'mf', 'cornrows'], ['Fade', 'm', 'fade'], ['Curtains', 'm', 'curtains'], ['Big curls', 'f', 'bigcurls'], ['Half up', 'mf', 'halfup'], ['Shaved side', 'f', 'shavedside'],
   // (pass 2, CB3-M / CB3-F / CC2: shapes the concepts have that the list lacked; drawn by the polish pass)
   // (the fourth field: only with the pass on - the creator lists them then, random looks never pick them; off, each draws as its base style)
   ['Balding', 'm', 'balding', 1], ['Flat top', 'm', 'flattop', 1], ['Pompadour', 'm', 'pompadour', 1], ['Afro puffs', 'f', 'puffs', 1], ['Low ponytail', 'mf', 'lowpony', 1], ['Side fringe', 'mf', 'emo', 1],
@@ -146,7 +147,7 @@ add('jacket', 'Waistcoat', 'mf', 'formal business retro western', 70, 'boutique'
 add('jacket', 'Puffer vest', 'mf', 'outdoors winter preppy', 70, 'outdoor', { k: 'vest', quilt: 1 }, 'navy');
 add('jacket', 'Studded vest', 'mf', 'punk alt', 85, 'boutique', { k: 'vest', studs: 1 }, 'black', 'silver');
 add('jacket', 'Fringe jacket', 'mf', 'western festival retro', 150, 'boutique', { k: 'leather', fringe: 1 }, 'tan');
-add('jacket', 'Kimono', 'f', 'festival lounge hifashion', 75, 'boutique', { k: 'coat', p: 4 }, 'plum', 'blush');
+add('jacket', 'Kimono', 'mf', 'festival lounge hifashion', 75, 'boutique', { k: 'coat', p: 4 }, 'plum', 'blush');
 add('jacket', 'Bathrobe', 'mf', 'lounge', 40, 'clothing', { k: 'coat', robe: 1 }, 'white');
 add('jacket', 'Lab coat', 'mf', 'work disguise', 60, 'workwear', { k: 'coat' }, 'white');
 // bottoms
@@ -177,7 +178,7 @@ add('set', 'Sundress', 'f', 'beach casual festival', 60, 'clothing', { k: 'dress
 add('set', 'Evening gown', 'f', 'formal hifashion', 380, 'boutique', { k: 'gown' }, 'royal blue');
 add('set', 'Wedding dress', 'f', 'formal', 900, 'boutique', { k: 'gown' }, 'white');
 add('set', 'Business suit', 'mf', 'business formal', 320, 'boutique', { k: 'suit', bk: 'pants' }, 'charcoal', 'burgundy');
-add('set', 'Tuxedo', 'm', 'formal nightclub', 420, 'boutique', { k: 'suit', bk: 'pants', bow: 1 }, 'black', 'black');
+add('set', 'Tuxedo', 'mf', 'formal nightclub', 420, 'boutique', { k: 'suit', bk: 'pants', bow: 1 }, 'black', 'black');
 add('set', 'Tracksuit', 'mf', 'athletic street streetwear retro', 80, 'sports', { k: 'tracksuit', bk: 'track' }, 'red', 'white');
 add('set', 'Overalls', 'mf', 'work western outdoors retro', 60, 'workwear', { k: 'overalls', bk: 'pants' }, 'denim', 'white');
 add('set', 'Coveralls', 'mf', 'work disguise', 55, 'workwear', { k: 'longsleeve', bk: 'cargo', zip: 1 }, 'orange', 'charcoal');
@@ -478,13 +479,13 @@ add('under', 'Striped briefs', 'mf', 'lounge casual', 10, 'clothing', { bk: 'bik
 add('under', 'Striped bra and panties', 'f', 'lounge casual', 16, 'clothing', { k: 'bra', bk: 'bikini', stripe: 1 }, 'pink', 'white');
 // the concepts' missing pieces, 1 (docs/characters/CHECKLIST.md "the next pass's work"; the owner, 11-20 20:53: "start on all of
 // it we are missing"): each drawn by the polish pass (pp: not sold, not worn in the city, while it is off). On the chest
-// (peoplepolish.js NECK): a tie on a shirt alone, braces, a cravat, a towel round the neck, a sweater over the shoulders.
+// (peoplepolish.js NECK): a tie on a shirt alone, suspenders, a towel round the neck, a sweater over the shoulders (a cravat
+// was built and dropped - the owner, 21:55: "probably dont need this as an item by itself").
 // On the face (masks): a sleep mask, novelty glasses, a chicken mask. Hats: a feather, a riding helmet, a half helmet
 // with goggles. To carry: a newspaper, a clipboard, a laptop sleeve, a parcel, a basketball, glow sticks, trekking poles,
 // a yoga mat on the back; boxing gloves.
 add('jewel', 'Necktie', 'mf', 'business smart formal preppy', 22, 'boutique', { tie: 1, pp: 1 }, 'red');
-add('jewel', 'Braces', 'mf', 'retro smart punk business', 18, 'boutique', { braces: 1, pp: 1 }, 'red');
-add('jewel', 'Cravat', 'mf', 'formal alt retro hifashion', 30, 'boutique', { cravat: 1, pp: 1 }, 'burgundy');
+add('jewel', 'Suspenders', 'mf', 'retro smart punk business', 18, 'boutique', { braces: 1, pp: 1 }, 'red');
 add('jewel', 'Towel round the neck', 'mf', 'athletic beach lounge', 8, 'sports', { ntowel: 1, pp: 1 }, 'sky', 'white');   // (sky by default: a white towel on a white top is not seen)
 add('jewel', 'Sweater over the shoulders', 'mf', 'preppy smart casual', 40, 'clothing', { shsweater: 1, pp: 1 }, 'navy');
 add('jewel', 'Boxing gloves', 'mf', 'athletic', 45, 'sports', { boxing: 1, pp: 1 }, 'red', 'white');
@@ -492,7 +493,7 @@ add('glasses', 'Sleep mask', 'mf', 'lounge', 8, 'clothing', { k: 'sleep', pp: 1,
 add('glasses', 'Novelty glasses', 'mf', 'disguise festival', 10, 'costume', { k: 'novelty', pp: 1, nostreet: 1 }, 'black');
 add('glasses', 'Chicken mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', animal: 'chicken', pp: 1, nostreet: 1 }, 'white', 'red');
 add('hat', 'Feathered hat', 'mf', 'festival hifashion retro western', 70, 'boutique', { k: 'fedora', feather: 1, pp: 1 }, 'olive', 'red');
-add('hat', 'Riding helmet', 'mf', 'preppy outdoors', 60, 'sports', { k: 'hard', riding: 1, pp: 1 }, 'black');
+add('hat', 'Riding helmet', 'mf', 'preppy outdoors', 60, 'sports', { k: 'hard', riding: 1, pp: 1 }, 'black', 'silver');
 add('hat', 'Half helmet with goggles', 'mf', 'punk street western', 75, 'outdoor', { k: 'skatehelmet', gog: 1, pp: 1 }, 'black', 'mustard');
 add('bag', 'Newspaper', 'mf', 'business smart casual retro', 2, 'clothing', { carry: 'purse', prop: 'paper', pp: 1 }, 'white', 'charcoal');
 add('bag', 'Clipboard', 'mf', 'work business', 6, 'workwear', { carry: 'purse', prop: 'clip', pp: 1 }, 'brown', 'white');
@@ -502,6 +503,29 @@ add('bag', 'Basketball', 'mf', 'athletic streetwear', 25, 'sports', { carry: 'pu
 add('bag', 'Glow sticks', 'mf', 'festival nightclub', 6, 'costume', { carry: 'purse', prop: 'glow', pp: 1 }, 'neon green', 'hot pink');
 add('bag', 'Trekking poles', 'mf', 'outdoors', 40, 'outdoor', { carry: 'cane', prop: 'poles', pp: 1 }, 'light gray', 'red');
 add('bag', 'Yoga mat', 'mf', 'athletic casual', 20, 'sports', { back: 3, pp: 1 }, 'purple');
+// the concepts' missing pieces, 2: two patterns the list lacked (dots, a stripe that runs down: PATTERNS) and the pieces that
+// wear them; sequins on another bomber; pieces worn another way (a shirt open, a tee over a long sleeve, one strap down, a
+// shirt tied at the waist, a towel at the waist or over a shoulder); small shapes of their own (arm warmers, a ripped tee,
+// a two-color windbreaker, a trouser's side stripe, a sherpa collar). Then five that are a piece the renderer already
+// draws, in the colors and the pattern the concepts show - ordinary pieces, sold and worn in the city like any other.
+add('top', 'Polka-dot blouse', 'f', 'retro smart preppy', 50, 'boutique', { k: 'blouse', p: 6, pp: 1 }, 'navy', 'white');
+add('set', 'Pinstripe suit', 'mf', 'business formal retro', 360, 'boutique', { k: 'suit', bk: 'pants', p: 7, pp: 1 }, 'navy', 'light gray');
+add('jacket', 'Sequin bomber', 'mf', 'nightclub festival hifashion', 180, 'boutique', { k: 'jacket', bomber: 1, shine: 1, pp: 1 }, 'silver', 'black');
+add('jacket', 'Open shirt', 'mf', 'beach casual festival', 40, 'clothing', { k: 'openshirt', pp: 1 }, 'white');
+add('bottoms', 'Towel round the waist', 'mf', 'beach lounge', 10, 'beach', { k: 'towel', pp: 1 }, 'white');
+add('jewel', 'Towel over the shoulder', 'mf', 'beach athletic lounge', 8, 'beach', { shtowel: 1, pp: 1 }, 'sky', 'white');
+add('jacket', 'Dungarees, one strap down', 'mf', 'retro casual festival skater', 60, 'clothing', { k: 'overalls', onestrap: 1, pp: 1 }, 'denim');
+add('top', 'Tee over a long sleeve', 'mf', 'skater streetwear casual alt', 34, 'clothing', { k: 'layertee', pp: 1 }, 'black', 'white');
+add('jewel', 'Shirt tied at the waist', 'mf', 'alt punk casual skater', 30, 'clothing', { waistshirt: 1, pp: 1 }, 'red', 'black');
+add('jewel', 'Arm warmers', 'mf', 'alt punk festival', 14, 'clothing', { armw: 1, pp: 1 }, 'black', 'hot pink');
+add('top', 'Ripped tee', 'mf', 'punk alt street', 24, 'clothing', { k: 'tee', torn: 1, pp: 1 }, 'charcoal');
+add('jacket', 'Color-block windbreaker', 'mf', 'retro athletic streetwear outdoors', 70, 'sports', { k: 'jacket', block: 1, pp: 1 }, 'teal', 'purple');
+add('bottoms', 'Side-stripe trousers', 'mf', 'work formal retro', 60, 'boutique', { k: 'pants', sidestripe: 1, pp: 1 }, 'navy', 'gold');
+add('jacket', 'Sherpa-collar jacket', 'mf', 'winter outdoors western casual', 120, 'outdoor', { k: 'puffer', sherpa: 1, pp: 1 }, 'brown', 'cream');
+add('bottoms', 'Jodhpurs', 'mf', 'preppy outdoors western', 70, 'boutique', { k: 'leggings' }, 'sand');
+add('jacket', 'Tweed jacket', 'mf', 'preppy smart retro', 150, 'boutique', { k: 'blazer', p: 2 }, 'brown', 'tan');
+add('set', 'T-shirt dress', 'f', 'casual streetwear', 45, 'clothing', { k: 'tee', bk: 'skirt' }, 'black', 'white');
+add('set', 'Jersey dress', 'f', 'streetwear athletic', 60, 'sports', { k: 'jersey', bk: 'skirt' }, 'royal blue', 'white');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
@@ -526,7 +550,7 @@ export function emptyLook(base = 'm') {
 // jackets with a front that closes - a zip, or buttons on a coat, a cardigan or a blazer. A piece has its own way of being
 // worn (d.zipped: the Founding Citizen jacket's is zipped); a look's jacket may carry z: 1, the other way. In the look's
 // code it is a spare bit of the jacket's pattern letter, so the code is no longer and old codes read as before.
-const ZIP_KINDS = { jacket: 1, leather: 1, puffer: 1, hoodie: 1, coat: 2, fur: 2, cardigan: 2, blazer: 2 };
+const ZIP_KINDS = { jacket: 1, leather: 1, puffer: 1, hoodie: 1, coat: 2, fur: 2, cardigan: 2, blazer: 2, openshirt: 2 };
 export const canZip = (P) => !!P && P.slot === 'jacket' && !P.d.dr && !P.d.robe && !(P.d.k === 'coat' && P.d.p) ? ZIP_KINDS[P.d.k] || 0 : 0;
 export const isZipped = (it) => { const P = it && PIECES[it.id], k = canZip(P); return k && ((P.d.zipped ? 1 : 0) ^ (it.z ? 1 : 0)) ? k : 0; };   // (0 open, 1 zipped, 2 buttoned)
 export const setZipped = (it, on) => { const P = it && PIECES[it.id]; if (!canZip(P)) return; if ((on ? 1 : 0) ^ (P.d.zipped ? 1 : 0)) it.z = 1; else delete it.z; };
@@ -676,12 +700,12 @@ export function lookArt(L, opt = {}) {
     A.top = { kind: set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0, plain: set.d.plain ? 1 : 0, bands: set.d.bands ? 1 : 0 };
     A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined };
   } else {
-    A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0, chevrons: top.d.chevrons ? 1 : 0 } : uTop || { kind: fem ? 'bra' : 'none', color: '#e8e4dc' };   // (no underwear picked: boxers; a bra and panties - the owner, 11-19)
-    A.bottom = bot ? { kind: bot.d.k, color: HEX(O.bottoms.c), color2: HEX(O.bottoms.t), trim: HEX(O.bottoms.t), pattern: pat(O.bottoms) || (bot.d.ripped ? 'ripped' : undefined), len: bot.d.len || 0, gloss: bot.d.gloss ? 1 : 0, stripe: bot.d.k === 'track' ? HEX(O.bottoms.t) : undefined } : uBot || { kind: fem ? 'bikini' : 'trunks', color: '#e8e4dc' };
+    A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0, chevrons: top.d.chevrons ? 1 : 0, ...(top.d.torn ? { torn: 1 } : null) } : uTop || { kind: fem ? 'bra' : 'none', color: '#e8e4dc' };   // (no underwear picked: boxers; a bra and panties - the owner, 11-19)
+    A.bottom = bot ? { ...(bot.d.sidestripe ? { sidestripe: HEX(O.bottoms.t) } : null), kind: bot.d.k, color: HEX(O.bottoms.c), color2: HEX(O.bottoms.t), trim: HEX(O.bottoms.t), pattern: pat(O.bottoms) || (bot.d.ripped ? 'ripped' : undefined), len: bot.d.len || 0, gloss: bot.d.gloss ? 1 : 0, stripe: bot.d.k === 'track' ? HEX(O.bottoms.t) : undefined } : uBot || { kind: fem ? 'bikini' : 'trunks', color: '#e8e4dc' };
   }
   if (jk) {   // worn open over the top: the top's colour down the front
     const under = A.top;
-    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null), ...(jk.d.shine ? { shine: 1 } : null), ...(isZipped(O.jacket) ? { zipped: isZipped(O.jacket) } : null) };
+    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null), ...(jk.d.shine ? { shine: 1 } : null), ...(isZipped(O.jacket) ? { zipped: isZipped(O.jacket) } : null), ...(jk.d.onestrap ? { onestrap: 1 } : null), ...(jk.d.block ? { block: 1 } : null), ...(jk.d.sherpa ? { sherpa: 1 } : null) };
     if (jk.d.k === 'vest') A.top.sleeve = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'crop' || under.kind === 'bikini' ? 'skin' : under.color;
     if (jk.d.k === 'kevlar') { A.top.kind = 'kevlar'; A.top.color = under.color || A.top.color; A.top.color2 = HEX(O.jacket.c); A.top.sleeve = under.kind === 'none' || under.kind === 'tank' ? 'skin' : under.color; A.top.chevrons = under.chevrons || 0; }   // (the plates over the shirt, the shirt's sleeves)
     if (jk.d.k === 'apron' || jk.d.k === 'overalls') {   // (worn over the top: the shirt round them is the top - its colour, its sleeves, a flannel's check - or bare skin)

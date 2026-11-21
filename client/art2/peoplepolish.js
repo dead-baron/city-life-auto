@@ -39,7 +39,7 @@ export const POLISH = {
   // (the owner, 20:15: round glasses "too close together ... one step bigger so it looks like an actual round lens". A lens is
   // two art pixels wide now - the eye and the pixel beside it - with its rim round them; the two lenses share the pixel
   // between the eyes, the bridge.)
-  propBox: { paper: [1.5, 3.4, 2.9, -2.4], clip: [1.5, 2.6, 3.3, -2.8], laptop: [1.6, 4.3, 3.1, -3.0], parcel: [2.9, 3.2, 2.8, -2.6] },   // (things carried in the hand: half sizes across, along, up, and how far under the hand)
+  propBox: { paper: [3.0, 2.6, 4.4, -1.4, 2.2], clip: [1.5, 2.6, 3.3, -2.8], laptop: [1.6, 4.3, 3.1, -3.0], parcel: [2.9, 3.2, 2.8, -2.6] },   // (things carried in the hand: half sizes across, along, up, how far under the hand, and how far out from it)
   GLS: { sleep: '11F', novelty: '10F20F12F22F31F01F11E21W', round: '10F20F12F22F31F01F11E21W', half: '01F31F12F22F11E21W', frames: '10F20F30F01F31F12H22H32H11E21W', browline: '00F10F20F30F01T31T12T22T11E21W', rimless: '10C20C31C12C22C11E21W', patch: '00F10F20F01F11F21F12F' },
   // ---- masks as small pictures (people.js face(): at the end, over the face). Columns are art pixels from the left eye
   // (lo..hi across the face, m the middle), rows from the eyes' row down.
@@ -54,7 +54,8 @@ export const POLISH = {
       if (A.scar === 7) { const b = skin[1].map((v, i) => Math.round(v * 0.45 + [96, 52, 110][i] * 0.55)); P(0, 1, b); P(-1, 0, b); }
       if (A.makeup && A.makeup.kind === 'face paint') { const c = hexRgb(A.makeup.color || '#c8262b'); P(lo, 1, c); P(hi, 1, c); if (two) { P(lo + 1, 1, c); P(hi - 1, 1, c); } }
     }
-    if (A.glasses === 'sleep') { const c = hexRgb(A.glassColor || '#1d2a4a'); row(0, c); for (const i of ex) P(i, 0, sh(c, 1.35)); return; }   // (a sleep mask: a band over both eyes, a paler stitch where each is)
+    if (A.jewel && A.jewel.scarf && !fm && !A.mask) { const c = hexRgb(A.jewel.color || '#c8262b'); row(3, c, lo, hi); row(4, sh(c, 0.8), lo, hi); }   // (a scarf comes up over the chin: the head's lowest rows are its wrap)
+    if (A.glasses === 'sleep') { const c = hexRgb(A.glassColor || '#1d2a4a'); row(0, c); row(1, sh(c, 0.82)); row(-1, sh(c, 1.15), lo + 1, hi - 1); for (const i of ex) P(i, 0, sh(c, 1.4)); return; }   // (the owner, 21:55: "very thin it could be bigger" - three rows: over the brow, the eyes, the cheeks' tops)   // (a sleep mask: a band over both eyes, a paler stitch where each is)
     if (A.glasses === 'novelty') { P(m, 1, [236, 150, 128]); P(m, 0, [236, 150, 128]); row(2, [30, 24, 26], m - 1, m + 1); return; }   // (novelty glasses: a big pink nose and a moustache under the frames)
     if (A.medmask) { const c = hexRgb(typeof A.medmask === 'string' ? A.medmask : '#8fc4e8'); row(1, sh(c, 1.35)); row(2, c); row(3, sh(c, 0.82), lo + 1, hi - 1); P(lo - 1, 1, [236, 238, 242]); P(hi + 1, 1, [236, 238, 242]); return; }
     if (A.bandana) { const c = hexRgb(typeof A.bandana === 'string' ? A.bandana : '#c8262b'); row(1, sh(c, 0.8)); row(2, c); row(3, sh(c, 0.9), lo + 1, hi - 1); P(m - 1, 2, sh(c, 1.5)); P(m + 1, 2, sh(c, 1.5)); P(m, 3, sh(c, 1.5)); return; }
@@ -65,12 +66,13 @@ export const POLISH = {
       P(lo, -1, t); P(hi, -1, t); if (A.masq) { P(m, -1, t); P(lo, 1, t); P(hi, 1, t); }
       return;
     }
+    if (A.hat && A.hat.gog && !fm && !A.glasses) { const ln = hexRgb(A.hat.trim || '#d8a030'), fr = [34, 34, 40]; row(0, fr); row(-1, fr); for (const i of ex) { P(i, 0, ln); P(i + out(i), 0, sh(ln, 0.72)); P(i, -1, sh(ln, 1.45)); P(i + out(i), -1, ln); } P(m, 0, fr); return; }   // (the owner, 21:55: "cant really tell they're goggles" - worn over the eyes: two lenses two art pixels square in their dark frame, a glint in each)
     if (!fm) return;
     const c = hexRgb(A.fmask.c), t = A.fmask.t ? hexRgb(A.fmask.t) : c, blk = [26, 22, 26];
     const mm = m + (two && turn > 0.2 ? fwd : 0), tip = two ? mm : mm + fwd;   // (an animal's muzzle: a step toward the way the head is turned; in profile its nose at the tip)
     if (fm === 'pig' && A.fmask.animal === 'chicken') { for (const i of ex) { P(i - 1, 0, c); P(i + 1, 0, c); } for (const i of ex) P(i, 0, [24, 20, 22]); P(tip, 1, [242, 168, 27]); P(mm, 1, [242, 168, 27]); P(mm, 2, t); }
     else if (fm === 'pig' && A.fmask.animal === 'panda') { for (const i of ex) { P(i + out(i), 0, blk); P(i, 1, blk); P(i + out(i), 1, blk); P(i, 0, [244, 244, 240]); } P(tip, 2, blk); }   // (a white eye in each black patch: all black, the patches read as a moustache)
-    else if (fm === 'pig' && A.fmask.animal === 'bear') { const mz = sh(c, 1.5); row(1, mz, mm - 1, mm + 1); row(2, sh(c, 1.36), mm - 1, mm + 1); P(tip, 1, [30, 22, 20]); for (const i of ex) { P(i - 1, 0, c); P(i + 1, 0, c); } for (const i of ex) P(i, 0, [26, 20, 18]); }   // (the owner, 20:53: the snout at an angle - a pale block three by two with the nose on it, no dark line down its middle; the eyes plain dots)
+    else if (fm === 'pig' && A.fmask.animal === 'bear') { const mz = sh(c, 1.5); row(1, mz, mm - 1, mm + 1); row(2, mz, mm - 1, mm + 1); P(two && turn > 0.2 ? mm + fwd : tip, 1, [30, 22, 20]); for (const i of ex) { P(i - 1, 0, c); P(i + 1, 0, c); } for (const i of ex) P(i, 0, [26, 20, 18]); }   // (the owner, 20:53: the snout at an angle - a pale block three by two with the nose on it, no dark line down its middle; the eyes plain dots)
     else if (fm === 'pig') { const sn = sh(c, 1.25), no = sh(c, 0.6); row(1, sn, mm - 1, mm + 1); row(2, sh(c, 1.1), mm - 1, mm + 1); P(mm - 1, 1, no); P(mm + 1, 1, no); for (const i of ex) { P(i + out(i), 0, c); P(i, 0, [40, 26, 30]); } }
     else if (fm === 'gas') { row(0, sh(c, 0.9)); row(-1, sh(c, 1.1)); row(1, c); for (const i of ex) { P(i, 0, [168, 196, 206]); P(i + out(i), 0, [92, 118, 130]); } }
     else if (fm === 'clown') { P(m, 1, t); row(2, t, m - 1, m + 1); P(m - 2, 1, [240, 150, 160]); P(m + 2, 1, [240, 150, 160]); for (const i of ex) { P(i, -1, [52, 104, 214]); P(i, 0, [24, 22, 30]); } }
@@ -409,18 +411,22 @@ export const POLISH = {
         if (J.steth) N.push({ rows: ['T...T', 'T...T', 'T...s', 'T....', 'SS...'], side: ['.T', 'T', 'T', 'S'], nape: 'T', K: { T: m(jc, -0.1), S: g(steel, 0.1), s: g(steel, 0.3) } });
         else if (J.lany) { const card = tone(jc, [246, 248, 252], 0.45); N.push({ rows: ['c...c', 'c...c', '.c.c.', '.kkk.', '.WdW.'], side: ['.c', 'c', 'c', 'k', 'W'], nape: 'c', K: { c: m(jc), W: m(card, 0.2), k: m(jc, -0.35), d: m(dk) } }); }
         // (the owner, 20:53: "scarf doesn't look like a scarf yet" - wound round the neck two rows thick, wider than the neck, in knit ribs; one end down the front, two wide, a band of the trim and a fringe at its end)
-        else if (J.scarf) { const tr = jt || cloth('#efe6d4'); N.push({ rows: ['.RrRrR.', 'RrRrRrR', '....RR.', '....rr.', '....RR.', '....r.r'], side: ['RrR', 'rRr', '.R', '.r'], back: ['.RrRrR.', 'RrRrRrR'], K: { R: m(jc, 0.1), r: m(tone(jc, [40, 14, 20], 0.32)), t: m(tr) } }); }
+        else if (J.scarf) { const tr = jt || cloth('#efe6d4'); N.push({ rows: ['.RrRrR.', '.rRrRr.', '...rR..', '...Rr..', '...rR..', '...r.r.'], side: ['RrR', 'rRr', 'R', 'r'], back: ['..RrR..', '.RrRrR.'],   // (the owner, 21:55: "should go around the neck better" - snug under the chin and widening over the collar, not from shoulder to shoulder)
+ K: { R: m(jc, 0.1), r: m(tone(jc, [40, 14, 20], 0.32)), t: m(tr) } }); }
         else if (J.pearl) N.push({ rows: ['q...q', '.pqp.'], side: ['.q', 'p'], K: { p: g(cloth('#fbf8f2'), 0.3), q: m(cloth('#9a8fae')) } });
         else if (J.whistle) N.push({ rows: ['c...c', '.c.c.', '..s..'], side: ['.c', 'c', 's'], K: { c: m(jc), s: g(steel, 0.2) } });
         else if (J.bolo) N.push({ rows: ['.c.c.', '..S..', '.c.c.', '.t.t.'], side: ['c', 'S', 'c', 't'], K: { c: m(dk), S: g(jc, 0.2), t: g(steel) } });
         else N.push({ rows: J.chain === 2 ? ['a...a', 'ab.ba', 'ba.ab', '.bab.'] : J.pendant ? ['a...a', 'b...b', '.aba.', '..P..'] : ['a...a', 'ba.ab', '.aba.'], side: ['.a', 'b', 'a'], K: { a: g(jc, 0.2), b: g(jc, -0.25), P: g(jc, 0.35) } });
       }
       // (the concepts' missing pieces: a tie on a shirt alone, braces, a cravat, a towel round the neck, a sweater over the shoulders)
-      if (J.tie) N.push({ rows: ['..K..', '..T..', '..T..', '..T..', '..T..'], side: ['K', 'T', 'T', 'T'], K: { K: m(tone(jc, [20, 16, 24], 0.35)), T: m(jc) } });
+      if (J.tie) N.push({ rows: ['..K..', '..T..', '..t..', '..T..', '..t..', '..T..'], rowsE: ['..KK..', '..TT..', '..tT..', '..Tt..', '..TT..', '..tT..', '...T..'], side: ['K', 'T', 't', 'T', 'T'],   // (the owner, 21:55: "more tie shaped" - a knot, a narrow neck, the blade widening, a point)
+ K: { K: m(tone(jc, [20, 16, 24], 0.45)), T: m(jc), t: m(tone(jc, [244, 240, 232], 0.55)) } });   // (two wide, a darker knot, pale stripes slanting down it, the tip cut on the slant)
       if (J.braces) N.push({ rows: ['S...S', 'S...S', 'S...S', 'S...S', 'S...S', 'c...c'], back: ['S...S', 'S...S', '.S.S.', '..S..', '..S..', '..c..'], side: ['.S', '.S', '.S', '.S', '.S'], K: { S: m(jc), c: g(steel, 0.2) } });
-      if (J.cravat) N.push({ rows: ['.CCC.', '.cCc.', '..c..'], side: ['C', 'C', 'c'], K: { C: g(jc, 0.2), c: m(tone(jc, [24, 12, 20], 0.35)) } });
       if (J.ntowel) { const tw = jc; N.push({ rows: ['.WW.WW.', '.WW.WW.', '.WW.WW.', '.tt.tt.', '.WW.WW.'], back: ['.WWWWW.'], side: ['.WW', '.WW', '.tt'], K: { W: m(tw, 0.1), t: m(jt || tw) } }); }
       if (J.shsweater) N.push({ rows: ['SSS.SSS', '.SS.SS.', '..SkS..'], back: ['SSSSSSS', 'SSSSSSS', '.SSSSS.', '.SSSSS.'], side: ['SSS', '.SS', '..S'], K: { S: m(jc), k: m(tone(jc, [16, 16, 24], 0.4)) } });
+      if (J.shtowel) N.push({ rows: ['.....WW', '.....WW', '.....WW', '.....tt', '.....WW'], back: ['WW.....', 'WW.....', 'WW.....', 'tt.....'], side: ['.W', '.W', '.t'], K: { W: m(jc), t: m(jt || jc) } });   // (a towel over one shoulder, an end down the chest and one down the back)
+      if (A.top && A.top.torn) N.push({ rows: ['.....', '.s...', '.....', '...s.', '.s...'], cloth: 1, K: { s: () => W.skin } });   // (a ripped tee: holes that show the skin)
+      if (A.top && A.top.sherpa) { const fl = cloth(A.top.trim || '#e8dcc0'); N.push({ rows: ['FF.FF'], back: ['.FFFFF.'], side: ['FF'], K: { F: m(fl, 0.1) } }); }   // (a sherpa collar: fleece in the trim, turned out over the shoulders)
       if (J.bow) { const bw = cloth(J.color || '#1a1a1e'); N.push({ rows: D.chestR[0] >= 8.2 ? ['BB...BB', 'BBBkBBB', 'BB...BB'] : ['BB.BB', 'BBkBB', 'BB.BB'], side: ['BB', 'Bk', 'BB'],   // (the owner, 20:53: "comically large ... one step bigger" - seven across where the chest has room, pinched at the knot)
  K: { B: m(bw, -0.2), k: m(tone(bw, [150, 150, 164], 0.28)) } }); }
       // (the owner, 20:15: "backpack straps still get kind of lost", a duffel "should have a strap over the shoulder", the camera "still not big enough")
@@ -442,7 +448,8 @@ export const POLISH = {
         // (the middle of the front falls in an art pixel, or on the line between two - a figure facing us is an even number
         // across. On the line a picture is one wider, its middle column twice: a bow tie, a chain, a card sit in the middle,
         // not half a pixel to one side. Buttons and a zip stay one column.)
-        const fr = anchor(0.85, zN)[2], ev = prof ? 0 : fr < 0.5 ? -1 : fr > 1.5 ? 1 : 0, at = (r, i, one) => { const c0 = (r.length - 1) >> 1; return r[!ev || one ? c0 + i : ev < 0 ? (i >= 0 ? c0 + i : c0 + i + 1) : i <= 0 ? c0 + i : c0 + i - 1]; };
+        const fr = anchor(0.85, zN)[2], ev = prof ? 0 : fr < 0.5 ? -1 : fr > 1.5 ? 1 : 0, q34 = !prof && Math.abs(TF.x[0]) < 0.9, at = (r, i, one) => { const c0 = (r.length - 1) >> 1; if (q34 && i * fs > 0) i += fs;   // (turned three quarters the far half of the chest is a column narrower: what hangs there is a column nearer the middle - a far suspender, the far side of a chain - or it fell off the body)
+          return r[!ev || one ? c0 + i : ev < 0 ? (i >= 0 ? c0 + i : c0 + i + 1) : i <= 0 ? c0 + i : c0 + i - 1]; };
         const o = W.torso;
         W.torso = (Q) => {
           const R = o(Q); if (Q.res !== 1) return R;
@@ -450,12 +457,26 @@ export const POLISH = {
           if (Q.f > (toCam ? -0.5 : 0.05)) {
             if (cy > Math.floor((y + CA * (Q.zs - hz)) / 2)) return R;   // (under the hem: the trousers')
             const j = cy - F[1], i = cx - F[0];
-            for (const n of N) { if (n.cloth && R === SKN) continue; const P = prof ? n.side : n.rows; if (!P || j < 0 || j >= P.length) continue;
-              const ch = prof ? P[j][-i * fs] : at(P[j], i, n.cloth); if (ch && ch !== '.') return n.K[ch](Q); }
+            for (const n of N) { if (n.cloth && R === SKN) continue; const E2 = !prof && ev && n.rowsE, P = prof ? n.side : E2 || n.rows; if (!P || j < 0 || j >= P.length) continue;
+              const ch = prof ? P[j][-i * fs] : E2 ? P[j][(P[j].length >> 1) + i + (ev < 0 ? 0 : -1) + (q34 && i * fs > 0 ? fs : 0)] : at(P[j], i, n.cloth); if (ch && ch !== '.') return n.K[ch](Q); }
           } else if (Q.f < -0.35) { const j = cy - Bk[1], i = cx - Bk[0]; for (const n of N) { if (n.nape && j === 0 && Math.abs(i) <= (n.wide ? 2 : 1)) return n.K[n.nape](Q); if (n.back && !prof && j >= 0 && j < n.back.length && cy <= Math.floor((y + CA * (Q.zs - hz)) / 2)) { const ch = at(n.back[j], i, 1); if (ch && ch !== '.') return n.K[ch](Q); } } }
           return R;
         };
       }
+    }
+    // (the concepts' missing pieces, 2: arm warmers - the forearm in the piece's color, a band of the trim at its top; a shirt
+    // tied round the waist - a check of its two colors on the hem's art row and the one under it, the knot hanging in front;
+    // a two-color windbreaker - the trim's color from the chest up and down to the elbows)
+    if (A.jewel && A.jewel.armw) { const ac = cloth(A.jewel.color || '#1a1a1e'), at2 = cloth(A.jewel.trim || '#ff5aa8'); wrap('arm', (R, Q) => (Q.part === 'fa' && Q.l0 < 0.88 ? (Q.l0 < 0.16 ? at2 : ac) : R)); }
+    if (TF && A.jewel && A.jewel.waistshirt && !A.founder) {
+      const c1 = cloth(A.jewel.color || '#c8262b'), c2 = cloth(A.jewel.trim || '#1a1a1e'), hz = W.HEMZ ?? -0.9;
+      const f = (R, Q) => { if (Q.res !== 1 || R === W.skin) return R; const y = Math.round(Q.y), d = Math.floor(y / 2) - Math.floor((y + 0.819152 * (Q.zs - hz)) / 2); if (d < 0 || d > 2) return R; if (d === 2 && !(Q.f > 0.4 && Math.abs(Q.u) < 0.22)) return R; return ((Math.floor(Math.round(Q.x) / 2) + d) & 1) ? c1 : c2; };
+      wrap('torso', f); wrap('pel', f);
+    }
+    if (TF && A.top && A.top.block) {
+      const t2b = cloth(A.top.trim || A.top.color2 || '#7a3ac8'), mine = new Set([W.top, relit(W.top)]), zB = D.chestUp - 1.2;
+      wrap('torso', (R, Q) => { if (!mine.has(R) || Q.res !== 1) return R; const y = Math.round(Q.y); return Math.floor(y / 2) < Math.floor((y + 0.819152 * (Q.zs - zB)) / 2) ? t2b : R; });
+      wrap('arm', (R, Q) => (mine.has(R) && Q.part === 'ua' ? t2b : R)); wrap('collar', (R) => (mine.has(R) ? t2b : R));
     }
     if (DR === 'tails') {
       const GREY = cloth('#8a8a92'), stripe = (Q) => { if (Math.floor((Q.l1 + 2) * 5) & 1) Q.k -= 0.16; return GREY; };
@@ -474,11 +495,11 @@ export const POLISH = {
       if (PR[0] === 'camera') wrap('leather', (R, Q) => { if (Q.l2 > 0.55) { Q.gloss = 1; return pt; } if (Math.abs(Q.l0) < 0.5 && Math.abs(Q.l2) < 0.5) { Q.gloss = 1; Q.k += 0.3; return cloth('#7fa6c4'); } Q.gloss = 0; return pc; });
       if (PR[0] === 'bouquet') wrap('cup', (R, Q) => (Q.l0 < 0.42 ? GREEN : spk(Q, 3) ? pt : (Q.k += 0.08, pc)));
       // (the concepts' missing things to carry, each on the small bag's block at its own size - propBox; a ball is a ball)
-      if (PR[0] === 'paper') wrap('leather', (R, Q) => { Q.gloss = 0; return (Math.floor((Q.Z + 40) / 2.4) & 1) ? cloth('#6a6a72') : cloth('#ecebe4'); });   // (lines of print)
+      if (PR[0] === 'paper') { const pp = cloth('#d9d6c8'), ink = cloth('#4a4a54'); wrap('leather', (R, Q) => { Q.gloss = 0; const j = Math.floor((Q.y + 400) / 2); return Q.l2 > 0.5 && Q.l2 < 0.95 ? ink : (j & 1) && Q.l2 < 0.3 && Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.72 ? cloth('#8a8a92') : pp; }); }   // (a folded newspaper: a headline's dark bar across the top, lines of print under it - an art pixel each)
       if (PR[0] === 'clip') wrap('leather', (R, Q) => { Q.gloss = 0; return Q.l2 > 0.72 && Math.abs(Q.l1) < 0.4 ? cloth('#c8ccd4') : Math.abs(Q.l1) < 0.78 && Q.l2 < 0.72 && Q.l2 > -0.85 ? pt : pc; });
       if (PR[0] === 'laptop') wrap('leather', (R, Q) => { Q.gloss = 0.2; if (Q.l2 > 0.72) { Q.k += 0.3; return pt; } return pc; });
       if (PR[0] === 'parcel') wrap('leather', (R, Q) => { Q.gloss = 0; return Math.abs(Q.l1) < 0.16 || (Q.l2 > 0.8 && Math.abs(Q.l0) < 0.2) ? pt : pc; });
-      if (PR[0] === 'ball') wrap('leather', (R, Q) => { Q.gloss = 0.3; return Math.abs(Q.nx) < 0.14 ? pt : pc; });   // (one dark seam round it)
+      if (PR[0] === 'ball') { const bo = cloth('#de5e12'), sm = cloth('#2a1a14'); wrap('leather', (R, Q) => { Q.gloss = 0; return Math.abs(Q.nx) < 0.13 || Math.abs(Q.nz - 0.3) < 0.11 ? sm : bo; }); }   // (a basketball: a deep orange - its lit tone was the skin's - a dark seam down it and one across)
       if (PR[0] === 'poles') wrap('wood', (R, Q) => (Q.l0 < 0.16 ? cloth('#2a2a2e') : Q.l0 > 0.9 ? pt : pc));
       if (PR[0] === 'parasol') wrap('wood', (R, Q) => (Q.l0 < 0.1 ? cloth('#d8c8a8') : Q.l0 > 0.96 ? cloth('#2a2226') : Math.floor(Q.l0 * 9 + Q.l1 * 1.5 + 2) & 1 ? pt : pc));
     }

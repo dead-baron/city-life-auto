@@ -1,6 +1,6 @@
 # The concept checklist (pass 5, 2026-11-19)
 
-**608 items: 536 in the game, 53 missing, 19 too small to show.** (11-20: 24 of the missing ones built - the first batch of "the next pass's work" at the end; pass 5 left it at 512 in, 77 missing.)
+**608 items: 556 in the game, 32 missing, 19 too small to show, 1 dropped.** (11-20: 45 of the missing ones built in two batches - "the next pass's work" at the end; one of them, the cravat, taken out again on the owner's word. Pass 5 left it at 512 in, 77 missing.)
 
 Every outfit, piece and creator option on the concept sheets (`docs/characters/concepts/`, 94 images), against the
 wardrobe (`shared/lookcore.js`) and the creator (`client/creator.js`). An item is a thing a player would look for: one
@@ -88,7 +88,7 @@ catalogue did not note is not here.
 | Long straight | in | Long straight |
 | Long waves | in | Long waves |
 | Long curly | in | Curly long (women only) |
-| Long curly on a man | **missing** | Curly long is a woman's style |
+| Long curly on a man | in | Curly long, listed for both - added 11-20 |
 | Big curls / curly bob / twist-out | in | Big curls |
 | Pixie | in | Pixie |
 | Bob | in | Bob |
@@ -99,14 +99,14 @@ catalogue did not note is not here.
 | High bun / messy bun | in | High bun (redrawn in pass 5) |
 | Space buns | in | Space buns (redrawn in pass 5) |
 | Half-up bun | in | Half up (redrawn in pass 5; women only) |
-| Half-up on a man (locs tied up) | **missing** | - |
+| Half-up on a man (locs tied up) | in | Half up, listed for both - added 11-20 |
 | High ponytail | in | Ponytail (redrawn in pass 5) |
 | Low ponytail, scrunchie | in | Low ponytail (pass on) |
 | Pigtails | in | Pigtails (redrawn in pass 5) |
 | Single braid | in | Single braid |
 | Braids | in | Braids |
 | Box braids with beads / cuffs | in | Box braids (women only) |
-| Box braids on a man | **missing** | - |
+| Box braids on a man | in | Box braids, listed for both - added 11-20 |
 | Cornrows | in | Cornrows |
 | Dreadlocks short and long, cuffs | in | Dreadlocks |
 | Loc updo (pineapple) | **missing** | - |
@@ -232,7 +232,7 @@ catalogue did not note is not here.
 | Tactical officer / K9 vest | in | Tactical vest |
 | Riot armour and helmet | **missing** | - |
 | Motorcycle officer: white helmet | in | Moto helmet, white |
-| Motorcycle officer: trouser stripe, tall boots | **missing** | Biker boots stand in; no stripe on uniform pants |
+| Motorcycle officer: trouser stripe, tall boots | in | Side-stripe trousers (pass on), Biker boots - added 11-20 |
 | Detective: suit, red tie, belt badge | in | Business suit with a red tie (the belt badge too small) |
 | Dress uniform, gold buttons, white gloves | in | Dress uniform, Dress gloves, Officer's cap |
 | Chief's braided cap | in | Officer's cap |
@@ -294,7 +294,7 @@ catalogue did not note is not here.
 | On the sheet | | In the game as / note |
 | --- | --- | --- |
 | Bib overalls, plaid shirt | in | Bib overalls, Flannel shirt |
-| Quilted jacket with a sherpa collar | **missing** | Puffer jacket is nearest |
+| Quilted jacket with a sherpa collar | in | Sherpa-collar jacket (pass on) - added 11-20 |
 | Apron, work gloves, wellies | in | Apron, Work gloves, Wellies |
 | Leather jacket, leather vest, chaps | in | Leather jacket, Studded vest, Leather chaps |
 | Blaze-orange cap and vest | **in (new)** | Hunting vest (new); Baseball cap, orange |
@@ -419,7 +419,7 @@ catalogue did not note is not here.
 | Open silk shirt and flares | in | Button-up shirt, Flares (not worn open) |
 | Knit polo | in | Polo shirt |
 | Coat draped over the shoulders | **missing** | - |
-| Pinstripe suit | **missing** | stripes run across, not down: a pinstripe needs its own pattern |
+| Pinstripe suit | in | Pinstripe suit; Pinstripe is a pattern too (pass on) - added 11-20 |
 
 ## SF2, SM2 - office
 
@@ -434,7 +434,7 @@ catalogue did not note is not here.
 | Long cardigan | in | Cardigan |
 | Tweed three-piece | in | Business suit with the check pattern, Waistcoat |
 | Quarter-zip | in | Sweater |
-| Shirt with braces and a loose tie | in | Button-up shirt, Braces, Necktie (pass on; one jewelry slot: braces or the tie) - added 11-20 |
+| Shirt with braces and a loose tie | in | Button-up shirt, Suspenders, Necktie (pass on; one jewelry slot: suspenders or the tie) - added 11-20 |
 | Cardigan and tie | in | Cardigan over a Button-up shirt (no tie without a suit) |
 | A tie on a shirt alone | in | Necktie (pass on) - added 11-20 |
 
@@ -448,7 +448,7 @@ catalogue did not note is not here.
 | Jumpsuit | in | Jumpsuit |
 | Blazer and wide trousers | in | Blazer, Flares |
 | Sweater and leather skirt | in | Sweater, Mini skirt |
-| Polka-dot blouse | **missing** | no dot pattern |
+| Polka-dot blouse | in | Polka-dot blouse; Dots is a pattern any top, jacket, bottoms or set can take (pass on) - added 11-20 |
 | Pleated skirt | in | Skirt |
 | Trench over a mini dress | in | Trench coat, Mini dress |
 | Black tee and jeans, linen shirt | in | Plain tee, Jeans, Button-up shirt |
@@ -466,8 +466,8 @@ catalogue did not note is not here.
 | Tracksuit | in | Tracksuit |
 | Varsity jacket | in | Varsity jacket |
 | Utility vest | in | Field vest |
-| Colour-block anorak / windbreaker | **missing** | a piece has one colour and a trim |
-| Graphic tee as a dress | **missing** | - |
+| Colour-block anorak / windbreaker | in | Color-block windbreaker: the trim color from the chest up (pass on) - added 11-20 |
+| Graphic tee as a dress | in | T-shirt dress - added 11-20 |
 | Double denim | in | Denim jacket, Jeans |
 | Puffer over a hoodie | in | Puffer jacket over a Hoodie |
 | Slides and socks | in | Slides and socks |
@@ -477,7 +477,7 @@ catalogue did not note is not here.
 | Hood up and track pants | in | Hood up, Joggers |
 | Open flannel / buttoned plaid | in | Flannel shirt |
 | Cargo shorts | in | Shorts |
-| Jersey dress | **missing** | - |
+| Jersey dress | in | Jersey dress - added 11-20 |
 | Jersey over a long sleeve | in | Football jersey (no layer under it) |
 | Durag, basketball kit | in | Durag, Football jersey, Shorts (no sleeveless jersey) |
 | Puffer vest over a hoodie | in | Puffer vest over a Hoodie |
@@ -510,10 +510,10 @@ catalogue did not note is not here.
 | Overshirt, work jacket | in | Denim jacket |
 | Double-knee trousers | in | Work pants |
 | Retro windbreaker | in | Rain jacket / Track jacket (one colour) |
-| Dungarees with a strap down | **missing** | Overalls, both straps up |
+| Dungarees with a strap down | in | Dungarees, one strap down (pass on) - added 11-20 |
 | Stickered helmet | in | Skate helmet (no stickers) |
 | Elbow pads, wallet chain | in | Elbow pads, Wallet chain (pass on; at the edge of what shows) |
-| Tee over a long sleeve | **missing** | no layered sleeve |
+| Tee over a long sleeve | in | Tee over a long sleeve: the sleeve in the trim color (pass on) - added 11-20 |
 | Coach jacket | in | Bomber jacket |
 
 ## SF8-A, SF8-B, SF8-C, SM8 - beach and swimwear
@@ -533,8 +533,8 @@ catalogue did not note is not here.
 | Halter and cut-offs | in | Bikini top, Denim shorts |
 | Open hibiscus shirt, board shorts | in | Hawaiian shirt, Swim trunks |
 | Bucket hat and tank | in | Bucket hat, Tank top |
-| Swim shorts and a towel over the shoulder | **missing** | the towel |
-| Open linen shirt on a bare chest | **missing** | shirts are worn closed |
+| Swim shorts and a towel over the shoulder | in | Swim trunks, Towel over the shoulder (pass on) - added 11-20 |
+| Open linen shirt on a bare chest | in | Open shirt, in the jacket slot: over a top or a bare chest; it buttons (pass on) - added 11-20 |
 | Wetsuit peeled to the waist | **missing** | - |
 | Swim briefs | in | Briefs (underwear) |
 | Flip-flops | in | Flip-flops |
@@ -551,7 +551,7 @@ catalogue did not note is not here.
 | Bathrobe and towel turban | in | Bathrobe, Towel wrap |
 | Dressing gown | in | Bathrobe |
 | Tank and shorts, hoodie and shorts | in | Tank top, Shorts, Hoodie |
-| A towel round the waist | **missing** | only the bathhouses have one |
+| A towel round the waist | in | Towel round the waist (pass on) - added 11-20 |
 | Slippers, slides | in | Slippers, Slides |
 
 ## SF10, SM10 - night out
@@ -568,7 +568,7 @@ catalogue did not note is not here.
 | Star-mesh top, vinyl skirt | in | Mesh top, Mini skirt |
 | Black open-collar shirt and chain | in | Button-up shirt, Gold chain |
 | Velvet blazer | in | Blazer |
-| Sequin bomber | **missing** | Bomber jacket, no sequins |
+| Sequin bomber | in | Sequin bomber (pass on) - added 11-20 |
 | Open tropical shirt | in | Hawaiian shirt |
 | Shirt over mesh | in | Mesh top |
 | Raver: neon, shield shades | in | Shield shades, Mesh top, Glow bracelets |
@@ -579,17 +579,17 @@ catalogue did not note is not here.
 | --- | --- | --- |
 | Studded leather jacket | in | Leather jacket / Studded vest |
 | Tartan trousers | **in (new)** | Tartan trousers (new) |
-| Ripped shirt, shredded tee | **missing** | only jeans rip |
+| Ripped shirt, shredded tee | in | Ripped tee (pass on) - added 11-20 |
 | Tartan mini and fishnets | in | Plaid skirt, Tights (fishnet is too small) |
 | Patched denim / battle vest | in | Studded vest, denim |
 | Bondage trousers, straps | **missing** | - |
 | Leather vest | in | Studded vest |
 | Red leather jacket | in | Leather jacket, red |
 | Fishnet top, spiked collar | in | Mesh top, Spiked collar |
-| Braces | in | Braces (pass on) - added 11-20 |
+| Braces | in | Suspenders (pass on) - added 11-20 |
 | Tattoo sleeves | in | Tattoos: Arms |
 | Bandana | in | Head bandana |
-| Plaid shirt tied at the waist | **missing** | - |
+| Plaid shirt tied at the waist | in | Shirt tied at the waist (pass on) - added 11-20 |
 | Long trench | in | Trench coat |
 | Camo shorts, tall boots | in | Shorts with the camo pattern, Combat boots |
 | Safety pins, patches' lettering | too small | - |
@@ -607,13 +607,13 @@ catalogue did not note is not here.
 | Band sweatshirt | in | Graphic tee / Sweater |
 | Hooded cloak | in | Hooded cloak |
 | Buckled long coat, frock coat | in | Trench coat, Wool coat (buckles too small) |
-| Cravat | in | Cravat (pass on) - added 11-20 |
+| Cravat | dropped | built and taken out again: the owner, 11-20 21:55 - "probably dont need this as an item by itself" |
 | Studded belt | too small | - |
 | Flannel and ripped jeans | in | Flannel shirt, Ripped jeans |
 | Leather vest over fishnet | in | Studded vest, Mesh top |
 | Face tattoo | in | Tattoos: Face |
 | Distressed cardigan | in | Cardigan |
-| Arm warmers | **missing** | - |
+| Arm warmers | in | Arm warmers (pass on) - added 11-20 |
 | Parasol | in | Parasol (pass on; carried closed) |
 | Platform sole | in | Platform boots |
 
@@ -700,7 +700,7 @@ catalogue did not note is not here.
 | Sequin mermaid gown | in | Sequin dress (short; no train) |
 | Tea-length dress with a bow | in | Mini dress / Sundress |
 | Tuxedo on a man | in | Tuxedo |
-| A tuxedo on a woman | **missing** | Business suit and Bow tie stand in |
+| A tuxedo on a woman | in | Tuxedo, listed for both - added 11-20 |
 | Lace ball gown, veil | in | Wedding dress, Bridal veil |
 | Bouquet | in | Bouquet (pass on) |
 | Velvet gown, opera gloves | in | Evening gown, Evening gloves |
@@ -737,7 +737,7 @@ catalogue did not note is not here.
 | Maxi dress, fringed waistcoat | in | Sundress, Fringe jacket |
 | Sparkly crop, muddy wellies | in | Crop top, Wellies |
 | Kimono | in | Kimono (women only) |
-| Kimono on a man, harem trousers | **missing** | - |
+| Kimono on a man, harem trousers | **missing** | the Kimono is listed for both now (11-20); no harem trousers |
 | Tie-dye tee dress, tie-dye tee | **in (new)** | Tie-dye tee (new); Mini dress with the tie-dye pattern |
 | Peasant blouse, tiered skirt | in | Blouse, Maxi skirt |
 | Poncho | in | Poncho |
@@ -757,7 +757,7 @@ catalogue did not note is not here.
 | Golf polo and skort | in | Polo shirt, Tennis skirt |
 | Golf glove | too small | - |
 | Breton top | **in (new)** | Breton top (new) |
-| Tweed jacket, jodhpurs, riding boots | **missing** | Blazer with the check pattern and Knee boots; no jodhpurs |
+| Tweed jacket, jodhpurs, riding boots | in | Tweed jacket, Jodhpurs, Knee boots - added 11-20 |
 | Tartan blazer and pleated skirt | in | Blazer with the check pattern, Plaid skirt |
 | Shift dress and pearls | in | Mini dress, Pearl necklace |
 | Quilted gilet | in | Puffer vest |

@@ -192,3 +192,16 @@ Stripes passed; on the striped bra and panties he is "not sure it works well ...
 - [x] Bow tie "comically large ... one step bigger" - eight across on a man's chest, pinched at the knot.
 - [~] "Go ahead and start on all of it we are missing" - the first 24 of the 77 missing concept items built (`docs/characters/CHECKLIST.md`: 536 in, 53 missing). Shown: `characters-missing-batch1.png`. What is left is listed in the DEVLOG entry of the same hour.
 
+## 21:55 - his look at the missing pieces' first batch ("Keep on building!")
+- [x] "Bear mask at an angle could use work" - the muzzle one pale tone, longer, the nose at its tip when the head is turned.
+- [~] "Scarf should go around the neck better" - snug under the chin, five across and two rows thick, the tail from under it. The neck itself is hidden by the chin from the game's camera: this is as near as the wrap gets without covering the mouth. To look at with him.
+- [x] "Necktie could be more tie shaped" - two wide, a darker knot, pale stripes slanting down it, the tip cut on the slant.
+- [x] "Not sure what braces are do you mean suspenders? They are missing from the angled view" - renamed Suspenders; turned three quarters, what hangs on the far half of the chest is drawn a column nearer the middle, so the far strap shows (chains and straps too).
+- [x] "Cravat ... probably dont need this as an item by itself" - taken out.
+- [x] "Sleep mask is very thin it could be bigger" - three rows: brow, eyes, the tops of the cheeks.
+- [x] "Riding helmet could look cooler" - glossy, a dark peak, a band of the trim over the crown, a harness strap down each cheek.
+- [x] "cant really tell they're goggles" - worn over the eyes: two lenses two art pixels square in a dark frame, their strap round the helmet.
+- [~] "Newspaper doesnt really look like a newspaper" - a bigger folded sheet with a dark headline bar and lines of print. Still a few art pixels at the hand.
+- [~] "Basketball does not look like a basketball" - a deeper orange (its lit tone was the skin's), a seam down and one across, held higher. Still half behind the arm from the front.
+- [x] "Keep on building!" - the second batch: 21 more of the missing items (`characters-missing-batch2.png`).
+
