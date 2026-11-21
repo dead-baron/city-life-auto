@@ -247,3 +247,7 @@ Stripes passed; on the striped bra and panties he is "not sure it works well ...
 - [~] Still weak: the Faux-hawk (a small ridge), the roller skates' wheels (two pixels), the clipboard, the sleep mask.
 - The whole suite, run one file at a time: everything the characters touch passes. Eight files have a failure that is not from this work (prison, uikit, uiscreens, hudlayout, scenes, visaudit, world3arrivals, gridlock) - all eight fail identically on the commit from before tonight; the list is in the DEVLOG for whoever owns them.
 
+## 11-21 07:40 - his look at the overnight work
+- [x] "Scarf looks good lets keep it." - kept.
+- [x] "Everything else sounds good." - the overnight calls stand (the hair length slider dropped, dogs and the bike basket out of the wardrobe's scope, the bodybuilder build men only for now, the look's code two letters longer).
+
