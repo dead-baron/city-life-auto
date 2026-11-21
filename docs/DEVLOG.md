@@ -25587,3 +25587,8 @@ The owner (11-20): smoother, without the tick box. The screen now says "By playi
 (under 18: with a parent or guardian's permission)" and either button confirms it: **Accept** (with Google Analytics) or
 **Essential only** (without) - side by side, equally easy, as Europe's consent rules want; the analytics line is a small
 note under them. Shown once and remembered, as before. `client/account.js` showGate.
+## 2026-11-17 - Fullscreen as a switch at the top of Graphics
+- The owner: the "Fullscreen on or off" button at the bottom of Settings > Graphics should sit higher and show whether
+  it's on. It's now the first row of Graphics, a plain switch that shows the state - F11, Esc and the title's button move
+  it too (fullscreenchange), and a browser that refuses puts it back. The title's FULLSCREEN button stays hidden with a
+  keyboard and mouse (F11 does it on a desktop) and shows on touch and gamepad.
