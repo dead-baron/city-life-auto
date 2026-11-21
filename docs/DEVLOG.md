@@ -25322,7 +25322,8 @@ best-looking trees in the game.
   from 1020 to 1022 KB** (a decision, per the rule): the art-pixel kit stood at 1016, and the forest floor's pieces,
   the loose stones and mushrooms and the fences' lines brought it to 1021. The workers load this after the page, so
   it costs no start-up time. The `animals` branch raised the same number to 1024 for its own 4 KB: merged, the two
-  need 1026.
+  need 1026. Later the same day: the branch takes `characters`' 1080 (the owner's number of 11-20), so the branches
+  agree where they meet (`prebeta-art` measures 1062 with everything in).
 - Seen as the game draws it (`tools/area-shot.mjs`, six places before and after): a mountain meadow, a pasture, a
   desert oasis, a cove, a redwood road, a town block. And in the running game (a local copy: the mountain tarn, a pasture, the
   Giants Loop trail, the canyon oasis).
