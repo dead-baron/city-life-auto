@@ -8,7 +8,7 @@
 //            node tools/bodycheck.mjs --show f,3,under,0    one figure's art pixels (base, build, outfit, direction)
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { check, bake, wardrobe } from '../tools/bodycheck.mjs';
+import { check, bake, wardrobe, look } from '../tools/bodycheck.mjs';
 import { setPolish, person, POSES } from '../client/art2/people.js';
 import * as LK from '../shared/look.js';
 import { POLISH } from '../client/art2/peoplepolish.js';
@@ -146,3 +146,58 @@ test('every pose renders with every piece the pass draws', () => {
       const A = LK.lookArt(LK.validLook(L)); for (const pose of poses) { const f = person(A, 1, pose, 1, { tight: true }); assert.ok(f.w > 6 && f.h > 6, `${p.name}, ${pose}: ${f.w}x${f.h}`); } }
   } finally { setPolish(null); }
 });
+
+// The owner's notes of 11-20 23:27 - each was a small thing decided a world pixel at a time, or laid over a row the face
+// didn't keep to. They're pictures on the art grid now, and this holds them there.
+const dressed = (base, f) => { const L = LK.emptyLook(base); L.hair.style = 2; L.body.skin = 2; L.outfit.top = LK.item('Plain tee', 'white'); L.outfit.bottoms = LK.item('Jeans'); f(L); return LK.lookArt(LK.validLook(L)); };
+const pixels = (S, f) => { const o = []; for (let y = 0; y < S.h; y++) for (let x = 0; x < S.w; x++) { const q = S.at(x, y); if (q && !q.ol && f(q)) o.push([x, y, q]); } return o; };
+
+test('a face turned three quarters has its two eyes on one art row', () => {
+  setPolish(POLISH);
+  const blue = (c) => c[2] > c[0] + 40 && c[2] > c[1] + 12, off = [];
+  for (const base of ['f', 'm']) for (let b = 0; b < 5; b++) for (const dir of [1, 7]) if (new Set(pixels(bake(look(base, b, 'clothed'), dir), (q) => q.g === 1 && blue(q.c)).map((p) => p[1])).size > 1) off.push(`${base} build ${b}, facing ${dir}`);
+  assert.deepEqual(off, [], 'eyes on a slope: ' + off.join('; '));
+});
+
+test('facial hair shows: every style is pixels of its own on the face, from the front, three quarters and the side', () => {
+  setPolish(POLISH);
+  for (const dir of [0, 1, 2]) {
+    const clean = new Set(pixels(bake(dressed('m', () => {}), dir), () => true).map((p) => p[2].c.join()));
+    for (let i = 1; i < LK.FACIAL_HAIR.length; i++) {
+      const own = pixels(bake(dressed('m', (L) => { L.hair.facial = i; }), dir), (q) => q.g === 1 && !clean.has(q.c.join()));
+      assert.ok(own.length >= (dir === 0 ? 2 : 1), `${LK.FACIAL_HAIR[i][0]}, facing ${dir}: ${own.length} pixels of its own`);
+      assert.ok(new Set(own.map((p) => p[2].c.join())).size <= 3, `${LK.FACIAL_HAIR[i][0]}, facing ${dir}: one or two tones, not a scatter`);
+    }
+  }
+});
+
+test('a mask over the eyes covers them at every angle; a scarf is round the neck from every side, never on the face', () => {
+  setPolish(POLISH);
+  for (const name of ['Bear mask', 'Pig mask']) for (let dir = 0; dir < 8; dir++) {
+    const white = pixels(bake(dressed('m', (L) => { L.outfit.glasses = LK.item(name); }), dir), (q) => q.g === 1 && q.c[0] > 215 && q.c[1] > 215 && q.c[2] > 200);
+    assert.equal(white.length, 0, `${name}, facing ${dir}: the white of an eye beside the mask's own`);
+  }
+  const red = (q) => q.c[0] > 140 && q.c[1] < 70 && q.c[2] < 75;
+  for (const base of ['m', 'f']) for (let dir = 0; dir < 8; dir++) {
+    const S = bake(dressed(base, (L) => { L.outfit.jewel = LK.item('Scarf'); }), dir);
+    assert.ok(pixels(S, (q) => q.g === 4 && red(q)).length >= 4, `scarf, ${base} facing ${dir}: round the neck`);
+    assert.equal(pixels(S, (q) => q.g === 1 && red(q)).length, 0, `scarf, ${base} facing ${dir}: none of it on the face`);
+  }
+});
+
+test('a basketball is a round disc five art pixels across; a jersey\'s number is a figure, not specks', () => {
+  setPolish(POLISH);
+  for (const base of ['m', 'f']) for (let dir = 0; dir < 8; dir++) {
+    const e = pixels(bake(dressed(base, (L) => { L.outfit.bag = LK.item('Basketball'); }), dir), (q) => q.part === 'purse'), xs = e.map((p) => p[0]), ys = e.map((p) => p[1]);
+    if ([0, 1, 2, 6, 7].includes(dir)) {   // (in view: the whole disc but what the hand under it and the arm beside it cover)
+      assert.ok(e.length >= 16, `ball, ${base} facing ${dir}: ${e.length} art pixels`);
+      assert.deepEqual([Math.max(...xs) - Math.min(...xs) + 1, Math.max(...ys) - Math.min(...ys) + 1], [5, 5], `ball, ${base} facing ${dir}: five by five`);
+    } else assert.ok(e.length === 0 || e.length >= 8, `ball, ${base} facing ${dir}: ${e.length} art pixels showing from behind the body - a speck`);
+  }
+  const num = (dir) => pixels(bake(dressed('f', (L) => { delete L.outfit.top; delete L.outfit.bottoms; L.outfit.set = LK.item('Jersey dress', 'royal blue', 'white'); }), dir), (q) => q.g === 4 && q.c[0] > 222 && q.c[1] > 222 && q.c[2] > 215);
+  for (const dir of [0, 4]) { const n = num(dir), xs = n.map((p) => p[0]), ys = n.map((p) => p[1]);
+    assert.ok(n.length === 6 || n.length === 7, `the number, facing ${dir}: ${n.length} art pixels (a 7: six, seven where the chest's middle is a line)`);
+    assert.equal(Math.max(...ys) - Math.min(...ys) + 1, 4, `the number, facing ${dir}: four rows tall`);
+    assert.ok(Math.max(...xs) - Math.min(...xs) + 1 <= 4, `the number, facing ${dir}: in one piece`); }
+});
+

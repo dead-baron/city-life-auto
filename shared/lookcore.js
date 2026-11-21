@@ -490,7 +490,7 @@ add('jewel', 'Suspenders', 'mf', 'retro smart punk business', 18, 'boutique', { 
 add('jewel', 'Towel round the neck', 'mf', 'athletic beach lounge', 8, 'sports', { ntowel: 1, pp: 1 }, 'sky', 'white');   // (sky by default: a white towel on a white top is not seen)
 add('jewel', 'Sweater over the shoulders', 'mf', 'preppy smart casual', 40, 'clothing', { shsweater: 1, pp: 1 }, 'navy');
 add('jewel', 'Boxing gloves', 'mf', 'athletic', 45, 'sports', { boxing: 1, pp: 1 }, 'red', 'white');
-add('glasses', 'Sleep mask', 'mf', 'lounge', 8, 'clothing', { k: 'sleep', pp: 1, nostreet: 1 }, 'navy');
+add('glasses', 'Sleep mask', 'mf', 'lounge', 8, 'clothing', { k: 'sleep', pp: 1, nostreet: 1 }, 'lavender');
 add('glasses', 'Novelty glasses', 'mf', 'disguise festival', 10, 'costume', { k: 'novelty', pp: 1, nostreet: 1 }, 'black');
 add('glasses', 'Chicken mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', animal: 'chicken', pp: 1, nostreet: 1 }, 'white', 'red');
 add('hat', 'Feathered hat', 'mf', 'festival hifashion retro western', 70, 'boutique', { k: 'fedora', feather: 1, pp: 1 }, 'olive', 'red');

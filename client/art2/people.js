@@ -635,6 +635,7 @@ function accHands(D, P, S, acc) {
   else if (acc === 'phone') { P.hR = vadd(S.chest, mv(S.SP, [1.4, 6.6, -2.4])); P.hL = vadd(S.chest, mv(S.SP, [-0.6, 6.4, -3])); P.elR = [1, -0.5, -0.6]; P.elL = [-1, -0.5, -0.6]; P.headPitch += 0.35; setItem(P, 'phone', [0, 1, 0], [0, 0, -1]); }
   else if (acc === 'cane') { P.hR = vadd(S.shR, [1.4, 4.6, -r * 0.82]); }
   else if (acc === 'board') { P.hR = vadd(S.shR, [1.6, 0.4, -r * 0.62]); P.elR = [1, -0.2, -0.6]; }
+  else if (acc === 'purse' && D.hold === 2) { P.hR = vadd(S.chest, mv(S.SP, [5.0, 10.4, -8.4])); P.elR = [1, -0.6, -0.5]; }   // (a ball on the palm, out in front of the hip)
   else if (acc === 'purse' && D.hold) { P.hR = vadd(S.chest, mv(S.SP, [3.4, 5.6, -4.4])); P.elR = [1, -0.5, -0.5]; }   // (the forearm across the body, the thing held to the chest: it shows from the front)
   else if (acc === 'briefcase' || acc === 'purse') { if (!P.hR || acc === 'briefcase') P.hR = vadd(S.shR, [2.0, 1.2, -r * 0.95]); }
   else if (acc === 'shopping') { P.hR = vadd(S.shR, [2.4, 1.0, -r * 0.94]); P.hL = vadd(S.shL, [-2.4, 1.0, -r * 0.94]); }
@@ -987,7 +988,7 @@ function wardrobe(A, D, TF, seed) {
       if (au > 0.4 && au < 0.6 && z > D.chestUp + 2.2) return plate;
     }
     if (T.stripe && Q.part === 'shb' && au > 0.7) return A.top?.trim ? trim : white;
-    if (T.number && (front || back) && au < 0.22 && z > D.waistUp && z < D.chestUp + 1.4) { const gx = Math.floor((u + 0.22) * 14), gy = Math.floor((z - D.waistUp) * 1.4); if ((gx === 1 || gy % 3 === 0 || (gy > 3 ? gx === 5 : gx === 0))) return white; }
+    if (!PL && T.number && (front || back) && au < 0.22 && z > D.waistUp && z < D.chestUp + 1.4) { const gx = Math.floor((u + 0.22) * 14), gy = Math.floor((z - D.waistUp) * 1.4); if ((gx === 1 || gy % 3 === 0 || (gy > 3 ? gx === 5 : gx === 0))) return white; }
     if (T.fur && z > D.shUp - 1.2) { Q.k += hash(Math.round(Q.X * 2), Math.round(Q.Z * 2), 3) * 0.4 - 0.1; return cloth('#efe6d4'); }
     if (T.hem && z < D.waistUp - 2.6 + (tk === 'jacket' ? 0 : 0.4)) Q.k -= 0.15;
     if (!T.bare && au > 0.78 && z > D.waistUp - 1 && z < D.chestUp + 1.5) Q.k -= 0.12;                 // the fold under the arm
@@ -1132,7 +1133,8 @@ function wardrobe(A, D, TF, seed) {
     if (A.mask) { if (b > 0.5 && c > -0.02 && c < 0.3 && Math.abs(a) < 0.62) return skin; if (A.maskTrim && c > 0.42 && c < 0.6) return cloth(A.maskTrim); return maskR; }
     if (A.medmask && b > 0.15 && c < -0.06 && c > -0.88 && Math.abs(a) < 0.9) { if (Math.abs(c + 0.4) < 0.04) Q.k -= 0.15; return cloth(A.medmask); }
     if (bandana && b > 0.05 && c < 0.0 + Math.abs(a) * 0.08 && c > -0.95) { if (b > 0.6 && Math.abs(a) < 0.08) Q.k -= 0.2; return bandana; }
-    if (A.beard && b > -0.3 && BEARD[A.beard]) { if (BEARD[A.beard](Math.abs(a), b, c)) return hairR; }
+    if (PL && PL.BST && PL.BST[A.beard]) { /* (the polish pass: a small picture in art pixels - peoplepolish.js masks()) */ }
+    else if (A.beard && b > -0.3 && BEARD[A.beard]) { if (BEARD[A.beard](Math.abs(a), b, c)) return hairR; }
     else if (A.beard && b > -0.3) {
       const full = A.beard === 'full', stub = A.beard === 'stubble';
       const chin = c < -0.2 - (full ? 0 : 0.1) && (full || Math.abs(a) < 0.62 || c < -0.62);
@@ -1365,7 +1367,11 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     const hR = S.haR, hL = S.haL;
     if (acc === 'briefcase') B(vadd(hR, [0, 0, -4.2]), S.PF, [1.3, 4.0, 3.0], GR.ACC, 'case', W.case);
     const prop = PL && A.prop ? A.prop[0] : null, pbox = prop && PL.propBox && PL.propBox[prop];   // (the polish pass's things to carry: each its own size in the hand - peoplepolish.js propBox, dress())
-    if (prop === 'ball') E(vadd(hR, mv(S.SP, [-2.0, 5.2, 7.6])), S.SP, [4.5, 4.5, 4.5], GR.ACC, 'purse', W.leather);   // (the owner, 22:19: "more spherical" - held against the chest, all of it in view)   // (the owner, 22:19: "more spherical" - held out in front of the hip, clear of the arm, so all of it shows)   // (a basketball held at the hip, in front of it: the sprite ends at the hand)
+    // (the owner, 23:27: "should be a sphere not this current shape" - it sat against the chest with the forearm across it, a ball
+    // of four and a half art pixels wherever the hand put it: a lump. Now it rests on the palm out in front of the hip, nothing
+    // over it, five art pixels across with its middle on an art pixel's middle - the same round disc from every side - and its
+    // seams are drawn on those art pixels: peoplepolish.js dress())
+    if (prop === 'ball') { const bp = E(vadd(hR, mv(S.SP, [0, 1.4, 5.6])), S.SP, [5, 5, 5], GR.ACC, 'purse', W.leather), c = bp.c; bp.ball = 1; c[0] = 2 * Math.round((c[0] - 1) / 2) + 1; const sy = c[1] * SA - c[2] * CA, sy1 = 2 * Math.round((sy - 1) / 2) + 1; c[2] += (sy - sy1) / CA; W.ballC = [(c[0] - 1) / 2, (sy1 - 1) / 2]; }   // (the prim's place is the world's: the screen's x, and y * SA - z * CA down it)
     else if (prop === 'glow') { const gm = (c) => { const rgb = hexRgb(c), R = cloth(c); return (Q) => { Q.e = [rgb[0], rgb[1], rgb[2], 150]; Q.k += 0.5; return R; }; }; C(vadd(hR, [0, 0.4, -0.6]), vadd(hR, [0.6, 1.2, 5.6]), 0.9, 0.9, GR.ACC, 'purse', gm(A.bagColor || '#5af04a')); C(vadd(hL, [0, 0.4, -0.6]), vadd(hL, [-0.6, 1.2, 5.6]), 0.9, 0.9, GR.ACC, 'purse', gm(A.prop[1] || '#ff5aa8')); }
     else if (acc === 'purse' && pbox) B(vadd(hR, D.hold ? mv(S.SP, [-2.6, 3.6, 5.2]) : mv(S.PF, [pbox[4] || 0.2, 1.8, pbox[3]])), D.hold ? S.SP : S.PF, pbox.slice(0, 3), GR.ACC, 'purse', W.leather);   // (in front of the thigh, where it shows from the front; the sprite ends at the hand)
     else if (acc === 'purse' && !(PL && A.prop && A.prop[0] === 'camera')) B(vadd(hR, [0, 0, A.bagSmall ? -1.6 : -3.2]), S.PF, A.bagSmall ? [0.8, 2.2, 1.2] : [1.1, 2.6, 2.0], GR.ACC, 'purse', W.leather);   // (the polish pass: a camera hangs on the chest from its strap - peoplepolish.js NECK - not in the hand)   // (the polish pass: a camera's body three art pixels by two)
@@ -1820,6 +1826,9 @@ function render(fig, P, S, X, D, A, opt) {
       }
     }
   }
+  // (the polish pass: a ball of which only a pixel or a sliver shows from behind the body - a speck of orange at the hip - isn't
+  // drawn: the figure is cast again without it)
+  if (PL && !fig.ballOff) { const bi = prims.findIndex((p) => p.ball); if (bi >= 0) { let c = 0; for (let i = 0; i < n; i++) if (PID[i] === bi) c++; if (c > 0 && c < 32 * R * R) { prims[bi].clip = () => false; fig.ballOff = 1; return render(fig, P, S, X, D, A, opt); } } }
   // 1b. close up, the head and the jaw are one smooth surface: their normals are blurred together (a box R px wide,
   // across then down) so the jaw's edge doesn't show as a ring round the face
   if (R > 1 && fig.head >= 0) {
@@ -2374,6 +2383,22 @@ function face(fig, P, A, D, w, h, AX, AY) {
   const azE = (s) => ((A.founder ? 33 : 24) + (s === near ? 16 * turn : 0)) * Math.PI / 180;
   let eyes = [-1, 1].map((s) => { const a = azE(s); return { s, p: at(s * Math.sin(a), Math.cos(a) * 0.99, PL ? PL.eyeZ : 0.12) }; }).filter((e) => e.p.fc > 0.28 && onHead(e.p.x, e.p.y));
   if (eyes.length === 2 && eyes[0].p.bx === eyes[1].p.bx) eyes = [eyes[0].p.fc > eyes[1].p.fc ? eyes[0] : eyes[1]];   // (one pixel wide: the nearer eye)
+  // (the polish pass, the owner 11-20 23:27: at an angle the far eye landed an art row off the near one - a face with its eyes on
+  // a slope, and every picture laid over the eyes' row - a mask's eye holes, a sleep mask's band - missed one of them. Level:
+  // both on the row of the eye that faces the camera more)
+  if (PL && PL.eyeLevel && eyes.length === 2 && eyes[0].p.by !== eyes[1].p.by) {
+    // (where: on the face with a pixel of cheek beyond it; else a column nearer the other eye, a pixel of skin still between them;
+    // else at the face's edge, where all of that art pixel is face - the far eye of a face turned three quarters. And if the eye
+    // that faces us less can't come onto the other's row, the other goes onto its row)
+    const k0 = eyes[0].p.fc >= eyes[1].p.fc ? 0 : 1;
+    for (const k of [k0, 1 - k0]) {
+      const o = eyes[1 - k], by = eyes[k].p.by, dx = Math.sign(o.p.bx - eyes[k].p.bx) || 1;
+      const cnt = (bx) => { let c = 0; for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) if (onHead(bx + i, by + j)) c++; return c; };
+      const far = (bx) => Math.abs(bx - eyes[k].p.bx) >= 4, C = [[o.p.bx, 3, 2], [o.p.bx - dx * 2, 3, 2], [o.p.bx, 4, 0], [o.p.bx - dx * 2, 4, 0]];
+      let ok = 0; for (const [bx, a, b] of C) if (far(bx) && cnt(bx) >= a && cnt(bx + dx * 2) >= b) { o.p = { ...o.p, x: bx, bx, y: by, by }; ok = 1; break; }
+      if (ok) break;
+    }
+  }
   // (the polish pass, 11-20: a face at an angle keeps its far eye - two art pixels on from the near one, a pixel of skin
   // between, where the face has room for it; with one eye it read as a broken face)
   if (PL && PL.eye2 && eyes.length === 1 && turn > 0.2 && turn < 0.9) {
@@ -2549,7 +2574,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   if (pn === 'hood') kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
-  const D = dims(A); if (PL && A.prop && PL.propHold && PL.propHold[A.prop[0]]) D.hold = 1;   // (the polish pass: a newspaper, a clipboard, a laptop sleeve, a ball are held against the chest - accHands)
+  const D = dims(A); if (PL && A.prop && PL.propHold && PL.propHold[A.prop[0]]) D.hold = PL.propHold[A.prop[0]];   // (the polish pass: a newspaper, a clipboard, a laptop sleeve, a ball are held against the chest - accHands)
   const P = rig(D, A, pn, f, kind, acc);
   if (opt.blink) P.eyes = 0;   // (a blink: the figure as it stands, the eyes shut)
   if (A.founder && pn === 'idle' && !kind) { const h0 = P.hands; P.hands = (S) => { if (h0) h0(S); P.hR = vadd(S.shR, mv(S.SP, [7.6, 1.6, 8.0 + (f & 1) * 0.5])); P.elR = [1, 0, -0.6]; P.peace = 1; }; }

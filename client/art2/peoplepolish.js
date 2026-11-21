@@ -40,8 +40,16 @@ export const POLISH = {
   // two art pixels wide now - the eye and the pixel beside it - with its rim round them; the two lenses share the pixel
   // between the eyes, the bridge.)
   propBox: { paper: [3.4, 0.7, 4.0, 0, 0], clip: [2.6, 0.6, 3.4, 0, 0], laptop: [4.2, 0.8, 3.0, 0, 0], parcel: [2.9, 3.2, 2.8, -2.6] },
-  propHold: { paper: 1, clip: 1, laptop: 1, ball: 1 },   // (held flat against the chest, the forearm across: people.js accHands)   // (things carried in the hand: half sizes across, along, up, how far under the hand, and how far out from it)
+  propHold: { paper: 1, clip: 1, laptop: 1, ball: 2 },   // (held flat against the chest, the forearm across: people.js accHands)   // (things carried in the hand: half sizes across, along, up, how far under the hand, and how far out from it)
   GLS: { sleep: '11F', novelty: '10F20F12F22F31F01F11E21W', round: '10F20F12F22F31F01F11E21W', half: '01F31F12F22F11E21W', frames: '10F20F30F01F31F12H22H32H11E21W', browline: '00F10F20F30F01T31T12T22T11E21W', rimless: '10C20C31C12C22C11E21W', patch: '00F10F20F01F11F21F12F' },
+  // (facial hair as small pictures - the owner, 23:27: "I can't see any of the moustaches". Decided a world pixel at a time on the
+  // head's curve they baked to a dark pixel or two wherever they fell, in the hair's darkest tone whatever the hair looked like:
+  // a hole in the face, not a moustache. Each is rows of five art pixels now, in the tone the hair's own mass is drawn in: X the
+  // hair, s a soft tone of it, t a shadow of it (stubble). The small ones: [the moustache's row, the chin's], across the face's
+  // middle. The beards (w): [the cheeks' row, the moustache's, the chin's], stretched from one edge of the face to the other. A
+  // long beard keeps its own shape hanging under the chin - people.js.)
+  BST: { moustache: ['.XXX.'], pencil: ['.sss.'], handlebar: ['XX.XX'], walrus: ['XXXXX', '.s.s.'], horseshoe: ['.XXX.', '.X.X.'], fumanchu: ['.sss.', '.s.s.'], circle: ['.XXX.', '.XXX.'], goatee: ['.....', '.XXX.'], soul: ['.....', '..X..'], vandyke: ['.XXX.', '..X..'],
+    stubble: { w: ['.....', 'ttttt', '.ttt.'] }, short: { w: ['s...s', 'sssss', '.sss.'] }, full: { w: ['X...X', 'XXXXX', '.XXX.'] }, long: { w: ['X...X', 'XXXXX', '.XXX.'] }, chinstrap: { w: ['X...X', 'X...X', '.XXX.'] }, chops: { w: ['X...X', 'XX.XX', '.....'] } },
   // ---- masks as small pictures (people.js face(): at the end, over the face). Columns are art pixels from the left eye
   // (lo..hi across the face, m the middle), rows from the eyes' row down.
   masks(cx) {
@@ -51,13 +59,34 @@ export const POLISH = {
     const sh = (c, k) => c.map((v) => Math.max(0, Math.min(255, Math.round(k > 1 ? v + (255 - v) * (k - 1) : v * k)))), ex = two ? [0, n] : [0], out = (i) => (two ? (i === 0 ? -1 : 1) : -fwd);
     // (the concepts' missing marks: a plaster on the cheek, a black eye, stripes of face paint - lookcore.js SCARS, MAKEUP)
     if (!fm && !A.medmask && !A.bandana && !A.mask) {
+      const bs = A.beard && this.BST[A.beard], HR = cx.W.hairR;
+      if (bs && HR) {
+        // (where they go: a face from the front has three art rows under the eyes - the moustache on the second, a row of skin
+        // between it and the eyes, the chin's tuft on the third; turned, it has two - the moustache on the first, the chin on
+        // the second. In profile they're on the mouth's side of the face: the moustache a pixel back from the jaw's front)
+        const X = (() => { let o = mix(HR[3], HR[4], 0.45); for (let k = 0; k < 6 && dist(o, skin[3]) < 96; k++) o = [Math.round(o[0] * 0.88), Math.round(o[1] * 0.8), Math.round(o[2] * 0.68)]; return o; })(),   // (darkened toward brown: a blonde beard darkened evenly was olive)
+          s = mix(X, skin[2], 0.42),   // (between the hair's body tone and its lit one - what the mass of hair above it looks like, peoplepolish.js hairLit: the base colour alone was black under brown-looking hair - darkened until it stands off the skin)
+          odd = two && (n & 1) ? 1 : 0, c0 = two && turn > 0.2 ? m + fwd : m;
+        const on = (i, j) => cx.onHead(base.bx + i * 2, base.by + j * 2) && cx.onHead(base.bx + i * 2 + 1, base.by + j * 2 + 1), r0 = two && on(c0, 3) ? 2 : 1;
+        const K = { X, s, t: mix(X, skin[2], 0.66) }, wide = !Array.isArray(bs);
+        (wide ? bs.w : bs).forEach((r, j0) => {
+          const j = wide ? j0 - 1 + r0 : j0 + (two ? r0 : 1); if (j < 1) return;
+          if (!two) {   // (in profile: from the front of the face back)
+            let f = 0; for (let k = 4; k >= 0; k--) if (on(fwd * k, j)) { f = k; break; }
+            if (wide) { for (let t = 0; t <= f + 1; t++) { const ch = r[t === 0 ? 2 : t === f + 1 ? 4 : 3]; if (ch !== '.') P(fwd * (f - t), j, K[ch]); } return; }
+            const a = j0 ? f : Math.max(0, f - 1); for (let i = 2; i < 4; i++) if (r[i] !== '.') P(fwd * (a - (i - 2)), j, K[r[i]]); return;
+          }
+          if (wide) { for (let col = lo; col <= hi; col++) { const ch = r[col < c0 ? (col === lo ? 0 : 1) : col > c0 + odd ? (col === hi ? 4 : 3) : 2]; if (ch !== '.') P(col, j, K[ch]); } return; }
+          for (let i = 0; i < 5; i++) { if (r[i] === '.') continue; P(c0 + i - 2 + (odd && i > 2 ? 1 : 0), j, K[r[i]]); if (odd && i === 2) P(c0 + 1, j, K[r[i]]); }
+        });
+      }
       if (A.scar === 6) { P(hi, 1, [244, 232, 210]); P(hi - 1, 1, [226, 206, 178]); }
       if (A.scar === 7) { const b = skin[1].map((v, i) => Math.round(v * 0.45 + [96, 52, 110][i] * 0.55)); P(0, 1, b); P(-1, 0, b); }
       if (A.makeup && A.makeup.kind === 'eyeshadow') { const c = hexRgb(A.makeup.color || '#7a3ac8'); for (const i of ex) P(i, -1, c); }
       if (A.makeup && A.makeup.kind === 'face paint') { const c = hexRgb(A.makeup.color || '#c8262b'); P(lo, 1, c); P(hi, 1, c); if (two) { P(lo + 1, 1, c); P(hi - 1, 1, c); } }
     }
-    if (A.jewel && A.jewel.scarf && !fm && !A.mask) { const c = hexRgb(A.jewel.color || '#c8262b'); for (let i = lo - 1; i <= hi + 1; i++) if (Math.abs(i - m) > 1) P(i, 2, c); row(3, sh(c, 0.85), lo - 1, hi + 1); }   // (the owner, 22:19: "it needs to wrap around the neck area" - up over the jaw's corners either side of the chin, and across under it)   // (a scarf comes up over the chin: the head's lowest rows are its wrap)
-    if (A.glasses === 'sleep') { const c = hexRgb(A.glassColor || '#1d2a4a'); row(0, c); for (let i = lo; i <= hi; i++) if (i !== m) P(i, 1, sh(c, 0.84)); return; }   // (the owner, 22:19: "weirdly shaped in the front view" - one plain shape: a band over the eyes, and under it a pad over each cheek with the nose between them)
+    // (a scarf: nothing on the face - the owner, 23:27: "goes around face on angle view but below it in front and other angle view". It's the same wrap round the neck from every side: dress() NECK)
+    if (A.glasses === 'sleep') { const c = hexRgb(A.glassColor || '#a898d8'), nz = two && turn > 0.2 ? m + fwd : m; row(0, sh(c, 1.12)); for (let i = lo; i <= hi; i++) if (i !== nz) P(i, 1, sh(c, 0.88)); P(lo - 1, 0, sh(c, 0.62)); P(hi + 1, 0, sh(c, 0.62)); return; }   // (a band over the eyes, lit along its top, a pad over each cheek under it with the nose between them, its strap a darker pixel into the hair each side; the owner, 23:27: "maybe sleep mask color is blending in with skin" - navy on a dark fringe was no shape at all: lavender now)
     if (A.glasses === 'novelty') { P(m, 1, [236, 150, 128]); P(m, 0, [236, 150, 128]); row(2, [30, 24, 26], m - 1, m + 1); return; }   // (novelty glasses: a big pink nose and a moustache under the frames)
     if (A.medmask) { const c = hexRgb(typeof A.medmask === 'string' ? A.medmask : '#8fc4e8'); row(1, sh(c, 1.35)); row(2, c); row(3, sh(c, 0.82), lo + 1, hi - 1); P(lo - 1, 1, [236, 238, 242]); P(hi + 1, 1, [236, 238, 242]); return; }
     if (A.bandana) { const c = hexRgb(typeof A.bandana === 'string' ? A.bandana : '#c8262b'); row(1, sh(c, 0.8)); row(2, c); row(3, sh(c, 0.9), lo + 1, hi - 1); P(m - 1, 2, sh(c, 1.5)); P(m + 1, 2, sh(c, 1.5)); P(m, 3, sh(c, 1.5)); return; }
@@ -70,6 +99,8 @@ export const POLISH = {
     }
     if (!fm) return;
     const c = hexRgb(A.fmask.c), t = A.fmask.t ? hexRgb(A.fmask.t) : c, blk = [26, 22, 26];
+    if (fm === 'pig') { for (const e of eyes) if (e.p.by !== e0.by) for (const d of [0, 1, -1]) put(e.p, c, d, 0);   // (an eye the face couldn't bring onto the other's row - people.js eyeLevel: its white isn't left showing beside the mask's own eye)
+      for (const i of ex) { P(i, -1, c); P(i + out(i), -1, c); } }   // (an animal's mask has no brows of the wearer's on it)
     const mm = m + (two && turn > 0.2 ? fwd : 0), tip = two ? mm : mm + fwd;   // (an animal's muzzle: a step toward the way the head is turned; in profile its nose at the tip)
     if (fm === 'pig' && A.fmask.animal === 'chicken') { row(0, c, lo - 1, hi + 1); for (const i of ex) P(i, 0, [24, 20, 22]); P(tip, 1, [242, 168, 27]); P(mm, 1, [242, 168, 27]); P(mm, 2, t); }
     else if (fm === 'pig' && A.fmask.animal === 'panda') { for (const i of ex) { P(i + out(i), 0, blk); P(i, 1, blk); P(i + out(i), 1, blk); P(i, 0, [244, 244, 240]); } P(tip, 2, blk); }   // (a white eye in each black patch: all black, the patches read as a moustache)
@@ -85,6 +116,7 @@ export const POLISH = {
   tipKeep: ['spiky', 'mohawk', 'quiff', 'shag'],
   eyeMode: 3,         // how an eye's colour shows (eyes() below): the colour with a white beside it - the owner's pick of four, 11-20
   eye2: true,         // a face at an angle keeps its far eye (people.js face)
+  eyeLevel: true,     // ...and the two on one art row (people.js face)
   lnHead: 0.24,       // the line a fringe or a hat draws on the face: this much lighter (people.js: a shadow, not a headband)
   lnL: 0.34,          // a line's lightness follows what it's drawn on, up to this much (people.js) - white cloth and skin get soft lines
   vLight: 0.56,       // a white or pale cloth's darkest shade (vMin's for the rest)
@@ -413,8 +445,13 @@ export const POLISH = {
         if (J.steth) N.push({ rows: ['T...T', 'T...T', 'T...s', 'T....', 'SS...'], side: ['.T', 'T', 'T', 'S'], nape: 'T', K: { T: m(jc, -0.1), S: g(steel, 0.1), s: g(steel, 0.3) } });
         else if (J.lany) { const card = tone(jc, [246, 248, 252], 0.45); N.push({ rows: ['c...c', 'c...c', '.c.c.', '.kkk.', '.WdW.'], side: ['.c', 'c', 'c', 'k', 'W'], nape: 'c', K: { c: m(jc), W: m(card, 0.2), k: m(jc, -0.35), d: m(dk) } }); }
         // (the owner, 20:53: "scarf doesn't look like a scarf yet" - wound round the neck two rows thick, wider than the neck, in knit ribs; one end down the front, two wide, a band of the trim and a fringe at its end)
-        else if (J.scarf) { const tr = jt || cloth('#efe6d4'); N.push({ rows: ['.RrRrR.', '.rRrRr.', '...rR..', '...Rr..', '...rR..', '...r.r.'], side: ['RrR', 'rRr', 'R', 'r'], back: ['..RrR..', '.RrRrR.'],   // (the owner, 21:55: "should go around the neck better" - snug under the chin and widening over the collar, not from shoulder to shoulder)
- K: { R: m(jc, 0.1), r: m(tone(jc, [40, 14, 20], 0.32)), t: m(tr) } }); }
+        // (the owner, 23:27: "goes around face on angle view but below it in front and other angle view" - one picture from every
+        // side, and one color: its ribs of two tones baked as a red pixel here and a dark one there, and in the light it went
+        // pale pink. Flat tones now - the piece's color, a fold a shade darker - snug under the chin, wider over the collar, one
+        // end down the front beside the middle with a band of the trim at its end)
+        else if (J.scarf) { const f5 = (c) => [c, c, c, c, c], sc = f5(jc[Math.min(3, jc.length - 1)]), sd = f5(mix(jc[Math.min(3, jc.length - 1)], [30, 12, 22], 0.3)), tr = jt ? f5(jt[Math.min(3, jt.length - 1)]) : sd, fl = (R) => (Q) => { Q.gloss = 0; return R; };
+          N.push({ rows: ['.RRRRR.', '.RRrRR.', '....RR.', '....RR.', '....RR.', '....tt.'], rowsE: ['.RRRRRR.', '.RRRrRR.', '.....RR.', '.....RR.', '.....RR.', '.....tt.'], side: ['RRR', 'RRr', 'R', 'R', 'R', 't'], back: ['.RRRRR.', '.RRRRR.'], bu: 1,   // (bu: from behind it starts a row higher - on the neck, not across the shoulder blades)
+  K: { R: fl(sc), r: fl(sd), t: fl(tr) } }); }
         else if (J.pearl) N.push({ rows: ['q...q', '.pqp.'], side: ['.q', 'p'], K: { p: g(cloth('#fbf8f2'), 0.3), q: m(cloth('#9a8fae')) } });
         else if (J.whistle) N.push({ rows: ['c...c', '.c.c.', '..s..'], side: ['.c', 'c', 's'], K: { c: m(jc), s: g(steel, 0.2) } });
         else if (J.bolo) N.push({ rows: ['.c.c.', '..S..', '.c.c.', '.t.t.'], side: ['c', 'S', 'c', 't'], K: { c: m(dk), S: g(jc, 0.2), t: g(steel) } });
@@ -428,6 +465,10 @@ export const POLISH = {
       if (J.ntowel) { const tw = jc; N.push({ rows: ['.WW.WW.', '.WW.WW.', '.WW.WW.', '.tt.tt.', '.WW.WW.'], back: ['.WWWWW.'], side: ['.WW', '.WW', '.tt'], K: { W: m(tw, 0.1), t: m(jt || tw) } }); }
       if (J.shsweater) N.push({ rows: ['SSS.SSS', '.SS.SS.', '..SkS..'], back: ['SSSSSSS', 'SSSSSSS', '.SSSSS.', '.SSSSS.'], side: ['SSS', '.SS', '..S'], K: { S: m(jc), k: m(tone(jc, [16, 16, 24], 0.4)) } });
       if (J.shtowel) N.push({ rows: ['.....WW', '.....WW', '.....WW', '.....tt', '.....WW'], back: ['WW.....', 'WW.....', 'WW.....', 'tt.....'], side: ['.W', '.W', '.t'], K: { W: m(jc), t: m(jt || jc) } });   // (a towel over one shoulder, an end down the chest and one down the back)
+      // (a jersey's number - the owner, 23:27: "white pixels in the middle that should look better". A grid of fourteen cells a
+      // world pixel wide baked to white specks; it's a 7 three art pixels wide and four tall now, on the chest and on the back)
+      if (T.number) { const nb = cloth(A.top.trim || 'white'), f5 = [nb[Math.min(4, nb.length - 1)], nb[Math.min(4, nb.length - 1)], nb[Math.min(4, nb.length - 1)], nb[Math.min(4, nb.length - 1)], nb[Math.min(4, nb.length - 1)]], nf = (Q) => { Q.gloss = 0; return f5; };
+        N.push({ rows: ['.....', '.WWW.', '...W.', '..W..', '..W..'], rowsE: ['......', '.WWWW.', '....W.', '...W..', '...W..'], back: ['.....', '.....', '.WWW.', '...W.', '..W..', '..W..'], cloth: 1, K: { W: nf } }); }
       if (A.top && A.top.torn) N.push({ rows: ['.....', '.s...', '.....', '...s.', '.s...'], cloth: 1, K: { s: () => W.skin } });   // (a ripped tee: holes that show the skin)
       if (A.top && A.top.cutout) N.push({ rows: ['.....', '.....', '.....', 's...s', 's...s'], cloth: 1, K: { s: () => W.skin } });   // (a cut-out dress: the waist bare at both sides)
       if (A.top && A.top.ragged) { const pt2 = cloth(A.top.trim || '#6b4a2a'); N.push({ rows: ['.....', '.pp..', '.pp..', '.....', '...p.', 'ss...', '...pp'], cloth: 1, K: { p: m(pt2), s: () => W.skin } }); }   // (ragged: patches in the trim, a hole)
@@ -464,7 +505,7 @@ export const POLISH = {
             const j = cy - F[1], i = cx - F[0];
             for (const n of N) { if (n.cloth && R === SKN) continue; const E2 = !prof && ev && n.rowsE, P = prof ? n.side : E2 || n.rows; if (!P || j < 0 || j >= P.length) continue;
               const ch = prof ? P[j][-i * fs] : E2 ? P[j][(P[j].length >> 1) + i + (ev < 0 ? 0 : -1) + (q34 && i * fs > 0 ? fs : 0)] : at(P[j], i, n.cloth); if (ch && ch !== '.') return n.K[ch](Q); }
-          } else if (Q.f < -0.35) { const j = cy - Bk[1], i = cx - Bk[0]; for (const n of N) { if (n.nape && j === 0 && Math.abs(i) <= (n.wide ? 2 : 1)) return n.K[n.nape](Q); if (n.back && !prof && j >= 0 && j < n.back.length && cy <= Math.floor((y + CA * (Q.zs - hz)) / 2)) { const ch = at(n.back[j], i, 1); if (ch && ch !== '.') return n.K[ch](Q); } } }
+          } else if (Q.f < -0.35) { const j0 = cy - Bk[1], i = cx - Bk[0]; for (const n of N) { const j = j0 + (n.bu || 0); if (n.nape && j === 0 && Math.abs(i) <= (n.wide ? 2 : 1)) return n.K[n.nape](Q); if (n.back && !prof && j >= 0 && j < n.back.length && cy <= Math.floor((y + CA * (Q.zs - hz)) / 2)) { const ch = at(n.back[j], i, 1); if (ch && ch !== '.') return n.K[ch](Q); } } }
           return R;
         };
       }
@@ -507,7 +548,7 @@ export const POLISH = {
       if (PR[0] === 'clip') wrap('leather', (R, Q) => { Q.gloss = 0; return Q.l2 > 0.72 && Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.4 ? cloth('#c8ccd4') : Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.72 && Q.l2 < 0.6 && Q.l2 > -0.8 ? pt : pc; });
       if (PR[0] === 'laptop') wrap('leather', (R, Q) => { Q.gloss = 0.2; if (Q.l2 > 0.72) { Q.k += 0.3; return pt; } return pc; });
       if (PR[0] === 'parcel') wrap('leather', (R, Q) => { Q.gloss = 0; return Math.abs(Q.l1) < 0.16 || (Q.l2 > 0.8 && Math.abs(Q.l0) < 0.2) ? pt : pc; });
-      if (PR[0] === 'ball') { const bo = [[150, 62, 12], [196, 88, 18], [222, 110, 26], [222, 110, 26], [238, 132, 44]], sm = cloth('#2a1610'); wrap('leather', (R, Q) => { Q.gloss = 0; return Q.ny * 0.819 + Q.nz * 0.574 < 0.5 || Math.abs(Q.nx) < 0.1 ? sm : bo; }); }   // (a basketball: its own oranges, a dark rim round it - on a tanned arm an orange ball with no edge was part of the arm - and one seam down it)
+      if (PR[0] === 'ball') { const bo = [[188, 76, 20], [204, 86, 22], [218, 98, 26], [218, 98, 26], [232, 120, 40]], sm = [[58, 30, 24], [58, 30, 24], [66, 34, 26], [66, 34, 26], [66, 34, 26]]; wrap('leather', (R, Q) => { Q.gloss = 0; const bc = W.ballC; if (!bc || Q.res !== 1) return bo; const dx = Math.floor(Math.round(Q.x) / 2) - bc[0], dy = Math.floor(Math.round(Q.y) / 2) - bc[1]; return dx === 0 || dy === 0 ? sm : bo; }); }   // (a basketball: its own oranges - on a tanned arm a leather-brown ball was part of the arm - and its two seams, a cross through the middle art pixel of the disc: people.js sets W.ballC, the art pixel its middle falls in)
       if (PR[0] === 'poles') wrap('wood', (R, Q) => (Q.l0 < 0.16 ? cloth('#2a2a2e') : Q.l0 > 0.9 ? pt : pc));
       if (PR[0] === 'parasol') wrap('wood', (R, Q) => (Q.l0 < 0.1 ? cloth('#d8c8a8') : Q.l0 > 0.96 ? cloth('#2a2226') : Math.floor(Q.l0 * 9 + Q.l1 * 1.5 + 2) & 1 ? pt : pc));
     }
