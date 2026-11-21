@@ -25253,3 +25253,26 @@ chance, the eyes were buried inside the head, and the bodies were too thin to ca
 - `tools/playtest.py --ls` brought over from the `characters` branch (the local gate) for the in-game captures.
 - Tests: `test/animalart.test.js` + the critters at the art pixel (their frames, mirrored, what the game hands out).
 
+## 2026-11-21 - Animals: the owner's notes of 09:27
+"The critters looked a bit better before than after ... return back to the before but just see if a little more polish
+makes it look better. Like the sparrow looks better after." / the moose's body "not moose like" / the bear's body
+"strange" / the heron's legs "really thick" from the front and back / the cats "look like small dogs".
+- **The critters are their painted frames again** (`critters.js`, untouched), the redrawn ones gone - but for the
+  sparrow, which he preferred. The light polish: `actors.js` `tidyDown` halves a painted frame to the art pixel with one
+  rule changed - a block that holds any of the creature shows the creature, not the ink line round it (a lone bright
+  eye or bill kept) - so each keeps its size and shape exactly and reads less as an outline: the pigeon, the gull, the
+  bee, the frog, the rabbit, the squirrel, the pond's heron. The butterflies and the dragonfly are left exactly as the
+  game halves them (their wings' dark veins are the picture). A before / after sheet went to him: it is his call
+  whether the polish stays.
+- **The moose**: a shorter body on longer legs, the withers high over a sloping back (`slope`), the long head carried
+  forward and down from the shoulders on a real neck (`hfwd`, `hdrop`), a darker muzzle.
+- **The bears**: a rounder barrel with an arched back (`arch`), the black bear's rump over its shoulders, the grizzly's
+  hump broader and lower; the head big, low and forward of the shoulders, not perched on the back like a dog's.
+- **The heron** (and every bird): the legs a voxel wide on whole voxels either side of the middle of an even-width
+  model, and drawn `bare` - no ink line round them (`renderArt`) - so from the front and from behind they are two thin
+  legs with the ground between, not a post.
+- **The cats**: a face wider than it is deep and flat in front (`catFace`), bigger ears set wide, a pink nose, a long
+  thin tail up in an S with the tip curling over (`tail: 'cat'`), slimmer legs, a lower head.
+- Tests: `test/animalart.test.js` - the painted critters keep their size, shape and anchor and carry no more ink than
+  before; the butterflies, dragonfly, leaves and motes untouched; the sparrow its own picture.
+

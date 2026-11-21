@@ -170,6 +170,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Trees much taller than people; taller buildings that never block the player's view. (10-05; chat)
 - No huge plain buildings or towers: break them up and vary them; keep a few real landmark towers downtown. (11-06; queue, DEVLOG 11-07)
 - No district all one color. (10-17; DEVLOG 10-17)
+- The small ambient creatures (pigeon, gull, butterflies, dragonfly, bee, frog, rabbit) keep their painted look - a redraw at the art pixel was turned down ("looked a bit better before"); only the sparrow's redraw stays; a light polish on the painted ones is his to judge. (11-21 09:27; chat, DEVLOG 11-21)
 - Art polish order (11-21 08:05): the animals and wildlife first (pets, farm, wild, birds, fish - "some dont look very good at all", close to the concepts), then the UI's icons with the unfinished `inventory` branch, then the nature kit, then buildings, storefronts and interiors a district at a time, vehicles last. (11-21; chat, DEVLOG 11-21)
 - No red cross on anything (protected emblem): clinics and pharmacies a white cross on green. (10-18; DEVLOG 10-18)
 - No snow: summits drawn as scree and rock. (10-17; DEVLOG 10-17)

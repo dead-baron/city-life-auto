@@ -76,12 +76,12 @@ export function birdModel(kind, o = {}) {
   const dab = pose === 'dabble', fly = pose === 'fly' || soar || stoop, swim = pose === 'swim' || dab || plunge, dead = pose === 'dead', peck = pose === 'peck', alert = pose === 'alert', strut = pose === 'strut' && B.tail === 'fan';   // (strut: a tom's display, AN2)
   const poised = pose === 'poised', stalkP = pose === 'stalk', strike = pose === 'strike', fishbill = pose === 'fishbill';
   const span = fly || plunge ? B.len * (B.wingL || 1.25) : 0, trail = fly && B.sneck && !stoop ? B.leg * 0.95 : 0;   // (trail: a heron's legs out behind it in flight)
-  const L = Math.ceil(B.len * 2 + B.neck + 12 + trail), W = Math.ceil(B.w + 8 + span * 2 + (strut ? B.len * 0.8 : 0)), H = Math.ceil(B.h + B.leg + B.neck + 10 + (fly ? span : plunge ? span * 0.9 : 0));
+  const L = Math.ceil(B.len * 2 + B.neck + 12 + trail), W = 2 * Math.ceil((B.w + 8 + span * 2 + (strut ? B.len * 0.8 : 0)) / 2), H = Math.ceil(B.h + B.leg + B.neck + 10 + (fly ? span : plunge ? span * 0.9 : 0));
   const m = new Vox(L, W, H), cy = W / 2;
   const glow = B.legend ? [214, 232, 255, 70] : null, cache = new Map();
   // (x: what the art-pixel renderer reads - animals.js renderArt: thin a part thinner than an art pixel, limb a leg)
   const R = (c, k = 3, x = null) => { const key = c + k + (x ? JSON.stringify(x) : ''); if (!cache.has(key)) cache.set(key, m.mat({ ramp: ramp(c, 6, 3), k, flag: B.fluffy ? F_LEAF : 0, emi: glow, ...x })); return cache.get(key); };
-  const THIN = { thin: 1 }, LIMB = { limb: 1 };   // (a bird's legs: a voxel wide, an art pixel in the picture - not thickened)
+  const THIN = { thin: 1 }, LIMB = { limb: 1, bare: 1 };   // (a bird's legs: a voxel wide, an art pixel in the picture - not thickened, and no line round them)
   const dark = m.mat({ ramp: ramp(B.legend ? '#7a7a88' : '#1e1a20', 4, 1), k: 1 });
   const darkT = m.mat({ ramp: ramp(B.legend ? '#7a7a88' : '#1e1a20', 4, 1), k: 1, thin: 1 });
   const step = Math.sin(phase * Math.PI * 2);
@@ -194,10 +194,12 @@ export function birdModel(kind, o = {}) {
     const feet = R(B.feet || '#8a7a6a', 3, LIMB);
     for (const [s, ph] of [[-1, 0], [1, 0.5]]) {
       const a = dead ? 1.2 : Math.sin((phase + ph) * Math.PI * 2) * (run ? 0.55 : o.gait ? 0.35 : 0);
-      const lx = cx + 0.5, ly = cy + s * B.w * 0.18, top = bz - B.h * 0.35;
+      // (a voxel wide each, on whole voxels either side of the middle - the model's width is even - so from the front and
+      // from behind each leg is one art pixel, with the body's width between them: two legs, not a post)
+      const lx = cx + 0.5, off = B.w >= 6 ? 2 : 1, ly0 = s < 0 ? cy - off - 1 : cy + off, top = bz - B.h * 0.35;
       // (down to the ground; deep across the line of sight, or the character view's steep look skips a thin leg)
-      for (let t = 0; t <= (dead ? B.leg : top / Math.max(0.5, Math.cos(a))) + 0.6; t += 0.4) { const x = lx + Math.sin(a) * t, z = dead ? top + t * 0.3 : top - Math.cos(a) * t; if (z < 0) break; m.box(Math.round(x), ly - 0.9, z, Math.round(x) + 1, ly + 0.9, z + 0.6, feet); }
-      if (!dead) m.box(lx + Math.sin(a) * B.leg - 0.4, ly - 0.6, 0, lx + Math.sin(a) * B.leg + 1.4 + (B.sneck ? 1.2 : 0), ly + 0.6, 0.6, feet);
+      for (let t = 0; t <= (dead ? B.leg : top / Math.max(0.5, Math.cos(a))) + 0.6; t += 0.4) { const x = lx + Math.sin(a) * t, z = dead ? top + t * 0.3 : top - Math.cos(a) * t; if (z < 0) break; m.box(Math.round(x), ly0, z, Math.round(x) + 1, ly0 + 1, z + 0.6, feet); }
+      if (!dead) m.box(lx + Math.sin(a) * B.leg - 0.4, ly0, 0, lx + Math.sin(a) * B.leg + 1.4 + (B.sneck ? 1.2 : 0), ly0 + 1, 0.6, feet);
     }
   }
   const feet = R(B.feet || '#8a7a6a', 3, LIMB);
