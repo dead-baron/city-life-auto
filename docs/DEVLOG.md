@@ -25244,9 +25244,31 @@ best-looking trees in the game.
   animals and the cars have (`done`: one art pixel, a dark tone of the colour beside it - so darker round a dark
   plant than a pale one - never black, none along the foot). The ground and what is strewn on it have none, as the
   spec says.
+- **Variety** (the owner, 11:40: "a few variations to each nature prop so that things dont look repetitive"). The
+  world drew 3 shapes of a species (4 of the ten commonest trees) and 2 of a boulder. Doubling them (`statics.js`
+  `NV`: 6 and 8; boulders 4, the town's 5) was not enough by itself: every oak the same height and width, every
+  palm leaning the same way, every saguaro with the same two arms. So each shape has its own build (`flora.js`
+  `VARY`, on inside `floraArt`, from the shape's seed): a broadleaf's height, crown width and depth and its crown a
+  little off the trunk; a conifer's height and spread, one in three with a bare lower trunk; a pine or a palm
+  leaning either way, the palm's height; a saguaro's height and none to three arms; a shrub's, a grass clump's, a
+  fern's and a flower bed's size and how many flowers (a planter keeps its own). The kit's own pictures don't vary
+  (a maker called on its own paints what it did). An item's room is a fifth over its species' size (`floraExt`).
+- **Cacti, colours** (the owner, 11:48). The saguaros' arms are each shape's own (`saguaro` under `VARY`: none to four,
+  each with its side, its height up the trunk, its length and reach, one in five a bud; white blossoms or red fruit on
+  the crown and the arm tips); the prickly pears and the barrel cacti come as clumps of their own number and size.
+  Flowers and berries take a stand's colour: `flora.js` `tc([...])` picks from a kind's list by `floraArt`'s tint
+  (`FLORA_TINTS`: 26 kinds, 2 to 4 colours each, all the palette's reds, oranges, yellows, pinks, purples, blues and
+  whites); `statics.js` `tintAt` gives a drift some nine tiles across one colour (a slanted grid) with one plant in
+  five a stray. A coloured shape is one more small sprite made once and kept.
+- **The painted light** (his question on the oaks' dark lower right). A plant's picture carries shading lit from the
+  upper left; the game's sun and shadows are added on top (lit at morning, noon, afternoon and golden hour off-line:
+  the lit side follows the sun, the painted dark stays). Leaving the left-right light to the game was tried
+  (`cluster`'s `SIDE`) and a sheet sent; it stays as it was (`SIDE` 1) unless he picks the other.
 - **Cost.** One art batch: the art hash changes, so the world re-bakes once when this goes live (about five hours of
   the server's bake). The bake itself draws a quarter of the pixels per plant; `node tools/perf.mjs` is within every
-  budget (bake 87 files, 1014 KB; `trees.js` no longer in it).
+  budget with twice the shapes (bake 87 files, 1016 KB of 1020; `trees.js` no longer in it; the bakes 57x of 90x).
+  The `animals` branch raised that budget to 1024 for its own 4 KB: merged together the two may need a couple of KB
+  more - a decision for that merge.
 - Seen as the game draws it (`tools/area-shot.mjs`, six places before and after): a mountain meadow, a pasture, a
   desert oasis, a cove, a redwood road, a town block. And in the running game (a local copy: the mountain tarn, a pasture, the
   Giants Loop trail, the canyon oasis).

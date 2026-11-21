@@ -76,7 +76,14 @@ let CAN = false;
 // its own (the kit sheets keep the sheet's proportions). bv: a factor round 1 from the plant's seed (i: which measure,
 // amt: how far either way); bu: 0..1 from the seed, or -1 with VARY off. The owner, 2026-11-21: "a lot of variety
 // throughout the world in nature" - more shapes of one build (the same height, the same lean) didn't read as variety.
-let VARY = false;
+let VARY = false, TINT = 0;
+const SIDE = 1;   // (how much of the painted light comes from the upper left, 0..1 - the art's convention; tried lower 11-21: the owner's to judge)
+// tc: the colour of a plant's flowers or berries - the first of the list for a maker called on its own, else the one the
+// stand it grows in has (floraArt's tint: statics.js gives a drift of flowers one colour, with a few strays). All of
+// them the palette's own reds, oranges, yellows, pinks, purples, blues and whites.
+const tc = (list) => list[TINT % list.length];
+export const FLORA_TINTS = { rose: 4, hydrangea: 4, tulips: 3, daffodils: 2, boxStone: 2, boxIron: 3, berry: 3, huckle: 2, foxglove: 3, brittle: 2, dPoppies: 3, hibiscus: 4, bougain: 4, flHedge: 3, poppies: 4, lupines: 4, daisies: 3,
+  berryShrub: 3, aLupine: 3, paintbrush: 3, heather: 3, aDaisies: 2, icePlant: 2, pear: 3, barrel: 3, wildflowers: 1 };
 const bv = (seed, i, amt) => (VARY ? 1 + (hash(seed, i, 911) - 0.5) * 2 * amt : 1), bu = (seed, i) => (VARY ? hash(seed, i, 913) : -1);
 const uu = (v) => (CAN || U === 1 ? v : v * U), UD = () => !CAN && U !== 1;
 const cv = (fn, ...a) => { const c = CAN; CAN = true; try { return fn(...a); } finally { CAN = c; } };
@@ -91,10 +98,10 @@ const sq = () => Math.sqrt(SIZE), tk = () => Math.pow(SIZE, 0.8), uq = () => Mat
 // chunk bake lays each of its pixels over 2 x 2 world px, its heights doubled (chunkbake.js compositeDepth2), on the art
 // grid - so the game shows the picture as it was painted, its clumps of leaves lit on top and dark underneath, a stem
 // one art pixel wide, where a world-px picture halved kept one texel of four (speckle).
-export function floraArt(k, fn) {
-  const u0 = U, v0 = VARY; U = 0.5; VARY = true;
+export function floraArt(k, fn, tint = 0) {
+  const u0 = U, v0 = VARY, t0 = TINT; U = 0.5; VARY = true; TINT = tint | 0;
   let G;
-  try { G = floraScale(k * 0.5, fn); if (G && G.render) G = G.render(0); } finally { U = u0; VARY = v0; }
+  try { G = floraScale(k * 0.5, fn); if (G && G.render) G = G.render(0); } finally { U = u0; VARY = v0; TINT = t0; }
   if (G && G.w && !G.ap2) { G.ax = (G.ax || 0) * 2; G.ay = (G.ay || 0) * 2; G.ap2 = 2; }
   return G;
 }
@@ -244,7 +251,7 @@ function massEll(lobes, rnd, cs, dens = 1.3) {
     for (let i = 0; i < n; i++) {
       const a = rnd() * TAU, q = Math.sqrt(rnd()) * 1.02, u = Math.cos(a) * q, v = Math.sin(a) * q, w = Math.sqrt(Math.max(0, 1 - q * q));
       const x = b.x + u * b.r, y = b.y + v * ry, gu = (x - mx) / hw, gv = (y - my) / hh;
-      out.push({ x, y, d: y + w * b.r * 0.9 + (b.dz || 0), r: cs * (0.72 + rnd() * 0.5), g: 0.37 - gu * 0.1 - gv * 0.12 + (w - 0.5) * 0.28 + (rnd() - 0.5) * 0.14 + (b.dg || 0), n: sN(gu * 0.75 + u * 0.25, gv * 0.6 + v * 0.3, w), w, gu, gv, ph: rnd() * TAU, edge: q > 0.84 });
+      out.push({ x, y, d: y + w * b.r * 0.9 + (b.dz || 0), r: cs * (0.72 + rnd() * 0.5), g: 0.37 - gu * 0.1 * SIDE - gv * 0.12 + (w - 0.5) * 0.28 + (rnd() - 0.5) * 0.14 + (b.dg || 0), n: sN(gu * 0.75 + u * 0.25, gv * 0.6 + v * 0.3, w), w, gu, gv, ph: rnd() * TAU, edge: q > 0.84 });
     }
   }
   return out;
@@ -280,9 +287,10 @@ function cluster(G, c, R, o, seed) {
     else lim = 0.9;
     if (q > lim) continue;
     const X = Math.round(c.x + dx), Y = Math.round(c.y + dy), e = q / lim;
-    let t = c.g + (-lx * 0.5 - ly * 0.62) * (o.contrast ?? 0.4);
-    if (e > 0.62 && lx + ly > 0.15) t -= 0.3;                                 // the shaded rim: dark pockets where clumps overlap
-    else if (e > 0.55 && lx + ly < -0.55) t += 0.22;                          // the lit tip
+    const sx = lx * SIDE;   // (SIDE: how much of the painted light comes from the left - the sun's side is the game's to light)
+    let t = c.g + (-sx * 0.5 - ly * (0.62 + (1 - SIDE) * 0.2)) * (o.contrast ?? 0.4);
+    if (e > 0.62 && sx + ly > 0.15) t -= 0.3;                                 // the shaded rim: dark pockets where clumps overlap
+    else if (e > 0.55 && sx + ly < -0.55 + (1 - SIDE) * 0.12) t += 0.22;      // the lit tip
     const hh = hash(X, Y, seed + 1);
     if (hh > 0.94 && ly < 0.2) t += 0.12; else if (hh < 0.03) t -= 0.12;      // single leaves catching or losing the light
     const lz = Math.sqrt(Math.max(0, 1 - Math.min(1, q * q)));
@@ -677,8 +685,8 @@ export function topiaryCone(seed = 1) {
   paintClusters(G, cone, { R: FOL('#3e7a30'), seed, core: true, clip: 1, tips: U < 1 ? false : undefined });
   return done(G);
 }
-export const roseBush = (seed = 1) => shrub(seed, { w: 17, h: 26, R: FOL('#3a7228'), cs: 3, flowers: { R: RR('#c8243a', 6, 3, { light: 0.55 }), k: 0.13, kind: 'rose', size: 1 } });
-export const hydrangea = (seed = 1) => shrub(seed, { w: 20, h: 25, R: FOL('#3a7230'), cs: 3.2, flowers: { R: RR('#5a6ad8', 6, 3, { light: 0.6, shift: 0.15 }), k: 0.075, kind: 'ball', size: 1.25 }, k: 1 });
+export const roseBush = (seed = 1) => shrub(seed, { w: 17, h: 26, R: FOL('#3a7228'), cs: 3, flowers: { R: RR(tc(['#c8243a', '#e8709a', '#f2ece0', '#f0c030']), 6, 3, { light: 0.55 }), k: 0.13, kind: 'rose', size: 1 } });
+export const hydrangea = (seed = 1) => shrub(seed, { w: 20, h: 25, R: FOL('#3a7230'), cs: 3.2, flowers: { R: RR(tc(['#5a6ad8', '#d868a8', '#9a5ad0', '#ece8f0']), 6, 3, { light: 0.6, shift: 0.15 }), k: 0.075, kind: 'ball', size: 1.25 }, k: 1 });
 export function lavender(seed = 1, o = {}) {
   const rnd = mulberry32(seed * 37 + 5), G = sprite(64, 60, 5), cx = G.ax, foot = G.ay;
   const L = FOL('#7a9a7a', { shift: 0.2 }), P = RR(o.flower || '#8a62c8', 6, 3, { light: 0.55, shift: 0.12 });
@@ -710,12 +718,12 @@ export function flowerBed(seed = 1, o = {}) {
   if (o.after) o.after(G, cx, foot, soil);
   return done(G);
 }
-export const tulipPlanter = (seed = 1) => flowerBed(seed, { n: 10, kind: 'cup', size: 2, R: [RR('#e0302a', 5, 2, { light: 0.6 }), RR('#e8902a', 5, 2), RR('#d8243a', 5, 2)], h: 19, spread: 20, lw: 1.6, planter: { w: 22, d: 9, h: 7, kind: 'stone' } });
-export const daffodilPlanter = (seed = 1) => flowerBed(seed, { n: 10, kind: 'trumpet', R: [RR('#f0d040', 5, 2, { light: 0.6 }), RR('#f4f0e0', 5, 2, { dark: 0.4 })], h: 18, spread: 20, lw: 1.5, planter: { w: 22, d: 9, h: 7, kind: 'stone' }, k: 1 });
+export const tulipPlanter = (seed = 1) => flowerBed(seed, { n: 10, kind: 'cup', size: 2, R: tc([[RR('#e0302a', 5, 2, { light: 0.6 }), RR('#e8902a', 5, 2), RR('#d8243a', 5, 2)], [RR('#f0c830', 5, 2, { light: 0.6 }), RR('#f4f0e4', 5, 2, { dark: 0.4 }), RR('#f0a030', 5, 2)], [RR('#e070a8', 5, 2, { light: 0.6 }), RR('#9a50c8', 5, 2), RR('#f4e4ee', 5, 2, { dark: 0.4 })]]), h: 19, spread: 20, lw: 1.6, planter: { w: 22, d: 9, h: 7, kind: 'stone' } });
+export const daffodilPlanter = (seed = 1) => flowerBed(seed, { n: 10, kind: 'trumpet', R: tc([[RR('#f0d040', 5, 2, { light: 0.6 }), RR('#f4f0e0', 5, 2, { dark: 0.4 })], [RR('#f4f0e0', 5, 2, { dark: 0.4 }), RR('#f0a838', 5, 2, { light: 0.6 })]]), h: 18, spread: 20, lw: 1.5, planter: { w: 22, d: 9, h: 7, kind: 'stone' }, k: 1 });
 // window / flower box: 'stone' (trailing ivy, mixed flowers) or 'iron' (black frame with a terracotta trough)
 export function flowerBox(seed = 1, kind = 'stone') {
   const rnd = mulberry32(seed * 47 + 3), G = sprite(70, 46, 5), cx = G.ax, foot = G.ay, w = 29, d = 9;
-  const fl = kind === 'stone' ? [RR('#e040a0', 5, 2), RR('#f4f0ec', 5, 2, { dark: 0.4 }), RR('#b048c0', 5, 2), RR('#e86aa0', 5, 2)] : [RR('#d8282a', 5, 2, { light: 0.55 })];
+  const fl = kind === 'stone' ? tc([[RR('#e040a0', 5, 2), RR('#f4f0ec', 5, 2, { dark: 0.4 }), RR('#b048c0', 5, 2), RR('#e86aa0', 5, 2)], [RR('#f0c030', 5, 2), RR('#f4f0ec', 5, 2, { dark: 0.4 }), RR('#e8802a', 5, 2), RR('#e0302a', 5, 2)]]) : [RR(tc(['#d8282a', '#e870a0', '#f0ece4']), 5, 2, { light: 0.55 })];
   let top;
   if (kind === 'iron') {
     const hh = 11, y0 = foot - hh;
@@ -1068,8 +1076,8 @@ export function nurseStump(seed = 1) {
 }
 // ---- forest floor --------------------------------------------------------------------------------------------
 export const salal = (seed = 1) => shrub(seed, { w: 26, h: 30, R: FOL('#3a7430'), cs: 3.4, flowers: { R: RR('#f0d8d8', 5, 2), k: 0.06, kind: 'bell' }, k: 2 });
-export const huckleberry = (seed = 1) => shrub(seed, { w: 24, h: 28, R: FOL('#4a7a2c'), cs: 2.6, leaf: 'fine', fruit: { R: RR('#3a3a8a', 5, 2, { light: 0.6 }), n: 12, r: 1.1 }, stems: 4, k: 3 });
-export const wildBerry = (seed = 1) => shrub(seed, { w: 24, h: 30, R: FOL('#4a7c2c'), cs: 2.8, fruit: { R: RR('#c8282a', 5, 2, { light: 0.6 }), n: 14, r: 1.2 }, flowers: { R: RR('#f4f0e8', 5, 3, { dark: 0.3 }), k: 0.05, kind: 'star' }, k: 4 });
+export const huckleberry = (seed = 1) => shrub(seed, { w: 24, h: 28, R: FOL('#4a7a2c'), cs: 2.6, leaf: 'fine', fruit: { R: RR(tc(['#3a3a8a', '#2a2238']), 5, 2, { light: 0.6 }), n: 12, r: 1.1 }, stems: 4, k: 3 });
+export const wildBerry = (seed = 1) => shrub(seed, { w: 24, h: 30, R: FOL('#4a7c2c'), cs: 2.8, fruit: { R: RR(tc(['#c8282a', '#3a2a5a', '#e8882a']), 5, 2, { light: 0.6 }), n: 14, r: 1.2 }, flowers: { R: RR('#f4f0e8', 5, 3, { dark: 0.3 }), k: 0.05, kind: 'star' }, k: 4 });
 // tall flower spikes over a basal rosette: foxglove, lupine, paintbrush. o: n, h, R (flower ramp), kind
 // ('bells' | 'pea' | 'brush'), L (leaf ramp), leaves ('broad' | 'palm' | 'fine'), rocks, w
 export function spikes(seed = 1, o = {}) {
@@ -1098,7 +1106,7 @@ export function spikes(seed = 1, o = {}) {
   if (o.rocks) pebbles(G, cx, foot, o.rocks, w, seed);
   return done(G);
 }
-export const foxglove = (seed = 1) => spikes(seed, { n: 6, h: 50, w: 22, R: [RR('#d0508a', 6, 3, { light: 0.55 }), RR('#c84a9a', 6, 3, { light: 0.55 })], kind: 'bells', leaves: 'broad' });
+export const foxglove = (seed = 1) => spikes(seed, { n: 6, h: 50, w: 22, R: tc([[RR('#d0508a', 6, 3, { light: 0.55 }), RR('#c84a9a', 6, 3, { light: 0.55 })], [RR('#f0e8ee', 6, 3, { dark: 0.35 }), RR('#e8c8dc', 6, 3, { dark: 0.35 })], [RR('#8a4ac0', 6, 3, { light: 0.55 }), RR('#a85ac8', 6, 3, { light: 0.55 })]]), kind: 'bells', leaves: 'broad' });
 export function trillium(seed = 1) {
   const rnd = mulberry32(seed * 157 + 1), G = sprite(80, 40, 5), cx = G.ax, foot = G.ay, L = FOL('#3a7a2c'), W = RR('#f4f2ea', 5, 3, { dark: 0.3, light: 0.6 });
   const pl = []; for (let i = 0; i < 6; i++) pl.push([cx + (i / 5 - 0.5) * 50 + (rnd() - 0.5) * 6, foot - 1 - rnd() * 7, rnd() < 0.6]);
@@ -1184,16 +1192,32 @@ export function saguaro(seed = 1, h = 100) {
   h *= SIZE * bv(seed, 1, 0.14);
   const rnd = mulberry32(seed * 181 + 1), r = Math.max(3 * U, h * 0.065), G = sprite(h * 0.8 + 20, h + 14, 5), cx = G.ax, foot = G.ay;
   let arms = h0 > 60 ? [[-1, 0.42 + rnd() * 0.1, 0.32], [1, 0.52 + rnd() * 0.12, 0.3]] : h0 > 45 ? [[-1, 0.35, 0.28], [1, 0.48, 0.26]] : [];
-  { const a = bu(seed, 2);   // (its arms: the other way round, one alone, a third, or none yet)
-    if (a >= 0 && arms.length) arms = a < 0.2 ? arms.map(([sd, t, l]) => [-sd, t, l]) : a < 0.34 ? [arms[0]] : a < 0.48 ? [[1, arms[1][1] - 0.08, arms[1][2] + 0.06]] : a < 0.66 && h0 > 60 ? [...arms, [a < 0.57 ? -1 : 1, 0.3, 0.2]] : a < 0.74 ? [] : arms; }
+  // (each shape its own: a young spear, one arm, the classic two at different heights, three or four, an arm with an
+  // elbow out and up, a short bud of an arm - [side, where up the trunk, how long, how far out, a bud])
+  let fruit = false;
+  if (VARY) {
+    const a = hash(seed, 2, 913), q = mulberry32(seed * 733 + 5), n = h0 < 46 ? (a < 0.6 ? 0 : 1) : h0 < 62 ? (a < 0.25 ? 0 : a < 0.65 ? 1 : 2) : a < 0.1 ? 0 : a < 0.26 ? 1 : a < 0.6 ? 2 : a < 0.84 ? 3 : 4;
+    let sd = q() < 0.5 ? -1 : 1; arms = [];
+    for (let i = 0; i < n; i++) {
+      const t = 0.28 + q() * 0.34 + (i > 1 ? 0.1 : 0), bud = q() < 0.2, len = bud ? 0.07 + q() * 0.05 : Math.min(0.9 - t, 0.16 + q() * 0.3);
+      arms.push([sd, Math.min(0.72, t), len, 0.7 + q() * 1.1, bud]); sd = -sd;
+    }
+    fruit = hash(seed, 6, 913) > 0.55;
+  }
   column(G, cx, foot, foot - h + r, r, CACTUS, seed);
-  for (const [s, t, len] of arms) {
-    const y0 = foot - h * t, ax = cx + s * (r + Math.max(2, 5 * SIZE)), ar = r * 0.78;
+  for (const [s, t, len, out = 1, bud = false] of arms) {
+    const y0 = foot - h * t, ax = cx + s * (r + Math.max(2, 5 * SIZE) * out), ar = r * (bud ? 0.7 : 0.78);
     limb(G, [cx + s * r * 0.4, y0], [ax, y0 + 1], [ax, y0 - 4 * SIZE], ar, ar, CACTUS, { tex: 'smooth', k: 0.5 });
     column(G, ax, y0 - 3 * SIZE, y0 - h * len, ar, CACTUS, seed + 3);
   }
   // flowers / fruit on the crown
   if (h0 > 60) for (let k = -1; k <= 1; k++) px(G, cx + k * 2, foot - h + r * 0.1 - 1, [236, 200, 80], [0, 0, 1], 0);
+  // (in flower or in fruit: white blossoms with a gold eye, or red fruit, on the crown and the tips of the arms)
+  if (VARY && h0 > 45 && hash(seed, 5, 913) > 0.4) for (const [x, y] of [[cx, foot - h + r * 0.1], ...arms.filter((a) => !a[4]).map(([s2, t, len, out = 1]) => [cx + s2 * (r + Math.max(2, 5 * SIZE) * out), foot - h * t - 3 * SIZE - h * len - r * 0.7])]) {
+    const c = fruit ? [216, 48, 56] : [248, 244, 232];
+    for (const [dx, dy] of [[-1, -1], [1, -1], [0, -2]]) px(G, x + dx, y + dy, c, [0, 0, 1], 0);
+    if (!fruit) px(G, x, y - 1, [240, 200, 70], [0, 0, 1], 0);
+  }
   pebbles(G, cx, foot, 5, h * 0.25, seed); tufts(G, cx, foot, 4, h * 0.2, seed, FOL('#8a9a3a'));
   return done(G);
 }
@@ -1233,10 +1257,11 @@ export function ocotillo(seed = 1) {
 export const paloVerde = (seed = 1) => broadleaf(seed, { h: 100, cw: 52, ch: 34, form: 'spread', twist: 3, tw: 3.4, B: RR('#8a9a4a', 7, 3, { dark: 0.6, light: 0.45 }), tex: 'smooth', leaf: 'fine', R: FOL('#a0b428', { warm: 56 }), cs: 3, holes: 0.9, dens: 0.32, airy: 0.25, lobes: 12, flowers: { R: RR('#f0d030', 5, 2), k: 0.3, kind: 'dot' }, k: 12 });
 export const mesquite = (seed = 1) => broadleaf(seed, { h: 102, cw: 50, ch: 34, form: 'spread', stems: 2, spread: 5, tw: 4, B: RR('#6a4430', 7, 3, { dark: 0.62 }), twist: 4, leaf: 'fine', R: FOL('#5a7a2e', { desat: 0.15 }), cs: 3.2, holes: 0.9, dens: 0.4, airy: 0.2, lobes: 12, k: 13 });
 export function pricklyPear(seed = 1) {
-  const rnd = mulberry32(seed * 197 + 1), G = sprite(90, 70, 5), cx = G.ax, foot = G.ay, R = FOL('#5e9a4a', { warm: 70, shift: 0.5, desat: 0.2 }), Fl = RR('#e0307a', 6, 3, { light: 0.55 });
+  const rnd = mulberry32(seed * 197 + 1), G = sprite(90, 70, 5), cx = G.ax, foot = G.ay, R = FOL('#5e9a4a', { warm: 70, shift: 0.5, desat: 0.2 }), Fl = RR(tc(['#e0307a', '#f0c028', '#f08028']), 6, 3, { light: 0.55 });
   const pads = [];
   const add = (x, y, a, r, depth) => { pads.push({ x, y, a, r, d: depth }); if (depth > 2 || r < 5) return; const n = depth === 0 ? 3 : 1 + (rnd() < 0.6 ? 1 : 0); for (let i = 0; i < n; i++) { const na = a + (i - (n - 1) / 2) * 0.8 + (rnd() - 0.5) * 0.3, tx = x + Math.sin(na) * r * 1.5, ty = y - Math.cos(na) * r * 1.5; add(tx, ty, na, r * (0.8 + rnd() * 0.12), depth + 1); } };
-  add(cx - 12, foot - 9, -0.3, 8.5, 0); add(cx + 12, foot - 9, 0.35, 8.5, 1); add(cx + 30, foot - 7, 0.6, 6.5, 2); add(cx - 30, foot - 7, -0.6, 6.5, 2);
+  { const z = bv(seed, 1, 0.18), m = bu(seed, 2);   // (each shape its own: a big clump, a clump leaning one way, a small one)
+    add(cx - 12, foot - 9, -0.3, 8.5 * z, 0); if (m < 0.8) add(cx + 12, foot - 9, 0.35, 8.5 * z, 1); if (m < 0.55) add(cx + 30, foot - 7, 0.6, 6.5 * z, 2); if (m < 0 || (m > 0.3 && m < 0.9)) add(cx - 30, foot - 7, -0.6, 6.5 * z, 2); }
   pads.sort((p, q) => q.d - p.d || p.y - q.y);
   for (const p of pads) {
     const rx = p.r * 0.78, ry = p.r, ca = Math.cos(p.a), sa = Math.sin(p.a);
@@ -1253,8 +1278,9 @@ export function pricklyPear(seed = 1) {
   return done(G);
 }
 export function barrelCacti(seed = 1) {
-  const rnd = mulberry32(seed * 199 + 1), G = sprite(70, 50, 5), cx = G.ax, foot = G.ay, R = FOL('#4e8a3a', { warm: 70, shift: 0.45, desat: 0.2 }), Fl = RR('#f0b020', 6, 3, { light: 0.55 });
-  for (const [ox, oy, r] of [[-9, -2, 11], [9, 2, 8.5]]) {
+  const rnd = mulberry32(seed * 199 + 1), G = sprite(70, 50, 5), cx = G.ax, foot = G.ay, R = FOL('#4e8a3a', { warm: 70, shift: 0.45, desat: 0.2 }), Fl = RR(tc(['#f0b020', '#e0382a', '#e85a9a']), 6, 3, { light: 0.55 });
+  const m = bu(seed, 1), z = bv(seed, 2, 0.2), set = m < 0 ? [[-9, -2, 11], [9, 2, 8.5]] : m < 0.25 ? [[0, 0, 12 * z]] : m < 0.6 ? [[-9, -2, 11 * z], [9, 2, 8.5 * z]] : m < 0.85 ? [[-13, -3, 9 * z], [1, 1, 12 * z], [14, 3, 7 * z]] : [[-7, 0, 13 * z], [11, 3, 6.5 * z]];
+  for (const [ox, oy, r] of set) {
     const x = cx + ox, y = foot + oy - r * 1.05;
     for (let b = -Math.ceil(r * 1.15); b <= r * 1.05; b++) for (let a = -Math.ceil(r); a <= r; a++) {
       const u = a / r, v = b / (r * 1.1); if (u * u + v * v > 1) continue;
@@ -1306,9 +1332,9 @@ export function yucca(seed = 1, bloomOn = true) {
 const DRY = FOL('#8a8a3a', { warm: 50, desat: 0.2 });
 export const creosote = (seed = 1) => shrub(seed, { w: 32, h: 40, R: FOL('#6e8a2a', { warm: 56 }), leaf: 'fine', cs: 2.6, holes: 0.5, airy: 0.25, dens: 0.22, stems: 12, B: RR('#5a3e2e', 6, 3), dens: 1.15, k: 5, after: (G, cx, foot) => pebbles(G, cx, foot, 5, 22, seed) });
 export const sagebrush = (seed = 1) => shrub(seed, { w: 32, h: 32, airy: 0.15, dens: 0.75, R: FOL('#869a80', { warm: 80, shift: 0.25, desat: 0.35, cool: 210, dark: 0.6 }), leaf: 'fine', cs: 2.6, stems: 4, k: 6, after: (G, cx, foot) => pebbles(G, cx, foot, 5, 22, seed) });
-export const brittlebush = (seed = 1) => shrub(seed, { w: 30, h: 32, R: FOL('#7a8a3a', { warm: 60 }), leaf: 'fine', cs: 2.6, stems: 9, airy: 0.25, dens: 0.28, flowers: { R: RR('#f0c020', 5, 2), k: 0.12, kind: 'dot' }, k: 7, after: (G, cx, foot) => pebbles(G, cx, foot, 5, 22, seed) });
+export const brittlebush = (seed = 1) => shrub(seed, { w: 30, h: 32, R: FOL('#7a8a3a', { warm: 60 }), leaf: 'fine', cs: 2.6, stems: 9, airy: 0.25, dens: 0.28, flowers: { R: RR(tc(['#f0c020', '#f08a28']), 5, 2), k: 0.12, kind: 'dot' }, k: 7, after: (G, cx, foot) => pebbles(G, cx, foot, 5, 22, seed) });
 export const whiteBursage = (seed = 1) => shrub(seed, { w: 30, h: 28, airy: 0.15, dens: 0.75, stems: 6, R: FOL('#a0a698', { warm: 60, shift: 0.2, desat: 0.4, cool: 220, dark: 0.6 }), leaf: 'fine', cs: 2.4, k: 8, after: (G, cx, foot) => pebbles(G, cx, foot, 5, 22, seed) });
-export const desertPoppies = (seed = 1) => flowerBed(seed, { n: 14, kind: 'poppy', R: [RR('#f08a20', 6, 3, { light: 0.55 }), RR('#f0a030', 6, 3)], h: 12, spread: 28, size: 2, leaves: 'clump', L: FOL('#5e8a3a'), after: (G, cx, foot) => pebbles(G, cx, foot, 5, 24, seed), k: 2 });
+export const desertPoppies = (seed = 1) => flowerBed(seed, { n: 14, kind: 'poppy', R: tc([[RR('#f08a20', 6, 3, { light: 0.55 }), RR('#f0a030', 6, 3)], [RR('#f0c828', 6, 3, { light: 0.55 }), RR('#f4dc60', 6, 3)], [RR('#e86a9a', 6, 3, { light: 0.55 }), RR('#d858a8', 6, 3)]]), h: 12, spread: 28, size: 2, leaves: 'clump', L: FOL('#5e8a3a'), after: (G, cx, foot) => pebbles(G, cx, foot, 5, 24, seed), k: 2 });
 export function desertFlowers(seed = 1) {
   const a = flowerBed(seed, { n: 12, kind: 'poppy', R: [RR('#f07a1a', 6, 3, { light: 0.55 }), RR('#e86020', 6, 3)], h: 12, spread: 26, size: 2, leaves: 'clump', L: FOL('#5e8a3a'), k: 3, after: (G, cx, foot) => pebbles(G, cx, foot, 5, 24, seed) });
   const b = spikes(seed + 1, { n: 5, h: 30, w: 12, R: RR('#7a5ac8', 6, 3, { light: 0.55 }), kind: 'pea', leaves: 'palm', L: FOL('#5e8a3a') });
@@ -1455,8 +1481,8 @@ export function birdOfParadise(seed = 1) {
   }
   return done(G);
 }
-export const hibiscus = (seed = 1) => shrub(seed, { w: 32, h: 42, R: FOL('#2e7030'), cs: 3, flowers: { R: RR('#e0202a', 6, 3, { light: 0.55 }), k: 0.12, kind: 'poppy', size: 2 }, k: 9 });
-export const bougainvillea = (seed = 1) => shrub(seed, { w: 34, h: 58, R: FOL('#3a7a2a'), cs: 3, leaf: 'fine', holes: 0.5, stems: 6, airy: 0.3, dens: 0.6, flowers: { R: RR('#d81a78', 6, 3, { light: 0.5, shift: 0.1 }), k: 0.35, kind: 'star' }, lobes: 7, squash: 1.1, k: 10, after: (G, cx, foot) => litter(G, cx, foot, 16, [[216, 40, 120], [180, 30, 100]], 5, 16) });
+export const hibiscus = (seed = 1) => shrub(seed, { w: 32, h: 42, R: FOL('#2e7030'), cs: 3, flowers: { R: RR(tc(['#e0202a', '#e86aa0', '#f0c028', '#f08a2a']), 6, 3, { light: 0.55 }), k: 0.12, kind: 'poppy', size: 2 }, k: 9 });
+export const bougainvillea = (seed = 1) => shrub(seed, { w: 34, h: 58, R: FOL('#3a7a2a'), cs: 3, leaf: 'fine', holes: 0.5, stems: 6, airy: 0.3, dens: 0.6, flowers: { R: RR(tc(['#d81a78', '#f08028', '#8a3ac8', '#f2ece4']), 6, 3, { light: 0.5, shift: 0.1 }), k: 0.35, kind: 'star' }, lobes: 7, squash: 1.1, k: 10, after: (G, cx, foot) => litter(G, cx, foot, 16, tc([[[216, 40, 120], [180, 30, 100]], [[240, 128, 40], [200, 100, 30]], [[138, 58, 200], [110, 44, 160]], [[242, 236, 228], [210, 204, 196]]]), 5, 16) });
 // grasses with seed plumes: dune grass, beach grass, tall meadow grass. o: h, n, R, plume (ramp), spread
 export function grassClump(seed = 1, o = {}) {
   const rnd = mulberry32(seed * 337 + (o.k || 0)), h = (o.h ?? 30) * bv(seed, 1, 0.18), sp = (o.spread ?? 1) * bv(seed, 2, 0.15), G = sprite(h * 2.6 * sp + 14, h + 18, 5), cx = G.ax, foot = G.ay, R = o.R || FOL('#8a9a3a', { warm: 52 });
@@ -1479,8 +1505,8 @@ export const tallGrass = (seed = 1) => grassClump(seed, { h: 46, n: 150, spread:
 // a low tuft of grass - the weeds along an old track's edge, at an orchard's margin (statics.js coverItems)
 export const weedTuft = (seed = 1) => grassClump(seed, { h: 18, n: 40, spread: 1, R: FOL('#6e9230'), k: 6 });
 export function icePlant(seed = 1) {
-  const rnd = mulberry32(seed * 347 + 1), G = sprite(120, 40, 6), cx = G.ax, foot = G.ay, R = FOL('#6aa03a', { warm: 70 }), P = RR('#e8509a', 6, 3, { light: 0.6 });
-  const pts = []; for (let i = 0; i < 380; i++) { const a = rnd() * TAU, q = Math.sqrt(rnd()); pts.push([cx + Math.cos(a) * q * 50, foot - 6 + Math.sin(a) * q * 11 - (1 - q) * 5]); }
+  const rnd = mulberry32(seed * 347 + 1), G = sprite(120, 40, 6), cx = G.ax, foot = G.ay, R = FOL('#6aa03a', { warm: 70 }), P = RR(tc(['#e8509a', '#f0d040']), 6, 3, { light: 0.6 });
+  const pts = []; for (let i = 0; i < nu(380, 0.5); i++) { const a = rnd() * TAU, q = Math.sqrt(rnd()); pts.push([cx + Math.cos(a) * q * 50, foot - 6 + Math.sin(a) * q * 11 - (1 - q) * 5]); }
   pts.sort((a, b) => a[1] - b[1]);
   for (const [x, y] of pts) { G.root = { y: y + 3, b: 0 }; const a = -PI / 2 + (rnd() - 0.5) * 2; blade(G, x, y + 2, a, 4 + rnd() * 4, 1.5, 0, R, { k: 0.35 + rnd() * 0.35, tipK: 0.5 }); }
   for (let i = 0; i < 22; i++) { const [x, y] = pts[Math.floor(rnd() * pts.length)]; G.root = { y: y + 3, b: 0 }; bloom(G, x, y - 2, 'daisy', P, 1, seed); }
@@ -1624,10 +1650,10 @@ export function grapevineTrellis(seed = 1) {
 }
 const fruitTree = (seed, c, k) => broadleaf(seed, { h: 84, cw: 35, ch: 39, R: FOL('#4e8a2a'), cs: 3.6, tw: 3.6, fruit: { R: RR(c, 6, 3, { light: 0.6 }), n: 16, r: 2 }, k });
 export const appleTree = (seed = 1) => fruitTree(seed, '#d0281e', 20), orangeTree = (seed = 1) => fruitTree(seed, '#f0861e', 21), lemonTree = (seed = 1) => fruitTree(seed, '#f0d020', 22);
-export const floweringHedge = (seed = 1) => hedge(seed, 112, 34, { curb: 0, R: FOL('#4a7a28'), flowers: { R: RR('#f8f4ea', 5, 3, { dark: 0.3 }), k: 0.06, kind: 'star' } });
-export const poppies = (seed = 1) => flowerBed(seed, { n: 13, kind: 'poppy', R: RR('#e0281e', 6, 3, { light: 0.55 }), h: 24, spread: 26, leaves: 'clump', L: FOL('#4a8a2a'), size: 2, k: 4 });
-export const lupines = (seed = 1, R = [RR('#6a4ac0', 6, 3, { light: 0.55 }), RR('#5a3aa8', 6, 3, { light: 0.55 })]) => spikes(seed, { n: 7, h: 44, w: 24, R, kind: 'pea', leaves: 'palm', L: FOL('#4a8a2a') });
-export const daisies = (seed = 1) => flowerBed(seed, { n: 18, kind: 'daisy', R: RR('#f8f6ee', 5, 3, { dark: 0.3 }), h: 18, spread: 28, size: 2, leaves: 'clump', L: FOL('#4a8a2a'), k: 5 });
+export const floweringHedge = (seed = 1) => hedge(seed, 112, 34, { curb: 0, R: FOL('#4a7a28'), flowers: { R: RR(tc(['#f8f4ea', '#e878a8', '#e0303a']), 5, 3, { dark: 0.3 }), k: 0.06, kind: 'star' } });
+export const poppies = (seed = 1) => flowerBed(seed, { n: 13, kind: 'poppy', R: RR(tc(['#e0281e', '#f08a20', '#f2ece2', '#e8689a']), 6, 3, { light: 0.55 }), h: 24, spread: 26, leaves: 'clump', L: FOL('#4a8a2a'), size: 2, k: 4 });
+export const lupines = (seed = 1, R = tc([[RR('#6a4ac0', 6, 3, { light: 0.55 }), RR('#5a3aa8', 6, 3, { light: 0.55 })], [RR('#d85a9a', 6, 3, { light: 0.55 }), RR('#c84a8a', 6, 3, { light: 0.55 })], [RR('#4a6ad8', 6, 3, { light: 0.55 }), RR('#3a56c0', 6, 3, { light: 0.55 })], [RR('#f0ecf0', 6, 3, { dark: 0.35 }), RR('#dcd4e8', 6, 3, { dark: 0.35 })]])) => spikes(seed, { n: 7, h: 44, w: 24, R, kind: 'pea', leaves: 'palm', L: FOL('#4a8a2a') });
+export const daisies = (seed = 1) => flowerBed(seed, { n: 18, kind: 'daisy', R: RR(tc(['#f8f6ee', '#f0c428', '#e88ab0']), 5, 3, { dark: 0.3 }), h: 18, spread: 28, size: 2, leaves: 'clump', L: FOL('#4a8a2a'), k: 5 });
 export const clover = (seed = 1) => shrub(seed, { w: 32, h: 20, R: FOL('#3e8a34'), cs: 2.3, leaf: 'maple', squash: 0.7, flowers: { R: RR('#f4f0e8', 5, 3, { dark: 0.35 }), k: 0.06, kind: 'ball', size: 0.7 }, k: 12 });
 // wetland plants standing in water: cattails, reeds, rushes
 export function cattails(seed = 1, kind = 'cattail') {
@@ -1689,9 +1715,9 @@ export function juniperMat(seed = 1) {
 }
 export const twistedShrub = (seed = 1) => pineTufts(seed, { h: 58, cw: 46, B: BARK_PALE, tw: 3.2, twist: 10, n: 8, low: 0.25, tuft: 8, flat: 0.6, rise: 0.15, flatTop: true, leaf: 'round', cs: 3, R: FOL('#46742c', { warm: 60 }), rocks: 6, grass: 4, k: 2 });
 export const snowyShrub = (seed = 1) => shrub(seed, { w: 30, h: 36, R: FOL('#3e6a3a'), cs: 3.6, twigs: 11, snowClumps: 0.55, k: 13, after: (G, cx, foot) => snowDrift(G, cx, foot, 22, seed) });
-export const berryShrub = (seed = 1) => shrub(seed, { w: 32, h: 40, R: FOL('#5a7a2a', { warm: 50 }), cs: 2.8, leaf: 'fine', twigs: 6, fruit: { R: RR('#d8301e', 6, 3, { light: 0.55 }), n: 22, r: 1.2 }, k: 14, after: (G, cx, foot) => pebbles(G, cx, foot, 6, 22, seed) });
-export const alpineLupine = (seed = 1) => spikes(seed, { n: 6, h: 44, w: 24, R: [RR('#5a4ad0', 6, 3, { light: 0.55 }), RR('#7a5ad8', 6, 3, { light: 0.55 })], kind: 'pea', leaves: 'palm', L: FOL('#3e7a2a'), rocks: 5, k: 1 });
-export const paintbrush = (seed = 1) => spikes(seed, { n: 8, h: 34, w: 24, R: RR('#e8401e', 6, 3, { light: 0.55 }), kind: 'brush', leaves: 'fine', L: FOL('#4a7a2a'), rocks: 5, k: 2 });
+export const berryShrub = (seed = 1) => shrub(seed, { w: 32, h: 40, R: FOL('#5a7a2a', { warm: 50 }), cs: 2.8, leaf: 'fine', twigs: 6, fruit: { R: RR(tc(['#d8301e', '#f0902a', '#3a3270']), 6, 3, { light: 0.55 }), n: 22, r: 1.2 }, k: 14, after: (G, cx, foot) => pebbles(G, cx, foot, 6, 22, seed) });
+export const alpineLupine = (seed = 1) => spikes(seed, { n: 6, h: 44, w: 24, R: tc([[RR('#5a4ad0', 6, 3, { light: 0.55 }), RR('#7a5ad8', 6, 3, { light: 0.55 })], [RR('#d05a9a', 6, 3, { light: 0.55 }), RR('#e07ab0', 6, 3, { light: 0.55 })], [RR('#eeeaf2', 6, 3, { dark: 0.35 }), RR('#c8c0e8', 6, 3, { dark: 0.35 })]]), kind: 'pea', leaves: 'palm', L: FOL('#3e7a2a'), rocks: 5, k: 1 });
+export const paintbrush = (seed = 1) => spikes(seed, { n: 8, h: 34, w: 24, R: RR(tc(['#e8401e', '#f08a20', '#d8388a']), 6, 3, { light: 0.55 }), kind: 'brush', leaves: 'fine', L: FOL('#4a7a2a'), rocks: 5, k: 2 });
 export function columbine(seed = 1) {
   const rnd = mulberry32(seed * 463 + 1), G = sprite(70, 60, 5), cx = G.ax, foot = G.ay, L = FOL('#4a8a3a'), P = RR('#c8a8e8', 6, 3, { light: 0.6 }), W = RR('#f4f0e8', 5, 3, { dark: 0.3 });
   paintClusters(G, massEll([{ x: cx, y: foot - 8, r: 24, ry: 8 }, { x: cx - 8, y: foot - 12, r: 10 }, { x: cx + 9, y: foot - 11, r: 10 }], rnd, 2.6, 1.5), { R: L, leaf: 'maple', seed, core: true });
@@ -1699,8 +1725,8 @@ export function columbine(seed = 1) {
   pebbles(G, cx, foot, 5, 18, seed);
   return done(G);
 }
-export const heather = (seed = 1) => shrub(seed, { w: 28, h: 20, R: FOL('#5a6a3a', { warm: 60 }), cs: 2.2, leaf: 'fine', squash: 0.7, flowers: { R: RR('#c03a8a', 6, 3, { light: 0.5 }), k: 0.6, kind: 'dot' }, k: 15, after: (G, cx, foot) => pebbles(G, cx, foot, 6, 22, seed) });
-export const alpineDaisies = (seed = 1) => shrub(seed, { w: 30, h: 17, R: FOL('#4a7a2a'), cs: 2.4, leaf: 'round', squash: 0.7, flowers: { R: RR('#f8f6ee', 5, 3, { dark: 0.3 }), k: 0.3, kind: 'daisy' }, k: 16, after: (G, cx, foot) => pebbles(G, cx, foot, 6, 24, seed) });
+export const heather = (seed = 1) => shrub(seed, { w: 28, h: 20, R: FOL('#5a6a3a', { warm: 60 }), cs: 2.2, leaf: 'fine', squash: 0.7, flowers: { R: RR(tc(['#c03a8a', '#8a4ac0', '#ece4ec']), 6, 3, { light: 0.5 }), k: 0.6, kind: 'dot' }, k: 15, after: (G, cx, foot) => pebbles(G, cx, foot, 6, 22, seed) });
+export const alpineDaisies = (seed = 1) => shrub(seed, { w: 30, h: 17, R: FOL('#4a7a2a'), cs: 2.4, leaf: 'round', squash: 0.7, flowers: { R: RR(tc(['#f8f6ee', '#f0c830']), 5, 3, { dark: 0.3 }), k: 0.3, kind: 'daisy' }, k: 16, after: (G, cx, foot) => pebbles(G, cx, foot, 6, 24, seed) });
 export const buttercups = (seed = 1) => shrub(seed, { w: 28, h: 17, R: FOL('#5a8a2a'), cs: 2.3, leaf: 'maple', squash: 0.7, flowers: { R: RR('#f0c818', 5, 2, { light: 0.5 }), k: 0.22, kind: 'cup' }, k: 17, after: (G, cx, foot) => { pebbles(G, cx, foot, 6, 24, seed); } });
 
 // ---- the catalog ---------------------------------------------------------------------------------------------

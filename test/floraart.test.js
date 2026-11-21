@@ -45,6 +45,18 @@ test('a species keeps its size on the whole, and its shapes differ in build: tal
   assert.equal(side('leaning').size, 2, 'the leaning palms lean both ways');
 });
 
+test('a stand has its colour: flowers and berries in the palette\'s other colours; the saguaros differ in their arms', () => {
+  const hue = (G, pick) => { let n = 0; for (let i = 0; i < G.w * G.h; i++) if (G.col[i * 4 + 3] && pick(G.col[i * 4], G.col[i * 4 + 1], G.col[i * 4 + 2])) n++; return n; };
+  const red = (r, g, b) => r > 160 && g < 50 && b < 60, orange = (r, g, b) => r > 190 && g > 55 && g < 150 && b < 50;
+  const p0 = makeStatic({ t: 'f', sp: 'poppies', s: 1049, k: 1 }), p1 = makeStatic({ t: 'f', sp: 'poppies', s: 1049, k: 1, c: 1 });
+  assert.ok(hue(p0, red) > 8 && hue(p1, red) < hue(p0, red) / 3 && hue(p1, orange) > 8, 'poppies: red, and orange in another stand');
+  assert.equal(p0.w, p1.w, 'the same plant, another colour');
+  assert.ok(FL.FLORA_TINTS.poppies >= 3 && FL.FLORA_TINTS.lupines >= 3 && FL.FLORA_TINTS.berry >= 2);
+  for (const sp of Object.keys(FL.FLORA_TINTS)) assert.ok(FLORA_SPECIES.includes(sp), `${sp}: a species the world plants`);
+  const widths = new Set(); for (let v = 0; v < 6; v++) widths.add(makeStatic({ t: 'f', sp: 'saguaroBig', s: 1000 + v * 37 + 70, k: 1 }).w);
+  assert.ok(widths.size >= 3, `the saguaros: a spear, one arm, several (${[...widths]})`);
+});
+
 test('floraArt leaves the makers as it found them, and a recipe always makes the same picture', () => {
   const before = FL.roseBush(3), a = FL.floraArt(1, () => FL.roseBush(3)), after = FL.roseBush(3);
   assert.equal(a.ap2, 2);
