@@ -552,7 +552,7 @@ add('set', 'Wetsuit, peeled to the waist', 'mf', 'beach athletic', 110, 'beach',
 add('jacket', 'Fur-hood parka', 'mf', 'winter outdoors streetwear', 180, 'outdoor', { k: 'puffer', furhood: 1, pp: 1 }, 'olive', 'cream');
 add('jacket', 'Coat over the shoulders', 'mf', 'hifashion business formal', 220, 'boutique', { k: 'coat', dr: 'cape', draped: 1, pp: 1 }, 'navy', 'black');
 add('bag', 'Surfboard', 'mf', 'beach athletic', 150, 'beach', { carry: 'purse', prop: 'board', pp: 1 }, 'cream', 'teal');
-add('set', 'Crochet cover-up', 'f', 'beach festival', 40, 'beach', { k: 'tee', bk: 'skirt', mesh: 1, pp: 1 }, 'cream');
+add('set', 'Crochet cover-up', 'f', 'beach festival', 40, 'beach', { k: 'tee', bk: 'skirt', mesh: 1, crochet: 1, pp: 1 }, 'cream');
 add('shoes', 'Roller skates', 'mf', 'retro athletic festival', 95, 'sports', { k: 'boot', skate: 1, sole: 1, pp: 1 }, 'white', 'pink');
 add('hat', 'Party wig', 'mf', 'festival nightclub disguise', 30, 'costume', { k: 'wig', pp: 1 }, 'pink');
 
@@ -732,7 +732,7 @@ export function lookArt(L, opt = {}) {
     A.top = uTop || { kind: fem ? 'bra' : 'none', color: c, under: 1 };
     A.bottom = uBot || { kind: fem ? 'bikini' : 'trunks', color: c, under: 1 };
   } else if (set) {
-    A.top = { kind: fem && set.d.fk ? set.d.fk : set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0, plain: set.d.plain ? 1 : 0, bands: set.d.bands ? 1 : 0 , ...(set.d.shine ? { shine: 1 } : null), ...(set.d.mesh ? { mesh: 1 } : null), ...(set.d.block ? { block: 1 } : null), ...(set.d.cutout ? { cutout: 1 } : null) };
+    A.top = { kind: fem && set.d.fk ? set.d.fk : set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0, plain: set.d.plain ? 1 : 0, bands: set.d.bands ? 1 : 0 , ...(set.d.shine ? { shine: 1 } : null), ...(set.d.mesh ? { mesh: 1 } : null), ...(set.d.crochet ? { crochet: 1 } : null), ...(set.d.block ? { block: 1 } : null), ...(set.d.cutout ? { cutout: 1 } : null) };
     A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined , ...(set.d.sidestripe ? { sidestripe: HEX(O.set.t) } : null), ...(set.d.peel ? { peel: 1 } : null) };
   } else {
     A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0, chevrons: top.d.chevrons ? 1 : 0, ...(top.d.torn ? { torn: 1 } : null) } : uTop || { kind: fem ? 'bra' : 'none', color: '#e8e4dc' };   // (no underwear picked: boxers; a bra and panties - the owner, 11-19)

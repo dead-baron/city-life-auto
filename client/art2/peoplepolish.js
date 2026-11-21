@@ -32,7 +32,7 @@ export const POLISH = {
   // hair, the owner's notes of 11-20: locs and braids hang at the sides of the face too (from the front they were a bowl cut:
   // people.js's hairline, [forehead, temple, sideburn, above the ear, nape]); a one-pixel point on top of the hair is taken
   // off, bar the styles that are points
-  hairLN: { dreads: [0.4, 0.36, -0.78, -0.78, -1.1], braids: [0.42, 0.36, -0.78, -0.78, -1.1], shavedside: [0.42, 0.4, 0.2, 0.1, -0.62], receding: [0.74, 0.96, -0.2, 0.1, -0.6], locupdo: [0.5, 0.46, 0.1, 0.3, -0.1] },   // (the shaved-side style keeps its hair down the back: from behind it was a bare head under a cap)
+  hairLN: { dreads: [0.4, 0.36, -0.78, -0.78, -1.1], braids: [0.42, 0.36, -0.78, -0.78, -1.1], shavedside: [0.42, 0.4, 0.2, 0.1, -0.62], receding: [0.92, 1.1, -0.2, 0.1, -0.6], locupdo: [0.5, 0.46, 0.1, 0.3, -0.1] },   // (the shaved-side style keeps its hair down the back: from behind it was a bare head under a cap)
   // glasses, a size bigger (the owner, 11-20: "glasses a size bigger", "square/rimless/browline glasses too small"): each kind's
   // stamp round an eye (people.js GLS: dx out from the nose then dy down, from -1; a color key). A whole ring round the eye
   // where there was half of one; the two rings meet over the nose.
@@ -538,6 +538,11 @@ export const POLISH = {
       const f = (R, Q) => { if (Q.res !== 1 || (R === W.skin && !peel)) return R; const y = Math.round(Q.y), d = Math.floor(y / 2) - Math.floor((y + 0.819152 * (Q.zs - hz)) / 2); if (d < 0 || d > 2) return R; if (d === 2 && !(Q.f > 0.4 && Math.abs(Q.u) < 0.22)) return R; if (c3 && d === 0) return c3; return ((Math.floor(Math.round(Q.x) / 2) + d) & 1) ? c1 : c2; };
       wrap('torso', f); wrap('pel', f); if (peel) wrap('leg', (R, Q) => (R === W.skin || Q.part !== 'th' || Q.l0 > 0.16 ? R : c1));
     }
+    // (a crochet cover-up: open work - every other art pixel of it the skin under it, seen through the holes; without that it
+    // was a cream dress)
+    if (A.top && A.top.crochet && !A.founder) { const mine = new Set([W.top, relit(W.top), W.bot, relit(W.bot)]), hole = W.skin.map((c, i) => mix(c, W.top[Math.min(i, W.top.length - 1)], 0.42));
+      const f = (R, Q) => (mine.has(R) && Q.res === 1 && ((Math.floor(Math.round(Q.x) / 2) + Math.floor(Math.round(Q.y) / 2)) & 1) ? hole : R);
+      wrap('torso', f); wrap('skirt', f); wrap('arm', f); wrap('pel', f); }
     if (TF && A.top && A.top.block) {
       const t2b = cloth(A.top.trim || A.top.color2 || '#7a3ac8'), mine = new Set([W.top, relit(W.top)]), zB = D.chestUp - 1.2;
       wrap('torso', (R, Q) => { if (!mine.has(R) || Q.res !== 1) return R; const y = Math.round(Q.y); return Math.floor(y / 2) < Math.floor((y + 0.819152 * (Q.zs - zB)) / 2) ? t2b : R; });

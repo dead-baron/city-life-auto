@@ -1286,7 +1286,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   if (PL && A.top?.furhood && hat !== 'hood') { const fr = cloth(A.top.trim || '#e8dcc4'), fm = (Q) => { Q.gloss = 0; return fr; };
     E(vadd(S.neck, mv(S.SP, [0, -3.4, -0.6])), S.SP, [5.6, 2.9, 3.2], GR.TORSO, 'hood', W.hood || (() => W.top));
     E(vadd(S.neck, mv(S.SP, [0, -3.0, 1.9])), S.SP, [6.3, 3.4, 1.5], GR.TORSO, 'fur', fm);
-    for (const s2 of [-1, 1]) E(vadd(S.neck, mv(S.SP, [s2 * 4.6, 0.6, 0.4])), S.SP, [1.9, 2.6, 1.5], GR.TORSO, 'fur', fm); }
+    E(vadd(S.neck, mv(S.SP, [0, 0.3, -1.0])), S.SP, [6.9, 5.6, 2.3], GR.TORSO, 'fur', fm); }   // (...and round the collar: the fur is what says parka from the front)
   if (PL && A.top?.draped) for (const [k2, s2] of [['L', -1], ['R', 1]]) { const sh = S['sh' + k2], cm = W.hood || (() => W.top);   // (over each shoulder, and an empty sleeve down the outside of the arm: from behind the arm is under the coat, from the front it's out of it)
     E(vadd(sh, mv(S.SP, [s2 * 0.5, -0.9, 0.9])), S.SP, [4.5, 3.9, 3.5], GR.TORSO, 'drape', cm);
     C(vadd(sh, mv(S.SP, [s2 * 2.3, -1.7, 0.6])), vadd(sh, mv(S.SP, [s2 * 3.3, -2.3, -(D.upper + D.fore) * 0.86])), 3.7, 3.0, GR.TORSO, 'drape', cm); }
