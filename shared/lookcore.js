@@ -90,8 +90,9 @@ export const HAIR_STYLES = [
 ];
 // facial hair (CB4)
 export const FACIAL_HAIR = [['None', null], ['Stubble', 'stubble'], ['Short beard', 'short'], ['Full beard', 'full'], ['Long beard', 'long'], ['Goatee', 'goatee'],
-  ['Moustache', 'moustache'], ['Handlebar', 'handlebar'], ['Chin strap', 'chinstrap'], ['Mutton chops', 'chops'], ['Soul patch', 'soul'], ['Van Dyke', 'vandyke']];
-export const MAKEUP = ['None', 'Natural', 'Lipstick', 'Smoky eyes', 'Blush', 'Glam', 'Goth', 'Face paint'];   // (append-only: a look's code holds the place)
+  ['Moustache', 'moustache'], ['Handlebar', 'handlebar'], ['Chin strap', 'chinstrap'], ['Mutton chops', 'chops'], ['Soul patch', 'soul'], ['Van Dyke', 'vandyke'],
+  ['Circle beard', 'circle'], ['Horseshoe', 'horseshoe'], ['Walrus', 'walrus'], ['Pencil moustache', 'pencil'], ['Fu Manchu', 'fumanchu']];   // (append-only; the last five are the concepts' CB4, 11-20)
+export const MAKEUP = ['None', 'Natural', 'Lipstick', 'Smoky eyes', 'Blush', 'Glam', 'Goth', 'Face paint', 'Eyeshadow'];   // (append-only: a look's code holds the place)
 export const TATTOO_AREAS = [['arms', 'Arms'], ['legs', 'Legs'], ['neck', 'Neck'], ['chest', 'Chest & back'], ['face', 'Face']];
 export const PIERCINGS = [['ears', 'Ears'], ['nose', 'Nose'], ['brow', 'Brow'], ['lip', 'Lip']];
 export const SCARS = ['None', 'Cheek', 'Across the eye', 'Lip', 'Chin', 'Brow', 'Plaster', 'Black eye'];   // (append-only; the last two are the polish pass's: a plaster on the cheek, a black eye)
@@ -526,6 +527,18 @@ add('bottoms', 'Jodhpurs', 'mf', 'preppy outdoors western', 70, 'boutique', { k:
 add('jacket', 'Tweed jacket', 'mf', 'preppy smart retro', 150, 'boutique', { k: 'blazer', p: 2 }, 'brown', 'tan');
 add('set', 'T-shirt dress', 'f', 'casual streetwear', 45, 'clothing', { k: 'tee', bk: 'skirt' }, 'black', 'white');
 add('set', 'Jersey dress', 'f', 'streetwear athletic', 60, 'sports', { k: 'jersey', bk: 'skirt' }, 'royal blue', 'white');
+// the concepts' missing pieces, 3 (the owner, 11-20 22:19: "finish everything missing"): sequins on a jumpsuit, riot gear, a
+// racer's suit, a fringed skirt with its concho belt, a cut-out dress, bondage trousers, ragged clothes - the pass's; a
+// crochet top is the mesh the renderer already draws.
+add('set', 'Sequin jumpsuit', 'f', 'nightclub festival hifashion', 200, 'boutique', { k: 'longsleeve', bk: 'pants', shine: 1, pp: 1 }, 'gold', 'black');
+add('hat', 'Riot helmet', 'mf', 'work disguise', 90, 'workwear', { k: 'moto', riot: 1, pp: 1 }, 'navy', 'sky');
+add('jacket', 'Riot armor', 'mf', 'work', 150, 'workwear', { k: 'kevlar', riot: 1, pp: 1 }, 'navy', 'charcoal');
+add('set', 'Racing suit', 'mf', 'athletic retro', 180, 'sports', { k: 'longsleeve', bk: 'pants', block: 1, sidestripe: 1, pp: 1 }, 'red', 'white');
+add('bottoms', 'Fringed skirt', 'f', 'western festival retro', 60, 'boutique', { k: 'skirt', fringe: 1, pp: 1 }, 'tan', 'silver');
+add('set', 'Cut-out dress', 'f', 'nightclub hifashion', 110, 'boutique', { k: 'dress', len: 1, cutout: 1, pp: 1 }, 'black');
+add('bottoms', 'Bondage trousers', 'mf', 'punk alt', 70, 'clothing', { k: 'pants', straps: 1, pp: 1 }, 'black', 'red');
+add('jacket', 'Ragged coat', 'mf', 'street', 5, 'clothing', { k: 'coat', ragged: 1, pp: 1 }, 'olive', 'brown');
+add('top', 'Crochet top', 'f', 'festival beach retro', 35, 'boutique', { k: 'tank', mesh: 1 }, 'cream');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
@@ -575,7 +588,7 @@ export function validLook(L) {
   for (const s of SLOTS) {
     const it = o[s];
     if (!it || typeof it !== 'object') continue;
-    const P = PIECES[clampI(it.id, 0, PIECES.length - 1, 0)];
+    const P = Number.isInteger(Number(it.id)) && it.id > 0 && it.id < PIECES.length ? PIECES[Number(it.id)] : null;   // (an id past the list's end is no piece - clamped, it was the last piece, whatever that was)
     if (!P || P.slot !== s) continue;   // (anyone can wear anything: a piece's bases only sort the lists)
     out.outfit[s] = { id: P.i, c: clampI(it.c, 0, CLOTH.length - 1, P.c), t: clampI(it.t, 0, CLOTH.length - 1, P.t), p: clampI(it.p, 0, PATTERNS.length - 1, 0) };
     if (it.z && canZip(P)) out.outfit[s].z = 1;
@@ -697,15 +710,15 @@ export function lookArt(L, opt = {}) {
     A.top = uTop || { kind: fem ? 'bra' : 'none', color: c, under: 1 };
     A.bottom = uBot || { kind: fem ? 'bikini' : 'trunks', color: c, under: 1 };
   } else if (set) {
-    A.top = { kind: set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0, plain: set.d.plain ? 1 : 0, bands: set.d.bands ? 1 : 0 };
-    A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined };
+    A.top = { kind: set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0, plain: set.d.plain ? 1 : 0, bands: set.d.bands ? 1 : 0 , ...(set.d.shine ? { shine: 1 } : null), ...(set.d.block ? { block: 1 } : null), ...(set.d.cutout ? { cutout: 1 } : null) };
+    A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined , ...(set.d.sidestripe ? { sidestripe: HEX(O.set.t) } : null) };
   } else {
     A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0, chevrons: top.d.chevrons ? 1 : 0, ...(top.d.torn ? { torn: 1 } : null) } : uTop || { kind: fem ? 'bra' : 'none', color: '#e8e4dc' };   // (no underwear picked: boxers; a bra and panties - the owner, 11-19)
-    A.bottom = bot ? { ...(bot.d.sidestripe ? { sidestripe: HEX(O.bottoms.t) } : null), kind: bot.d.k, color: HEX(O.bottoms.c), color2: HEX(O.bottoms.t), trim: HEX(O.bottoms.t), pattern: pat(O.bottoms) || (bot.d.ripped ? 'ripped' : undefined), len: bot.d.len || 0, gloss: bot.d.gloss ? 1 : 0, stripe: bot.d.k === 'track' ? HEX(O.bottoms.t) : undefined } : uBot || { kind: fem ? 'bikini' : 'trunks', color: '#e8e4dc' };
+    A.bottom = bot ? { ...(bot.d.sidestripe ? { sidestripe: HEX(O.bottoms.t) } : null), ...(bot.d.fringe ? { fringe: 1 } : null), ...(bot.d.straps ? { straps: 1 } : null), kind: bot.d.k, color: HEX(O.bottoms.c), color2: HEX(O.bottoms.t), trim: HEX(O.bottoms.t), pattern: pat(O.bottoms) || (bot.d.ripped ? 'ripped' : undefined), len: bot.d.len || 0, gloss: bot.d.gloss ? 1 : 0, stripe: bot.d.k === 'track' ? HEX(O.bottoms.t) : undefined } : uBot || { kind: fem ? 'bikini' : 'trunks', color: '#e8e4dc' };
   }
   if (jk) {   // worn open over the top: the top's colour down the front
     const under = A.top;
-    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null), ...(jk.d.shine ? { shine: 1 } : null), ...(isZipped(O.jacket) ? { zipped: isZipped(O.jacket) } : null), ...(jk.d.onestrap ? { onestrap: 1 } : null), ...(jk.d.block ? { block: 1 } : null), ...(jk.d.sherpa ? { sherpa: 1 } : null) };
+    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null), ...(jk.d.shine ? { shine: 1 } : null), ...(isZipped(O.jacket) ? { zipped: isZipped(O.jacket) } : null), ...(jk.d.onestrap ? { onestrap: 1 } : null), ...(jk.d.block ? { block: 1 } : null), ...(jk.d.sherpa ? { sherpa: 1 } : null), ...(jk.d.riot ? { riot: 1 } : null), ...(jk.d.ragged ? { ragged: 1 } : null) };
     if (jk.d.k === 'vest') A.top.sleeve = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'crop' || under.kind === 'bikini' ? 'skin' : under.color;
     if (jk.d.k === 'kevlar') { A.top.kind = 'kevlar'; A.top.color = under.color || A.top.color; A.top.color2 = HEX(O.jacket.c); A.top.sleeve = under.kind === 'none' || under.kind === 'tank' ? 'skin' : under.color; A.top.chevrons = under.chevrons || 0; }   // (the plates over the shirt, the shirt's sleeves)
     if (jk.d.k === 'apron' || jk.d.k === 'overalls') {   // (worn over the top: the shirt round them is the top - its colour, its sleeves, a flannel's check - or bare skin)
@@ -727,7 +740,7 @@ export function lookArt(L, opt = {}) {
   }
   else { A.shoes = '#d8c8b0'; A.shoeKind = 'barefoot'; }
   const hat = P('hat');
-  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat), ...(hat.d.flat ? { flat: 1 } : null), ...(hat.d.fire ? { fire: 1 } : null), ...(hat.d.phones ? { phones: 1 } : null), ...(hat.d.feather ? { feather: 1 } : null), ...(hat.d.riding ? { riding: 1 } : null), ...(hat.d.gog ? { gog: 1 } : null) };   // (fire: a fire helmet's crest, shield and neck brim; phones: headphones, not earmuffs - people.js hatPrims)
+  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat), ...(hat.d.flat ? { flat: 1 } : null), ...(hat.d.fire ? { fire: 1 } : null), ...(hat.d.phones ? { phones: 1 } : null), ...(hat.d.feather ? { feather: 1 } : null), ...(hat.d.riding ? { riding: 1 } : null), ...(hat.d.gog ? { gog: 1 } : null), ...(hat.d.riot ? { riot: 1 } : null) };   // (fire: a fire helmet's crest, shield and neck brim; phones: headphones, not earmuffs - people.js hatPrims)
   if (hat && hat.d.k === 'hood') A.hat.color = A.top.color;
   A.drape = (jk || set || A).d?.dr;
   if (!hat && (A.drape === 'cloak' || A.drape === 'ghillie')) A.hat = { kind: 'hood', color: A.top.color };

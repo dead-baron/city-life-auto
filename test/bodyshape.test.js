@@ -8,8 +8,8 @@
 //            node tools/bodycheck.mjs --show f,3,under,0    one figure's art pixels (base, build, outfit, direction)
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { check, bake } from '../tools/bodycheck.mjs';
-import { setPolish } from '../client/art2/people.js';
+import { check, bake, wardrobe } from '../tools/bodycheck.mjs';
+import { setPolish, person, POSES } from '../client/art2/people.js';
 import * as LK from '../shared/look.js';
 import { POLISH } from '../client/art2/peoplepolish.js';
 
@@ -119,4 +119,30 @@ test('a jacket open or done up: the player\'s choice, kept in the look\'s code a
   setPolish(POLISH);
   try { for (const n of ['Denim jacket', 'Leather jacket', 'Trench coat']) { const a = front(mk(n, 0)), b = front(mk(n, 1)); assert.ok(a >= 4 && b <= 1, `${n}: ${a} art pixels of shirt open, ${b} done up`); } } finally { setPolish(null); }
   assert.equal(front(mk('Denim jacket', 0)), front(mk('Denim jacket', 1)), 'the pass off: as before');
+});
+
+// (the owner, 11-20 22:19: "T shirt dress and jersey dress have skin pixels showing through (I thought we were doing checks on
+// this to make sure)". The checks above dress their figures in one outfit; this one puts on every piece of the wardrobe in
+// turn - tools/bodycheck.mjs wardrobe() - from six sides: no art pixel of bare skin with clothing on three or four sides
+// and no skin beside it. people.js render() fills such a pixel with the clothing's color, by the same rule.)
+test('the whole wardrobe: no skin showing through any piece, from any side', () => {
+  const F = wardrobe(POLISH), speck = F.filter((f) => f.rule === 'speck'), stray = F.filter((f) => f.rule === 'stray');
+  // (known, to be looked at: a hand's art pixel over the hip from behind that the rule takes for the leg's, the sari's drape, a skirt's side at one angle)
+  const KNOWN = new Set(['set: Pajamas, facing 4', 'set: Sari, facing 1', 'set: Sari, facing 7', 'top: Gingham shirt, facing 5', 'jacket: Tweed jacket, facing 5', 'bottoms: Fringed skirt, facing 1']);
+  const fresh = speck.filter((f) => !KNOWN.has(f.who));
+  assert.equal(fresh.length, 0, fresh.slice(0, 12).map((f) => `${f.who}: ${f.text}`).join('\n'));
+  // (a garment's pixel on its own inside another: uniforms' badges and bands and a jacket's opening seen at an angle still count here - no more of them than today)
+  assert.ok(stray.length <= 68, `${stray.length} art pixels of a garment on their own (68 known): ${stray.slice(0, 6).map((f) => f.who).join('; ')}`);
+});
+
+// (the owner, 11-20 22:19: "Please make sure all animations work well". Every pose the renderer has, with every piece only the
+// pass draws and every chest picture, mask and hat: each renders, from the front quarter, as a figure.)
+test('every pose renders with every piece the pass draws', () => {
+  setPolish(POLISH);
+  try {
+    const poses = Object.keys(POSES), P = LK.PIECES.filter((p) => p && (p.d.pp || p.d.chain || p.d.animal || p.d.shine || p.d.zipped));
+    assert.ok(poses.length >= 60 && P.length >= 60, `${poses.length} poses, ${P.length} pieces`);
+    for (const p of P) { const L = LK.emptyLook(p.b.includes('m') ? 'm' : 'f'); if (!['top', 'set', 'under'].includes(p.slot)) L.outfit.top = LK.item('Button-up shirt', 'white'); if (!['bottoms', 'set', 'under'].includes(p.slot)) L.outfit.bottoms = LK.item('Jeans'); L.outfit[p.slot] = LK.item(p.name);
+      const A = LK.lookArt(LK.validLook(L)); for (const pose of poses) { const f = person(A, 1, pose, 1, { tight: true }); assert.ok(f.w > 6 && f.h > 6, `${p.name}, ${pose}: ${f.w}x${f.h}`); } }
+  } finally { setPolish(null); }
 });

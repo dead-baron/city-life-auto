@@ -1,6 +1,6 @@
 # The concept checklist (pass 5, 2026-11-19)
 
-**608 items: 556 in the game, 32 missing, 19 too small to show, 1 dropped.** (11-20: 45 of the missing ones built in two batches - "the next pass's work" at the end; one of them, the cravat, taken out again on the owner's word. Pass 5 left it at 512 in, 77 missing.)
+**608 items: 568 in the game, 20 missing, 19 too small to show, 1 dropped.** (11-20: 56 of the missing ones built in three batches - "the next pass's work" at the end; one more, the cravat, built and taken out on the owner's word. Pass 5 left it at 512 in, 77 missing.)
 
 Every outfit, piece and creator option on the concept sheets (`docs/characters/concepts/`, 94 images), against the
 wardrobe (`shared/lookcore.js`) and the creator (`client/creator.js`). An item is a thing a player would look for: one
@@ -130,13 +130,13 @@ catalogue did not note is not here.
 | Long / very long beard | in | Long beard |
 | Braided beard | too small | reads as Long beard |
 | Goatee | in | Goatee |
-| Circle beard | **missing** | Goatee is nearest |
+| Circle beard | in | Circle beard - added 11-20 |
 | Van Dyke | in | Van Dyke |
 | Chin strap | in | Chin strap |
 | Soul patch | in | Soul patch |
 | Moustache | in | Moustache |
 | Handlebar | in | Handlebar |
-| Walrus, pencil, horseshoe, fu manchu | **missing** | one Moustache and Handlebar; the others would be 1-2 px apart |
+| Walrus, pencil, horseshoe, fu manchu | in | Walrus, Pencil moustache, Horseshoe, Fu Manchu - added 11-20 |
 | Mutton chops | in | Mutton chops |
 | Grey, white, ginger, dyed beards | in | the beard takes the hair's colour |
 | A beard in its own colour | **missing** | - |
@@ -149,7 +149,7 @@ catalogue did not note is not here.
 | Lipstick in colours | in | Lipstick + makeup colour |
 | Smoky eyes | in | Smoky eyes |
 | Winged liner | too small | - |
-| Coloured eyeshadow, glitter | **missing** | Smoky eyes in a colour is nearest |
+| Coloured eyeshadow, glitter | in | Makeup: Eyeshadow, in the makeup color (pass on); no glitter - added 11-20 |
 | Blush | in | Blush |
 | Glam | in | Glam |
 | Goth | in | Goth |
@@ -209,7 +209,7 @@ catalogue did not note is not here.
 | Farmer: overalls, flannel | in | Overalls, Flannel shirt |
 | Trucker cap | in | Trucker cap |
 | Old lady's cane | in | Walking cane |
-| Homeless man's layers, shopping trolley | **missing** | the trolley is a world thing; no worn / ragged clothes |
+| Homeless man's layers, shopping trolley | in | Ragged coat (pass on); the trolley is a world thing - added 11-20 |
 | Newspaper to carry | in | Newspaper (pass on; small in the hand) - added 11-20 |
 | Matching shell suits (seniors) | in | Tracksuit, any colour |
 | Bouncer in black | in | Plain tee and Black jeans, black |
@@ -230,7 +230,7 @@ catalogue did not note is not here.
 | Light-blue patrol shirt | in | Uniform shirt, light blue (patrol ranks) |
 | Sergeant's chevrons | in | Sergeant's shirt |
 | Tactical officer / K9 vest | in | Tactical vest |
-| Riot armour and helmet | **missing** | - |
+| Riot armour and helmet | in | Riot armor, Riot helmet (pass on) - added 11-20 |
 | Motorcycle officer: white helmet | in | Moto helmet, white |
 | Motorcycle officer: trouser stripe, tall boots | in | Side-stripe trousers (pass on), Biker boots - added 11-20 |
 | Detective: suit, red tie, belt badge | in | Business suit with a red tie (the belt badge too small) |
@@ -244,7 +244,7 @@ catalogue did not note is not here.
 | Builder | in | Hard hat, Hi-vis vest, Work boots |
 | Lifeguard: whistle, float | in | Lifeguard whistle, Rescue tube |
 | Robber in a balaclava | in | Balaclava |
-| Racer suit | **missing** | MX jersey is nearest |
+| Racer suit | in | Racing suit (pass on) - added 11-20 |
 | Trench coat and fedora | in | Trench coat, Fedora |
 | Boss in a white suit | in | Business suit, white |
 | Gang colours on hat, stripe, shoes | in | any colour on any piece; Track jacket trim |
@@ -562,7 +562,7 @@ catalogue did not note is not here.
 | Satin slit dress, fur jacket | in | Slip dress, Fur coat |
 | Leather corset and trousers | in | Corset top, Leather pants |
 | Sequin jumpsuit | in | Jumpsuit (no sequins) |
-| Cut-out mini dress | **missing** | - |
+| Cut-out mini dress | in | Cut-out dress (pass on) - added 11-20 |
 | Neon crop top, skirt, glow bracelets | in | Crop top, Mini skirt, Glow bracelets |
 | Blazer-dress | in | Blazer over a Mini dress |
 | Star-mesh top, vinyl skirt | in | Mesh top, Mini skirt |
@@ -582,7 +582,7 @@ catalogue did not note is not here.
 | Ripped shirt, shredded tee | in | Ripped tee (pass on) - added 11-20 |
 | Tartan mini and fishnets | in | Plaid skirt, Tights (fishnet is too small) |
 | Patched denim / battle vest | in | Studded vest, denim |
-| Bondage trousers, straps | **missing** | - |
+| Bondage trousers, straps | in | Bondage trousers (pass on) - added 11-20 |
 | Leather vest | in | Studded vest |
 | Red leather jacket | in | Leather jacket, red |
 | Fishnet top, spiked collar | in | Mesh top, Spiked collar |
@@ -665,7 +665,7 @@ catalogue did not note is not here.
 | Prairie dress | in | Sundress (no tiers) |
 | Black western shirt, yoked shirt | in | Button-up shirt (no yoke) |
 | Dungarees and a neckerchief | in | Overalls, Neckerchief |
-| Fringed skirt, concho belt | **missing** | - |
+| Fringed skirt, concho belt | in | Fringed skirt: the fringe at its hem, conchos on its belt (pass on) - added 11-20 |
 | Puffer vest over flannel, quilted vest | in | Puffer vest, Flannel shirt |
 | White shirt, bolo tie | in | Button-up shirt, Bolo tie |
 | Chore coat | in | Denim jacket |
@@ -743,7 +743,7 @@ catalogue did not note is not here.
 | Poncho | in | Poncho |
 | Neon mesh | in | Mesh top |
 | Open floral shirt, linen trousers | in | Hawaiian shirt, Chinos |
-| Crochet vest | **missing** | - |
+| Crochet vest | in | Crochet top (the mesh the renderer draws) - added 11-20 |
 | Glow sticks in the hand | in | Glow sticks (pass on) - added 11-20 |
 | Belt bag | in | Belt bag |
 
@@ -802,7 +802,7 @@ catalogue did not note is not here.
 | On the sheet | | In the game as / note |
 | --- | --- | --- |
 | White bra and briefs | in | Bra and briefs (the default for a woman since pass 5) |
-| Striped set | **missing** | patterns are not carried into the pass's cut |
+| Striped set | in | Striped bra and panties, Striped boxers, Striped briefs (pass on) - added 11-20 |
 | Black lace set | in | Lace bra and panties |
 | Grey sports bra and boyshorts | in | Sports bra and shorts |
 | Beige high briefs | in | Briefs, any colour |
@@ -813,7 +813,7 @@ catalogue did not note is not here.
 | Slips | in | Silk slip |
 | An oversized hoodie over briefs, knee socks | in | Hoodie with no bottoms, Knee socks |
 | Tee and briefs, V-neck and trunks | in | Undershirt and boxers; Briefs; Fitted trunks |
-| Tank and striped / print boxers | **missing** | Tank and briefs; Boxers plain (no print in the cut) |
+| Tank and striped / print boxers | in | Striped boxers (pass on); no print - added 11-20 |
 | Black / navy boxer briefs | in | Boxer briefs |
 | Red union suit | in | Union suit |
 | Long johns | in | Union suit / Leggings |

@@ -28,11 +28,11 @@ things are ... than to have the details totally lost."
 ## Small things that don't read (size up)
 - [x] Glasses and sunglasses, all of them: the next size up (square, rimless, browline named). Eye patch: more detail. - 19:23 below: the frames drawn a size up; the eye patch a full patch.
 - [x] Necklaces (1 px, or not drawn): a pixel more. Tiara (one pixel). Bow tie. Stethoscope. - 19:23 below. A pearl necklace on a white top still does not show (white on white).
-- [~] Party mask, medical mask, face bandana (a train robber / an anarchist). Gas mask: more detail. - left as they are: judged readable at the new size. To look at with him.
-- [~] Pig, clown, skull, alien, masquerade, welding masks: more detail, bigger if needed. Bear and panda masks: ears, markings. - bear and panda done (ears, muzzle, eye patches); the other six left as they are - to look at with him.
+- [x] Party mask, medical mask, face bandana (a train robber / an anarchist). Gas mask: more detail. - left as they are: judged readable at the new size. To look at with him. REDONE 20:15: each a picture in art pixels.
+- [x] Pig, clown, skull, alien, masquerade, welding masks: more detail, bigger if needed. Bear and panda masks: ears, markings. - bear and panda done (ears, muzzle, eye patches); the other six left as they are - to look at with him. REDONE 20:15: all ten.
 - [x] Glow bracelets and the lanyard go all the way round. Smartwatch: one wrist, right round it (shows from behind). - 19:23 below.
 - [x] Knee pads and elbow pads from behind: a strap round, or the pad on the elbow. - the pad goes all the way round the joint.
-- [~] Camera: you can't tell it's a camera (a strap only). - a camera body on the strap now; still small - weak.
+- [x] Camera: you can't tell it's a camera (a strap only). - a camera body on the strap now; still small - weak. REDONE 20:15: on the chest from its strap.
 - [x] Guitar case: hard to tell what it is. Backpacks and duffel bags too small (the duffel didn't draw?). Tool bag too small. - 19:23 below.
       Things held bigger in general.
 - [x] Earmuffs: not seen (under the hair?) - over the hair, bigger. Headphones too (a piece exists: check it). - 19:23 below.
@@ -204,4 +204,17 @@ Stripes passed; on the striped bra and panties he is "not sure it works well ...
 - [~] "Newspaper doesnt really look like a newspaper" - a bigger folded sheet with a dark headline bar and lines of print. Still a few art pixels at the hand.
 - [~] "Basketball does not look like a basketball" - a deeper orange (its lit tone was the skin's), a seam down and one across, held higher. Still half behind the arm from the front.
 - [x] "Keep on building!" - the second batch: 21 more of the missing items (`characters-missing-batch2.png`).
+
+## 22:19 - his look at the fixes and batch 2 ("Lets keep it going! ... finish everything missing and make sure all notes are accounted for")
+- [x] "Basketball should be more spherical" - held against the chest with the forearm across, all of it in view; a deep orange with one seam.
+- [x] Goggles "doesnt look right still, it also doesnt cover eyes on the angled view" - shapes now, not stamps: a dark frame across the eyes, a lens standing out over each, from every side.
+- [~] "The scarf still isnt right it needs to wrap around the neck area" - up over the jaw's corners either side of the chin and across under it, then the wrap and the tail. To look at with him.
+- [x] Necktie "one pixel on each side ... and pointy at the end" - four wide at the front, a knot, slanting stripes, a point.
+- [x] "Sleep mask is weirdly shaped in the front view and seems off in the angled view" - one plain shape: a band over the eyes, a pad over each cheek, the nose between.
+- [x] "Bear mask has white in the eyes on angled views but no white in the front view" - the eyes' whole row is the mask's color first, from every side (pig and chicken too).
+- [x] "T shirt dress and jersey dress have skin pixels showing through (I thought we were doing checks on this to make sure)" - the check dressed its figures in one outfit. It now puts on every piece of the wardrobe from six sides (`tools/bodycheck.mjs` wardrobe(), a test): about 170 such pixels on 60 pieces at the start - skirts and dresses, the thigh under a jacket's hem, a shirt showing through a jacket's opening at an angle - 6 left, named in the test.
+- [x] "Please make sure all animations work well" - every one of the 68 poses renders with every accessory, jacket and pass-only piece (28,152 renders, none failed; a test for the pass's pieces); a sheet of 25 poses in a tie, a pack, glasses and a cap looked at. Not done: watching them move in the running game.
+- [~] "Make sure all customizations and everything are in" / "finish everything missing" - 12 more concept items: 568 in, 20 missing (below). A carrying pose for things held to the chest (newspaper, clipboard, laptop sleeve, basketball).
+- Missing still, and why: a bodybuilder build (built, then taken out: the underwear's cut breaks on it); a stoop, two-tone hair, a hair length slider, a beard's own color (each needs a new field in the look's code); waves, a faux-hawk, a loc updo, a receding hairline, pin curls (each a hair shape of its own); a wig; a coat on the shoulders; a peeled wetsuit; a hood's fur trim; harem trousers; a crochet cover-up; a polka-dot bikini; a surfboard to carry; roller skates, dogs on leads, a bike with a basket (world things).
+- Notes still marked [~] above this section, for him to look at: the party / medical / bandana / gas masks and the pig, clown, skull, alien, masquerade, welding masks (all redrawn at 20:15 - these two lines are answered); the camera (on the chest since 20:15 - answered); the big woman's neckline pixel from the side; the slim woman's arm from behind.
 

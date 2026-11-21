@@ -183,12 +183,14 @@ function skinline(S, skinM, dir) {
 }
 // 18. no art pixel of a garment (or of skin) on its own in another: one of a material the figure has plenty of, with none
 // of it on any side or corner ("a random blue pixel here and there", "a random white pixel" - the owner, 11-20 17:44)
-function stray(S, skinM) {
+function stray(S, skinM, inside = false) {
   const n = new Map(), out = [], bodyP = (p) => p && !p.ol && [TORSO, ARML, ARMR, LEGL, LEGR].includes(p.g) && !['shoe', 'sole', 'boot', 'sh'].includes(p.part);   // (a sock's top at the ankle is its own thing)
   each(S, (p) => { if (bodyP(p)) n.set(p.m, (n.get(p.m) || 0) + 1); });
+  const big = new Set([...n].filter(([m]) => m !== skinM).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([m]) => m));   // (the wardrobe's: the cloths themselves - a badge, a reflective band, a button is a small material of its own)
   each(S, (p, x, y) => {
     if (!bodyP(p) || p.ln || n.get(p.m) < 6 || p.m === skinM) return;   // (a hand or an elbow showing past the body is not a stray)
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const q = S.at(x + dx, y + dy); if ((dx || dy) && q && !q.ol && q.m === p.m) return; }
+    if (inside && (!big.has(p.m) || [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([dx, dy]) => { const q = S.at(x + dx, y + dy); return !q || q.ol; }))) return;   // (the wardrobe's: on the figure's edge it is a part showing past another - a far shoulder - not a pixel inside a garment)
     out.push(`an art pixel on its own (${p.part}, ${p.c.join(',')}) at ${x},${y}`);
   });
   return out;
@@ -227,6 +229,40 @@ export function check(POLISH, { bases = ['f', 'm'], builds = [0, 1, 2, 3, 4], di
         else add(who, 'dark', dark(S, (p) => p.m === skinM && !teal(p.c) && ['chest', 'bust', 'waist', 'belly', 'shb', 'neck', 'collar', 'ua', 'fa', 'hand'].includes(p.part), 'the bare skin', 0.56));
       }
     }
+  } finally { setPolish(null); }
+  return faults;
+}
+// ---- the whole wardrobe (the owner, 11-20 22:19: "T shirt dress and jersey dress have skin pixels showing through (I thought
+// we were doing checks on this to make sure)" - the check above dresses its figures in one outfit; this one puts on every
+// piece in turn, as the wardrobe sheet does, on the base it is listed for). Two rules, on the trunk and the legs:
+//  speck  - an art pixel of bare skin with clothing on three or four sides and no skin beside it: skin showing through
+//  stray  - rule 18, an art pixel of a garment on its own in another
+// A piece made to show skin through it (a ripped tee, mesh, lace) and a pattern of single pixels (dots) are left out of the
+// rule that would name them. Returns { who, rule, text } like check().
+function speck(S, skinM) {
+  const out = [], body = (p) => p && !p.ol && [TORSO, LEGL, LEGR].includes(p.g), cloth = (p) => p && !p.ol && p.m !== skinM && [TORSO, ARML, ARMR, LEGL, LEGR, 9].includes(p.g);
+  each(S, (p, x, y) => {
+    if (!body(p) || p.m !== skinM || p.ln || ['neck', 'collar', 'hand', 'foot', 'shoe', 'sh', 'sole', 'boot'].includes(p.part)) return;   // (a sandal shows the foot)
+    const N = [S.at(x - 1, y), S.at(x + 1, y), S.at(x, y - 1), S.at(x, y + 1)];
+    if (N.some((q) => q && !q.ol && q.m === skinM)) return;
+    if (N.filter((q) => q && !q.ol && (q.g === ARML || q.g === ARMR) && ['fa', 'hand'].includes(q.part)).length >= 2) return;   // (a hand's art pixel over the hip, cut off from the arm's skin by a cuff or a bangle, is the hand)
+    if (N.filter(cloth).length >= 3) out.push(`skin showing through (${p.part}) at ${x},${y}`);
+  });
+  return out;
+}
+export function wardrobe(POLISH, { dirs = [0, 1, 3, 4, 5, 7], only = null } = {}) {
+  setPolish(POLISH);
+  const faults = [];
+  try {
+    LK.PIECES.forEach((P, n) => {
+      if (!P || P.name === 'Nothing on' || (only && !only.includes(P.name))) return;
+      const base = P.b.includes('m') && !(P.b.includes('f') && (n & 1)) ? 'm' : 'f', L = LK.emptyLook(base); L.body.skin = 1 + (n % 3);
+      if (!['top', 'set', 'under'].includes(P.slot)) L.outfit.top = LK.item('Plain tee', 'white'); if (!['bottoms', 'set', 'under'].includes(P.slot)) L.outfit.bottoms = LK.item('Jeans'); if (P.slot !== 'shoes') L.outfit.shoes = LK.item('Sneakers');   // (a jacket over a tee, as it is worn)
+      L.outfit[P.slot] = LK.item(P.name); const A = LK.lookArt(LK.validLook(L)), holes = P.d.torn || P.d.mesh || P.d.lace || P.d.ripped || ['crop', 'bikini', 'bra', 'tube'].includes(A.top && A.top.kind) || P.slot === 'under', single = P.slot === 'under' || !!(A.top && (A.top.pattern || A.top.shine || A.top.sequin || ['flannel', 'hawaiian'].includes(A.top.kind))) || !!(A.bottom && A.bottom.pattern) || !!A.drape;   // (a pattern, sequins, a drape's tufts: single art pixels by design)
+      for (const dir of dirs) { const S = bake(A, dir), who = `${P.slot}: ${P.name}, facing ${dir}`; const cm = new Map(); each(S, (p) => { if (!p.ol && !p.ln && (p.part === 'hand' || p.part === 'head' || p.part === 'neck' || p.part === 'fa')) cm.set(p.m, (cm.get(p.m) || 0) + 1); }); const skinM = [...cm].sort((a, b) => b[1] - a[1])[0]?.[0] || 0;   // (the skin's material: what most of the hands, the face and the forearms are - a hand behind a bag shows the bag's)
+        if (!holes) for (const text of speck(S, skinM)) faults.push({ who, rule: 'speck', text });
+        if (!single && ['top', 'bottoms', 'set', 'jacket', 'shoes', 'socks'].includes(P.slot)) for (const text of stray(S, skinM, true)) faults.push({ who, rule: 'stray', text }); }   // (the clothes themselves: on a figure wearing a chain or a bag the single pixels are the piece's own picture)
+    });
   } finally { setPolish(null); }
   return faults;
 }
