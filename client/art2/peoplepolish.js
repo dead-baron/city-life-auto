@@ -635,7 +635,7 @@ export const POLISH = {
   // renderer's own lines want a clear step in depth: an arm hanging by a chest has none, and the two were one mass)
   post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, GR, AX, AY, fig, A }) {
     const gx = Math.round(AX) & 1, gy = Math.round(AY) & 1;   // (where the art grid falls: the bake pairs world pixels from the anchor)
-    if (this.hairLit && fig.W.hairR) hairLit(fig.W.hairR, A.hair && A.hair.style, PID, CR, CG, CB, prims, w, h, GR, gx, gy);
+    if (this.hairLit && fig.W.hairR) hairLit(fig.W.hairR, A.hair && A.hair.style, PID, CR, CG, CB, prims, w, h, GR, gx, gy, fig.W.tipTop ? fig.W.tipR : null);
     if (fig.W.u4) { fig.W.u4.dir8 = fig.dir8; under4(fig.W.u4, LN, CR, CG, CB, w, AX, AY, gx, gy); }
     const g = (i) => { const k = PID[i]; return k >= 0 && k < 32000 && !NOO[i] ? prims[k].g : 0; }, arm = (x) => x === GR.ARML || x === GR.ARMR;
     const hit = [];
@@ -689,7 +689,7 @@ export const POLISH = {
 const FRONT = { long: [-4.6, 2.5, 1.7], wavy: [-4.8, 2.7, 1.9], curlylong: [-4.8, 2.9, 2.2], bigcurls: [-4.4, 3.0, 2.3], halfup: [-4.4, 2.4, 1.7], shoulder: [-2.4, 2.4, 1.8], dreads: [-4.2, 2.5, 1.9], boxbraids: [-4.6, 2.4, 1.8], braids: [-4.6, 2.4, 1.8], shag: [-1.8, 2.2, 1.6], braid: [-1.6, 2.0, 1.5] };   // (how far down the neck's frame a front lock ends, its width at the temple and at its tip)
 const SHORT = { buzz: 1, fade: 1, sides: 1, balding: 1, cornrows: 1, short: 1, undercut: 1, shavedside: 1, waves: 1, receding: 1 };
 const HAIR_TEX = { afro: 1, curly: 1, curlylong: 1, bigcurls: 1, puffs: 1, dreads: 2, boxbraids: 2, braids: 2, braid: 2, cornrows: 2, locupdo: 2, pincurls: 1 };
-function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
+function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy, tipR = null) {   // (tipR: dyed tips on a short cut - its lit tones are the dye's)
   const bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, H = new Uint8Array(bw * bh), F = new Uint8Array(bw * bh), T = new Uint8Array(w * h), tex = HAIR_TEX[style] | 0;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x, k = PID[i], b = ((y + oy) >> 1) * bw + ((x + ox) >> 1);
@@ -700,7 +700,7 @@ function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
   }
   const hair = (x, y) => x >= 0 && y >= 0 && x < bw && y < bh && H[y * bw + x] >= 2, fig = (x, y) => x >= 0 && y >= 0 && x < bw && y < bh && F[y * bw + x] >= 2;
   const pale = lum(R[4]) > 0.6;
-  const tone = new Int8Array(bw * bh).fill(-1), TN = [R[1], R[2], R[3], mix(R[3], R[4], pale ? 0.4 : 0.55), pale ? mix(R[3], R[4], 0.4) : R[4]], hsh = (x, y) => { const v = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return v - Math.floor(v); };   // (underside, far side, body, lit, highlight)
+  const tone = new Int8Array(bw * bh).fill(-1), TN = [R[1], R[2], R[3], mix(R[3], R[4], pale ? 0.4 : 0.55), pale ? mix(R[3], R[4], 0.4) : R[4]].map((c, i) => (tipR && i >= 3 ? tipR[i] : c)), hsh = (x, y) => { const v = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return v - Math.floor(v); };   // (underside, far side, body, lit, highlight)
   for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
     if (!hair(x, y)) continue;
     let d = 0; while (d < 9 && hair(x, y - d - 1)) d++;

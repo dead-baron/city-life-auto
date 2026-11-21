@@ -107,6 +107,7 @@ export const HAIR_STYLES = ['spiky', 'short', 'buzz', 'bald', 'afro', 'long', 'w
 // the look system's variants (shared/look.js HAIR_STYLES), each drawn from a base style with its own touch (hairPrims):
 // short back and sides (a faded crew cut), a side part, a quiff, a man bun, shoulder length, box braids with cuffs, big
 // curls, a shaved side
+const TIPLOW = { long: 1, wavy: 1, braids: 1, dreads: 1, bob: 1, curlylong: 1, shag: 1, halfup: 1, mullet: 1, pony: 1, bun: 1, pigtails: 1, braid: 1, twinbuns: 1, topknot: 1 };   // (styles whose hair hangs or is tied: their tips are its ends, not the crown)
 const BASE_HAIR = { sides: 'fade', sidepart: 'slick', quiff: 'short', manbun: 'slick', shoulder: 'long', boxbraids: 'dreads', bigcurls: 'curlylong', shavedside: 'undercut', balding: 'short', flattop: 'short', pompadour: 'slick', puffs: 'twinbuns', lowpony: 'slick', emo: 'short', waves: 'buzz', fauxhawk: 'fade', locupdo: 'fade', receding: 'short', pincurls: 'bob' };   // (the last six: pass 2's, their shapes the polish pass's - PL.hair)
 export const TOP_KINDS = ['tee', 'tank', 'polo', 'shirt', 'hoodie', 'jacket', 'suit', 'leather', 'puffer', 'flannel', 'hawaiian', 'vest', 'hivis', 'uniform', 'tactical', 'scrubs', 'apron', 'overalls', 'tracksuit', 'jersey', 'coat', 'cardigan', 'dress', 'fur', 'none', 'bikini', 'swimsuit', 'towel'];
 
@@ -839,11 +840,12 @@ function wardrobe(A, D, TF, seed) {
   const top = cloth(A.top?.color || (tk === 'bikini' || tk === 'swimsuit' ? 'teal' : tk === 'towel' ? 'white' : 'grey')), top2 = cloth(A.top?.color2 || 'white');
   const bot = cloth(A.bottom?.color || (bk === 'jeans' ? 'denim' : bk === 'trunks' || bk === 'bikini' ? (A.top?.color || 'red') : bk === 'towel' ? 'white' : 'black'));
   const shoeC = A.shoes || 'white', shoe = cloth(shoeC), sk = SHOE_OF(shoeC, A);
+  const tipR = PL && A.hair?.tip ? hairRamp(A.hair.tip) : null;
   const hairR = hairRamp(A.hair?.color ?? 0), inner = cloth(A.top?.inner || T.inner || A.top?.color2 || 'white'), tie = cloth(A.top?.tie || A.top?.color2 || 'navy');
   const hasInner = !!A.top && 'inner' in A.top, trim = cloth(A.top?.trim || 'white'), chainR = typeof A.chain === 'string' ? cloth(A.chain) : null;
   const tat = A.tattoo === true ? 3 : A.tattoo | 0, jw = A.jewel || null, jwR = jw ? cloth(jw.color || 'gold') : null;
   const fm = A.fmask ? A.fmask.k : null, fmC = fm ? cloth(A.fmask.c) : null, fmHead = fm === 'pig' || fm === 'alien';   // (CP2's masks)
-  const W = { T, tk, bk, skin, top, top2, bot, shoe, sk, hairR, seed, bare: !A.founder && (bk === 'none' || (tk === 'none' && D.fem)) };
+  const W = { T, tk, bk, skin, top, top2, bot, shoe, sk, hairR, seed, tipR, tipTop: tipR && !TIPLOW[BASE_HAIR[A.hair?.style] || A.hair?.style] && (BASE_HAIR[A.hair?.style] || A.hair?.style) !== 'spiky' ? 1 : 0, bare: !A.founder && (bk === 'none' || (tk === 'none' && D.fem)) };
   const dark = (R) => R[Math.max(0, R.length - 4)], gold0 = cloth('gold'), white = cloth('white'), black = cloth('black'), silver = cloth('#c8ccd4');
   const gold = gold0, chainC = chainR || gold0;
   // the look system's patterns (shared/look.js PATTERNS), in model space so they run on across the seams: main colour,
@@ -1145,6 +1147,9 @@ function wardrobe(A, D, TF, seed) {
   W.hairM = (Q) => {
     // clumps: darker grooves radiating from the crown, a sheen band
     const az = Math.atan2(Q.l0, Q.l1), ex = A.hair?.style, st = BASE_HAIR[ex] || ex;
+    // (dyed tips: the ends of long hair; spikes whole; on any other short cut the hair's lit tones are the dye's - peoplepolish.js
+    // hairLit, W.tipTop: the whole top in another color was a cap)
+    if (tipR && (TIPLOW[st] ? Q.part === 'hair' && Q.l2 < -0.3 : st === 'spiky' && Q.l2 > 0.56)) return tipR;
     if (ex === 'sidepart' && Q.part === 'hair' && Math.abs(Q.l0 + 0.36) < (Q.res > 1 ? 0.045 : 0.13) && Q.l1 > -0.2 && Q.l2 > 0.45) { if (Q.res > 1 || PL) { Q.k -= 0.4; return hairR; } return skin; }   // (the parting: a line of scalp, wide enough to be a whole art pixel - under the polish pass a shadow in the hair: the scalp read as a bald spot, the owner 11-20)
     if (st === 'buzz' && Q.part === 'hair') { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return Q.res > 1 ? stubble : buzzR; }
     if (st === 'mohawk' && Q.part === 'hair') return Q.res > 1 ? stubble : shavedR;
@@ -1169,6 +1174,7 @@ function wardrobe(A, D, TF, seed) {
   W.hairLock = (Q) => {
     Q.k += Math.sin(Q.l0 * 9 + Q.l1 * 2) * 0.14 - 0.04;
     if ((A.hair?.style === 'braids' || A.hair?.style === 'braid' || A.hair?.style === 'boxbraids') && ((Math.floor(Q.l0 * 10) + (Q.l1 > 0 ? 1 : 0)) & 1)) Q.k -= 0.22;
+    if (tipR && Q.l0 > 0.5) return tipR;   // (dyed tips: the lower half of whatever hangs)
     if (Q.res > 1) { const g = Math.atan2(Q.l0, Q.l1 || 1e-6) * 7 + 30, fr = g - Math.floor(g); if (fr < 0.18) Q.k -= 0.2; Q.gloss = Math.max(Q.gloss, 0.5); }
     return hairR;
   };
@@ -1272,7 +1278,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   // (the polish pass: hair that stands off the head - a full beard's mass under the jaw, a long one's length, a goatee's tuft -
   // in the beard's one tone; peoplepolish.js BVOL. Part of the head's group: the hair's own lighting isn't laid over it)
   const bvol = PL && PL.BVOL && !A.mask && !A.fmask && !A.medmask && !A.bandana ? PL.BVOL[A.beard] : null;
-  if (PL && A.beard && PL.beardTone) { const br = PL.beardTone(W.hairR, W.skin); W.beardR = br; W.beardM = (Q) => { Q.gloss = 0; return br; }; }
+  if (PL && A.beard && PL.beardTone) { const br = PL.beardTone(A.beardColor ? hairRamp(A.beardColor) : W.hairR, W.skin); W.beardR = br; W.beardM = (Q) => { Q.gloss = 0; return br; }; }
   if (bvol) for (const v of bvol) E(at(v[0]), HD, [hr[0] * v[1][0], hr[1] * v[1][1], hr[2] * v[1][2]], GR.HEAD, 'beard', W.beardM);
   else if (A.beard === 'long' && !A.mask && !A.fmask) E(at([0, 0.5, -1.02]), HD, [hr[0] * 0.48, hr[1] * 0.34, hr[2] * 0.42], GR.HAIR, 'beard', W.hairLock);
   // (the last of the concepts' missing pieces, 11-21. A parka: a hood down the back with a roll of fur along its edge. A coat
@@ -2595,6 +2601,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
   const D = dims(A); if (PL && A.prop && PL.propHold && PL.propHold[A.prop[0]]) D.hold = PL.propHold[A.prop[0]];   // (the polish pass: a newspaper, a clipboard, a laptop sleeve, a ball are held against the chest - accHands)
   const P = rig(D, A, pn, f, kind, acc);
+  if (PL && A.stoop && !P.root) { P.lean = (P.lean || 0) + 0.24; P.headPitch = (P.headPitch || 0) + 0.1; }   // (a stoop: the back bent forward and the head carried low, whatever the figure is doing on its feet)
   if (opt.blink) P.eyes = 0;   // (a blink: the figure as it stands, the eyes shut)
   if (A.founder && pn === 'idle' && !kind) { const h0 = P.hands; P.hands = (S) => { if (h0) h0(S); P.hR = vadd(S.shR, mv(S.SP, [7.6, 1.6, 8.0 + (f & 1) * 0.5])); P.elR = [1, 0, -0.6]; P.peace = 1; }; }
   if (!P.root) P.camYaw = 0.3 * Math.cos(th);                       // E +, W -: the face turns toward the camera (south)

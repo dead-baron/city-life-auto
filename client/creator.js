@@ -568,10 +568,11 @@ function renderPage() {
     h += `<p class="cc-note cc-info">A fresh look at home lowers your public wanted level.</p>`;
   } else if (tab === 'body') {
     h = row('Base', chip('base', 'm', 'Men', B.base === 'm') + chip('base', 'f', 'Women', B.base === 'f'))
-      + row('Build', `<div class="cc-grid">${LK.BUILDS.map((b, i) => `<button class="cc-card sm ${B.build === i ? 'on' : ''}" data-act="build" data-v="${i}">${th(variant((V) => { V.body.build = i; }))}<span>${b.name}</span></button>`).join('')}</div>`)
+      + row('Build', `<div class="cc-grid">${LK.BUILDS.map((b, i) => (b.pp && !passOn() && B.build !== i) || (b.b && b.b !== B.base) ? '' : `<button class="cc-card sm ${B.build === i ? 'on' : ''}" data-act="build" data-v="${i}">${th(variant((V) => { V.body.build = i; }))}<span>${b.name}</span></button>`).join('')}</div>`)
       + row(`Height <b>${LK.HEIGHT_NAMES[B.height]}</b>`, `<input class="cc-range" type="range" min="0" max="${LK.HEIGHTS.length - 1}" step="1" value="${B.height}" data-act="height" aria-label="Height">`)
       + row('Skin tone', LK.SKIN_ORDER.map((i) => sw('skin', i, LK.SKIN_TONES[i], B.skin === i, `Skin tone ${i + 1}`)).join(''))
       + row('Age', LK.AGES.map((a, i) => chip('age', i, a, B.age === i)).join(''))
+      + (passOn() ? row('Posture', chip('stoop', 0, 'Upright', !B.stoop) + chip('stoop', 1, 'Stooped', !!B.stoop)) : '')
       // (pass 3: body freckles, vitiligo, a prosthetic arm or leg - the polish pass draws them: offered while it is on)
       + (passOn() ? row('Skin marks', chip('bmark', 1, 'Body freckles', B.marks & 1) + chip('bmark', 2, 'Vitiligo', B.marks & 2)) + row('Prosthetic', LK.LIMBS.map((n, i) => chip('limb', i, n, (B.limb | 0) === i)).join('')) : '');
   } else if (tab === 'face') {
@@ -590,7 +591,9 @@ function renderPage() {
     h = row('Hair length', ['all', 'short', 'medium', 'long'].map((k) => chip('hlen', k, k[0].toUpperCase() + k.slice(1), hairLen === k)).join(''))
       + row('Hairstyle', `<div class="cc-grid">${styles.map(([s, i]) => `<button class="cc-card hd ${L.hair.style === i ? 'on' : ''}" data-act="hair" data-v="${i}">${th(variant((V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }), 'head')}<span>${esc(s[0])}</span></button>`).join('')}</div>`)
       + row('Hair color', LK.HAIR_COLORS.map(([hx, n], i) => sw('hcol', i, hx, L.hair.color === i, n)).join(''))
-      + (B.base === 'm' ? row('Facial hair', `<div class="cc-grid">${LK.FACIAL_HAIR.map(([n, k], i) => passOn() && L.hair.facial !== i && LK.FACIAL_RETIRED.includes(k) ? '' : `<button class="cc-card hd ${L.hair.facial === i ? 'on' : ''}" data-act="facial" data-v="${i}">${th(variant((V) => { V.hair.facial = i; V.outfit.glasses = null; }), 'head')}<span>${n}</span></button>`).join('')}</div>`) : '');
+      + (passOn() ? row('Dyed tips', chip('htip', 0, 'None', !L.hair.tip) + LK.HAIR_COLORS.map(([hx, n], i) => sw('htip', i + 1, hx, L.hair.tip === i + 1, n)).join('')) : '')
+      + (B.base === 'm' ? row('Facial hair', `<div class="cc-grid">${LK.FACIAL_HAIR.map(([n, k], i) => passOn() && L.hair.facial !== i && LK.FACIAL_RETIRED.includes(k) ? '' : `<button class="cc-card hd ${L.hair.facial === i ? 'on' : ''}" data-act="facial" data-v="${i}">${th(variant((V) => { V.hair.facial = i; V.outfit.glasses = null; }), 'head')}<span>${n}</span></button>`).join('')}</div>`) : '')
+      + (B.base === 'm' && passOn() && L.hair.facial ? row('Beard color', chip('bcol', 0, 'Same as hair', !L.hair.bcol) + LK.HAIR_COLORS.map(([hx, n], i) => sw('bcol', i + 1, hx, L.hair.bcol === i + 1, n)).join('')) : '');
   } else if (tab === 'outfit') {
     const base = outBase || B.base;
     const slotItem = L.outfit[outSlot];
@@ -739,6 +742,9 @@ function act(a, v, el) {
     case 'hlen': hairLen = v; renderPage(); return;
     case 'hair': setL((L) => { L.hair.style = Number(v); }); return;
     case 'hcol': setL((L) => { L.hair.color = Number(v); }); return;
+    case 'htip': setL((L) => { L.hair.tip = Number(v); }); return;
+    case 'bcol': setL((L) => { L.hair.bcol = Number(v); }); return;
+    case 'stoop': setL((L) => { L.body.stoop = Number(v); }); return;
     case 'facial': setL((L) => { L.hair.facial = Number(v); }); return;
     case 'makeup': setL((L) => { L.extras.makeup = Number(v); }); return;
     case 'mcol': setL((L) => { L.extras.makeupColor = Number(v); }); return;

@@ -65,6 +65,7 @@ export const BASES = [['m', 'Men'], ['f', 'Women']];
 export const BUILDS = [
   { name: 'Slim', h: 0.98, w: 0.8, limb: 0.78 }, { name: 'Average', h: 1, w: 1, limb: 1 }, { name: 'Athletic', h: 1, w: 1.1, limb: 1.16, muscle: 1 },
   { name: 'Curvy', h: 0.99, w: 1.16, limb: 1.16, belly: 0.6 }, { name: 'Big', h: 1, w: 1.3, limb: 1.3, belly: 1.5, muscle: 0.3 },
+  { name: 'Bodybuilder', h: 1.02, w: 1.2, limb: 1.36, muscle: 1.5, pp: 1, b: 'm' },   // (the concepts' C1; pp: the creator offers it with the polish pass on, random looks never pick it; b: men only for now - on a woman the underwear's cut fails the body check)
 ];
 export const HEIGHTS = [0.88, 0.94, 1, 1.06, 1.12];
 export const HEIGHT_NAMES = ['Short', 'Below average', 'Average', 'Tall', 'Very tall'];
@@ -589,14 +590,14 @@ export function validLook(L) {
   if (!L || typeof L !== 'object') return null;
   const b = L.body || {}, base = b.base === 'f' ? 'f' : 'm';
   const out = emptyLook(base);
-  out.body = { base, build: clampI(b.build, 0, BUILDS.length - 1, 1), height: clampI(b.height, 0, HEIGHTS.length - 1, 2), skin: clampI(b.skin, 0, SKIN_TONES.length - 1, 1), age: clampI(b.age, 0, AGES.length - 1, 0), marks: clampI(b.marks, 0, 3, 0), limb: clampI(b.limb, 0, LIMBS.length - 1, 0) };
+  out.body = { base, build: ((bi) => (BUILDS[bi].b && BUILDS[bi].b !== base ? 2 : bi))(clampI(b.build, 0, BUILDS.length - 1, 1)), height: clampI(b.height, 0, HEIGHTS.length - 1, 2), skin: clampI(b.skin, 0, SKIN_TONES.length - 1, 1), age: clampI(b.age, 0, AGES.length - 1, 0), marks: clampI(b.marks, 0, 3, 0), limb: clampI(b.limb, 0, LIMBS.length - 1, 0), ...(b.stoop ? { stoop: 1 } : null) };
   const f = L.face || {};
   for (const k of ['shape', 'eyes', 'brows', 'nose', 'lips']) out.face[k] = clampI(f[k], 0, FACE_OPTS[k].length - 1, 0);
   out.face.eyeColor = clampI(f.eyeColor, 0, EYE_COLORS.length - 1, 0);
   for (const k of ['freckles', 'mole', 'dimples']) out.face[k] = f[k] ? 1 : 0;
   const h = L.hair || {};
   const st = clampI(h.style, 0, HAIR_STYLES.length - 1, out.hair.style);
-  out.hair = { style: st, color: clampI(h.color, 0, HAIR_COLORS.length - 1, 2), facial: base === 'm' ? clampI(h.facial, 0, FACIAL_HAIR.length - 1, 0) : 0 };
+  out.hair = { style: st, color: clampI(h.color, 0, HAIR_COLORS.length - 1, 2), facial: base === 'm' ? clampI(h.facial, 0, FACIAL_HAIR.length - 1, 0) : 0, ...(clampI(h.tip, 0, HAIR_COLORS.length, 0) ? { tip: clampI(h.tip, 0, HAIR_COLORS.length, 0) } : null), ...(base === 'm' && clampI(h.bcol, 0, HAIR_COLORS.length, 0) ? { bcol: clampI(h.bcol, 0, HAIR_COLORS.length, 0) } : null) };   // (tip, bcol: 0 none, else a hair color + 1 - dyed tips, a beard in its own color; 11-21)
   const e = L.extras || {};
   out.extras = { makeup: clampI(e.makeup, 0, MAKEUP.length - 1, 0), makeupColor: clampI(e.makeupColor, 0, MAKEUP_COLORS.length - 1, 0), tattoos: clampI(e.tattoos, 0, (1 << TATTOO_AREAS.length) - 1, 0), piercings: clampI(e.piercings, 0, (1 << PIERCINGS.length) - 1, 0), scar: clampI(e.scar, 0, SCARS.length - 1, 0) };
   const o = L.outfit || {};
@@ -627,22 +628,25 @@ export function encodeLook(L) {
     const it = L.outfit[k];
     s += it ? AB[(it.id >> 6) & 63] + AB[it.id & 63] + AB[it.c & 63] + AB[it.t & 63] + AB[(it.p & 31) | (it.z ? 32 : 0)] : '00000';
   }
-  if (b.marks || b.limb) return s + AB[b.marks | (b.limb << 2)];
+  // (11-21: three more things a look can say, each off by default so every older code reads as before - a stoop, in the spare
+  // bit of the marks' letter; dyed tips and a beard's own color, a letter each after it)
+  if (h.tip || h.bcol) return s + AB[b.marks | (b.limb << 2) | (b.stoop ? 32 : 0)] + AB[h.tip | 0] + AB[h.bcol | 0];
+  if (b.marks || b.limb || b.stoop) return s + AB[b.marks | (b.limb << 2) | (b.stoop ? 32 : 0)];
   while (s.length > LOOK_CODE_LEN && s.endsWith('00000')) s = s.slice(0, -5);
   return s;
 }
-export const LOOK_CODE_LEN = 21 + 9 * 5, LOOK_CODE_MAX = 22 + SLOTS.length * 5;
+export const LOOK_CODE_LEN = 21 + 9 * 5, LOOK_CODE_MAX = 22 + SLOTS.length * 5, LOOK_CODE_MAX2 = LOOK_CODE_MAX + 2;
 export function decodeLook(s) {
-  if (typeof s !== 'string' || s.length < LOOK_CODE_LEN || s.length > LOOK_CODE_MAX || (s.length < LOOK_CODE_MAX && (s.length - LOOK_CODE_LEN) % 5)) return null;
-  s = s.padEnd(LOOK_CODE_MAX, '0');
+  if (typeof s !== 'string' || s.length < LOOK_CODE_LEN || (s.length > LOOK_CODE_MAX && s.length !== LOOK_CODE_MAX2) || (s.length < LOOK_CODE_MAX && (s.length - LOOK_CODE_LEN) % 5)) return null;
+  s = s.padEnd(LOOK_CODE_MAX2, '0');
   const v = [];
   for (let i = 0; i < s.length; i++) { const x = AV[s[i]]; if (x === undefined) return null; v.push(x); }
   if (v[0] !== LOOK_VERSION) return null;
   const L = {
     v: LOOK_VERSION,
-    body: { base: v[1] ? 'f' : 'm', build: v[2], height: v[3], skin: v[4], age: v[5], marks: v[LOOK_CODE_MAX - 1] & 3, limb: v[LOOK_CODE_MAX - 1] >> 2 },
+    body: { base: v[1] ? 'f' : 'm', build: v[2], height: v[3], skin: v[4], age: v[5], marks: v[LOOK_CODE_MAX - 1] & 3, limb: (v[LOOK_CODE_MAX - 1] >> 2) & 7, stoop: v[LOOK_CODE_MAX - 1] >> 5 },
     face: { shape: v[6], eyes: v[7], eyeColor: v[8], brows: v[9], nose: v[10], lips: v[11], freckles: v[12] & 1, mole: (v[12] >> 1) & 1, dimples: (v[12] >> 2) & 1 },
-    hair: { style: v[13], color: v[14], facial: v[15] },
+    hair: { style: v[13], color: v[14], facial: v[15], tip: v[LOOK_CODE_MAX], bcol: v[LOOK_CODE_MAX + 1] },
     extras: { makeup: v[16], makeupColor: v[17], tattoos: v[18], piercings: v[19], scar: v[20] },
     outfit: {},
   };
@@ -705,6 +709,9 @@ export function lookArt(L, opt = {}) {
   A.hair = { style: HAIR_STYLES[L.hair.style]?.[2] || 'short', color: hc };
   const fh = FACIAL_HAIR[L.hair.facial]?.[1];
   if (fh && !fem) A.beard = fh;
+  if (L.hair.tip) A.hair.tip = HAIR_COLORS[L.hair.tip - 1]?.[0];
+  if (L.hair.bcol && A.beard) A.beardColor = HAIR_COLORS[L.hair.bcol - 1]?.[0];
+  if (L.body.stoop) A.stoop = 1;
   A.face = { ...L.face, eyeColor: EYE_COLORS[L.face.eyeColor]?.[0] };
   const ex = L.extras;
   if (ex.makeup) A.makeup = { kind: MAKEUP[ex.makeup].toLowerCase(), color: MAKEUP_COLORS[ex.makeupColor]?.[0] };

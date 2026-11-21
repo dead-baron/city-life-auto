@@ -209,3 +209,30 @@ test('a basketball is a round disc five art pixels across; a jersey\'s number is
     assert.ok(Math.max(...xs) - Math.min(...xs) + 1 <= 4, `the number, facing ${dir}: in one piece`); }
 });
 
+test('the last look options: dyed tips, a beard in its own color, a stoop, a bodybuilder - in the code, drawn by the pass, nothing without it', () => {
+  const mk = (f) => { const L = LK.emptyLook('m'); L.hair.style = 16; L.hair.color = 2; L.hair.facial = 3; L.outfit.top = LK.item('Plain tee', 'white'); L.outfit.bottoms = LK.item('Jeans'); f(L); return LK.validLook(L); };
+  const plain = mk(() => {}), tip = mk((L) => { L.hair.tip = 18; }), bc = mk((L) => { L.hair.bcol = 13; }), st = mk((L) => { L.body.stoop = 1; }), bb = mk((L) => { L.body.build = 5; }), ath = mk((L) => { L.body.build = 2; });
+  // the code: older looks read as before; each new thing survives the round trip
+  assert.equal(LK.encodeLook(plain).length, LK.LOOK_CODE_LEN + 0, 'a look without them: the same short code');
+  for (const [L, k] of [[tip, 'tip'], [bc, 'bcol']]) { const c = LK.encodeLook(L); assert.equal(c.length, LK.LOOK_CODE_MAX2); assert.equal(LK.decodeLook(c).hair[k], L.hair[k]); assert.equal(LK.encodeLook(LK.decodeLook(c)), c); }
+  assert.equal(LK.decodeLook(LK.encodeLook(st)).body.stoop, 1); assert.ok(!LK.decodeLook(LK.encodeLook(plain)).body.stoop);
+  assert.equal(LK.validLook({ ...bb, body: { ...bb.body, base: 'f' } }).body.build, 2, 'the bodybuilder build: men only for now');
+  assert.ok(!LK.decodeLook(LK.encodeLook(tip) + '0'), 'a longer code is refused');
+  // the pass off: each look bakes exactly as the same look without the option
+  setPolish(null);
+  const raw = (L, d) => { const S = bake({ ...LK.lookArt(L), lk: 'x', seed: 7 }, d); let o = S.w + 'x' + S.h + ' '; for (let y = 0; y < S.h; y++) for (let x = 0; x < S.w; x++) { const q = S.at(x, y); o += q ? q.c.join(',') + ';' : '.'; } return o; };   // (lk, seed: the code differs, and the seed with it - a lock of hair moves; held, to compare the drawing alone)
+  for (const L of [tip, bc, st]) assert.equal(raw(L, 1), raw(plain, 1), 'off: nothing drawn differently');
+  // the pass on
+  setPolish(POLISH);
+  const col = (S, f) => pixels(S, f).length, blueish = (q) => q.c[2] > q.c[0] + 30 && q.c[2] > 110;
+  assert.ok(col(bake(LK.lookArt(tip), 4), (q) => q.g === 2 && blueish(q)) >= 4, 'long hair with blue tips: its ends are blue from behind');
+  assert.equal(col(bake(LK.lookArt(plain), 4), (q) => q.g === 2 && blueish(q)), 0);
+  const beard = (L) => pixels(bake(LK.lookArt(L), 0), (q) => q.part === 'beard').map((p) => p[2].c);
+  const lum = (cs) => cs.reduce((a, c) => a + c[0] + c[1] + c[2], 0) / (cs.length * 3);
+  assert.ok(lum(beard(bc)) > lum(beard(plain)) + 30, 'a gray beard under dark hair is lighter than the hair\'s own beard');
+  const wide = (L) => pixels(bake(LK.lookArt(L), 0), (q) => q.g >= 3 && q.g <= 6).length;   // (the trunk's and the arms' art pixels from the front)
+  assert.ok(wide(bb) > wide(ath), 'the bodybuilder is broader than the athletic build');
+  const headX = (L) => { const e = pixels(bake(LK.lookArt(L), 2), (q) => q.g === 1); return e.reduce((a, p) => a + p[0], 0) / e.length; }, feetX = (L) => { const S = bake(LK.lookArt(L), 2), e = pixels(S, (q) => q.part === 'shoe' || q.part === 'sole' || q.part === 'foot'); return e.reduce((a, p) => a + p[0], 0) / Math.max(1, e.length); };
+  assert.ok(Math.abs((headX(st) - feetX(st)) - (headX(plain) - feetX(plain))) >= 0.8, 'stooped, the head is carried forward of the feet from the side');
+});
+

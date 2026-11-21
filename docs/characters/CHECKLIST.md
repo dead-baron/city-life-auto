@@ -1,6 +1,6 @@
 # The concept checklist (pass 5, 2026-11-19)
 
-**608 items: 563 in the game, 20 missing, 19 too small to show, 6 dropped.** (11-21: the five facial hair styles added on 11-20 taken out on the owner's word - they didn't read.) (11-20: 56 of the missing ones built in three batches - "the next pass's work" at the end; one more, the cravat, built and taken out on the owner's word. Pass 5 left it at 512 in, 77 missing.)
+**608 items: 580 in the game, 0 missing, 20 too small to show, 8 dropped.** (11-21: the last 20 - 17 built, the hair length slider and the dogs / bike dropped with reasons, the polka-dot bikini too small.) (11-21: the five facial hair styles added on 11-20 taken out on the owner's word - they didn't read.) (11-20: 56 of the missing ones built in three batches - "the next pass's work" at the end; one more, the cravat, built and taken out on the owner's word. Pass 5 left it at 512 in, 77 missing.)
 
 Every outfit, piece and creator option on the concept sheets (`docs/characters/concepts/`, 94 images), against the
 wardrobe (`shared/lookcore.js`) and the creator (`client/creator.js`). An item is a thing a player would look for: one
@@ -26,10 +26,10 @@ catalogue did not note is not here.
 | --- | --- | --- |
 | Two bases (man, woman) | in | Body: base |
 | Builds slim to heavy (6 a base) | in | Slim, Average, Athletic, Curvy, Big (5; the concepts' "lean" and "stocky" fall between) |
-| Bodybuilder build | **missing** | Athletic is the nearest; no heavier-muscled build |
+| Bodybuilder build | in | Bodybuilder - a sixth build, men only for now (on a woman the underwear's cut fails the body check); added 11-21, pass only |
 | Very tall / very short | in | Height (5 steps) |
 | Older, pot belly | in | Age 50s-60s with the Big build |
-| Elderly, stooped posture | **missing** | Age 60s-70s greys the hair; the stoop is only an NPC walk style, not a creator option |
+| Elderly, stooped posture | in | Body > Posture: Stooped - a new letter in the look's code; added 11-21, pass only |
 | 16 skin tones | in | 16 skin tones |
 | Freckles on the body | in | Body freckles (pass on) |
 | Vitiligo | in | Vitiligo (pass on) |
@@ -69,10 +69,10 @@ catalogue did not note is not here.
 | Short back and sides | in | Short back & sides |
 | Fade with a textured top | in | Fade |
 | Shaved line in a fade | too small | - |
-| Waves (360) | **missing** | Buzz cut is nearest |
+| Waves (360) | in | Waves - added 11-21, pass only |
 | Flat top | in | Flat top (pass on) |
 | Spiky | in | Spiky |
-| Faux-hawk | **missing** | Spiky or Quiff is nearest |
+| Faux-hawk | in | Faux-hawk - added 11-21, pass only |
 | Quiff | in | Quiff |
 | Pompadour | in | Pompadour (pass on) |
 | Slicked back | in | Slicked back |
@@ -109,14 +109,14 @@ catalogue did not note is not here.
 | Box braids on a man | in | Box braids, listed for both - added 11-20 |
 | Cornrows | in | Cornrows |
 | Dreadlocks short and long, cuffs | in | Dreadlocks |
-| Loc updo (pineapple) | **missing** | - |
+| Loc updo (pineapple) | in | Loc updo - added 11-21, pass only |
 | Mohawk | in | Mohawk (redrawn in pass 5) |
-| Receding hairline | **missing** | Balding is nearest |
+| Receding hairline | in | Receding - added 11-21, pass only |
 | Bald on top, hair at the sides | in | Balding (pass on) |
-| Vintage pin curls | **missing** | - |
-| Two-tone / ombre / dyed tips | **missing** | A style has one colour |
+| Vintage pin curls | in | Pin curls - added 11-21, pass only |
+| Two-tone / ombre / dyed tips | in | Hair > Dyed tips: the ends of long hair, the lit tones of a short cut, a spiky cut's spikes - added 11-21, pass only |
 | 17-18 hair colours, dyed ones | in | 19 hair colours |
-| Hair length slider (CC1) | **missing** | Length is the style you pick |
+| Hair length slider (CC1) | dropped | by design: length is the style you pick, and the Hair tab filters by Short / Medium / Long (11-21) |
 | Butterfly clips, beads as accents | too small | - |
 
 ## CB4 - facial hair (creator: Facial hair)
@@ -139,7 +139,7 @@ catalogue did not note is not here.
 | Walrus, pencil, horseshoe, fu manchu | dropped | added 11-20, taken out 11-21 with the circle beard: at the game's size they were the same few pixels as a moustache or a goatee |
 | Mutton chops | in | Mutton chops |
 | Grey, white, ginger, dyed beards | in | the beard takes the hair's colour |
-| A beard in its own colour | **missing** | - |
+| A beard in its own colour | in | Hair > Beard color - added 11-21, pass only |
 
 ## CB5 - makeup, tattoos, marks (creator: Makeup + tattoos)
 
@@ -216,8 +216,8 @@ catalogue did not note is not here.
 | Red dress | in | Mini dress, red |
 | Crop top and cargos | in | Crop top, Cargo pants |
 | Road cyclist kit | in | Cycling jersey, Cycling shorts, Bike helmet |
-| Roller skates | **missing** | rollerblades are gear you ride, not shoes in the wardrobe |
-| Dogs on leads, a bike with a basket | **missing** | world things, not clothes |
+| Roller skates | in | Roller skates (shoes: wheels under the boot) - added 11-21, pass only |
+| Dogs on leads, a bike with a basket | dropped | world things, not what a person wears: out of the wardrobe's scope (11-21) - for the world's list |
 | Coffee cup | in | Coffee to go |
 | Crossbody bag, duffel | in | Crossbody bag, Duffel bag |
 | Posture walks (stoop, swagger, sway) | in | NPC walk styles (not a player option) |
@@ -362,7 +362,7 @@ catalogue did not note is not here.
 | Panda and bear masks (SF22, SM22) | in | Panda mask, Bear mask (the pig mask's shape recoloured) |
 | Chicken mask | in | Chicken mask (pass on) - added 11-20 |
 | Novelty glasses with a nose, fake moustache | in | Novelty glasses (pass on) - added 11-20 |
-| A wig | **missing** | change the hair instead |
+| A wig | in | Party wig (a hat that is hair: a big round one in any color) - added 11-21, pass only |
 
 ## CP3 - jewelry and bags
 
@@ -418,7 +418,7 @@ catalogue did not note is not here.
 | Long black coat over a hoodie | in | Wool coat over a Hoodie |
 | Open silk shirt and flares | in | Button-up shirt, Flares (not worn open) |
 | Knit polo | in | Polo shirt |
-| Coat draped over the shoulders | **missing** | - |
+| Coat draped over the shoulders | in | Coat over the shoulders - added 11-21, pass only |
 | Pinstripe suit | in | Pinstripe suit; Pinstripe is a pattern too (pass on) - added 11-20 |
 
 ## SF2, SM2 - office
@@ -524,9 +524,9 @@ catalogue did not note is not here.
 | Sports bikini and board shorts | in | Bikini top, Swim trunks / Shorts |
 | Bikini and lace sarong | in | Bikini top, Bikini bottoms, Sarong |
 | Rash guard, wetsuit leggings | in | Rash guard, Leggings; Wetsuit |
-| Surfboard to carry | **missing** | the surfboard is a thing you own |
-| Crochet cover-up | **missing** | sheer |
-| Polka-dot bikini | **missing** | no dot pattern |
+| Surfboard to carry | in | Surfboard (bags: carried under the arm) - added 11-21, pass only |
+| Crochet cover-up | in | Crochet cover-up (sets) - added 11-21, pass only |
+| Polka-dot bikini | too small | a bikini is two art pixels a cup: dots don't fit (tried 11-20) |
 | Head wrap | in | Head wrap |
 | Lifeguard: red one-piece, visor, whistle | in | Swimsuit red, Visor, Lifeguard whistle |
 | String, thong and bandeau bikinis | in | Bikini top / Strapless set as a bandeau; a thong is drawn as a brief |
@@ -535,7 +535,7 @@ catalogue did not note is not here.
 | Bucket hat and tank | in | Bucket hat, Tank top |
 | Swim shorts and a towel over the shoulder | in | Swim trunks, Towel over the shoulder (pass on) - added 11-20 |
 | Open linen shirt on a bare chest | in | Open shirt, in the jacket slot: over a top or a bare chest; it buttons (pass on) - added 11-20 |
-| Wetsuit peeled to the waist | **missing** | - |
+| Wetsuit peeled to the waist | in | Wetsuit, peeled to the waist - added 11-21, pass only |
 | Swim briefs | in | Briefs (underwear) |
 | Flip-flops | in | Flip-flops |
 
@@ -717,7 +717,7 @@ catalogue did not note is not here.
 | On the sheet | | In the game as / note |
 | --- | --- | --- |
 | Long puffer, parka | in | Puffer jacket, Hood up |
-| Fur trim on a hood | **missing** | - |
+| Fur trim on a hood | in | Fur-hood parka - added 11-21, pass only |
 | Camel overcoat and scarf | in | Wool coat, Scarf |
 | Yellow raincoat, hood up, wellies | in | Rain jacket yellow, Hood up, Wellies |
 | Ski jacket and goggles | in | Ski suit, Ski goggles |
@@ -737,7 +737,7 @@ catalogue did not note is not here.
 | Maxi dress, fringed waistcoat | in | Sundress, Fringe jacket |
 | Sparkly crop, muddy wellies | in | Crop top, Wellies |
 | Kimono | in | Kimono (women only) |
-| Kimono on a man, harem trousers | **missing** | the Kimono is listed for both now (11-20); no harem trousers |
+| Kimono on a man, harem trousers | in | the Kimono is listed for both (11-20); Harem trousers added 11-21, pass only |
 | Tie-dye tee dress, tie-dye tee | **in (new)** | Tie-dye tee (new); Mini dress with the tie-dye pattern |
 | Peasant blouse, tiered skirt | in | Blouse, Maxi skirt |
 | Poncho | in | Poncho |
