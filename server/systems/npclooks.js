@@ -31,8 +31,8 @@ const slotOf = (L, s) => (L.outfit[s] ? PIECES[L.outfit[s].id] : null);
 // styles: weighted STYLES ids; fem: the share of women; age: weights for 20s .. 70s; shade: how much the district counts
 // (0: not at all - a uniform of sorts; 1: the district decides)
 export const RECIPES = {
-  // the police on the street (CC5): patrol officers in the navy shirt and the police cap, now and then a sergeant with
-  // chevrons or a rookie in light blue under a ball cap; about a third in sunglasses (shared/look.js policeLook)
+  // the police on the street (CC5): patrol officers in the light-blue shirt and the police cap, now and then a sergeant
+  // in navy with chevrons or a rookie under a ball cap; about a third in sunglasses (shared/look.js policeLook)
   cop: { styles: W('work:1'), fem: 0.3, age: [2, 3, 3, 2, 1, 0], shade: 0, pool: 24,
     fix(L, r) { const k = r(); L.outfit = policeLook(L, k < 0.14 ? 2 : 0, k > 0.84 ? 'rookie' : null, r() < 0.35).outfit; L.extras.piercings &= 1; L.extras.makeup = L.extras.makeup && r() < 0.5 ? 1 : 0; } },
   executive: { styles: W('business:6 formal:2 smart:2'), fem: 0.42, age: [1, 3, 3, 2, 1, 0], shade: 0.15,

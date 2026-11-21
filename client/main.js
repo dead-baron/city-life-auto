@@ -111,6 +111,8 @@ if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection 
 setTimeout(preloadAudio, 1500);
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
+// (the character polish pass, staged - the debug menu's switch: the title's portrait and the creator draw with it too; docs/characters/NOTES.md)
+try { if (localStorage.getItem('cla.polish') === '1') window.CLA_POLISH = Promise.all([import('./art2/people.js'), import('./art2/peoplepolish.js')]).then(([p, m]) => p.setPolish(m.POLISH)).catch(() => {}); } catch { /* blocked */ }
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
 const afloat = (e) => e.swim || (e.kind === K.VEH && !!e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).kind === 'boat');
 S.fx.water = (x, y) => { const t = S.map ? S.map.tileAtPx(x, y) : -1; return WATER_T[t] === 1 ? 1 : t === T.BRIDGE && afloatUnder(S.ents.values(), x, y, afloat) ? 2 : 0; };   // (render/fx.js: 2 under a deck)
@@ -421,7 +423,7 @@ const lookWait = [];
 import('../shared/look.js').then((m) => { LOOKS = m; for (const d of lookWait.splice(0)) lookApp(d); }).catch((e) => console.warn('[looks]', e));
 function lookApp(d) { if (!LOOKS) { lookWait.push(d); return; } const L = LOOKS.decodeLook(d.app.lk); if (L) { const fd = d.app.fd; d.app = LOOKS.lookToApp(L, d.app.lk); if (fd) d.app.fd = 1; } }   // (fd: the founder's look over it - client/art2/game/peds.js)
 function openCreator(mode) {
-  creatorP ||= import('./creator.js').then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k), zoom: () => baseZoom() }); S.creator = m; return m; });   // (zoom: the game's CSS px per world px - the creator draws you a little bigger than that)
+  creatorP ||= Promise.resolve(window.CLA_POLISH).then(() => import('./creator.js')).then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k), zoom: () => baseZoom() }); S.creator = m; return m; });   // (zoom: the game's CSS px per world px - the creator draws you a little bigger than that)
   creatorP.then((m) => m.open(mode, S.looks)).catch((e) => console.warn('[creator]', e));
 }
 
@@ -5161,7 +5163,7 @@ function drawSpanWire(sg, n) {
 // to see - the target too. A little pixel skull, made once and drawn crisp at any zoom, with a slow gold glow.
 const SKULL = ['...#####...', '.#########.', '###########', '###########', '##...#...##', '##...#...##', '###########', '.####.####.', '..#######..', '..#.#.#.#..', '..#######..'];
 let skullImg = null;
-const SKULL_HEAD = 46;   // world px from a standing person's feet to the top of their head (art v2 people)
+const SKULL_HEAD = window.CLA_POLISH ? 50 : 46;   // (the polish pass's people stand two art pixels taller: line 115)  // world px from a standing person's feet to the top of their head (art v2 people)
 const EM_HEAD = { sit: 30, crouch: 30, kneel: 36, lie: 14, sleep: 16, faceplant: 12, pushups: 16 };   // (the same, sat, crouched, knelt or lying: an emote's pose - client/art2/poses.js)
 function skullSprite() {
   if (skullImg) return skullImg;
@@ -5310,7 +5312,7 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
       if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
     }
     if ((!only || only.tags) && p.d.pl && p.d.n && p.id !== S.myPedId) {
-      const y = py - 26 / z;
+      const y = py - 26 / z - (SKULL_HEAD - 46);   // (the polish pass's taller people: the name keeps its place against the head - pass 3)
       const np = p.d.np, nm = np && np.k ? `[${np.k}] ${p.d.n}` : p.d.n;   // (their name color, title plate and crew tag: server cosmetics.js)
       const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade, a faint shadow and no edge; members bright, with a dark edge all round - told apart by lightness and the edge, no word: the owner, 11-16)
       if (gu) { g.fillStyle = 'rgba(0,0,0,.45)'; g.fillText(nm, p.rx + 1 / z, y + 1 / z); }

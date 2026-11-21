@@ -487,6 +487,7 @@ export class World2 {
       const t = performance.now();
       const [A, Pd] = await Promise.all([import('./actors.js').catch(() => null), import('./peds.js').catch(() => null)]);
       this.A = A; this.Pd = Pd;
+      try { if (Pd && localStorage.getItem('cla.polish') === '1') { await Pd.loadPolish(new URL('../peoplepolish.js', import.meta.url).href); Pd.usePolish(true); } } catch { /* off */ }
       if (A && A.artFrom) A.artFrom({ fleet: () => import('../fleet.js'), horse: () => import('../horse.js') });   // (the batch-4 fleet's models, the horse: when first needed - actors.js)
       this._loadMark('artmods', performance.now() - t);
     } catch { /* providers optional */ }
@@ -1742,7 +1743,7 @@ export class World2 {
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
     // felling a tree (d.ch: server felling.js): the axe swung, the chainsaw held out; the lantern carried by its bail
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
-    const wpn = L.board || L.surf || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
+    const wpn = L.board || L.surf || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : p.d.ph === 3 ? 'phoneSelfie' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined) || p.d.gt === 'emote') && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : q === 'pushup' || q === 'situp' ? repFrame(p, now) : q === 'cue' && Pd.cueFrame ? Pd.cueFrame(p, p.id) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
@@ -1751,6 +1752,9 @@ export class World2 {
     this.meNone = me && !(p._v2k && E.hasSprite(p._v2k));
     if (me && this.warming && World2.X) World2.X.warmMe(this, A2, wpn, bo);
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo]);
+    // (a blink, peds.js blinkAt: the same figure, the eyes shut - asked for a second ahead, shown only once it's made)
+    const bk = sk && Pd.blinkAt && Pd.BLINKS.test(ppose) && !lying ? Pd.blinkAt(p.id, now) : 0;
+    if (bk) { const ob = { ...(bo || {}), bl: 1 }, kb = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, ob), [A2, ppose, d8, pf, wpn, ob]); if (bk === 1 && kb) sk = kb; }
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
     if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {
       p._cp = ppose; p._cd = d8; p._cw = wpn; p._ca = A2;

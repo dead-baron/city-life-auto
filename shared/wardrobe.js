@@ -46,11 +46,14 @@ export function storeOf(poi) {
 }
 
 const takes = (S, P) => S.rules.some((r) => (!r.kinds || r.kinds.includes(P.store)) && (!r.styles || r.styles.some((s) => P.tags.includes(s))));
+// pieces only the polish pass draws (lookcore.js d.pp) are not sold while the pass is off for the game (the owner, 11-19):
+// true on the day the pass goes live
+export const PASS_SOLD = false;
 const STOCK = {};
 export function stock(id) {
   const S = STORES[id];
   if (!S) return [];
-  return STOCK[id] || (STOCK[id] = PIECES.filter((P) => P && P.price > 0 && takes(S, P)).map((P) => P.i));
+  return STOCK[id] || (STOCK[id] = PIECES.filter((P) => P && P.price > 0 && (PASS_SOLD || !P.d.pp) && takes(S, P)).map((P) => P.i));
 }
 export const stocks = (id, pid) => stock(id).includes(pid);
 export function priceAt(id, pid) {
