@@ -104,3 +104,21 @@ detail, people should blink, or everyone stares.
 - Men: slim's chest bump and athletic's pointy chest - the chest no more than half a pixel in front of the waist; average's
   neck - the head a pixel higher; big's points on the shoulders from behind - an upper arm's one-pixel top folded into the outline.
 - Checked: with the pass OFF the renderer draws exactly what pass 5 drew (240 sprites, scratch `offsame.mjs`) - worth a test.
+
+## 15:49 - "is there a better way ... so we nail it down this time" - the bodies, measured
+His list, and where each stands. All of it is now a rule in `tools/bodycheck.mjs` (run by `test/bodyshape.test.js`), which finds nothing on 160 standing and 640 walking figures.
+- [x] Men slim / curvy: chest bump - one-pixel bumps on the trunk are folded into the outline; a curvy man has no small belly.
+- [x] Men average / athletic: no neck from the side - the head a pixel higher; where a build's jaw still ran out over the chest, the jaw's lowest front pixel goes (people.js, the side-view neck rule).
+- [x] Men athletic: two bumps at the bottom of the underwear - a boxer's hem is one level row.
+- [x] Men's shirts: a V at the bottom - the hem is level on the screen and on the art grid, waist and pelvis alike.
+- [x] White shirts and skin: shade lines too dark - lines about three quarters of the color under them (were under half), lighter on pale cloth, warm on skin; one-pixel lines dropped; shading tidied so no art pixel is alone in its tone.
+- [x] Men big, front: skin pixel in the middle of the underwear - rows run unbroken; the thigh's inside is the boxer's too.
+- [x] Women: legs not apart all the way, front and back - the line between the legs runs up to the underwear (checked as a rule).
+- [x] Women big, front: no underwear - the briefs' rows run across the belly.
+- [x] Eye disappears at an angle - the colored part is drawn after the whites (checked: two eyes at every front angle).
+- [x] Strap a "+" at an angle; straps missing on big and slim, front and back - a strap over each cup or up from the band, whatever the build; from behind the bra is a level band with two straps.
+- [x] Women slim: big feet, lost legs, "a big step back" from the front - slim is now an average build an art pixel narrower; feet scale with the legs.
+- [x] Women: the shape in the seat from behind - the seat no longer shows between the thighs or under the briefs.
+- [~] Women big, white shirt: extra pixel on the neckline from the side - the neck now has a row set in from chin and chest; the pixel he saw may be the bare skin above the scoop. To look at with him.
+- Left, and said so: from the side an arm hangs over most of the hip, so underwear shows as a patch in front of and behind it; at an angle the far hand shows as a small nub on the wide builds; kneel / punch lose an eye at some angles.
+

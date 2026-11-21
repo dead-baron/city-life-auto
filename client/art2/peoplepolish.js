@@ -37,7 +37,11 @@ export const POLISH = {
   eyeMode: 3,         // how an eye's colour shows (eyes() below): the colour with a white beside it - the owner's pick of four, 11-20
   eye2: true,         // a face at an angle keeps its far eye (people.js face)
   lnHead: 0.24,       // the line a fringe or a hat draws on the face: this much lighter (people.js: a shadow, not a headband)
-  lnSkin: 0.2,        // ...and the lines on bare skin (an arm on a bare chest)
+  lnL: 0.34,          // a line's lightness follows what it's drawn on, up to this much (people.js) - white cloth and skin get soft lines
+  vLight: 0.56,       // a white or pale cloth's darkest shade (vMin's for the rest)
+  inseam: true,
+  vSkin: 0.4,
+  clean: true,   // (the body's shading tidied on the art grid: one tone an art pixel, none alone in its tone - people.js)       // the line between the legs runs up to the crotch, front and back (people.js)
   // the outline, on the art grid (people.js): [lit side: how much of the colour it borders, its brightest; the same in the shade]
   // (the owner, 11-20: the concepts' soft outline in the colour of what it outlines, "slightly darker" so the people sit with
   // the world's benches and lamps - and never bright enough to read as more skin: in the game a paler one made blobs of heads and hands)
@@ -47,9 +51,13 @@ export const POLISH = {
   mouthOn: false,   // (pass 3, the owner 11-19: the concepts' small figures have no mouth - off; true draws pass 1's. Painted lips - lipstick, glam, goth, a clown's - always show)
   noseK: 1.0,
   dims(D, A, b) {
+    // (a slim build, the owner 11-20: "a big step back" - at four fifths of an average build's width the chunky body was six art
+    // pixels across under a head of ten, its trunk no deeper than its arm: from the side an arm and nothing else. Slim is an
+    // average build an art pixel narrower: three fifths of the way back to it)
+    if (b.w < 1) { const q = (1 + (b.w - 1) * 0.6) / b.w; for (const k of ['chestR', 'waistR', 'pelR']) { D[k][0] *= q; D[k][1] *= q; } D.shX *= q; D.hipX *= q; D.shBar *= q; D.w *= q; }
     const fem = D.fem, mu = D.mu, w = D.w, h = D.h;
     // the neck: the head sits a neck above the shoulders (today the chin is inside them), the neck thick enough to show
-    D.headUp = D.head[2] + (fem ? 1.7 : 2.7) * h;   // (a man's a pixel more: on the chunky build his chin sat on his chest from the side - "lost definition to the neck", the owner 11-20)
+    D.headUp = D.head[2] + (fem ? 1.7 : this.neckM ?? 3.7) * h;   // (a man's a pixel more: on the chunky build his chin sat on his chest from the side - "lost definition to the neck", the owner 11-20)
     D.neckR = (fem ? 2.05 : 2.4) * Math.min(1.2, 0.5 + w * 0.5) * (1 + mu * 0.2);
     // the shoulder line: square and wider than the head on a man, narrower with a waist and hips on a woman; a build's
     // muscle is shoulders and chest over a narrow waist (a V), its belly the waist (a pear)
@@ -84,8 +92,11 @@ export const POLISH = {
     // a body with depth (the concepts' side views are a barrel, not a plank), and a big build's belly out in front
     D.chestR[1] *= fem ? 0.84 : 1.03; D.waistR[1] *= fem ? 1.0 : 1.1; D.pelR[1] *= 1.08;
     if (!fem) D.chestR[1] = Math.min(D.chestR[1], D.waistR[1] + 0.55);   // (a man's chest no more than half a pixel in front of his waist: more was a bump on a slim build, a point on an athletic one)   // (a woman's back flatter: her upper back stood out behind the shoulder in a side view - the owner, 11-20; her shape is the bust's and the seat's)
+    D.chestR[1] = Math.max(D.chestR[1], D.armR[0] + 1.0); D.waistR[1] = Math.max(D.waistR[1], D.armR[0] + 0.6);   // (a trunk deeper than the arm that hangs beside it, whatever the build)
     if (b.belly >= 1.2) { D.waistR[0] *= 1.12; D.waistR[1] *= 1.12; D.chestR[0] *= 1.06; D.shX *= 1.05; }
     D.fist = Math.min(D.fist, D.foreR[1] * 1.35);   // (a hand no more than a third wider than its wrist: on a slim build's arm it stood out at the hip as a point, and from the side behind it)
+    if (!fem && b.belly > 0 && b.belly < 1.2) D.belly = 0;   // (a man's curvy build is a thicker waist - dims() has that - not a small belly: at his size it was a bump on the chest)
+    { const fk = 0.74 + 0.26 * Math.min(1.15, D.shinR[0] / (2.85 * (fem ? 0.86 : 1) * 1.24)); D.foot = D.foot.map((v, i) => v * (i < 2 ? fk : 1)); }   // (feet in step with the legs over them: a slim build's were clown shoes)
     // (a big build's back is a back: the waist no deeper than the chest - the belly is its own shape in front, people.js)
     if (b.belly >= 1.2) D.waistR[1] = Math.min(D.waistR[1], D.chestR[1] * 1.04);
     D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;
@@ -114,6 +125,7 @@ export const POLISH = {
     const lid = mix(skin[1], LASH, 0.35), white = mix(WHITE, skin[4], dk ? 0.2 : 0.1), lash = mix(LASH, skin[0], 0.15);
     // (a brow is never as dark as the eye under it, or the two read as one tall bar)
     const brow0 = off(mix(hairC, EYE, 0.2), skin[3], 84), brow = mix(brow0, skin[2], 0.3), browS = mix(brow0, skin[2], 0.55);
+    const late = [];
     for (const e of eyes) {
       const o = outOf(cx, e), q = e.p;
       // (this.eyeMode - options for the owner, 11-20: how an eye's colour shows. 0 today's, the colour mixed into one dark
@@ -127,7 +139,8 @@ export const POLISH = {
         // it is; round a lash over the colour; narrow no white - a squint; hooded the lid's shadow over both; big a lash over
         // both; sleepy a heavy lid over the colour and half a white)
         const wc = E5 === 2 ? lid : E5 === 5 ? mix(white, lid, 0.5) : white;
-        put(q, iris); if (!put(q, wc, o, 0)) put(q, wc, -o, 0);   // (in profile there's no face beyond the eye: the white goes behind the colour, as on a face seen from the side)
+        if (!put(q, wc, o, 0)) put(q, wc, -o, 0);
+        late.push([q, iris]);   // (the colours go on after every white: at an angle the eyes are neighbours, and one's white took the other's colour)   // (in profile there's no face beyond the eye: the white goes behind the colour, as on a face seen from the side)
         if (E5 === 1) put(q, lash, 0, -1);
         if (E5 === 3) { const sh = mix(skin[1], skin[0], 0.3); put(q, sh, 0, -1); put(q, sh, o, -1); }
         if (E5 === 4) { put(q, lash, 0, -1); put(q, lash, o, -1); }
@@ -155,6 +168,7 @@ export const POLISH = {
       else if (B5 === 4) { b(0, 0, browS); b(1, 0, browS); }
       else { b(0, 0, brow); b(1, 0, brow); b(0, -1, brow); b(-1, 0, browS); }
     }
+    for (const [q, c] of late) put(q, c);
   },
   // the mouth: two rows under the eyes, across the face's middle - a man's a short line in the skin's shadow, a woman's in
   // her lips' colour; turned to the side, one pixel
@@ -198,10 +212,11 @@ export const POLISH = {
       const hemZ = T.tuck ? 3.3 : T.bare || T.bikini || T.towel || T.crop ? 9 : T.tank ? 0.4 : -0.9, mine = new Set([W.top, relit(W.top)]), ours = new Set([W.bot, relit(W.bot)]);
       const body = (R, Q) => {
         const low = Q.part === 'pel' && Q.z <= hemZ;
-        if (Q.part === 'belly' && (!tt || tt === 'bra' || tt === 'sport' || tt === 'bralette' || tt === 'bandeau')) return R;   // (a big build's belly is bare between a bra and briefs: at chest height it stands out beyond the bust, and took the cups - a red ball from the side)
+        const bel = Q.part === 'belly' && (!tt || tt === 'bra' || tt === 'sport' || tt === 'bralette' || tt === 'bandeau');
+        if (bel && (R !== W.skin || Q.res !== 1 || !bt)) return R;   // (a big build's belly is bare between a bra and briefs: at chest height it stands out beyond the bust, and took the cups - a red ball from the side)
         if (low ? !bt || (R !== W.skin && !ours.has(R)) : R !== W.skin && !(tt && mine.has(R))) return R;
         if (Q.res !== 1) { const g = cut4(S, { n: 1, bust: Q.part === 'bust' ? 1 : 0, u: Q.u, z: Q.z, f: Q.f, u0: Q.u - 0.06, u1: Q.u + 0.06, z0: Q.z - 0.5, z1: Q.z + 0.5 }, null); return g ? (g === 2 && tt === 'tee' ? S.RT : S.RC) : W.skin; }   // (close up: cut pixel by pixel)
-        S.rec.push(Q.x, Q.y, Q.part === 'bust' ? 1 : 0, Q.u, Q.z, Q.f);
+        S.rec.push(Q.x, Q.y, bel ? 3 : Q.part === 'bust' ? 1 : 0, Q.u, Q.z, Q.f);   // (3: a belly under no top - never the top half's, and the bottom half's only where its rows run across it, under4)
         return W.skin;
       };
       wrap('torso', body); wrap('pel', body);
@@ -402,9 +417,30 @@ export const POLISH = {
       if (LN[i] || (gi !== GR.TORSO && gi !== GR.SKIRT && gi !== GR.LEGL && gi !== GR.LEGR)) continue;
       for (const j of [i - 1, i + 1]) if (arm(g(j)) && NEAR[j] > NEAR[i] + 0.2 && !(this.lnC && Math.abs(CR[i] - CR[j]) + Math.abs(CG[i] - CG[j]) + Math.abs(CB[i] - CB[j]) > this.lnC)) { hit.push(i); break; }   // (lnC: not where the colours part them already)
     }
-    const sk = fig.W.skin, isSkin = (i) => sk.some((c) => c[0] === CR[i] && c[1] === CG[i] && c[2] === CB[i]);
-    for (const i of hit) { const k = this.lnSkin && isSkin(i) ? this.lnSkin : 0; LN[i] = 1; CR[i] = CR[i] * (0.52 + k) + 8; CG[i] = CG[i] * (0.48 + k) + 6; CB[i] = CB[i] * (0.56 + k) + 14; }
+    // (a line of one art pixel is a speck: only the lines that run on, with the renderer's own or with each other - lone below)
+    const T = LN.slice(0, w * h); for (const i of hit) T[i] = 1;
+    const lone = this.clean ? this.lone(T, w, h, gx, gy) : null;
+    for (const i of hit) {
+      if (lone && lone[i]) continue;
+      const gi = g(i), L = (CR[i] * 0.3 + CG[i] * 0.59 + CB[i] * 0.11) / 255, legs = gi === GR.LEGL || gi === GR.LEGR;
+      LN[i] = 1;
+      if (this.lnL && !legs && L > 0.3) { const s = Math.max(L * (L > 0.7 ? 0.82 : 0.74), Math.min(L * 0.94, 0.39)) / L, warm = CR[i] > CB[i] + 40; CR[i] *= s; CG[i] *= s * (warm ? 0.9 : 0.95); CB[i] *= s * (warm ? 0.82 : 1.04); }   // (people.js: a line as dark as the colour's own deep shade)
+      else { CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; }
+    }
   },
+  // lone(L, w, h, gx, gy): the world pixels whose art pixel holds a line with no line in any art pixel round it
+  lone(L, w, h, gx, gy) {
+    const bw = (w + gx + 1) >> 1, bh = (h + gy + 1) >> 1, B = new Uint8Array(bw * bh), out = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (L[y * w + x]) B[((y + gy) >> 1) * bw + ((x + gx) >> 1)] = 1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!L[y * w + x]) continue;
+      const bx = (x + gx) >> 1, by = (y + gy) >> 1; let near = 0;
+      for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1; dx++) { const X = bx + dx, Y = by + dy; if ((dx || dy) && X >= 0 && Y >= 0 && X < bw && Y < bh && B[Y * bw + X]) { near = 1; break; } }
+      if (!near) out[y * w + x] = 1;
+    }
+    return out;
+  },
+
 };
 // ---- pass 3 (docs/tasks/CHARACTERS3.md; gap 7): every hairstyle drawn as the concepts draw hair (CB3, CC2, C4) - a mass
 // in clean tones on the art grid: a lit top (the crown's upper left, a highlight in it), the body of the hair, a dark
@@ -496,19 +532,19 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
   for (let n = 0; n < rec.length; n += 6) {
     const x = Math.round(rec[n] + AX), y = Math.round(rec[n + 1] + AY), key = ((y + oy) >> 1) * K + ((x + ox) >> 1), k = rec[n + 2], a = rec[n + 3], b = rec[n + 4];
     let c = cells.get(key);
-    if (!c) cells.set(key, c = { px: [], n: 0, bust: 0, u: 0, z: 0, f: 0, u0: 9, u1: -9, z0: 99, z1: -99, ln: 0, al: 0, sd: 0, g: 0, i: 2 });
+    if (!c) cells.set(key, c = { px: [], n: 0, bust: 0, bel: 0, u: 0, z: 0, f: 0, u0: 9, u1: -9, z0: 99, z1: -99, ln: 0, al: 0, sd: 0, g: 0, i: 2 });
     c.px.push(y * w + x);
     if (k === 2) { c.ln++; c.al += a; c.sd += b; }
-    else { c.n++; c.bust += k; c.u += a; c.z += b; c.f += rec[n + 5]; c.u0 = Math.min(c.u0, a); c.u1 = Math.max(c.u1, a); c.z0 = Math.min(c.z0, b); c.z1 = Math.max(c.z1, b); }
+    else { c.n++; if (k === 3) c.bel++; else c.bust += k; c.u += a; c.z += b; c.f += rec[n + 5]; c.u0 = Math.min(c.u0, a); c.u1 = Math.max(c.u1, a); c.z0 = Math.min(c.z0, b); c.z1 = Math.max(c.z1, b); }
   }
   for (const c of cells.values()) {
     c.leg = c.ln > c.n;
     if (c.leg) { c.al /= c.ln; c.sd /= c.ln; c.g = cut4(S, null, c); }
-    else { c.u /= c.n; c.z /= c.n; c.f /= c.n; c.g = cut4(S, c, null); }
+    else { c.u /= c.n; c.z /= c.n; c.f /= c.n; c.g = c.bel * 2 > c.n ? 0 : cut4(S, c, null); }
     // its tone: the body's own light on that art pixel (the skin's step there), on the cloth's ramp
     let i = 0, m = 0;
     for (const p of c.px) for (let q = 0; q < 5; q++) if (SK[q][0] === CR[p] && SK[q][1] === CG[p] && SK[q][2] === CB[p]) { i += q; m++; break; }
-    if (m) c.i = Math.round(i / m);
+    if (m) c.i = Math.min(3, Math.round(i / m));   // (never the cloth's palest tone: on two art pixels of a boxer's hip it was a pink patch, not a light)
   }
   // (a waist is level at this size: the bottom half runs on across an art pixel that has it on both sides)
   for (const [key, c] of cells) if (!c.g && !c.leg) { const a = cells.get(key - 1), b = cells.get(key + 1); if (a && b && a.g === 2 && b.g === 2) c.fill = 1; }
@@ -519,7 +555,44 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
   const gk = (key) => { const c = cells.get(key); return c ? c.g : 0; }, N4 = (key) => [key - 1, key + 1, key - K, key + K];
   for (const [key, c] of cells) if (!c.g && !c.leg) { const n = N4(key).map(gk).filter((g) => g); if (n.length >= 3 && !(n.includes(2) && n.some((g) => g !== 2))) c.fill = n[0] === 3 || n[0] === 4 ? 1 : n[0]; }   // (never the row of skin between a top half and a bottom half: on a short waist that made one ball of a bra and briefs)
   for (const c of cells.values()) if (c.fill > 0 && !c.g) c.g = c.fill;
-  if (S.bt && S.bt !== 'body' && tt && tt !== 'tee' && tt !== 'tank') for (const [key, c] of cells) if (c.g && c.g !== 2 && gk(key + K) === 2) c.g = 0;
+  // (...the top's whole lowest row, if the top has a row left over it: cut one art pixel at a time the two made an hourglass, a one-piece)
+  if (S.bt && S.bt !== 'body' && tt && tt !== 'tee' && tt !== 'tank') {
+    const hitR = new Set(), topR = new Map();
+    for (const [key, c] of cells) if (c.g && c.g !== 2) { const r = Math.floor(key / K); topR.set(r, (topR.get(r) || 0) + 1); if (gk(key + K) === 2) hitR.add(r); }
+    for (const [key, c] of cells) if (c.g && c.g !== 2) { const r = Math.floor(key / K); if (hitR.has(r) ? (topR.get(r - 1) || 0) >= 3 || gk(key + K) === 2 : false) c.g = 0; }
+  }
+  // (11-20: every row of the bottom half runs unbroken from its first art pixel to its last - a waist's own shape, seen from
+  // the camera's height, leaves the middle of a boxers' top row bare - and a bra has a strap over each cup, or two up from its
+  // band behind, whatever the build: cut by place on the body, a slim or a big build's fell between art pixels)
+  // (...and a boxer's or a trunk's hem is level: a row of the thighs is the piece's or bare, whichever most of it is - cut by how
+  // far down each thigh a pixel sits, the hem left the inside of a thigh bare beside the line between the legs: a skin pixel
+  // in the middle of a man's underwear, the owner, 11-20)
+  if (S.bt === 'boxer' || S.bt === 'trunk') { const rl = new Map(); for (const [key, c] of cells) if (c.leg) { const r = Math.floor(key / K), e = rl.get(r) || rl.set(r, [0, 0]).get(r); e[c.g === 2 ? 0 : 1]++; }
+    for (const [key, c] of cells) if (c.leg) { const e = rl.get(Math.floor(key / K)); c.g = e[0] > e[1] ? 2 : 0; } }
+  { const rw = new Map(); for (const [key, c] of cells) if (c.g === 2) { const r = Math.floor(key / K), x = key % K, e = rw.get(r); if (!e) rw.set(r, [x, x]); else { e[0] = Math.min(e[0], x); e[1] = Math.max(e[1], x); } }
+    for (const [key, c] of cells) if (!c.g && !c.leg) { const e = rw.get(Math.floor(key / K)), x = key % K; if (e && x > e[0] && x < e[1] && (!S.fem || S.bt !== 'brief' || c.bel * 2 > c.n)) c.g = 2; } }
+  // (a band round the back is a level line: level in the world, on a body turned three quarters away it steps down an art
+  // pixel half way across - two dashes, "random pixels". Seen from behind, the band is one row: the one most of it is on,
+  // from its first art pixel to its last; the straps stand on it.)
+  if (tt === 'bra' || tt === 'bralette' || tt === 'bandeau') {
+    const rowsN = new Map(); let nb = 0, nf = 0, x0 = Infinity, x1 = -1;
+    for (const [key, c] of cells) if ((c.g === 1 || c.g === 3 || c.g === 4) && !c.leg) { if (c.f < 0) nb++; else nf++; if (c.g === 1 && c.f < 0) { const r = Math.floor(key / K), x = key % K; rowsN.set(r, (rowsN.get(r) || 0) + 1); x0 = Math.min(x0, x); x1 = Math.max(x1, x); } }
+    let R = -1, best = 0; for (const [r, n] of [...rowsN].sort((a, b) => a[0] - b[0])) if (n > best) { best = n; R = r; }
+    if (R >= 0 && nb > nf && rowsN.size > 1) for (const [key, c] of cells) {
+      if (c.leg || c.f >= 0) continue;
+      const r = Math.floor(key / K), x = key % K;
+      if (r === R) { if (!c.g && x >= x0 && x <= x1) c.g = 1; }
+      else if (c.g === 1 || c.g === 4 || (c.g === 3 && r > R)) c.g = 0;
+    }
+  }
+  if (tt === 'bra' || tt === 'bralette') {
+    let top = Infinity; for (const [key, c] of cells) if (c.g === 1) top = Math.min(top, Math.floor(key / K));
+    const xs = [...cells].filter(([key, c]) => c.g === 1 && Math.floor(key / K) === top).map(([key]) => key % K).sort((a, b) => a - b);
+    if (xs.length >= 3 && top > 0) for (const x of [xs[Math.floor(xs.length * 0.2)], xs[Math.ceil(xs.length * 0.8) - 1]]) {
+      const up = cells.get((top - 1) * K + x), has = [x - 1, x, x + 1].some((v) => { const c = cells.get((top - 1) * K + v); return c && c.g; });
+      if (up && !up.g && !has) up.g = 3;
+    }
+  }
   // (the owner, 11-20: a strap round the hip holds a woman's briefs up - the triangle's top row runs on across every art pixel
   // of the hips in it, as far as the arms let it show; from the side and from behind it is the strap)
   if (S.bt === 'brief' && S.fem) {
