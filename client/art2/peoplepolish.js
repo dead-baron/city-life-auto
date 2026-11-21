@@ -39,8 +39,8 @@ export const POLISH = {
   // (the owner, 20:15: round glasses "too close together ... one step bigger so it looks like an actual round lens". A lens is
   // two art pixels wide now - the eye and the pixel beside it - with its rim round them; the two lenses share the pixel
   // between the eyes, the bridge.)
-  propBox: { paper: [3.4, 0.7, 4.0, 0, 0], clip: [2.6, 0.6, 3.4, 0, 0], laptop: [4.2, 0.8, 3.0, 0, 0], parcel: [2.9, 3.2, 2.8, -2.6] },
-  propHold: { paper: 1, clip: 1, laptop: 1, ball: 2 },   // (held flat against the chest, the forearm across: people.js accHands)   // (things carried in the hand: half sizes across, along, up, how far under the hand, and how far out from it)
+  propBox: { paper: [5, 0.8, 5.2, 0, 0], clip: [4, 0.7, 5, 0, 0], laptop: [4.2, 0.8, 3.0, 0, 0], parcel: [2.9, 3.2, 2.8, -2.6] },
+  propHold: { paper: 2, clip: 2, laptop: 1, ball: 2 },   // (2: on the palm out in front of the hip, where all of it shows)   // (held flat against the chest, the forearm across: people.js accHands)   // (things carried in the hand: half sizes across, along, up, how far under the hand, and how far out from it)
   GLS: { sleep: '11F', novelty: '10F20F12F22F31F01F11E21W', round: '10F20F12F22F31F01F11E21W', half: '01F31F12F22F11E21W', frames: '10F20F30F01F31F12H22H32H11E21W', browline: '00F10F20F30F01T31T12T22T11E21W', rimless: '10C20C31C12C22C11E21W', patch: '00F10F20F01F11F21F12F' },
   // (facial hair - the owner, 11-20 23:27: "I can't see any of the moustaches"; 11-21 01:03: "a few okay ones like handle bar
   // moustache but otherwise they're not looking great ... if we want to add a bigger beard and obvious facial hair we should go
@@ -556,7 +556,7 @@ export const POLISH = {
       if (PR[0] === 'camera') wrap('leather', (R, Q) => { if (Q.l2 > 0.55) { Q.gloss = 1; return pt; } if (Math.abs(Q.l0) < 0.5 && Math.abs(Q.l2) < 0.5) { Q.gloss = 1; Q.k += 0.3; return cloth('#7fa6c4'); } Q.gloss = 0; return pc; });
       if (PR[0] === 'bouquet') wrap('cup', (R, Q) => (Q.l0 < 0.42 ? GREEN : spk(Q, 3) ? pt : (Q.k += 0.08, pc)));
       // (the concepts' missing things to carry, each on the small bag's block at its own size - propBox; a ball is a ball)
-      if (PR[0] === 'paper') { const pp = cloth('#cfcab6'), ink = cloth('#3a3a44'); wrap('leather', (R, Q) => { Q.gloss = 0; const j = Math.floor((Q.y + 400) / 2); return Q.l2 > 0.5 && Q.l2 < 0.95 ? ink : (j & 1) && Q.l2 < 0.3 && Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.72 ? cloth('#8a8a92') : pp; }); }   // (a folded newspaper: a headline's dark bar across the top, lines of print under it - an art pixel each)
+      if (PR[0] === 'paper') { const pp = [[176, 172, 158], [190, 186, 172], [206, 202, 188], [206, 202, 188], [216, 212, 198]], ink = [[52, 52, 60], [52, 52, 60], [58, 58, 66], [58, 58, 66], [58, 58, 66]], gr = [[128, 128, 134], [128, 128, 134], [136, 136, 142], [136, 136, 142], [136, 136, 142]]; wrap('leather', (R, Q) => { Q.gloss = 0; if (Q.res !== 1) return pp; const j = Math.floor(Math.round(Q.y) / 2); return Q.l2 > 0.42 && Q.l2 < 0.9 && Math.abs(Q.l0) < 0.8 ? ink : (j & 1) && Q.l2 < 0.3 && Q.l2 > -0.85 && Math.abs(Q.l0) < 0.8 ? gr : pp; }); }   // (a newspaper: newsprint's gray - on a white shirt a white sheet was nothing - a headline's dark bar across the top, a line of print on every other art row under it)
       if (PR[0] === 'clip') wrap('leather', (R, Q) => { Q.gloss = 0; return Q.l2 > 0.72 && Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.4 ? cloth('#c8ccd4') : Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.72 && Q.l2 < 0.6 && Q.l2 > -0.8 ? pt : pc; });
       if (PR[0] === 'laptop') wrap('leather', (R, Q) => { Q.gloss = 0.2; if (Q.l2 > 0.72) { Q.k += 0.3; return pt; } return pc; });
       if (PR[0] === 'parcel') wrap('leather', (R, Q) => { Q.gloss = 0; return Math.abs(Q.l1) < 0.16 || (Q.l2 > 0.8 && Math.abs(Q.l0) < 0.2) ? pt : pc; });

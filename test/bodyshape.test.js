@@ -8,7 +8,9 @@
 //            node tools/bodycheck.mjs --show f,3,under,0    one figure's art pixels (base, build, outfit, direction)
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { check, bake, wardrobe, look } from '../tools/bodycheck.mjs';
+import { check, bake, wardrobe, look, looksCheck } from '../tools/bodycheck.mjs';
+import { RECIPES, recipeLook } from '../server/systems/npclooks.js';
+import { LOOKS } from '../server/systems/personas.js';
 import { setPolish, person, POSES } from '../client/art2/people.js';
 import * as LK from '../shared/look.js';
 import { POLISH } from '../client/art2/peoplepolish.js';
@@ -234,5 +236,21 @@ test('the last look options: dyed tips, a beard in its own color, a stoop, a bod
   assert.ok(wide(bb) > wide(ath), 'the bodybuilder is broader than the athletic build');
   const headX = (L) => { const e = pixels(bake(LK.lookArt(L), 2), (q) => q.g === 1); return e.reduce((a, p) => a + p[0], 0) / e.length; }, feetX = (L) => { const S = bake(LK.lookArt(L), 2), e = pixels(S, (q) => q.part === 'shoe' || q.part === 'sole' || q.part === 'foot'); return e.reduce((a, p) => a + p[0], 0) / Math.max(1, e.length); };
   assert.ok(Math.abs((headX(st) - feetX(st)) - (headX(plain) - feetX(plain))) >= 0.8, 'stooped, the head is carried forward of the feet from the side');
+});
+
+// The city's people under the pass (the owner, 11-21: "do everything left for the character/npc characters"): every civilian
+// recipe and every street persona, three looks each, from six sides - each one draws, in every pose, and bare skin doesn't
+// show as a lone pixel through what they wear. The few it finds are skin that is really there (a shoulder between a vest and
+// a chain, a belly under a short tank top): kept from growing, not hidden.
+test('the city\'s people under the pass: every NPC recipe and persona draws, in every pose, without skin showing through', () => {
+  const looks = [];
+  for (const a of Object.keys(RECIPES)) for (let k = 1; k <= 3; k++) for (const [ds, night] of [['commercial', false], ['residential', true]]) looks.push([`${a} #${k} ${ds}`, recipeLook(a, k * 7919 + 13, ds, night).look]);
+  for (const [k, v] of Object.entries(LOOKS)) for (let n = 1; n <= 3; n++) looks.push([`persona ${k} #${n}`, recipeLook(k, n * 104729 + 7, 'commercial', false, v).look]);
+  assert.ok(looks.length >= 180 && looks.every(([, L]) => L && L.outfit && (L.outfit.top || L.outfit.set)), 'the looks are the recipes\' own');
+  const F = looksCheck(POLISH, looks);
+  assert.deepEqual(F.filter((f) => f.rule !== 'speck').map((f) => f.who + ': ' + f.text), [], 'a look that is not valid or does not draw');
+  assert.ok(F.length <= 12, `${F.length} lone pixels of skin (9 known): ` + F.slice(0, 6).map((f) => f.who).join('; '));
+  setPolish(POLISH);
+  try { for (const [name, L] of looks.filter((_, i) => i % 4 === 0)) { const A = LK.lookArt(L); for (const p of Object.keys(POSES)) assert.doesNotThrow(() => person(A, 1, p, 0, { tight: true }), `${name}, ${p}`); } } finally { setPolish(null); }
 });
 

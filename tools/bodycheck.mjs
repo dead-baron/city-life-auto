@@ -250,6 +250,24 @@ function speck(S, skinM) {
   });
   return out;
 }
+// A whole look, as a person in the city wears it (the NPCs: server/systems/npclooks.js recipes, personas.js LOOKS): skin showing
+// through, from six sides. The same rule as wardrobe() below, on looks instead of single pieces.
+export function looksCheck(POLISH, looks, { dirs = [0, 1, 3, 4, 5, 7] } = {}) {
+  setPolish(POLISH);
+  const faults = [];
+  try {
+    for (const [name, L0] of looks) {
+      const L = LK.validLook(L0); if (!L) { faults.push({ who: name, rule: 'look', text: 'not a valid look' }); continue; }
+      const A = LK.lookArt(L), Ps = Object.values(L.outfit).filter(Boolean).map((o) => LK.PIECES[o.id]);
+      const holes = Ps.some((P) => P.d.torn || P.d.mesh || P.d.lace || P.d.ripped || P.slot === 'under') || ['crop', 'bikini', 'bra', 'tube', 'none'].includes(A.top && A.top.kind) || !L.outfit.bottoms && !L.outfit.set;
+      if (holes) continue;
+      for (const dir of dirs) { let S; try { S = bake(A, dir); } catch (e) { faults.push({ who: `${name}, facing ${dir}`, rule: 'render', text: String(e.message).slice(0, 80) }); continue; }
+        const cm = new Map(); each(S, (p) => { if (!p.ol && !p.ln && (p.part === 'hand' || p.part === 'head' || p.part === 'neck' || p.part === 'fa')) cm.set(p.m, (cm.get(p.m) || 0) + 1); }); const skinM = [...cm].sort((a, b) => b[1] - a[1])[0]?.[0] || 0;
+        for (const text of speck(S, skinM)) faults.push({ who: `${name}, facing ${dir}`, rule: 'speck', text }); }
+    }
+  } finally { setPolish(null); }
+  return faults;
+}
 export function wardrobe(POLISH, { dirs = [0, 1, 3, 4, 5, 7], only = null } = {}) {
   setPolish(POLISH);
   const faults = [];
