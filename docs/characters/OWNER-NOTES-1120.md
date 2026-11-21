@@ -190,5 +190,5 @@ Stripes passed; on the striped bra and panties he is "not sure it works well ...
 - [x] The bear's "snout at an angle might need more polish" - the muzzle a pale block with the nose on it, a step toward the way the head faces, its tip out past the face in profile; the eyes plain dots.
 - [x] "Scarf doesn't look like a scarf yet" - wound round the neck two rows thick and wider than it, one end down the front two wide, ribbed.
 - [x] Bow tie "comically large ... one step bigger" - eight across on a man's chest, pinched at the knot.
-- [ ] "Go ahead and start on all of it we are missing" - the queue below this line in the DEVLOG.
+- [~] "Go ahead and start on all of it we are missing" - the first 24 of the 77 missing concept items built (`docs/characters/CHECKLIST.md`: 536 in, 53 missing). Shown: `characters-missing-batch1.png`. What is left is listed in the DEVLOG entry of the same hour.
 

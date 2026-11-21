@@ -1,6 +1,6 @@
 # The concept checklist (pass 5, 2026-11-19)
 
-**608 items: 512 in the game (9 of them added in this pass), 77 missing, 19 too small to show.**
+**608 items: 536 in the game, 53 missing, 19 too small to show.** (11-20: 24 of the missing ones built - the first batch of "the next pass's work" at the end; pass 5 left it at 512 in, 77 missing.)
 
 Every outfit, piece and creator option on the concept sheets (`docs/characters/concepts/`, 94 images), against the
 wardrobe (`shared/lookcore.js`) and the creator (`client/creator.js`). An item is a thing a player would look for: one
@@ -54,8 +54,8 @@ catalogue did not note is not here.
 | Age lines, wrinkles | too small | - |
 | Grey hair for age | in | Age; grey and white hair colours |
 | Scars (cheek, eye, lip, chin, brow) | in | Scar: Cheek, Across the eye, Lip, Chin, Brow |
-| A plaster on the face | **missing** | - |
-| A black eye | **missing** | - |
+| A plaster on the face | in | Scar: Plaster (pass on) - added 11-20 |
+| A black eye | in | Scar: Black eye (pass on) - added 11-20 |
 | Ear stud, nose stud, brow and lip piercing | in | Piercings: Ears, Nose, Brow, Lip |
 | Smiles, expressions | too small | - |
 
@@ -153,7 +153,7 @@ catalogue did not note is not here.
 | Blush | in | Blush |
 | Glam | in | Glam |
 | Goth | in | Goth |
-| A cheek stripe (face paint) | **missing** | - |
+| A cheek stripe (face paint) | in | Makeup: Face paint, in the makeup color (pass on) - added 11-20 |
 | Tattoo sleeves | in | Tattoos: Arms |
 | Leg tattoos | in | Tattoos: Legs |
 | Neck tattoo | in | Tattoos: Neck |
@@ -210,7 +210,7 @@ catalogue did not note is not here.
 | Trucker cap | in | Trucker cap |
 | Old lady's cane | in | Walking cane |
 | Homeless man's layers, shopping trolley | **missing** | the trolley is a world thing; no worn / ragged clothes |
-| Newspaper to carry | **missing** | - |
+| Newspaper to carry | in | Newspaper (pass on; small in the hand) - added 11-20 |
 | Matching shell suits (seniors) | in | Tracksuit, any colour |
 | Bouncer in black | in | Plain tee and Black jeans, black |
 | Red dress | in | Mini dress, red |
@@ -264,7 +264,7 @@ catalogue did not note is not here.
 | Bandana on the head | in | Head bandana |
 | Braid, long beard | in | Single braid, Long beard |
 | Chaps | in | Leather chaps |
-| Half-helmet with goggles | **missing** | Moto helmet is a full helmet |
+| Half-helmet with goggles | in | Half helmet with goggles (pass on) - added 11-20 |
 | Prospect's plain vest | in | Waistcoat / Studded vest |
 | Studs | in | Studded vest |
 
@@ -341,10 +341,10 @@ catalogue did not note is not here.
 | Earmuffs, cat ears | in | Earmuffs, Cat ears |
 | Baker-boy cap (SF3) | in | Flat cap |
 | Wide felt hat (SF1) | in | Fedora / Sun hat |
-| Riding helmet (SF20) | **missing** | - |
+| Riding helmet (SF20) | in | Riding helmet (pass on) - added 11-20 |
 | Towel turban (SF9) | in | Towel wrap |
-| Sleep mask (SF9) | **missing** | - |
-| Feathered hat (SF19) | **missing** | - |
+| Sleep mask (SF9) | in | Sleep mask (pass on) - added 11-20 |
+| Feathered hat (SF19) | in | Feathered hat (pass on) - added 11-20 |
 
 ## CP2 - glasses and masks
 
@@ -360,8 +360,8 @@ catalogue did not note is not here.
 | Pig, clown, skull, alien, masquerade | in | Pig mask, Clown mask, Skull mask, Alien mask, Masquerade mask |
 | Welding mask | in | Welding mask |
 | Panda and bear masks (SF22, SM22) | in | Panda mask, Bear mask (the pig mask's shape recoloured) |
-| Chicken mask | **missing** | - |
-| Novelty glasses with a nose, fake moustache | **missing** | the Moustache is facial hair |
+| Chicken mask | in | Chicken mask (pass on) - added 11-20 |
+| Novelty glasses with a nose, fake moustache | in | Novelty glasses (pass on) - added 11-20 |
 | A wig | **missing** | change the hair instead |
 
 ## CP3 - jewelry and bags
@@ -375,7 +375,7 @@ catalogue did not note is not here.
 | Watches, smartwatch | in | Watch, Gold watch, Smartwatch |
 | Bangles, beads, leather cuff | in | Bangles, Beaded bracelet, Leather cuff |
 | Backpack, duffel, tote, sling | in | Backpack, Duffel bag, Tote bag, Crossbody bag |
-| Laptop sleeve | **missing** | Briefcase is nearest |
+| Laptop sleeve | in | Laptop sleeve (pass on; small in the hand) - added 11-20 |
 | Briefcase, belt bag, chest rig, messenger | in | Briefcase, Belt bag, Chest rig, Messenger bag |
 | Shopping bags, guitar case | in | Shopping bags, Guitar case |
 | Quilted handbag, clutch | in | Handbag, Clutch |
@@ -434,9 +434,9 @@ catalogue did not note is not here.
 | Long cardigan | in | Cardigan |
 | Tweed three-piece | in | Business suit with the check pattern, Waistcoat |
 | Quarter-zip | in | Sweater |
-| Shirt with braces and a loose tie | **missing** | no braces |
+| Shirt with braces and a loose tie | in | Button-up shirt, Braces, Necktie (pass on; one jewelry slot: braces or the tie) - added 11-20 |
 | Cardigan and tie | in | Cardigan over a Button-up shirt (no tie without a suit) |
-| A tie on a shirt alone | **missing** | - |
+| A tie on a shirt alone | in | Necktie (pass on) - added 11-20 |
 
 ## SF3, SM3 - everyday, smart casual
 
@@ -586,7 +586,7 @@ catalogue did not note is not here.
 | Leather vest | in | Studded vest |
 | Red leather jacket | in | Leather jacket, red |
 | Fishnet top, spiked collar | in | Mesh top, Spiked collar |
-| Braces | **missing** | - |
+| Braces | in | Braces (pass on) - added 11-20 |
 | Tattoo sleeves | in | Tattoos: Arms |
 | Bandana | in | Head bandana |
 | Plaid shirt tied at the waist | **missing** | - |
@@ -607,7 +607,7 @@ catalogue did not note is not here.
 | Band sweatshirt | in | Graphic tee / Sweater |
 | Hooded cloak | in | Hooded cloak |
 | Buckled long coat, frock coat | in | Trench coat, Wool coat (buckles too small) |
-| Cravat | **missing** | - |
+| Cravat | in | Cravat (pass on) - added 11-20 |
 | Studded belt | too small | - |
 | Flannel and ripped jeans | in | Flannel shirt, Ripped jeans |
 | Leather vest over fishnet | in | Studded vest, Mesh top |
@@ -623,16 +623,16 @@ catalogue did not note is not here.
 | --- | --- | --- |
 | Bra and leggings | in | Sports bra, Leggings |
 | Running kit, armband | in | Tank top, Shorts, Running shoes (armband too small) |
-| Yoga mat | **missing** | - |
+| Yoga mat | in | Yoga mat, on the back (pass on) - added 11-20 |
 | Tracksuit | in | Tracksuit |
 | Basketball kit | in | Football jersey, Shorts (no sleeveless jersey) |
 | Tennis dress, visor | in | Tennis dress, Visor |
-| Boxing wraps, gloves, trunks | **missing** | Sweatbands and Shorts stand in; no boxing gloves |
+| Boxing wraps, gloves, trunks | in | Boxing gloves (pass on); Shorts for the trunks - added 11-20 |
 | Cycling kit, helmet | in | Cycling jersey, Cycling shorts, Bike helmet |
 | Stringer tank, compression tee | in | Tank top, Rash guard |
 | Footballer | in | Football jersey, Shorts, Knee socks |
-| A towel round the neck | **missing** | - |
-| A basketball to carry | **missing** | - |
+| A towel round the neck | in | Towel round the neck (pass on) - added 11-20 |
+| A basketball to carry | in | Basketball (pass on; small at the hip) - added 11-20 |
 | Headband, sweatbands | in | Headband, Sweatbands |
 
 ## SF14, SM14 - decades
@@ -689,7 +689,7 @@ catalogue did not note is not here.
 | Chalk bag | too small | - |
 | Blaze-orange vest over camo | **in (new)** | Hunting vest, Camo pants (new), Camo jacket |
 | Knee-patch trousers | in | Work pants |
-| Trekking poles | **missing** | - |
+| Trekking poles | in | Trekking poles (pass on) - added 11-20 |
 | Shell and shorts | in | Rain jacket, Shorts |
 
 ## SF17, SM17 - formal
@@ -744,7 +744,7 @@ catalogue did not note is not here.
 | Neon mesh | in | Mesh top |
 | Open floral shirt, linen trousers | in | Hawaiian shirt, Chinos |
 | Crochet vest | **missing** | - |
-| Glow sticks in the hand | **missing** | Glow bracelets on the wrist |
+| Glow sticks in the hand | in | Glow sticks (pass on) - added 11-20 |
 | Belt bag | in | Belt bag |
 
 ## SF20, SM20 - preppy
@@ -752,7 +752,7 @@ catalogue did not note is not here.
 | On the sheet | | In the game as / note |
 | --- | --- | --- |
 | Tennis whites | in | Tennis dress, Tennis skirt, Polo shirt |
-| A sweater over the shoulders | **missing** | - |
+| A sweater over the shoulders | in | Sweater over the shoulders (pass on) - added 11-20 |
 | Cable sweater and chinos | in | Sweater, Chinos |
 | Golf polo and skort | in | Polo shirt, Tennis skirt |
 | Golf glove | too small | - |
@@ -780,7 +780,7 @@ catalogue did not note is not here.
 | Doctor: lab coat over scrubs | in | Lab coat, Scrubs |
 | Tradesman: tool belt, knee pads | in | Tool belt, Knee pads (pass on) |
 | Hi-vis coverall, reflective bands | in | Hi-vis coverall |
-| Clipboard | **missing** | - |
+| Clipboard | in | Clipboard (pass on; small in the hand) - added 11-20 |
 
 ## SF22, SM22 - disguise
 
@@ -790,7 +790,7 @@ catalogue did not note is not here.
 | Dungarees / boiler suit and a toolbox | in | Coveralls, Tool bag |
 | Trench, fedora, bandana | in | Trench coat, Fedora, Face bandana |
 | Pig mask and tracksuit | in | Pig mask, Tracksuit |
-| Courier with a parcel | **missing** | the parcel (Delivery pack is nearest) |
+| Courier with a parcel | in | Parcel (pass on) - added 11-20 |
 | Fake moustache and glasses | in | Moustache, Reading glasses |
 | Cap and face bandana / gaiter | in | Baseball cap, Face bandana, Neck gaiter |
 | Bomber and duffel | in | Bomber jacket, Duffel bag |

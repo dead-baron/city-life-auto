@@ -90,10 +90,10 @@ export const HAIR_STYLES = [
 // facial hair (CB4)
 export const FACIAL_HAIR = [['None', null], ['Stubble', 'stubble'], ['Short beard', 'short'], ['Full beard', 'full'], ['Long beard', 'long'], ['Goatee', 'goatee'],
   ['Moustache', 'moustache'], ['Handlebar', 'handlebar'], ['Chin strap', 'chinstrap'], ['Mutton chops', 'chops'], ['Soul patch', 'soul'], ['Van Dyke', 'vandyke']];
-export const MAKEUP = ['None', 'Natural', 'Lipstick', 'Smoky eyes', 'Blush', 'Glam', 'Goth'];
+export const MAKEUP = ['None', 'Natural', 'Lipstick', 'Smoky eyes', 'Blush', 'Glam', 'Goth', 'Face paint'];   // (append-only: a look's code holds the place)
 export const TATTOO_AREAS = [['arms', 'Arms'], ['legs', 'Legs'], ['neck', 'Neck'], ['chest', 'Chest & back'], ['face', 'Face']];
 export const PIERCINGS = [['ears', 'Ears'], ['nose', 'Nose'], ['brow', 'Brow'], ['lip', 'Lip']];
-export const SCARS = ['None', 'Cheek', 'Across the eye', 'Lip', 'Chin', 'Brow'];
+export const SCARS = ['None', 'Cheek', 'Across the eye', 'Lip', 'Chin', 'Brow', 'Plaster', 'Black eye'];   // (append-only; the last two are the polish pass's: a plaster on the cheek, a black eye)
 
 // ---- the catalogue -------------------------------------------------------------------------------------------------
 // [slot, name, bases, style tags, price, store, draw, main colour, trim colour]
@@ -476,6 +476,32 @@ add('set', 'Undershirt and trunks', 'mf', 'lounge', 15, 'clothing', { k: 'under'
 add('under', 'Striped boxers', 'm', 'lounge casual', 12, 'clothing', { bk: 'trunks', band: 1, stripe: 1 }, 'navy', 'white');
 add('under', 'Striped briefs', 'mf', 'lounge casual', 10, 'clothing', { bk: 'bikini', stripe: 1 }, 'red', 'white');
 add('under', 'Striped bra and panties', 'f', 'lounge casual', 16, 'clothing', { k: 'bra', bk: 'bikini', stripe: 1 }, 'pink', 'white');
+// the concepts' missing pieces, 1 (docs/characters/CHECKLIST.md "the next pass's work"; the owner, 11-20 20:53: "start on all of
+// it we are missing"): each drawn by the polish pass (pp: not sold, not worn in the city, while it is off). On the chest
+// (peoplepolish.js NECK): a tie on a shirt alone, braces, a cravat, a towel round the neck, a sweater over the shoulders.
+// On the face (masks): a sleep mask, novelty glasses, a chicken mask. Hats: a feather, a riding helmet, a half helmet
+// with goggles. To carry: a newspaper, a clipboard, a laptop sleeve, a parcel, a basketball, glow sticks, trekking poles,
+// a yoga mat on the back; boxing gloves.
+add('jewel', 'Necktie', 'mf', 'business smart formal preppy', 22, 'boutique', { tie: 1, pp: 1 }, 'red');
+add('jewel', 'Braces', 'mf', 'retro smart punk business', 18, 'boutique', { braces: 1, pp: 1 }, 'red');
+add('jewel', 'Cravat', 'mf', 'formal alt retro hifashion', 30, 'boutique', { cravat: 1, pp: 1 }, 'burgundy');
+add('jewel', 'Towel round the neck', 'mf', 'athletic beach lounge', 8, 'sports', { ntowel: 1, pp: 1 }, 'sky', 'white');   // (sky by default: a white towel on a white top is not seen)
+add('jewel', 'Sweater over the shoulders', 'mf', 'preppy smart casual', 40, 'clothing', { shsweater: 1, pp: 1 }, 'navy');
+add('jewel', 'Boxing gloves', 'mf', 'athletic', 45, 'sports', { boxing: 1, pp: 1 }, 'red', 'white');
+add('glasses', 'Sleep mask', 'mf', 'lounge', 8, 'clothing', { k: 'sleep', pp: 1, nostreet: 1 }, 'navy');
+add('glasses', 'Novelty glasses', 'mf', 'disguise festival', 10, 'costume', { k: 'novelty', pp: 1, nostreet: 1 }, 'black');
+add('glasses', 'Chicken mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', animal: 'chicken', pp: 1, nostreet: 1 }, 'white', 'red');
+add('hat', 'Feathered hat', 'mf', 'festival hifashion retro western', 70, 'boutique', { k: 'fedora', feather: 1, pp: 1 }, 'olive', 'red');
+add('hat', 'Riding helmet', 'mf', 'preppy outdoors', 60, 'sports', { k: 'hard', riding: 1, pp: 1 }, 'black');
+add('hat', 'Half helmet with goggles', 'mf', 'punk street western', 75, 'outdoor', { k: 'skatehelmet', gog: 1, pp: 1 }, 'black', 'mustard');
+add('bag', 'Newspaper', 'mf', 'business smart casual retro', 2, 'clothing', { carry: 'purse', prop: 'paper', pp: 1 }, 'white', 'charcoal');
+add('bag', 'Clipboard', 'mf', 'work business', 6, 'workwear', { carry: 'purse', prop: 'clip', pp: 1 }, 'brown', 'white');
+add('bag', 'Laptop sleeve', 'mf', 'business smart casual', 35, 'clothing', { carry: 'purse', prop: 'laptop', pp: 1 }, 'charcoal', 'silver');
+add('bag', 'Parcel', 'mf', 'work', 5, 'workwear', { carry: 'purse', prop: 'parcel', pp: 1 }, 'tan', 'cream');
+add('bag', 'Basketball', 'mf', 'athletic streetwear', 25, 'sports', { carry: 'purse', prop: 'ball', pp: 1 }, 'orange', 'black');
+add('bag', 'Glow sticks', 'mf', 'festival nightclub', 6, 'costume', { carry: 'purse', prop: 'glow', pp: 1 }, 'neon green', 'hot pink');
+add('bag', 'Trekking poles', 'mf', 'outdoors', 40, 'outdoor', { carry: 'cane', prop: 'poles', pp: 1 }, 'light gray', 'red');
+add('bag', 'Yoga mat', 'mf', 'athletic casual', 20, 'sports', { back: 3, pp: 1 }, 'purple');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
@@ -677,7 +703,7 @@ export function lookArt(L, opt = {}) {
   }
   else { A.shoes = '#d8c8b0'; A.shoeKind = 'barefoot'; }
   const hat = P('hat');
-  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat), ...(hat.d.flat ? { flat: 1 } : null), ...(hat.d.fire ? { fire: 1 } : null), ...(hat.d.phones ? { phones: 1 } : null) };   // (fire: a fire helmet's crest, shield and neck brim; phones: headphones, not earmuffs - people.js hatPrims)
+  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat), ...(hat.d.flat ? { flat: 1 } : null), ...(hat.d.fire ? { fire: 1 } : null), ...(hat.d.phones ? { phones: 1 } : null), ...(hat.d.feather ? { feather: 1 } : null), ...(hat.d.riding ? { riding: 1 } : null), ...(hat.d.gog ? { gog: 1 } : null) };   // (fire: a fire helmet's crest, shield and neck brim; phones: headphones, not earmuffs - people.js hatPrims)
   if (hat && hat.d.k === 'hood') A.hat.color = A.top.color;
   A.drape = (jk || set || A).d?.dr;
   if (!hat && (A.drape === 'cloak' || A.drape === 'ghillie')) A.hat = { kind: 'hood', color: A.top.color };
@@ -703,7 +729,7 @@ export function lookArt(L, opt = {}) {
   if (jw && jw.d.gloves) A.gloves = HEX(O.jewel.c);
   const bg = P('bag');
   if (bg) {
-    if (bg.d.back) { A.back = bg.d.back === 2 ? 'guitarcase' : 'backpack'; A.backColor = HEX(O.bag.c); if (bg.d.big) A.backBig = 1; if (bg.d.box) A.backBox = 1; }
+    if (bg.d.back) { A.back = bg.d.back === 2 ? 'guitarcase' : bg.d.back === 3 ? 'yogamat' : 'backpack'; A.backColor = HEX(O.bag.c); if (bg.d.big) A.backBig = 1; if (bg.d.box) A.backBox = 1; }
     else if (bg.d.belt) A.beltBag = HEX(O.bag.c);
     else if (bg.d.rig) A.rig = HEX(O.bag.c);
     else { A.carry = bg.d.carry; A.bagColor = HEX(O.bag.c); if (bg.d.prop) A.prop = [bg.d.prop, HEX(O.bag.t)]; if (bg.d.small) A.bagSmall = 1; if (bg.d.big) A.bagBig = 1; if (bg.d.duffel) A.duffel = 1; }
