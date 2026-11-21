@@ -25239,4 +25239,10 @@ and the HUD keep the clean line set.
 - Checked in the running game (a local copy, the bag opened with a full kit): the pictures sit in the tiles, the
   equipment slots and the details panel. Seen there and not from this change: at 1280 x 720 the details panel clips a
   long weapon name and the EQUIP label, and the Sort box runs under the panel - for the pre-beta list.
+- **His notes again (09:55).** The pickaxe's head is one even arc with two points across the top of the handle; the
+  katana a long slim blade with a gentle curve (a dark spine, a bright edge), a small round guard and a grip wrapped
+  in diamonds; the hunting knife a buck knife - a broad clip-point blade, brass guard and pommel, a wooden grip; the
+  bat a bat - a knob, a slim taped handle, a long taper to the barrel; the silenced pistol's silencer is its own
+  fatter tube on a short neck. The cooked steaks tell apart by colour and trimming (venison dark with a sprig of
+  rosemary, elk redder and on the bone, game golden with a pat of butter), the raw meats by a wider spread of reds.
 - Not live: on the branch until the owner has seen it.

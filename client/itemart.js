@@ -166,7 +166,18 @@ const bowl = (p, soup) => { p.P([[3, 11], [20, 11], [17, 20], [6, 20]], '#e8e2d6
 const feather = (p, c, tip, bar) => { p.P([[8, 18], [6, 14], [8, 9], [12, 5], [17, 2], [20, 2], [21, 5], [18, 10], [14, 15], [10, 18]], c); if (tip) p.P([[13, 4], [17, 2], [20, 2], [21, 5], [19, 8]], tip, { f: 1 }); p.cut(6, 14).cut(7, 13).cut(8, 13).cut(18, 10).cut(17, 10).cut(17, 11).cut(11, 5).cut(12, 6).cut(14, 15).cut(13, 15); p.ink(); p.L2(3, 22, 19, 4, [250, 246, 232]); const d = dusk(hex(c), 0.3); for (const [x, y] of [[9, 12], [11, 10], [13, 8], [15, 6]]) { p.L2(x, y, x - 2, y, d); p.L2(x + 1, y + 1, x + 1, y + 3, d); } if (bar) { p.L(9, 15, 12, 16, bar).L(15, 9, 17, 9, bar); } };
 const handle = (p, x0, y0, x1, y1, c = '#9a6a3a') => p.S(x0, y0, x1, y1, c, 3);
 const ore = (p, base, fleck, hi) => { rock(p, base); p.ink(); for (const [x, y] of [[8, 10], [13, 8], [16, 12], [10, 15], [14, 16], [7, 13]]) p.R(x, y, x + 1, y + 1, fleck, { f: 1 }); if (hi) for (const [x, y] of [[8, 10], [13, 8], [14, 16]]) p.D(x, y, hi); };
-const pick = (p, head) => { p.S(6, 22, 13, 6, '#9a6a3a', 3).P([[2, 11], [5, 6], [10, 3], [16, 3], [20, 6], [22, 12], [20, 11], [18, 8], [15, 6], [11, 6], [7, 8], [4, 12]], head).R(11, 3, 15, 6, '#5a5e6c', { f: 1 }).ink(); const h = lite(hex(head), 0.5); p.L2(5, 7, 10, 4, h); p.L2(16, 4, 20, 7, h); };
+// a band between two curves from a to b (bent toward c1 outside, c2 inside): a pick's head, a blade's sweep
+const band = (p, a, c1, c2, b, col, o) => { const q = (c, t) => [(1 - t) * (1 - t) * a[0] + 2 * (1 - t) * t * c[0] + t * t * b[0], (1 - t) * (1 - t) * a[1] + 2 * (1 - t) * t * c[1] + t * t * b[1]], A = [], B = []; for (let i = 0; i <= 12; i++) { A.push(q(c1, i / 12)); B.push(q(c2, i / 12)); } return p.P([...A, ...B.reverse()], col, o); };
+// a point u along a tool's length and v across it, the tool lying from the lower left to the upper right
+const at = (gx, gy, u, v) => [gx + (u + v) * 0.7071, gy + (-u + v) * 0.7071];
+const pick = (p, head) => {
+  p.S(3, 22, 15, 9, '#9a6a3a', 3);                                             // (the handle, a little thicker at its foot)
+  band(p, [4, 3], [22, 0], [16.5, 8], [21, 20], head, { f: 1 });               // (the head: two points, one arc)
+  p.R(15, 6, 18, 9, '#4a4e5c', { f: 1 }).ink();                                // (the eye the handle goes through)
+  const h = lite(hex(head), 0.6), d = dusk(hex(head), 0.34), q = (c, t) => [(1 - t) * (1 - t) * 4 + 2 * (1 - t) * t * c[0] + t * t * 21, (1 - t) * (1 - t) * 3 + 2 * (1 - t) * t * c[1] + t * t * 20];
+  for (let i = 2; i <= 22; i++) { const [x, y] = q([21, 1.2], i / 24); p.set(x, y, h); const [x2, y2] = q([17.2, 7.2], i / 24); if (i > 13) p.set(x2, y2, d); }   // (light along its back, shade under the far arm)
+  p.D(16, 7, '#8a8e9c').D(4, 21, '#6a4426').D(5, 21, '#6a4426');
+};
 const rod = (p, c, reel, grip = '#3a2a22') => { p.L(3, 21, 20, 3, c).L(3, 21, 8, 16, grip, 2).E(9, 17, 2.2, 2.2, reel).ink(); p.L(20, 3, 21, 9, '#d8dce6'); p.D(21, 10, '#c8ccd4'); };
 const tub = (p, c, lidC) => { p.R(5, 10, 18, 20, c, { r: 1 }).R(4, 8, 19, 10, lidC, { r: 1 }); };
 const produce = { tomato: (p) => { p.E(11.5, 13.5, 7.5, 6.5, '#e0382a').P([[8, 7], [11.5, 9], [15, 7], [13, 6], [11.5, 4], [10, 6]], '#4a9a3a', { f: 1 }); },
@@ -194,14 +205,17 @@ const TIP = { redFox: '#f6f2ea', greyFox: '#2a282e', raccoon: '#2a282c', wolf: '
 for (const k of ['deer', 'elk', 'moose', 'goat', 'boar']) ART[k + 'Hide'] = (p) => { hide(p, COAT[k], BELLY[k] || lhex(COAT[k])); p.ink(); };
 for (const k of ['bear', 'grizzly', 'cougar', 'bobcat', 'coyote', 'wolf', 'redFox', 'greyFox', 'raccoon', 'beaver', 'otter', 'rabbit', 'squirrel']) ART[k + 'Pelt'] = (p) => { pelt(p, COAT[k], BELLY[k], TIP[k]); p.ink(); if (k === 'raccoon') p.L(10, 17, 13, 17, '#2a282c'); if (k === 'bobcat') for (const [x, y] of [[9, 9], [14, 10], [11, 12]]) p.D(x, y, '#5a4632'); };
 function lhex(h) { const c = lite(hex(h), 0.3); return '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join(''); }
-const MEAT = { venison: '#b83a3a', elkMeat: '#a8343c', mooseMeat: '#8e2c36', boarMeat: '#d86a6e', bearMeat: '#802a2c', grizzlyMeat: '#702628', cougarMeat: '#c85a4c', goatMeat: '#c44a4a', gameMeat: '#b04444', rabbitMeat: '#e08e8a' };
+const MEAT = { venison: '#b02a34', elkMeat: '#9e2e4a', mooseMeat: '#7e2438', boarMeat: '#e07a7e', bearMeat: '#742226', grizzlyMeat: '#5e1e24', cougarMeat: '#d4705a', goatMeat: '#c8503e', gameMeat: '#c05a36', rabbitMeat: '#eaa09a' };
 for (const [k, c] of Object.entries(MEAT)) ART[k] = (p) => { cut(p, c); p.ink(); };
 for (const [k, c] of [['birdMeat', '#f0c4a4'], ['turkeyMeat', '#eab894'], ['gooseMeat', '#e0a888']]) ART[k] = (p) => { drum(p, c); p.ink(); };
 // cooked: a steak with its grill marks, a roast, chops, a stew, a roast bird - on a plate or in a bowl
-const steak = (c) => (p) => { plate(p); p.E(11.5, 14.5, 6, 3.6, c).ink(); p.L(8, 13, 10, 16, '#3a2218').L(11, 12.5, 13, 16, '#3a2218').L(14, 13, 15.5, 15.5, '#3a2218'); };
+const steak = (c, trim) => (p) => { plate(p); p.E(11.5, 14.5, 6, 3.6, c).ink(); const g = dusk(hex(c), 0.55); p.L2(8, 13, 10, 16, g); p.L2(11, 12.5, 13, 16, g); p.L2(14, 13, 15.5, 15.5, g); if (trim) trim(p); };
+const SPRIG = (p) => { p.L(16, 10, 19, 12, '#3e8a34').D(17, 9, '#5ab04a').D(18, 10, '#5ab04a').D(19, 11, '#5ab04a').D(16, 12, '#5ab04a').D(18, 13, '#5ab04a'); };   // (rosemary)
+const BONE = (p) => { p.L(4, 13, 7, 14, '#f6f0e0', 2).D(3, 12, '#f6f0e0').D(3, 15, '#f6f0e0').D(5, 15, '#c8bca4').D(6, 15, '#c8bca4'); };                           // (on the bone)
+const BUTTER = (p) => { p.R(10, 12, 12, 13, '#f6dc6a', { f: 1 }).D(10, 12, '#fff4b8').D(13, 14, '#f0c84a'); };                                                 // (a pat of butter)
 const roast = (c) => (p) => { plate(p); p.E(11.5, 12.5, 6.5, 5, c).ink(); p.L(8, 10, 10, 9, '#f2c88a').E(6, 17, 1.4, 1.2, '#5aa83a', { f: 1 }).E(17, 17, 1.4, 1.2, '#f08a2a', { f: 1 }); };
 const stew = (c) => (p) => { bowl(p, c); p.ink(); p.D(9, 11, '#f08a2a').D(13, 10, '#e8d8a0').D(15, 12, '#5aa83a').D(11, 12, '#7a3a22'); p.D(10, 5, '#c8ccd4').D(11, 6, '#c8ccd4').D(13, 4, '#c8ccd4').D(14, 5, '#c8ccd4'); };
-Object.assign(ART, { venisonSteak: steak('#8a4a2a'), elkSteak: steak('#7e4226'), gameSteak: steak('#84462a'), mooseRoast: roast('#7a3e24'), rabbitRoast: roast('#b8763a'),
+Object.assign(ART, { venisonSteak: steak('#7a3a22', SPRIG), elkSteak: steak('#a8523a', BONE), gameSteak: steak('#b07a3a', BUTTER), mooseRoast: roast('#7a3e24'), rabbitRoast: roast('#b8763a'),
   boarChops: (p) => { plate(p); p.E(8.5, 14, 3.6, 3, '#c88a5a').E(15, 15, 3.6, 3, '#c88a5a').ink(); p.L(5, 11, 7, 12, '#f2ead8').L(12, 12, 13.5, 13, '#f2ead8'); },
   bearStew: stew('#6a3a22'), goatStew: stew('#a8662e'),
   roastBird: (p) => { plate(p); drum(p, '#b8702a'); p.ink(); p.L(7, 8, 10, 7, '#f2c88a'); }, roastTurkey: (p) => { plate(p); p.E(11.5, 12, 7, 5.5, '#b8702a').E(5.5, 14.5, 2.4, 1.8, '#a86222').E(17.5, 14.5, 2.4, 1.8, '#a86222').ink(); p.L(8, 9, 11, 8, '#f2c88a'); },
@@ -363,11 +377,38 @@ const bowShape = (p, c, grip = '#3a2a22') => {
 };
 const WART = {
   fists: (p) => { p.R(8, 17, 16, 22, '#d89a70', { r: 1 }).R(4, 8, 19, 17, '#eab890', { r: 2 }); for (const x of [6, 10, 14, 17.5]) p.E(x, 7.5, 2.1, 2.3, '#f0c49c'); p.P([[3, 12], [12, 12], [14, 14.5], [12, 17], [4, 17]], '#f0c49c').ink(); p.L(8, 6, 8, 11, '#a8704c').L(12, 6, 12, 11, '#a8704c').L(16, 6, 16, 11, '#a8704c').L(4, 12, 12, 12, '#a8704c').L(12, 12, 14, 14, '#a8704c').L(9, 21, 15, 21, '#a8704c'); p.D(5, 14, '#fbe0c8').D(6, 14, '#fbe0c8').D(5, 7, '#fbe0c8').D(9, 6, '#fbe0c8').D(13, 6, '#fbe0c8'); },
-  bat: (p) => { p.P([[3, 19], [5, 21], [12, 15], [20, 9], [22, 5], [21, 2], [18, 1], [15, 3], [9, 11]], '#d0a060').E(3.5, 20.5, 2, 2, '#b8884a').ink(); p.L2(9, 12, 16, 4, [240, 212, 160]); p.L2(16, 4, 19, 2, [240, 212, 160]); for (const [x, y] of [[6, 16], [8, 14], [10, 12]]) p.L(x - 1, y - 1, x + 1, y + 1, '#3a2a22'); p.L(18, 7, 20, 5, '#a87838'); },
+  // a baseball bat: a knob, a slim handle with its tape, a long taper to the barrel and its rounded end
+  bat: (p) => {
+    const hw = (u) => (u < 1.2 ? 1.5 : u < 9 ? 0.85 : u < 17 ? 0.85 + (u - 9) / 8 * 1.25 : u < 24 ? 2.1 : 2.1 * Math.sqrt(Math.max(0, 1 - ((u - 24) / 2.2) ** 2))), A = [], B = [];
+    for (let u = 0; u <= 26.2; u += 0.5) { A.push(at(2.6, 21.4, u, -hw(u))); B.push(at(2.6, 21.4, u, hw(u))); }
+    p.P([...A, ...B.reverse()], '#e2b877').ink();
+    for (let u = 2; u <= 8; u += 1) { const [x, y] = at(2.6, 21.4, u, 0); p.D(x, y, u % 2 ? '#3a2a22' : '#5a4636'); const [x2, y2] = at(2.6, 21.4, u, -0.9); p.D(x2, y2, u % 2 ? '#3a2a22' : '#5a4636'); }   // (the grip tape)
+    for (let u = 11; u <= 24; u += 0.5) { const [x, y] = at(2.6, 21.4, u, -hw(u) + 0.6); p.set(x, y, [250, 228, 178]); const [x2, y2] = at(2.6, 21.4, u, hw(u) - 0.3); p.set(x2, y2, [176, 132, 74]); }
+    const [mx, my] = at(2.6, 21.4, 19.5, 0.2); p.D(mx, my, '#8a2a2a').D(mx + 1, my - 1, '#8a2a2a');                                                                    // (the maker's mark)
+  },
   knife: (p) => { p.P([[8, 13], [19, 2], [21, 4], [20, 8], [16, 13], [11, 16]], '#cdd2de').S(9, 15, 4, 20, '#2e2a30', 3).L(8, 13, 11, 16, '#8a8e98', 2).ink(); p.L2(12, 15, 16, 12, [250, 252, 255]); p.L2(16, 12, 20, 7, [250, 252, 255]); p.L2(10, 12, 18, 4, [150, 156, 172]); p.D(7, 17, '#8a8e98').D(5, 19, '#8a8e98'); },
-  huntknife: (p) => { p.P([[7, 12], [16, 3], [21, 1], [22, 6], [18, 12], [12, 17]], '#bcc2d0').S(9, 15, 4, 20, '#8a5a2e', 3).L(6, 11, 12, 17, '#c8a23a', 2).E(3.4, 20.6, 1.6, 1.6, '#c8a23a').ink(); p.L2(13, 16, 18, 11, [250, 252, 255]); p.L2(18, 11, 22, 6, [250, 252, 255]); p.D(10, 10, '#5a5e6c').D(12, 8, '#5a5e6c').D(14, 6, '#5a5e6c').D(7, 17, '#5a3a1e').D(5, 19, '#5a3a1e'); },
+  // a buck knife: a broad clip-point blade (the spine dips to the point), a brass guard and pommel, a wooden grip
+  huntknife: (p) => {
+    const g = (u, v) => at(9.4, 15.2, u, v);
+    p.P([g(0, -1.9), g(8, -1.9), g(10, -0.7), g(12.5, 0), g(16, 0.4), g(13.8, 2.2), g(10.5, 3), g(5, 2.7), g(0, 2.2)], '#c4cad8');
+    p.S(...g(-1.4, 0.2), ...g(-7.6, 0.2), '#7a4426', 3);
+    p.L(...g(-0.7, -2.6), ...g(-0.7, 3.6), '#d8b03a', 2).E(...g(-8.6, 0.2), 1.7, 1.7, '#d8b03a').ink();
+    for (let u = 0.5; u <= 14; u += 0.5) { const [x, y] = g(u, u < 10 ? 2.1 : 2.1 - (u - 10) * 0.4); p.set(x, y, [250, 252, 255]); }       // (the ground edge, bright)
+    for (let u = 1; u <= 8; u += 0.5) { const [x, y] = g(u, -0.7); p.set(x, y, [128, 136, 156]); }                                           // (the groove under the spine)
+    for (const u of [-3, -5]) { const [x, y] = g(u, 0.2); p.D(x, y, '#e8c860'); }                                                            // (the grip's pins)
+  },
   sword: (p) => blade(p, { len: 19.5, w: 1.6, gx: 7.5, gy: 16.5, guard: 4.8, guardW: 2, gripC: '#6a3a22', grip: 4.5, pommel: '#e0b83a', wrap: '#3a2212' }),
-  katana: (p) => blade(p, { len: 17.5, w: 1.2, single: 1, curve: 2.6, gx: 9.5, gy: 14.5, steel: '#e4e8f2', guard: 1.8, guardW: 3, guardC: '#d8b03a', gripC: '#26242c', grip: 8.5, gripW: 3, wrap: '#d83a3a' }),
+  // a katana: a long slim blade with a gentle curve - a dark spine, a bright edge, an angled point - a small round
+  // guard, and a long grip wrapped in diamonds with a cap on its end
+  katana: (p) => {
+    const q = (t) => [(1 - t) * (1 - t) * 8.5 + 2 * (1 - t) * t * 17.5 + t * t * 21.5, (1 - t) * (1 - t) * 14.5 + 2 * (1 - t) * t * 9 + t * t * 0.8];
+    for (let i = 0; i <= 40; i++) { const [x, y] = q(i / 40); p.set(x, y, hex('#eef2fa')); if (i < 38) p.set(x - 1, y, hex('#98a0b8')); }
+    p.L(7.5, 15.5, 2, 21, '#23212c', 2).E(7.6, 15.4, 1.9, 1.9, '#d8b03a').ink();
+    for (let i = 2; i <= 38; i++) { const [x, y] = q(i / 40); p.set(x, y, [255, 255, 255]); p.set(x - 1, y, [146, 154, 178]); }
+    p.D(8, 14, '#f0d878').D(9, 13, '#c8ccd8');                                                                                             // (the guard's light, the collar)
+    for (let i = 0; i < 3; i++) { p.D(6 - i * 2, 17 + i * 2, '#e8e2d0'); p.D(5 - i * 2, 17 + i * 2, '#b83a3a'); p.D(6 - i * 2, 18 + i * 2, '#b83a3a'); }   // (the wrap's diamonds)
+    p.D(1, 22, '#d8b03a').D(2, 22, '#d8b03a').D(1, 21, '#d8b03a');
+  },
   plasma: (p) => { p.S(3, 21, 8, 16, '#7a7e8c', 3).L(6, 14, 10, 18, '#3a3e4a', 2).ink(); p.D(5, 19, '#5ae8ff').D(4, 20, '#2a6ad0'); p.L(9, 15, 20, 4, '#1e5ab8', 5).L(9, 15, 20, 4, '#4ad8ff', 3).L(9, 15, 21, 3, '#f2feff').D(22, 2, '#b8f6ff').D(21, 2, '#4ad8ff').D(22, 3, '#4ad8ff'); p.D(17, 2, '#b8f6ff').D(23, 7, '#b8f6ff').D(13, 5, '#7ae8ff').D(20, 11, '#7ae8ff'); star(p); },
   crowbar: (p) => { p.L(4, 21, 16, 8, '#c8302a', 3).Q([16, 8], [19, 3], [22, 5], '#c8302a', 3).L(22, 5, 22, 8, '#c8302a', 2).L(4, 21, 2, 20, '#c8302a', 2).ink(); p.L2(5, 19, 16, 7, [240, 110, 96]); p.D(22, 8, '#c8ccd8').D(22, 9, '#c8ccd8').D(2, 20, '#c8ccd8').D(1, 19, '#c8ccd8'); },
   sledge: (p) => { p.S(3, 22, 14, 8, '#9a6a3a', 3).P([[9, 5], [13, 1], [22, 10], [18, 14]], '#7a7e8c').ink(); p.L2(10, 5, 13, 2, [200, 204, 216]); p.L2(13, 2, 21, 10, [168, 172, 184]); p.L2(19, 13, 21, 11, [70, 74, 86]); p.D(3, 22, '#6a4426'); },
@@ -378,7 +419,11 @@ const WART = {
   spikes: (p) => { p.R(1, 15, 22, 17, '#3a3e4a', { r: 1 }).ink(); for (let x = 3; x < 22; x += 4) p.P([[x - 1, 15], [x, 9], [x + 1, 15]], '#c8ccd8', { f: 1 }); },
   pistol: (p) => { p.R(4, 8, 18, 11, STEEL).P([[5, 12], [10, 12], [9, 19], [5, 19]], BLACK).R(11, 12, 13, 13, STEEL, { f: 1 }).ink(); p.L(5, 8, 17, 8, '#9aa0b0'); },
   service: (p) => { p.R(4, 8, 18, 11, BLACK).P([[5, 12], [10, 12], [9, 19], [5, 19]], BLACK).R(11, 12, 13, 13, BLACK, { f: 1 }).ink(); p.L(5, 8, 17, 8, '#6a6e7c').D(7, 15, '#3a6ad0'); },
-  spistol: (p) => { p.R(2, 8, 12, 11, STEEL).R(12, 8, 21, 11, BLACK, { r: 1 }).P([[3, 12], [8, 12], [7, 19], [3, 19]], BLACK).ink(); p.L(13, 9, 20, 9, '#5a5e6c'); },
+  // a silenced pistol: the pistol, a short threaded neck, and the silencer - its own tube, fatter than the barrel
+  spistol: (p) => {
+    p.R(1, 8, 10, 11, STEEL).P([[2, 12], [7, 12], [6, 19], [2, 19]], BLACK).R(8, 12, 10, 13, STEEL, { f: 1 }).R(11, 9, 12, 10, '#8a8e9c', { f: 1 }).R(13, 7, 22, 11, '#34363e', { r: 1 }).ink();
+    p.L(2, 8, 9, 8, '#9aa0b0').L(14, 7, 21, 7, '#6a6e7c'); for (const x of [14, 16, 21]) p.L(x, 8, x, 11, '#1c1e24'); p.D(22, 9, '#0c0c10').D(11, 9, '#b8bcc8').D(12, 9, '#b8bcc8');
+  },
   revolver: (p) => { p.R(11, 8, 20, 10, '#b8bcc8').E(9, 10.5, 3.2, 3, '#a8acb8').P([[3, 11], [7, 12], [6, 20], [2, 19]], WOOD).ink(); p.D(9, 10, '#5a5e6c').L(12, 8, 19, 8, '#f2f4f8'); },
   smg: (p) => { p.R(5, 8, 15, 12, BLACK).R(15, 9, 19, 10, STEEL).R(9, 13, 11, 20, BLACK).P([[13, 13], [15, 13], [14, 17], [12, 17]], BLACK).R(2, 8, 5, 9, STEEL, { f: 1 }).ink(); p.L(6, 8, 14, 8, '#6a6e7c'); },
   shotgun: (p) => long(p, { guard: WOOD, len: 22 }),
