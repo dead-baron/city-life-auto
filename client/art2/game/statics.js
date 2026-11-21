@@ -338,6 +338,7 @@ export function makeStatic(r) {
     case 'b': return makeBld(r);
     case 'cut': return makeCut(r);
     case 'v': { const m = voxModel(r.m, r.a || []); return m && typeof m.prepare !== 'function' && m.col ? m : voxSprite(m, r.hd || 0, r.pv || null); }   // (a few props come drawn already: the greenhouse's glass over its plants)
+    case 'va': return artRock(voxSprite(artVox(r.m, r.a || []), r.hd || 0));   // (a voxel model built at the art pixel: one voxel 2 x 2 px - props-rural.js's meadow and woods pieces)
     case 'f': return makeFlora(r);
     case 'rw': return r.k === 'stump' ? RW.oldStump(11 + r.s * 7, 26) : RW.nurseLog(5 + r.s * 13, r.len || 200, 18, r.flip);   // (redwoods.js: an old stump, a fallen giant)
     case 'deck': return makeDeck(r);
@@ -2915,6 +2916,17 @@ function putFall(c, I, it) {
     r.src = open ? 1 : 2; it.key += open ? ':o' : ':s';
   }
   put(I, it);
+}
+// the models built at the art pixel (recipe 'va'): the nature pass's missing pieces, placed with the world batch
+function artVox(m, a) {
+  switch (m) {
+    case 'dryWall': return U.dryStoneWall(a[0] || 44, a[1] || 1);
+    case 'fieldGate': return U.fieldGate(a[0] || 26);
+    case 'stile': return U.stile();
+    case 'swing': return U.ropeSwing(a[0] ?? 1);
+    case 'ruins': return U.woodRuins(a[0] || 1);
+    default: return U.dryStoneWall(20, 1);
+  }
 }
 const artRock = (G) => { G.ax *= 2; G.ay *= 2; G.ap2 = 2; return G; };
 function makeRock(r) {

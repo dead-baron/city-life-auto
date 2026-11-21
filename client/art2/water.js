@@ -661,12 +661,12 @@ export function waterfall(o = {}, model = null) {
   const mist = o.mist ?? (m.kind === 'cliff' ? 1 : m.kind === 'twoTier' ? 0.5 : 0.2);
   if (mist > 0) {
     const LK = FALL_LOOK.v, seed = o.seed ?? 3, f = m.frameRef.v, cx = G.ax, cy = G.ay - 4, rx = (LK ? m.width * 0.62 + 26 + m.lip * 0.12 : m.width * (m.kind === 'cliff' ? 1.6 : 0.72) + 30 + m.lip * 0.2) / S, ry = (10 + mist * 34) * (LK ? 1 + Math.min(1, m.lip / 160) * (LK > 1 ? 1 : 0.6) : 1) / S;   // (the spray spilling out past the walls; a tall fall's stands higher)
-    for (let y = Math.floor(cy - ry * 1.6); y < Math.min(G.h, cy + ry * 0.5); y++) for (let x = Math.floor(cx - rx); x < cx + rx; x++) {
+    for (let y = Math.floor(cy - ry * 1.6); y < Math.min(G.h, cy + ry * (LK ? 0.85 : 0.5)); y++) for (let x = Math.floor(cx - rx); x < cx + rx; x++) {
       if (!G.inside(x, y)) continue;
-      const q = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2; if (q > 1.4) continue;
+      const q = ((x - cx) / rx) ** 2 + ((y - cy) / (y > cy && LK ? ry * 0.6 : ry)) ** 2; if (q > 1.4) continue;   // (with the new look the spray lies out over the pool in front too, a shallower lobe)
       const nz = vnoise(x * S + f * 3, y * S - f * 5, 7, seed + 77) * 0.7 + vnoise(x * S, y * S - f * 2, 3, seed + 78) * 0.3;
-      const a = (1 - q / 1.4) * mist * (nz - 0.3) * 1.8; if (a <= 0.05) continue;
-      const j = (y * G.w + x) * 4, A = Math.min(0.75, a);
+      const a = (1 - q / 1.4) * mist * (nz - (LK ? 0.22 : 0.3)) * (LK ? 2.4 : 1.8); if (a <= 0.05) continue;   // (and stands thicker at the foot: the churn hidden in it)
+      const j = (y * G.w + x) * 4, A = Math.min(LK ? 0.9 : 0.75, a);
       if (G.col[j + 3] === 255) { G.col[j] += (236 - G.col[j]) * A * 0.8; G.col[j + 1] += (244 - G.col[j + 1]) * A * 0.8; G.col[j + 2] += (246 - G.col[j + 2]) * A * 0.8; }
       else if (!G.col[j + 3]) { G.col[j] = 232; G.col[j + 1] = 242; G.col[j + 2] = 246; G.col[j + 3] = Math.round(A * 200); G.flag[y * G.w + x] = F_NOCAST; }
     }

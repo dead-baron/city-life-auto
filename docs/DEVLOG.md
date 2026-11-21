@@ -25327,6 +25327,13 @@ best-looking trees in the game.
   stream and small pool feeding into it" - with the world batch; the fall takes it as its source by itself once it is
   there. Seen and not fixed: a block of broken white squares in the river below Willow River Falls (there on the
   live build too) - for the water audit.
+- **The meadow's and the woods' missing pieces, drawn (the owner, 13:08: "please do create any missing art you find
+  that would be useful").** `props-rural.js`: a dry-stone wall (coursed stones each its own tone, cap stones with
+  notches between, a stone fallen out, lichen), a five-bar field gate, a stile, a rope swing off a bough, stone ruins
+  in the woods (an L of wall with a doorway and a window, its corner standing, blocks fallen round it, ivy). Built at
+  the art pixel - one voxel 2 x 2 px - and drawn by a recipe of their own (`statics.js` `'va'`, `artVox`), set beside
+  concepts NS1-E and NS1-B. Not placed: placing them changes the world, which waits for the world batch.
+  `test/naturepieces.test.js`. The spray at a fall's foot stands a little thicker and lies out over the pool.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
