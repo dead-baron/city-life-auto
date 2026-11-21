@@ -16,40 +16,40 @@ things are ... than to have the details totally lost."
 - [x] Jackets over bare skin read as "pants missing a top part" (the sheet: no shirt under them). All jackets are open; zipped as an option: AFTER THE BETA (the owner, 13:42).
 
 ## Underwear
-- [ ] Small briefs / panties: the triangle is right, but a visible strap round the hip holds it up (not a bare V).
-- [ ] Bras from the side: straps round the shoulder / the body where they're missing.
-- [ ] Sports bra: one thin line today - thicker, shaped.
-- [ ] Bikini top: two pixels - more detail, shaped, still a bikini top. Bikini bottoms: a strap round the hip too, not bigger.
-- [ ] New: striped panties and striped underwear in general.
+- [x] Small briefs / panties: the triangle is right, but a visible strap round the hip holds it up (not a bare V). - 18:10 below.
+- [x] Bras from the side: straps round the shoulder / the body where they're missing. - 18:10 below.
+- [x] Sports bra: one thin line today - thicker, shaped. - 18:10 below.
+- [x] Bikini top: two pixels - more detail, shaped, still a bikini top. Bikini bottoms: a strap round the hip too, not bigger. - 18:10 below.
+- [x] New: striped panties and striped underwear in general. - 18:10 below.
 
 ## Stripes
-- [ ] Stripes drawn as one horizontal line at any angle don't work (many pieces): rework how stripes are drawn.
+- [x] Stripes drawn as one horizontal line at any angle don't work (many pieces): rework how stripes are drawn. - 18:54 and 19:06 below.
 
 ## Small things that don't read (size up)
-- [ ] Glasses and sunglasses, all of them: the next size up (square, rimless, browline named). Eye patch: more detail.
-- [ ] Necklaces (1 px, or not drawn): a pixel more. Tiara (one pixel). Bow tie. Stethoscope.
-- [ ] Party mask, medical mask, face bandana (a train robber / an anarchist). Gas mask: more detail.
-- [ ] Pig, clown, skull, alien, masquerade, welding masks: more detail, bigger if needed. Bear and panda masks: ears, markings.
-- [ ] Glow bracelets and the lanyard go all the way round. Smartwatch: one wrist, right round it (shows from behind).
-- [ ] Knee pads and elbow pads from behind: a strap round, or the pad on the elbow.
-- [ ] Camera: you can't tell it's a camera (a strap only).
-- [ ] Guitar case: hard to tell what it is. Backpacks and duffel bags too small (the duffel didn't draw?). Tool bag too small.
+- [x] Glasses and sunglasses, all of them: the next size up (square, rimless, browline named). Eye patch: more detail. - 19:23 below: the frames drawn a size up; the eye patch a full patch.
+- [x] Necklaces (1 px, or not drawn): a pixel more. Tiara (one pixel). Bow tie. Stethoscope. - 19:23 below. A pearl necklace on a white top still does not show (white on white).
+- [~] Party mask, medical mask, face bandana (a train robber / an anarchist). Gas mask: more detail. - left as they are: judged readable at the new size. To look at with him.
+- [~] Pig, clown, skull, alien, masquerade, welding masks: more detail, bigger if needed. Bear and panda masks: ears, markings. - bear and panda done (ears, muzzle, eye patches); the other six left as they are - to look at with him.
+- [x] Glow bracelets and the lanyard go all the way round. Smartwatch: one wrist, right round it (shows from behind). - 19:23 below.
+- [x] Knee pads and elbow pads from behind: a strap round, or the pad on the elbow. - the pad goes all the way round the joint.
+- [~] Camera: you can't tell it's a camera (a strap only). - a camera body on the strap now; still small - weak.
+- [x] Guitar case: hard to tell what it is. Backpacks and duffel bags too small (the duffel didn't draw?). Tool bag too small. - 19:23 below.
       Things held bigger in general.
-- [ ] Earmuffs: not seen (under the hair?) - over the hair, bigger. Headphones too (a piece exists: check it).
-- [ ] Bib overalls: the straps don't join at the back.
+- [x] Earmuffs: not seen (under the hair?) - over the hair, bigger. Headphones too (a piece exists: check it). - 19:23 below.
+- [x] Bib overalls: the straps don't join at the back. - a panel joins them at the back.
 
 ## Hats
-- [ ] Top hat: level on top, more of a box (reads as a London police helmet).
-- [ ] Fire helmet doesn't read as one.
-- [ ] Visor: a single line - a real bill, and it wraps the head. (Today's makes a good headband.)
-- [ ] Cap backwards: two white lines at the back, no bill.
-- [ ] Turban: one blob - show the wrap.
+- [x] Top hat: level on top, more of a box (reads as a London police helmet). - 19:23 below.
+- [x] Fire helmet doesn't read as one. - 19:23 below.
+- [x] Visor: a single line - a real bill, and it wraps the head. (Today's makes a good headband.) - 19:23 below.
+- [x] Cap backwards: two white lines at the back, no bill. - 19:23 below.
+- [x] Turban: one blob - show the wrap. - 19:23 below.
 
 ## Clothes
-- [ ] Button-up shirt: subtle buttons?
-- [ ] Tactical vest: too small to make out.
-- [ ] Ghillie suit: vegetation - grass and plants coming off it.
-- [ ] Founding Citizen jacket: all gold, not the sleeves only; a full bomber-style jacket that shines and sparkles - a
+- [x] Button-up shirt: subtle buttons? - 19:23 below.
+- [x] Tactical vest: too small to make out. - 19:23 below.
+- [x] Ghillie suit: vegetation - grass and plants coming off it. - 19:23 below.
+- [x] Founding Citizen jacket: all gold, not the sleeves only; a full bomber-style jacket that shines and sparkles - a - 19:23 below.
       super premium item; a small VFX if it's cheap.
 
 ## Eyes (he asks for suggestions)
@@ -149,3 +149,14 @@ Each fix made against a snapshot of every figure; what it touched is in the DEVL
 ## 19:06 - "thicker in places and thinner and not complete in others ... make the full stripe connect all the way around"
 - [x] Stripes laid on the art grid: one art pixel thick, joined from one side of the part to the other, a test for it. Shown: `characters-stripes-v2.png`. Not yet seen by him.
 
+
+
+## 19:23 - "I think it looks great ... Can we get a big batch going of the rest of the work we have planned for characters and NPCs?"
+Stripes passed; on the striped bra and panties he is "not sure it works well ... leave it as is for now". The batch, each piece against the wardrobe snapshot (53 pieces changed, the ones aimed at and their families):
+- [x] Sizes up: glasses frames, chains and necklaces, the lanyard (a card on it, round the collar at the back), the stethoscope (a silver bell), watches and bangles right round the wrist, bow tie, tiara, pads round the joint, things held in the hand.
+- [x] Masks: bear and panda - ears, a pale muzzle, a nose; the panda its eye patches and black ears.
+- [x] Hats: top hat a box with a level lid; fire helmet with a crest, a neck brim and a shield; visor a band round the head with a bill; cap backwards with its bill behind; turban with crossing folds and a knot; earmuffs and headphones over the hair with a band.
+- [x] Bags: backpack and hiking pack bigger with a pocket; guitar case in the shape of a guitar; tool bag bigger with a handle; the duffel is drawn (it was not). Bib overalls joined at the back.
+- [x] Clothes: buttons on button-up shirts (one art pixel each, every second row); tactical vest a plate carrier with pouches; ghillie suit with tufts standing out of it; the Founding Citizen jacket a gold bomber with dark ribbing, glossy, with pixels that catch the light.
+- Left, and said so: the camera is still small; party / medical / bandana / gas / pig / clown / skull / alien / masquerade / welding masks unchanged; the scarf still reads as a necklace; a pearl necklace does not show on white.
+- Shown: `characters-wardrobe-batch2-before-after.png`. Not yet seen by him.

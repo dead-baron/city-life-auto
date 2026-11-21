@@ -33,6 +33,11 @@ export const POLISH = {
   // people.js's hairline, [forehead, temple, sideburn, above the ear, nape]); a one-pixel point on top of the hair is taken
   // off, bar the styles that are points
   hairLN: { dreads: [0.4, 0.36, -0.78, -0.78, -1.1], braids: [0.42, 0.36, -0.78, -0.78, -1.1], shavedside: [0.42, 0.4, 0.2, 0.1, -0.62] },   // (the shaved-side style keeps its hair down the back: from behind it was a bare head under a cap)
+  // glasses, a size bigger (the owner, 11-20: "glasses a size bigger", "square/rimless/browline glasses too small"): each kind's
+  // stamp round an eye (people.js GLS: dx out from the nose then dy down, from -1; a color key). A whole ring round the eye
+  // where there was half of one; the two rings meet over the nose.
+  GLS: { round: '10F01F21F12F00H20H02H22H11E', half: '01F21F02F12F22F11E', frames: '00F10F20F01F21F02F12F22F11E', browline: '00F10F20F/0F01T21T12T11E', rimless: '11E00W10W20W01W21W12W', patch: '00F10F20F01F11F21F12F' },
+  itemK: 1.18,   // (things held in the hand, a little bigger - the owner, 11-20: "held items bigger")
   nubOff: ['short'],   // (styles whose one-pixel bump at the back of the head, in profile, is folded into the outline - people.js)
   tipKeep: ['spiky', 'mohawk', 'quiff', 'shag'],
   eyeMode: 3,         // how an eye's colour shows (eyes() below): the colour with a white beside it - the owner's pick of four, 11-20
@@ -276,7 +281,7 @@ export const POLISH = {
     // a lit pixel on its cap; a wallet chain - a silver loop from the belt down the right thigh; a tool belt - a leather
     // band at the waist, pouches at the hips, a tool's handle; a climbing harness - a waist band and two leg loops
     const J = A.jewel || {}, jc = J.color && cloth(J.color), jt = J.trim && cloth(J.trim), DK = cloth('#3a2a20');
-    const pad = (Q, al) => { if (Math.abs(al - 0.52) < 0.13 && Q.l2 > -0.3) { Q.k += al < 0.5 ? 0.3 : 0; return 1; } return 0; };
+    const pad = (Q, al) => { if (Math.abs(al - 0.52) < 0.13) { if (Q.l2 > -0.3) Q.k += al < 0.5 ? 0.3 : 0; else Q.k -= 0.12; return 1; } return 0; };   // (11-20, the owner: pads show from behind too - the strap round the joint, a shade darker)
     if (J.knee || J.wchain || J.harness || J.tbelt) wrap('leg', (R, Q) => {
       const al = Q.part === 'th' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5, side = Q.l1 * Q.side;
       if (J.knee && pad(Q, al)) return jc;
@@ -336,6 +341,19 @@ export const POLISH = {
         Q.k += v > 0.5 ? 0.1 : -0.12;
         return v < 0.3 ? GH[0] : v < 0.5 ? GH[1] : v > 0.86 ? GH[2] : R;
       });
+    }
+    // the Founding Citizen jacket (lookcore.js d.shine; the owner, 11-20: "all gold, bomber style, shine/sparkle, small VFX if
+    // cheap"): a gold bomber - dark ribbing at the cuffs and the hem - the cloth glossy, and here and there an art pixel of
+    // it catches the light (a glow: it shows at night too). Where the sparkles fall moves as the body does: they twinkle
+    // as the figure breathes and walks, at no cost.
+    if (A.top && A.top.shine) {
+      const mineT = new Set([W.top, relit(W.top)]), RIB = relit(cloth(A.top.trim || '#1a1a1e')), rib = (Q) => { Q.k -= 0.25; return RIB; };
+      const spark = (Q) => { Q.gloss = 1; let v = (Math.floor(Q.x / 2) * 374761393 + Math.floor(Q.y / 2) * 668265263) | 0; v = Math.imul(v ^ (v >>> 13), 1274126177); v = ((v ^ (v >>> 16)) >>> 0) / 4294967296; if (v > 0.945) { Q.e = [255, 242, 176, 150]; Q.k += 0.4; } };
+      const hemRow = (Q) => { const y = Math.round(Q.y); return Math.floor(y / 2) === Math.floor((y + 0.8192 * (Q.zs + 0.9)) / 2); };   // (the art row the hem falls in: people.js HEMZ, underHem)
+      wrap('torso', (R, Q) => { if (!mineT.has(R)) return R; if (Q.res === 1 && Q.z < 4 && hemRow(Q)) return rib(Q); spark(Q); return R; });
+      wrap('pel', (R, Q) => { if (!mineT.has(R)) return R; if (Q.res === 1 && hemRow(Q)) return rib(Q); spark(Q); return R; });
+      wrap('arm', (R, Q) => { if (!mineT.has(R)) return R; if (Q.part === 'fa' && Q.l0 > 0.78) return rib(Q); spark(Q); return R; });
+      wrap('collar', (R) => (mineT.has(R) ? RIB : R));
     }
     if (DR === 'tails') {
       const GREY = cloth('#8a8a92'), stripe = (Q) => { if (Math.floor((Q.l1 + 2) * 5) & 1) Q.k -= 0.16; return GREY; };

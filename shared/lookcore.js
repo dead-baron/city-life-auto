@@ -265,7 +265,7 @@ add('bag', 'Crossbody bag', 'mf', 'streetwear casual festival', 50, 'boutique', 
 add('bag', 'Handbag', 'f', 'hifashion smart business', 160, 'boutique', { carry: 'purse' }, 'burgundy');
 add('bag', 'Clutch', 'f', 'nightclub formal', 90, 'boutique', { carry: 'purse', small: 1 }, 'gold');
 add('bag', 'Briefcase', 'mf', 'business', 120, 'boutique', { carry: 'briefcase' }, 'brown');
-add('bag', 'Duffel bag', 'mf', 'athletic disguise', 50, 'sports', { carry: 'toolbag' }, 'black');
+add('bag', 'Duffel bag', 'mf', 'athletic disguise', 50, 'sports', { carry: 'toolbag', duffel: 1 }, 'black');
 add('bag', 'Belt bag', 'mf', 'streetwear festival athletic', 30, 'clothing', { belt: 1 }, 'black');
 // the starting looks' own (CC9, 2026-10-09): a sarong; an apron and bib overalls, worn over a top like a jacket (the
 // top's sleeves and collar show round them); a coffee to go; a tool bag
@@ -376,7 +376,7 @@ add('top', 'Chef whites', 'mf', 'work', 40, 'workwear', { k: 'uniform', plain: 1
 add('hat', 'Paper hat', 'mf', 'work retro', 5, 'workwear', { k: 'paper' }, 'white', 'red');
 add('jacket', 'Poncho', 'mf', 'outdoors festival western', 45, 'outdoor', { k: 'coat', p: 1 }, 'rust', 'mustard');
 add('jewel', 'Lifeguard whistle', 'mf', 'beach athletic work', 12, 'beach', { chain: 1, pendant: 1 }, 'red', 'silver');
-add('jewel', 'Stethoscope', 'mf', 'work', 60, 'workwear', { chain: 1, pendant: 1 }, 'charcoal', 'silver');
+add('jewel', 'Stethoscope', 'mf', 'work', 60, 'workwear', { chain: 1, pendant: 1, steth: 1 }, 'charcoal', 'silver');
 add('jewel', 'Bow tie', 'mf', 'formal business retro', 35, 'boutique', { bow: 1 }, 'black');
 add('jewel', 'Work gloves', 'mf', 'work outdoors', 18, 'workwear', { gloves: 1 }, 'tan');
 add('bag', 'Rescue tube', 'mf', 'beach work', 40, 'beach', { carry: 'bag', big: 1 }, 'red');
@@ -388,7 +388,7 @@ add('set', 'Nothing', 'mf', 'lounge', 0, 'bathhouse', { k: 'none', bk: 'none', i
 // the season gifts (d.gift: never sold, not free - only the accounts given one own it: shared/wardrobe.js free; never in
 // a random look; the creator shows it only to its owners): Season 0's Founding Citizen jacket (server/systems/cosmetics.js,
 // shared/rules.js COSMETICS.beta) - the varsity jacket's art in black and gold, no new sprite art
-add('jacket', 'Founding Citizen jacket', 'mf', 'preppy streetwear retro', 0, 'gift', { k: 'jacket', varsity: 1, gift: 1 }, 'black', 'gold');
+add('jacket', 'Founding Citizen jacket', 'mf', 'preppy streetwear retro', 0, 'gift', { k: 'jacket', bomber: 1, shine: 1, gift: 1 }, 'gold', 'black');   // (the owner, 11-20: all gold, a bomber that shines and sparkles - it was the varsity jacket in black with gold sleeves)
 // underwear (the owner, 2026-11-19): a slot, seen where there's no top or no bottoms. d.k the top half's art kind
 // (none: a woman's gets a plain bra), d.bk the bottom's. 'Nothing on': the mosaic. Never in random looks.
 add('under', 'Nothing on', 'mf', 'lounge', 0, 'clothing', { k: 'none', bk: 'none' }, 'white');
@@ -437,7 +437,7 @@ add('jewel', 'Climbing harness', 'mf', 'outdoors athletic', 55, 'outdoor', { har
 add('set', 'Paramedic uniform', 'mf', 'work', 70, 'workwear', { k: 'uniform', plain: 1, bk: 'cargo', bands: 1 }, 'forest', 'white');
 add('set', 'Turnout gear', 'mf', 'work', 120, 'workwear', { k: 'jacket', bk: 'cargo', bands: 1 }, 'tan', 'yellow');
 add('set', 'Hi-vis coverall', 'mf', 'work', 60, 'workwear', { k: 'longsleeve', bk: 'cargo', zip: 1, bands: 1 }, 'orange', 'silver');
-add('hat', 'Fire helmet', 'mf', 'work', 60, 'workwear', { k: 'hard' }, 'red', 'yellow');
+add('hat', 'Fire helmet', 'mf', 'work', 60, 'workwear', { k: 'hard', fire: 1 }, 'red', 'yellow');
 add('top', 'Security shirt', 'mf', 'work', 35, 'workwear', { k: 'uniform' }, 'grey', 'gold');
 add('top', 'Rash guard', 'mf', 'beach athletic', 35, 'beach', { k: 'longsleeve' }, 'black', 'teal');
 add('top', 'Camisole', 'f', 'casual nightclub smart', 24, 'clothing', { k: 'tank' }, 'red');
@@ -451,17 +451,17 @@ add('set', 'Sequin dress', 'f', 'nightclub formal hifashion', 180, 'boutique', {
 add('jewel', 'Scarf', 'mf', 'winter smart casual', 25, 'clothing', { choker: 1, chain: 2 }, 'red');
 add('jewel', 'Neckerchief', 'mf', 'western work festival', 12, 'clothing', { choker: 1 }, 'red');
 add('jewel', 'Bolo tie', 'mf', 'western formal', 45, 'boutique', { chain: 1, pendant: 1 }, 'teal', 'silver');
-add('jewel', 'Lanyard', 'mf', 'work business smart', 6, 'workwear', { chain: 1, pendant: 1 }, 'royal blue', 'white');
+add('jewel', 'Lanyard', 'mf', 'work business smart', 6, 'workwear', { chain: 1, pendant: 1, lany: 1 }, 'royal blue', 'white');
 add('jewel', 'Evening gloves', 'f', 'formal hifashion nightclub', 60, 'boutique', { gloves: 1 }, 'black');
 add('jewel', 'Biker gloves', 'mf', 'punk street western', 35, 'boutique', { gloves: 1 }, 'black');
 add('jewel', 'Sweatbands', 'mf', 'athletic retro', 10, 'sports', { cuffband: 1 }, 'white');
 add('jewel', 'Glow bracelets', 'mf', 'festival nightclub', 8, 'boutique', { bangles: 1 }, 'neon green');
-add('hat', 'Headphones', 'mf', 'streetwear casual skater athletic', 60, 'clothing', { k: 'earmuffs' }, 'black', 'royal blue');
+add('hat', 'Headphones', 'mf', 'streetwear casual skater athletic', 60, 'clothing', { k: 'earmuffs', phones: 1 }, 'black', 'royal blue');
 add('hat', 'Towel wrap', 'mf', 'lounge beach', 10, 'clothing', { k: 'turban' }, 'white');
 add('hat', 'Boonie hat', 'mf', 'outdoors disguise', 30, 'costume', { k: 'bucket', p: 3 }, 'olive', 'khaki');
 add('hat', 'Camo cap', 'mf', 'outdoors disguise street', 25, 'costume', { k: 'cap', p: 3 }, 'olive', 'khaki');
-add('glasses', 'Bear mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', nostreet: 1 }, 'brown');
-add('glasses', 'Panda mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', nostreet: 1 }, 'white', 'black');
+add('glasses', 'Bear mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', animal: 'bear', nostreet: 1 }, 'brown');   // (the owner, 11-20: bear and panda masks need their ears and markings - people.js maskPrims)
+add('glasses', 'Panda mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', animal: 'panda', nostreet: 1 }, 'white', 'black');
 add('bag', 'Walking cane', 'mf', 'retro formal smart', 40, 'boutique', { carry: 'cane' }, 'brown');
 // pass 5 (docs/characters/CHECKLIST.md): concept pieces that are a pattern or a colour of a piece we draw
 add('top', 'Striped tee', 'mf', 'casual skater preppy retro', 24, 'clothing', { k: 'tee', p: 1 }, 'white', 'navy');
@@ -646,7 +646,7 @@ export function lookArt(L, opt = {}) {
   }
   if (jk) {   // worn open over the top: the top's colour down the front
     const under = A.top;
-    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null) };
+    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null), ...(jk.d.shine ? { shine: 1 } : null) };
     if (jk.d.k === 'vest') A.top.sleeve = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'crop' || under.kind === 'bikini' ? 'skin' : under.color;
     if (jk.d.k === 'kevlar') { A.top.kind = 'kevlar'; A.top.color = under.color || A.top.color; A.top.color2 = HEX(O.jacket.c); A.top.sleeve = under.kind === 'none' || under.kind === 'tank' ? 'skin' : under.color; A.top.chevrons = under.chevrons || 0; }   // (the plates over the shirt, the shirt's sleeves)
     if (jk.d.k === 'apron' || jk.d.k === 'overalls') {   // (worn over the top: the shirt round them is the top - its colour, its sleeves, a flannel's check - or bare skin)
@@ -668,7 +668,7 @@ export function lookArt(L, opt = {}) {
   }
   else { A.shoes = '#d8c8b0'; A.shoeKind = 'barefoot'; }
   const hat = P('hat');
-  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat), ...(hat.d.flat ? { flat: 1 } : null) };
+  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat), ...(hat.d.flat ? { flat: 1 } : null), ...(hat.d.fire ? { fire: 1 } : null), ...(hat.d.phones ? { phones: 1 } : null) };   // (fire: a fire helmet's crest, shield and neck brim; phones: headphones, not earmuffs - people.js hatPrims)
   if (hat && hat.d.k === 'hood') A.hat.color = A.top.color;
   A.drape = (jk || set || A).d?.dr;
   if (!hat && (A.drape === 'cloak' || A.drape === 'ghillie')) A.hat = { kind: 'hood', color: A.top.color };
@@ -678,7 +678,7 @@ export function lookArt(L, opt = {}) {
     if (k === 'balaclava' || k === 'skimask') { A.mask = HEX(O.glasses.c); A.maskTrim = k === 'skimask' ? HEX(O.glasses.t) : null; }
     else if (k === 'bandana') A.bandana = HEX(O.glasses.c);
     else if (k === 'medmask') A.medmask = HEX(O.glasses.c);
-    else if (FMASKS.includes(k)) A.fmask = { k, c: HEX(O.glasses.c), t: HEX(O.glasses.t) };   // (the rest of CP2's masks)
+    else if (FMASKS.includes(k)) { A.fmask = { k, c: HEX(O.glasses.c), t: HEX(O.glasses.t) }; if (gl.d.animal) A.fmask.animal = gl.d.animal; }   // (the rest of CP2's masks; animal: which head a 'pig' is - a bear, a panda)
     else {
       A.glasses = k === 'masq' ? 'domino' : k; A.glassColor = HEX(O.glasses.c); A.lens = gl.d.lens ? HEX(col(gl.d.lens)) : null; A.glassTrim = HEX(O.glasses.t);
       if (gl.d.big) A.glassBig = 1;
@@ -697,7 +697,7 @@ export function lookArt(L, opt = {}) {
     if (bg.d.back) { A.back = bg.d.back === 2 ? 'guitarcase' : 'backpack'; A.backColor = HEX(O.bag.c); if (bg.d.big) A.backBig = 1; if (bg.d.box) A.backBox = 1; }
     else if (bg.d.belt) A.beltBag = HEX(O.bag.c);
     else if (bg.d.rig) A.rig = HEX(O.bag.c);
-    else { A.carry = bg.d.carry; A.bagColor = HEX(O.bag.c); if (bg.d.prop) A.prop = [bg.d.prop, HEX(O.bag.t)]; if (bg.d.small) A.bagSmall = 1; if (bg.d.big) A.bagBig = 1; }
+    else { A.carry = bg.d.carry; A.bagColor = HEX(O.bag.c); if (bg.d.prop) A.prop = [bg.d.prop, HEX(O.bag.t)]; if (bg.d.small) A.bagSmall = 1; if (bg.d.big) A.bagBig = 1; if (bg.d.duffel) A.duffel = 1; }
   }
   return A;
 }
