@@ -25224,8 +25224,7 @@ best-looking trees in the game.
   on the art grid): the flowers, ferns, reeds, tall tufts, pebbles, cones and shells strewn over the ground are one
   art pixel to the pixel. Not the dense turf: a lawn of blades one art pixel wide, each with its sunlit tip, came out
   as yellow static in the running game - halved and averaged by the bake it stays the soft mottled grass it was.
-- **Birch and aspen**: fewer stems, set apart (six in a bundle read as a stone pillar at the art pixel). The grasses'
-  outline is softer (`GOL`): a blade is a pixel wide, a full-dark ring was most of the plant.
+- **Birch and aspen**: fewer stems, set apart (six in a bundle read as a stone pillar at the art pixel).
 - **The olive, the Italian cypress and the small fan palm** came from the older painters (`trees.js`): made in
   `flora.js` now (`oliveTree`, `italianCypress`, `smallFanPalm`), so they are at the art pixel with the rest;
   `statics.js` no longer loads `trees.js`.
@@ -25233,11 +25232,18 @@ best-looking trees in the game.
   fits the room its map item claims (four species' rooms a few px wider: the whitebark pine, the twisted shrub, the
   coastal cypress, the mesquite). Collision, the canopy fade and the wind don't change: they come from the map and
   the leaf flag.
-- **The greens - the owner's pick, open.** The concept sheets' foliage is olive with gold where the sun catches; the
-  kit's is a brighter lime under the game's noon sun. `FOL` (the foliage ramp) can lean the greens toward the concept
-  (`TONE` 0..1: hue toward olive, less saturation, a deeper shade, gold lights - the autumn, blossom and blue
-  ramps keep their colour). A three-row sheet went to him (A today, B halfway, C the concept's); the branch stays
-  on A (`TONE` 0) until he picks.
+- **The greens stay** (the owner, 11:11). Claude had set the plants beside the plant sheets alone and suggested
+  leaning their greens to the sheets' olive and gold; he asked whether the game's greens weren't chosen for the whole
+  game from a style anchor. They were: the Round 1 targets, R1-D's palette (dark blue-green through yellow-green to a
+  pale lime), which `FOL`'s ramps follow, and the plant sheets are lit at golden hour - the game's own golden hour
+  turns the same greens olive and gold. The colours are set as a whole, not sheet by sheet. The tone option is out
+  of the code.
+- **One outline rule** (the owner, 11:11: "some have dark outlines and others dont"). Halved, most of a plant's
+  outline was lost; made at the art pixel it is all there, so the differences showed: Claude had given the grasses a
+  softer one than the trees, shrubs and flowers. Every plant has the spec's outline now, the one the people, the
+  animals and the cars have (`done`: one art pixel, a dark tone of the colour beside it - so darker round a dark
+  plant than a pale one - never black, none along the foot). The ground and what is strewn on it have none, as the
+  spec says.
 - **Cost.** One art batch: the art hash changes, so the world re-bakes once when this goes live (about five hours of
   the server's bake). The bake itself draws a quarter of the pixels per plant; `node tools/perf.mjs` is within every
   budget (bake 87 files, 1014 KB; `trees.js` no longer in it).
