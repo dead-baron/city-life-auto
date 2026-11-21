@@ -1676,7 +1676,30 @@ const low = (m) => KIND[m] === 3 || KIND[m] === 2;
 // ---- 8. decorations ------------------------------------------------------------------------------------------------
 // stamp a cover sprite with its root at world (X, Y): each pixel is kept only where it stands at least as high
 // as what is already there (the depth rule, so overlaps come out the same in every chunk)
+// (at the art pixel where the chunk is: ground.js coverSprite. Not the dense turf: a lawn of blades one art pixel wide,
+// each with its sunlit tip, came out as yellow static in the game - halved and averaged by the bake it is the soft
+// mottled grass it was)
+const cover = (C, kind, v) => coverSprite(kind, v, C.ap === 2 && kind !== 'turf');
 function stamp(C, G, spr, X, Y, z0 = 0, fl = 0) {
+  if (spr.ap2) {   // (made at the art pixel: its root on the art grid, each of its pixels a 2 x 2 block)
+    const rx = Math.round(X / 2) * 2 - C.X0 - spr.ax * 2, ry = Math.round(Y / 2) * 2 - C.Y0 - spr.ay * 2;
+    for (let y = 0; y < spr.h; y++) for (let x = 0; x < spr.w; x++) {
+      const si = y * spr.w + x; if (!spr.col[si * 4 + 3]) continue;
+      const z = spr.z[si] + z0, sj = si * 4;
+      for (let v = 0; v < 2; v++) {
+        const gy = ry + y * 2 + v; if (gy < 0 || gy >= CHUNK) continue;
+        for (let u = 0; u < 2; u++) {
+          const gx = rx + x * 2 + u; if (gx < 0 || gx >= CHUNK) continue;
+          const gi = gy * CHUNK + gx, j = gi * 4;
+          if (z < G.z[gi]) continue;
+          G.col[j] = spr.col[sj]; G.col[j + 1] = spr.col[sj + 1]; G.col[j + 2] = spr.col[sj + 2];
+          G.nrm[j] = spr.nrm[sj]; G.nrm[j + 1] = spr.nrm[sj + 1]; G.nrm[j + 2] = spr.nrm[sj + 2];
+          G.z[gi] = z; G.flag[gi] = spr.flag[si] | F_GROUND | F_WET | fl;
+        }
+      }
+    }
+    return;
+  }
   const ox = Math.round(X) - C.X0 - spr.ax, oy = Math.round(Y) - C.Y0 - spr.ay;
   for (let y = 0; y < spr.h; y++) {
     const gy = oy + y; if (gy < 0 || gy >= CHUNK) continue;
@@ -1739,7 +1762,7 @@ function decor(C, G) {
     const n = Math.round((raised(m) || roadLike(m) ? 26 : 40) * dens);
     for (let k = 0; k < n; k++) {
       const a = hh(k, Math.round(p.x), seed + 81) * 6.283, r = Math.sqrt(hh(k, Math.round(p.y), seed + 83)) * 52;
-      stamp(C, G, coverSprite('leaf', (hh(k, 7, seed + Math.round(p.x)) * 5) | 0), p.x + Math.cos(a) * r * 1.25, p.y + Math.sin(a) * r * 0.85 + 6, zAt(C, p.x + Math.cos(a) * r * 1.25, p.y + Math.sin(a) * r * 0.85 + 6));
+      stamp(C, G, cover(C, 'leaf', (hh(k, 7, seed + Math.round(p.x)) * 5) | 0), p.x + Math.cos(a) * r * 1.25, p.y + Math.sin(a) * r * 0.85 + 6, zAt(C, p.x + Math.cos(a) * r * 1.25, p.y + Math.sin(a) * r * 0.85 + 6));
     }
   }
   turf(C, G, 1);                                              // (the grass itself: full density from q1 up)
@@ -1756,7 +1779,7 @@ function decor(C, G) {
       let acc = 0;
       for (const [kind, nv, p] of list) {
         acc += p * dens;
-        if (h0 < acc) { stamp(C, G, coverSprite(kind, (hh(cx, cy, seed + 97) * nv) | 0), X, Y, b.zb[i]); break; }
+        if (h0 < acc) { stamp(C, G, cover(C, kind, (hh(cx, cy, seed + 97) * nv) | 0), X, Y, b.zb[i]); break; }
       }
       continue;
     }
@@ -1767,15 +1790,15 @@ function decor(C, G) {
       if (!w || w.k === WK.SEA || b.tt[(Math.floor(Y / TILE) - C.TY0) * TN + Math.floor(X / TILE) - C.TX0] === T.WALL) continue;   // (nor on a ledge fall's lip)
       const still = (w.k === WK.POND || w.k === WK.LAKE || w.k === WK.MARSH || w.fv < 0.2) && !(w.pk > 0.05);   // (a river's calm pocket: no lilies)
       const reedy = vnc(X, Y, 150, seed + 103) + (w.k === WK.MARSH ? 0.25 : w.k === WK.POND ? 0.1 : 0);
-      if (w.depth < (w.k === WK.MARSH ? 0.9 : 0.45) && (d < 5 || reedy > 0.55) && h0 < (reedy > 0.55 ? 0.42 : 0.1) * dens) stamp(C, G, coverSprite('reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
-      else if (still && w.depth > 0.25 && w.depth < 1.9 && d > 5 && vnc(X, Y, 110, seed + 105) > (w.k === WK.LAKE ? 0.68 : w.k === WK.MARSH ? 0.7 : 0.6) && h0 < 0.55 * dens) stamp(C, G, coverSprite('lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, LILY_Z, F_NOCAST);
+      if (w.depth < (w.k === WK.MARSH ? 0.9 : 0.45) && (d < 5 || reedy > 0.55) && h0 < (reedy > 0.55 ? 0.42 : 0.1) * dens) stamp(C, G, cover(C, 'reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
+      else if (still && w.depth > 0.25 && w.depth < 1.9 && d > 5 && vnc(X, Y, 110, seed + 105) > (w.k === WK.LAKE ? 0.68 : w.k === WK.MARSH ? 0.7 : 0.6) && h0 < 0.55 * dens) stamp(C, G, cover(C, 'lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, LILY_Z, F_NOCAST);
       continue;
     }
     // paving and asphalt: litter and weeds by wealth
     const ti = (Math.floor(Y / TILE) - C.TY0) * TN + Math.floor(X / TILE) - C.TX0, D = DISTRICTS[b.td[ti]] || DISTRICTS[1];
     const lit = (LITTER[D.tier] ?? 0.3) * dens;
     if ((raised(m) || roadLike(m)) && h0 < 0.004 * lit) litterAt(C, G, X, Y, b.zb[i], cx * 7 + cy);
-    else if ((raised(m) || m === M_.LOT || m === M_.YARD) && h0 > 1 - 0.025 * lit * (WEAR[D.tier] ?? 0.3)) stamp(C, G, coverSprite('weed', (h0 * 400) & 3), X, Y, b.zb[i]);
+    else if ((raised(m) || m === M_.LOT || m === M_.YARD) && h0 > 1 - 0.025 * lit * (WEAR[D.tier] ?? 0.3)) stamp(C, G, cover(C, 'weed', (h0 * 400) & 3), X, Y, b.zb[i]);
   }
 }
 // grass as E1 draws it: overlapping tufts in staggered rows, each a fan of blades with sunlit tips, stamped north
@@ -1798,7 +1821,7 @@ function turf(C, G, dens) {
       if (TURFCLOV[m] && cloverAt(X | 0, Y | 0, seed, TURFCLOV[m])) continue;
       const tall = m === M_.MEADOW && vnc(X, Y, 31, seed + 115) > 0.45 ? 5 : pal, pv = vnc(X, Y, 53, seed + 119) + (h0 - 0.5) * 0.3;
       const shade = pv < 0.38 ? 0 : pv > 0.64 ? 2 : 1;
-      stamp(C, G, coverSprite('turf', (tall * 3 + shade) * 16 + ((hh(c, r, seed + 117) * 12) | 0)), X, Y, b.zb[py * WN + px]);
+      stamp(C, G, cover(C, 'turf', (tall * 3 + shade) * 16 + ((hh(c, r, seed + 117) * 12) | 0)), X, Y, b.zb[py * WN + px]);
     }
   }
 }
@@ -1817,7 +1840,7 @@ function crops(C, G, dens) {
         const X = c * RX + ox + (hh(r, c, seed + 133) - 0.5) * 1.5, Y = r * RY + (h0 - 0.5);
         const px = Math.floor(X - C.WX0), py = Math.floor(Y - C.WY0);
         if (px < 0 || py < 0 || px >= WN || py >= WN || !mats.includes(b.mat[py * WN + px])) continue;
-        stamp(C, G, coverSprite(kind, ((hh(c, r, seed + 137) * nv) | 0) + (vnc(X, Y, 90, seed + 141) > 0.5 ? nv : 0)), X, Y, b.zb[py * WN + px]);   // (in patches a head taller)
+        stamp(C, G, cover(C, kind, ((hh(c, r, seed + 137) * nv) | 0) + (vnc(X, Y, 90, seed + 141) > 0.5 ? nv : 0)), X, Y, b.zb[py * WN + px]);   // (in patches a head taller)
       }
     }
   }

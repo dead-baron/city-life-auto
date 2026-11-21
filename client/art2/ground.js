@@ -1188,10 +1188,13 @@ function corn(x, y, s, vert) {
 // grass, a flower, a fern, a reed, a pebble, a pine cone, a shell. Anchored at its root (ax, ay); z is the
 // height above the ground it stands on; plants are flagged F_LEAF. Cached: identical calls share a sprite.
 const COVERS = new Map();
-export function coverSprite(kind, v = 0) {
-  const key = kind + ':' + v;
+// art: the same thing made at the art pixel (1 px of it = 2 world px, marked ap2: the chunk baker stamps it in 2 x 2
+// blocks on the art grid) - a blade of grass one art pixel wide, where a world-px blade halved by the bake came out as
+// speckle (the owner's nature kit pass, 2026-11-21).
+export function coverSprite(kind, v = 0, art = false) {
+  const key = kind + ':' + v + (art ? ':a' : '');
   let g = COVERS.get(key);
-  if (!g) { g = makeCover(kind, v); COVERS.set(key, g); }
+  if (!g) { g = makeCover(kind, v, art); COVERS.set(key, g); }
   return g;
 }
 export const COVER_KINDS = ['turf', 'tuft', 'tuftTall', 'tuftDry', 'tuftAlp', 'seed', 'wheat', 'corn', 'flower', 'fern', 'reed', 'duneGrass', 'weed', 'pebble', 'rock', 'redStone', 'cone', 'twig', 'shell', 'starfish', 'leaf', 'seaweed', 'mushroom', 'scrub', 'lily', 'clod'];
@@ -1205,11 +1208,11 @@ const TURF = [
   RP('#0c1b15 #12271a #193621 #244426 #335228 #435e2d #7e8341 #aba459'),
 ];
 const BLOOMS = ['#ecebe2', '#f0c83a', '#e8823a', '#a868c8', '#d8384a', '#f0a0c0', '#6a8ce8'].map((h) => ramp(h, 4, 2, { dark: 0.45, light: 0.6 }));
-function makeCover(kind, v) {
+function makeCover(kind, v, art = false) {
   const S = new GBuf(24, 24); S.ax = 12; S.ay = 20;
   let n = (Math.imul(v + 1, 2654435761) ^ (kind.length * 977 + kind.charCodeAt(0) * 31)) >>> 0;
   const r = () => { n = (n + 0x6D2B79F5) | 0; let t = Math.imul(n ^ (n >>> 15), 1 | n); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  const put = (x, y, c, nx, ny, z, f) => { x = Math.round(x); y = Math.round(y); if (!S.inside(x, y)) return; S.put(x, y, c, norm([nx, ny, 1]), Math.max(0, z), null, f); };
+  const put = (x, y, c, nx, ny, z, f) => { if (art) { x = S.ax + (x - S.ax) / 2; y = S.ay + (y - S.ay) / 2; } x = Math.round(x); y = Math.round(y); if (!S.inside(x, y)) return; S.put(x, y, c, norm([nx, ny, 1]), Math.max(0, z), null, f); };
   // a blade from the root: lean (px per px of height), height, ramp, base shade
   const blade = (x0, lean, h, R, curve = 0, f = F_LEAF, t0 = 0.15) => {
     for (let k = 0; k < h; k++) {
@@ -1392,6 +1395,7 @@ function makeCover(kind, v) {
     O.z[di] = S.z[si]; O.flag[di] = S.flag[si];
   }
   O.ax = S.ax - x0; O.ay = S.ay - y0;
+  if (art) O.ap2 = 2;
   return O;
 }
 // the ground between dense turf tufts (what shows in the gaps): dark, mottled, a clover patch now and then

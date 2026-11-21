@@ -672,7 +672,7 @@ export function topiaryCone(seed = 1) {
   const soil = planterSprite(G, cx, foot, 10, 8, 10, 'stone', seed);
   const cone = massCone(cx, soil - 50, soil + 1, 10.5, rnd, 2.5, 1.8, 0.1);
   if (U < 1) for (const c of cone) c.x = cx + (c.x - cx) * Math.min(1, 0.25 + (c.y - (soil - 50)) / 22);   // (at the art pixel: a clipped point, not a leaning one)
-  paintClusters(G, cone, { R: FOL('#3e7a30'), seed, core: true, clip: 1, tips: false });
+  paintClusters(G, cone, { R: FOL('#3e7a30'), seed, core: true, clip: 1, tips: U < 1 ? false : undefined });
   return done(G);
 }
 export const roseBush = (seed = 1) => shrub(seed, { w: 17, h: 26, R: FOL('#3a7228'), cs: 3, flowers: { R: RR('#c8243a', 6, 3, { light: 0.55 }), k: 0.13, kind: 'rose', size: 1 } });
@@ -996,7 +996,7 @@ export function pineTufts(seed = 1, o = {}) {
   if (!CAN) return cv(pineTufts, seed, o);
   const rnd = mulberry32(seed * 233 + (o.k || 0)), h = (o.h ?? 122) * SIZE, cw = (o.cw ?? 32) * SIZE, G = sprite(cw * 2 + 30, h + 14, 5), cx = G.ax, foot = G.ay;
   const B = o.B || RR('#9a5a30', 7, 3, { dark: 0.62, light: 0.45 }), R = o.R || FOL('#4a7a2a'), tw = (o.tw ?? 3.4) * tk(), lobes = [], branches = [];
-  const twist = (o.twist || 0) * SIZE, topX = cx + (o.lean || 0) * SIZE, tuft = (o.tuft ?? 7.5) * Math.pow(SIZE, 0.85);
+  const twist = (o.twist || 0) * SIZE, topX = cx + (o.lean || 0) * SIZE, tuft = (o.tuft ?? 7.5) * Math.pow(SIZE, 0.95);
   const trunkPts = [[cx, foot + 1], [cx + twist * 1.6, foot - h * 0.5], [topX, foot - h + 6 * SIZE]];
   const lowest = o.low ?? 0.38;
   for (let i = 0; i < (o.n ?? 9); i++) {
@@ -1025,11 +1025,11 @@ export const mapleAutumn = (seed = 1) => broadleaf(seed, { h: 98, cw: 44, ch: 45
 // a clump of slim pale trunks fanning out from one spot, foliage in clumps up their tops: birch, aspen
 export function grove(seed = 1, o = {}) {
   if (!CAN) return cv(grove, seed, o);
-  const rnd = mulberry32(seed * 281 + (o.k || 0)), h = (o.h ?? 94) * SIZE, cw = (o.cw ?? 38) * SIZE, n = o.n ?? 5, G = sprite(cw * 2 + 30, h + 16, 5), cx = G.ax, foot = G.ay;
+  const rnd = mulberry32(seed * 281 + (o.k || 0)), h = (o.h ?? 94) * SIZE, cw = (o.cw ?? 38) * SIZE, n = U < 1 ? Math.max(3, Math.round((o.n ?? 5) * 0.67)) : o.n ?? 5, G = sprite(cw * 2 + 30, h + 16, 5), cx = G.ax, foot = G.ay;   // (at the art pixel: fewer stems, each apart from the next - six in a bundle read as a pillar)
   const B = o.B || BARK_BIRCH, R = o.R || FOL('#76a032'), stems = [], lobes = [];
   for (let i = 0; i < n; i++) {
-    const u = (i - (n - 1) / 2) / Math.max(1, (n - 1) / 2), bx = cx + u * 7 * tk() + (rnd() - 0.5) * 2 * SIZE, tx = cx + u * cw * 0.8 + (rnd() - 0.5) * 6 * SIZE, ty = foot - h * (0.78 + rnd() * 0.22) + Math.abs(u) * 8 * SIZE;
-    stems.push([[bx, foot + 1], [(bx * 2 + tx) / 3, (foot + ty) / 2], [tx, ty], (1.3 + rnd() * 0.5) * tk(), rnd()]);
+    const u = (i - (n - 1) / 2) / Math.max(1, (n - 1) / 2), bx = cx + u * (U < 1 ? 10 : 7) * tk() + (rnd() - 0.5) * 2 * SIZE, tx = cx + u * cw * 0.8 + (rnd() - 0.5) * 6 * SIZE, ty = foot - h * (0.78 + rnd() * 0.22) + Math.abs(u) * 8 * SIZE;
+    stems.push([[bx, foot + 1], [(bx * 2 + tx) / 3, (foot + ty) / 2], [tx, ty], (1.3 + rnd() * 0.5) * tk() * (U < 1 ? 0.72 : 1), rnd()]);
     for (let k = 0; k < 6; k++) { const t = 0.45 + k * 0.11, p = qpt([bx, foot], [(bx * 2 + tx) / 3, (foot + ty) / 2], [tx, ty], t), r = (o.r ?? 7.5) * SIZE * (0.8 + rnd() * 0.4) * (1 - k * 0.05); lobes.push({ x: p[0] + (rnd() - 0.5) * 12 * SIZE + u * 4 * SIZE, y: p[1] - r * 0.3, r, ry: r * 0.85 }); }
   }
   const cls = massEll(lobes, rnd, (o.cs ?? 3.6) * sq(), o.dens ?? 0.95);
