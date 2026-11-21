@@ -38,6 +38,14 @@ follows this file, as `docs/tasks/PREBETA-TESTS.txt`. If that file is missing, t
 (below) before relying on this branch. Known to fail on `main` too: `test/uiscreens.test.js` test 5,
 `test/world3arrivals.test.js` test 4. The audit of 11-19 listed 13 failures on Windows to recheck on Linux.
 
+Triage of the failures seen so far on this branch (11-21, 215 of 418 files run):
+- `test/hub.test.js` test 3 and `test/launch-review.test.js` test 1 fail on `quickwins` alone, pass on `main` and on
+  `characters`: they came in with quick wins. Both assert text - the README's controls row for the bag
+  (`| Bag (EQUIPMENT: ... | tap ITEMS |`) and the gate's pad focus in `client/account.js` - that quick wins 3 and 4
+  changed. To do: check the behaviour in the page, then bring the README row or the tests up to date.
+- `test/hudlayout.test.js` test 1 and `test/gridlock.test.js` tests 1-2 fail on `main` too (before any of this).
+- `test/calevents.test.js` failed once while the machine was loaded and passes run alone.
+
     for t in test/*.test.js; do NODE_OPTIONS=--max-old-space-size=3072 flock /tmp/cla-heavy.lock node --test $t; done
 
 (One at a time: the dev box has 4 cores and 7 GB; `npm test` runs them side by side and runs out of memory there.)
