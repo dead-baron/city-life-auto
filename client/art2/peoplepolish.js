@@ -78,14 +78,15 @@ export const POLISH = {
         const on = (i, j) => cx.onHead(base.bx + i * 2, base.by + j * 2) && cx.onHead(base.bx + i * 2 + 1, base.by + j * 2 + 1), r0 = two && on(c0, 3) ? 2 : 1;
         const K = { X, s, t: mix(X, skin[2], 0.66) }, wide = !Array.isArray(bs);
         (wide ? bs.w : bs).forEach((r, j0) => {
-          const j = wide ? j0 - 1 + r0 : j0 + (two ? r0 : 1); if (j < 1) return;
+          const j = wide ? j0 - 1 + r0 : j0 + (two ? (r0 === 1 && on(c0, 2) ? 2 : r0) : 1); if (j < 1) return;   // (a moustache: on the second row wherever the face has one there - skin between it and the eyes, turned as from the front)
           if (!two) {   // (in profile: from the front of the face back)
             let f = 0; for (let k = 4; k >= 0; k--) if (on(fwd * k, j)) { f = k; break; }
             if (wide) { for (let t = 0; t <= f + 1; t++) { const ch = r[t === 0 ? 2 : t === f + 1 ? 4 : 3]; if (ch !== '.') P(fwd * (f - t), j, K[ch]); } return; }
-            const a = j0 ? f : Math.max(0, f - 1); for (let i = 2; i < 4; i++) if (r[i] !== '.') P(fwd * (a - (i - 2)), j, K[r[i]]); return;
+            const a = j0 ? f : Math.max(0, f - 1); for (let i = 2; i < 5; i++) { const ch = i === 2 && r[2] === '.' ? r[3] : r[i]; if (ch !== '.') P(fwd * (a - (i - 2)), j, K[ch]); } return;   // (a moustache parted in the middle - a handlebar - still starts at the lip from the side, and runs a pixel further back)
           }
           if (wide) { for (let col = lo; col <= hi; col++) { const ch = r[col < c0 ? (col === lo ? 0 : 1) : col > c0 + odd ? (col === hi ? 4 : 3) : 2]; if (ch !== '.') P(col, j, K[ch]); } return; }
-          for (let i = 0; i < 5; i++) { if (r[i] === '.') continue; P(c0 + i - 2 + (odd && i > 2 ? 1 : 0), j, K[r[i]]); if (odd && i === 2) P(c0 + 1, j, K[r[i]]); }
+          const q3 = turn > 0.2;   // (three quarters: the parting isn't under the nose any more - one bar)
+          for (let i = 0; i < 5; i++) { const ch = q3 && i === 2 && r[2] === '.' && r[1] !== '.' && r[3] !== '.' ? r[1] : r[i]; if (ch === '.') continue; P(c0 + i - 2 + (odd && i > 2 ? 1 : 0), j, K[ch]); if (odd && i === 2) P(c0 + 1, j, K[ch]); }
         });
       }
       if (A.scar === 6) { P(hi, 1, [244, 232, 210]); P(hi - 1, 1, [226, 206, 178]); }
