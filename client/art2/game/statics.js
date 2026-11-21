@@ -2404,7 +2404,27 @@ const PLANTS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_
 // trunk (or the sprays just round it) covers you fades - fbox, narrower than the picture - not every crown nearby.
 export const TREE_FADE = 1e6;
 const RW_R = { giantL: 70, giant: 54, giantS: 40, redwood2: 16, gate: 78 };
-const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'cocoUp', 'royal', 'mtnPine', 'maple']), NV = (sp) => (NV5.has(sp) ? 8 : 6);   // (how many shapes of a species the world draws - doubled 2026-11-21, the owner: "a lot of variety throughout the world in nature"; a plant made at the art pixel is a quarter of the pixels to make and to keep)
+// Which of a species' pictures the plant at (x, y) is, laid out so the same one never stands close by (the owner,
+// 11-21: "the same tree used multiple times near each other" - picked by chance, two trees in three had their twin
+// within five tiles). A lattice over 32 px cells: cell (ix, iy) takes (ix + a * iy) mod m, a chosen for each m so the
+// nearest cells with the same number lie as far apart as m allows (about sqrt(m) cells). A pure function of the
+// place, so the server's bake and every page's agree. A wild tree's number also sets its size (three sizes: 3 x the
+// shapes to share out). test/undergrowth.test.js counts the twins over the built world.
+const LAT_A = new Map();
+function latA(m) {
+  let a = LAT_A.get(m);
+  if (a) return a;
+  let bd = 0;
+  for (let t = 1; t < m; t++) {
+    let d = 1e9;
+    for (let dy = -m; dy <= m; dy++) for (let dx = -m; dx <= m; dx++) if ((dx || dy) && (((dx + t * dy) % m) + m) % m === 0) d = Math.min(d, dx * dx + dy * dy);
+    if (d > bd) { bd = d; a = t; }
+  }
+  LAT_A.set(m, a || 1);
+  return a || 1;
+}
+const shapeAt = (sp, x, y, m) => (((Math.floor(x / 32) + latA(m) * Math.floor(y / 32) + sp.length * 5) % m) + m) % m;
+const NV5 = new Set(['street', 'streetPl', 'coconut', 'cocoUp', 'royal', 'mesquite', 'paloVerde', 'joshua', 'larch', 'whitePine', 'mapleAutumn', 'coastCypress', 'leaning']), NV12 = new Set(['oak', 'fir', 'cedar', 'maple', 'pondPine', 'pine', 'spruce', 'birch', 'aspen', 'mtnPine', 'mtnFir', 'fern', 'fernR', 'sorrel', 'salal', 'huckle', 'tallGrass', 'daisies']), NV = (sp) => (NV12.has(sp) ? 12 : NV5.has(sp) ? 8 : 6);   // (how many shapes of a species the world draws - doubled 2026-11-21, the owner: "a lot of variety throughout the world in nature"; a plant made at the art pixel is a quarter of the pixels to make and to keep)
 
 // ================================================================================================
 // props
@@ -2432,7 +2452,7 @@ function propItems(c, p, pi, I) {
   const t = p.t, x = p.x, y = p.y, u = hh(x, y, 7), seed = Math.floor(hh(x, y, 9) * 6);
   const V = (key, m, a, hd = 0, pv = null, extra = null) => put(I, vitem(key, m, a, x, y, hd, pv, { pi, ...(p.lift ? { z0: p.lift } : null), ...(extra || {}) }));   // (p.lift: stands on something raised, a pier's deck)
   if (t === 'redwood') {
-    const sp = SPECIES[p.sp] ? p.sp : 'giant', S = SPECIES[sp], v = Math.floor(hh(x, y, 13) * NV(sp)), tr = RW_R[sp] || 20, rr = tr * 1.35, fw = tr * 1.5 + 24;
+    const sp = SPECIES[p.sp] ? p.sp : 'giant', S = SPECIES[sp], v = shapeAt(sp, x, y, NV(sp)), tr = RW_R[sp] || 20, rr = tr * 1.35, fw = tr * 1.5 + 24;
     put(I, { key: `f:${sp}:${v}:1`, recipe: { t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k: 1 }, x, y, ext: [S[1], S[2], S[1], 60], fbox: [fw, S[2], fw, 60], pi, fade: 1, b: TREE_FADE + pi, fp: [x + rr, y - rr * 0.5, x - rr, y + rr * 0.5] });   // (x0 > x1: an ellipse, engine.js STATIC_FS)
     return;
   }
@@ -2440,7 +2460,8 @@ function propItems(c, p, pi, I) {
   if (PLANTS.has(t)) {
     const r = plantFor(c, p);
     if (!r) return;
-    const [sp, k0] = r, k = Math.round(k0 * 5) / 5, v = Math.floor(hh(x, y, 13) * NV(sp)), tl = c.at(x, y);
+    const [sp, k0] = r, n = NV(sp), sized = (t === 'tree_a' || t === 'tree_b') && WILDS.has(c.dist(x, y).style);   // (a tree of the wilds: smaller, as it was, bigger - by its number)
+    const j = shapeAt(sp, x, y, sized ? n * 3 : n), v = j % n, k = Math.round((k0 + (sized ? (Math.floor(j / n) - 1) * 0.2 : 0)) * 5) / 5, tl = c.at(x, y);
     put(I, fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k, { pi }, tl !== T.SIDEWALK && tl !== T.PLAZA));
     // (p.lit: fairy lights wound up an upright palm's trunk - the nightlife districts' boulevards, SC4-B)
     const LH = p.lit && LIT_PALMS[sp];
@@ -3940,7 +3961,7 @@ const YARD = { houses: ['rose', 'hydrangea', 'lavender', 'topBall', 'hydrangea',
   rural: ['berryShrub', 'rose', 'lupines', 'hydrangea'], desert: ['agave', 'yucca', 'barrel', 'pear'], southside: ['tallGrass', 'dryGrass', 'berryShrub', 'rose'], oldtown: ['lavender', 'rose', 'boxIron', 'hydrangea'], arts: ['lavender', 'boxIron', 'rose', 'pampas'] };
 const HOUSEY = new Set(['house', 'villa', 'farmhouse', 'cabin', 'cottage', 'mansion']);
 const COVER = { cv: 1 };   // (marks what the greenery grows by rule, not a hand's or the map's placing: test/undergrowth.test.js)
-function flora1(I, sp, k, x, y, bare = true) { const v = Math.floor(hh(x, y, 13) * NV(sp)); put(I, fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k, null, bare)); }
+function flora1(I, sp, k, x, y, bare = true) { const v = shapeAt(sp, x, y, NV(sp)); put(I, fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k, null, bare)); }
 function addYards(c, I) {
   c.M.buildings.forEach((b, bi) => {
     if (!b || b.gone || !HOUSEY.has(archOf(c, b))) return;
@@ -4055,7 +4076,7 @@ function addGreenery(c, I) {
     const x = Math.round((tx + 0.5 + (hash(tx, ty, 7005) - 0.5) * 1.6) * TILE), y = Math.round((ty + 0.5 + (hash(tx, ty, 7007) - 0.5) * 1.6) * TILE);
     const li = M.inside(Math.floor(x / TILE), Math.floor(y / TILE)) ? M.idx(Math.floor(x / TILE), Math.floor(y / TILE)) : i;
     if (taken[li]) continue;   // (it lands up to most of a tile off its own: not onto a fence's tile or a prop's)
-    const sp = pick(['hydrangea', 'rose', 'lavender', 'flHedge', 'tulips', 'daisies', 'berryShrub'], hash(tx, ty, 7003)), v = Math.floor(hh(x, y, 13) * NV(sp));
+    const sp = pick(['hydrangea', 'rose', 'lavender', 'flHedge', 'tulips', 'daisies', 'berryShrub'], hash(tx, ty, 7003)), v = shapeAt(sp, x, y, NV(sp));
     put(I, fitem(`f:${sp}:${v}:1`, sp, 1000 + v * 37 + sp.length * 7, x, y, 1, COVER, true));
   }
 }
@@ -4282,7 +4303,7 @@ function coverItems(c, I, cx, cy) {
       if (hash(tx, ty, 7177) > 0.3) continue;
       r = [/^(creosote|bursage|brittle|dryGrass|sage|tumble|dFlowers|dPoppies|barrel|pear|agave|cholla|saguaroSmall|yucca|heather|juniper|twisted|aDaisies|aLupine|paintbrush)$/.test(r[0]) ? 'dryTuft' : 'weed', 1];
     }
-    const [sp, k] = r, v = Math.floor(hash(tx, ty, 13) * NV(sp));
+    const [sp, k] = r, v = shapeAt(sp, x, y, NV(sp));
     if (sight.has(i) && (SPECIES[sp] ? SPECIES[sp][2] : 0) * k > 80) continue;
     if ((SPECIES[sp] ? SPECIES[sp][1] : 0) * k > 50 && TOWN_COVER[(DISTRICTS[c.M.dist[i]] || {}).style] && !coverClear(c, tx, ty, 2)) continue;   // (a wide drift in town: two tiles clear of a path or a drive, not one - its spread reaches over - the owner, 11-14)
     out.push(fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k, COVER));

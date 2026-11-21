@@ -4,6 +4,9 @@
 //  - Nothing grows through a fence (the owner, 2026-11-21: plants "across sidewalks or through fences" - the lupines
 //    through a pasture's rail fence). A fence is a line, and only its first tile was kept clear. Every fence, wall and
 //    hedge line is laid by fenceLine, which hands each piece to the greenery.
+//  - Variety (the owner, 2026-11-21: "the same tree used multiple times near each other"): a plant's picture is its
+//    species, its shape, its size and its colour. Picked by chance, one tree in five in the woods had its twin within
+//    five tiles and four ferns in five within three. shapeAt lays the shapes out so twins stand apart.
 //  - A rock never stands alone on bare ground (concepts NR1-A, NS1-B): a wild boulder and a fallen log keep only their
 //    own tiles clear, loose stones lie at a rock's foot, ferns and mushrooms along a log.
 import { test } from 'node:test';
@@ -87,4 +90,21 @@ test('a wild rock does not stand alone, nor a fallen log: stones and undergrowth
     assert.ok(shrooms > 0.15, `logs with mushrooms: ${(shrooms * 100).toFixed(0)}%`);
   }
   console.log(`# rocks ${rocks.length}: any ${(withAny * 100).toFixed(0)}%, stones ${(withStones * 100).toFixed(0)}%; logs ${logs.length}`);
+});
+
+test('variety: in the woods a tree does not stand near its twin, and a place draws on many pictures', () => {
+  // (a twin: the very same picture - species, shape, size, colour - within reach)
+  const places = { woods: [1530, 1198], pines: [1560, 1317], oakwoods: [1700, 1250], meadow: [2947, 1062] };
+  for (const [name, [tx, ty]] of Object.entries(places)) {
+    const cx0 = Math.floor(tx * TILE / CH), cy0 = Math.floor(ty * TILE / CH), all = new Map();
+    for (let cy = cy0 - 1; cy <= cy0 + 1; cy++) for (let cx = cx0 - 1; cx <= cx0 + 1; cx++) for (const it of staticItems(M, cx, cy)) if (it.recipe && it.recipe.t === 'f') all.set(it.key + '@' + it.x + ',' + it.y, it);
+    const L = [...all.values()], isTree = (it) => it.pi !== undefined && M.props[it.pi] && /^tree_/.test(M.props[it.pi].t);
+    const trees = L.filter(isTree), under = L.filter((it) => isCover(it));
+    const twins = (S, r) => { const bad = S.filter((a) => S.some((b) => a !== b && a.key === b.key && Math.abs(a.x - b.x) < r && Math.abs(a.y - b.y) < r && Math.hypot(a.x - b.x, a.y - b.y) < r)); return S.length ? bad.length / S.length : 0; };
+    const t160 = twins(trees, 160), u96 = twins(under, 96), pics = new Set(L.map((it) => it.key)).size;
+    console.log(`# ${name}: ${trees.length} trees, twins within 160 px ${(t160 * 100).toFixed(0)}%; ${under.length} undergrowth, twins within 96 px ${(u96 * 100).toFixed(0)}%; ${pics} pictures`);
+    if (trees.length >= 50) assert.ok(t160 <= 0.1, `${name}: trees with their twin within 160 px: ${(t160 * 100).toFixed(0)}%`);
+    if (under.length >= 300) assert.ok(u96 <= 0.3, `${name}: undergrowth with its twin within 96 px: ${(u96 * 100).toFixed(0)}%`);
+    if (trees.length >= 50) assert.ok(pics >= 120, `${name}: pictures drawn on (${pics})`);
+  }
 });

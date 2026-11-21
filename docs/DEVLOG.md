@@ -25293,6 +25293,17 @@ best-looking trees in the game.
   flowers come up to them, loose stones lie at a rock's foot (`flora.js` `looseStones`, in the rock's own stone -
   granite, red sandstone, basalt) and mushrooms and ferns grow along a log (`toadstools`, three cap colors by stand).
   `test/undergrowth.test.js` counts them over the built world.
+- **Variety, measured (the owner, 13:08: "the same tree used multiple times near each other").** A plant's shape was
+  picked by chance from six or eight, so twins were certain: on the live build one tree in five in the woods has the
+  very same picture (species, shape, size) within five tiles, and four ferns in five have theirs within three. Three
+  changes. (1) `statics.js` `shapeAt` lays the shapes out on a lattice over 32 px cells, the multiplier chosen per
+  count so the nearest same number is as far off as the count allows; a pure function of the place, so the server's
+  bake and every page's agree. (2) A wild tree's number also sets its size (three sizes), and the forest's main trees
+  and the carpeting ferns have twelve shapes each (`NV12`). (3) A shape is a build, not a wobble: conifers come young
+  (short, slim), old (bare lower trunk, thin top), ragged (gaps, off the plumb) or as they were; broadleaf trees young,
+  slim or as they were. Measured over the built world (`test/undergrowth.test.js`): trees with a twin within 160 px
+  0% in three woods (12-21% live); undergrowth with a twin within 96 px 11-17% (81-85% live); a wood draws on about
+  230 pictures where it drew on about 80.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.

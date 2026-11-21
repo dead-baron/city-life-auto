@@ -14,7 +14,7 @@ const OWN = new Set(['redwood', 'redwood2', 'giantL', 'giant', 'giantS', 'gate',
 test('every species the world plants is made at the art pixel, and its picture fits the room its item claims', () => {
   assert.ok(FLORA_SPECIES.length > 100, 'the species');
   // (every shape the world draws: statics.js seeds a species' shapes 1000 + v * 37 + its name's length * 7)
-  for (const sp of FLORA_SPECIES) for (const k of [1, 1.4]) for (let v = 0; v < 8; v++) {
+  for (const sp of FLORA_SPECIES) for (const k of [1, 1.4]) for (let v = 0; v < 12; v++) {
     const G = makeStatic({ t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k });
     assert.ok(G && G.w > 1 && G.h > 1, `${sp}: a picture`);
     if (sp !== 'sorrel') assert.equal(G.ap2, 2, `${sp}: at the art pixel`);   // (the redwood floor's sorrel: a flat carpet in world px, redwoods.js)

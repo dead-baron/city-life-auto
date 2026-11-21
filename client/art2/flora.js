@@ -451,9 +451,11 @@ function spray(G, s, R, o, seed) {
 export function broadleaf(seed = 1, o = {}) {
   if (!CAN) return cv(broadleaf, seed, o);
   const rnd = mulberry32(seed * 7919 + (o.k || 0) * 13 + 3);
-  const h = (o.h ?? 110) * SIZE * bv(seed, 1, 0.13), cw = (o.cw ?? 38) * SIZE * bv(seed, 2, 0.15), ch = (o.ch ?? 36) * SIZE * bv(seed, 3, 0.12), base = BARE ? null : o.base, bw = base ? (base.w ?? 15) * U : 0;
+  // (with VARY a shape is one of three builds: a young tree, short with a small crown; a tall one, its crown narrow; the tree as it was)
+  const bld = bu(seed, 6), young = bld >= 0 && bld < 0.22, slim = bld >= 0.22 && bld < 0.4;
+  const h = (o.h ?? 110) * SIZE * bv(seed, 1, 0.13) * (young ? 0.74 : 1), cw = (o.cw ?? 38) * SIZE * bv(seed, 2, 0.15) * (young ? 0.76 : slim ? 0.84 : 1), ch = (o.ch ?? 36) * SIZE * bv(seed, 3, 0.12) * (young ? 0.8 : 1), base = BARE ? null : o.base, bw = base ? (base.w ?? 15) * U : 0;
   const G = sprite(cw * 2 + 30, h + 24, base ? Math.ceil(bw * 0.5) + 4 : 5);
-  const cx = G.ax + (o.dx || 0) * SIZE, foot = G.ay, R = o.R || G_LEAF, B = o.B || BARK, tw = (o.tw ?? 4) * tk();
+  const cx = G.ax + (o.dx || 0) * SIZE, foot = G.ay, R = o.R || G_LEAF, B = o.B || BARK, tw = (o.tw ?? 4) * tk() * (young ? 0.8 : 1);
   if (base) treeBase(G, cx, foot, base, seed);
   if (o.litter) litter(G, cx, foot, bw + 10 * U, o.litter, seed, Math.round(26 * (U < 1 ? 0.6 : 1)));
   const ccx = cx + (o.lean || 0) * SIZE + (VARY ? (bu(seed, 4) - 0.5) * cw * 0.34 : 0), ccy = foot - h + ch, fork = ccy + ch * (o.form === 'vase' ? 0.8 : o.form === 'spread' ? 0.5 : 0.62);   // (ccx: with VARY, a crown a little off its trunk, one way or the other)
@@ -554,17 +556,23 @@ function litter(G, cx, foot, r, cols, seed, n = 30) {
 export function conifer(seed = 1, o = {}) {
   if (!CAN) return cv(conifer, seed, o);
   const rnd = mulberry32(seed * 3301 + (o.k || 0) * 7 + 9);
-  const h = (o.h ?? 120) * SIZE * bv(seed, 1, 0.15), r = (o.r ?? 30) * SIZE * bv(seed, 2, 0.16), form = o.form || 'cone', R = o.R || FOL('#33663a'), B = o.B || BARK;
-  const G = sprite(r * 2 + 30, h + 16, 5), cx = G.ax, foot = G.ay, top = foot - h, tw = (o.tw ?? 2.6) * tk();
-  const sp = (o.sp ?? 5) * Math.pow(SIZE, 0.6), bare = (o.bare ?? 0.12) + (bu(seed, 3) > 0.68 ? 0.16 : 0), sprays = [];   // (one in three an older tree, its lower trunk bare)
+  // (with VARY a shape is one of four builds, so two of a kind side by side read as two trees - the owner, 11-21: a
+  // young one, short and slim; an old one, its lower trunk bare and its top thin; a ragged one, gaps in its boughs
+  // and off the plumb; the tree as it was)
+  const cls = bu(seed, 6), young = cls >= 0 && cls < 0.2, old = cls >= 0.2 && cls < 0.38, ragged = cls >= 0.38 && cls < 0.54;
+  const h = (o.h ?? 120) * SIZE * bv(seed, 1, 0.15) * (young ? 0.72 : 1), r = (o.r ?? 30) * SIZE * bv(seed, 2, 0.16) * (young ? 0.84 : 1), form = o.form || 'cone', R = o.R || FOL('#33663a'), B = o.B || BARK;
+  const G = sprite(r * 2 + 30, h + 16, 5), cx = G.ax, foot = G.ay, top = foot - h, tw = (o.tw ?? 2.6) * tk() * (young ? 0.8 : 1);
+  const lean = ragged ? (bu(seed, 7) - 0.5) * r * 0.5 : VARY ? (bu(seed, 7) - 0.5) * r * 0.12 : 0, gaps = ragged ? 0.24 : 0;
+  const sp = (o.sp ?? 5) * Math.pow(SIZE, 0.6), bare = young ? 0.05 : (o.bare ?? 0.12) + (old ? 0.24 : bu(seed, 3) > 0.68 ? 0.16 : 0), sprays = [];   // (one in three an older tree, its lower trunk bare)
   const prof = (t) => form === 'narrow' ? Math.pow(1 - t, 0.75) * (0.75 + 0.25 * Math.min(1, t * 6)) : form === 'column' ? (1 - t ** 3) * 0.75 : form === 'redwood' ? 0.45 + 0.25 * Math.sin(t * 9 + seed) : form === 'cedar' ? Math.pow(1 - t, 0.8) * (0.8 + 0.2 * Math.min(1, t * 4)) : Math.pow(1 - t, 0.95);
   let tier = 0;
   const twigsB = [], twigsF = [];
   for (let y = foot - h * bare; y > top + 3; y -= sp * (0.85 + rnd() * 0.3)) {
-    const t = (foot - y) / h, Rw = r * prof(t) + 2;
+    const t = (foot - y) / h, Rw = (r * prof(t) + 2) * (old && t > 0.8 ? 0.6 : 1), cx = G.ax + lean * t * t;   // (cx: the trunk's own line, bowed by its lean)
     const nb = form === 'redwood' ? (rnd() < 0.45 ? 0 : 1 + (rnd() * 2 | 0)) : 2 + (rnd() < 0.7 ? 1 : 0) + (Rw > 14 && rnd() < 0.6 ? 1 : 0);
     for (let b = 0; b < nb; b++) {
       if (o.sparse && rnd() < o.sparse) continue;
+      if (gaps && hash(seed, tier * 4 + b, 919) < gaps) continue;
       const side = b === 0 ? -1 : b === 1 ? 1 : rnd() < 0.5 ? -1 : 1, depth = b < 2 ? (rnd() - 0.5) * 0.5 : b === 2 ? 0.8 : -0.8;
       const L = Rw * (b < 2 ? 0.62 + rnd() * 0.5 : 0.35 + rnd() * 0.4), sw = (o.sw ?? clamp(2.6 + Rw / SIZE * 0.11, 2.8, 5.4)) * Math.pow(SIZE, 0.6), dy = (o.droop ?? 0.35) * L * 0.45;
       const ns = Math.max(1, Math.round(L / (sw * 1.6)));
@@ -579,13 +587,13 @@ export function conifer(seed = 1, o = {}) {
     tier++;
   }
   // a leader at the top
-  sprays.push({ x: cx, y: top + 3, w: 1.6, h: 5, s: 0, g: (o.g ?? 0.3) + 0.25, k: 999, tier: tier + 1, depth: 0 });
+  sprays.push({ x: cx + lean, y: top + 3, w: 1.6, h: 5, s: 0, g: (o.g ?? 0.3) + 0.25, k: 999, tier: tier + 1, depth: 0 });
   const backS = sprays.filter((s) => s.depth < -0.2), frontS = sprays.filter((s) => s.depth >= -0.2);
   const order = (a, b) => (a.tier - b.tier) || (a.depth - b.depth);
   backS.sort(order); frontS.sort(order);
   for (const s of backS) spray(G, { ...s, g: s.g - 0.15 }, R, o, seed);
   for (const [a, b, c] of twigsB) limb(G, a, b, c, 0.9, 0.5, B, { seed, k: 0.3 });
-  limb(G, [cx, foot + 1], [cx + (rnd() - 0.5) * 2, foot - h * 0.5], [cx, top + 4], tw, Math.max(0.6, tw * 0.25), B, { flare: o.flare ?? 0.7, seed, tex: o.tex || 'bark' });
+  limb(G, [cx, foot + 1], [cx + (rnd() - 0.5) * 2 + lean * 0.25, foot - h * 0.5], [cx + lean, top + 4], tw, Math.max(0.6, tw * 0.25), B, { flare: o.flare ?? 0.7, seed, tex: o.tex || 'bark' });
   for (const [a, b, c] of twigsF) limb(G, a, b, c, 0.9, 0.5, B, { seed, k: 0.3 });
   if (o.roots) for (const s of [-1, 1, -0.5, 0.6]) limb(G, [cx + s * tw * 0.6, foot - tw * 1.2], [cx + s * tw * 1.4, foot - 2], [cx + s * (tw * 1.9 + 3), foot + 1], tw * 0.45, 1, B, { seed: seed + 5, tex: o.tex || 'bark' });
   for (const s of frontS) spray(G, s, R, o, seed);
