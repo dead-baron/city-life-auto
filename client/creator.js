@@ -538,6 +538,7 @@ function renderPage() {
       if (it && it.id === shopSel) {
         h += row(`Color: ${esc(P.name)}`, chip('ctarget', 'c', 'Main', ctarget === 'c') + chip('ctarget', 't', 'Trim', ctarget === 't')) + `<div class="cc-opts sw">${LK.CLOTH.map(([hx, n], i) => sw('sh-colour', i, hx, it[ctarget] === i, n)).join('')}</div>`;
         if (PATTERNED.has(P.slot)) h += row('Pattern', LK.PATTERNS.map((pp, i) => chip('sh-pattern', i, pp === 'tiedye' ? 'Tie-dye' : pp[0].toUpperCase() + pp.slice(1), it.p === i)).join(''));
+        if (LK.canZip(P)) h += row('Front', chip('sh-zip', 0, 'Open', !LK.isZipped(it)) + chip('sh-zip', 1, LK.canZip(P) === 2 ? 'Buttoned' : 'Zipped', !!LK.isZipped(it)));   // (a jacket open or done up: lookcore.js canZip)
       }
     }
   } else if (mode === 'barber') {
@@ -611,7 +612,8 @@ function renderPage() {
       + `<div class="cc-grid">${none}${tiles || '<p class="cc-note">Nothing in this style for this slot.</p>'}</div>`
       + (slotItem ? row('Color', chip('ctarget', 'c', 'Main', ctarget === 'c') + chip('ctarget', 't', 'Trim', ctarget === 't'))
         + `<div class="cc-opts sw">${LK.CLOTH.map(([hx, n], i) => sw('colour', i, hx, slotItem[ctarget] === i, n)).join('')}</div>`
-        + row('Pattern', LK.PATTERNS.map((p, i) => chip('pattern', i, p === 'tiedye' ? 'Tie-dye' : p[0].toUpperCase() + p.slice(1), slotItem.p === i)).join('')) : '')
+        + row('Pattern', LK.PATTERNS.map((p, i) => chip('pattern', i, p === 'tiedye' ? 'Tie-dye' : p[0].toUpperCase() + p.slice(1), slotItem.p === i)).join(''))
+        + (LK.canZip(LK.PIECES[slotItem.id]) ? row('Front', chip('zip', 0, 'Open', !LK.isZipped(slotItem)) + chip('zip', 1, LK.canZip(LK.PIECES[slotItem.id]) === 2 ? 'Buttoned' : 'Zipped', !!LK.isZipped(slotItem))) : '') : '')
       + row(`Complete looks${outStyle ? ': ' + LK.STYLES.find((s) => s[0] === outStyle)[1] : ''}`, `<div class="cc-grid">${strip}</div>`);
   } else if (tab === 'extras') {
     const E = L.extras;
@@ -778,6 +780,8 @@ function act(a, v, el) {
     }
     case 'colour': setL((L) => { const it = L.outfit[outSlot]; if (it) it[ctarget] = Number(v); }); return;
     case 'pattern': setL((L) => { const it = L.outfit[outSlot]; if (it) it.p = Number(v); }); return;
+    case 'zip': setL((L) => { LK.setZipped(L.outfit[outSlot], Number(v)); }); return;
+    case 'sh-zip': setL((L2) => { const P = LK.PIECES[shopSel], it = P && L2.outfit[P.slot]; if (it && it.id === shopSel) LK.setZipped(it, Number(v)); }); return;
     case 'complete': { const V = completeLooks()[Number(v)]; if (V) setL((L) => { L.outfit = V.outfit; }); return; }
     case 'sv-name': { const i = root.querySelector('.cc-name'); if (i) { i.value = v; i.focus(); } return; }
     case 'sv-save': {

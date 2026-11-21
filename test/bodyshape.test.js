@@ -81,7 +81,7 @@ test('things on the chest are pictures in art pixels: whole from the front, butt
     for (const base of ['m', 'f']) {
       const plain = fig(base, () => {});
       // (piece, at least so many art pixels of it, at most so wide)
-      for (const [name, min, wide] of [['Gold chain', 6, 7], ['Lanyard', 8, 7], ['Stethoscope', 7, 7], ['Bow tie', base === 'm' ? 12 : 10, 7], ['Scarf', 6, 7], ['Camera', 9, 7]]) {   // (five across; a line beside it may change its tone)
+      for (const [name, min, wide] of [['Gold chain', 6, 7], ['Lanyard', 8, 7], ['Stethoscope', 7, 7], ['Bow tie', base === 'm' ? 13 : 10, 9], ['Scarf', 12, 9], ['Camera', 9, 7]]) {   // (five across, six on the line between two art pixels; a bow tie and a scarf seven or eight; a line beside it may change its tone)
         const P = LK.PIECES[LK.byName(name)], at = diff(fig(base, (L) => { L.outfit[P.slot] = LK.item(name); }), plain).filter(([x, y]) => { const q = plain.at(x, y); return q.g === 4; });   // (on the trunk: a camera's old place was the hand)
         assert.ok(at.length >= min, `${name} on ${base}: ${at.length} art pixels`);
         assert.ok(span(at, 0) <= wide, `${name} on ${base}: ${span(at, 0)} wide`);
@@ -95,4 +95,28 @@ test('things on the chest are pictures in art pixels: whole from the front, butt
       for (const [x, y] of btn) assert.ok(!btn.some(([x2, y2]) => x2 === x && y2 === y + 1), `${base}: two buttons touch at ${x},${y}`);
     }
   } finally { setPolish(null); }
+});
+
+// (the owner, 11-20 20:53: "Let's do a zipper and unzipped version and give players the option". shared/lookcore.js canZip,
+// isZipped, setZipped: a spare bit of the jacket's pattern letter in the look's code.)
+test('a jacket open or done up: the player\'s choice, kept in the look\'s code at no cost, drawn by the pass', () => {
+  const mk = (name, on) => { const L = LK.emptyLook('m'); L.outfit.top = LK.item('Plain tee', 'white'); L.outfit.bottoms = LK.item('Jeans'); L.outfit.jacket = LK.item(name); if (on !== undefined) LK.setZipped(L.outfit.jacket, on); return LK.validLook(L); };
+  // (which jackets: a zip, buttons, or neither)
+  for (const [n, k] of [['Denim jacket', 1], ['Leather jacket', 1], ['Puffer jacket', 1], ['Zip hoodie', 1], ['Trench coat', 2], ['Cardigan', 2], ['Blazer', 2], ['Waistcoat', 0], ['Poncho', 0], ['Bathrobe', 0], ['Hooded cloak', 0], ['Apron', 0]]) assert.equal(LK.canZip(LK.PIECES[LK.byName(n)]), k, n);
+  assert.equal(LK.canZip(LK.PIECES[LK.byName('Plain tee')]), 0);
+  // (open unless chosen; the Founding Citizen jacket the other way round)
+  assert.equal(LK.isZipped(mk('Denim jacket').outfit.jacket), 0); assert.equal(LK.isZipped(mk('Denim jacket', 1).outfit.jacket), 1); assert.equal(LK.isZipped(mk('Trench coat', 1).outfit.jacket), 2);
+  assert.equal(LK.isZipped(mk('Founding Citizen jacket').outfit.jacket), 1); assert.equal(LK.isZipped(mk('Founding Citizen jacket', 0).outfit.jacket), 0);
+  { const L = mk('Waistcoat'); L.outfit.jacket.z = 1; assert.equal(LK.validLook(L).outfit.jacket.z, undefined, 'a vest has no front to close'); }
+  // (the code: the same length either way, there and back; a code from before reads as open)
+  for (const n of ['Denim jacket', 'Trench coat', 'Founding Citizen jacket']) for (const on of [0, 1]) {
+    const L = mk(n, on), c = LK.encodeLook(L), c0 = LK.encodeLook(mk(n));
+    assert.equal(c.length, c0.length, n); assert.deepEqual(LK.decodeLook(c), L, `${n} ${on}`); assert.equal(LK.isZipped(LK.decodeLook(c).outfit.jacket) ? 1 : 0, on);
+  }
+  { const L = mk('Denim jacket'), P = LK.item('Denim jacket', undefined, undefined, 3); L.outfit.jacket = P; assert.equal(LK.decodeLook(LK.encodeLook(L)).outfit.jacket.p, 3, 'the pattern keeps its letter'); }
+  // (drawn: done up, the shirt no longer shows down the front; the pass off, nothing changes)
+  const front = (L) => { const S = bake(LK.lookArt(L), 0); let n = 0; for (let y = 0; y < S.h; y++) for (let x = 0; x < S.w; x++) { const p = S.at(x, y); if (p && !p.ol && p.g === 4 && p.c[0] > 200 && p.c[1] > 200 && p.c[2] > 190) n++; } return n; };
+  setPolish(POLISH);
+  try { for (const n of ['Denim jacket', 'Leather jacket', 'Trench coat']) { const a = front(mk(n, 0)), b = front(mk(n, 1)); assert.ok(a >= 4 && b <= 1, `${n}: ${a} art pixels of shirt open, ${b} done up`); } } finally { setPolish(null); }
+  assert.equal(front(mk('Denim jacket', 0)), front(mk('Denim jacket', 1)), 'the pass off: as before');
 });

@@ -58,9 +58,10 @@ export const POLISH = {
     }
     if (!fm) return;
     const c = hexRgb(A.fmask.c), t = A.fmask.t ? hexRgb(A.fmask.t) : c, blk = [26, 22, 26];
-    if (fm === 'pig' && A.fmask.animal === 'panda') { for (const i of ex) { P(i + out(i), 0, blk); P(i, 1, blk); P(i + out(i), 1, blk); P(i, 0, [244, 244, 240]); } P(m, 2, blk); }   // (a white eye in each black patch: all black, the patches read as a moustache)
-    else if (fm === 'pig' && A.fmask.animal === 'bear') { const mz = sh(c, 1.42); row(1, mz, m - 1, m + 1); row(2, mz, m - 1, m + 1); P(m, 1, [30, 22, 20]); P(m, 2, sh(c, 0.5)); for (const i of ex) P(i, 0, [26, 20, 18]); }
-    else if (fm === 'pig') { const sn = sh(c, 1.25), no = sh(c, 0.6); row(1, sn, m - 1, m + 1); row(2, sh(c, 1.1), m - 1, m + 1); P(m - 1, 1, no); P(m + 1, 1, no); for (const i of ex) P(i, 0, [40, 26, 30]); }
+    const mm = m + (two && turn > 0.2 ? fwd : 0), tip = two ? mm : mm + fwd;   // (an animal's muzzle: a step toward the way the head is turned; in profile its nose at the tip)
+    if (fm === 'pig' && A.fmask.animal === 'panda') { for (const i of ex) { P(i + out(i), 0, blk); P(i, 1, blk); P(i + out(i), 1, blk); P(i, 0, [244, 244, 240]); } P(tip, 2, blk); }   // (a white eye in each black patch: all black, the patches read as a moustache)
+    else if (fm === 'pig' && A.fmask.animal === 'bear') { const mz = sh(c, 1.5); row(1, mz, mm - 1, mm + 1); row(2, sh(c, 1.36), mm - 1, mm + 1); P(tip, 1, [30, 22, 20]); for (const i of ex) { P(i - 1, 0, c); P(i + 1, 0, c); } for (const i of ex) P(i, 0, [26, 20, 18]); }   // (the owner, 20:53: the snout at an angle - a pale block three by two with the nose on it, no dark line down its middle; the eyes plain dots)
+    else if (fm === 'pig') { const sn = sh(c, 1.25), no = sh(c, 0.6); row(1, sn, mm - 1, mm + 1); row(2, sh(c, 1.1), mm - 1, mm + 1); P(mm - 1, 1, no); P(mm + 1, 1, no); for (const i of ex) { P(i + out(i), 0, c); P(i, 0, [40, 26, 30]); } }
     else if (fm === 'gas') { row(0, sh(c, 0.9)); row(-1, sh(c, 1.1)); row(1, c); for (const i of ex) { P(i, 0, [168, 196, 206]); P(i + out(i), 0, [92, 118, 130]); } }
     else if (fm === 'clown') { P(m, 1, t); row(2, t, m - 1, m + 1); P(m - 2, 1, [240, 150, 160]); P(m + 2, 1, [240, 150, 160]); for (const i of ex) { P(i, -1, [52, 104, 214]); P(i, 0, [24, 22, 30]); } }
     else if (fm === 'skull') { const d = [34, 28, 30]; for (const i of ex) { P(i, 0, d); P(i + out(i), 0, d); P(i, -1, sh(c, 0.8)); } P(m, 1, d); P(lo, 1, sh(c, 0.72)); P(hi, 1, sh(c, 0.72)); for (let i = lo + 1; i <= hi - 1; i++) P(i, 2, (i - m) & 1 ? d : sh(c, 1.2)); P(m, 3, sh(c, 0.7)); }
@@ -397,38 +398,45 @@ export const POLISH = {
       if (A.chain && !T.open) {
         if (J.steth) N.push({ rows: ['T...T', 'T...T', 'T...s', 'T....', 'SS...'], side: ['.T', 'T', 'T', 'S'], nape: 'T', K: { T: m(jc, -0.1), S: g(steel, 0.1), s: g(steel, 0.3) } });
         else if (J.lany) { const card = tone(jc, [246, 248, 252], 0.45); N.push({ rows: ['c...c', 'c...c', '.c.c.', '.kkk.', '.WdW.'], side: ['.c', 'c', 'c', 'k', 'W'], nape: 'c', K: { c: m(jc), W: m(card, 0.2), k: m(jc, -0.35), d: m(dk) } }); }
-        else if (J.scarf) N.push({ rows: ['RRRRR', '...Rr', '...rR', '...R.'], side: ['RR', 'R', 'r'], nape: 'R', wide: 1, K: { R: m(jc), r: m(jc, -0.3) } });
+        // (the owner, 20:53: "scarf doesn't look like a scarf yet" - wound round the neck two rows thick, wider than the neck, in knit ribs; one end down the front, two wide, a band of the trim and a fringe at its end)
+        else if (J.scarf) { const tr = jt || cloth('#efe6d4'); N.push({ rows: ['.RrRrR.', 'RrRrRrR', '....RR.', '....rr.', '....RR.', '....r.r'], side: ['RrR', 'rRr', '.R', '.r'], back: ['.RrRrR.', 'RrRrRrR'], K: { R: m(jc, 0.1), r: m(tone(jc, [40, 14, 20], 0.32)), t: m(tr) } }); }
         else if (J.pearl) N.push({ rows: ['q...q', '.pqp.'], side: ['.q', 'p'], K: { p: g(cloth('#fbf8f2'), 0.3), q: m(cloth('#9a8fae')) } });
         else if (J.whistle) N.push({ rows: ['c...c', '.c.c.', '..s..'], side: ['.c', 'c', 's'], K: { c: m(jc), s: g(steel, 0.2) } });
         else if (J.bolo) N.push({ rows: ['.c.c.', '..S..', '.c.c.', '.t.t.'], side: ['c', 'S', 'c', 't'], K: { c: m(dk), S: g(jc, 0.2), t: g(steel) } });
         else N.push({ rows: J.chain === 2 ? ['a...a', 'ab.ba', 'ba.ab', '.bab.'] : J.pendant ? ['a...a', 'b...b', '.aba.', '..P..'] : ['a...a', 'ba.ab', '.aba.'], side: ['.a', 'b', 'a'], K: { a: g(jc, 0.2), b: g(jc, -0.25), P: g(jc, 0.35) } });
       }
-      if (J.bow) { const bw = cloth(J.color || '#1a1a1e'); N.push({ rows: ['BB.BB', 'BBkBB', 'BB.BB'], side: ['B', 'k', 'B'], K: { B: m(bw, -0.2), k: m(bw, 0.5) } }); }
+      if (J.bow) { const bw = cloth(J.color || '#1a1a1e'); N.push({ rows: D.chestR[0] >= 8.2 ? ['BB...BB', 'BBBkBBB', 'BB...BB'] : ['BB.BB', 'BBkBB', 'BB.BB'], side: ['BB', 'Bk', 'BB'],   // (the owner, 20:53: "comically large ... one step bigger" - seven across where the chest has room, pinched at the knot)
+ K: { B: m(bw, -0.2), k: m(tone(bw, [150, 150, 164], 0.28)) } }); }
       // (the owner, 20:15: "backpack straps still get kind of lost", a duffel "should have a strap over the shoulder", the camera "still not big enough")
       if (A.back === 'backpack') { const sc = tone(cloth(A.backColor || 'navy'), [18, 20, 30], 0.35); N.push({ rows: ['S.....S', 'S.....S', 'S.....S', 'S.....S', 'S.....S'], side: ['..S', '..S', '..S', '..S'], K: { S: m(sc) } }); }
       if (A.back === 'guitarcase' || A.duffel) { const sc = cloth(A.duffel ? A.bagColor || '#2a2a2e' : A.backColor || '#1a1a1e'), dg = ['S......', '.S.....', '..S....', '...S...', '....S..', '.....S.']; const gd = dg.map((r) => r.split('').reverse().join('')); N.push({ rows: A.duffel ? gd : dg, back: A.duffel ? dg : gd, side: ['.S', '.S', 'S'], K: { S: m(sc, 0.1) } }); }
       if (A.prop && A.prop[0] === 'camera') { const body = cloth(A.bagColor || '#2a2a2e'), sv = cloth(A.prop[2] || '#c8ccd4'); N.push({ rows: ['c...c', '.c.c.', '.ttt.', '.KLK.', '.KKK.'], side: ['.c', 'c', 't', 'K', 'K'], nape: 'c', K: { c: m(cloth('#5a3a26')), t: g(sv, -0.1), K: m(body, -0.1), L: g(cloth('#7fa6c4'), 0.3) } }); }
       const shirt = A.top && A.top.kind === 'shirt' && !T.open, zipd = A.top && A.top.zipped;
       if (shirt) { const bt = tone(W.top, [28, 36, 48], 0.45); N.push({ rows: ['.....', '..o..', '.....', '..o..', '.....', '..o..', '.....', '..o..'], cloth: 1, K: { o: m(bt) } }); }   // (from the row under the collar's opening)
-      if (zipd) { const zp = cloth(A.top.trim || '#1a1a1e'); N.push({ rows: ['..z..', '..z..', '..z..', '..z..', '..z..', '..z..', '..z..', '..z..'], cloth: 1, K: { z: m(zp, -0.1) } }); }
+      if (zipd === 2) { const bt = tone(W.top, [20, 22, 30], 0.5); N.push({ rows: ['.....', '..o..', '.....', '..o..', '.....', '..o..', '.....', '..o..', '.....', '..o..'], cloth: 1, K: { o: m(bt) } }); }   // (a coat, a cardigan, a blazer done up: its buttons)
+      else if (zipd) { const zp = A.top.shine ? cloth(A.top.trim || '#1a1a1e') : tone(W.top, [16, 18, 26], 0.55); N.push({ rows: ['..z..', '..z..', '..z..', '..z..', '..z..', '..z..', '..z..', '..z..', '..z..', '..z..'], cloth: 1, K: { z: m(zp, -0.1) } }); }
       if (N.length) {
         const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], zc0 = dot([TF.c[0] - TF.p[0], TF.c[1] - TF.p[1], TF.c[2] - TF.p[2]], TF.z), SA = 0.573576, CA = 0.819152;
-        const anchor = (fy, zA) => { const k = TF.ry * fy, h = zA - zc0, X = TF.c[0] + TF.y[0] * k + TF.z[0] * h, Y = TF.c[1] + TF.y[1] * k + TF.z[1] * h, Z = TF.c[2] + TF.y[2] * k + TF.z[2] * h; return [Math.floor((X + 1e-4) / 2), Math.floor((Y * SA - Z * CA + 1e-4) / 2)]; };
+        const anchor = (fy, zA) => { const k = TF.ry * fy, h = zA - zc0, X = TF.c[0] + TF.y[0] * k + TF.z[0] * h, Y = TF.c[1] + TF.y[1] * k + TF.z[1] * h, Z = TF.c[2] + TF.y[2] * k + TF.z[2] * h; return [Math.floor((X + 1e-4) / 2), Math.floor((Y * SA - Z * CA + 1e-4) / 2), (((X + 1e-4) % 2) + 2) % 2]; };
         const zN = D.shUp - (this.neckZ ?? -3.9), F = [anchor(0.85, zN)[0], anchor(0.4, zN)[1]], Bk = anchor(-0.6, D.shUp + 0.2), prof = Math.abs(TF.x[0]) < 0.5,
           // (never under the chin: the head's lowest art row on the screen, from the head's place over the spine - a woman's collar is under it)
           chin = (() => { const h = D.neckUp + D.headUp, Y = TF.p[1] + TF.z[1] * h + TF.y[1] * 0.6, Z = TF.p[2] + TF.z[2] * h + TF.y[2] * 0.6; return Math.floor((Y * SA - Z * CA + Math.hypot(D.head[1] * SA, D.head[2] * CA) - 0.6) / 2) + 1; })(), fs = TF.y[0] > 0 ? 1 : -1, SKN = W.skin, hz = W.HEMZ ?? -0.9;
         if (chin > F[1] && chin < F[1] + 3) F[1] = chin;
         const toCam = TF.y[1] > 0.5;   // (facing the camera: the shoulders' tops are the front's too)
+        // (the middle of the front falls in an art pixel, or on the line between two - a figure facing us is an even number
+        // across. On the line a picture is one wider, its middle column twice: a bow tie, a chain, a card sit in the middle,
+        // not half a pixel to one side. Buttons and a zip stay one column.)
+        const fr = anchor(0.85, zN)[2], ev = prof ? 0 : fr < 0.5 ? -1 : fr > 1.5 ? 1 : 0, at = (r, i, one) => { const c0 = (r.length - 1) >> 1; return r[!ev || one ? c0 + i : ev < 0 ? (i >= 0 ? c0 + i : c0 + i + 1) : i <= 0 ? c0 + i : c0 + i - 1]; };
         const o = W.torso;
         W.torso = (Q) => {
           const R = o(Q); if (Q.res !== 1) return R;
           const x = Math.round(Q.x), y = Math.round(Q.y), cx = Math.floor(x / 2), cy = Math.floor(y / 2);
-          if (Q.f > (toCam ? -0.15 : 0.05)) {
+          if (Q.f > (toCam ? -0.5 : 0.05)) {
             if (cy > Math.floor((y + CA * (Q.zs - hz)) / 2)) return R;   // (under the hem: the trousers')
             const j = cy - F[1], i = cx - F[0];
             for (const n of N) { if (n.cloth && R === SKN) continue; const P = prof ? n.side : n.rows; if (!P || j < 0 || j >= P.length) continue;
-              const ch = prof ? P[j][-i * fs] : P[j][i + ((P[j].length - 1) >> 1)]; if (ch && ch !== '.') return n.K[ch](Q); }
-          } else if (Q.f < -0.35) { const j = cy - Bk[1], i = cx - Bk[0]; for (const n of N) { if (n.nape && j === 0 && Math.abs(i) <= (n.wide ? 2 : 1)) return n.K[n.nape](Q); if (n.back && !prof && j >= 0 && j < n.back.length && cy <= Math.floor((y + CA * (Q.zs - hz)) / 2)) { const ch = n.back[j][i + ((n.back[j].length - 1) >> 1)]; if (ch && ch !== '.') return n.K[ch](Q); } } }
+              const ch = prof ? P[j][-i * fs] : at(P[j], i, n.cloth); if (ch && ch !== '.') return n.K[ch](Q); }
+          } else if (Q.f < -0.35) { const j = cy - Bk[1], i = cx - Bk[0]; for (const n of N) { if (n.nape && j === 0 && Math.abs(i) <= (n.wide ? 2 : 1)) return n.K[n.nape](Q); if (n.back && !prof && j >= 0 && j < n.back.length && cy <= Math.floor((y + CA * (Q.zs - hz)) / 2)) { const ch = at(n.back[j], i, 1); if (ch && ch !== '.') return n.K[ch](Q); } } }
           return R;
         };
       }

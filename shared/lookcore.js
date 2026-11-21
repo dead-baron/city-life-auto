@@ -496,6 +496,14 @@ export function emptyLook(base = 'm') {
     outfit: o,
   };
 }
+// A jacket worn open or done up (the owner, 11-20 20:53: "a zipper and unzipped version and give players the option"): the
+// jackets with a front that closes - a zip, or buttons on a coat, a cardigan or a blazer. A piece has its own way of being
+// worn (d.zipped: the Founding Citizen jacket's is zipped); a look's jacket may carry z: 1, the other way. In the look's
+// code it is a spare bit of the jacket's pattern letter, so the code is no longer and old codes read as before.
+const ZIP_KINDS = { jacket: 1, leather: 1, puffer: 1, hoodie: 1, coat: 2, fur: 2, cardigan: 2, blazer: 2 };
+export const canZip = (P) => !!P && P.slot === 'jacket' && !P.d.dr && !P.d.robe && !(P.d.k === 'coat' && P.d.p) ? ZIP_KINDS[P.d.k] || 0 : 0;
+export const isZipped = (it) => { const P = it && PIECES[it.id], k = canZip(P); return k && ((P.d.zipped ? 1 : 0) ^ (it.z ? 1 : 0)) ? k : 0; };   // (0 open, 1 zipped, 2 buttoned)
+export const setZipped = (it, on) => { const P = it && PIECES[it.id]; if (!canZip(P)) return; if ((on ? 1 : 0) ^ (P.d.zipped ? 1 : 0)) it.z = 1; else delete it.z; };
 export const item = (name, c, t, p = 0) => { const id = byName(name), P = PIECES[id]; return id ? { id, c: c === undefined ? P.c : col(c), t: t === undefined ? P.t : col(t), p: p || P.d.p || 0 } : null; };
 
 // the clamped copy (or null for something that isn't a look at all)
@@ -520,6 +528,7 @@ export function validLook(L) {
     const P = PIECES[clampI(it.id, 0, PIECES.length - 1, 0)];
     if (!P || P.slot !== s) continue;   // (anyone can wear anything: a piece's bases only sort the lists)
     out.outfit[s] = { id: P.i, c: clampI(it.c, 0, CLOTH.length - 1, P.c), t: clampI(it.t, 0, CLOTH.length - 1, P.t), p: clampI(it.p, 0, PATTERNS.length - 1, 0) };
+    if (it.z && canZip(P)) out.outfit[s].z = 1;
   }
   if (out.outfit.set) { out.outfit.top = null; out.outfit.bottoms = null; }
   return out;
@@ -538,7 +547,7 @@ export function encodeLook(L) {
   for (const v of n) s += AB[v & 63];
   for (const k of SLOTS) {
     const it = L.outfit[k];
-    s += it ? AB[(it.id >> 6) & 63] + AB[it.id & 63] + AB[it.c & 63] + AB[it.t & 63] + AB[it.p & 63] : '00000';
+    s += it ? AB[(it.id >> 6) & 63] + AB[it.id & 63] + AB[it.c & 63] + AB[it.t & 63] + AB[(it.p & 31) | (it.z ? 32 : 0)] : '00000';
   }
   if (b.marks || b.limb) return s + AB[b.marks | (b.limb << 2)];
   while (s.length > LOOK_CODE_LEN && s.endsWith('00000')) s = s.slice(0, -5);
@@ -559,7 +568,7 @@ export function decodeLook(s) {
     extras: { makeup: v[16], makeupColor: v[17], tattoos: v[18], piercings: v[19], scar: v[20] },
     outfit: {},
   };
-  SLOTS.forEach((k, j) => { const o = 21 + j * 5, id = v[o] * 64 + v[o + 1]; L.outfit[k] = id ? { id, c: v[o + 2], t: v[o + 3], p: v[o + 4] } : null; });
+  SLOTS.forEach((k, j) => { const o = 21 + j * 5, id = v[o] * 64 + v[o + 1]; L.outfit[k] = id ? { id, c: v[o + 2], t: v[o + 3], p: v[o + 4] & 31, ...(v[o + 4] & 32 ? { z: 1 } : null) } : null; });
   return validLook(L);
 }
 
@@ -646,7 +655,7 @@ export function lookArt(L, opt = {}) {
   }
   if (jk) {   // worn open over the top: the top's colour down the front
     const under = A.top;
-    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null), ...(jk.d.shine ? { shine: 1 } : null), ...(jk.d.zipped ? { zipped: 1 } : null) };
+    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null), ...(jk.d.shine ? { shine: 1 } : null), ...(isZipped(O.jacket) ? { zipped: isZipped(O.jacket) } : null) };
     if (jk.d.k === 'vest') A.top.sleeve = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'crop' || under.kind === 'bikini' ? 'skin' : under.color;
     if (jk.d.k === 'kevlar') { A.top.kind = 'kevlar'; A.top.color = under.color || A.top.color; A.top.color2 = HEX(O.jacket.c); A.top.sleeve = under.kind === 'none' || under.kind === 'tank' ? 'skin' : under.color; A.top.chevrons = under.chevrons || 0; }   // (the plates over the shirt, the shirt's sleeves)
     if (jk.d.k === 'apron' || jk.d.k === 'overalls') {   // (worn over the top: the shirt round them is the top - its colour, its sleeves, a flannel's check - or bare skin)

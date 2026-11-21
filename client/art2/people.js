@@ -1536,7 +1536,7 @@ function maskPrims(E, C, B, A, at, HD, hr) {
     // Round ears up on the corners of the head, two art pixels each (a panda's black); a short pale muzzle, a dark nose on it)
     const panda = A.fmask.animal === 'panda', ec = panda ? cloth(A.fmask.t || '#1a1a1e') : cloth(mixHex(A.fmask.c, '#000000', 0.3)), mz = cloth(mixHex(A.fmask.c, '#ffffff', panda ? 0 : 0.42)), nose = cloth('#1a1416');
     for (const s of [-1, 1]) E(at([s * 0.8, -0.05, 0.98]), HD, [3.1, 1.5, 3.1], GR.HAT, 'pigear', () => ec);   // (the owner, 20:15: "ears could be bigger")
-    C(at([0, 0.8, -0.36]), at([0, 0.98, -0.38]), 2.3, 2.1, GR.HAT, 'snout', () => mz);   // (short: at an angle a long one read as a beak; its nose and mouth are stamped on it - peoplepolish.js masks)
+    C(at([0, 0.8, -0.36]), at([0, 1.06, -0.4]), 2.2, 2.0, GR.HAT, 'snout', () => mz);   // (short: at an angle a long one read as a beak; its nose and mouth are stamped on it - peoplepolish.js masks)
   } else if (k === 'pig' && PL) {   // (the polish pass: ears that show - folded triangles on the corners - and a short broad snout, its nostrils stamped on)
     const ec = cloth(mixHex(A.fmask.c, '#7a2a40', 0.3)), sn = cloth(mixHex(A.fmask.c, '#ffffff', 0.25));
     for (const s of [-1, 1]) E(at([s * 0.78, 0.0, 0.95]), mmul(HD, ry(s * 0.5)), [2.5, 1.2, 2.2], GR.HAT, 'pigear', () => ec);

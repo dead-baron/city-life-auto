@@ -184,3 +184,11 @@ Stripes passed; on the striped bra and panties he is "not sure it works well ...
 - Weak still, said so: a pearl necklace on a white top is faint; the bolo tie is small; a bow tie loses a pixel on the narrowest chests.
 - Shown: `characters-wardrobe-batch3-before-after.png`. Not yet seen by him.
 
+## 20:53 - his look at batch 3
+- [x] "Let's do a zipper and unzipped version and give players the option" - Front: Open / Zipped (Buttoned on coats, cardigans, blazers) in the creator and the shop, kept in the look's code.
+- [x] "Is there a reason not to raise the render budget? If not lets raise it." - none; 470 -> 510 KB.
+- [x] The bear's "snout at an angle might need more polish" - the muzzle a pale block with the nose on it, a step toward the way the head faces, its tip out past the face in profile; the eyes plain dots.
+- [x] "Scarf doesn't look like a scarf yet" - wound round the neck two rows thick and wider than it, one end down the front two wide, ribbed.
+- [x] Bow tie "comically large ... one step bigger" - eight across on a man's chest, pinched at the knot.
+- [ ] "Go ahead and start on all of it we are missing" - the queue below this line in the DEVLOG.
+
