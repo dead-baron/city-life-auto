@@ -12,6 +12,7 @@ import { check, bake, wardrobe, look, looksCheck } from '../tools/bodycheck.mjs'
 import { RECIPES, recipeLook } from '../server/systems/npclooks.js';
 import { LOOKS } from '../server/systems/personas.js';
 import { setPolish, person, POSES } from '../client/art2/people.js';
+import { packGBuf, downsample2 } from '../client/art2/gbuf.js';
 import * as LK from '../shared/look.js';
 import { POLISH } from '../client/art2/peoplepolish.js';
 
@@ -252,5 +253,20 @@ test('the city\'s people under the pass: every NPC recipe and persona draws, in 
   assert.ok(F.length <= 12, `${F.length} lone pixels of skin (9 known): ` + F.slice(0, 6).map((f) => f.who).join('; '));
   setPolish(POLISH);
   try { for (const [name, L] of looks.filter((_, i) => i % 4 === 0)) { const A = LK.lookArt(L); for (const p of Object.keys(POSES)) assert.doesNotThrow(() => person(A, 1, p, 0, { tight: true }), `${name}, ${p}`); } } finally { setPolish(null); }
+});
+
+test('a blink is the same figure with its eyes shut, at every angle that shows them', () => {
+  setPolish(POLISH);
+  try {
+    const A = look('m', 1, 'clothed');
+    for (const dir of [0, 1, 2, 6, 7]) {
+      // (the sprite as the game bakes it; the eyes are the only white or blue in the head's rows - above the white shirt)
+      const eyes = (blink) => { const d = downsample2(packGBuf(person(A, dir, 'idle', 0, { tight: true, blink }))); let n = 0; for (let y = 0; y < 9; y++) for (let x = 0; x < d.w; x++) { const o = (y * d.w + x) * 4; if (d.p0[o + 3] < 128) continue; const c = [d.p0[o], d.p0[o + 1], d.p0[o + 2]]; if ((c[0] > 215 && c[1] > 205 && c[2] > 190) || (c[2] > c[0] + 40 && c[2] > c[1] + 12)) n++; } return [n, d.w, d.h]; };
+      const a = eyes(0), b = eyes(1);
+      assert.ok(a[0] >= 2, `facing ${dir}: open, the eyes show (${a[0]})`);
+      assert.equal(b[0], 0, `facing ${dir}: shut, no white or iris left`);
+      assert.deepEqual(a.slice(1), b.slice(1), `facing ${dir}: the same figure`);
+    }
+  } finally { setPolish(null); }
 });
 
