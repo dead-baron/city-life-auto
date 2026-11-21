@@ -1,6 +1,6 @@
 # The concept checklist (pass 5, 2026-11-19)
 
-**608 items: 568 in the game, 20 missing, 19 too small to show, 1 dropped.** (11-20: 56 of the missing ones built in three batches - "the next pass's work" at the end; one more, the cravat, built and taken out on the owner's word. Pass 5 left it at 512 in, 77 missing.)
+**608 items: 563 in the game, 20 missing, 19 too small to show, 6 dropped.** (11-21: the five facial hair styles added on 11-20 taken out on the owner's word - they didn't read.) (11-20: 56 of the missing ones built in three batches - "the next pass's work" at the end; one more, the cravat, built and taken out on the owner's word. Pass 5 left it at 512 in, 77 missing.)
 
 Every outfit, piece and creator option on the concept sheets (`docs/characters/concepts/`, 94 images), against the
 wardrobe (`shared/lookcore.js`) and the creator (`client/creator.js`). An item is a thing a player would look for: one
@@ -130,13 +130,13 @@ catalogue did not note is not here.
 | Long / very long beard | in | Long beard |
 | Braided beard | too small | reads as Long beard |
 | Goatee | in | Goatee |
-| Circle beard | in | Circle beard - added 11-20 |
+| Circle beard | dropped | added 11-20, taken out 11-21: the owner - "might not be worth it for some of these that don't show ... anything visibly clear" |
 | Van Dyke | in | Van Dyke |
 | Chin strap | in | Chin strap |
 | Soul patch | in | Soul patch |
 | Moustache | in | Moustache |
 | Handlebar | in | Handlebar |
-| Walrus, pencil, horseshoe, fu manchu | in | Walrus, Pencil moustache, Horseshoe, Fu Manchu - added 11-20 |
+| Walrus, pencil, horseshoe, fu manchu | dropped | added 11-20, taken out 11-21 with the circle beard: at the game's size they were the same few pixels as a moustache or a goatee |
 | Mutton chops | in | Mutton chops |
 | Grey, white, ginger, dyed beards | in | the beard takes the hair's colour |
 | A beard in its own colour | **missing** | - |

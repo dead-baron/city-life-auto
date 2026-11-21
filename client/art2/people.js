@@ -798,11 +798,6 @@ const BEARD = {
   vandyke: (a, b, c) => (c < -0.55 && a < 0.26) || MOU(a, b, c),
   // (the concepts' CB4, 11-20: a circle beard - the moustache joined to the chin's tuft round the mouth; a horseshoe - the
   // moustache run down to the jaw each side; a walrus, heavy over the mouth; a pencil line; a fu manchu, thin tails past the chin)
-  circle: (a, b, c) => (c < -0.5 && a < 0.3) || MOU(a, b, c) || (a > 0.22 && a < 0.42 && c < -0.2 && c > -0.62 && b > 0.6),
-  horseshoe: (a, b, c) => MOU(a, b, c) || (a > 0.3 && a < 0.48 && c < -0.3 && c > -0.92 && b > 0.5),
-  walrus: (a, b, c) => c > -0.58 && c < -0.18 && b > 0.62 && a < 0.5,
-  pencil: (a, b, c) => c > -0.35 && c < -0.24 && b > 0.7 && a < 0.4,
-  fumanchu: (a, b, c) => (c > -0.35 && c < -0.24 && b > 0.7 && a < 0.4) || (a > 0.3 && a < 0.42 && c < -0.3 && c > -1 && b > 0.5),
 };
 // a living statue (the buskers, Shared-9: server/systems/personas.js BUSKS statue): every colour of the look bronze - the
 // skin, the clothes, the hat, the hair - so it reads as a cast figure on its crate
@@ -1273,7 +1268,18 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   E(at([0, 0.42, -0.5]), HD, [hr[0] * (D.jawW || 0.74), hr[1] * 0.6, hr[2] * 0.5], GR.HEAD, 'jaw', W.head);
   const nz = NOSE[A.face?.nose | 0] || NOSE[0];
   E(at([0, 0.97, -0.24]), HD, [0.9 * nz[0], 1.1 * nz[1] * (PL ? PL.noseK : 1), 1.15 * nz[2]], GR.HEAD, 'nose', W.head);
-  if (A.beard === 'long' && !A.mask && !A.fmask) E(at([0, 0.5, -1.02]), HD, [hr[0] * 0.48, hr[1] * 0.34, hr[2] * 0.42], GR.HAIR, 'beard', W.hairLock);
+  // (the polish pass: hair that stands off the head - a full beard's mass under the jaw, a long one's length, a goatee's tuft -
+  // in the beard's one tone; peoplepolish.js BVOL. Part of the head's group: the hair's own lighting isn't laid over it)
+  const bvol = PL && PL.BVOL && !A.mask && !A.fmask && !A.medmask && !A.bandana ? PL.BVOL[A.beard] : null;
+  if (PL && A.beard && PL.beardTone) { const br = PL.beardTone(W.hairR, W.skin); W.beardR = br; W.beardM = (Q) => { Q.gloss = 0; return br; }; }
+  if (bvol) for (const v of bvol) E(at(v[0]), HD, [hr[0] * v[1][0], hr[1] * v[1][1], hr[2] * v[1][2]], GR.HEAD, 'beard', W.beardM);
+  else if (A.beard === 'long' && !A.mask && !A.fmask) E(at([0, 0.5, -1.02]), HD, [hr[0] * 0.48, hr[1] * 0.34, hr[2] * 0.42], GR.HAIR, 'beard', W.hairLock);
+  // (the polish pass: a scarf is a shape - a roll round the neck as wide as the head, up over the chin and the mouth, and an end
+  // hanging down the chest with a band across its foot; peoplepolish.js dress() W.scarf)
+  if (PL && W.scarf) { const nk = (x, y, z) => vadd(S.neck, mv(S.SP, [x, y, z]));
+    E(nk(0, 1.0, 2.7), S.SP, [hr[0] * 1.0, hr[1] * 1.08, 3.8], GR.ACC, 'scarf', W.scarf);
+    C(nk(2.8, hr[1] * 0.9, -0.5), nk(3.1, D.chestR[1] + 1.5, -8.4), 2.3, 2.2, GR.ACC, 'scarf', W.scarf);
+    E(nk(3.1, D.chestR[1] + 1.5, -9.2), S.SP, [2.5, 2.1, 1.3], GR.ACC, 'scarf', W.scarfD); }
   for (const s of [-1, 1]) E(at([s * 0.97, -0.1, 0.04]), HD, [1.1, 1.3, 1.75], GR.HEAD, 'ear', W.ear);
   hairPrims(E, C, A, D, P, S, W, at, hat, seed);
   if (hat) hatPrims(E, C, A, D, S, W, at, hat, B);

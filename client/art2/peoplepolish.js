@@ -42,14 +42,24 @@ export const POLISH = {
   propBox: { paper: [3.4, 0.7, 4.0, 0, 0], clip: [2.6, 0.6, 3.4, 0, 0], laptop: [4.2, 0.8, 3.0, 0, 0], parcel: [2.9, 3.2, 2.8, -2.6] },
   propHold: { paper: 1, clip: 1, laptop: 1, ball: 2 },   // (held flat against the chest, the forearm across: people.js accHands)   // (things carried in the hand: half sizes across, along, up, how far under the hand, and how far out from it)
   GLS: { sleep: '11F', novelty: '10F20F12F22F31F01F11E21W', round: '10F20F12F22F31F01F11E21W', half: '01F31F12F22F11E21W', frames: '10F20F30F01F31F12H22H32H11E21W', browline: '00F10F20F30F01T31T12T22T11E21W', rimless: '10C20C31C12C22C11E21W', patch: '00F10F20F01F11F21F12F' },
-  // (facial hair as small pictures - the owner, 23:27: "I can't see any of the moustaches". Decided a world pixel at a time on the
-  // head's curve they baked to a dark pixel or two wherever they fell, in the hair's darkest tone whatever the hair looked like:
-  // a hole in the face, not a moustache. Each is rows of five art pixels now, in the tone the hair's own mass is drawn in: X the
-  // hair, s a soft tone of it, t a shadow of it (stubble). The small ones: [the moustache's row, the chin's], across the face's
-  // middle. The beards (w): [the cheeks' row, the moustache's, the chin's], stretched from one edge of the face to the other. A
-  // long beard keeps its own shape hanging under the chin - people.js.)
-  BST: { moustache: ['.XXX.'], pencil: ['.sss.'], handlebar: ['XX.XX'], walrus: ['XXXXX', '.s.s.'], horseshoe: ['.XXX.', '.X.X.'], fumanchu: ['.sss.', '.s.s.'], circle: ['.XXX.', '.XXX.'], goatee: ['.....', '.XXX.'], soul: ['.....', '..X..'], vandyke: ['.XXX.', '..X..'],
-    stubble: { w: ['.....', 'ttttt', '.ttt.'] }, short: { w: ['s...s', 'sssss', '.sss.'] }, full: { w: ['X...X', 'XXXXX', '.XXX.'] }, long: { w: ['X...X', 'XXXXX', '.XXX.'] }, chinstrap: { w: ['X...X', 'X...X', '.XXX.'] }, chops: { w: ['X...X', 'XX.XX', '.....'] } },
+  // (facial hair - the owner, 11-20 23:27: "I can't see any of the moustaches"; 11-21 01:03: "a few okay ones like handle bar
+  // moustache but otherwise they're not looking great ... if we want to add a bigger beard and obvious facial hair we should go
+  // for it but otherwise it might not be worth it for some of these that don't show anything at all or anything visibly clear."
+  // So: eight that read, each drawn to be seen, and the rest are drawn as the nearest of those (BST below: a chin strap as a
+  // short beard, a soul patch and a Van Dyke as a goatee; the creator doesn't offer them while the pass is on - lookcore.js
+  // FACIAL_RETIRED). Two parts to each:
+  //  - on the face, rows of five art pixels in the beard's tone (X; s a soft tone, t a shadow of it): the small ones are [the
+  //    moustache's row, the chin's] across the face's middle; the beards (w) [the cheeks' row, the moustache's, the chin's]
+  //    stretched from one edge of the face to the other;
+  //  - BVOL, hair that stands off the head: a full beard's mass under the jaw, a long one's length down the chest, a goatee's
+  //    tuft under the chin - [where on the head, its size in the head's radii]. people.js builds them.
+  BST: (() => { const short = { w: ['s...s', 'XXXXX', 'XXXXX'] }, goatee = ['.XXX.', '.XXX.'], full = { w: ['X...X', 'XXXXX', 'XXXXX', 'XXXXX', 'XXXXX'] };   // (a full beard: every pixel of the face and the jaw from the moustache down - none of the chin left showing in it)
+    return { stubble: { w: ['.....', 'ttttt', 'ttttt'] }, short, full, long: full, goatee, moustache: ['.XXX.'], handlebar: ['XX.XX'], chops: { w: ['X...X', 'XX.XX', 'X...X'] }, chinstrap: short, soul: goatee, vandyke: goatee }; })(),
+  BVOL: (() => { const goatee = [[[0, 0.66, -0.98], [0.36, 0.3, 0.34]]], full = [[[0, 0.36, -0.86], [0.84, 0.62, 0.4]]];
+    return { full, long: [...full, [[0, 0.52, -1.42], [0.56, 0.4, 0.72]]], goatee, soul: goatee, vandyke: goatee, chops: [[[-0.8, 0.2, -0.66], [0.3, 0.5, 0.42]], [[0.8, 0.2, -0.66], [0.3, 0.5, 0.42]]] }; })(),
+  // (the beard's tone: between the hair's body tone and its lit one - what the hair above it looks like; the ramp's base alone was
+  // black under brown-looking hair - darkened toward brown, not evenly (a blonde beard went olive), until it stands off the skin)
+  beardTone(HR, skin) { let o = mix(HR[3], HR[4], 0.45); for (let k = 0; k < 6 && dist(o, skin[3]) < 96; k++) o = [Math.round(o[0] * 0.88), Math.round(o[1] * 0.8), Math.round(o[2] * 0.68)]; const d = o.map((v) => Math.round(v * 0.8)); return [d, d, o, o, o]; },
   // ---- masks as small pictures (people.js face(): at the end, over the face). Columns are art pixels from the left eye
   // (lo..hi across the face, m the middle), rows from the eyes' row down.
   masks(cx) {
@@ -64,9 +74,7 @@ export const POLISH = {
         // (where they go: a face from the front has three art rows under the eyes - the moustache on the second, a row of skin
         // between it and the eyes, the chin's tuft on the third; turned, it has two - the moustache on the first, the chin on
         // the second. In profile they're on the mouth's side of the face: the moustache a pixel back from the jaw's front)
-        const X = (() => { let o = mix(HR[3], HR[4], 0.45); for (let k = 0; k < 6 && dist(o, skin[3]) < 96; k++) o = [Math.round(o[0] * 0.88), Math.round(o[1] * 0.8), Math.round(o[2] * 0.68)]; return o; })(),   // (darkened toward brown: a blonde beard darkened evenly was olive)
-          s = mix(X, skin[2], 0.42),   // (between the hair's body tone and its lit one - what the mass of hair above it looks like, peoplepolish.js hairLit: the base colour alone was black under brown-looking hair - darkened until it stands off the skin)
-          odd = two && (n & 1) ? 1 : 0, c0 = two && turn > 0.2 ? m + fwd : m;
+        const X = (cx.W.beardR || this.beardTone(HR, skin))[2], s = mix(X, skin[2], 0.42), odd = two && (n & 1) ? 1 : 0, c0 = two && turn > 0.2 ? m + fwd : m;
         const on = (i, j) => cx.onHead(base.bx + i * 2, base.by + j * 2) && cx.onHead(base.bx + i * 2 + 1, base.by + j * 2 + 1), r0 = two && on(c0, 3) ? 2 : 1;
         const K = { X, s, t: mix(X, skin[2], 0.66) }, wide = !Array.isArray(bs);
         (wide ? bs.w : bs).forEach((r, j0) => {
@@ -357,6 +365,13 @@ export const POLISH = {
     // a lit pixel on its cap; a wallet chain - a silver loop from the belt down the right thigh; a tool belt - a leather
     // band at the waist, pouches at the hips, a tool's handle; a climbing harness - a waist band and two leg loops
     const J = A.jewel || {}, jc = J.color && cloth(J.color), jt = J.trim && cloth(J.trim), DK = cloth('#3a2a20');
+    // (a scarf - the owner, 11-21 01:03: "it should just bunch up around the neck and maybe cover the bottom of the face over
+    // the mouth and wrap all the way around and dangle down a bit on the chest like scarves do". Three rounds of pictures on
+    // the chest never looked like one: it's a shape now (people.js) - a roll round the neck as wide as the head, up over the
+    // chin and the mouth, an end hanging down the chest - so it's the same scarf from every side. Its tones: the piece's
+    // color and two shades under it, nothing lighter than the color itself (lit, a red one went pink))
+    if (J.scarf && jc) { const b = jc[2], dk = [24, 12, 20], sr = [mix(b, dk, 0.42), mix(b, dk, 0.24), b, b, mix(b, jc[3], 0.5)], bd = jt ? [jt[1], jt[1], jt[2], jt[2], jt[2]] : sr.map((c) => mix(c, dk, 0.34));
+      W.scarf = (Q) => { Q.gloss = 0; return sr; }; W.scarfD = (Q) => { Q.gloss = 0; return bd; }; }
     const pad = (Q, al) => { if (Math.abs(al - 0.52) < 0.13) { if (Q.l2 > -0.3) Q.k += al < 0.5 ? 0.3 : 0; else Q.k -= 0.12; return 1; } return 0; };   // (11-20, the owner: pads show from behind too - the strap round the joint, a shade darker)
     if (J.knee || J.wchain || J.harness || J.tbelt) wrap('leg', (R, Q) => {
       const al = Q.part === 'th' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5, side = Q.l1 * Q.side;
@@ -445,13 +460,7 @@ export const POLISH = {
         if (J.steth) N.push({ rows: ['T...T', 'T...T', 'T...s', 'T....', 'SS...'], side: ['.T', 'T', 'T', 'S'], nape: 'T', K: { T: m(jc, -0.1), S: g(steel, 0.1), s: g(steel, 0.3) } });
         else if (J.lany) { const card = tone(jc, [246, 248, 252], 0.45); N.push({ rows: ['c...c', 'c...c', '.c.c.', '.kkk.', '.WdW.'], side: ['.c', 'c', 'c', 'k', 'W'], nape: 'c', K: { c: m(jc), W: m(card, 0.2), k: m(jc, -0.35), d: m(dk) } }); }
         // (the owner, 20:53: "scarf doesn't look like a scarf yet" - wound round the neck two rows thick, wider than the neck, in knit ribs; one end down the front, two wide, a band of the trim and a fringe at its end)
-        // (the owner, 23:27: "goes around face on angle view but below it in front and other angle view" - one picture from every
-        // side, and one color: its ribs of two tones baked as a red pixel here and a dark one there, and in the light it went
-        // pale pink. Flat tones now - the piece's color, a fold a shade darker - snug under the chin, wider over the collar, one
-        // end down the front beside the middle with a band of the trim at its end)
-        else if (J.scarf) { const f5 = (c) => [c, c, c, c, c], sc = f5(jc[Math.min(3, jc.length - 1)]), sd = f5(mix(jc[Math.min(3, jc.length - 1)], [30, 12, 22], 0.3)), tr = jt ? f5(jt[Math.min(3, jt.length - 1)]) : sd, fl = (R) => (Q) => { Q.gloss = 0; return R; };
-          N.push({ rows: ['.RRRRR.', '.RRrRR.', '....RR.', '....RR.', '....RR.', '....tt.'], rowsE: ['.RRRRRR.', '.RRRrRR.', '.....RR.', '.....RR.', '.....RR.', '.....tt.'], side: ['RRR', 'RRr', 'R', 'R', 'R', 't'], back: ['.RRRRR.', '.RRRRR.'], bu: 1,   // (bu: from behind it starts a row higher - on the neck, not across the shoulder blades)
-  K: { R: fl(sc), r: fl(sd), t: fl(tr) } }); }
+        else if (J.scarf) { /* (a shape of its own round the neck, not a picture on the chest: W.scarf below, people.js builds it) */ }
         else if (J.pearl) N.push({ rows: ['q...q', '.pqp.'], side: ['.q', 'p'], K: { p: g(cloth('#fbf8f2'), 0.3), q: m(cloth('#9a8fae')) } });
         else if (J.whistle) N.push({ rows: ['c...c', '.c.c.', '..s..'], side: ['.c', 'c', 's'], K: { c: m(jc), s: g(steel, 0.2) } });
         else if (J.bolo) N.push({ rows: ['.c.c.', '..S..', '.c.c.', '.t.t.'], side: ['c', 'S', 'c', 't'], K: { c: m(dk), S: g(jc, 0.2), t: g(steel) } });

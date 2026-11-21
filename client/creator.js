@@ -547,7 +547,7 @@ function renderPage() {
     const heads = (list, what) => `<div class="cc-grid">${list.map(([n, i, fn, on, same]) => `<button class="cc-card hd ${on ? 'on' : ''}" data-act="${what}" data-v="${i}">${th(variant(fn), 'head')}<span>${esc(n)}</span>${price(hairTab, same)}</button>`).join('')}</div>`;
     if (hairTab === 'cut') h = heads(LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base) && hairShown(s)).map(([s, i]) => [s[0], i, (V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }, L.hair.style === i, cur.hair.style === i]), 'hb-style');
     else if (hairTab === 'colour') h = row(`Color <b>${WD.hairPrice(k, 'colour') ? '$' + WD.hairPrice(k, 'colour') : ''}</b>`, LK.HAIR_COLORS.map(([hx, n], i) => sw('hb-col', i, hx, L.hair.color === i, n)).join(''));
-    else h = heads((hairTab === 'beard' ? WD.BEARDS : WD.MOUSTACHES).map((i) => [i ? LK.FACIAL_HAIR[i][0] : 'Clean shaven', i, (V) => { V.hair.facial = i; V.outfit.glasses = null; }, L.hair.facial === i, cur.hair.facial === i]), 'hb-fac');
+    else h = heads((hairTab === 'beard' ? WD.BEARDS : WD.MOUSTACHES).filter((i) => !i || !passOn() || L.hair.facial === i || !LK.FACIAL_RETIRED.includes(LK.FACIAL_HAIR[i][1])).map((i) => [i ? LK.FACIAL_HAIR[i][0] : 'Clean shaven', i, (V) => { V.hair.facial = i; V.outfit.glasses = null; }, L.hair.facial === i, cur.hair.facial === i]), 'hb-fac');
     h = `<p class="cc-note">${k === 'salon' ? 'Cuts and color' : 'Cuts, color, beards and mustaches'}: see it on you, then Confirm to pay.</p>` + h;
   } else if (mode === 'start') {
     // (U18: the looks standing on round stages side by side, the picked one under a spotlight with its name on a plate,
@@ -590,7 +590,7 @@ function renderPage() {
     h = row('Hair length', ['all', 'short', 'medium', 'long'].map((k) => chip('hlen', k, k[0].toUpperCase() + k.slice(1), hairLen === k)).join(''))
       + row('Hairstyle', `<div class="cc-grid">${styles.map(([s, i]) => `<button class="cc-card hd ${L.hair.style === i ? 'on' : ''}" data-act="hair" data-v="${i}">${th(variant((V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }), 'head')}<span>${esc(s[0])}</span></button>`).join('')}</div>`)
       + row('Hair color', LK.HAIR_COLORS.map(([hx, n], i) => sw('hcol', i, hx, L.hair.color === i, n)).join(''))
-      + (B.base === 'm' ? row('Facial hair', `<div class="cc-grid">${LK.FACIAL_HAIR.map(([n], i) => `<button class="cc-card hd ${L.hair.facial === i ? 'on' : ''}" data-act="facial" data-v="${i}">${th(variant((V) => { V.hair.facial = i; V.outfit.glasses = null; }), 'head')}<span>${n}</span></button>`).join('')}</div>`) : '');
+      + (B.base === 'm' ? row('Facial hair', `<div class="cc-grid">${LK.FACIAL_HAIR.map(([n, k], i) => passOn() && L.hair.facial !== i && LK.FACIAL_RETIRED.includes(k) ? '' : `<button class="cc-card hd ${L.hair.facial === i ? 'on' : ''}" data-act="facial" data-v="${i}">${th(variant((V) => { V.hair.facial = i; V.outfit.glasses = null; }), 'head')}<span>${n}</span></button>`).join('')}</div>`) : '');
   } else if (tab === 'outfit') {
     const base = outBase || B.base;
     const slotItem = L.outfit[outSlot];

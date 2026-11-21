@@ -90,8 +90,11 @@ export const HAIR_STYLES = [
 ];
 // facial hair (CB4)
 export const FACIAL_HAIR = [['None', null], ['Stubble', 'stubble'], ['Short beard', 'short'], ['Full beard', 'full'], ['Long beard', 'long'], ['Goatee', 'goatee'],
-  ['Moustache', 'moustache'], ['Handlebar', 'handlebar'], ['Chin strap', 'chinstrap'], ['Mutton chops', 'chops'], ['Soul patch', 'soul'], ['Van Dyke', 'vandyke'],
-  ['Circle beard', 'circle'], ['Horseshoe', 'horseshoe'], ['Walrus', 'walrus'], ['Pencil moustache', 'pencil'], ['Fu Manchu', 'fumanchu']];   // (append-only; the last five are the concepts' CB4, 11-20)
+  ['Moustache', 'moustache'], ['Handlebar', 'handlebar'], ['Chin strap', 'chinstrap'], ['Mutton chops', 'chops'], ['Soul patch', 'soul'], ['Van Dyke', 'vandyke']];   // (append-only)
+// (the owner, 11-21: facial hair that doesn't show clearly at the game's size isn't worth having. Under the polish pass these
+// three are drawn as the nearest style that reads - a short beard, a goatee, a goatee - and the creator doesn't offer them;
+// a look saved with one keeps its number. With the pass off nothing changes.)
+export const FACIAL_RETIRED = ['chinstrap', 'soul', 'vandyke'];
 export const MAKEUP = ['None', 'Natural', 'Lipstick', 'Smoky eyes', 'Blush', 'Glam', 'Goth', 'Face paint', 'Eyeshadow'];   // (append-only: a look's code holds the place)
 export const TATTOO_AREAS = [['arms', 'Arms'], ['legs', 'Legs'], ['neck', 'Neck'], ['chest', 'Chest & back'], ['face', 'Face']];
 export const PIERCINGS = [['ears', 'Ears'], ['nose', 'Nose'], ['brow', 'Brow'], ['lip', 'Lip']];

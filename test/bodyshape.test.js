@@ -161,27 +161,35 @@ test('a face turned three quarters has its two eyes on one art row', () => {
 
 test('facial hair shows: every style is pixels of its own on the face, from the front, three quarters and the side', () => {
   setPolish(POLISH);
+  // (the owner, 11-21: "a bigger beard and obvious facial hair ... otherwise it might not be worth it". A full beard, a long one
+  // and a goatee stand off the head - hair below the chin, seen from behind the jaw too; the three styles that never read are
+  // drawn as the nearest that does)
+  const beard = (name, dir) => pixels(bake(dressed('m', (L) => { L.hair.facial = LK.FACIAL_HAIR.findIndex((f) => f[0] === name); }), dir), (q) => q.part === 'beard').length;
+  for (const dir of [0, 1, 2]) { const g = beard('Goatee', dir), f = beard('Full beard', dir), l = beard('Long beard', dir);
+    assert.ok(g >= 2 && (dir === 2 || f >= g + 2) && l >= f + 4, `facing ${dir}: a goatee's tuft (${g}), a full beard's mass (${f}), a long beard's length (${l})`); }   // (from the side a full beard's mass is behind the jaw's line: it's the face's own pixels there)
+  assert.deepEqual(LK.FACIAL_RETIRED.map((k) => !!POLISH.BST[k]), [true, true, true], 'a retired style still draws as something');
   for (const dir of [0, 1, 2]) {
     const clean = new Set(pixels(bake(dressed('m', () => {}), dir), () => true).map((p) => p[2].c.join()));
     for (let i = 1; i < LK.FACIAL_HAIR.length; i++) {
       const own = pixels(bake(dressed('m', (L) => { L.hair.facial = i; }), dir), (q) => q.g === 1 && !clean.has(q.c.join()));
       assert.ok(own.length >= (dir === 0 ? 2 : 1), `${LK.FACIAL_HAIR[i][0]}, facing ${dir}: ${own.length} pixels of its own`);
-      assert.ok(new Set(own.map((p) => p[2].c.join())).size <= 3, `${LK.FACIAL_HAIR[i][0]}, facing ${dir}: one or two tones, not a scatter`);
+      assert.ok(new Set(own.map((p) => p[2].c.map((v) => v >> 5).join())).size <= 3, `${LK.FACIAL_HAIR[i][0]}, facing ${dir}: a tone and its shade, not a scatter`);
     }
   }
 });
 
-test('a mask over the eyes covers them at every angle; a scarf is round the neck from every side, never on the face', () => {
+test('a mask over the eyes covers them at every angle; a scarf is a roll round the neck from every side, the eyes clear of it', () => {
   setPolish(POLISH);
   for (const name of ['Bear mask', 'Pig mask']) for (let dir = 0; dir < 8; dir++) {
     const white = pixels(bake(dressed('m', (L) => { L.outfit.glasses = LK.item(name); }), dir), (q) => q.g === 1 && q.c[0] > 215 && q.c[1] > 215 && q.c[2] > 200);
     assert.equal(white.length, 0, `${name}, facing ${dir}: the white of an eye beside the mask's own`);
   }
-  const red = (q) => q.c[0] > 140 && q.c[1] < 70 && q.c[2] < 75;
   for (const base of ['m', 'f']) for (let dir = 0; dir < 8; dir++) {
     const S = bake(dressed(base, (L) => { L.outfit.jewel = LK.item('Scarf'); }), dir);
-    assert.ok(pixels(S, (q) => q.g === 4 && red(q)).length >= 4, `scarf, ${base} facing ${dir}: round the neck`);
-    assert.equal(pixels(S, (q) => q.g === 1 && red(q)).length, 0, `scarf, ${base} facing ${dir}: none of it on the face`);
+    const sc = pixels(S, (q) => q.part === 'scarf').length;
+    assert.ok(sc >= ([3, 4, 5].includes(dir) ? 4 : 10), `scarf, ${base} facing ${dir}: a roll round the neck, from every side (${sc} art pixels; from behind the hair is over most of it)`);
+    if ([0, 1, 7].includes(dir)) { const white = (S) => pixels(S, (q) => q.g === 1 && q.c[0] > 215 && q.c[1] > 205 && q.c[2] > 190).length;   // (up over the chin and the mouth, never the eyes)
+      assert.equal(white(S), white(bake(dressed(base, () => {}), dir)), `scarf, ${base} facing ${dir}: the eyes still show`); }
   }
 });
 
