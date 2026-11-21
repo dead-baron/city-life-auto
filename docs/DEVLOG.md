@@ -25321,6 +25321,12 @@ best-looking trees in the game.
   out of a dark cleft in a hood of rock, a spring. A fall's own pools (its shelf, a spring's tongue) are in the rivers'
   teal. A resort's built fall keeps its pool. Seen in the world: the redwood horseshoe, Twin Falls, Summit Tarn,
   Coral Cay.
+- **Waterfalls, third step.** A spring's rock is rougher: an uneven top with mossy boulders on it, roots hanging over
+  a ragged cleft. The ruled, dotted arc of foam round a plunge pool is gone (`water.js`: a pocket of kind 2 carries
+  flecks and short rafts of foam drifting on it, thinning outward). The owner's call for Coral Cay (14:54): "a little
+  stream and small pool feeding into it" - with the world batch; the fall takes it as its source by itself once it is
+  there. Seen and not fixed: a block of broken white squares in the river below Willow River Falls (there on the
+  live build too) - for the water audit.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.

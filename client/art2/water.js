@@ -523,8 +523,8 @@ export function fallModel(o = {}) {
     if (open && y < lipY(x)) return -1;                       // (the source is the ground's own water: nothing of the fall's up there)
     if (spring && y < sY) {                                   // (a hood of rock at the back, the water out of a dark cleft in it)
       const u = (x - cx) / Math.max(4, width / 2 - 2);
-      if (z >= drop + 12 + vnoise(x, y, 9, seed + 90) * 7 - Math.max(0, Math.abs(u) - 0.8) * 10) return -1;
-      return y >= sY - 4 && Math.abs(u) < 1 && z >= drop - 2 - zsOf(x) && z < drop - 1 + 11 * (1 - u * u) ? dark : rock;
+      if (z >= drop + 9 + vnoise(x, y, 6, seed + 90) * 9 + vnoise(x, 3, 19, seed + 91) * 5 - Math.max(0, Math.abs(u) - 0.75) * 14) return -1;   // (its top uneven, its shoulders coming down)
+      return y >= sY - 4 && Math.abs(u) < 1 && z >= drop - 2 - zsOf(x) && z < drop - 1 + (9 + vnoise(x, 5, 8, seed + 92) * 5) * (1 - u * u) ? dark : rock;   // (the cleft: a ragged arch)
     }
     if (y < lipY(x)) return z < drop - 2 - zsOf(x) && y >= backY(x) ? rock : -1;   // under the upper water
     if (tier2 && y < d2) return z < mid - 2 ? rock : -1;      // the shelf
@@ -553,6 +553,13 @@ export function fallModel(o = {}) {
     for (let i = 0, n = Math.floor(width / 45); i < n; i++) {   // (rocks breaking the water above the lip)
       const r = 2.5 + hash(i, 13, seed) * 2.5, bx = cx + (hash(i, 11, seed) - 0.5) * width * 0.8, by = d1 * (0.35 + hash(i, 12, seed) * 0.4);
       m.ell(bx, by, drop - 2, r * 1.3, r, r * 0.8, RK.wet); m.ell(bx - 0.5, by - 0.5, drop - 1 + r * 0.4, r * 0.9, r * 0.7, r * 0.35, RK.moss);
+    }
+    if (spring) {   // (boulders with moss on the hood, roots hanging over the cleft: a spring out of broken rock, not a lintel)
+      for (let i = 0, n = 3 + Math.floor(width / 30); i < n; i++) {
+        const r = 4 + hash(i, 22, seed) * 4, bx = cx + (i / (n - 1) - 0.5) * (width + 14) + (hash(i, 21, seed) - 0.5) * 6, by = sY * (0.25 + hash(i, 23, seed) * 0.5), bz = drop + 9 + hash(i, 24, seed) * 5;
+        m.ell(bx, by, bz, r * 1.2, r, r * 0.8, RK.rock); m.ell(bx - 0.5, by - 0.5, bz + r * 0.45, r * 0.95, r * 0.75, r * 0.4, RK.moss);
+      }
+      for (let x = Math.ceil(cx - width / 2 + 3); x < cx + width / 2 - 3; x++) if (hash(x, 31, seed) < 0.16) roots(m, RK, x, sY, drop + 8, 3 + Math.floor(hash(x, 32, seed) * 6));
     }
     for (let i = 0; i < 5; i++) {
       const r = 3 + hash(i, 3, seed) * 4, sd = hash(i, 1, seed) < 0.5 ? -1 : 1, bx = cx + sd * (width / 2 + r + 2 + hash(i, 2, seed) * Math.max(4, side - 12)), by = d2 + 1 + hash(i, 5, seed) * 6;
@@ -1262,7 +1269,7 @@ function channels(M) {
     for (let j = 0; j < p.length; j++) { if (j) s[j] = s[j - 1] + Math.hypot(p[j][0] - p[j - 1][0], p[j][1] - p[j - 1][1]); bb[0] = Math.min(bb[0], p[j][0]); bb[1] = Math.min(bb[1], p[j][1]); bb[2] = Math.max(bb[2], p[j][0]); bb[3] = Math.max(bb[3], p[j][1]); }
     const r = h.w / 2 + 4;
     // (each calm pocket's way out to the current: toward the nearest point of the centre line)
-    const pk = (h.p || []).map(([x, y, pr]) => { let bd = 1e9, ox = 0, oy = 0; for (const q of p) { const dx = q[0] - x, dy = q[1] - y, d = dx * dx + dy * dy; if (d < bd) { bd = d; ox = dx; oy = dy; } } const l = Math.hypot(ox, oy) || 1; return { x, y, r: pr, ox: ox / l, oy: oy / l }; });
+    const pk = (h.p || []).map(([x, y, pr, kd]) => { let bd = 1e9, ox = 0, oy = 0; for (const q of p) { const dx = q[0] - x, dy = q[1] - y, d = dx * dx + dy * dy; if (d < bd) { bd = d; ox = dx; oy = dy; } } const l = Math.hypot(ox, oy) || 1; return { x, y, r: pr, ox: ox / l, oy: oy / l, kd: kd || 0 }; });   // (kd 2: a plunge pool under a fall - world3-ledgefalls.js)
     return { ...h, s, pk, bb: [bb[0] - r, bb[1] - r, bb[2] + r, bb[3] + r], kind: h.k === 'creek' ? WK.CREEK : h.k === 'marsh' ? WK.MARSH : h.k === 'lake' ? WK.LAKE : WK.RIVER, sty: BY_T[h.t] ?? S.forest };
   });
   CH.set(W, c);
@@ -1382,7 +1389,7 @@ function channelTiles(chs, TX0, TY0, TN) {
       const R = P.r + 2.5;
       if (P.x + R < wx0 || P.x - R > wx1 || P.y + R < wy0 || P.y - R > wy1) continue;
       const pi = PKW.length;
-      PKW.push({ x: P.x * TILE, y: P.y * TILE, r: P.r * TILE, ox: P.ox, oy: P.oy });
+      PKW.push({ x: P.x * TILE, y: P.y * TILE, r: P.r * TILE, ox: P.ox, oy: P.oy, kd: P.kd || 0 });
       for (let j = Math.max(0, Math.floor(P.y - R) - wy0); j <= Math.min(TN - 1, Math.ceil(P.y + R) - wy0); j++) for (let i = Math.max(0, Math.floor(P.x - R) - wx0); i <= Math.min(TN - 1, Math.ceil(P.x + R) - wx0); i++) {
         const k = j * TN + i;
         if (F.k[k] !== WK.RIVER && F.k[k] !== WK.CREEK) continue;
@@ -1547,7 +1554,9 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     const P = PKW[pi], ex = X - P.x, ey = Y - P.y, D = Math.sqrt(ex * ex + ey * ey), u = D / P.r;
     c = mixTo(MIX, c, rr[0], 0.3 * pk);   // (a deep hole: darker, easing out)
     if (u < 0.9 && fine > 0.35 && Math.sin(D * 0.2 - Math.atan2(ey, ex) * 2 + seed) > 0.95) c = mixTo(MIX, c, rr[5], 0.16);
-    else if (Math.abs(D - P.r) < 2.2 + fine * 1.5 && ex * P.ox + ey * P.oy > D * 0.4 && vnc(X, Y, 7, seed + 237) > 0.45 && hh(x >> 1, y >> 1, seed + 239) > 0.35) c = sd(FOAM, 0.4 + fine * 0.3, x, y, 0.4);
+    else if (P.kd === 2) {   // (a plunge pool, the nature pass 11-21: no ruled arc of foam round it - flecks and short rafts of foam drifting on it, thinning outward)
+      if (u < 1 && vnc(X * 0.5, Y * 1.6, 9, seed + 241) > 0.8 + u * 0.1 && hh(x >> 1, y >> 1, seed + 239) > 0.5) c = sd(FOAM, 0.35 + fine * 0.3, x, y, 0.4);
+    } else if (Math.abs(D - P.r) < 2.2 + fine * 1.5 && ex * P.ox + ey * P.oy > D * 0.4 && vnc(X, Y, 7, seed + 237) > 0.45 && hh(x >> 1, y >> 1, seed + 239) > 0.35) c = sd(FOAM, 0.4 + fine * 0.3, x, y, 0.4);
   }
   // the water's edge
   if (k === WK.SEA) {
