@@ -245,5 +245,5 @@ Stripes passed; on the striped bra and panties he is "not sure it works well ...
 ## 11-21, later - the weak ones, and the whole test suite
 - [x] Fur-hood parka: fur round the collar, seen from the front. Receding: the hairline clearly further back. Crochet cover-up: open work you can see.
 - [~] Still weak: the Faux-hawk (a small ridge), the roller skates' wheels (two pixels), the clipboard, the sleep mask.
-- The whole suite, run one file at a time: everything the characters touch passes. Eight files have a failure that is not from this work (prison, uikit, uiscreens, hudlayout, scenes, visaudit, world3arrivals, gridlock) - the first six fail identically on the commit from before tonight; the list is in the DEVLOG for whoever owns them.
+- The whole suite, run one file at a time: everything the characters touch passes. Eight files have a failure that is not from this work (prison, uikit, uiscreens, hudlayout, scenes, visaudit, world3arrivals, gridlock) - all eight fail identically on the commit from before tonight; the list is in the DEVLOG for whoever owns them.
 
