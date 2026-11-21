@@ -83,6 +83,7 @@ const cv = (fn, ...a) => { const c = CAN; CAN = true; try { return fn(...a); } f
 const ds = (fn, ...a) => { const c = CAN; CAN = false; try { return fn(...a); } finally { CAN = c; } };
 // (nu: how many blades, rings or stalks a plant made at the art pixel keeps - a blade is a pixel wide either way, so
 // as many of them in a quarter of the room would close into a flat mass)
+const GOL = () => (U < 1 ? 0.6 : 0.42);   // (a grass's outline at the art pixel: softer - a blade is a pixel wide, a full-dark ring would be most of the plant)
 const nu = (n, k = 0.6) => (U === 1 ? n : Math.max(1, Math.round(n * k)));
 const CQ = () => Math.pow(U, 0.4), zu = (o) => (o && o.z > 0 ? { ...o, z: Math.max(1, o.z * U) } : o);
 const sq = () => Math.sqrt(SIZE), tk = () => Math.pow(SIZE, 0.8), uq = () => Math.sqrt(U);   // (uq: what a leaf cluster shrinks by at the art pixel - less than the plant, so its clumps stay readable)
@@ -685,7 +686,7 @@ export function lavender(seed = 1, o = {}) {
     const [ex, ey] = blade(G, x0, foot - 2, a, len * 0.7, 0.4, 0, L, { k: 0.3 });
     for (let k = 0; k < 11; k++) { const X = ex + Math.cos(a) * k * 0.9, Y = ey + Math.sin(a) * k * 0.9; px(G, X, Y, step(P, 0.75 - k * 0.04 + (k % 2 ? -0.25 : 0), X | 0, Y | 0, 0), [-0.3, 0.3, 0.9]); if (k % 2 === 0) px(G, X + 1, Y, step(P, 0.4, X | 0, Y | 0, 0), [0.4, 0.4, 0.8]); }
   }
-  return done(G);
+  return done(G, GOL());
 }
 // flowers on stems out of a planter or the ground. o: n, kind (bloom kind), R (flower ramp), h (stem
 // height), spread, leaves ('blade' | 'clump'), planter (w, d, h, kind)
@@ -804,7 +805,7 @@ export function pampasGrass(seed = 1) {
     // the feathery plume, leaning with the stalk and drooping a little
     for (let k = 0; k < 20; k++) { const wd = 3.4 * Math.sin(PI * Math.min(1, (k + 2) / 20)); const X0 = ex + Math.cos(a) * k * 0.9 + (k / 16) ** 2 * (a + PI / 2) * 6, Y0 = ey + Math.sin(a) * k * 0.9; for (let q = -Math.ceil(wd); q <= wd; q++) { if (hash(X0 + q | 0, Y0 | 0, seed) < 0.2) continue; px(G, X0 + q, Y0, step(P, 0.6 - q / (wd + 1) * 0.3 + (hash(q, k, seed) > 0.6 ? 0.15 : -0.05), X0 + q | 0, Y0 | 0, 0.3), sN(q / (wd + 1), -0.2, 0.9)); } }
   }
-  return done(G);
+  return done(G, GOL());
 }
 // a raised patch of meadow lawn with wildflowers and a dirt edge
 export function wildflowerLawn(seed = 1, w = 64, d = 34) {
@@ -933,7 +934,7 @@ function logVox(seed, len, r, o = {}) {
     if (o.moss && z > cz + rr * 0.35 && hash(Math.round(x / 2), Math.round(y / 2), seed + 1) < o.moss) return moss;
     return bark;
   });
-  if (o.stubs) for (let i = 0; i < o.stubs; i++) { const x = 10 + hash(i, 1, seed) * (len - 20), l = 6 + hash(i, 2, seed) * 9; for (let k = 0; k < l; k++) m.box(x + k * 0.5, cy - 1 + (i % 2 ? -1 : 1) * k * 0.15, cz + r - 1 + k, x + k * 0.5 + 2, cy + 1, cz + r + k, bark); }
+  if (o.stubs) for (let i = 0; i < o.stubs; i++) { const x = uu(10) + hash(i, 1, seed) * (len - uu(20)), l = uu(6 + hash(i, 2, seed) * 9); for (let k = 0; k < l; k++) m.box(x + k * 0.5, cy - 1 + (i % 2 ? -1 : 1) * k * 0.15, cz + r - 1 + k, x + k * 0.5 + 2, cy + 1, cz + r + k, bark); }
   m.smooth = 1;
   return m;
 }
@@ -960,17 +961,17 @@ function twigs(seed, h, B) {
 function tuftSprite(seed, h, R) {
   const rnd = mulberry32(seed * 5 + 1), G = sprite(h * 2 + 8, h + 8, 3), cx = G.ax, foot = G.ay;
   for (let i = 0; i < nu(14); i++) blade(G, cx + (rnd() - 0.5) * 4, foot, -PI / 2 + (rnd() - 0.5) * 1.8, h * (0.5 + rnd() * 0.5), 0.6, 0.03, R, { k: 0.3 + rnd() * 0.4 });
-  return done(G);
+  return done(G, GOL());
 }
 // a little conifer sapling
-export const sapling = (seed = 1, h = 26) => conifer(seed, { h, r: h * 0.3, R: FOL('#3e7034'), sp: 3, sw: 2.6, tw: 1, bare: 0.1, droop: 0.3 });
+export const sapling = (seed = 1, h = 26) => conifer(seed, { h, r: h * 0.3, R: FOL('#3e7034'), sp: 3 * (U < 1 ? 0.8 : 1), sw: 2.6 * (U < 1 ? 0.8 : 1), tw: 1, bare: 0.1, droop: 0.3 });
 
 // ---- forest trees (E3b) -----------------------------------------------------------------------------------
 export function redwood(seed = 1, h = 150) {
   if (!CAN) return cv(redwood, seed, h);
   h *= SIZE;
   // (a giant: a trunk two strides across, flared at the foot; dense sprays of foliage up the top two thirds)
-  const rnd = mulberry32(seed * 271 + 1), G = sprite(132 * SIZE, h + 16, 5), cx = G.ax, foot = G.ay, tw = 17 * tk(), top = foot - h, lobes = [], stubs = [];
+  const rnd = mulberry32(seed * 271 + 1), G = sprite(132 * SIZE, h + 16, 5), cx = G.ax, foot = G.ay, tw = 17 * (SIZE < 1 ? SIZE : tk()), top = foot - h, lobes = [], stubs = [];
   for (let y = foot - h * 0.36; y > top + 6 * SIZE; y -= (6 + rnd() * 4) * SIZE) for (const side of [-1, 1]) {
     if (rnd() < 0.12) continue;
     const up = (foot - y) / h, r = (7 + rnd() * 5) * SIZE * (1.15 - up * 0.45), x = cx + side * (tw * (1 - up * 0.45) + (3 + rnd() * 13 * (1.1 - up * 0.6)) * SIZE);
@@ -1045,15 +1046,15 @@ export const birchClump = (seed = 1) => grove(seed, { h: 96, cw: 40, n: 6, R: FO
 export const aspenGrove = (seed = 1) => grove(seed, { h: 98, cw: 40, n: 7, R: FOL('#e2ae22', { cool: 25, shiftD: 0.45 }), r: 7.5, litter: LIT_GOLD, k: 1 });
 // a huge old stump with moss and ferns, young firs growing out of its top
 export function nurseStump(seed = 1) {
-  const m = new Vox(46, 40, 32), cx = 23, cy = 20;
+  const q = uu(1), m = new Vox(Math.ceil(46 * q), Math.ceil(40 * q), Math.ceil(32 * q)), cx = 23 * q, cy = 20 * q;   // (q: its voxels are canvas px)
   const B = m.mat({ ramp: RR('#6a4430', 7, 3, { dark: 0.62 }), k: 3, shade: (x, y, z) => (Math.round(Math.atan2(y - cy, x - cx) * 7) % 2 ? -0.6 : 0.2) + (hash(Math.round(Math.atan2(y - cy, x - cx) * 9), Math.round(z / 3), seed) - 0.5) });
   const top = m.mat({ ramp: RR('#8a5a3a', 6, 3), k: 3, shade: (x, y) => (Math.round(Math.hypot(x - cx, y - cy)) % 3 ? 0 : -0.7) });
   const moss = m.mat({ ramp: FOL('#5e8e28'), k: 4, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), z | 0) > 0.7 ? 1 : 0) });
   m.fill((x, y, z) => {
-    const a = Math.atan2(y - cy, x - cx), d = Math.hypot(x - cx, (y - cy) * 1.1), r = 16 + Math.sin(a * 5 + seed) * 1.6 + Math.max(0, 6 - z) * 0.9 + (z < 3 ? Math.max(0, Math.cos(a * 4 + seed)) * 4 : 0);
-    const H = 22 + Math.sin(a * 3 + seed) * 4 + hash(Math.round(a * 6), 0, seed) * 4;
+    const a = Math.atan2(y - cy, x - cx), d = Math.hypot(x - cx, (y - cy) * 1.1), r = (16 + Math.sin(a * 5 + seed) * 1.6) * q + Math.max(0, 6 * q - z) * 0.9 + (z < 3 * q ? Math.max(0, Math.cos(a * 4 + seed)) * 4 * q : 0);
+    const H = (22 + Math.sin(a * 3 + seed) * 4 + hash(Math.round(a * 6), 0, seed) * 4) * q;
     if (d > r || z > H) return -1;
-    if (z > H - 2) return d < r - 3 ? top : moss;
+    if (z > H - 2) return d < r - 3 * q ? top : moss;
     if (hash(Math.round(a * 8), Math.round(z / 2), seed + 2) > 0.78 || (z < 4 && hash(Math.round(x / 2), Math.round(y / 2), seed + 5) > 0.5)) return moss;
     return B;
   });
@@ -1294,7 +1295,7 @@ export function yucca(seed = 1, bloomOn = true) {
   for (const l of lv) blade(G, cx + Math.cos(l.a) * 2, foot - 4, l.a, l.l, 1.2, 0.006, R, { k: 0.3 + (l.d + 1.5) * 0.18 + l.j, tipK: 0.35 });
   if (bloomOn) { stem(G, cx, foot - 10, cx + 1, foot - 52, RR('#8a8a4a', 5, 2), 0.4); for (let k = 0; k < 20; k++) { const y = foot - 50 + k, w = 1 + Math.sin(PI * k / 20) * 3; for (let q = -Math.ceil(w); q <= w; q++) if (hash(q, k, seed) > 0.25) px(G, cx + q, y, step(W, 0.6 - q / (w + 1) * 0.3 + (k % 2 ? -0.12 : 0.05), cx + q, y, 0.2), sN(q / (w + 1), 0.2, 0.9)); } }
   pebbles(G, cx, foot, 6, 26, seed); tufts(G, cx, foot, 4, 24, seed, FOL('#8a9a3a'));
-  return done(G);
+  return done(G, GOL());
 }
 const DRY = FOL('#8a8a3a', { warm: 50, desat: 0.2 });
 export const creosote = (seed = 1) => shrub(seed, { w: 32, h: 40, R: FOL('#6e8a2a', { warm: 56 }), leaf: 'fine', cs: 2.6, holes: 0.5, airy: 0.25, dens: 0.22, stems: 12, B: RR('#5a3e2e', 6, 3), dens: 1.15, k: 5, after: (G, cx, foot) => pebbles(G, cx, foot, 5, 22, seed) });
@@ -1314,7 +1315,7 @@ export function dryGrass(seed = 1, size = 1) {
   bl.forEach((b, i) => { b.j = U < 1 ? (i % 3 - 1) * 0.16 : 0; });
   for (const b of bl) blade(G, b.x, foot - 1, b.a, b.l, 0.6, 0.02, R, { k: 0.3 + b.d * 0.45 + b.j });
   pebbles(G, cx, foot, 3, h * 0.8, seed);
-  return done(G);
+  return done(G, GOL());
 }
 export function tumbleweed(seed = 1, r = 14) {
   const rnd = mulberry32(seed * 233 + 1), G = sprite(r * 2 + 12, r * 2 + 12, 4), cx = G.ax, cyc = G.ay - r, R = RR('#a8845a', 7, 3, { dark: 0.6, light: 0.5 });
@@ -1464,7 +1465,7 @@ export function grassClump(seed = 1, o = {}) {
     for (let k = 0; k < pl; k++) { const wd = (o.plumeW ?? 1.5) * Math.sin(PI * (k + 1) / (pl + 1)); const X = ex + Math.cos(a) * k * 0.9 + (k / pl) ** 2 * 3 * Math.sign(Math.cos(a) || 0.1), Y = ey + Math.sin(a) * k * 0.9; for (let q = -Math.ceil(wd); q <= wd; q++) px(G, X + q, Y, step(o.plume, 0.6 - q / (wd + 1) * 0.3 + (k % 2 ? -0.1 : 0.08), X + q | 0, Y | 0, 0.2), sN(q / (wd + 1), 0, 0.9)); }
   }
   if (o.after) o.after(G, cx, foot);
-  return done(G);
+  return done(G, GOL());
 }
 export const duneGrass = (seed = 1) => grassClump(seed, { h: 46, n: 110, spread: 1.3, R: FOL('#9aa040', { warm: 50 }), plume: RR('#d8c08a', 6, 3, { dark: 0.45 }), plumes: 6, k: 1 });
 export const beachGrass = (seed = 1) => grassClump(seed, { h: 42, n: 140, spread: 1.4, R: FOL('#a0a048', { warm: 48, desat: 0.2 }), k: 2 });
@@ -1638,7 +1639,7 @@ export function cattails(seed = 1, kind = 'cattail') {
     else { for (let k = 0; k < 3; k++) px(G, ex + (k - 1), ey + 6 + (k % 2), step(C, 0.5, 0, 0, 0), [0, 0.3, 0.9], 0); }
   }
   for (let k = -12; k <= 12; k += U < 1 ? 2 : 1) if (hash(k, 1, seed) > (U < 1 ? 0.62 : 0.4)) px(G, cx + k, foot + 1, [200, 225, 230], [0, 0, 1], F_GROUND | F_WATER, 0);   // (glints where the stems meet the water: a few, not a line)
-  return done(G);
+  return done(G, GOL());
 }
 export const reeds = (seed = 1) => cattails(seed, 'reed'), rushes = (seed = 1) => cattails(seed, 'rush');
 export function lilyPads(seed = 1, n = 8, lotus = 3) {
