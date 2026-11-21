@@ -25193,3 +25193,39 @@ The security audit (branch `audit-security`, docs/audit/SECURITY.md) found three
   least a quarter more per piece than the best buy-back anywhere (`shared/items.js`, applied over the whole table), so
   picking and hunting stay the way to earn. `test/moneyloop.test.js` guards it.
 The audit's other findings (high and below) are for the pre-beta pass.
+
+## 2026-11-21 - The animals drawn at the art pixel: faces, eyes, legs that hold (first pass, branch `animals`)
+The owner (11-21): "I'd like to polish the animal/wildlife art up, some dont look very good at all. I'd like to get it
+close to the concepts." A sheet of every land animal and bird as the game drew it, beside its concept, showed it was
+nearly all of them, and one cause: the models are 1 world px a voxel, the game's art pixel is 2, and the picture was
+made with one ray per art pixel - whatever was thinner than the pixel (a leg, a tail, an eye) was lost or doubled by
+chance, the eyes were buried inside the head, and the bodies were too thin to carry a face from the front.
+
+- **The picture** (`client/art2/animals.js` `renderArt`, used whenever `px` > 1; the old one-ray picture stays for the
+  previews at px 1). Every art pixel looks at each world px under it, down the line of sight a world px of depth at a
+  time: the material most of the pixel shows, in its average tone; a thin part (a material's `thin`: a tail, an
+  antler, an ear, a bill) fills the pixel it only half covers; the legs on the far side of the body (`limb`) a tone
+  darker, so four legs read as four; the shading in three clean bands from the surface's own direction, never the
+  ramp's last tone; and the features (`feat`: an eye, a nose, a tongue - each its own material) one art pixel each,
+  where the middle of what shows of it lands - seen through 2 px of coat, so an eye sits where it reads from the
+  front and from the side both; the far eye not seen side on, none from behind; two eyes never touching.
+- **The rig**: the pets of A1 chunky - the head big and carried high over the back, sturdy legs set apart, ears a
+  shade off the coat - and each breed's own marks (the spaniel's brown head and white blaze, the shepherd's black
+  muzzle and saddle, the husky's white face and legs and blue eyes, the bulldog's and the pit bull's white, the
+  dalmatian's spots an art pixel each, the tabbies' bands, the cats' eye colours). The farm: the cow's pink muzzle and
+  black ears, the sheep's black face and legs, the pig, the goat. The wild ones: antlers, horns and tusks that hold,
+  the moose's palms laid back, the wolf sturdier with yellow eyes, the raccoon's mask, the bobcat.
+- **A bug found on the way: the birds had no heads.** In `client/art2/birds.js` every bird's table gave `head` twice -
+  its size, then its colour - so the colour overwrote the size and the head, the eyes, the bill and a quail's topknot
+  were never drawn (a radius of '#3e3a46'). The colour is `headC` now. The small birds are drawn a little bigger than
+  the table's sizes (`GROW`: a quail 1.3) - the picture only; nothing the server measures.
+- **Budget**: the renderer's code 411 -> 419 KB (`tools/perf.mjs`): `renderArt` and the rig's markings join the
+  renderer's first load, as the animals' code always has. A sprite takes about twice as long to draw as before
+  (measured here: 12 -> 23 ms each over 192 sprites); they are drawn once and kept.
+- **Tests**: `test/animalart.test.js` - every four-legged animal has two eyes from the front, apart and level; one eye
+  from the side and none from behind, for the animals and the birds; a bird's head is a size and `headC` a colour;
+  fore and hind feet apart on the ground; the px-1 picture still there. `test/wildart.test.js` unchanged and passing.
+- Not done yet: the moose's antlers and the deer's rack from the front, the mountain goat, the birds' wings in flight,
+  the shark and the sea life, the fish in the water and on the catch card (to be judged on sheets), the animals in
+  motion in the game. Not on `main`: the owner sees the sheets first.
+
