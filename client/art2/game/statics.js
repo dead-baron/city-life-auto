@@ -352,7 +352,7 @@ export function makeStatic(r) {
     case 'debris': return makeDebris(r);
     case 'rock': return makeRock(r);
     case 'rk': return rkSprite(r);
-    case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams, stone: r.stone, rock: r.rock });
+    case 'fall': return WT.waterfall({ art: WT.FALL_LOOK.v > 0, kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams, stone: r.stone, rock: r.rock });
     case 'sbridge': return makeStoneBridge(r);
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
     case 'festoon': return makeFestoon(r);

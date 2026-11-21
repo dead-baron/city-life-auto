@@ -25304,6 +25304,15 @@ best-looking trees in the game.
   slim or as they were. Measured over the built world (`test/undergrowth.test.js`): trees with a twin within 160 px
   0% in three woods (12-21% live); undergrowth with a twin within 96 px 11-17% (81-85% live); a wood draws on about
   230 pictures where it drew on about 80.
+- **Waterfalls, first step: the sheet (the owner, 13:08: "They should look natural and like the concepts").** Sixteen
+  falls rendered as the game draws them showed the fault was mostly in one place: a fall's water fanned out to three
+  times its width by the foot, so a tall fall read as a white tent and the redwood horseshoe as a row of eighteen
+  cones; and its white with one-pixel streaks was halved to speckle. `water.js` `FALL_LOOK` (1, pending the owner's
+  pick between 1 and 2): the sheet drops nearly straight - a low fall widens at its foot as before (the owner's earlier note, held by `test/fallart.test.js`), a tall one no more than a low one - in ropes two px wide with their own length and
+  pace, whiter to the foot, glassy where it leaves the lip, the wet rock dark through its thin places, on a ramp of
+  its own from wet rock to white; the lip's water darker. A world's fall is drawn at the art pixel (`waterfall`
+  `o.art`, the bake's ap2). Not done: the settings - Summit Tarn's fall still stands on flat ground and the ledge
+  falls still read low; their rock changes the world's solid ground and goes in with the world batch.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.

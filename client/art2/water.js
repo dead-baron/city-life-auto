@@ -461,6 +461,11 @@ const autoUps = (w, sd) => { const out = []; let x = -w / 2 + 2; for (let i = 0;
 // The model's .face is the y of the lowest face (the anchor the sprite is placed by) and .lip the drop.
 const SANDROCK = R('#c49a6a', 7, 3, { dark: 0.55, light: 0.45 }), LAVAR = R('#46434a', 7, 3, { dark: 0.6, light: 0.55, shift: 0.2 });   // (LAVAR: the tropics' black rock, o.stone 'lava')
 const REDROCKW = R('#a8563c', 7, 3, { dark: 0.55, light: 0.45 });   // (o.stone 'red': the red rock desert's - Red Rock Canyon's spring)
+// (the nature pass, 2026-11-21, the owner: the falls "should look natural and like the concepts" - NR1-E, N5) the look
+// of a fall's water: 0 as it was (a white fan, three times as wide at its foot), 1 a sheet that drops straight in ropes
+// and veils with the wet rock dark through its thin places, 2 the same broken into more strands, more mist
+export const FALL_LOOK = { v: 1 };
+const FALLW = [[46, 58, 70], [78, 104, 124], [122, 154, 176], [166, 196, 214], [204, 224, 235], [234, 243, 247], [252, 253, 254]];   // (the sheet's own ramp: the wet rock dark through it, blue-grey veils, white ropes)
 export function fallModel(o = {}) {
   const kind = o.kind || 'ledge', seed = o.seed ?? 3, frames = o.frames || 4;
   const width = o.width ?? (kind === 'cliff' ? 22 : kind === 'weir' ? 120 : 60), drop = o.drop ?? (kind === 'cliff' ? 120 : kind === 'twoTier' ? 110 : kind === 'weir' ? 12 : 26);
@@ -475,8 +480,16 @@ export function fallModel(o = {}) {
   // (o.stone 'sand': a resort's rockwork of warm sandstone in courses - Lucky Mesa's Mesa Grande)
   const sand = o.stone === 'sand' || o.stone === 'red';
   const RK = rockKit(m, seed, o.stone === 'lava' ? 'lava' : o.stone === 'red' ? REDROCKW : sand), rock = kind === 'weir' ? m.mat({ ramp: CONC, k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5 }) : RK.rock;
-  const wtop = m.mat({ ramp: WATER.river, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => Math.sin(y * 0.6 - frame.v / frames * TAU * 2 + hash(Math.round(x), 1, seed) * 3) * 0.5 + (hash(Math.round(x), Math.round(y), seed) > 0.9 ? 1 : 0) - 0.2 - Math.max(0, d1 - 6 - y) / d1 * 1.6 + (vnoise(x, y, 6, seed + 75) > 0.72 ? 1.2 : 0) });   // (deeper and darker back from the lip, streaks of foam on it)
-  const sheet = m.mat({ ramp: WATER.fall, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y, z) => {
+  const wtop = m.mat({ ramp: WATER.river, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => Math.sin(y * 0.6 - frame.v / frames * TAU * 2 + hash(Math.round(x), 1, seed) * 3) * 0.5 + (hash(Math.round(x), Math.round(y), seed) > 0.9 ? 1 : 0) - 0.2 - (FALL_LOOK.v ? 1.3 : 0) - Math.max(0, d1 - 6 - y) / d1 * 1.6 + (vnoise(x, y, 6, seed + 75) > 0.72 ? 1.2 : 0) });   // (deeper and darker back from the lip, streaks of foam on it)
+  const LK = FALL_LOOK.v;
+  const sheet = m.mat({ ramp: LK ? FALLW : WATER.fall, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y, z) => {
+    if (LK) {
+      // ropes two px wide (the art pixel), each its own length and pace: a bright head, a tail that thins to veil; whiter
+      // toward the foot; glassy and dark where it leaves the lip; thin places where the wet rock shows through
+      const c2 = Math.round(x / 2), h = hash(c2, 3, seed), len = 12 + h * 26, u = (Hh - z) / len - frame.v / frames * (1 + Math.floor(h * 2)), ph = u - Math.floor(u);
+      const lipT = z > sheetTop(x) - 4 - vnoise(x, 0, 7, seed + 71) * 8 ? -1.6 : 0, thin = vnoise(x * 0.5, z * 0.16, 5, seed + 74) < (LK > 1 ? 0.3 : 0.2) ? -2.6 : 0;
+      return (ph < 0.5 ? 1.5 : ph < 0.78 ? 0.3 : -0.9) + (h > 0.7 ? 1 : h < 0.28 ? -1.1 : 0) + lipT + thin + (Hh - z) / Hh * 0.9 - 0.3;
+    }
     const col = Math.round(x), h = hash(col, 3, seed), u = (Hh - z) / (7 + h * 7) + frame.v / frames * (2 + Math.floor(h * 2)) * -1;
     const band = Math.sin(TAU * (u + h * 5)), top = z > sheetTop(x) - 3 - vnoise(x, 0, 7, seed + 71) * 9 ? -1.1 : 0;   // (the glassy tongue over the lip, ragged)
     return (band > 0.2 ? 1.6 : band < -0.6 ? -0.7 : 0.5) + (h > 0.7 ? 0.8 : h < 0.2 ? -0.5 : 0) + top + (Hh - z) / Hh * 0.6 + (vnoise(x, z * 0.3, 5, seed + 74) < 0.22 ? -1.4 : 0);   // (thin places: the wet rock dark through it)
@@ -544,11 +557,11 @@ export function fallModel(o = {}) {
     sheetTop = (x) => drop - zsOf(x);
     // (a strand fans out as it falls - its edges ragged - so the rocks that split it at the lip are hidden below: they
     // break the water near the top and the strands join into one curtain further down, not posts down the face)
-    const spr = (z, top, k) => Math.max(0, (top - z) * 0.14 + (hash(Math.round(z / 4), k, seed + 11) - 0.5) * 2.6);
+    const spr = (z, top, k) => Math.max(0, (top - z) * (LK ? 0.12 : 0.14) + (hash(Math.round(z / 4), k, seed + 11) - 0.5) * 2.6);
     m.fill((x, y, z) => {
       const zt = drop - zsOf(x);
       if (z >= zt) return -1;
-      const fan = (drop - z) * 0.3;   // (the curtain spreads as it falls, out past the notch: wider at the foot)
+      const fan = LK ? Math.min((drop - z) * 0.3, 6 + Math.sqrt(drop - z) * 1.3) : (drop - z) * 0.3;   // (the curtain spreads as it falls, out past the notch: wider at the foot - the owner's note 2, test/fallart.test.js - but a tall fall no more than a low one: water drops straight)
       if (!inNotch(x, -w1 / 2 - fan + Math.sin(z * 0.2 + x) * 0.6 + (vnoise(z, 3, 7, seed + 70) - 0.5) * 7, w1 / 2 + fan - (vnoise(z, 4, 7, seed + 70) - 0.5) * 7)) return -1;
       const sk = ups ? ups.findIndex(([lo, hi], k) => inNotch(x, lo - (k ? spr(z, drop, k * 2) : fan * 0.9) + Math.sin(z * 0.3 + lo) * 0.8, hi + (k < ups.length - 1 ? spr(z, drop, k * 2 + 1) : fan * 0.9))) : 0;
       if (sk < 0) return -1;
@@ -586,7 +599,7 @@ export function fallModel(o = {}) {
     }
   }
   // the churn at the foot
-  const footW = kind === 'cliff' ? width * 1.6 : width + drop * 0.34 + 6;   // (as wide as the curtain has spread)
+  const footW = LK ? width + drop * 0.1 + 14 : kind === 'cliff' ? width * 1.6 : width + drop * 0.34 + 6;   // (as wide as the curtain has spread, and the churn a little past it)
   m.fill((x, y, z) => {
     const dx = (x - cx) / (footW / 2 + 4), dy = (y - d2) / apron, q = dx * dx + dy * dy * 1.4;
     if (q > 1 + (vnoise(x, y, 5, seed + 60) - 0.5) * 0.8 + Math.sin(Math.atan2(dy, dx) * 3 + seed) * 0.3 || y < d2 + 1) return -1;   // (its edge ragged, lobed)
@@ -601,23 +614,26 @@ export function fallModel(o = {}) {
 export function waterfall(o = {}, model = null) {
   const m = model || fallModel(o);
   if (o.frame != null) m.frameRef.v = o.frame;
-  const G = m.render(0, { dither: 0.4 });
-  G.ay += m.face - m.depth / 2;
+  // (o.art: drawn at the art pixel - one px here is 2 x 2 in the world, laid by the bake (ap2) - so its ropes and its
+  // rock's joints are whole pixels, not what halving leaves of them)
+  const S = o.art ? 2 : 1, G = m.render(0, { dither: 0.4, px: S });
+  G.ay += (m.face - m.depth / 2) / S;
   const tip = norm([-0.3, 0.25, 0.92]);
   for (let i = 0; i < G.w * G.h; i++) if (G.col[i * 4 + 3] && (G.flag[i] & F_WATER)) { const j = i * 4; G.nrm[j] = (tip[0] * 0.5 + 0.5) * 255; G.nrm[j + 1] = (tip[1] * 0.5 + 0.5) * 255; G.nrm[j + 2] = (tip[2] * 0.5 + 0.5) * 255; }
   const mist = o.mist ?? (m.kind === 'cliff' ? 1 : m.kind === 'twoTier' ? 0.5 : 0.2);
   if (mist > 0) {
-    const seed = o.seed ?? 3, f = m.frameRef.v, cx = G.ax, cy = G.ay - 4, rx = m.width * (m.kind === 'cliff' ? 1.6 : 0.72) + 30 + m.lip * 0.2, ry = 10 + mist * 34;   // (the spray spilling out past the walls)
+    const LK = FALL_LOOK.v, seed = o.seed ?? 3, f = m.frameRef.v, cx = G.ax, cy = G.ay - 4, rx = (LK ? m.width * 0.62 + 26 + m.lip * 0.12 : m.width * (m.kind === 'cliff' ? 1.6 : 0.72) + 30 + m.lip * 0.2) / S, ry = (10 + mist * 34) * (LK ? 1 + Math.min(1, m.lip / 160) * (LK > 1 ? 1 : 0.6) : 1) / S;   // (the spray spilling out past the walls; a tall fall's stands higher)
     for (let y = Math.floor(cy - ry * 1.6); y < Math.min(G.h, cy + ry * 0.5); y++) for (let x = Math.floor(cx - rx); x < cx + rx; x++) {
       if (!G.inside(x, y)) continue;
       const q = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2; if (q > 1.4) continue;
-      const nz = vnoise(x + f * 3, y - f * 5, 7, seed + 77) * 0.7 + vnoise(x, y - f * 2, 3, seed + 78) * 0.3;
+      const nz = vnoise(x * S + f * 3, y * S - f * 5, 7, seed + 77) * 0.7 + vnoise(x * S, y * S - f * 2, 3, seed + 78) * 0.3;
       const a = (1 - q / 1.4) * mist * (nz - 0.3) * 1.8; if (a <= 0.05) continue;
       const j = (y * G.w + x) * 4, A = Math.min(0.75, a);
       if (G.col[j + 3] === 255) { G.col[j] += (236 - G.col[j]) * A * 0.8; G.col[j + 1] += (244 - G.col[j + 1]) * A * 0.8; G.col[j + 2] += (246 - G.col[j + 2]) * A * 0.8; }
       else if (!G.col[j + 3]) { G.col[j] = 232; G.col[j + 1] = 242; G.col[j + 2] = 246; G.col[j + 3] = Math.round(A * 200); G.flag[y * G.w + x] = F_NOCAST; }
     }
   }
+  if (S > 1) { for (let i = 0; i < G.z.length; i++) G.z[i] = G.z[i] >> 1; G.ax *= S; G.ay *= S; G.ap = 1; G.ap2 = S; }   // (heights in its own px, as the bake's ap2 reads them)
   return G;
 }
 // n animation frames of one fall (the rock is voxelised once)
