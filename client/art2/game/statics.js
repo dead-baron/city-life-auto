@@ -2235,12 +2235,12 @@ const SPECIES = {
   street: [(s) => FL.streetTree(s, 'grate'), 46, 128], streetPl: [(s) => FL.streetTree(s, 'planter'), 46, 128], ginkgo: [FL.ginkgo, 40, 124], redMaple: [FL.redMaple, 44, 122],
   young: [FL.youngTree, 26, 114], flowerTree: [FL.flowerTree, 42, 124], magnolia: [FL.magnoliaTree, 44, 118], cherry: [FL.cherryTree, 42, 118], maple: [FL.mapleGreen, 48, 106],
   mapleAutumn: [FL.mapleAutumn, 48, 104], oak: [FL.bigOak, 66, 124], birch: [FL.birchClump, 48, 110], aspen: [FL.aspenGrove, 48, 112], willow: [FL.weepingWillow, 44, 106],
-  apple: [FL.appleTree, 40, 92], orange: [FL.orangeTree, 40, 90], olive: [(s) => TR.olive(s, 92, 42), 48, 94], cypress: [(s) => TR.cypress(s, 112, 13), 18, 108],
+  apple: [FL.appleTree, 40, 92], orange: [FL.orangeTree, 40, 90], olive: [FL.oliveTree, 48, 94], cypress: [FL.italianCypress, 18, 108],
   fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], pine: [FL.ponderosaPine, 32, 138],   /* ('pine': Pine Hills' and the Lakeside course's - drawn as nothing till 2026-10-21) */ spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 110, 405],
   mtnPine: [FL.mountainPine, 36, 150], mtnFir: [FL.mountainFir, 40, 157], whitePine: [FL.whitebarkPine, 50, 114], larch: [FL.goldenLarch, 38, 154],
   mesquite: [FL.mesquite, 48, 116], paloVerde: [FL.paloVerde, 54, 115], joshua: [FL.joshuaTree, 52, 101], deadSnag: [FL.deadSnag, 38, 77],
   coconut: [FL.coconutPalm, 76, 151], cocoUp: [FL.cityCoconut, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
-  smallPalm: [(s) => TR.fanPalm(s, 46), 36, 76], coastCypress: [FL.coastalCypress, 80, 98], banana: [FL.banana, 60, 99],
+  smallPalm: [FL.smallFanPalm, 36, 76], coastCypress: [FL.coastalCypress, 80, 98], banana: [FL.banana, 60, 99],
   // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
   giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
   redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 100, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
@@ -2261,15 +2261,14 @@ const SPECIES = {
   sunflowers: [FL.sunflowers, 35, 69], wildflowers: [(s) => FL.wildflowerLawn(s), 68, 47],
 };
 // Every plant is made at the art pixel (flora.js floraArt: the maker run at half size, a pixel of it an art pixel) - the
-// owner's nature kit pass, 2026-11-21 - but the few that come from the older tree painters (trees.js: world px, halved
-// by the bake as before) and the redwoods' own (redwoods.js: at the art pixel already).
-const WORLD_PX_FLORA = new Set(['olive', 'cypress', 'smallPalm', 'redwood', 'redwood2', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
+// owner's nature kit pass, 2026-11-21 - but the redwoods' own (redwoods.js: at the art pixel already).
+const OWN_ART_FLORA = new Set(['redwood', 'redwood2', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
 function makeFlora(r) {
   const sp = SPECIES[r.sp];
   if (!sp) return EMPTY;
   const k = r.k || 1, mk = () => (r.bare ? FL.floraBare(() => sp[0](r.s)) : sp[0](r.s));
-  if (!WORLD_PX_FLORA.has(r.sp)) return FL.floraArt(k, mk);   // (made at the art pixel: flora.js floraArt)
+  if (!OWN_ART_FLORA.has(r.sp)) return FL.floraArt(k, mk);   // (made at the art pixel: flora.js floraArt)
   let G = k !== 1 && FL.floraScale ? FL.floraScale(k, mk) : mk();
   if (G && G.render) G = G.render(0);
   return G;

@@ -582,6 +582,19 @@ export function conifer(seed = 1, o = {}) {
   return done(G);
 }
 
+// the three the older painters drew (trees.js), made here so they come at the art pixel with the rest: an olive, an
+// Italian cypress, a small fan palm. Each keeps one size whatever the stand's scale, as it did (atOne).
+const atOne = (fn) => { const z = SIZE; SIZE = U; try { return fn(); } finally { SIZE = z; } };
+export const oliveTree = (seed = 1) => atOne(() => broadleaf(seed, { h: 88, cw: 34, ch: 31, R: FOL('#74885a', { warm: 70, shift: 0.35, desat: 0.2, cool: 200, dark: 0.64 }), cs: 3.8, dens: 1.05, leaf: 'fine', tw: 4.2, twist: 4, B: RR('#7a6a5a', 7, 3, { dark: 0.6, light: 0.45 }), holes: 0.7, lobes: 11, k: 21 }));
+export function italianCypress(seed = 1, h = 112, r = 13) {
+  const rnd = mulberry32(seed * 131 + 7), G = sprite(r * 2 + 18, h + 14, 5), cx = G.ax, foot = G.ay;
+  limb(G, [cx, foot + 1], [cx, foot - 6], [cx, foot - 12], 2, 1.4, BARK, { seed, flare: 0.5 });
+  paintClusters(G, massCone(cx + (rnd() - 0.5) * 2, foot - h, foot - 7, r * 0.92, rnd, 2.6, 1.9, 0.9), { R: FOL('#1f5236', { cool: 205, light: 0.34, shift: 0.5 }), seed, core: true, leaf: 'scale', clip: 1, tips: false });
+  tufts(G, cx, foot, 3, 8, seed, FOL('#5a8a2a'));
+  return done(G);
+}
+export const smallFanPalm = (seed = 1) => atOne(() => palmTree(seed, { h: 40, lean: 0, r: 26, n: 10, fan: true, R: FOL('#4e8a2c'), B: RR('#8a6438', 7, 3), tex: 'diamond', tw: 3.6, ground: true, k: 9 }));
+
 // ---- shrubs and masses ------------------------------------------------------------------------------------
 // a rounded shrub: o: w (half width), h (height), R, leaf, cs, flowers, fruit, twigs (bare twigs poking out),
 // lobes, stems (visible woody stems under it), flat (mound)
