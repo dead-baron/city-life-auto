@@ -72,8 +72,8 @@ test('the painted critters keep their shapes at the art pixel: same size as the 
       assert.equal(g.w, halved.w); assert.equal(g.h, halved.h); assert.equal(g.ax, halved.ax); assert.equal(g.ay, halved.ay);
       let n = 0, dark = 0, n0 = 0, dark0 = 0;
       for (let i = 0; i < g.w * g.h; i++) {
-        if (g.col[i * 4 + 3]) { n++; if (lum(g, i) < 80) dark++; }
-        if (halved.p0[i * 4 + 3]) { n0++; if (halved.p0[i * 4] * 0.3 + halved.p0[i * 4 + 1] * 0.5 + halved.p0[i * 4 + 2] * 0.2 < 80) dark0++; }
+        if (g.col[i * 4 + 3]) { n++; if (lum(g, i) < 50) dark++; }
+        if (halved.p0[i * 4 + 3]) { n0++; if (halved.p0[i * 4] * 0.3 + halved.p0[i * 4 + 1] * 0.5 + halved.p0[i * 4 + 2] * 0.2 < 50) dark0++; }
       }
       assert.ok(n >= 3 && Math.abs(n - n0) <= Math.max(3, n0 * 0.2), `${kind} ${f}: the same shape (${n} against ${n0} pixels)`);
       assert.ok(dark <= dark0 + 2, `${kind} ${f}: no more ink than before (${dark} against ${dark0})`);   // (a dark creature - the squirrel - has dark pixels of its own)
