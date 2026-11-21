@@ -27,10 +27,10 @@ test('pieces only the pass draws are not sold while the pass is off', () => {
   }
 });
 
-test('the five draped pieces stay out of the city\'s random looks (and are still sold)', () => {
+test('the six draped pieces stay out of the city\'s random looks (and are still sold)', () => {
   const DR = LK.PIECES.filter((p) => p && p.d.dr);
-  assert.deepEqual(DR.map((p) => p.name).sort(), ['Cape coat', 'Ghillie suit', 'Hooded cloak', 'Morning dress', 'Sari']);
-  for (const p of DR) assert.ok(W.sellerOf(p.i), `${p.name}: a store sells it`);
+  assert.deepEqual(DR.map((p) => p.name).sort(), ['Cape coat', 'Coat over the shoulders', 'Ghillie suit', 'Hooded cloak', 'Morning dress', 'Sari']);
+  for (const p of DR) assert.ok(p.d.pp || W.sellerOf(p.i), `${p.name}: a store sells it`);   // (a piece only the pass draws is sold when the pass goes live)
   for (let k = 1; k < 3000; k++) for (const o of Object.values(LK.randomLook(k * 104729).outfit)) if (o) assert.ok(!LK.PIECES[o.id].d.dr, LK.PIECES[o.id].name);
   for (const [st] of LK.STYLES) for (let k = 1; k < 60; k++) for (const base of ['m', 'f']) for (const o of Object.values(LK.randomLook(k * 7919, base, st).outfit)) if (o) assert.ok(!LK.PIECES[o.id].d.dr, `${st}: ${LK.PIECES[o.id].name}`);
 });

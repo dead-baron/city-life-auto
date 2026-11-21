@@ -160,15 +160,15 @@ test('the pass on: uniforms read - the police\'s gold badge and buckle, reflecti
   assert.equal(withPass(() => gold(baked(cook, 0))), 0, 'no badge on the chef\'s whites');
 });
 
-test('the concepts\' six more hairstyles: their own shapes with the pass on, their base style off; random looks never pick them', () => {
+test('the concepts\' eleven more hairstyles: their own shapes with the pass on, their base style off; random looks never pick them', () => {
   const NEW = LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[3]);
-  assert.deepEqual(NEW.map(([s]) => s[0]), ['Balding', 'Flat top', 'Pompadour', 'Afro puffs', 'Low ponytail', 'Side fringe']);
+  assert.deepEqual(NEW.map(([s]) => s[0]), ['Balding', 'Flat top', 'Pompadour', 'Afro puffs', 'Low ponytail', 'Side fringe', 'Waves', 'Faux-hawk', 'Loc updo', 'Receding', 'Pin curls']);   // (the last five: 11-21, the end of the concepts' checklist)
   const head = (base, style, d) => { const L = LK.emptyLook(base); L.hair.style = style; L.outfit.top = LK.item('Plain tee'); return baked(LK.lookArt(LK.validLook(L)), d); };
   for (const [s, i] of NEW) {
     const base = s[1][0];
     assert.ok(head(base, i, 5).h > 16, `${s[0]}: off, it draws (as the style it is built on)`);
     // (the same head with the pass's hair left out: the shape is the pass's)
-    setPolish({ ...POLISH, hair: null, hairCut: null, hairRe: null });
+    setPolish({ ...POLISH, hair: null, hairCut: null, hairRe: null, hairLN: null });   // (hairLN: a receding hairline is the pass's line round the cap)
     let plain; try { plain = [head(base, i, 5), head(base, i, 1)]; } finally { setPolish(null); }
     withPass(() => assert.ok(!same(head(base, i, 5), plain[0]) || !same(head(base, i, 1), plain[1]), `${s[0]}: on, its own shape`));
   }

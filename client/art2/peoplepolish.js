@@ -32,7 +32,7 @@ export const POLISH = {
   // hair, the owner's notes of 11-20: locs and braids hang at the sides of the face too (from the front they were a bowl cut:
   // people.js's hairline, [forehead, temple, sideburn, above the ear, nape]); a one-pixel point on top of the hair is taken
   // off, bar the styles that are points
-  hairLN: { dreads: [0.4, 0.36, -0.78, -0.78, -1.1], braids: [0.42, 0.36, -0.78, -0.78, -1.1], shavedside: [0.42, 0.4, 0.2, 0.1, -0.62] },   // (the shaved-side style keeps its hair down the back: from behind it was a bare head under a cap)
+  hairLN: { dreads: [0.4, 0.36, -0.78, -0.78, -1.1], braids: [0.42, 0.36, -0.78, -0.78, -1.1], shavedside: [0.42, 0.4, 0.2, 0.1, -0.62], receding: [0.74, 0.96, -0.2, 0.1, -0.6], locupdo: [0.5, 0.46, 0.1, 0.3, -0.1] },   // (the shaved-side style keeps its hair down the back: from behind it was a bare head under a cap)
   // glasses, a size bigger (the owner, 11-20: "glasses a size bigger", "square/rimless/browline glasses too small"): each kind's
   // stamp round an eye (people.js GLS: dx out from the nose then dy down, from -1; a color key). A whole ring round the eye
   // where there was half of one; the two rings meet over the nose.
@@ -527,10 +527,12 @@ export const POLISH = {
     if (A.bottom && A.bottom.fringe) { const fr = cloth(A.bottom.trim || '#c8ccd4'); wrap('skirt', (R, Q) => { const cx = Math.floor(Math.round(Q.x) / 2); if (Q.l0 < 0.14) { if (cx & 1) { Q.gloss = 1; return fr; } Q.k -= 0.3; return R; } if (Q.l0 > 0.72 && (cx & 1)) Q.k -= 0.4; return R; }); }
     if (A.bottom && A.bottom.straps) { const st = cloth(A.bottom.trim || '#c8262b'); wrap('leg', (R, Q) => { if (R === W.skin) return R; const al = Q.part === 'th' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5; return Math.abs(al - 0.36) < 0.045 || Math.abs(al - 0.66) < 0.045 ? st : R; }); }
     if (A.jewel && A.jewel.armw) { const ac = cloth(A.jewel.color || '#1a1a1e'), at2 = cloth(A.jewel.trim || '#ff5aa8'); wrap('arm', (R, Q) => (Q.part === 'fa' && Q.l0 < 0.88 ? (Q.l0 < 0.16 ? at2 : ac) : R)); }
-    if (TF && A.jewel && A.jewel.waistshirt && !A.founder) {
-      const c1 = cloth(A.jewel.color || '#c8262b'), c2 = cloth(A.jewel.trim || '#1a1a1e'), hz = W.HEMZ ?? -0.9;
-      const f = (R, Q) => { if (Q.res !== 1 || R === W.skin) return R; const y = Math.round(Q.y), d = Math.floor(y / 2) - Math.floor((y + 0.819152 * (Q.zs - hz)) / 2); if (d < 0 || d > 2) return R; if (d === 2 && !(Q.f > 0.4 && Math.abs(Q.u) < 0.22)) return R; return ((Math.floor(Math.round(Q.x) / 2) + d) & 1) ? c1 : c2; };
-      wrap('torso', f); wrap('pel', f);
+    // (...and a wetsuit peeled to the waist: its top half hangs round the hips the same way, in the suit's color with a row of its trim)
+    const peel = A.bottom && A.bottom.peel;
+    if (TF && ((A.jewel && A.jewel.waistshirt) || peel) && !A.founder) {
+      const c1 = cloth(peel ? A.bottom.color : A.jewel.color || '#c8262b'), c2 = peel ? c1 : cloth(A.jewel.trim || '#1a1a1e'), c3 = peel ? cloth(A.bottom.color2 || '#1a8a8a') : null, hz = peel ? 1.2 : W.HEMZ ?? -0.9;   // (peeled: round the waist, whatever the top's own hem)
+      const f = (R, Q) => { if (Q.res !== 1 || (R === W.skin && !peel)) return R; const y = Math.round(Q.y), d = Math.floor(y / 2) - Math.floor((y + 0.819152 * (Q.zs - hz)) / 2); if (d < 0 || d > 2) return R; if (d === 2 && !(Q.f > 0.4 && Math.abs(Q.u) < 0.22)) return R; if (c3 && d === 0) return c3; return ((Math.floor(Math.round(Q.x) / 2) + d) & 1) ? c1 : c2; };
+      wrap('torso', f); wrap('pel', f); if (peel) wrap('leg', (R, Q) => (R === W.skin || Q.part !== 'th' || Q.l0 > 0.16 ? R : c1));
     }
     if (TF && A.top && A.top.block) {
       const t2b = cloth(A.top.trim || A.top.color2 || '#7a3ac8'), mine = new Set([W.top, relit(W.top)]), zB = D.chestUp - 1.2;
@@ -558,6 +560,7 @@ export const POLISH = {
       if (PR[0] === 'clip') wrap('leather', (R, Q) => { Q.gloss = 0; return Q.l2 > 0.72 && Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.4 ? cloth('#c8ccd4') : Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.72 && Q.l2 < 0.6 && Q.l2 > -0.8 ? pt : pc; });
       if (PR[0] === 'laptop') wrap('leather', (R, Q) => { Q.gloss = 0.2; if (Q.l2 > 0.72) { Q.k += 0.3; return pt; } return pc; });
       if (PR[0] === 'parcel') wrap('leather', (R, Q) => { Q.gloss = 0; return Math.abs(Q.l1) < 0.16 || (Q.l2 > 0.8 && Math.abs(Q.l0) < 0.2) ? pt : pc; });
+      if (PR[0] === 'board') { const bc = cloth(A.bagColor || '#efe6d4'), st = cloth(PR[1] || '#1a8a8a'); wrap('leather', (R, Q) => { Q.gloss = 0.5; return Math.abs(Q.l1) < 0.16 || Q.l2 > 0.78 ? st : bc; }); }   // (a surfboard: a stringer down its middle and a dipped nose in the trim)
       if (PR[0] === 'ball') { const bo = [[188, 76, 20], [204, 86, 22], [218, 98, 26], [218, 98, 26], [232, 120, 40]], sm = [[58, 30, 24], [58, 30, 24], [66, 34, 26], [66, 34, 26], [66, 34, 26]]; wrap('leather', (R, Q) => { Q.gloss = 0; const bc = W.ballC; if (!bc || Q.res !== 1) return bo; const dx = Math.floor(Math.round(Q.x) / 2) - bc[0], dy = Math.floor(Math.round(Q.y) / 2) - bc[1]; return dx === 0 || dy === 0 ? sm : bo; }); }   // (a basketball: its own oranges - on a tanned arm a leather-brown ball was part of the arm - and its two seams, a cross through the middle art pixel of the disc: people.js sets W.ballC, the art pixel its middle falls in)
       if (PR[0] === 'poles') wrap('wood', (R, Q) => (Q.l0 < 0.16 ? cloth('#2a2a2e') : Q.l0 > 0.9 ? pt : pc));
       if (PR[0] === 'parasol') wrap('wood', (R, Q) => (Q.l0 < 0.1 ? cloth('#d8c8a8') : Q.l0 > 0.96 ? cloth('#2a2226') : Math.floor(Q.l0 * 9 + Q.l1 * 1.5 + 2) & 1 ? pt : pc));
@@ -584,6 +587,14 @@ export const POLISH = {
     else if (ex === 'puffs') for (const s of [-1, 1]) { const c = at([s * 0.78, -0.2, 0.9]); E(c, HD, [3.7, 3.6, 3.5], GR.HAIR, 'afro', M); bumps(c, [3.7, 3.6, 3.5], 7, 1.5, -0.2, 1.3, 2, 0.95); }   // (two round puffs high at the sides)
     else if (ex === 'lowpony') { const r0 = at([0, -0.96, -0.28]); E(r0, HD, [1.3, 1.1, 1.2], GR.HAIR, 'tie', () => cloth('#2a2226')); const m1 = sw(nk(0.5, backY - 1.3, -2.6), 0.5), m2 = sw(nk(0.9, backY - 1.5, -5.6), 0.8); lock(r0, m1, 1.7, 2.9, 'tail'); lock(m1, m2, 2.9, 2.2, 'tail'); lock(m2, sw(nk(0.3, backY - 1.0, -8.8), 1), 2.2, 0.6, 'tail'); }   // (11-20: full under the tie, a slight curve, a point - it was a straight bar)   // (tied at the nape, hanging down the back)
     else if (ex === 'shavedside') { lock(at([-0.25, 0.2, 1.06]), at([1.16, 0.22, -0.15]), 3.5, 2.9, 'sweep'); lock(at([1.0, 0.1, 0.1]), sw(nk(hr[0] + 1.2, 0.5, -3.6), 0.4), 2.9, 1.8, 'sweep'); lock(at([0.1, -0.5, 0.98]), at([0.98, -0.72, 0.0]), 3.6, 3.2, 'sweep'); lock(at([0.98, -0.72, 0.0]), sw(nk(hr[0] + 0.6, -1.6, -4.0), 0.5), 3.2, 1.7, 'sweep'); }   // (...and down the back on the same side: from behind, hair on one half of the head, stubble on the other)   // (11-20: the long side is long - swept over and down past the jaw; it was a few thin locks)
+    // (11-21, the checklist's last five. Waves: a close cap with rings of light round the crown. A faux-hawk: a short cut with a
+    // ridge standing along the middle. A loc updo: the sides close, the locs tied at the crown and standing out of the tie like
+    // a pineapple's leaves. Receding: the hairline far back over the temples (hairLN). Pin curls: a roll at each side of the
+    // forehead and one at each temple over a short bob.)
+    else if (ex === 'waves') { const R = W.hairR, lt = R.map((c) => mix(c, [255, 240, 220], 0.2)); E(at([0, -0.04, 0.06]), HD, [hr[0] + 0.45, hr[1] + 0.5, hr[2] + 0.4], GR.HAIR, 'waves', (Q) => (Math.floor(Math.hypot(Q.l0, Q.l1 + 0.1) * 5.2) & 1 ? lt : R), (a, b, c) => c > (b > 0.3 ? 0.52 : 0.2)); }
+    else if (ex === 'fauxhawk') { e([0, 0.0, 0.98], HD, [hr[0] * 0.46, hr[1] * 0.92, 4.9], 'hawk'); e([0, 0.56, 0.98], mmul(HD, rx(-0.35)), [hr[0] * 0.42, 3.0, 4.6], 'hawk'); }
+    else if (ex === 'locupdo') { E(at([0, -0.1, 1.02]), HD, [3.0, 2.9, 1.4], GR.HAIR, 'tie', () => cloth('#c8a040')); for (let i = 0; i < 7; i++) { const a = i * 0.9 + 0.3, cx = Math.cos(a), sy = Math.sin(a), k = i === 6 ? 0 : 1; lock(at([cx * 0.2 * k, sy * 0.2 * k - 0.1, 1.12]), at([cx * 0.62 * k, sy * 0.62 * k - 0.1, 1.62 + (i & 1) * 0.12 + (k ? 0 : 0.18)]), 1.9, 1.3, 'loc'); } }
+    else if (ex === 'pincurls') { for (const s of [-1, 1]) { const c = at([s * 0.46, 0.52, 0.92]); E(c, HD, [2.9, 2.6, 2.7], GR.HAIR, 'curl', M); bumps(c, [2.9, 2.6, 2.7], 4, 1.2, -0.2, 1.2, 2, 0.9); E(at([s * 0.98, 0.1, 0.3]), HD, [2.0, 2.3, 2.3], GR.HAIR, 'curl', M); } }
     else if (ex === 'emo') { e([0.36, 0.7, 0.42], mmul(HD, ry(0.62)), [hr[0] * 0.74, 2.5, 2.9], 'sweep'); e([-0.5, 0.5, 0.74], HD, [hr[0] * 0.5, 2.2, 1.6], 'sweep'); }   // (a long fringe swept across one eye)
   },
   // ---- pass 5 (docs/tasks/CHARACTERS5.md; the owner's shot, docs/characters/owner-hair-1119.png): the tied and the tall
@@ -676,8 +687,8 @@ export const POLISH = {
 // own tones are redrawn: shaved sides, a parting, ties, cuffs and the lines between locks stay as they are.
 // Curls keep a broken tone, braids and locs their strands.
 const FRONT = { long: [-4.6, 2.5, 1.7], wavy: [-4.8, 2.7, 1.9], curlylong: [-4.8, 2.9, 2.2], bigcurls: [-4.4, 3.0, 2.3], halfup: [-4.4, 2.4, 1.7], shoulder: [-2.4, 2.4, 1.8], dreads: [-4.2, 2.5, 1.9], boxbraids: [-4.6, 2.4, 1.8], braids: [-4.6, 2.4, 1.8], shag: [-1.8, 2.2, 1.6], braid: [-1.6, 2.0, 1.5] };   // (how far down the neck's frame a front lock ends, its width at the temple and at its tip)
-const SHORT = { buzz: 1, fade: 1, sides: 1, balding: 1, cornrows: 1, short: 1, undercut: 1, shavedside: 1 };
-const HAIR_TEX = { afro: 1, curly: 1, curlylong: 1, bigcurls: 1, puffs: 1, dreads: 2, boxbraids: 2, braids: 2, braid: 2, cornrows: 2 };
+const SHORT = { buzz: 1, fade: 1, sides: 1, balding: 1, cornrows: 1, short: 1, undercut: 1, shavedside: 1, waves: 1, receding: 1 };
+const HAIR_TEX = { afro: 1, curly: 1, curlylong: 1, bigcurls: 1, puffs: 1, dreads: 2, boxbraids: 2, braids: 2, braid: 2, cornrows: 2, locupdo: 2, pincurls: 1 };
 function hairLit(R, style, PID, CR, CG, CB, prims, w, h, GR, ox, oy) {
   const bw = (w + ox + 1) >> 1, bh = (h + oy + 1) >> 1, H = new Uint8Array(bw * bh), F = new Uint8Array(bw * bh), T = new Uint8Array(w * h), tex = HAIR_TEX[style] | 0;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {

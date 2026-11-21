@@ -107,7 +107,7 @@ export const HAIR_STYLES = ['spiky', 'short', 'buzz', 'bald', 'afro', 'long', 'w
 // the look system's variants (shared/look.js HAIR_STYLES), each drawn from a base style with its own touch (hairPrims):
 // short back and sides (a faded crew cut), a side part, a quiff, a man bun, shoulder length, box braids with cuffs, big
 // curls, a shaved side
-const BASE_HAIR = { sides: 'fade', sidepart: 'slick', quiff: 'short', manbun: 'slick', shoulder: 'long', boxbraids: 'dreads', bigcurls: 'curlylong', shavedside: 'undercut', balding: 'short', flattop: 'short', pompadour: 'slick', puffs: 'twinbuns', lowpony: 'slick', emo: 'short' };   // (the last six: pass 2's, their shapes the polish pass's - PL.hair)
+const BASE_HAIR = { sides: 'fade', sidepart: 'slick', quiff: 'short', manbun: 'slick', shoulder: 'long', boxbraids: 'dreads', bigcurls: 'curlylong', shavedside: 'undercut', balding: 'short', flattop: 'short', pompadour: 'slick', puffs: 'twinbuns', lowpony: 'slick', emo: 'short', waves: 'buzz', fauxhawk: 'fade', locupdo: 'fade', receding: 'short', pincurls: 'bob' };   // (the last six: pass 2's, their shapes the polish pass's - PL.hair)
 export const TOP_KINDS = ['tee', 'tank', 'polo', 'shirt', 'hoodie', 'jacket', 'suit', 'leather', 'puffer', 'flannel', 'hawaiian', 'vest', 'hivis', 'uniform', 'tactical', 'scrubs', 'apron', 'overalls', 'tracksuit', 'jersey', 'coat', 'cardigan', 'dress', 'fur', 'none', 'bikini', 'swimsuit', 'towel'];
 
 // ---- colour -----------------------------------------------------------------------------------------------------
@@ -1029,7 +1029,7 @@ function wardrobe(A, D, TF, seed) {
   };
   W.skinM = () => skin;
   // arms: sleeves to `sl` of the arm's length, then skin; cuffs; gloves; tattoos on bare skin
-  const slv = (T.bib || T.apron || tk === 'kevlar') && A.top?.innerKind && TOP[A.top.innerKind] ? (A.top.bareUnder ? 0 : TOP[A.top.innerKind].sl) : T.sl, gl = A.gloves ? cloth(A.gloves) : null;   // (an apron or bib overalls worn over a top: the top's sleeves)
+  const slv = (T.bib || T.apron || tk === 'kevlar' || (PL && A.top?.draped)) && A.top?.innerKind && TOP[A.top.innerKind] ? (A.top.bareUnder ? 0 : TOP[A.top.innerKind].sl) : T.sl, gl = A.gloves ? cloth(A.gloves) : null;   // (an apron or bib overalls worn over a top: the top's sleeves)
   W.arm = (Q) => {
     const along = Q.part === 'ua' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5;
     if (along < slv - (slv >= 1 ? 0.06 : 0)) {
@@ -1213,6 +1213,7 @@ function wardrobe(A, D, TF, seed) {
   W.hood = (Q) => { if (Q.l1 > 0.2) Q.k -= 0.2; return top; };
   W.collar = (Q) => { Q.k += Q.l2 > 0.3 ? 0.1 : -0.12; if (T.gloss) Q.gloss = T.gloss; return tk === 'fur' ? cloth('#efe6d4') : top; };
   W.pack = (Q) => { const R = cloth(A.backColor || 'navy'); if (Q.l2 > 0.55) Q.k -= 0.15; if (Math.abs(Q.l2 - 0.2) < 0.06) Q.k -= 0.25; return R; };
+  { const wh = cloth(A.shoeTrim || '#e0508c'); W.wheel = (Q) => { Q.gloss = 0.4; return wh; }; }
   W.leather = (Q) => { Q.gloss = 0.5; if (Q.l2 > 0.82) Q.k += 0.12; return cloth(A.bagColor || (A.carry === 'purse' ? (A.top?.color2 || 'maroon') : '#5a3a26')); };
   W.case = (Q) => { Q.gloss = 0.6; if (Math.abs(Q.l2 - 0.55) < 0.08 || Math.abs(Q.l0) > 0.94) Q.k -= 0.2; return cloth(A.bagColor || '#4a2e1e'); };
   W.tool = (Q) => (Q.l2 > 0.85 && (Math.round(Q.l0 * 4) & 1) ? cloth(A.bagColor ? '#c8ccd4' : '#c8302c') : cloth(A.bagColor || '#3a3632'));
@@ -1274,6 +1275,15 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   if (PL && A.beard && PL.beardTone) { const br = PL.beardTone(W.hairR, W.skin); W.beardR = br; W.beardM = (Q) => { Q.gloss = 0; return br; }; }
   if (bvol) for (const v of bvol) E(at(v[0]), HD, [hr[0] * v[1][0], hr[1] * v[1][1], hr[2] * v[1][2]], GR.HEAD, 'beard', W.beardM);
   else if (A.beard === 'long' && !A.mask && !A.fmask) E(at([0, 0.5, -1.02]), HD, [hr[0] * 0.48, hr[1] * 0.34, hr[2] * 0.42], GR.HAIR, 'beard', W.hairLock);
+  // (the last of the concepts' missing pieces, 11-21. A parka: a hood down the back with a roll of fur along its edge. A coat
+  // over the shoulders: the arms are out of it - the top's sleeves, or bare - and its empty sleeves hang from the shoulders.)
+  if (PL && A.top?.furhood && hat !== 'hood') { const fr = cloth(A.top.trim || '#e8dcc4'), fm = (Q) => { Q.gloss = 0; return fr; };
+    E(vadd(S.neck, mv(S.SP, [0, -3.4, -0.6])), S.SP, [5.6, 2.9, 3.2], GR.TORSO, 'hood', W.hood || (() => W.top));
+    E(vadd(S.neck, mv(S.SP, [0, -3.0, 1.9])), S.SP, [6.3, 3.4, 1.5], GR.TORSO, 'fur', fm);
+    for (const s2 of [-1, 1]) E(vadd(S.neck, mv(S.SP, [s2 * 4.6, 0.6, 0.4])), S.SP, [1.9, 2.6, 1.5], GR.TORSO, 'fur', fm); }
+  if (PL && A.top?.draped) for (const [k2, s2] of [['L', -1], ['R', 1]]) { const sh = S['sh' + k2], cm = W.hood || (() => W.top);   // (over each shoulder, and an empty sleeve down the outside of the arm: from behind the arm is under the coat, from the front it's out of it)
+    E(vadd(sh, mv(S.SP, [s2 * 0.5, -0.9, 0.9])), S.SP, [4.5, 3.9, 3.5], GR.TORSO, 'drape', cm);
+    C(vadd(sh, mv(S.SP, [s2 * 2.3, -1.7, 0.6])), vadd(sh, mv(S.SP, [s2 * 3.3, -2.3, -(D.upper + D.fore) * 0.86])), 3.7, 3.0, GR.TORSO, 'drape', cm); }
   // (the polish pass: a scarf is a shape - a roll round the neck as wide as the head, up over the chin and the mouth, and an end
   // hanging down the chest with a band across its foot; peoplepolish.js dress() W.scarf)
   if (PL && W.scarf) { const nk = (x, y, z) => vadd(S.neck, mv(S.SP, [x, y, z]));
@@ -1309,13 +1319,15 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   // legs and feet
   for (const [k, s, g] of [['L', -1, GR.LEGL], ['R', 1, GR.LEGR]]) {
     const hp = S['hip' + k], kn = S['kn' + k], an = S['an' + k], side = mv(S.PF, [s, 0, 0]);
-    C(hp, kn, D.thighR[0], D.thighR[1], g, 'th', W.leg, null, side, mv(S.PF, [0, 1, 0])).side = 1;
-    C(kn, an, D.shinR[0], D.shinR[1], g, 'sh', W.leg, null, side, mv(S.PF, [0, 1, 0])).side = 1;
+    const hm = PL && A.bottom?.harem ? 1 : 0;   // (harem trousers: full from the hip, fullest at the knee, gathered at the ankle)
+    C(hp, kn, D.thighR[0] * (hm ? 1.22 : 1), D.thighR[1] * (hm ? 1.62 : 1), g, 'th', W.leg, null, side, mv(S.PF, [0, 1, 0])).side = 1;
+    C(kn, an, D.shinR[0] * (hm ? 1.7 : 1), D.shinR[1] * (hm ? 1.08 : 1), g, 'sh', W.leg, null, side, mv(S.PF, [0, 1, 0])).side = 1;
     const FF = mmul(rz(P.pelYaw + s * P.splay), rx(P['toe' + k])), fr = W.shoeKind === 'barefoot' || W.shoeKind === 'sandal' ? (PL && PL.bareK ? D.foot.map((v, i) => v * PL.bareK[i]) : [D.foot[0] * 0.8, D.foot[1] * 0.9, D.foot[2] * 0.75]) : W.shoeKind === 'heel' ? [D.foot[0] * 0.85, D.foot[1] * 0.92, D.foot[2] * 0.9] : D.foot;
     const fc = vadd(an, mv(FF, [0, 1.5, -1.62]));
     E(fc, FF, fr, g, 'shoe', W.shoe, (a, b, c) => c > -0.62);
     const th = A.shoe_platform || A.shoe_chunky ? 1.05 : 0.55;   // (a platform or a chunky sole: taller, from the same ground)
     if (PL || (W.shoeKind !== 'barefoot' && W.shoeKind !== 'sandal')) E(vadd(fc, mv(FF, [0, 0.1, -fr[2] * 0.6 + th - 0.55])), FF, [fr[0] + (A.shoe_chunky ? 0.4 : 0.12), fr[1] + 0.2, th], g, 'sole', W.sole);
+    if (PL && A.shoe_skate) for (const fy of [-0.62, 0.62]) E(vadd(fc, mv(FF, [0, fy * fr[1], -fr[2] * 0.6 - 0.9])), FF, [fr[0] * 0.92, 1.45, 1.45], g, 'sole', W.wheel);   // (roller skates: a pair of wheels under the heel and under the toe)
     if (W.shoeKind === 'boot' || (A.hiTop && W.shoeKind === 'sneaker')) { const bt = A.bootTall === 2 ? 8.5 : A.bootTall ? 5 : A.hiTop ? 2.2 : 2.6; C(vadd(an, [0, 0, -0.6]), vadd(an, mv(S.PF, [0, -0.2, bt])), D.shinR[1] + 0.55, D.shinR[1] + (bt > 3 ? 0.65 : 0.45), g, 'boot', W.shoe); }
   }
   // skirts, dresses, coat tails
@@ -1377,6 +1389,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     // of four and a half art pixels wherever the hand put it: a lump. Now it rests on the palm out in front of the hip, nothing
     // over it, five art pixels across with its middle on an art pixel's middle - the same round disc from every side - and its
     // seams are drawn on those art pixels: peoplepolish.js dress())
+    if (prop === 'board') E(vadd(hR, mv(S.SP, [2.6, -0.6, 9.5])), mmul(S.SP, mmul(rz(0.5), rx(0.1))), [1.25, 5.2, 21], GR.ACC, 'purse', W.leather);   // (a surfboard under the arm: as tall as its owner, nose up)
     if (prop === 'ball') { const bp = E(vadd(hR, mv(S.SP, [0, 1.4, 5.6])), S.SP, [5, 5, 5], GR.ACC, 'purse', W.leather), c = bp.c; bp.ball = 1; c[0] = 2 * Math.round((c[0] - 1) / 2) + 1; const sy = c[1] * SA - c[2] * CA, sy1 = 2 * Math.round((sy - 1) / 2) + 1; c[2] += (sy - sy1) / CA; W.ballC = [(c[0] - 1) / 2, (sy1 - 1) / 2]; }   // (the prim's place is the world's: the screen's x, and y * SA - z * CA down it)
     else if (prop === 'glow') { const gm = (c) => { const rgb = hexRgb(c), R = cloth(c); return (Q) => { Q.e = [rgb[0], rgb[1], rgb[2], 150]; Q.k += 0.5; return R; }; }; C(vadd(hR, [0, 0.4, -0.6]), vadd(hR, [0.6, 1.2, 5.6]), 0.9, 0.9, GR.ACC, 'purse', gm(A.bagColor || '#5af04a')); C(vadd(hL, [0, 0.4, -0.6]), vadd(hL, [-0.6, 1.2, 5.6]), 0.9, 0.9, GR.ACC, 'purse', gm(A.prop[1] || '#ff5aa8')); }
     else if (acc === 'purse' && pbox) B(vadd(hR, D.hold ? mv(S.SP, [-2.6, 3.6, 5.2]) : mv(S.PF, [pbox[4] || 0.2, 1.8, pbox[3]])), D.hold ? S.SP : S.PF, pbox.slice(0, 3), GR.ACC, 'purse', W.leather);   // (in front of the thigh, where it shows from the front; the sprite ends at the hand)
