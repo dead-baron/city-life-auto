@@ -1278,7 +1278,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   // (the polish pass: hair that stands off the head - a full beard's mass under the jaw, a long one's length, a goatee's tuft -
   // in the beard's one tone; peoplepolish.js BVOL. Part of the head's group: the hair's own lighting isn't laid over it)
   const bvol = PL && PL.BVOL && !A.mask && !A.fmask && !A.medmask && !A.bandana ? PL.BVOL[A.beard] : null;
-  if (PL && A.beard && PL.beardTone) { const br = PL.beardTone(A.beardColor ? hairRamp(A.beardColor) : W.hairR, W.skin); W.beardR = br; W.beardM = (Q) => { Q.gloss = 0; return br; }; }
+  if (PL && A.beard && PL.beardTone) { const br = PL.beardTone(A.beardColor ? hairRamp(A.beardColor) : W.hairR, W.skin); W.beardR = br; W.beardM = (Q) => { Q.gloss = 0; if (Q.res === 1) Q.k += (hash(Math.floor(Math.round(Q.x) / 2), Math.floor(Math.round(Q.y) / 2), seed) - 0.5) * 0.5; return br; }; }   // (clumps: an art pixel here and there a tone up or down, as the hair's)
   if (bvol) for (const v of bvol) E(at(v[0]), HD, [hr[0] * v[1][0], hr[1] * v[1][1], hr[2] * v[1][2]], GR.HEAD, 'beard', W.beardM);
   else if (A.beard === 'long' && !A.mask && !A.fmask) E(at([0, 0.5, -1.02]), HD, [hr[0] * 0.48, hr[1] * 0.34, hr[2] * 0.42], GR.HAIR, 'beard', W.hairLock);
   // (the last of the concepts' missing pieces, 11-21. A parka: a hood down the back with a roll of fur along its edge. A coat

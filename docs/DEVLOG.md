@@ -25460,3 +25460,6 @@ The owner at 01:31: "can you do everything left for the character/npc characters
 - Tests: `test/bodyshape.test.js` 15 (the new options in the code and drawn; the NPCs; a blink is the same figure with its eyes shut), the two pinned lists in `characters2` / `characters4` updated. Budgets: page 532 / 540 KB, bake 1048 / 1080, renderer 477 / 510.
 - **Not done**: watching animations and a blink in motion; a phone and the Xbox; the pieces listed as weak in OWNER-NOTES; go-live (the owner's review first).
 
+## 2026-11-21 · Characters: beards and moustaches textured like the hair (branch characters, staged)
+The owner at 04:54: "beards need similar texture as hair, right now beards and moustaches are one solid color". `peoplepolish.js` `beardTone` returns three tones (a warm shade, the body, a lit tone - the hair ramp's own highlight where that stands off the skin); the pictures on the face pick one per art pixel (`tex`: lit on the upper left, shade on the chin's far side, a clump up or down from a hash of the pixel and the figure's seed), and the beard that stands off the head takes a tone up or down per art pixel the same way (`people.js` `W.beardM`). Stubble is a plain shade as before. A test: a full beard is at least three tones of its own.
+

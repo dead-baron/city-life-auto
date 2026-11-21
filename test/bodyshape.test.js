@@ -171,6 +171,10 @@ test('facial hair shows: every style is pixels of its own on the face, from the 
   for (const dir of [0, 1, 2]) { const g = beard('Goatee', dir), f = beard('Full beard', dir), l = beard('Long beard', dir);
     assert.ok(g >= 2 && (dir === 2 || f >= g + 2) && l >= f + 4, `facing ${dir}: a goatee's tuft (${g}), a full beard's mass (${f}), a long beard's length (${l})`); }   // (from the side a full beard's mass is behind the jaw's line: it's the face's own pixels there)
   assert.deepEqual(LK.FACIAL_RETIRED.map((k) => !!POLISH.BST[k]), [true, true, true], 'a retired style still draws as something');
+  // (the owner, 11-21 04:54: "beards need similar texture as hair, right now beards and moustaches are one solid color" - three
+  // tones and clumps: a full beard is never one flat color, from the front or at an angle)
+  for (const dir of [0, 1]) { const tones = new Set(pixels(bake(dressed('m', (L) => { L.hair.facial = LK.FACIAL_HAIR.findIndex((f) => f[0] === 'Full beard'); }), dir), (q) => q.part === 'beard').map((p) => p[2].c.map((v) => v >> 3).join()));
+    assert.ok(tones.size >= 2, `a full beard, facing ${dir}: ${tones.size} tones in the hair under the jaw - not one flat color`); }
   for (const dir of [0, 1, 2]) {
     const clean = new Set(pixels(bake(dressed('m', () => {}), dir), () => true).map((p) => p[2].c.join()));
     for (let i = 1; i < LK.FACIAL_HAIR.length; i++) {

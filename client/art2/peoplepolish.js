@@ -59,7 +59,7 @@ export const POLISH = {
     return { full, long: [...full, [[0, 0.52, -1.42], [0.56, 0.4, 0.72]]], goatee, soul: goatee, vandyke: goatee, chops: [[[-0.8, 0.2, -0.66], [0.3, 0.5, 0.42]], [[0.8, 0.2, -0.66], [0.3, 0.5, 0.42]]] }; })(),
   // (the beard's tone: between the hair's body tone and its lit one - what the hair above it looks like; the ramp's base alone was
   // black under brown-looking hair - darkened toward brown, not evenly (a blonde beard went olive), until it stands off the skin)
-  beardTone(HR, skin) { let o = mix(HR[3], HR[4], 0.45); for (let k = 0; k < 6 && dist(o, skin[3]) < 96; k++) o = [Math.round(o[0] * 0.88), Math.round(o[1] * 0.8), Math.round(o[2] * 0.68)]; const d = o.map((v) => Math.round(v * 0.8)); return [d, d, o, o, o]; },
+  beardTone(HR, skin) { let o = mix(HR[3], HR[4], 0.45); for (let k = 0; k < 6 && dist(o, skin[3]) < 96; k++) o = [Math.round(o[0] * 0.88), Math.round(o[1] * 0.8), Math.round(o[2] * 0.68)]; const d = [Math.round(o[0] * 0.82), Math.round(o[1] * 0.74), Math.round(o[2] * 0.62)], l = dist(HR[4], skin[3]) >= 64 ? HR[4] : mix(o, HR[4], 0.6); return [d, d, o, o, l]; },   // (the lit tone is the hair's own highlight where that stands off the skin)   // (three tones, as hair has: its shade, its body, its lit side - the owner, 11-21 04:54: "beards need similar texture as hair, right now beards and moustaches are one solid color")
   // ---- masks as small pictures (people.js face(): at the end, over the face). Columns are art pixels from the left eye
   // (lo..hi across the face, m the middle), rows from the eyes' row down.
   masks(cx) {
@@ -74,19 +74,23 @@ export const POLISH = {
         // (where they go: a face from the front has three art rows under the eyes - the moustache on the second, a row of skin
         // between it and the eyes, the chin's tuft on the third; turned, it has two - the moustache on the first, the chin on
         // the second. In profile they're on the mouth's side of the face: the moustache a pixel back from the jaw's front)
-        const X = (cx.W.beardR || this.beardTone(HR, skin))[2], s = mix(X, skin[2], 0.42), odd = two && (n & 1) ? 1 : 0, c0 = two && turn > 0.2 ? m + fwd : m;
+        const BR = cx.W.beardR || this.beardTone(HR, skin), X = BR[2], s = mix(X, skin[2], 0.42), odd = two && (n & 1) ? 1 : 0, c0 = two && turn > 0.2 ? m + fwd : m;
+        // (texture: the light is from the upper left, as on the hair - the moustache's and the cheeks' pixels on that side take the
+        // lit tone, the chin's on the far side the shade, and here and there a clump a tone lighter or darker: each person's own)
+        const TR = [BR[0], BR[2], BR[4]], sd = (cx.W.seed || 0) * 0.37, hs = (a, b) => { const v = Math.sin(a * 12.9898 + b * 78.233 + sd) * 43758.5453; return v - Math.floor(v); };
+        const tex = (ch, col, j, row) => { if (ch === 't') return K.t; let t = 1; if (col < c0 && row <= 1) t = 2; else if (col > c0 + odd && row >= 2) t = 0; const h = hs(col, j); if (h < 0.2) t = Math.min(2, t + 1); else if (h > 0.84) t = Math.max(0, t - 1); return ch === 's' ? mix(TR[t], skin[2], 0.42) : TR[t]; };
         const on = (i, j) => cx.onHead(base.bx + i * 2, base.by + j * 2) && cx.onHead(base.bx + i * 2 + 1, base.by + j * 2 + 1), r0 = two && on(c0, 3) ? 2 : 1;
         const K = { X, s, t: mix(X, skin[2], 0.66) }, wide = !Array.isArray(bs);
-        (wide ? bs.w : bs).forEach((r, j0) => {
+        (wide ? bs.w : bs).forEach((r, j0) => { const row = wide ? j0 : j0 + 1;   // (row: 0 the cheeks, 1 the moustache, 2 and on the chin)
           const j = wide ? j0 - 1 + r0 : j0 + (two ? (r0 === 1 && on(c0, 2) ? 2 : r0) : 1); if (j < 1) return;   // (a moustache: on the second row wherever the face has one there - skin between it and the eyes, turned as from the front)
           if (!two) {   // (in profile: from the front of the face back)
             let f = 0; for (let k = 4; k >= 0; k--) if (on(fwd * k, j)) { f = k; break; }
-            if (wide) { for (let t = 0; t <= f + 1; t++) { const ch = r[t === 0 ? 2 : t === f + 1 ? 4 : 3]; if (ch !== '.') P(fwd * (f - t), j, K[ch]); } return; }
-            const a = j0 ? f : Math.max(0, f - 1); for (let i = 2; i < 5; i++) { const ch = i === 2 && r[2] === '.' ? r[3] : r[i]; if (ch !== '.') P(fwd * (a - (i - 2)), j, K[ch]); } return;   // (a moustache parted in the middle - a handlebar - still starts at the lip from the side, and runs a pixel further back)
+            if (wide) { for (let t = 0; t <= f + 1; t++) { const ch = r[t === 0 ? 2 : t === f + 1 ? 4 : 3]; if (ch !== '.') P(fwd * (f - t), j, tex(ch, t ? c0 + 1 : c0 - 1, j, row)); } return; }
+            const a = j0 ? f : Math.max(0, f - 1); for (let i = 2; i < 5; i++) { const ch = i === 2 && r[2] === '.' ? r[3] : r[i]; if (ch !== '.') P(fwd * (a - (i - 2)), j, tex(ch, i === 2 ? c0 - 1 : c0 + 1, j, row)); } return;   // (a moustache parted in the middle - a handlebar - still starts at the lip from the side, and runs a pixel further back)
           }
-          if (wide) { for (let col = lo; col <= hi; col++) { const ch = r[col < c0 ? (col === lo ? 0 : 1) : col > c0 + odd ? (col === hi ? 4 : 3) : 2]; if (ch !== '.') P(col, j, K[ch]); } return; }
+          if (wide) { for (let col = lo; col <= hi; col++) { const ch = r[col < c0 ? (col === lo ? 0 : 1) : col > c0 + odd ? (col === hi ? 4 : 3) : 2]; if (ch !== '.') P(col, j, tex(ch, col, j, row)); } return; }
           const q3 = turn > 0.2;   // (three quarters: the parting isn't under the nose any more - one bar)
-          for (let i = 0; i < 5; i++) { const ch = q3 && i === 2 && r[2] === '.' && r[1] !== '.' && r[3] !== '.' ? r[1] : r[i]; if (ch === '.') continue; P(c0 + i - 2 + (odd && i > 2 ? 1 : 0), j, K[ch]); if (odd && i === 2) P(c0 + 1, j, K[ch]); }
+          for (let i = 0; i < 5; i++) { const ch = q3 && i === 2 && r[2] === '.' && r[1] !== '.' && r[3] !== '.' ? r[1] : r[i]; if (ch === '.') continue; const col = c0 + i - 2 + (odd && i > 2 ? 1 : 0); P(col, j, tex(ch, col, j, row)); if (odd && i === 2) P(c0 + 1, j, tex(ch, c0 + 1, j, row)); }
         });
       }
       if (A.scar === 6) { P(hi, 1, [244, 232, 210]); P(hi - 1, 1, [226, 206, 178]); }
