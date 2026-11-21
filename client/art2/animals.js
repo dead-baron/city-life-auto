@@ -63,7 +63,7 @@ export const ANIMALS = {
   // the wilds (shared/fauna.js): deer and their kin, the predators, the water's edge, small game
   elk: { len: 44, h: 32, w: 13, coat: '#b08458', belly: '#6a4a30', mane: '#4e3424', neckC: '#6a4a32', pattern: 'rump', patch: '#e2cea4', ears: 'up', tail: 'stub', snout: 6, head: 6, neck: 13, antlers: 2, jl: 1, lower: '#4a3222', hoof: 1 },
   moose: { len: 50, h: 40, w: 15, coat: '#3e2c22', socks: '#a8988a', ears: 'side', tail: 'stub', snout: 9, head: 7, neck: 10, antlers: 3, hump: 1.4, bell: 1, droop: 1, jl: 1, lower: '#a8988a', hoof: 1 },
-  mtgoat: { len: 28, h: 23, w: 11, coat: '#f2eee6', ears: 'side', tail: 'stub', snout: 4.5, head: 4.4, neck: 6, horns: 'black', beard: 1, fluffy: 1, hump: 0.8, socks: '#2a262c', jl: 1, lower: '#ece6da', hoof: 1 },
+  mtgoat: { len: 27, h: 23, w: 12.5, coat: '#f2eee6', ears: 'side', tail: 'stub', snout: 4.5, head: 4.8, neck: 6, hup: 0.6, muzzle: '#e4dccc', horns: 'black', beard: 1, fluffy: 1, hump: 0.8, socks: '#2a262c', jl: 1, lower: '#ece6da', hoof: 1 },
   boar: { len: 32, h: 19, w: 12, coat: '#4a3a2e', mane: '#241c18', ears: 'up', tail: 'thin', snout: 7, head: 6.4, nose: '#6a5a52', tusks: 1, jl: 1, lower: '#2e2420', hoof: 1, tips: '#6e5a48' },
   blackbear: { len: 36, h: 25, w: 13.5, coat: '#2e2a32', muzzle: '#9a7a58', ears: 'round', tail: 'stub', snout: 4, head: 6.5, fluffy: 1, bear: 1, jl: 1 },
   grizzly: { len: 44, h: 31, w: 16.5, coat: '#7a5634', muzzle: '#9a7650', tips: '#b89a70', ears: 'round', tail: 'stub', snout: 5, head: 7.5, fluffy: 1, bear: 1, hump: 1.5, jl: 1, lower: '#5a3e26' },
@@ -167,7 +167,8 @@ export function animalModel(kind, o = {}) {
   // (x: what the art-pixel renderer reads - renderArt: limb a leg, thin a part thinner than an art pixel, pri a feature)
   const R = (c, k = 3, x = null) => { const key = c + k + (x ? JSON.stringify(x) : ''); if (!cache.has(key)) cache.set(key, m.mat({ ramp: ramp(c, 6, 3), k, flag: A.fluffy ? F_LEAF : 0, emi: glow, ...x })); return cache.get(key); };
   const LIMB = { limb: 1, thin: 1 }, THIN = { thin: 1 };
-  const base = R(A.coat), belly = A.belly ? R(A.belly) : base, patch = A.patch ? R(A.patch) : base, patch2 = A.patch2 ? R(A.patch2) : patch;
+  const base = R(A.coat), belly = A.belly ? R(A.belly, 4) : base;   // (the belly a tone up: in the body's shadow it stays its own colour)
+  const patch = A.patch ? R(A.patch) : base, patch2 = A.patch2 ? R(A.patch2) : patch;
   const darkC = A.legend ? '#8a8a96' : '#2a2228';
   const dark = m.mat({ ramp: ramp(darkC, 5, 2), k: 1 }), hoofM = m.mat({ ramp: ramp(darkC, 5, 2), k: 1, limb: 1, thin: 1 });
   // (the features: each its own material, a pixel each in the game's picture - drawn over `as`, the coat under it)
@@ -313,11 +314,11 @@ export function animalModel(kind, o = {}) {
     else if (A.ears === 'side') m.ell(ex, cy + s * (HY + 1.2), hz + HD * 0.3, 1.3, 1.7, 0.9, ear);
     else { const lg = A.ears === 'long'; m.ell(hx - HD * 0.25, cy + s * (HY + 0.2), hz - HD * (lg ? 0.3 : 0.05), HD * 0.5, 1.4, HD * (lg ? 0.95 : 0.72), flopC); }   // (hanging down the side of the head)
   }
-  if (A.horns === 'black' || A.horns === 'nub') for (const s of [-1, 1]) for (let k = 0; k < (A.horns === 'nub' ? 1.2 : 6); k += 0.4) m.ell(hx - k * 0.75 - (k > 3 ? (k - 3) * 0.4 : 0), cy + s * HD * 0.35, hz + HD * 0.7 + k * 0.85, 0.95, 0.95, 0.9, A.legend ? R('#e8d8a8', 3, THIN) : R('#2a262c', 3, THIN));   // a mountain goat's black daggers, curving back
+  if (A.horns === 'black' || A.horns === 'nub') for (const s of [-1, 1]) for (let k = 0; k < (A.horns === 'nub' ? 1.2 : 7.5); k += 0.4) m.ell(hx - k * 0.75 - (k > 3 ? (k - 3) * 0.4 : 0), cy + s * HD * 0.35, hz + HD * 0.7 + k * 0.85, 0.95, 0.95, 0.9, A.legend ? R('#e8d8a8', 3, THIN) : R('#2a262c', 3, THIN));   // a mountain goat's black daggers, curving back
   else if (A.horns) for (const s of [-1, 1]) for (let k = 0; k < 4; k += 0.5) m.ell(hx - (A.horns === 'back' ? k * 0.8 : 0), cy + s * (HD * 0.4 + (A.horns === 'short' ? k * 0.5 : 0)), hz + HD * 0.7 + k * 0.6, 0.95, 0.95, 0.9, R('#d8ccb0', 3, THIN));
   const tine = A.legend ? R('#ecdcae', 3, THIN) : R('#c8b48a', 3, THIN);
   if (A.antlers === 1) for (const s of [-1, 1]) for (let u = 0; u <= 1; u += 0.04) {   // (the beams sweep back, up and forward in a C, the tines straight up off them: a rack that reads from the side as in AN1)
-    const x = hx - 5 * Math.sin(Math.PI * u) + 3 * u, y = cy + s * (HD * 0.5 + u * 4), z = hz + HD * 0.6 + u * 9.5;
+    const x = hx - 5 * Math.sin(Math.PI * u) + 3 * u, y = cy + s * (HD * 0.5 + Math.sin(u * Math.PI * 0.5) * 6.5), z = hz + HD * 0.6 + u * 10.5;
     m.ell(x, y, z, 0.75, 1.25, 0.7, tine);   // (deep across the line of sight, or the character view's steep look skips it)
     if (Math.abs(u - 0.36) < 0.02 || Math.abs(u - 0.6) < 0.02 || Math.abs(u - 0.84) < 0.02) for (let t = 0; t < 3.5; t += 0.5) m.ell(x - 0.2, y, z + t, 0.6, 1.1, 0.6, tine);
   }
@@ -328,16 +329,17 @@ export function animalModel(kind, o = {}) {
       if ([2.5, 5.5, 8.5, 11.5, 14.5].includes(k)) for (let t = 0; t < 5; t += 0.5) m.ell(x + t * 0.78, y, z + t * 0.62, 0.85, 0.8, 0.8, tine);
     }
   }
-  if (A.antlers === 3) for (const s of [-1, 1]) {   // a moose's palms: out to the side and up, broad and flat, points round the rim
+  if (A.antlers === 3) for (const s of [-1, 1]) {   // a moose's palms: out to the side and up, broad and flat, the points its fingers
     for (let k = 0; k < 3; k += 0.5) m.ell(hx - 0.5, cy + s * (HD * 0.5 + k), hz + HD * 0.7 + k * 0.5, 0.9, 0.9, 0.9, tine);
-    // the palm: a broad plate leaning out at ~50 degrees (u out from the head along the lean, v front to back)
-    const by = cy + s * (HD * 0.5 + 2.5), bzz = hz + HD * 0.7 + 1.5, ca = Math.cos(0.62), sa = Math.sin(0.62);
+    // the palm: a broad plate leaning out and up like an open hand (u up along it, v front to back), its top edge cut
+    // into fingers - from the side the palm and its points, as in AN4
+    const by = cy + s * (HD * 0.5 + 2.5), bzz = hz + HD * 0.7 + 1.5, ca = Math.cos(0.95), sa = Math.sin(0.95), vx = hx - 4;
     m.fill((x, y, z) => {
-      const dy = (y - by) * s, dz = z - bzz, u = dy * ca + dz * sa, w = -dy * sa + dz * ca, v = x - (hx - 3.5);
+      const dy = (y - by) * s, dz = z - bzz, u = dy * ca + dz * sa, w = -dy * sa + dz * ca, v = x - vx;
       if (u < 0 || u > 9.5 || Math.abs(w) > 1.1) return -1;
-      const half = 3 + Math.min(u, 6) * 1.3, tip = u > 7 && Math.floor((v + 40) / 4) % 2 === 1;   // (points along the far edge)
-      return Math.abs(v) <= half && !tip ? tine : -1;
-    }, Math.floor(hx - 15), Math.floor(Math.min(by, by + s * 12) - 1), Math.floor(bzz - 1), Math.ceil(hx + 8), Math.ceil(Math.max(by, by + s * 12) + 1), Math.ceil(bzz + 12));
+      if (u > 6) return Math.abs(v) <= 11 && Math.floor((v + 41) / 3) % 2 === 0 ? tine : -1;   // (the fingers)
+      return Math.abs(v) <= 4.5 + Math.min(u, 4) * 1.7 ? tine : -1;
+    }, Math.floor(hx - 18), Math.floor(Math.min(by, by + s * 12) - 1), Math.floor(bzz - 1), Math.ceil(hx + 8), Math.ceil(Math.max(by, by + s * 12) + 1), Math.ceil(bzz + 13));
   }
   if (A.beard) m.ell(sx + A.snout * 0.35, cy, sz - HD * 0.5, 1.5, 1.4, 2, A.muzzle ? R(A.muzzle) : base);
   if (A.collar) { const col = R(A.collar), cx = Math.round(x1 + (hx - x1) * 0.25); for (let z = Math.floor(bz); z < m.h; z++) for (let y = 0; y < W; y++) for (const x of [cx, cx + 1]) { const i = m.idx(x, y, z); if (m.v[i] && z < hz - HD * 0.5) m.v[i] = col; } }
@@ -525,10 +527,10 @@ function renderArt(m, heading, opt) {
         }
         if (fm) { let f = feats.get(fm); if (!f) feats.set(fm, f = [0, 0, 0]); f[0]++; f[1] += px * S + (k % S) + 0.5; f[2] += py * S + ((k / S) | 0) + 0.5; }
         if (M.feat) { mt = M.as; M = mats[mt]; }
-        // (the light from the upper left, a little from the front: a lit back, a mid flank, a shaded underside - three
-        // clean bands, not the voxels' speckle)
+        // (the light from the upper left, a little from the front: the coat its own colour over the back and the flank,
+        // lit along the upper left, shaded underneath and to the right - clean bands, not the voxels' speckle)
         const nx = m.nx[vi], ny = m.ny[vi], nz = m.nz[vi], wx = c * nx - s * ny, wy = s * nx + c * ny;
-        let t = M.k + (nz * 0.95 - wx * 0.3 + wy * 0.2) * 1.5 - 0.15 + (m.ao[vi] - 0.75) * 0.8 + (M.shade ? M.shade(mx, my, Z, vi) : 0);
+        let t = M.k + (nz * 0.5 - wx * 0.45 + wy * 0.15) * 1.5 - 0.2 + (m.ao[vi] - 0.75) * 0.8 + (M.shade ? M.shade(mx, my, Z, vi) : 0);
         if (M.limb && c * (my - d / 2) < -0.75) t -= 1.1;   // (a leg on the far side of the body)
         if (t < 1) t = 1;   // (never the ramp's last tone: on a small sprite its hue shift reads as a red fleck)
         hm[n] = mt; hv[n] = vi; ht[n] = t; hd[n] = Y * fy + zf; hz[n] = Z; n++;

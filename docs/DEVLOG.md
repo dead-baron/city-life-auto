@@ -25229,3 +25229,27 @@ chance, the eyes were buried inside the head, and the bodies were too thin to ca
   the shark and the sea life, the fish in the water and on the catch card (to be judged on sheets), the animals in
   motion in the game. Not on `main`: the owner sees the sheets first.
 
+## 2026-11-21 - Animals, second pass: the birds that fly round you, antlers, the horse's eye, richer coats
+- **The pigeons, gulls and sparrows were smudges** (the owner: "even the birds you see flying around as a world
+  detail"). `critters.js` paints them 1 world px a pixel, right for the chunks' scenery; as live sprites the game
+  halved each to the 2 px art pixel and a ten-pixel pigeon lost its head, wing and bill. The ones that fly round the
+  player are now their own pictures at that size (`client/art2/game/actors.js` `critterArt`, a pixel at a time: the pigeon on the
+  ground, taking off and three wingbeats, the gull's four, the sparrow, the three butterflies, the dragonfly, the
+  bee, the frog); `actors.js` `critterSprite` hands them out at art pixel 2 (the painted frames at 1, and for the
+  scenery as before). The verge's rabbit, the squirrel on a trunk and the pond's heron are the same models as the ones
+  you hunt, so a kind has one look. Kept in `actors.js`: `critters.js` is part of the chunks' bake (a change to it is
+  a new build of every chunk), and the renderer is at its file budget for a file of its own.
+- **Antlers and horns**: the moose's palms stand like open hands with fingers along the top (from the side a palm
+  and its points, not a block on its head); a deer's rack spreads from the front; the mountain goat's black horns
+  show, its head carried higher.
+- **The horse** (`horse.js`) has an eye a pixel in the picture, like the others.
+- **Coats**: the back and the flank keep the coat's own colour, lit only along the upper left and shaded underneath
+  (they were a tone too pale all over - the bears most); a belly stays its own colour in the body's shadow (the deer's
+  had turned to a red stripe).
+- **Left as they are**: the 91 fish of the catch card and the Fish log (`client/fishart.js`, 11-16) and the fish seen
+  in the water (`waterlife.js`) - judged on a sheet, they hold up.
+- **Budget**: the bake worker's code 1020 -> 1024 KB (`tools/perf.mjs`; it counts the sprite providers): the art-pixel
+  critters' pictures. No chunk is rebuilt: the art hashes are unchanged.
+- `tools/playtest.py --ls` brought over from the `characters` branch (the local gate) for the in-game captures.
+- Tests: `test/animalart.test.js` + the critters at the art pixel (their frames, mirrored, what the game hands out).
+

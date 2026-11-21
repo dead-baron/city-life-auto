@@ -6,6 +6,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ANIMALS, animalModel, renderUpright } from '../client/art2/animals.js';
 import { BIRDS, birdModel } from '../client/art2/birds.js';
+import { CRITTERS, critterFrames } from '../client/art2/critters.js';
+import { critterArt, critterSprite, setArtPx } from '../client/art2/game/actors.js';
 
 const HEAD = (dir8) => Math.PI / 2 + dir8 * Math.PI / 4;   // (the game's headings: 0 toward the camera, 6 east, 4 away)
 const art = (m, dir8) => renderUpright(m, HEAD(dir8), { px: 2 });
@@ -53,4 +55,38 @@ test('the old one-ray picture is still there for the previews (px 1), and the ar
   const m = animalModel('golden'), a = art(m, 7), b = art(m, 7);
   assert.deepEqual([...a.col], [...b.col], 'the same model drawn twice is the same picture');
   assert.ok(renderUpright(m, HEAD(6)).w > a.w, 'px 1: the full-size picture');
+});
+
+// The small ones that fly round the player (actors.js critterArt): painted frames halved to the art pixel came out as
+// smudges, so the live sprites are their own pictures at that size - as many frames as the painted kind, east and west.
+
+test('the pigeon, the gull, the sparrow and the insects are drawn at the art pixel, a frame for each painted one', () => {
+  for (const kind of ['pigeon', 'seagull', 'sparrow', 'monarch', 'blueWing', 'sulphur', 'dragonfly', 'bee', 'frog']) {
+    const fr = critterArt(kind, false), lf = critterArt(kind, true);
+    assert.equal(fr.length, CRITTERS[kind].frames, `${kind}: its frames`);
+    fr.forEach((g, f) => {
+      assert.equal(g.ap, 2, `${kind} ${f}: art pixels`);
+      let n = 0; for (let i = 3; i < g.col.length; i += 4) if (g.col[i]) n++;
+      assert.ok(n >= 3, `${kind} ${f} draws (${n})`);   // (a butterfly with its wings closed is four pixels)
+      assert.ok(g.w <= Math.max(...critterFrames(kind).map((q) => q.w)), `${kind} ${f}: no bigger than the painted kind`);
+      assert.equal(lf[f].ax, g.w - g.ax, `${kind} ${f}: mirrored round its anchor`);
+    });
+  }
+  // a pigeon on the ground has its orange eye, its pale bill ahead of it and its pink feet under it
+  const p = critterArt('pigeon', false)[0], has = (c) => { for (let i = 0; i < p.col.length; i += 4) if (p.col[i + 3] && p.col[i] === c[0] && p.col[i + 1] === c[1] && p.col[i + 2] === c[2]) return true; return false; };
+  assert.ok(has([226, 128, 48]) && has([216, 204, 184]) && has([204, 100, 108]), 'the pigeon: eye, bill, feet');
+  assert.equal(critterArt('mapleLeaf', false), null, 'the leaves and the motes stay as painted');
+});
+
+test('the game hands out the art-pixel critters at art pixel 2, the painted ones at 1; the rabbit, squirrel and heron are the models', () => {
+  setArtPx(2);
+  for (const kind of ['pigeon', 'seagull', 'rabbit', 'squirrel', 'heron']) for (let f = 0; f < CRITTERS[kind].frames; f++) {
+    const g = critterSprite(kind, f, f % 2 === 1);
+    assert.equal(g.ap, 2, `${kind} ${f}: at the art pixel`);
+    let n = 0; for (let i = 3; i < g.col.length; i += 4) if (g.col[i]) n++;
+    assert.ok(n >= 12, `${kind} ${f} draws (${n})`);
+  }
+  setArtPx(1);
+  assert.ok(!critterSprite('pigeon', 0, false).ap, 'px 1: the painted frame');
+  setArtPx(2);
 });

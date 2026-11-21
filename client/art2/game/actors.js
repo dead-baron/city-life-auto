@@ -10,7 +10,7 @@ import { vehicleModel, vehicleAnchors, carPaint, patchHidden, paintSheen, VEHICL
 import { animalModel, renderUpright, ANIMALS } from '../animals.js';
 import { birdModel, BIRDS } from '../birds.js';
 import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
-import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
+import { CRITTERS, critterFrames, shadowBlob, mirror } from '../critters.js';
 import { groundSprite as forageGround } from '../forage.js';
 import { VEHICLE_BY_INDEX, PAINTS, unpackVehDamage } from '../../../shared/vehicles.js';
 const ART = {};   // (useArt: ferrisCab, hotAirBalloon, starfish; horseModel - loadArt)
@@ -860,6 +860,7 @@ const copySprite = (S) => {
   const G = new GBuf(S.w, S.h);
   G.col.set(S.col); G.nrm.set(S.nrm); G.z.set(S.z); G.emi.set(S.emi); G.flag.set(S.flag);
   G.ax = S.ax; G.ay = S.ay;
+  if (S.ap) G.ap = S.ap;   // (drawn at the art pixel already)
   if (S.light) G.light = { ...S.light };
   return G;
 };
@@ -938,7 +939,86 @@ export function v1DecalFrame(d) {
 // left = mirrored (facing west). critterInfo(kind) -> frames, fps, flight altitude, shadow radius.
 export const CRITTER_NAMES = Object.keys(CRITTERS);
 export const critterKey = (kind, frame = 0, left = false) => `k|${kind}|${frame | 0}|${left ? 1 : 0}`;
-export function critterSprite(kind, frame = 0, left = false) { const fr = critterFrames(CRITTERS[kind] ? kind : 'pigeon', !!left); return copySprite(fr[((frame | 0) % fr.length + fr.length) % fr.length]); }
+// ---- the small live ones at the game's art pixel ----------------------------------------------------------------------
+// (the owner, 11-21: "even the birds you see flying around as a world detail".) critters.js's frames are painted 1 world px
+// a pixel, as the chunks' scenery wants them; as live sprites the game then halved each one to its 2 px art pixel, and a
+// pigeon ten pixels long came out as a smudge - no head, no wing, no bill. Here the ones that fly round the player are
+// drawn at that size to begin with, a pixel at a time: the pigeon (on the ground, taking off, three wingbeats), the gull
+// (wings up, half, the glide, down), the sparrow, the butterflies, the dragonfly, the bee, the frog. All face east.
+//   critterArt(kind, left) -> [GBuf] | null   the kind's frames (ap 2: art pixels, the anchor too; the flags of the
+//     painted frame they stand in for), or null for a kind still drawn the old way
+const CP = {   // the colours, a letter each ('.' is clear)
+  o: [42, 38, 52],                                                       // the outline
+  g: [142, 148, 164], l: [190, 196, 210], d: [92, 98, 116], b: [56, 58, 72],   // a pigeon's greys, its wing bars
+  n: [92, 132, 112], v: [124, 100, 148], e: [226, 128, 48], k: [216, 204, 184], r: [204, 100, 108],   // its neck's green and violet, eye, bill, feet
+  w: [240, 242, 246], s: [198, 204, 216], y: [234, 186, 56], i: [30, 30, 40],   // a gull's white and shade, its bill, an eye
+  N: [156, 108, 72], D: [94, 64, 46], c: [228, 210, 178], K: [72, 62, 58],   // a sparrow's browns, its pale belly, its bill
+  a: [232, 128, 40], A: [40, 30, 34], B: [34, 28, 30],                   // a monarch's wing, its edge, a body
+  x: [204, 226, 234], t: [44, 152, 150], h: [30, 62, 72],                // a dragonfly's wings, body, head
+  Y: [238, 196, 52], G: [96, 160, 72], L: [152, 202, 102], f: [222, 222, 152],   // a bee's yellow; a frog's greens, its belly
+};
+const WINGS = { blueWing: { a: [92, 152, 232], A: [32, 44, 86] }, sulphur: { a: [242, 218, 92], A: [152, 122, 42] } };
+
+// kind: [anchor x, [rows, anchor y under the body] per frame]
+const FLY = ['ka.ak|aaBaa|aaBaa|ka.ak', '.a.a.|.aBa.|.aBa.|.a.a.', '..A..|..a..|..a..|..A..', '.a.a.|.aBa.|.aBa.|.a.a.'].map((r) => [r.replace(/k/g, 'A'), 4]);
+const CART = {
+  pigeon: [5, [
+    ['.......oo..|......oggo.|......ogeok|.ooooonvo..|oblllggno..|.obdlggo...|..oodgo....|....r.r....', 8],
+    ['...ob.......|...olb......|....oll.oo..|....ollogeok|..ooogllgno.|.obdggggvo..|..oodggoo...|....oro.....|....r.......', 7],
+    ['...ob.......|...olb......|....oll.oo..|....ollogeok|.oooogllgno.|obdgggggvo..|.ooodggoo...', 7],
+    ['.........oo.|..obbb.ogeok|.oooolllgno.|obdgggggvo..|.ooodggoo...', 5],
+    ['.........oo.|.......ogeok|.ooooogggno.|obdgggggvo..|.ooolldgo...|...olldo....|....olbo....|.....bo.....', 5],
+  ]],
+  seagull: [6, [
+    ['....ob........|....ogb.......|.....ogg......|.....oggo.oo..|......oggowiy.|..ooooswwwwo..|.osswwwwwso...|..oooooooo....', 8],
+    ['...obgggo.oo..|......oggowiy.|..ooooswwwwo..|.osswwwwwso...|..oooooooo....', 5],
+    ['..........oo..|.obggggggowiy.|..oooswwwwwo..|.osswwwwwso...|..oooooooo....', 5],
+    ['..........oo..|.........owiy.|..ooooswwwwo..|.osswwggwso...|..ooooggooo...|.....oggo.....|.....ogbo.....|......bo......', 5],
+  ]],
+  sparrow: [3, [
+    ['...ooo.|.ooNNiK|oDNcco.|.occo..|..o.o..', 5],
+    ['..oD...|..Dooo.|.ooNNiK|oDNcco.|.ooo...', 5],
+    ['...ooo.|.oDDNiK|oDNcco.|.ooo...', 4],
+    ['...ooo.|.ooNNiK|oDNcco.|.oDDo..|..Do...', 3],
+  ]],
+  monarch: [2, FLY], blueWing: [2, FLY], sulphur: [2, FLY],
+  dragonfly: [3, [['..x.x..|...xx..|ttttthh|...xx..|..x.x..', 3], ['...x...|..xxx..|ttttthh|..xxx..|...x...', 3], ['..x.x..|...xx..|ttttthh|...xx..|..x.x..', 3], ['...x...|..xxx..|ttttthh|..xxx..|...x...', 3]]],
+  bee: [2, [['.ww.|YBYB|.BB.', 3], ['w..w|YBYB|.BB.', 3], ['.ww.|YBYB|.BB.', 3], ['w..w|YBYB|.BB.', 3]]],
+  frog: [3, [['...oio|.oGGLo|oGGffo|oo.oo.', 4], ['....oio|ooGGGL.|o.off..', 3], ['....oio|ooGGGL.|o.off..', 3], ['...oio|.oGGLo|oGGffo|oo.oo.', 4]]],
+};
+
+const ACACHE = new Map();
+// (here, not in critters.js: that file is part of the chunks' bake, and a change to it is a new build of every chunk)
+export function critterArt(kind, left) {
+  const D = CART[kind];
+  if (!D) return null;
+  const key = kind + (left ? '<' : '>');
+  let fr = ACACHE.get(key);
+  if (!fr) {
+    const pal = WINGS[kind] ? { ...CP, ...WINGS[kind] } : CP, old = critterFrames(kind);
+    const flagOf = (f) => { const g = old[f % old.length]; for (let i = 0; i < g.w * g.h; i++) if (g.col[i * 4 + 3]) return g.flag[i]; return 0; };
+    fr = D[1].map(([art, ay], f) => {
+      const rows = art.split('|'), w = Math.max(...rows.map((r) => r.length)), G = new GBuf(w, rows.length), flag = flagOf(f);
+      G.ax = D[0]; G.ay = ay;
+      // (each pixel faces the camera and a little up: the tones are in the picture; z its height over the anchor, in world px)
+      rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const c = pal[r[x]]; if (c) G.put(x, y, c, [0, 0.55, 0.83], Math.max(0, (ay - y) * 2), null, flag); } });
+      const M = left ? mirror(G) : G;
+      M.ap = 2;
+      return M;
+    });
+    ACACHE.set(key, fr);
+  }
+  return fr;
+}
+// (at the game's art pixel the small ones are their own pictures - critterArt above - and the rabbit, the squirrel
+// and the heron the same models as the ones you hunt: one look for a kind, and no painted frame halved into a smudge)
+const CRITTER_RIG = { rabbit: (f, l) => animalSprite('rabbit', 'run', l ? 2 : 6, f), squirrel: (f, l) => animalSprite('squirrel', 'climb', l ? 2 : 6, f), heron: (f, l) => animalSprite('heron', f ? 'fly' : 'idle', l ? 2 : 6, f) };
+export function critterSprite(kind, frame = 0, left = false) {
+  const k = CRITTERS[kind] ? kind : 'pigeon';
+  if (ART_PX === 2 && CRITTER_RIG[k]) return CRITTER_RIG[k](frame | 0, !!left);
+  const fr = (ART_PX === 2 && critterArt(k, !!left)) || critterFrames(k, !!left);
+  return copySprite(fr[((frame | 0) % fr.length + fr.length) % fr.length]);
+}
 export function critterInfo(kind) { const d = CRITTERS[kind]; return d ? { frames: d.frames, fps: d.fps, fly: !!d.fly, alt: d.alt || null, shadow: d.shadow || 0, ground: d.ground || null, air: d.air || null } : null; }
 export function critterShadow(r = 3) { return copySprite(shadowBlob(r)); }
 
