@@ -507,7 +507,7 @@ export const POLISH = {
       if (PR[0] === 'clip') wrap('leather', (R, Q) => { Q.gloss = 0; return Q.l2 > 0.72 && Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.4 ? cloth('#c8ccd4') : Math.min(Math.abs(Q.l0), Math.abs(Q.l1)) < 0.72 && Q.l2 < 0.6 && Q.l2 > -0.8 ? pt : pc; });
       if (PR[0] === 'laptop') wrap('leather', (R, Q) => { Q.gloss = 0.2; if (Q.l2 > 0.72) { Q.k += 0.3; return pt; } return pc; });
       if (PR[0] === 'parcel') wrap('leather', (R, Q) => { Q.gloss = 0; return Math.abs(Q.l1) < 0.16 || (Q.l2 > 0.8 && Math.abs(Q.l0) < 0.2) ? pt : pc; });
-      if (PR[0] === 'ball') { const bo = cloth('#c8480c'), sm = cloth('#3a2018'); wrap('leather', (R, Q) => { Q.gloss = 0; return Math.abs(Q.nx) < 0.1 ? sm : bo; }); }   // (a basketball: a deep orange - its lit tone was the skin's - a dark seam down it and one across)
+      if (PR[0] === 'ball') { const bo = [[150, 62, 12], [196, 88, 18], [222, 110, 26], [222, 110, 26], [238, 132, 44]], sm = cloth('#2a1610'); wrap('leather', (R, Q) => { Q.gloss = 0; return Q.ny * 0.819 + Q.nz * 0.574 < 0.5 || Math.abs(Q.nx) < 0.1 ? sm : bo; }); }   // (a basketball: its own oranges, a dark rim round it - on a tanned arm an orange ball with no edge was part of the arm - and one seam down it)
       if (PR[0] === 'poles') wrap('wood', (R, Q) => (Q.l0 < 0.16 ? cloth('#2a2a2e') : Q.l0 > 0.9 ? pt : pc));
       if (PR[0] === 'parasol') wrap('wood', (R, Q) => (Q.l0 < 0.1 ? cloth('#d8c8a8') : Q.l0 > 0.96 ? cloth('#2a2226') : Math.floor(Q.l0 * 9 + Q.l1 * 1.5 + 2) & 1 ? pt : pc));
     }
