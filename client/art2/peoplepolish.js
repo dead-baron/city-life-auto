@@ -36,7 +36,36 @@ export const POLISH = {
   // glasses, a size bigger (the owner, 11-20: "glasses a size bigger", "square/rimless/browline glasses too small"): each kind's
   // stamp round an eye (people.js GLS: dx out from the nose then dy down, from -1; a color key). A whole ring round the eye
   // where there was half of one; the two rings meet over the nose.
-  GLS: { round: '10F01F21F12F00H20H02H22H11E', half: '01F21F02F12F22F11E', frames: '00F10F20F01F21F02F12F22F11E', browline: '00F10F20F/0F01T21T12T11E', rimless: '11E00W10W20W01W21W12W', patch: '00F10F20F01F11F21F12F' },
+  // (the owner, 20:15: round glasses "too close together ... one step bigger so it looks like an actual round lens". A lens is
+  // two art pixels wide now - the eye and the pixel beside it - with its rim round them; the two lenses share the pixel
+  // between the eyes, the bridge.)
+  GLS: { round: '10F20F12F22F31F01F11E21W', half: '01F31F12F22F11E21W', frames: '10F20F30F01F31F12H22H32H11E21W', browline: '00F10F20F30F01T31T12T22T11E21W', rimless: '10C20C31C12C22C11E21W', patch: '00F10F20F01F11F21F12F' },
+  // ---- masks as small pictures (people.js face(): at the end, over the face). Columns are art pixels from the left eye
+  // (lo..hi across the face, m the middle), rows from the eyes' row down.
+  masks(cx) {
+    const { put, eyes, e0, A, skin, turn, hexRgb, fwd, fm } = cx, xs = eyes.map((e) => e.p.bx), xa = Math.min(...xs), n = (Math.max(...xs) - xa) >> 1, two = eyes.length > 1;
+    let lo = two ? -1 : -1, hi = two ? n + 1 : 1; const m = two ? n >> 1 : fwd; if (two && turn > 0.2) { if (fwd > 0) lo--; else hi++; }
+    const base = { bx: xa, by: e0.by }, P = (i, j, c) => put(base, c, i, j), row = (j, c, a = lo, b = hi) => { for (let i = a; i <= b; i++) P(i, j, c); };
+    const sh = (c, k) => c.map((v) => Math.max(0, Math.min(255, Math.round(k > 1 ? v + (255 - v) * (k - 1) : v * k)))), ex = two ? [0, n] : [0], out = (i) => (two ? (i === 0 ? -1 : 1) : -fwd);
+    if (A.medmask) { const c = hexRgb(typeof A.medmask === 'string' ? A.medmask : '#8fc4e8'); row(1, sh(c, 1.35)); row(2, c); row(3, sh(c, 0.82), lo + 1, hi - 1); P(lo - 1, 1, [236, 238, 242]); P(hi + 1, 1, [236, 238, 242]); return; }
+    if (A.bandana) { const c = hexRgb(typeof A.bandana === 'string' ? A.bandana : '#c8262b'); row(1, sh(c, 0.8)); row(2, c); row(3, sh(c, 0.9), lo + 1, hi - 1); P(m - 1, 2, sh(c, 1.5)); P(m + 1, 2, sh(c, 1.5)); P(m, 3, sh(c, 1.5)); return; }
+    if (A.glasses === 'domino') {   // (a party mask; a masquerade mask - A.masq, its trim)
+      const c = hexRgb(A.glassColor || '#1a1a1e'), t = hexRgb(A.masq || A.glassTrim || '#d9a21b'), dark = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2] < 90;
+      row(0, c); for (const i of ex) P(i, 0, dark ? [238, 238, 242] : [30, 24, 30]);
+      for (let i = lo; i <= hi; i++) if (i !== m) P(i, 1, sh(c, 0.85));
+      P(lo, -1, t); P(hi, -1, t); if (A.masq) { P(m, -1, t); P(lo, 1, t); P(hi, 1, t); }
+      return;
+    }
+    if (!fm) return;
+    const c = hexRgb(A.fmask.c), t = A.fmask.t ? hexRgb(A.fmask.t) : c, blk = [26, 22, 26];
+    if (fm === 'pig' && A.fmask.animal === 'panda') { for (const i of ex) { P(i + out(i), 0, blk); P(i, 1, blk); P(i + out(i), 1, blk); P(i, 0, [244, 244, 240]); } P(m, 2, blk); }   // (a white eye in each black patch: all black, the patches read as a moustache)
+    else if (fm === 'pig' && A.fmask.animal === 'bear') { const mz = sh(c, 1.42); row(1, mz, m - 1, m + 1); row(2, mz, m - 1, m + 1); P(m, 1, [30, 22, 20]); P(m, 2, sh(c, 0.5)); for (const i of ex) P(i, 0, [26, 20, 18]); }
+    else if (fm === 'pig') { const sn = sh(c, 1.25), no = sh(c, 0.6); row(1, sn, m - 1, m + 1); row(2, sh(c, 1.1), m - 1, m + 1); P(m - 1, 1, no); P(m + 1, 1, no); for (const i of ex) P(i, 0, [40, 26, 30]); }
+    else if (fm === 'gas') { row(0, sh(c, 0.9)); row(-1, sh(c, 1.1)); row(1, c); for (const i of ex) { P(i, 0, [168, 196, 206]); P(i + out(i), 0, [92, 118, 130]); } }
+    else if (fm === 'clown') { P(m, 1, t); row(2, t, m - 1, m + 1); P(m - 2, 1, [240, 150, 160]); P(m + 2, 1, [240, 150, 160]); for (const i of ex) { P(i, -1, [52, 104, 214]); P(i, 0, [24, 22, 30]); } }
+    else if (fm === 'skull') { const d = [34, 28, 30]; for (const i of ex) { P(i, 0, d); P(i + out(i), 0, d); P(i, -1, sh(c, 0.8)); } P(m, 1, d); P(lo, 1, sh(c, 0.72)); P(hi, 1, sh(c, 0.72)); for (let i = lo + 1; i <= hi - 1; i++) P(i, 2, (i - m) & 1 ? d : sh(c, 1.2)); P(m, 3, sh(c, 0.7)); }
+    else if (fm === 'alien') { for (const i of ex) { P(i, 0, [14, 16, 14]); P(i + out(i), 0, [14, 16, 14]); P(i + out(i), -1, [14, 16, 14]); } P(m, 2, sh(c, 0.55)); P(m, -2, sh(c, 1.3)); }
+  },
   itemK: 1.18,   // (things held in the hand, a little bigger - the owner, 11-20: "held items bigger")
   nubOff: ['short'],   // (styles whose one-pixel bump at the back of the head, in profile, is folded into the outline - people.js)
   tipKeep: ['spiky', 'mohawk', 'quiff', 'shag'],
@@ -204,7 +233,7 @@ export const POLISH = {
   // 5-step ramp). A dark cloth's ramp is re-lit - its shadows kept, its lit steps lifted and cooled, as the concepts
   // paint black and navy (a slate mid-tone, a blue-grey light) - so folds, lapels and the arm over the chest have
   // tones to be drawn in; a dark top over dark bottoms gets a waist line, dark shoes a lighter sole.
-  dress(W, A, D, T) {
+  dress(W, A, D, T, TF) {
     const keep = new Set([W.skin, W.hairR]), fix = (R) => (Array.isArray(R) && Array.isArray(R[0]) && !keep.has(R) ? relit(R) : R);
     const wrap = (k, f) => { const o = W[k]; if (o) W[k] = (Q) => f(o(Q), Q); };
     for (const k of ['torso', 'arm', 'leg', 'skirt', 'hood', 'collar', 'shoe', 'sole', 'hat', 'brim', 'lining', 'apron', 'pack', 'leather', 'case', 'beltbag']) wrap(k, fix);
@@ -353,7 +382,56 @@ export const POLISH = {
       wrap('torso', (R, Q) => { if (!mineT.has(R)) return R; if (Q.res === 1 && Q.z < 4 && hemRow(Q)) return rib(Q); spark(Q); return R; });
       wrap('pel', (R, Q) => { if (!mineT.has(R)) return R; if (Q.res === 1 && hemRow(Q)) return rib(Q); spark(Q); return R; });
       wrap('arm', (R, Q) => { if (!mineT.has(R)) return R; if (Q.part === 'fa' && Q.l0 > 0.78) return rib(Q); spark(Q); return R; });
-      wrap('collar', (R) => (mineT.has(R) ? RIB : R));
+      wrap('collar', (R, Q) => (mineT.has(R) ? rib(Q) : R));
+    }
+    // ---- things on the chest, laid on the art grid (the owner, 11-20 20:15: lanyard, chain and stethoscope "still too thin to
+    // recognize", a bow tie "bigger so it actually looks like a bow tie", buttons "centered ... all the way up"). Decided a
+    // world pixel at a time they came out a pixel here and a pixel there; each is a small picture in art pixels now (NECK),
+    // hung from the collar's art pixel at the middle of the front: rows down from it, columns either side. In profile the
+    // picture's `side` is used instead - columns back from the chest's front. From behind, a line on the nape (`nape`).
+    if (TF && W.torso && !A.founder) {
+      const J = A.jewel || {}, hx = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, v | 0)).toString(16).padStart(2, '0')).join(''), tone = (R, c, k) => cloth(hx(mix(R[3], c, k)));
+      const jc = A.chain ? cloth(typeof A.chain === 'string' ? A.chain : 'gold') : J.color ? cloth(J.color) : null, jt = J.trim ? cloth(J.trim) : null, steel = cloth('#7c88a4'), dk = cloth('#2a262c');
+      const g = (R, k = 0) => (Q) => { Q.gloss = 1; Q.k += k; return R; }, m = (R, k = 0) => (Q) => { Q.k += k; return R; };
+      const N = [];   // (each: rows, side, nape, K)
+      if (A.chain && !T.open) {
+        if (J.steth) N.push({ rows: ['T...T', 'T...T', 'T...s', 'T....', 'SS...'], side: ['.T', 'T', 'T', 'S'], nape: 'T', K: { T: m(jc, -0.1), S: g(steel, 0.1), s: g(steel, 0.3) } });
+        else if (J.lany) { const card = tone(jc, [246, 248, 252], 0.45); N.push({ rows: ['c...c', 'c...c', '.c.c.', '.kkk.', '.WdW.'], side: ['.c', 'c', 'c', 'k', 'W'], nape: 'c', K: { c: m(jc), W: m(card, 0.2), k: m(jc, -0.35), d: m(dk) } }); }
+        else if (J.scarf) N.push({ rows: ['RRRRR', '...Rr', '...rR', '...R.'], side: ['RR', 'R', 'r'], nape: 'R', wide: 1, K: { R: m(jc), r: m(jc, -0.3) } });
+        else if (J.pearl) N.push({ rows: ['q...q', '.pqp.'], side: ['.q', 'p'], K: { p: g(cloth('#fbf8f2'), 0.3), q: m(cloth('#9a8fae')) } });
+        else if (J.whistle) N.push({ rows: ['c...c', '.c.c.', '..s..'], side: ['.c', 'c', 's'], K: { c: m(jc), s: g(steel, 0.2) } });
+        else if (J.bolo) N.push({ rows: ['.c.c.', '..S..', '.c.c.', '.t.t.'], side: ['c', 'S', 'c', 't'], K: { c: m(dk), S: g(jc, 0.2), t: g(steel) } });
+        else N.push({ rows: J.chain === 2 ? ['a...a', 'ab.ba', 'ba.ab', '.bab.'] : J.pendant ? ['a...a', 'b...b', '.aba.', '..P..'] : ['a...a', 'ba.ab', '.aba.'], side: ['.a', 'b', 'a'], K: { a: g(jc, 0.2), b: g(jc, -0.25), P: g(jc, 0.35) } });
+      }
+      if (J.bow) { const bw = cloth(J.color || '#1a1a1e'); N.push({ rows: ['BB.BB', 'BBkBB', 'BB.BB'], side: ['B', 'k', 'B'], K: { B: m(bw, -0.2), k: m(bw, 0.5) } }); }
+      // (the owner, 20:15: "backpack straps still get kind of lost", a duffel "should have a strap over the shoulder", the camera "still not big enough")
+      if (A.back === 'backpack') { const sc = tone(cloth(A.backColor || 'navy'), [18, 20, 30], 0.35); N.push({ rows: ['S.....S', 'S.....S', 'S.....S', 'S.....S', 'S.....S'], side: ['..S', '..S', '..S', '..S'], K: { S: m(sc) } }); }
+      if (A.back === 'guitarcase' || A.duffel) { const sc = cloth(A.duffel ? A.bagColor || '#2a2a2e' : A.backColor || '#1a1a1e'), dg = ['S......', '.S.....', '..S....', '...S...', '....S..', '.....S.']; const gd = dg.map((r) => r.split('').reverse().join('')); N.push({ rows: A.duffel ? gd : dg, back: A.duffel ? dg : gd, side: ['.S', '.S', 'S'], K: { S: m(sc, 0.1) } }); }
+      if (A.prop && A.prop[0] === 'camera') { const body = cloth(A.bagColor || '#2a2a2e'), sv = cloth(A.prop[2] || '#c8ccd4'); N.push({ rows: ['c...c', '.c.c.', '.ttt.', '.KLK.', '.KKK.'], side: ['.c', 'c', 't', 'K', 'K'], nape: 'c', K: { c: m(cloth('#5a3a26')), t: g(sv, -0.1), K: m(body, -0.1), L: g(cloth('#7fa6c4'), 0.3) } }); }
+      const shirt = A.top && A.top.kind === 'shirt' && !T.open, zipd = A.top && A.top.zipped;
+      if (shirt) { const bt = tone(W.top, [28, 36, 48], 0.45); N.push({ rows: ['.....', '..o..', '.....', '..o..', '.....', '..o..', '.....', '..o..'], cloth: 1, K: { o: m(bt) } }); }   // (from the row under the collar's opening)
+      if (zipd) { const zp = cloth(A.top.trim || '#1a1a1e'); N.push({ rows: ['..z..', '..z..', '..z..', '..z..', '..z..', '..z..', '..z..', '..z..'], cloth: 1, K: { z: m(zp, -0.1) } }); }
+      if (N.length) {
+        const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], zc0 = dot([TF.c[0] - TF.p[0], TF.c[1] - TF.p[1], TF.c[2] - TF.p[2]], TF.z), SA = 0.573576, CA = 0.819152;
+        const anchor = (fy, zA) => { const k = TF.ry * fy, h = zA - zc0, X = TF.c[0] + TF.y[0] * k + TF.z[0] * h, Y = TF.c[1] + TF.y[1] * k + TF.z[1] * h, Z = TF.c[2] + TF.y[2] * k + TF.z[2] * h; return [Math.floor((X + 1e-4) / 2), Math.floor((Y * SA - Z * CA + 1e-4) / 2)]; };
+        const zN = D.shUp - (this.neckZ ?? -3.9), F = [anchor(0.85, zN)[0], anchor(0.4, zN)[1]], Bk = anchor(-0.6, D.shUp + 0.2), prof = Math.abs(TF.x[0]) < 0.5,
+          // (never under the chin: the head's lowest art row on the screen, from the head's place over the spine - a woman's collar is under it)
+          chin = (() => { const h = D.neckUp + D.headUp, Y = TF.p[1] + TF.z[1] * h + TF.y[1] * 0.6, Z = TF.p[2] + TF.z[2] * h + TF.y[2] * 0.6; return Math.floor((Y * SA - Z * CA + Math.hypot(D.head[1] * SA, D.head[2] * CA) - 0.6) / 2) + 1; })(), fs = TF.y[0] > 0 ? 1 : -1, SKN = W.skin, hz = W.HEMZ ?? -0.9;
+        if (chin > F[1] && chin < F[1] + 3) F[1] = chin;
+        const toCam = TF.y[1] > 0.5;   // (facing the camera: the shoulders' tops are the front's too)
+        const o = W.torso;
+        W.torso = (Q) => {
+          const R = o(Q); if (Q.res !== 1) return R;
+          const x = Math.round(Q.x), y = Math.round(Q.y), cx = Math.floor(x / 2), cy = Math.floor(y / 2);
+          if (Q.f > (toCam ? -0.15 : 0.05)) {
+            if (cy > Math.floor((y + CA * (Q.zs - hz)) / 2)) return R;   // (under the hem: the trousers')
+            const j = cy - F[1], i = cx - F[0];
+            for (const n of N) { if (n.cloth && R === SKN) continue; const P = prof ? n.side : n.rows; if (!P || j < 0 || j >= P.length) continue;
+              const ch = prof ? P[j][-i * fs] : P[j][i + ((P[j].length - 1) >> 1)]; if (ch && ch !== '.') return n.K[ch](Q); }
+          } else if (Q.f < -0.35) { const j = cy - Bk[1], i = cx - Bk[0]; for (const n of N) { if (n.nape && j === 0 && Math.abs(i) <= (n.wide ? 2 : 1)) return n.K[n.nape](Q); if (n.back && !prof && j >= 0 && j < n.back.length && cy <= Math.floor((y + CA * (Q.zs - hz)) / 2)) { const ch = n.back[j][i + ((n.back[j].length - 1) >> 1)]; if (ch && ch !== '.') return n.K[ch](Q); } } }
+          return R;
+        };
+      }
     }
     if (DR === 'tails') {
       const GREY = cloth('#8a8a92'), stripe = (Q) => { if (Math.floor((Q.l1 + 2) * 5) & 1) Q.k -= 0.16; return GREY; };

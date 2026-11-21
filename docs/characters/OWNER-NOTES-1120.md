@@ -160,3 +160,27 @@ Stripes passed; on the striped bra and panties he is "not sure it works well ...
 - [x] Clothes: buttons on button-up shirts (one art pixel each, every second row); tactical vest a plate carrier with pouches; ghillie suit with tufts standing out of it; the Founding Citizen jacket a gold bomber with dark ribbing, glossy, with pixels that catch the light.
 - Left, and said so: the camera is still small; party / medical / bandana / gas / pig / clown / skull / alien / masquerade / welding masks unchanged; the scarf still reads as a necklace; a pearl necklace does not show on white.
 - Shown: `characters-wardrobe-batch2-before-after.png`. Not yet seen by him.
+
+## 20:15 - his look at batch 2 (`characters-wardrobe-batch2-before-after.png`)
+"Is it bad to raise the bake code? I feel like we should raise it?" - raised, 1045 -> 1080 KB. "We should do the weak or left alone parts too right? Is there a reason we didn't do that?" - no good reason; done below.
+- [x] Lanyard, gold chain, stethoscope "still too thin to recognize" - pictures in art pixels hung from the collar: a chain five across and two thick at the bottom; a lanyard's cord down to a card; a stethoscope's two tubes with a silver bell and earpiece.
+- [x] Bow tie "bigger so it actually looks like a bow tie" - five across, three tall, two wings and a knot.
+- [x] Buttons "centered on front view and run all the way up" - the middle column of the front, from the collar down, every second row.
+- [x] Founding Citizen jacket "grey pixel on back in center top" - its collar is the ribbing's dark. "Zipped up, or an option" - zipped, a zip down the front. OPEN: the open / zipped choice itself.
+- [x] Round glasses "too close together ... one step bigger so it looks like an actual round lens" - each lens two art pixels wide with its rim; the bridge between the eyes. Square, browline, rimless and half frames the same width.
+- [x] Bear "the snout from the angle"; panda "missing nose in front view"; "ears could be bigger" - a short pale muzzle with the nose and mouth drawn on it; a panda's white eyes in black patches and a nose; ears a third bigger.
+- [x] Turban "should look wrapped" - a fuller volume, the layers' folds rising to a point over the brow, the under-wrap showing in a peak there.
+- [x] Cap backwards "more definition for the bill", no logo, "a little gap ... where the adjuster is" - the bill longer and darker behind, no logo, an arch over the brow.
+- [x] Top hat "the white ring looked better ... make sure the top part is flat" - the round crown, taller, cut off level under a dark lid; the white band a ring round its foot.
+- [x] Tiara "a little bigger ... back view doesn't look like anything" - a silver band over the hair from ear to ear, three points and the stone in front.
+- [x] Earmuffs "maybe too big now"; headphones "probably better before" - both smaller, set outside the hair. Shown on a bald head too.
+- [x] Tool bag "looks like a purse almost" - a tool box carried by its handle in the hand, tools standing out of it.
+- [x] Duffel "a strap over the shoulder and be much bigger" - a long round bag behind the hip, a strap across the chest and the back.
+- [x] Guitar case "the actual size of a guitar" - from the back of the knees to over the head.
+- [x] Backpack "straps still get kind of lost" - a whole art pixel wide, in the pack's color, down to the ribs.
+- [x] Camera "still not big enough" - on the chest from its strap: a silver top, a dark body, the lens.
+- [x] The ten masks left alone: party and masquerade (a band across the eyes, eye holes, trim at the tips, bigger feathers), medical (the lower face, ear loops), face bandana (dotted), gas (lenses, one canister), pig (ears, a snout with nostrils), clown (red nose and mouth, tufts of hair), skull (sockets, nose, teeth), alien (bigger slanted eyes), welding (a green glass).
+- [x] Scarf reads as a scarf (a band at the collar, a tail down one side, a line on the nape); pearls show on white as beads.
+- Weak still, said so: a pearl necklace on a white top is faint; the bolo tie is small; a bow tie loses a pixel on the narrowest chests.
+- Shown: `characters-wardrobe-batch3-before-after.png`. Not yet seen by him.
+

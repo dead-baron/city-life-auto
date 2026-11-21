@@ -68,3 +68,31 @@ test('stripes on a top: one art pixel thick, each one joined from side to side, 
     }
   } finally { setPolish(null); }
 });
+
+// (the owner, 11-20 20:15: lanyard, chain and stethoscope "still too thin to recognize", a bow tie "bigger so it actually
+// looks like a bow tie", buttons "centered on front view and run all the way up". Things on the chest are small pictures in
+// art pixels - peoplepolish.js NECK - so from the front each one is whole: so many art pixels, in so wide a box.)
+test('things on the chest are pictures in art pixels: whole from the front, buttons one column from the collar down', () => {
+  setPolish(POLISH);
+  try {
+    const fig = (base, set) => { const L = LK.emptyLook(base); L.hair.style = 2; L.body.skin = 2; L.outfit.top = LK.item('Plain tee', 'white'); L.outfit.bottoms = LK.item('Jeans', 'black'); set(L); return bake(LK.lookArt(LK.validLook(L)), 0); };
+    const diff = (A, B) => { const at = [], dx = B.ax - A.ax, dy = B.ay - A.ay; for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) { const p = A.at(x, y), q = B.at(x + dx, y + dy); if (!p || !q || p.ol || q.ol) continue; if (p.c[0] !== q.c[0] || p.c[1] !== q.c[1] || p.c[2] !== q.c[2]) at.push([x + dx, y + dy]); } return at; };   // (in the plain figure's art pixels; a piece may widen the sprite)
+    const span = (at, k) => Math.max(...at.map((p) => p[k])) - Math.min(...at.map((p) => p[k])) + 1;
+    for (const base of ['m', 'f']) {
+      const plain = fig(base, () => {});
+      // (piece, at least so many art pixels of it, at most so wide)
+      for (const [name, min, wide] of [['Gold chain', 6, 7], ['Lanyard', 8, 7], ['Stethoscope', 7, 7], ['Bow tie', base === 'm' ? 12 : 10, 7], ['Scarf', 6, 7], ['Camera', 9, 7]]) {   // (five across; a line beside it may change its tone)
+        const P = LK.PIECES[LK.byName(name)], at = diff(fig(base, (L) => { L.outfit[P.slot] = LK.item(name); }), plain).filter(([x, y]) => { const q = plain.at(x, y); return q.g === 4; });   // (on the trunk: a camera's old place was the hand)
+        assert.ok(at.length >= min, `${name} on ${base}: ${at.length} art pixels`);
+        assert.ok(span(at, 0) <= wide, `${name} on ${base}: ${span(at, 0)} wide`);
+      }
+      const shirt = fig(base, (L) => { L.outfit.top = LK.item('Button-up shirt', 'white'); });
+      // (the buttons: a material of their own on the trunk - grey on the white shirt - in one column, two or more, a row of shirt between each)
+      const by = new Map(); for (let y = 0; y < shirt.h; y++) for (let x = 0; x < shirt.w; x++) { const p = shirt.at(x, y); if (p && !p.ol && !p.ln && p.g === 4) { if (!by.has(p.m)) by.set(p.m, []); by.get(p.m).push([x, y, p.c]); } }
+      const btn = [...by.values()].filter((l) => l.length <= 6 && l.every(([, , c]) => c[0] > 80 && c[0] < 200 && Math.abs(c[0] - c[2]) < 40))[0] || [];
+      assert.ok(btn.length >= (base === 'm' ? 3 : 2), `${base}: ${btn.length} buttons`);
+      assert.equal(span(btn, 0), 1, `${base}: the buttons in one column`);
+      for (const [x, y] of btn) assert.ok(!btn.some(([x2, y2]) => x2 === x && y2 === y + 1), `${base}: two buttons touch at ${x},${y}`);
+    }
+  } finally { setPolish(null); }
+});

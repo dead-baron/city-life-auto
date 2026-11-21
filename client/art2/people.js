@@ -830,7 +830,7 @@ function founderWings(E, A, D, S, P) {
 function wardrobe(A, D, TF, seed) {
   if (A.carry === 'statue') A = statueApp(A);
   const tk = A.top?.kind || 'tee', bk = A.bottom?.kind || 'jeans';
-  const T = TOP[tk] || TOP.tee, skin = A.founder ? BONE : A.bronze ? BRONZE_SKIN : SKIN[clamp(A.skin ?? 1, 0, SKIN.length - 1) | 0];
+  const T = PL && A.top?.zipped && TOP[tk] ? { ...TOP[tk], open: 0 } : TOP[tk] || TOP.tee, skin = A.founder ? BONE : A.bronze ? BRONZE_SKIN : SKIN[clamp(A.skin ?? 1, 0, SKIN.length - 1) | 0];
   const top = cloth(A.top?.color || (tk === 'bikini' || tk === 'swimsuit' ? 'teal' : tk === 'towel' ? 'white' : 'grey')), top2 = cloth(A.top?.color2 || 'white');
   const bot = cloth(A.bottom?.color || (bk === 'jeans' ? 'denim' : bk === 'trunks' || bk === 'bikini' ? (A.top?.color || 'red') : bk === 'towel' ? 'white' : 'black'));
   const shoeC = A.shoes || 'white', shoe = cloth(shoeC), sk = SHOE_OF(shoeC, A);
@@ -877,9 +877,6 @@ function wardrobe(A, D, TF, seed) {
   // woodland camouflage (the army: game/peds.js): blotches in model space, so they run on across the seams
   const CAMO = A.top?.pattern === 'camo' || A.bottom?.pattern === 'camo' ? [cloth('#39432a'), cloth('#76704c'), cloth('#25261e')] : null;
   const camo = (Q) => { const n = hash(Math.floor(Q.X / 2.6), Math.floor(Q.Y / 2.6) + Math.floor(Q.Z / 2.2) * 7, seed + 31); return n < 0.22 ? CAMO[0] : n < 0.36 ? CAMO[1] : n > 0.86 ? CAMO[2] : null; };
-  // (a button-up shirt's buttons, the polish pass: one art pixel each - the art column the middle of the front falls in, the art row
-  // each button's height falls in, every second row - in a darker tone of the shirt)
-  const BTN = PL && tk === 'shirt' && !T.open && !A.founder ? cloth(mixHex(A.top?.color || '#f0eee8', '#1c2430', 0.45)) : null, BTNP = 4 / CA;
   // ---- torso (chest, waist, shoulder bar, belly, bust, the shirt part of the pelvis)
   const HEMZ = T.tuck ? 2.4 : T.bare || T.bikini || T.towel || T.crop ? 9 : T.tank ? 0.4 : -0.9;   // (the shirt's hem, up from the hips)
   // (the polish pass: is this pixel under the hem? The hem is a line level on the screen, and on the art grid: it runs along
@@ -909,30 +906,20 @@ function wardrobe(A, D, TF, seed) {
     // (the polish pass, the owner 11-20: "necklaces a pixel more", "bow tie, stethoscope and other one-pixel details get lost",
     // a lanyard "all the way round". A chain is a whole art pixel thick and a little wider; a pendant two pixels; a lanyard
     // and a stethoscope hang lower - a card on the one, a silver disc on the other; a lanyard shows on the collar from behind.)
-    if (PL && A.chain && !T.open) {
-      const long = jw && (jw.lany || jw.steth), w0 = 0.42;
-      if (front && au < w0) {
-        const cz = D.shUp - 0.6 - (1 - (u / w0) * (u / w0)) * (long ? 5.4 : 3.2);
-        if (jw && jw.pendant && au < 0.16 && z < cz + 0.4 && z > cz - (long ? 2.6 : 2.2)) { Q.gloss = 1; return jw.lany ? cloth(jw.trim || '#f0eee8') : jw.steth ? silver : chainC; }
-        if (Math.abs(z - cz) < (jw && jw.chain === 2 ? 1.1 : 0.85)) { Q.gloss = jw && jw.lany ? 0 : 1; return chainC; }
-      }
-      if (jw && jw.lany && back && au < 0.3 && z > D.shUp + 0.3 && z < D.shUp + 1.9) return chainC;   // (a lanyard runs round the back of the neck: on the collar's line, where the hair lets it show - lower it was a patch on the back)
+    if (PL && A.chain && !T.open) {   // (laid on the art grid: peoplepolish.js dress(), NECK)
     } else if (A.chain && front && !T.open && au < 0.36) {   // (from the neck's sides down to a U on the chest: a V of three art pixels at the game's size)
       const cz = D.shUp - 0.6 - (1 - (u / 0.36) * (u / 0.36)) * 3;
       if (Math.abs(z - cz) < (jw && jw.chain === 2 ? 0.8 : 0.5) || (jw && jw.pendant && au < 0.07 && z < cz && z > cz - 1.6)) { Q.gloss = 1; return chainC; }
     }
-    // (the polish pass, the owner 11-20: "button-up shirt buttons" - down the middle of the front, every other art pixel, in a darker tone of the shirt)
-    if (BTN && Q.res === 1 && front && au < 0.3 && z > D.waistUp - 1.0 && z < D.chestUp + 3.2) { const x = Math.round(Q.x), y = Math.round(Q.y), zk = Math.round(Q.zs / BTNP) * BTNP;
-      if (Math.floor(x / 2) === Math.floor((x - u * TF.rx * TF.x[0]) / 2) && Math.floor(y / 2) === Math.floor((y + CA * (Q.zs - zk)) / 2)) return BTN; }
     let R = top;
     // ---- a biker club's back patch (NP4, task #366): the top rocker (the club's name, a curved band), the emblem in a round
     // field in the middle, the bottom rocker - in the club's colours (shared/clubs.js)
     if (T.vest && back && A.top?.patch !== undefined) { const pc = clubPatch(A.top.patch, u, z, D); if (pc) return cloth(pc); }
     // ---- end club patch
     // straps of a backpack or a bag across the chest
-    if ((A.back === 'backpack' || A.back === 'guitarcase') && Math.abs(au - 0.5) < 0.09 && z > D.waistUp && (front || back)) return black;
+    if (!PL && (A.back === 'backpack' || A.back === 'guitarcase') && Math.abs(au - 0.5) < 0.09 && z > D.waistUp && (front || back)) return black;   // (the polish pass lays straps on the art grid: peoplepolish.js NECK)
     if (A.rig && Math.abs(au - 0.42) < 0.08 && z > D.chestUp && (front || back)) return cloth(A.rig);
-    if (bag && front && Math.abs(-u * 0.9 + (z - D.chestUp) / 6 - 0.15) < 0.11) return cloth(A.bagBig && A.bagColor ? A.bagColor : 'leather');   // (a tote's or a messenger's strap its own)
+    if (bag && !(PL && A.prop && A.prop[0] === 'camera') && front && Math.abs(-u * 0.9 + (z - D.chestUp) / 6 - 0.15) < 0.11) return cloth(A.bagBig && A.bagColor ? A.bagColor : 'leather');   // (a tote's or a messenger's strap its own)
     if (T.vest || T.bib || T.apron) {
       // a panel over a shirt: the shirt shows round the arms and the collar
       const panel = T.bib ? (front && au < 0.55 && z < D.chestUp + 2.6) || (au > 0.25 && au < 0.42 && z > D.chestUp) || z < D.waistUp - 1 || (PL && back && ((au > 0.2 && au < 0.42) || (au <= 0.2 && z < D.waistUp + 2.4))) :   // (the polish pass, the owner 11-20: "bib overalls don't connect at the back" - the straps run on down the back to a low panel over the waist)
@@ -1177,19 +1164,22 @@ function wardrobe(A, D, TF, seed) {
   // hats
   const hatR = cloth(A.hat?.color || 'navy'), hk = A.hat?.kind;
   const hatTrim = A.hat?.trim && A.hat.trim !== A.hat.color ? cloth(A.hat.trim) : null;
+  const turbanU = PL && hk === 'turban' ? cloth(mixHex(A.hat.color || 'cream', '#3a2618', 0.5)) : null;
   const hatPat = A.hat?.pattern ? patFn({ pattern: A.hat.pattern, color: A.hat.color, trim: A.hat.trim }) : null;
   W.hat = (Q) => {
     if (Q.part === 'flower') { const i = Math.abs(Math.round(Q.X * 3 + Q.Y * 5)) % 3; return i === 0 ? hatR : i === 1 ? white : cloth('#f2c21b'); }
     if (Q.part === 'leaf') return cloth(A.hat?.trim || '#2f9a3a');
     if (hk === 'catears' && Q.part === 'ear' && Q.l1 > 0.2) return cloth(A.hat?.trim || 'pink');
     if (hk === 'skatehelmet' && Q.part === 'crown' && Q.l2 > 0.3 && (Math.round(Math.atan2(Q.l0, Q.l1) * 2.2) & 1) && Math.abs(Q.l2 - 0.62) < 0.14) Q.k -= 0.45;   // (vents)
-    if (hk === 'turban' && Q.part === 'crown' && (Math.round(Q.l2 * 4 + Q.l0 * 1.5) & 1)) Q.k -= 0.14;   // (the folds)
+    if (hk === 'turban' && Q.part === 'crown' && PL) {   // (wound: the layers rise to a point over the brow - the under-wrap shows in a peak there - and each layer is a fold's shadow)
+      const t = Q.l2 + Math.abs(Q.l0) * 1.2; if (Q.l1 > 0.2 && t < 0.46) { Q.k -= 0.1; return turbanU; } const f = t * 1.45 - Math.floor(t * 1.45); if (f < 0.42) Q.k -= 0.42;
+    } else if (hk === 'turban' && Q.part === 'crown' && (Math.round(Q.l2 * 4 + Q.l0 * 1.5) & 1)) Q.k -= 0.14;   // (the folds)
     if (hk === 'moto' || hk === 'skatehelmet') Q.gloss = 0.7;
     if (hatPat) { const c = hatPat(Q); if (c) return c; }
     if (hk === 'trucker' && Q.part === 'crown' && Q.l1 > 0.45 && Q.l2 > 0.05) return white;
     // (2026-11-14: hats that read at the game's size - a cap's logo in its trim on the front panel and its button, a felt
     // hat's sheen and a dark band round a light one)
-    if (hk === 'cap' && hatTrim && (Q.part === 'button' || (Q.part === 'crown' && Q.l1 * (A.hat.back ? -1 : 1) > 0.7 && Math.abs(Q.l0) < 0.32 && Q.l2 > 0.1 && Q.l2 < 0.6))) return hatTrim;
+    if (hk === 'cap' && hatTrim && !(PL && A.hat.back) && (Q.part === 'button' || (Q.part === 'crown' && Q.l1 * (A.hat.back ? -1 : 1) > 0.7 && Math.abs(Q.l0) < 0.32 && Q.l2 > 0.1 && Q.l2 < 0.6))) return hatTrim;
     if (FELT.has(hk) && Q.part === 'crown') Q.gloss = 0.4;
     if (hk === 'police' && Q.part === 'crown' && Q.l1 > 0.85 && Math.abs(Q.l0) < 0.16 && Q.l2 > -0.4) { Q.gloss = 1; return gold; }
     if (hk === 'hard' && Math.abs(Q.l0) < 0.12 && Q.part === 'crown') Q.k += 0.18;
@@ -1201,7 +1191,7 @@ function wardrobe(A, D, TF, seed) {
     return hatR;
   };
   W.band = () => (FELT.has(hk) && lum(hatR[3]) > 0.4 ? cloth('#2a1a1e') : hk === 'police' ? (A.hat?.braid ? gold : black) : hk === 'sailor' || hk === 'tiara' || hk === 'earmuffs' || A.hat?.pom ? cloth(A.hat?.trim || 'navy') : hk === 'tophat' ? cloth(A.hat?.trim && A.hat.trim !== A.hat.color ? A.hat.trim : '#2a1a1e') : dark(hatR));
-  W.brim = (Q) => { if (hk === 'police') { Q.gloss = 1; return black; } if (hk === 'cap' || hk === 'visor' || hk === 'flatcap') Q.k -= 0.16; return hatR; };
+  W.brim = (Q) => { if (hk === 'police') { Q.gloss = 1; return black; } if (hk === 'cap' || hk === 'visor' || hk === 'flatcap') Q.k -= PL && A.hat.back ? 0.34 : 0.16; return hatR; };
   W.glass = (Q) => { Q.gloss = 1; Q.k -= 0.1; return cloth('#2a3442'); };
   W.skirt = (Q) => { const R = T.dress ? top : T.long ? top : bot, pf = R === top ? topPat : botPat; if (Q.l0 > 0.92) Q.k -= 0.16; if (pf) { const pr = pf(Q); if (pr) return pr; }
     if ((T.towel || bk === 'towel') && Math.abs(Q.l1 - 0.6) < 0.12 && Q.l2 > 0.2) Q.k -= 0.22;                      // the tucked-in corner
@@ -1221,7 +1211,7 @@ function wardrobe(A, D, TF, seed) {
   W.wood = (Q) => { if (Q.l0 > 0.94) Q.k += 0.2; return cloth('#6a4428'); };
   W.board = (Q) => (Math.abs(Q.l0) < 0.12 ? cloth('teal') : cloth('#f0ece4'));
   W.holster = () => black;
-  if (PL && PL.dress) PL.dress(W, A, D, T, TF);
+  W.HEMZ = HEMZ; if (PL && PL.dress) PL.dress(W, A, D, T, TF);
   return W;
 }
 
@@ -1334,22 +1324,30 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   }
   if (A.wings) founderWings(E, A, D, S, P);
   if (A.back === 'guitarcase' && PL) { const gm = (Q) => { Q.gloss = 0.4; return cloth(A.backColor || 'black'); }, GF = mmul(S.SP, ry(0.38));   // (the polish pass, the owner 11-20: "guitar case unreadable" - a guitar's outline: a wide round body low, a narrower waist, a long neck up over the shoulder)
-    E(vadd(S.chest, mv(S.SP, [-1.2, -(D.chestR[1] + 2.0), -5.0])), GF, [5.2, 2.0, 5.2], GR.ACC, 'gcase', gm); E(vadd(S.chest, mv(S.SP, [0.9, -(D.chestR[1] + 2.0), 0.6])), GF, [3.6, 1.9, 3.8], GR.ACC, 'gcase', gm); C(vadd(S.chest, mv(S.SP, [1.9, -(D.chestR[1] + 1.9), 3.0])), vadd(S.chest, mv(S.SP, [5.2, -(D.chestR[1] + 1.7), 11.0])), 1.7, 1.5, GR.ACC, 'gcase', gm); }
+    // (the owner, 20:15: "bigger like the actual size of a guitar compared to a person" - from the back of the knees to over the head)
+    E(vadd(S.chest, mv(S.SP, [-2.2, -(D.chestR[1] + 2.3), -8.0])), GF, [6.6, 2.3, 6.8], GR.ACC, 'gcase', gm); E(vadd(S.chest, mv(S.SP, [0.6, -(D.chestR[1] + 2.3), -0.6])), GF, [4.8, 2.2, 4.8], GR.ACC, 'gcase', gm);
+    C(vadd(S.chest, mv(S.SP, [2.0, -(D.chestR[1] + 2.1), 2.6])), vadd(S.chest, mv(S.SP, [7.4, -(D.chestR[1] + 1.9), 15.5])), 2.1, 1.8, GR.ACC, 'gcase', gm); B(vadd(S.chest, mv(S.SP, [8.0, -(D.chestR[1] + 1.9), 17.0])), GF, [1.9, 1.3, 2.3], GR.ACC, 'gcase', gm); }
   else if (A.back === 'guitarcase') E(vadd(S.chest, mv(S.SP, [1.0, -(D.chestR[1] + 1.7), -1.6])), mmul(S.SP, ry(0.38)), [3.3, 1.5, 11.5], GR.ACC, 'gcase', (Q) => { Q.gloss = 0.4; if (Math.abs(Q.l2 + 0.25) < 0.05) Q.k -= 0.25; return cloth(A.backColor || 'black'); });
-  if (A.jewel && A.jewel.bow && PL) { for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 1.7, D.chestR[1] + 0.5, D.chestR[2] - 1.2])), S.SP, [1.5, 0.7, 1.25], GR.ACC, 'bow', MAT(A.jewel.color)); E(vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.7, D.chestR[2] - 1.2])), S.SP, [0.7, 0.6, 0.8], GR.ACC, 'bow', MAT(A.jewel.color)); }   // (the polish pass: three art pixels across - two wings and a knot; it was one)
+  if (A.jewel && A.jewel.bow && PL) ;   // (the polish pass lays it on the art grid: peoplepolish.js NECK)
   else if (A.jewel && A.jewel.bow) for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 0.75, D.chestR[1] + 0.45, D.chestR[2] - 0.7])), S.SP, [0.85, 0.5, 0.6], GR.ACC, 'bow', MAT(A.jewel.color));   // (a bow tie at the collar)
   if (A.rig) B(vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.8, -0.6])), S.SP, [3.8, 1.0, 2.3], GR.ACC, 'rig', (Q) => { if (Math.abs(Q.l0) < 0.05 || Math.abs(Q.l2 - 0.2) < 0.08) Q.k -= 0.25; return cloth(A.rig); });
   // a robbery's takings (server hotmoney.js; game/host.js puts back 'moneybag' on while the descriptor's mb): a canvas sack, tied off
   if (A.back === 'moneybag') { const sack = (Q) => { if (Q.l2 > 0.6) Q.k -= 0.14; return cloth('#9a8a5c'); }; E(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.3), -1.4])), S.SP, [3.5, 2.4, 3.7], GR.ACC, 'sack', sack); E(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.1), 2.5])), S.SP, [1.2, 1.0, 1.1], GR.ACC, 'sack', (Q) => { Q.k -= 0.22; return cloth('#7a6a44'); }); }
   if (acc === 'bag') B(vadd(S.pel, mv(S.PF, [-D.pelR[0] - (A.bagBig ? 1.9 : 1.4), 0.6, A.bagBig ? -0.4 : 1.0])), S.PF, A.bagBig ? [1.7, 4.6, 4.4] : [1.4, 3.6, 2.8], GR.ACC, 'bag', W.leather);
-  if (acc === 'toolbag' && PL && A.duffel) { const p0 = vadd(S.pel, mv(S.PF, [D.pelR[0] + 2.9, 0.4, -2.2])); C(vadd(p0, mv(S.PF, [0, -4.6, 0])), vadd(p0, mv(S.PF, [0, 4.6, 0])), 2.9, 2.9, GR.ACC, 'tool', (Q) => { if (Math.abs(Q.l0 - 0.5) < 0.05) Q.k -= 0.22; return W.tool(Q); }); }   // (the polish pass, the owner 11-20: "duffel too small (didn't draw?)" - a long round bag at the hip, front to back)
-  else if (acc === 'toolbag' && PL) { const p0 = vadd(S.pel, mv(S.PF, [D.pelR[0] + 2.1, 0.8, -1.2])); B(p0, S.PF, [2.0, 3.4, 2.7], GR.ACC, 'tool', W.tool); B(vadd(p0, mv(S.PF, [0, 0, 3.2])), S.PF, [0.6, 2.2, 0.6], GR.ACC, 'tool', (Q) => { Q.k -= 0.25; return W.tool(Q); }); }   // (...a tool bag: a box twice the size, its handle over it)
+  if (acc === 'toolbag' && PL && A.duffel) {   // (the polish pass, the owner 20:15: "much bigger and look like a duffel bag", "a strap over the shoulder" - a long round bag behind the hip, a pale band round each end, two handles on top; its strap across the chest is laid on the art grid, peoplepolish.js NECK)
+    const p0 = vadd(S.pel, mv(S.PF, [D.pelR[0] + 3.3, -1.0, -1.6])), dc = cloth(A.bagColor || '#2a2a2e'), dm = (Q) => { if (Math.abs(Q.l0 - 0.2) < 0.06 || Math.abs(Q.l0 - 0.8) < 0.06) Q.k += 0.45; return dc; };
+    C(vadd(p0, mv(S.PF, [0, -6.6, 0])), vadd(p0, mv(S.PF, [0, 6.6, 0])), 3.7, 3.7, GR.ACC, 'tool', dm); B(vadd(p0, mv(S.PF, [0, 0, 3.9])), S.PF, [0.7, 2.6, 0.7], GR.ACC, 'tool', (Q) => { Q.k += 0.3; return dc; }); }
+  else if (acc === 'toolbag' && PL) {   // (the owner, 20:15: "should that not be a bigger thing to carry? Looks like a purse almost" - a tool box: long, carried by its handle in the hand where the pose has a free one, tools standing out of its open top)
+    const hand = P.acc && P.item === null, p0 = hand ? vadd(S.haR, [0.4, 0, -5.2]) : vadd(S.pel, mv(S.PF, [D.pelR[0] + 2.6, 0.8, -1.6]));
+    B(p0, S.PF, [2.1, 5.4, 2.9], GR.ACC, 'tool', (Q) => { if (Q.l2 < 0.85 && Math.abs(Q.l2 - 0.3) < 0.1) Q.k -= 0.28; return W.tool(Q); });
+    B(vadd(p0, mv(S.PF, [0, 0, 3.7])), S.PF, [0.7, 3.2, 0.7], GR.ACC, 'tool', (Q) => { Q.k -= 0.3; return W.tool(Q); });
+    for (const [y, c] of [[-3.2, '#c8ccd4'], [0, '#e0b020'], [3.0, '#c8ccd4']]) C(vadd(p0, mv(S.PF, [0, y, 2.6])), vadd(p0, mv(S.PF, [0, y + 0.6, 5.6])), 0.8, 0.7, GR.ACC, 'tool', ((R) => () => R)(cloth(c))); }
   else if (acc === 'toolbag') B(vadd(S.pel, mv(S.PF, [D.pelR[0] + 1.2, 0.8, -0.4])), S.PF, [1.4, 2.3, 2.4], GR.ACC, 'tool', W.tool);
   if (A.beltBag) B(vadd(S.pel, mv(S.PF, [0.6, D.pelR[1] + 0.8, 1.1])), S.PF, [2.6, 1.0, 1.2], GR.ACC, 'beltbag', W.beltbag);
   if (P.acc && acc && P.item === null) {
     const hR = S.haR, hL = S.haL;
     if (acc === 'briefcase') B(vadd(hR, [0, 0, -4.2]), S.PF, [1.3, 4.0, 3.0], GR.ACC, 'case', W.case);
-    if (acc === 'purse') B(vadd(hR, [0, 0, A.bagSmall ? -1.6 : -3.2]), S.PF, PL && A.prop && A.prop[0] === 'camera' ? [1.9, 3.1, 2.4] : A.bagSmall ? [0.8, 2.2, 1.2] : [1.1, 2.6, 2.0], GR.ACC, 'purse', W.leather);   // (the polish pass: a camera's body three art pixels by two)
+    if (acc === 'purse' && !(PL && A.prop && A.prop[0] === 'camera')) B(vadd(hR, [0, 0, A.bagSmall ? -1.6 : -3.2]), S.PF, A.bagSmall ? [0.8, 2.2, 1.2] : [1.1, 2.6, 2.0], GR.ACC, 'purse', W.leather);   // (the polish pass: a camera hangs on the chest from its strap - peoplepolish.js NECK - not in the hand)   // (the polish pass: a camera's body three art pixels by two)
     if (acc === 'shopping') { B(vadd(hR, [0.4, 0, -4.4]), S.PF, [1.2, 2.8, 3.4], GR.ACC, 'bagR', W.paper); B(vadd(hL, [-0.4, 0, -4.4]), S.PF, [1.2, 2.8, 3.4], GR.ACC, 'bagL', W.paper); }
     if (acc === 'coffee') C(vadd(hR, [0, 0.4, 1.2]), vadd(hR, [0, 0.4, 4.4]), 1.2, 1.55, GR.ACC, 'cup', W.cup);
     if (acc === 'cane') C(vadd(hR, [0, 0.6, 0.6]), [hR[0] + 0.6, hR[1] + 3.4, 0.4], 0.62, 0.55, GR.ACC, 'cane', W.wood);
@@ -1537,22 +1535,28 @@ function maskPrims(E, C, B, A, at, HD, hr) {
     // (the polish pass, the owner 11-20: "bear and panda masks need ears/markings" - both were a pig's head in another color.
     // Round ears up on the corners of the head, two art pixels each (a panda's black); a short pale muzzle, a dark nose on it)
     const panda = A.fmask.animal === 'panda', ec = panda ? cloth(A.fmask.t || '#1a1a1e') : cloth(mixHex(A.fmask.c, '#000000', 0.3)), mz = cloth(mixHex(A.fmask.c, '#ffffff', panda ? 0 : 0.42)), nose = cloth('#1a1416');
-    for (const s of [-1, 1]) E(at([s * 0.74, -0.05, 0.9]), HD, [2.3, 1.2, 2.3], GR.HAT, 'pigear', () => ec);
-    C(at([0, 0.86, -0.34]), at([0, 1.12, -0.36]), 1.9, 1.7, GR.HAT, 'snout', (Q) => (Q.l0 > 0.6 && Math.abs(Q.l1) < 0.5 && Q.l2 > -0.1 ? nose : mz));
+    for (const s of [-1, 1]) E(at([s * 0.8, -0.05, 0.98]), HD, [3.1, 1.5, 3.1], GR.HAT, 'pigear', () => ec);   // (the owner, 20:15: "ears could be bigger")
+    C(at([0, 0.8, -0.36]), at([0, 0.98, -0.38]), 2.3, 2.1, GR.HAT, 'snout', () => mz);   // (short: at an angle a long one read as a beak; its nose and mouth are stamped on it - peoplepolish.js masks)
+  } else if (k === 'pig' && PL) {   // (the polish pass: ears that show - folded triangles on the corners - and a short broad snout, its nostrils stamped on)
+    const ec = cloth(mixHex(A.fmask.c, '#7a2a40', 0.3)), sn = cloth(mixHex(A.fmask.c, '#ffffff', 0.25));
+    for (const s of [-1, 1]) E(at([s * 0.78, 0.0, 0.95]), mmul(HD, ry(s * 0.5)), [2.5, 1.2, 2.2], GR.HAT, 'pigear', () => ec);
+    C(at([0, 0.8, -0.34]), at([0, 1.02, -0.36]), 2.2, 2.0, GR.HAT, 'snout', () => sn);
   } else if (k === 'pig') {
     for (const s of [-1, 1]) E(at([s * 0.6, -0.05, 0.84]), HD, [1.25, 0.55, 1.5], GR.HAT, 'pigear', () => mc);
     const sn = cloth(mixHex(A.fmask.c, '#ffffff', 0.2)), hole = cloth('#8a4a58');
     C(at([0, 0.86, -0.3]), at([0, 1.2, -0.32]), 1.5, 1.4, GR.HAT, 'snout', (Q) => (Q.l0 > 0.97 && Math.abs(Q.l1) > 0.2 && Math.abs(Q.l1) < 0.65 && Math.abs(Q.l2) < 0.4 ? hole : sn));
   } else if (k === 'gas') {
     const fc = cloth(A.fmask.t);
-    for (const s of [-1, 1]) C(at([s * 0.38, 0.9, -0.58]), at([s * 0.72, 1.28, -0.72]), 1.25, 1.2, GR.HAT, 'filter', (Q) => { if (Q.l0 > 0.8) Q.k -= 0.25; return fc; });
+    if (PL) C(at([0, 0.86, -0.6]), at([0, 1.22, -0.7]), 2.0, 1.9, GR.HAT, 'filter', (Q) => { if (Q.l0 > 0.75) Q.k -= 0.3; return fc; });   // (the polish pass: one canister in front of the mouth - two small ones at the cheeks were specks)
+    else for (const s of [-1, 1]) C(at([s * 0.38, 0.9, -0.58]), at([s * 0.72, 1.28, -0.72]), 1.25, 1.2, GR.HAT, 'filter', (Q) => { if (Q.l0 > 0.8) Q.k -= 0.25; return fc; });
   } else if (k === 'welding') {
-    const win = cloth('#141618');
-    B(at([0, 1.0, -0.12]), HD, [hr[0] * 0.9, 1.3, hr[2] * 0.88], GR.HAT, 'weld', (Q) => (Math.abs(Q.l2 - 0.3) < 0.16 && Math.abs(Q.l0) < 0.62 ? win : mc));   // (deep enough that the nose stays behind it)
+    const win = cloth(PL ? '#2f6f5a' : '#141618');   // (the polish pass: a dark green glass - black on charcoal did not show)
+    B(at([0, 1.0, -0.12]), HD, [hr[0] * 0.9, 1.3, hr[2] * 0.88], GR.HAT, 'weld', (Q) => (Math.abs(Q.l2 - 0.3) < (PL ? 0.22 : 0.16) && Math.abs(Q.l0) < 0.62 ? (PL && (Q.gloss = 1), win) : mc));   // (deep enough that the nose stays behind it)
   }
+  if (k === 'clown' && PL) { const tc = cloth(A.fmask.t || '#c8262b'); for (const s of [-1, 1]) E(at([s * 1.12, -0.15, 0.3]), HD, [3.0, 3.0, 3.0], GR.HAT, 'pigear', () => tc); }   // (a clown's tufts of hair at the sides, in its trim)
   if (A.masq) {
     const F = [cloth(A.masq), cloth('#c8262b'), cloth('#7a3ac8')];
-    for (let i = 0; i < 3; i++) C(at([0.55, 0.62, 0.42]), at([0.75 + i * 0.16, 0.5 - i * 0.18, 1.45 + (i === 1 ? 0.15 : 0)]), 0.62, 0.2, GR.HAT, 'feather', () => F[i]);
+    for (let i = 0; i < 3; i++) C(at([0.55, 0.62, 0.42]), at([0.75 + i * 0.16, 0.5 - i * 0.18, (PL ? 1.75 : 1.45) + (i === 1 ? 0.15 : 0)]), PL ? 0.95 : 0.62, PL ? 0.45 : 0.2, GR.HAT, 'feather', () => F[i]);
   }
 }
 function hatPrims(E, C, A, D, S, W, at, k, B) {
@@ -1561,9 +1565,10 @@ function hatPrims(E, C, A, D, S, W, at, k, B) {
   const brim = (dy, rx_, ry_, th, z = 0.32, F = HDb) => E(vadd(S.head, mv(F, [0, dy, hr[2] * z])), F, [rx_, ry_, th], GR.HAT, 'brim', W.brim);
   if (k === 'cap' || k === 'trucker') {
     const bk = A.hat.back ? -1 : 1;   // (worn backwards: the peak over the nape)
-    E(at([0, -0.05, 0.3]), HD, [hr[0] + 1.1, hr[1] + 1.1, hr[2] * 0.82], GR.HAT, 'crown', W.hat, (a, b, c) => c > (b * bk > 0.3 ? 0.05 : -0.14));
+    // (the polish pass, the owner 20:15: worn backwards "a little gap in the back of the hat (which is facing us in the front view) where the adjuster is" - an arch over the brow, the strap under it)
+    E(at([0, -0.05, 0.3]), HD, [hr[0] + 1.1, hr[1] + 1.1, hr[2] * 0.82], GR.HAT, 'crown', W.hat, (a, b, c) => c > (b * bk > 0.3 ? 0.05 : -0.14) && !(PL && bk < 0 && b > 0.55 && Math.abs(a) < 0.36 && c > 0.06 && c < 0.5));
     if (bk > 0) brim(hr[1] + 0.5, hr[0] * 0.78, 2.9, 0.6, 0.44);
-    else if (PL) brim(-(hr[1] + 1.6), hr[0] * 0.82, 3.8, 0.75, 0.3, mmul(HD, rx(0.16)));   // (the polish pass, the owner 11-20: "cap backwards has no bill" - out past the hair behind, two art pixels of it)
+    else if (PL) brim(-(hr[1] + 1.9), hr[0] * 0.86, 4.2, 0.8, 0.26, mmul(HD, rx(0.2)));   // (the polish pass, the owner 11-20: "cap backwards has no bill" - out past the hair behind, two art pixels of it)
     else brim(-(hr[1] + 0.4), hr[0] * 0.78, 2.6, 0.6, 0.34, mmul(HD, rx(0.3)));
     E(at([0, -0.05, 1.07]), HD, [0.8, 0.8, 0.6], GR.HAT, 'button', W.hat);
   } else if (k === 'police') {
@@ -1601,9 +1606,13 @@ function hatPrims(E, C, A, D, S, W, at, k, B) {
     E(at([0.12, -0.12, 0.66]), mmul(HD, ry(0.22)), [hr[0] + 1.7, hr[1] + 1.5, 2.3], GR.HAT, 'crown', W.hat, (a, b, c) => c > -0.45);
   } else if (k === 'tophat') {
     const b0 = at([0, -0.05, 0.55]);
-    if (PL) B(vadd(b0, mv(HD, [0, 0, 3.9])), HD, [hr[0] * 0.82, hr[0] * 0.8, 3.9], GR.HAT, 'crown', (Q) => { const R = W.hat(Q); if (Q.nz > 0.6) Q.k -= 0.34; return R; });   // (its flat top a tone of the hat, not a white lid)   // (the polish pass, the owner 11-20: "top hat level/boxy" - a flat-topped block, not a dome)
+    if (PL) {   // (the polish pass, the owner 20:15: "the white ring ... looked better on the before picture. Just want to make sure the top part is flat" - the round crown and its brim as they were, the dome cut off level under a lid)
+      const R0 = hr[0] * 0.86; let LID = null; E(vadd(b0, mv(HD, [0, 0, 4.9])), HD, [R0 * 1.1, R0 * 1.1, 11.2], GR.HAT, 'crown', W.hat, (a, b, c) => Math.abs(c) < 0.44);
+      E(vadd(b0, mv(HD, [0, 0, 9.8])), HD, [R0, R0, 0.4], GR.HAT, 'crown', (Q) => { const R = W.hat(Q); Q.gloss = 0; return (LID ||= [R[0], R[0], R[1], R[1], R[2]]); });   // (the lid in the hat's own dark tones: lit from straight above it came out white)
+    }
     else C(b0, vadd(b0, mv(HD, [0, 0, 8.5])), hr[0] * 0.84, hr[0] * 0.9, GR.HAT, 'crown', W.hat);
-    C(vadd(b0, mv(HD, [0, 0, 0.6])), vadd(b0, mv(HD, [0, 0, 2.0])), hr[0] * 0.87, hr[0] * 0.87, GR.HAT, 'band', W.band);
+    if (PL) E(vadd(b0, mv(HD, [0, 0, 1.5])), HD, [hr[0] * 1.0, hr[0] * 1.0, 5.0], GR.HAT, 'band', W.band, (a, b, c) => Math.abs(c) < 0.24);   // (the band a ring round the crown's foot, proud of it: as a capsule its domed end came up through the lid)
+    else C(vadd(b0, mv(HD, [0, 0, 0.6])), vadd(b0, mv(HD, [0, 0, 2.0])), hr[0] * 0.87, hr[0] * 0.87, GR.HAT, 'band', W.band);
     E(vadd(S.head, mv(HD, [0, -0.2, hr[2] * 0.5])), HD, [hr[0] + 2.3, hr[1] + 2.1, 0.55], GR.HAT, 'brim', W.brim);
   } else if (k === 'visor') {
     E(at([0, -0.05, 0.34]), HD, PL ? [hr[0] + 2.9, hr[1] + 2.9, 1.9] : [hr[0] + 0.7, hr[1] + 0.7, 1.3], GR.HAT, 'crown', W.hat);   // (the polish pass, the owner 11-20: "visor needs a bill and wraps the head" - the band out over the hair all the way round, the bill twice as long)
@@ -1645,22 +1654,28 @@ function hatPrims(E, C, A, D, S, W, at, k, B) {
     E(at([0, -0.15, 0.08]), HD, [hr[0] + 1.4, hr[1] + 1.35, hr[2] + 1.3], GR.HAT, 'crown', W.hat, (a, b, c) => !(b > 0.32 && Math.abs(a) < 0.66 && c < 0.5 && c > -0.88));
     E(vadd(S.neck, mv(S.SP, [0, -0.4, -1.6])), S.SP, [D.shX * 0.8, D.chestR[1] + 0.9, 3.6], GR.HAT, 'drape', W.hat, (a, b, c) => c > -0.4 || b < 0.6);
   } else if (k === 'turban') {   // wound round: a rounded volume with its folds
-    E(at([0, -0.1, 0.72]), HD, [hr[0] + 1.5, hr[1] + 1.45, hr[2] * 0.98], GR.HAT, 'crown', W.hat, (a, b, c) => c > (b > 0.5 ? -0.1 : -0.45));
-    if (PL) {   // (the polish pass, the owner 11-20: "turban is a blob" - the wraps: two bands crossing over the brow in a darker fold, a knot of cloth on top)
-      const fold = (Q) => { const R = W.hat(Q); Q.k -= 0.2; return R; };
-      for (const s of [-1, 1]) E(at([s * 0.3, 0.1, 0.82]), mmul(HD, ry(s * 0.55)), [hr[0] + 1.9, hr[1] + 1.7, 1.25], GR.HAT, 'fold', fold, (a, b, c) => b > -0.3);
-      E(at([0, 0.2, 1.62]), HD, [2.6, 2.4, 1.6], GR.HAT, 'knot', W.hat);
-    }
+    // (the polish pass, the owner 20:15: "should look wrapped at some part of it" - a taller, fuller volume; its folds and the peak of the
+    // under-wrap over the brow are drawn by W.hat)
+    if (PL) E(at([0, -0.06, 0.78]), HD, [hr[0] + 2.0, hr[1] + 1.9, hr[2] * 1.08], GR.HAT, 'crown', W.hat, (a, b, c) => c > (b > 0.5 ? -0.16 : -0.45));
+    else E(at([0, -0.1, 0.72]), HD, [hr[0] + 1.5, hr[1] + 1.45, hr[2] * 0.98], GR.HAT, 'crown', W.hat, (a, b, c) => c > (b > 0.5 ? -0.1 : -0.45));
   } else if (k === 'flowers') {   // a ring of flowers and leaves round the head
     for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; E(at([Math.sin(a) * 1.02, Math.cos(a) * 1.0, 0.42]), HD, [1.25, 1.25, 1.0], GR.HAT, i % 3 === 2 ? 'leaf' : 'flower', W.hat); }
   } else if (k === 'tiara') {   // a small crest of silver at the front of the head, a stone in it
-    E(at([0, 0.58, 0.88]), mmul(HD, rx(0.5)), PL ? [hr[0] * 0.8, 0.7, 2.3] : [hr[0] * 0.62, 0.5, 1.5], GR.HAT, 'crown', W.hat);   // (the polish pass: a band three or four art pixels across, its stone a whole one - it was one pixel in all)
-    E(at([0, 0.72, PL ? 1.06 : 0.98]), HD, PL ? [1.4, 0.8, 1.4] : [0.8, 0.6, 0.8], GR.HAT, 'gem', W.band);
+    if (PL) {   // (the polish pass, the owner 20:15: "a little bigger and more clear it's a tiara ... back view doesn't look like anything" - a band over the hair from ear to ear, so it shows from behind; three points at the front, the middle one tall with the stone)
+      const sv = (Q) => { Q.gloss = 1; Q.k += 0.2; return W.hat(Q); }, HT = mmul(HD, rx(0.42));
+      E(at([0, 0.1, 0.1]), HT, [hr[0] + 2.9, 1.2, hr[2] + 2.9], GR.HAT, 'crown', sv, (a, b, c) => c > 0.2);
+      for (const [x, hgt] of [[-0.42, 1.7], [0, 2.9], [0.42, 1.7]]) E(vadd(at([x, 0.1, 0.1]), mv(HT, [0, 0, hr[2] + 2.9 + hgt * 0.6])), HT, [1.25, 1.1, hgt], GR.HAT, 'crown', sv);
+      E(vadd(at([0, 0.1, 0.1]), mv(HT, [0, 0.9, hr[2] + 4.3])), HT, [1.2, 0.9, 1.2], GR.HAT, 'gem', (Q) => { Q.gloss = 1; return W.band(); });
+    } else {
+    E(at([0, 0.58, 0.88]), mmul(HD, rx(0.5)), [hr[0] * 0.62, 0.5, 1.5], GR.HAT, 'crown', W.hat);
+    E(at([0, 0.72, 0.98]), HD, [0.8, 0.6, 0.8], GR.HAT, 'gem', W.band);
+    }
   } else if (k === 'earmuffs') {   // fluffy pads over the ears on a band over the top
     if (PL) {   // (the polish pass, the owner 11-20: "earmuffs not visible, add headphones" - the pads out past the hair, the band an arch over it; headphones a paler band and a colored face on each cup)
       const ph = A.hat.phones, bandC = ph ? cloth(mixHex(A.hat.color || '#1a1a1e', '#ffffff', 0.32)) : null, tr = cloth(A.hat.trim || 'royal blue');
-      for (const s of [-1, 1]) { E(at([s * 1.4, -0.05, -0.08]), HD, ph ? [2.3, 2.7, 3.1] : [2.7, 3.1, 3.3], GR.HAT, 'muff', W.hat); if (ph) E(at([s * 1.62, -0.05, -0.08]), HD, [1.1, 1.7, 2.0], GR.HAT, 'cup', () => tr); }
-      E(at([0, -0.05, 0]), HD, [hr[0] + 3.1, 1.15, hr[2] + 3.0], GR.HAT, 'band', ph ? () => bandC : W.band, (a, b, c) => c > 0.1);
+      // (the owner, 20:15: the muffs "maybe too big now", the headphones "probably better before" - the first shapes' sizes, a little over, set out past the hair so they show; the band a thin arch)
+      for (const s of [-1, 1]) { E(at([s * 1.36, -0.05, -0.08]), HD, ph ? [1.7, 2.2, 2.5] : [2.2, 2.5, 2.7], GR.HAT, 'muff', W.hat); if (ph) E(at([s * 1.5, -0.05, -0.08]), HD, [0.9, 1.3, 1.5], GR.HAT, 'cup', () => tr); }
+      E(at([0, -0.05, 0]), HD, [hr[0] + 2.7, ph ? 0.75 : 0.9, hr[2] + 2.7], GR.HAT, 'band', ph ? () => bandC : W.band, (a, b, c) => c > 0.3);
     } else {
     for (const s of [-1, 1]) E(at([s * 1.22, -0.05, -0.05]), HD, [2.1, 2.3, 2.4], GR.HAT, 'muff', W.hat);
     E(at([0, -0.05, 0.98]), HD, [hr[0] + 0.5, 0.75, 0.6], GR.HAT, 'band', W.band);
@@ -2272,7 +2287,8 @@ function face(fig, P, A, D, w, h, AX, AY) {
     // (the art pixel it falls in: its top-left world px)
     return { x, y, bx: AX + 2 * Math.floor((x - AX) / 2), by: AY + 2 * Math.floor((y - AY) / 2), fc: (ny * CA + nz * SA) / nl };
   };
-  const JAW = K + 1, onHead = (x, y) => x >= 0 && y >= 0 && x < w && y < h && (PID[y * w + x] === K || PID[y * w + x] === JAW);
+  const JAW = K + 1, SNP = PL && A.fmask ? (pk) => pk >= 0 && pk < fig.prims.length && fig.prims[pk].part === 'snout' : null;   // (the polish pass: an animal mask's muzzle is face too - its nose and mouth are stamped on it)
+  const onHead = (x, y) => x >= 0 && y >= 0 && x < w && y < h && (PID[y * w + x] === K || PID[y * w + x] === JAW || (SNP !== null && SNP(PID[y * w + x])));
   // one art pixel: the 2 x 2 block at (bx, by), where it's on the face; dx, dy step whole art pixels
   const put = (q, col, dx = 0, dy = 0) => {
     const x0 = q.bx + dx * 2, y0 = q.by + dy * 2;
@@ -2393,6 +2409,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
       else stamp(m, LIP_ST[L5], { a: lip, t: mixC(lip, skin[0], 0.5), b: lit(lip, 0.3), c: mixC(lip, skin[3], 0.5) }, 1, my);   // (medium, thin a dark line, full two pixels, wide three, a bow's lit top, small a faint dot)
     }
   }
+  if (cx && PL.masks && e0) PL.masks({ ...cx, fm, fwd: M[1] > 0 ? 1 : -1 });   // (the polish pass: masks as small pictures in art pixels, over all of the above)
 }
 function water(w, h, AX, AY, X, S, P, R = 1) {
   const WATERC = [36, 116, 140];

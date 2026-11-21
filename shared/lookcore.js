@@ -249,7 +249,7 @@ add('glasses', 'Party mask', 'mf', 'nightclub disguise festival', 20, 'costume',
 // jewellery and watches (CP3)
 add('jewel', 'Gold chain', 'mf', 'streetwear nightclub street', 250, 'jeweller', { chain: 1 }, 'gold');
 add('jewel', 'Silver chain', 'mf', 'streetwear punk alt', 120, 'jeweller', { chain: 1 }, 'silver');
-add('jewel', 'Pearl necklace', 'f', 'formal preppy hifashion', 300, 'jeweller', { chain: 1 }, 'white');
+add('jewel', 'Pearl necklace', 'f', 'formal preppy hifashion', 300, 'jeweller', { chain: 1, pearl: 1 }, 'white');
 add('jewel', 'Choker', 'f', 'alt punk nightclub', 30, 'boutique', { choker: 1 }, 'black');
 add('jewel', 'Hoop earrings', 'f', 'nightclub streetwear', 60, 'jeweller', { ear: 1 }, 'gold');
 add('jewel', 'Stud earrings', 'mf', 'casual smart', 40, 'jeweller', { ear: 1 }, 'silver');
@@ -375,7 +375,7 @@ add('bag', 'Mail satchel', 'mf', 'work retro', 55, 'workwear', { carry: 'bag', b
 add('top', 'Chef whites', 'mf', 'work', 40, 'workwear', { k: 'uniform', plain: 1 }, 'white', 'black');
 add('hat', 'Paper hat', 'mf', 'work retro', 5, 'workwear', { k: 'paper' }, 'white', 'red');
 add('jacket', 'Poncho', 'mf', 'outdoors festival western', 45, 'outdoor', { k: 'coat', p: 1 }, 'rust', 'mustard');
-add('jewel', 'Lifeguard whistle', 'mf', 'beach athletic work', 12, 'beach', { chain: 1, pendant: 1 }, 'red', 'silver');
+add('jewel', 'Lifeguard whistle', 'mf', 'beach athletic work', 12, 'beach', { chain: 1, pendant: 1, whistle: 1 }, 'red', 'silver');
 add('jewel', 'Stethoscope', 'mf', 'work', 60, 'workwear', { chain: 1, pendant: 1, steth: 1 }, 'charcoal', 'silver');
 add('jewel', 'Bow tie', 'mf', 'formal business retro', 35, 'boutique', { bow: 1 }, 'black');
 add('jewel', 'Work gloves', 'mf', 'work outdoors', 18, 'workwear', { gloves: 1 }, 'tan');
@@ -388,7 +388,7 @@ add('set', 'Nothing', 'mf', 'lounge', 0, 'bathhouse', { k: 'none', bk: 'none', i
 // the season gifts (d.gift: never sold, not free - only the accounts given one own it: shared/wardrobe.js free; never in
 // a random look; the creator shows it only to its owners): Season 0's Founding Citizen jacket (server/systems/cosmetics.js,
 // shared/rules.js COSMETICS.beta) - the varsity jacket's art in black and gold, no new sprite art
-add('jacket', 'Founding Citizen jacket', 'mf', 'preppy streetwear retro', 0, 'gift', { k: 'jacket', bomber: 1, shine: 1, gift: 1 }, 'gold', 'black');   // (the owner, 11-20: all gold, a bomber that shines and sparkles - it was the varsity jacket in black with gold sleeves)
+add('jacket', 'Founding Citizen jacket', 'mf', 'preppy streetwear retro', 0, 'gift', { k: 'jacket', bomber: 1, shine: 1, zipped: 1, gift: 1 }, 'gold', 'black');   // (the owner, 11-20: all gold, a bomber that shines and sparkles - it was the varsity jacket in black with gold sleeves)
 // underwear (the owner, 2026-11-19): a slot, seen where there's no top or no bottoms. d.k the top half's art kind
 // (none: a woman's gets a plain bra), d.bk the bottom's. 'Nothing on': the mosaic. Never in random looks.
 add('under', 'Nothing on', 'mf', 'lounge', 0, 'clothing', { k: 'none', bk: 'none' }, 'white');
@@ -448,9 +448,9 @@ add('bottoms', 'Kilt', 'mf', 'formal retro punk', 90, 'boutique', { k: 'skirt', 
 add('bottoms', 'Leather chaps', 'mf', 'western punk', 130, 'boutique', { k: 'pants', gloss: 1 }, 'brown');
 add('set', 'Onesie', 'mf', 'lounge festival', 55, 'clothing', { k: 'hoodie', bk: 'pants' }, 'brown', 'cream');
 add('set', 'Sequin dress', 'f', 'nightclub formal hifashion', 180, 'boutique', { k: 'dress', len: 1, p: 4 }, 'gold', 'cream');
-add('jewel', 'Scarf', 'mf', 'winter smart casual', 25, 'clothing', { choker: 1, chain: 2 }, 'red');
+add('jewel', 'Scarf', 'mf', 'winter smart casual', 25, 'clothing', { choker: 1, chain: 2, scarf: 1 }, 'red');
 add('jewel', 'Neckerchief', 'mf', 'western work festival', 12, 'clothing', { choker: 1 }, 'red');
-add('jewel', 'Bolo tie', 'mf', 'western formal', 45, 'boutique', { chain: 1, pendant: 1 }, 'teal', 'silver');
+add('jewel', 'Bolo tie', 'mf', 'western formal', 45, 'boutique', { chain: 1, pendant: 1, bolo: 1 }, 'teal', 'silver');
 add('jewel', 'Lanyard', 'mf', 'work business smart', 6, 'workwear', { chain: 1, pendant: 1, lany: 1 }, 'royal blue', 'white');
 add('jewel', 'Evening gloves', 'f', 'formal hifashion nightclub', 60, 'boutique', { gloves: 1 }, 'black');
 add('jewel', 'Biker gloves', 'mf', 'punk street western', 35, 'boutique', { gloves: 1 }, 'black');
@@ -646,7 +646,7 @@ export function lookArt(L, opt = {}) {
   }
   if (jk) {   // worn open over the top: the top's colour down the front
     const under = A.top;
-    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null), ...(jk.d.shine ? { shine: 1 } : null) };
+    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null), ...(jk.d.shine ? { shine: 1 } : null), ...(jk.d.zipped ? { zipped: 1 } : null) };
     if (jk.d.k === 'vest') A.top.sleeve = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'crop' || under.kind === 'bikini' ? 'skin' : under.color;
     if (jk.d.k === 'kevlar') { A.top.kind = 'kevlar'; A.top.color = under.color || A.top.color; A.top.color2 = HEX(O.jacket.c); A.top.sleeve = under.kind === 'none' || under.kind === 'tank' ? 'skin' : under.color; A.top.chevrons = under.chevrons || 0; }   // (the plates over the shirt, the shirt's sleeves)
     if (jk.d.k === 'apron' || jk.d.k === 'overalls') {   // (worn over the top: the shirt round them is the top - its colour, its sleeves, a flannel's check - or bare skin)
