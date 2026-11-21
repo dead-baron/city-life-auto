@@ -25264,6 +25264,14 @@ best-looking trees in the game.
   upper left; the game's sun and shadows are added on top (lit at morning, noon, afternoon and golden hour off-line:
   the lit side follows the sun, the painted dark stays). Leaving the left-right light to the game was tried
   (`cluster`'s `SIDE`) and a sheet sent; it stays as it was (`SIDE` 1) unless he picks the other.
+- **The audit, and the pieces never placed** (the owner, 11:48 and 12:12). Each nature sheet's pieces were matched
+  against what the game draws (project doc `claude/nature-audit-2026-11-21.md`: has / part / missing, by sheet - by
+  name so far, the look checked as each biome is built). Its first find: `flora.js` drew 144 things and the world
+  planted 93. Placed now, as walk-through undergrowth by rule (`statics.js` `SPECIES`, `NAT_SP`): trillium, fallen
+  branches, pine cones, leaf litter, conifer saplings and wild strawberries on the forest floor (trillium, branches
+  and saplings under the redwoods too); daisies, buttercups and clover as two more kinds of meadow drift; columbine
+  and buttercups in the alpine ground; rushes at the water's edge. Still unplaced: the solid ones (mossy log, nurse
+  stump, moss mounds, lichen boulders, creek rocks, driftwood) - those are the server's to place, the next step.
 - **Cost.** One art batch: the art hash changes, so the world re-bakes once when this goes live (about five hours of
   the server's bake). The bake itself draws a quarter of the pixels per plant; `node tools/perf.mjs` is within every
   budget with twice the shapes (bake 87 files, 1016 KB of 1020; `trees.js` no longer in it; the bakes 57x of 90x).

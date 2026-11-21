@@ -2258,6 +2258,10 @@ const SPECIES = {
   berryShrub: [FL.berryShrub, 40, 56], aLupine: [FL.alpineLupine, 27, 60], paintbrush: [FL.paintbrush, 27, 51], heather: [FL.heather, 31, 36], aDaisies: [FL.alpineDaisies, 31, 33],
   weed: [FL.weedTuft, 31, 36], dryTuft: [(s) => FL.dryGrass(s, 0.6), 34, 31],
   sunflowers: [FL.sunflowers, 35, 69], wildflowers: [(s) => FL.wildflowerLawn(s), 68, 47],
+  // the forest floor and the meadows' small things, drawn for the kit sheets (E3b, E3e, E3f) and never planted till the
+  // nature kit pass (2026-11-21, the owner: "pulling everything we can from the concepts to create a really full kit")
+  trillium: [FL.trillium, 40, 28], twigs: [FL.fallenBranches, 45, 23], cones: [FL.pineCones, 23, 17], litter: [(s) => FL.leafLitter(s), 34, 16], sapling: [FL.sapling, 15, 30],
+  columbine: [FL.columbine, 32, 46], buttercups: [FL.buttercups, 32, 27], clover: [FL.clover, 34, 30], strawberries: [FL.strawberries, 33, 27], rushes: [FL.rushes, 30, 60],
 };
 // Every plant is made at the art pixel (flora.js floraArt: the maker run at half size, a pixel of it an art pixel) - the
 // owner's nature kit pass, 2026-11-21 - but the redwoods' own (redwoods.js: at the art pixel already).
@@ -4040,16 +4044,17 @@ function coverClearWet(c, tx, ty) {
 // ================================================================================================
 const NAT_SP = {
   // [species, weight] by the patch a tile falls in
-  forest: [['fern', 6], ['fern', 6], ['salal', 5], ['huckle', 2], ['berry', 1], ['bracken', 1], ['foxglove', 1]],
-  redwood: [['fernR', 12], ['salal', 1], ['huckle', 1], ['bracken', 1], ['foxglove', 1]],
+  forest: [['fern', 6], ['fern', 6], ['salal', 5], ['huckle', 2], ['berry', 1], ['bracken', 1], ['foxglove', 1], ['sapling', 2], ['trillium', 1], ['twigs', 1], ['cones', 1], ['litter', 1], ['strawberries', 1]],
+  redwood: [['fernR', 12], ['salal', 1], ['huckle', 1], ['bracken', 1], ['foxglove', 1], ['trillium', 2], ['twigs', 1], ['sapling', 1]],
   meadowA: [['lupines', 1]], meadowB: [['poppies', 3], ['tallGrass', 1]], meadowC: [['lupines', 1], ['berryShrub', 1]], meadowD: [['poppies', 1], ['lupines', 1], ['tallGrass', 1]],
-  meadowGrass: [['tallGrass', 5], ['berryShrub', 1], ['pampas', 1]],
+  meadowE: [['daisies', 3], ['buttercups', 2], ['clover', 1]], meadowF: [['clover', 3], ['buttercups', 1], ['strawberries', 1], ['tallGrass', 1]],
+  meadowGrass: [['tallGrass', 5], ['berryShrub', 1], ['pampas', 1], ['clover', 1]],
   desert: [['creosote', 4], ['bursage', 3], ['brittle', 2], ['dryGrass', 3], ['sage', 2], ['tumble', 1]],
   desertBloom: [['dFlowers', 2], ['dPoppies', 2], ['brittle', 1]],
   desertCacti: [['barrel', 2], ['pear', 2], ['agave', 2], ['cholla', 1], ['saguaroSmall', 1], ['yucca', 1]],
-  alpine: [['heather', 4], ['juniper', 1], ['aDaisies', 3], ['aLupine', 2], ['paintbrush', 1], ['twisted', 1]],
+  alpine: [['heather', 4], ['juniper', 1], ['aDaisies', 3], ['aLupine', 2], ['paintbrush', 1], ['twisted', 1], ['columbine', 2], ['buttercups', 1]],
   dune: [['duneGrass', 4], ['beachGrass', 3], ['icePlant', 1]],
-  shore: [['reeds', 3], ['cattails', 3], ['tallGrass', 1]],
+  shore: [['reeds', 3], ['cattails', 3], ['tallGrass', 1], ['rushes', 2]],
   jungle: [['fern', 5], ['monstera', 4], ['elephant', 3], ['bird', 2], ['hibiscus', 1], ['fern', 3], ['salal', 1]],
 };
 const TOWN_COVER = {
@@ -4077,7 +4082,7 @@ function coverAt(c, tx, ty, x, y) {
     if (t === T.SAND) return h < 0.07 ? [pickW(M.dist[i] === 50 ? NAT_SP.desert : NAT_SP.shore, h2), 1] : null;   // (a few on the gravel bars; World v3's dry washes: desert scrub)
     const d = M.distRiver ? M.distRiver[i] : 99;
     if (d > 0 && d <= 6) return pb > 0.3 && h < 0.85 ? [pickW(NAT_SP.shore, h2), 1 + (h < 0.3 ? 0.15 : 0)] : null;
-    if (pa > 0.6 && h < 0.34) return [pickW([NAT_SP.meadowA, NAT_SP.meadowB, NAT_SP.meadowD][Math.floor(vnoise(x, y, 400, 7151) * 3) % 3], h2), 1];
+    if (pa > 0.6 && h < 0.34) return [pickW([NAT_SP.meadowA, NAT_SP.meadowB, NAT_SP.meadowD, NAT_SP.meadowE][Math.floor(vnoise(x, y, 400, 7151) * 4) % 4], h2), 1];
     return h < 0.14 ? [pickW(NAT_SP.meadowGrass, h2), 1] : null;
   }
   const st = (DISTRICTS[M.dist[i]] || {}).style;
@@ -4115,7 +4120,7 @@ function coverAt(c, tx, ty, x, y) {
   }
   if (bio === 4) return pb > 0.5 && h < 0.2 ? [pickW(NAT_SP.alpine, h2), 1] : h < 0.03 ? [pickW(NAT_SP.alpine, h2), 1] : null;
   // meadows: a drift of one flower, tall grass between, plain grass most of the way
-  if (pa > 0.62 && h < 0.32) return [pickW([NAT_SP.meadowA, NAT_SP.meadowB, NAT_SP.meadowC, NAT_SP.meadowD][Math.floor(vnoise(x, y, 400, 7111) * 4) % 4], h2), 1];
+  if (pa > 0.62 && h < 0.32) return [pickW([NAT_SP.meadowA, NAT_SP.meadowB, NAT_SP.meadowC, NAT_SP.meadowD, NAT_SP.meadowE, NAT_SP.meadowF][Math.floor(vnoise(x, y, 400, 7111) * 6) % 6], h2), 1];
   if (pb > 0.66 && h < 0.22) return [pickW(NAT_SP.meadowGrass, h2), 1];
   return h < 0.015 ? [pickW(NAT_SP.meadowGrass, h2), 1] : null;
 }

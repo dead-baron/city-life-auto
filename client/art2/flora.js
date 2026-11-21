@@ -83,7 +83,7 @@ const SIDE = 1;   // (how much of the painted light comes from the upper left, 0
 // them the palette's own reds, oranges, yellows, pinks, purples, blues and whites.
 const tc = (list) => list[TINT % list.length];
 export const FLORA_TINTS = { rose: 4, hydrangea: 4, tulips: 3, daffodils: 2, boxStone: 2, boxIron: 3, berry: 3, huckle: 2, foxglove: 3, brittle: 2, dPoppies: 3, hibiscus: 4, bougain: 4, flHedge: 3, poppies: 4, lupines: 4, daisies: 3,
-  berryShrub: 3, aLupine: 3, paintbrush: 3, heather: 3, aDaisies: 2, icePlant: 2, pear: 3, barrel: 3, wildflowers: 1 };
+  berryShrub: 3, aLupine: 3, paintbrush: 3, heather: 3, aDaisies: 2, icePlant: 2, pear: 3, barrel: 3 };
 const bv = (seed, i, amt) => (VARY ? 1 + (hash(seed, i, 911) - 0.5) * 2 * amt : 1), bu = (seed, i) => (VARY ? hash(seed, i, 913) : -1);
 const uu = (v) => (CAN || U === 1 ? v : v * U), UD = () => !CAN && U !== 1;
 const cv = (fn, ...a) => { const c = CAN; CAN = true; try { return fn(...a); } finally { CAN = c; } };
