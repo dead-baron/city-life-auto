@@ -136,6 +136,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Touch buttons never touch: 6 px clear between any two, 12 round ACT (its pulse ring), at every layout; the sticks unchanged. (11-14; chat: "the act or look button overlaps the other button so it's a little too close together", DEVLOG 11-14)
 - Right aim stick stays in the corner, action buttons on arcs round it; in portrait a tight thumb cluster. (11-12; queue, DEVLOG 11-06)
 - The Clean (Lucide) icon line kept; the pixel icon set does NOT ship (branch pixelicons unmerged). (11-06; queue)
+- Item and weapon pictures: the owner wants the UI's icons for weapons, items and the inventory improved (11-21 07:57). Proposed: each item and weapon its own pixel picture after IC1-IC5 (`client/itemart.js`, branch `itemicons`, built but not wired in) against today's one line icon per family in the bag. OPEN: the owner picks from the side-by-side sheet. (11-21; chat, DEVLOG 11-21)
 - HIT shows what you hit with (fist bare-handed, else the weapon). (11-05; DEVLOG 11-05)
 - Buy/sell/pay button shows "$", not coins; FIRE ON shows an auto-fire symbol, not infinity. (11-06; queue)
 - Gamepad: RT fires, right stick only aims (stick-full-fire is an option, off by default); RB/LB tap cycles, hold opens the wheel. (10-09; DEVLOG 10-09)

@@ -25193,3 +25193,25 @@ The security audit (branch `audit-security`, docs/audit/SECURITY.md) found three
   least a quarter more per piece than the best buy-back anywhere (`shared/items.js`, applied over the whole table), so
   picking and hunting stay the way to earn. `test/moneyloop.test.js` guards it.
 The audit's other findings (high and below) are for the pre-beta pass.
+
+## 2026-11-21 - Item and weapon pictures in pixels: a proposal, not wired in (branch `itemicons`)
+The owner (11-21): "I think the UI art overall needs help, and the icons and things that go with UI. Like symbols and
+icons for different weapons or items or inventory." Today the bag shows an item as its family's line icon (one paw
+print for every hide and pelt, one hook for every bait - `client/bag.js` `ITEM_GLYPH`, since 11-05), and the quick
+wheel (`client/inventory.js` `ITEM_ICON`) still shows system emoji. His icon sheets IC1-IC5 show each item as its own
+pixel picture.
+
+- **`client/itemart.js`** (new, loaded by nothing yet): `itemSprite(id)` / `itemIconURL(id)` / `itemIcon(id, px)` and
+  `weaponSprite(id)` - every one of the 246 items in `shared/items.js`, the 13 things the stages add (fireworks, the
+  camp kit, the players and instruments, the tapes) and the 36 weapons, each its own picture on a 24 x 24 grid in the
+  game's style: a dark coloured outline, three tones lit from the upper left, a catch-light. Made from a few shapes
+  each by a small painter (an ellipse, a box, a polygon, a line), no image files. Families share a part and differ by
+  what tells them apart: the hides and pelts by the animal's coat and tail, a poor one torn and a perfect one starred,
+  the legends' pelts white; the meats by colour and cut; the seeds a packet with the crop on it, the prize crops a
+  blue rosette; the picks by their head; the rods by their colour.
+- **Not wired in.** The bag's clean line icons were the owner's call (11-06: the pixel icon set does not ship), and a
+  visual direction is shown as variants before it goes in (11-12). A side-by-side sheet of the bag's tiles both ways
+  went to him; the wiring (the bag's tiles and details, the quick wheel, the shops' rows) follows his pick.
+- `test/itemart.test.js`: every item and every weapon has a picture, no two different ones share one, a hide's
+  grades differ from it and from each other, the stages' things are covered.
+
