@@ -25215,3 +25215,28 @@ pixel picture.
 - `test/itemart.test.js`: every item and every weapon has a picture, no two different ones share one, a hide's
   grades differ from it and from each other, the stages' things are covered.
 
+## 2026-11-21 - The pixel pictures go into the bag and the quick wheel; the owner's notes (branch `itemicons`)
+The owner picked the pixel pictures from the side-by-side sheet ("Items are looking good") and named the ones to draw
+again. This supersedes the 11-06 call ("the pixel icon set does not ship") for items and weapons only - buttons, apps
+and the HUD keep the clean line set.
+
+- **Wired in.** The bag (`client/bag.js`: tiles, the details panel, the quick bar, the equipment slots) and the quick
+  wheel (`client/inventory.js`, which loads `itemart.js` the first time the wheel opens - the page's startup code
+  doesn't grow) show `itemIcon(id)` / `weaponIcon(id)`; the line glyph stays as the fallback for an id without a
+  picture. Shown at whole multiples of the 24 px grid (48 px in a tile, 72 px in the details, 24 px in the quick bar
+  and the wheel; 24 / 48 px on a short screen), `image-rendering: pixelated`. A tile's row stays 40 px high and the
+  picture overhangs it 4 px each way, so the name and the count sit where they did.
+- **His notes on items.** The pickaxes have a traditional crescent head over a shaded handle; the hatchet and the axes
+  a wedge head with a bright edge; the feathers a vane with splits, a quill and barbs (the eagle's dark with a white
+  tip); every mushroom a domed cap, gills and a ringed stem (the chanterelles two funnels, the oysters a shelf, the
+  earthstar a star); the geodes facets, glints and sparkles; raw meat a steak with a fat rim, a bone and marbling.
+- **His notes on weapons** (a second pass on all 36): the sword a straight double-edged blade with a cross guard; the
+  katana curved, with a small round guard and a long wrapped grip; the knife and the hunting knife single-edged with
+  their own shapes; the fists a fist (knuckles, thumb, wrist); the hunting bow aims forward - belly and arrowhead to
+  the right, the string drawn back; the plasma blade glows in layers with sparkles; the bat tapers with grip tape; the
+  sledgehammer's block head sits across its handle; the crowbar is hooked; the flamethrower and the baton redrawn.
+- `test/itemart.test.js` as before; `test/uiscreens.test.js` pins the bag's weapon line to `weaponIcon(id) || glyph`.
+- Checked in the running game (a local copy, the bag opened with a full kit): the pictures sit in the tiles, the
+  equipment slots and the details panel. Seen there and not from this change: at 1280 x 720 the details panel clips a
+  long weapon name and the EQUIP label, and the Sort box runs under the panel - for the pre-beta list.
+- Not live: on the branch until the owner has seen it.
