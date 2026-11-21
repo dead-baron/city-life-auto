@@ -25311,3 +25311,16 @@ Four rounds of body notes in an hour each fixed what was pointed at and broke so
 - With the pass off the renderer still draws exactly what pass 5 drew (240 sprites). Sizes: renderer 446 of 470 KB, bake 1029 of 1045.
 - **Not done**: kneeling and punching lose an eye at some angles; the far hand shows as a small nub at an angle on the wide builds; the wardrobe notes (stripes, size-ups, masks, hats, bags, the gold jacket).
 
+## 2026-11-20 · Characters, the bodies: the owner's second look, fixed one at a time (branch characters, staged)
+
+The owner on the checked sheets: "overall this is WAY better", a dozen pixel-level notes, and a request: "Can we isolate these fixes? can they be made without breaking everything else". So each fix was made against a snapshot of all 160 standing figures (and 640 walking, every wardrobe piece, every hair style), and the snapshot's diff is the proof of what it touched.
+- **Lines on bare skin are the skin's own shade** (`POLISH.skinLine`): half way between the tone under the one it is drawn on and the next, never under the ramp's second tone - on a leg too. A darkened copy of the color was a tan smudge on light skin and near-black on a leg at an angle ("an extra line on her leg", "dark shading in the crotch region", "weird shading"). Same pixels, new color: 149 figures, 32 art pixels at most.
+- **Bare legs stay two apart up to the underwear** where they stand two apart below: 13 figures, 1-2 px.
+- **A bra at an angle and from behind**: a row of the chest that is mostly the top is the top right across, a strap up from each end with bare chest over it; from behind the band runs to the arm on both sides and the straps run up to the shoulder. 24 figures, all women in underwear at five directions; front and profile untouched.
+- **In profile the near arm is lifted by what the high camera drops it** (`POLISH.armLift`, 8.5 px at most): from the side the hand hung at the knee, two art pixels lower than from the front. What the hand holds or wears goes with it. 40 figures: the two profile directions only.
+- **A tank top in profile**: no art pixel of the top on its own (a strap's end on the neck's row or behind the arm), no single pixel of skin in it. 10 figures.
+- **Short hair**: a one-pixel bump at the back of the head, in profile and from three quarters behind, folded into the outline (`POLISH.nubOff`) - only the style named: every other style is as the owner passed it. 8 figures.
+- **Seven new rules** in `tools/bodycheck.mjs` (reach, profile, thighs, strapsUp, angled, nub, skinline). Run on the version he looked at they find 132 faults; on this one, none.
+- Not changed: the slim woman's arms from behind keep their shape - what read as "weird" there was mostly the dark lines; thicker arms or wider shoulders were tried and changed her from every side. To look at with him.
+- Open: the outline's strength - three options sent.
+

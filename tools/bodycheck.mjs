@@ -116,6 +116,72 @@ function feet(S) {
   return out;
 }
 
+// ---- the owner's notes of 11-20 16:51 --------------------------------------------------------------------------------
+// 11. in profile an arm is no longer than from the front: how far down the body the hand ends (0 the shoulders .. 1 the
+// soles) is within an art pixel and a half's worth of the same figure's from the front (it was three more) ("arms/hands seem way too long on side view")
+function reachOf(S) {
+  let top = 1e9, bot = -1, hand = -1; each(S, (p, x, y) => { if (p.g === TORSO) top = Math.min(top, y); if (p.g === LEGL || p.g === LEGR) bot = Math.max(bot, y); if (p.g === ARML || p.g === ARMR) hand = Math.max(hand, y); });
+  return (hand - top) / Math.max(1, bot - top);
+}
+const reach = (S, front) => { const k = reachOf(S); return k > front + 0.08 ? [`the hand ends ${k.toFixed(2)} of the way down the body; from the front ${front.toFixed(2)}`] : []; };
+// 12. a top with straps, in profile: no art pixel of it alone (none of it above, below or beside), and no single art pixel of
+// skin in it ("extra white pixel on neck", "pixel missing (showing skin pixel)")
+function profile(S, isTop, skinM) {
+  const out = [], t = (x, y) => { const p = S.at(x, y); return !!p && !p.ol && isTop(p); }, sk = (x, y) => { const p = S.at(x, y); return !!p && !p.ol && p.m === skinM && !isTop(p); };
+  each(S, (p, x, y) => {
+    const n4 = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]];
+    if (isTop(p) && p.g === TORSO && !n4.some(([a, b]) => t(a, b))) out.push(`an art pixel of the top on its own at ${x},${y}`);
+    if (p.g === TORSO && p.m === skinM && !p.ln && !n4.some(([a, b]) => sk(a, b)) && n4.filter(([a, b]) => t(a, b)).length >= 2) out.push(`an art pixel of skin in the top at ${x},${y}`);
+  });
+  return out;
+}
+// 13. bare legs stay as far apart going up as they stand below: the gap or line between them never narrows and widens again
+// ("extra skin pixel on leg between thighs")
+function thighs(S, isCloth) {
+  const T = crotch(S, isCloth); if (T < 0) return [];
+  let bottom = 0; each(S, (p, x, y) => { if ((p.g === LEGL || p.g === LEGR) && !['shoe', 'sole', 'boot'].includes(p.part)) bottom = Math.max(bottom, y); });
+  const sep = (y) => { let a = -1, b = -1; for (let x = 0; x < S.w; x++) { const p = S.at(x, y); if (p && !p.ol && !p.ln && (p.g === LEGL || p.g === LEGR)) { if (teal(p.c)) return -1; if (x < S.ax) a = Math.max(a, x); else if (b < 0) b = x; } } return a >= 0 && b >= 0 ? b - a - 1 : -1; };   // (bare rows only: a boxer's legs have their own fold)
+  let hi = 0; const out = [];   // (going down from the garment the gap may only widen)
+  for (let y = T + 1; y <= bottom - 1; y++) { const v = sep(y); if (v < 0) continue; if (v < hi) { out.push(`the legs ${v} apart on row ${y}, under a row where they are ${hi} apart`); break; } hi = Math.max(hi, v); }
+  return out;
+}
+// 14. a bra from behind: each strap runs on up from the band while there is back over it ("straps not working on back view")
+function strapsUp(S, isTop) {
+  const rows = new Map(); each(S, (p, x, y) => { if (isTop(p)) (rows.get(y) || rows.set(y, []).get(y)).push(x); });
+  let wide = 1e9; for (const [y, xs] of rows) if (xs.length >= 4 && y < wide) wide = y;
+  if (wide === 1e9) return [];
+  const out = [];
+  for (const x of rows.get(wide - 1) || []) { const p = S.at(x, wide - 2); if (p && !p.ol && p.g === TORSO && !isTop(p)) out.push(`a strap stops an art pixel over the band at ${x},${wide - 1}, with bare back over it`); }
+  return out;
+}
+// 15. a bra at an angle from the front: a row of it across the chest (three art pixels or more) and a strap up from both ends
+// ("straps missing, swimsuit not showing correctly")
+function angled(S, isTop) {
+  const rows = new Map(); each(S, (p, x, y) => { if (isTop(p)) (rows.get(y) || rows.set(y, []).get(y)).push(x); });
+  let wide = -1, n = 0; for (const [y, xs] of [...rows].sort((a, b) => a[0] - b[0])) if (xs.length > n) { n = xs.length; wide = y; }
+  if (n < 3) return [`the top's widest row at an angle is ${n} art pixels`];
+  const run = (xs) => xs.length >= 3 && Math.max(...xs) - Math.min(...xs) + 1 === xs.length;   // (a row of the top, not two straps and a cup's corner)
+  let y0 = wide; while (rows.has(y0 - 1) && run(rows.get(y0 - 1))) y0--;
+  const xs = rows.get(y0), up = rows.get(y0 - 1) || [], a = Math.min(...xs), b = Math.max(...xs);
+  const bare = (x0, x1) => { for (let x = x0; x <= x1; x++) { const p = S.at(x, y0 - 1); if (p && !p.ol && p.g === TORSO && !isTop(p)) return true; } return false; };   // (an end under the arm or the chin has no strap to show)
+  return (up.some((x) => x <= a + 1) || !bare(a, a + 1)) && (up.some((x) => x >= b - 1) || !bare(b - 1, b)) ? [] : [`no strap up from both ends of the top at an angle (row ${y0}: ${a}..${b}; over it ${up.join(',') || 'none'})`];
+}
+// 16. short hair in profile: no art pixel of it out on its own at the back of the head ("a pixel sticking out on the head")
+function nub(S) {
+  const out = [], hr = (x, y) => { const p = S.at(x, y); return !!p && !p.ol && p.g === 2; };
+  each(S, (p, x, y) => { if (p.g !== 2 || S.body(x, y - 1) || S.body(x, y + 1) || S.body(x - 1, y) === S.body(x + 1, y)) return; const ix = S.body(x - 1, y) ? x - 1 : x + 1; if (hr(ix, y) && hr(ix, y - 1) && hr(ix, y + 1)) out.push(`hair out on its own at ${x},${y}`); });
+  return out;
+}
+// 17. a line on bare skin is skin's own shade, on a leg too - only the line between the legs, front and back, is dark
+// ("an extra line on her leg", "dark shading happening in crotch region")
+function skinline(S, skinM, dir) {
+  const L = [], bad = []; each(S, (p) => { if (p.m === skinM && !p.ln && !teal(p.c) && p.g !== HEAD && p.g !== 2) L.push(lum(p.c)); });
+  if (L.length < 8) return [];
+  const m = median(L);
+  each(S, (p, x, y) => { if (!p.ln || p.m !== skinM || teal(p.c) || ![TORSO, ARML, ARMR, LEGL, LEGR].includes(p.g)) return; if (dir % 4 === 0 && (p.g === LEGL || p.g === LEGR || p.part === 'pel' || p.part === 'seat') && Math.abs(x - S.ax + 0.5) <= 1.5) return; if (lum(p.c) < 0.5 * m) bad.push(`${x},${y} ${p.part}`); });
+  return bad.length ? [`${bad.length} line art pixels on bare skin darker than half the skin's tone: ${bad.slice(0, 5).join('; ')}`] : [];
+}
+
 export const BUILDS = LK.BUILDS.map((b) => b.name);
 // every fault, as { who, rule, text }
 export function check(POLISH, { bases = ['f', 'm'], builds = [0, 1, 2, 3, 4], dirs = [0, 1, 2, 3, 4, 5, 6, 7], outfits = ['under', 'clothed'], poses = ['idle'] } = {}) {
@@ -123,16 +189,21 @@ export function check(POLISH, { bases = ['f', 'm'], builds = [0, 1, 2, 3, 4], di
   const faults = [], add = (who, rule, list) => { for (const text of list) faults.push({ who, rule, text }); };
   try {
     for (const base of bases) for (const b of builds) for (const outfit of outfits) {
-      const A = look(base, b, outfit), under = outfit === 'under';
+      const A = look(base, b, outfit), under = outfit === 'under', frontK = reachOf(bake(A, 0));
       for (const pose of poses) for (const dir of dirs) {
         const idle = pose === 'idle', S = bake(A, dir, pose), who = `${base === 'f' ? 'woman' : 'man'} ${BUILDS[b]}, ${outfit}, ${idle ? '' : pose + ', '}facing ${dir}`;
         let skinM = 0; each(S, (p) => { if (p.part === 'hand') skinM = p.m; });
-        const cnt = new Map(); each(S, (p) => { if (['chest', 'bust', 'waist'].includes(p.part) && p.m !== skinM) cnt.set(p.m, (cnt.get(p.m) || 0) + 1); });
+        const cnt = new Map(); each(S, (p) => { if (['chest', 'bust'].includes(p.part) && p.m !== skinM) cnt.set(p.m, (cnt.get(p.m) || 0) + 1); });
         const topM = [...cnt].sort((x, y) => y[1] - x[1])[0]?.[0] || -1;
         const isTop = under ? (p) => teal(p.c) && !['pel', 'seat', 'th'].includes(p.part) && p.g === TORSO : (p) => p.m === topM && (p.g === TORSO || p.g === HEAD);   // (a strap's art pixel under the jaw is the top's by its cloth)
         add(who, 'points', points(S)); add(who, 'bumps', bumps(S));
         add(who, 'eyes', dir === 3 || dir === 4 || dir === 5 ? [] : eyes(S, dir));
         if (idle && (dir === 2 || dir === 6)) add(who, 'neck', neck(S, dir));
+        if (idle && (dir === 2 || dir === 6)) { add(who, 'reach', reach(S, frontK)); add(who, 'nub', nub(S)); if (base === 'f' && !under) add(who, 'profile', profile(S, isTop, skinM)); }
+        if (under) add(who, 'skinline', skinline(S, skinM, dir));
+        if (idle && under && (dir === 0 || dir === 4)) add(who, 'thighs', thighs(S, (p) => teal(p.c)));
+        if (idle && under && base === 'f' && dir === 4) add(who, 'strapsUp', strapsUp(S, isTop));
+        if (idle && under && base === 'f' && (dir === 1 || dir === 7)) add(who, 'angled', angled(S, isTop));
         if (idle && (dir === 0 || dir === 4)) {
           add(who, 'legs', legs(S, under ? (p) => teal(p.c) : (p) => p.m !== skinM));
           if (under) add(who, 'underwear', underwear(S));

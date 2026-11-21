@@ -33,6 +33,7 @@ export const POLISH = {
   // people.js's hairline, [forehead, temple, sideburn, above the ear, nape]); a one-pixel point on top of the hair is taken
   // off, bar the styles that are points
   hairLN: { dreads: [0.4, 0.36, -0.78, -0.78, -1.1], braids: [0.42, 0.36, -0.78, -0.78, -1.1], shavedside: [0.42, 0.4, 0.2, 0.1, -0.62] },   // (the shaved-side style keeps its hair down the back: from behind it was a bare head under a cap)
+  nubOff: ['short'],   // (styles whose one-pixel bump at the back of the head, in profile, is folded into the outline - people.js)
   tipKeep: ['spiky', 'mohawk', 'quiff', 'shag'],
   eyeMode: 3,         // how an eye's colour shows (eyes() below): the colour with a white beside it - the owner's pick of four, 11-20
   eye2: true,         // a face at an angle keeps its far eye (people.js face)
@@ -41,6 +42,7 @@ export const POLISH = {
   vLight: 0.56,       // a white or pale cloth's darkest shade (vMin's for the rest)
   inseam: true,
   vSkin: 0.4,
+  armLift: 1, armLiftMax: 8.5,   // (in profile the near arm is lifted by what the high camera drops it, 8.5 px at most - people.js person())
   clean: true,   // (the body's shading tidied on the art grid: one tone an art pixel, none alone in its tone - people.js)       // the line between the legs runs up to the crotch, front and back (people.js)
   // the outline, on the art grid (people.js): [lit side: how much of the colour it borders, its brightest; the same in the shade]
   // (the owner, 11-20: the concepts' soft outline in the colour of what it outlines, "slightly darker" so the people sit with
@@ -409,7 +411,7 @@ export const POLISH = {
   post({ PID, NEAR, LN, NOO, CR, CG, CB, prims, w, h, GR, AX, AY, fig, A }) {
     const gx = Math.round(AX) & 1, gy = Math.round(AY) & 1;   // (where the art grid falls: the bake pairs world pixels from the anchor)
     if (this.hairLit && fig.W.hairR) hairLit(fig.W.hairR, A.hair && A.hair.style, PID, CR, CG, CB, prims, w, h, GR, gx, gy);
-    if (fig.W.u4) under4(fig.W.u4, LN, CR, CG, CB, w, AX, AY, gx, gy);
+    if (fig.W.u4) { fig.W.u4.dir8 = fig.dir8; under4(fig.W.u4, LN, CR, CG, CB, w, AX, AY, gx, gy); }
     const g = (i) => { const k = PID[i]; return k >= 0 && k < 32000 && !NOO[i] ? prims[k].g : 0; }, arm = (x) => x === GR.ARML || x === GR.ARMR;
     const hit = [];
     for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
@@ -420,13 +422,24 @@ export const POLISH = {
     // (a line of one art pixel is a speck: only the lines that run on, with the renderer's own or with each other - lone below)
     const T = LN.slice(0, w * h); for (const i of hit) T[i] = 1;
     const lone = this.clean ? this.lone(T, w, h, gx, gy) : null;
+    const SK = fig.W.skin;
     for (const i of hit) {
       if (lone && lone[i]) continue;
       const gi = g(i), L = (CR[i] * 0.3 + CG[i] * 0.59 + CB[i] * 0.11) / 255, legs = gi === GR.LEGL || gi === GR.LEGR;
       LN[i] = 1;
-      if (this.lnL && !legs && L > 0.3) { const s = Math.max(L * (L > 0.7 ? 0.82 : 0.74), Math.min(L * 0.94, 0.39)) / L, warm = CR[i] > CB[i] + 40; CR[i] *= s; CG[i] *= s * (warm ? 0.9 : 0.95); CB[i] *= s * (warm ? 0.82 : 1.04); }   // (people.js: a line as dark as the colour's own deep shade)
+      const c = SK && this.skinLine(SK, CR[i], CG[i], CB[i]);
+      if (c) { CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2]; }   // (bare skin: the skin's own shade, a leg's too)
+      else if (this.lnL && !legs && L > 0.3) { const s = Math.max(L * (L > 0.7 ? 0.82 : 0.74), Math.min(L * 0.94, 0.39)) / L, warm = CR[i] > CB[i] + 40; CR[i] *= s; CG[i] *= s * (warm ? 0.9 : 0.95); CB[i] *= s * (warm ? 0.82 : 1.04); }   // (people.js: a line as dark as the colour's own deep shade)
       else { CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; }
     }
+  },
+  // skinLine(SK, r, g, b): a line's color on bare skin, where (r, g, b) is one of the skin ramp's own tones - half way between
+  // the tone under it and the one under that, and never under the ramp's second tone. null: not a tone of this skin.
+  skinLine(SK, r, g, b) {
+    let i = -1; for (let q = 0; q < SK.length; q++) if (SK[q][0] === r && SK[q][1] === g && SK[q][2] === b) { i = q; break; }
+    if (i < 0) return null;
+    const a = SK[Math.max(1, i - 1)], c = SK[Math.max(1, i - 2)];
+    return [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2, (a[2] + c[2]) / 2];
   },
   // lone(L, w, h, gx, gy): the world pixels whose art pixel holds a line with no line in any art pixel round it
   lone(L, w, h, gx, gy) {
@@ -574,15 +587,35 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
   // (a band round the back is a level line: level in the world, on a body turned three quarters away it steps down an art
   // pixel half way across - two dashes, "random pixels". Seen from behind, the band is one row: the one most of it is on,
   // from its first art pixel to its last; the straps stand on it.)
+  let behind = false;
   if (tt === 'bra' || tt === 'bralette' || tt === 'bandeau') {
     const rowsN = new Map(); let nb = 0, nf = 0, x0 = Infinity, x1 = -1;
     for (const [key, c] of cells) if ((c.g === 1 || c.g === 3 || c.g === 4) && !c.leg) { if (c.f < 0) nb++; else nf++; if (c.g === 1 && c.f < 0) { const r = Math.floor(key / K), x = key % K; rowsN.set(r, (rowsN.get(r) || 0) + 1); x0 = Math.min(x0, x); x1 = Math.max(x1, x); } }
     let R = -1, best = 0; for (const [r, n] of [...rowsN].sort((a, b) => a[0] - b[0])) if (n > best) { best = n; R = r; }
-    if (R >= 0 && nb > nf && rowsN.size > 1) for (const [key, c] of cells) {
-      if (c.leg || c.f >= 0) continue;
+    behind = nb > nf;
+    // (...and it runs on to the arm on both sides: every art pixel of the trunk next along the row - 16:51, "swimsuit not showing correctly")
+    const trunk = (r, x) => { const c = cells.get(r * K + x); return c && !c.leg && !(c.bel * 2 > c.n) ? c : null; };
+    if (R >= 0 && behind) { while (trunk(R, x0 - 1)) x0--; while (trunk(R, x1 + 1)) x1++; }
+    if (R >= 0 && behind && (rowsN.size > 1 || x1 - x0 + 1 > best)) for (const [key, c] of cells) {
+      if (c.leg) continue;
       const r = Math.floor(key / K), x = key % K;
       if (r === R) { if (!c.g && x >= x0 && x <= x1) c.g = 1; }
-      else if (c.g === 1 || c.g === 4 || (c.g === 3 && r > R)) c.g = 0;
+      else if (c.f < 0 && (c.g === 1 || c.g === 4 || (c.g === 3 && r > R))) c.g = 0;
+    }
+    // (three quarters from the front - the owner, 11-20 16:51: "straps missing, swimsuit not showing correctly". The near arm
+    // hangs over the near half of the chest and the cups, level in the world, slant across what is left: a red blob on the far
+    // side. A row of the chest that is mostly the top is the top right across, and a strap goes up from its near end.)
+    if (!behind && (S.dir8 & 1)) {
+      const rows = new Map(); for (const [key, c] of cells) if (trunk(Math.floor(key / K), key % K)) { const r = Math.floor(key / K); (rows.get(r) || rows.set(r, []).get(r)).push(key % K); }
+      let R0 = Infinity;
+      for (const [r, xs] of rows) { const top = xs.filter((x) => { const g = cells.get(r * K + x).g; return g === 1 || g === 4; }); if (top.length < 2 || top.length * 2 < xs.length) continue;
+        let a = Math.min(...top), b2 = Math.max(...top); while (trunk(r, a - 1)) a--; while (trunk(r, b2 + 1)) b2++;
+        for (let x = a; x <= b2; x++) { const c = cells.get(r * K + x); if (!c.g) c.g = 1; }
+        if (r < R0) R0 = r; }
+      if (R0 < Infinity) { const xs = rows.get(R0).filter((x) => cells.get(R0 * K + x).g === 1).sort((a, b2) => a - b2);
+        // (from each end, the first art pixel with bare chest over it: the very end may lie under the arm)
+        for (const [x0, sd] of [[xs[0], 1], [xs[xs.length - 1], -1]]) for (let k2 = 0; k2 < 3; k2++) { const x = x0 + sd * k2, up = trunk(R0 - 1, x); if (!up) continue;
+          const has = [x - 1, x, x + 1].some((v) => { const c = cells.get((R0 - 1) * K + v); return c && c.g; }); if (!up.g && !has) up.g = 3; break; } }
     }
   }
   if (tt === 'bra' || tt === 'bralette') {
@@ -591,6 +624,11 @@ function under4(S, LN, CR, CG, CB, w, AX, AY, ox, oy) {
     if (xs.length >= 3 && top > 0) for (const x of [xs[Math.floor(xs.length * 0.2)], xs[Math.ceil(xs.length * 0.8) - 1]]) {
       const up = cells.get((top - 1) * K + x), has = [x - 1, x, x + 1].some((v) => { const c = cells.get((top - 1) * K + v); return c && c.g; });
       if (up && !up.g && !has) up.g = 3;
+    }
+    // (from behind a strap runs on up to the shoulder: cut by its place on the body it broke off an art pixel over the band
+    // on a big build, whose art pixels are narrow there - "straps not working on back view and angled view of big")
+    if (behind) for (const [key, c] of [...cells]) if (c.g === 3 && !c.leg && c.f < 0) {
+      for (let k2 = key - K; ; k2 -= K) { const u = cells.get(k2); if (!u || u.leg || u.z >= S.su + 0.6) break; if (u.g && u.g !== 3) break; u.g = 3; }
     }
   }
   // (the owner, 11-20: a strap round the hip holds a woman's briefs up - the triangle's top row runs on across every art pixel

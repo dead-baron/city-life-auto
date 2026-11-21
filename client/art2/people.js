@@ -1242,7 +1242,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   if (A.fmask || A.masq) maskPrims(E, C, B, A, at, HD, hr);
   // arms
   for (const [k, s, g] of [['L', -1, GR.ARML], ['R', 1, GR.ARMR]]) {
-    const sh = S['sh' + k], el = S['el' + k], ha = S['ha' + k], fd = vnorm(vsub(ha, el)), wr = vsub(ha, vmul(fd, 1.25));
+    const sh = S['shA' + k] || S['sh' + k], el = S['el' + k], ha = S['ha' + k], fd = vnorm(vsub(ha, el)), wr = vsub(ha, vmul(fd, 1.25));
     const side = mv(S.SP, [s, 0, 0]);
     const ua = C(sh, el, D.armR[0], D.armR[1], g, 'ua', W.arm, null, side, mv(S.SP, [0, 1, 0])); ua.side = 1;
     C(el, wr, D.foreR[0], D.foreR[1], g, 'fa', W.arm, null, side, mv(S.SP, [0, 1, 0])).side = 1;
@@ -1823,9 +1823,14 @@ function render(fig, P, S, X, D, A, opt) {
     // half its colour it was a near-black scratch on a white shirt and a brown blotch on skin. Between the legs it stays
     // dark: that line is the legs' separation. PL.lnHead: a fringe's or a hat's line on the face, a shadow)
     const hk = (PL && PL.lnHead) || 0, lk = (PL && PL.lnL) || 0;
+    // (the owner, 11-20 16:51: a line on bare skin is the skin's own shade - the tone a step and a half under the one it is drawn
+    // on, never under the skin's second tone. A darkened copy of a light skin's color was a tan smudge, and on a leg - an arm
+    // or the other leg in front of it at an angle - near-black: "an extra line on her leg", "dark shading". PL.skinLine below.)
+    const SKM = PL && PL.skinLine ? MID.get(fig.W.skin) : 0, SK = fig.W.skin;
     for (let i = 0; i < n; i++) if (LN[i]) {
       const g = PID[i] < prims.length ? prims[PID[i]].g : 0, L = (CR[i] * 0.3 + CG[i] * 0.59 + CB[i] * 0.11) / 255;
       const legs = g === GR.LEGL || g === GR.LEGR;
+      if (SKM && MTL[i] === SKM && g !== GR.HEAD) { const c = PL.skinLine(SK, CR[i], CG[i], CB[i]); if (c) { CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2]; continue; } }
       if (lk && !legs && g !== GR.HEAD && L > 0.3) {   // (as dark as the colour's own deep shade and no darker: seven tenths of a mid or a light tone; a shaded one goes less far)
         const s = Math.max(L * (L > 0.7 ? 0.82 : 0.74), Math.min(L * 0.94, 0.39)) / L;
         const warm = CR[i] > CB[i] + 40;   // (skin and warm cloth keep their warmth in a line - a cool one on light skin was a grey smudge; white and cool cloth go a little cool)
@@ -1928,6 +1933,14 @@ function render(fig, P, S, X, D, A, opt) {
       const q = by * bw + bx;
       if (BA[q] >= 2 && !DM[q] && bg(q) === GR.HAIR && BA[q - 1] < 2 && BA[q + 1] < 2 && BA[q - bw] < 2) DM[q] = 1;
     }
+    // (...and one out to the side of a head of hair, with nothing over or under it and the hair's edge running straight past
+    // it: "a pixel sticking out on the head" from the side, the owner, 11-20 16:51. A tail or a lock is longer than that.)
+    if (fig.dir8 >= 2 && fig.dir8 <= 6 && fig.dir8 !== 4 && PL.nubOff && PL.nubOff.includes(A.hair && A.hair.style)) for (let by = 1; by < bh - 1; by++) for (let bx = 1; bx < bw - 1; bx++) {   // (in profile and from three quarters behind: from the front a fringe's corner is that shape; and only the smooth styles named - a curl or a braid's end is that shape too, and the hair is as the owner passed it)
+      const q = by * bw + bx;
+      if (BA[q] < 2 || DM[q] || bg(q) !== GR.HAIR || BA[q - bw] >= 2 || BA[q + bw] >= 2 || (BA[q - 1] >= 2) === (BA[q + 1] >= 2)) continue;
+      const inner = BA[q - 1] >= 2 ? q - 1 : q + 1;
+      if (bg(inner) === GR.HAIR && BA[inner - bw] >= 2 && BA[inner + bw] >= 2 && bg(inner - bw) === GR.HAIR && bg(inner + bw) === GR.HAIR) DM[q] = 1;
+    }
     // (a scrap of the far arm at the figure's edge - one or two art pixels of it out behind the body in a side view, a bump on
     // the shoulder: the outline there)
     { const armG = (q) => { const g = bg(q); return BA[q] >= 2 && !DM[q] && (g === GR.ARML || g === GR.ARMR) ? g : 0; }, same = (q, g) => [q - 1, q + 1, q - bw, q + bw].filter((r) => r >= 0 && r < bw * bh && armG(r) === g);
@@ -1973,18 +1986,42 @@ function render(fig, P, S, X, D, A, opt) {
       if (yc > 1 && yc < bh - 1) { const a = F(yc - 1), b = F(yc), c = F(yc + 1);
         if (a >= 0 && b >= 0 && c >= 0 && sd * (b - a) >= 0 && sd * (c - b) >= 0 && bg(yc * bw + b) === GR.HEAD) DM[yc * bw + b] = 1; }
     }
+    // (a tank top in profile - the owner, 11-20 16:51: "extra white pixel on neck", "white pixel showing", "pixel missing
+    // (showing skin pixel)". From the side a strap over the shoulder and the scooped neck are an art pixel each: one of the
+    // top's on the neck's row, one of skin in the top's chest. In profile only: the top's highest row keeps no art pixel of
+    // the top that stands alone in it, and a single art pixel of skin with the top on both sides of it is the top's.)
+    if ((fig.dir8 === 2 || fig.dir8 === 6) && fig.W.T && fig.W.T.tank && !fig.W.T.dress) {
+      const SK = fig.W.skin, SKM = MID.get(SK), on = (r) => BA[r] >= 2 && !DM[r], mt = (r) => MTL[BS[r]], tr = (r) => on(r) && bg(r) === GR.TORSO && !LN[BS[r]];
+      const paint = (q, c, m, same) => { const bx = q % bw, by = (q / bw) | 0; let nn = 0, r = 0, g = 0, b = 0;
+        for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const x = 2 * bx - ox + dx, y = 2 * by - oy + dy, i = y * w + x; if (x < 0 || y < 0 || x >= w || y >= h || PID[i] < 0 || PID[i] >= prims.length) continue; if (prims[PID[i]].g === GR.TORSO && (same ? MTL[i] === SKM : MTL[i] !== SKM)) { CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2]; MTL[i] = m; LN[i] = 0; } nn++; r += CR[i]; g += CG[i]; b += CB[i]; }
+        if (nn) { BN[q] = nn; BC[q * 3] = r; BC[q * 3 + 1] = g; BC[q * 3 + 2] = b; } };
+      // (an art pixel is the top's, or skin's, if any of its trunk's pixels are: the bake may show either)
+      const cnt = (q, f) => { const bx = q % bw, by = (q / bw) | 0; let c = 0; for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const x = 2 * bx - ox + dx, y = 2 * by - oy + dy, i = y * w + x; if (x >= 0 && y >= 0 && x < w && y < h && PID[i] >= 0 && PID[i] < prims.length && !NOO[i] && f(i)) c++; } return c; };
+      const cloth = (q) => on(q) && cnt(q, (i) => prims[PID[i]].g === GR.TORSO && MTL[i] !== SKM), skinT = (q) => on(q) && cnt(q, (i) => prims[PID[i]].g === GR.TORSO && MTL[i] === SKM), skinAny = (q) => on(q) && cnt(q, (i) => MTL[i] === SKM);
+      let top = -1; for (let by = 1; by < bh - 1 && top < 0; by++) for (let bx = 1; bx < bw - 1; bx++) if (cloth(by * bw + bx)) { top = by; break; }
+      if (top > 0 && SKM) { const lone = []; for (let bx = 1; bx < bw - 1; bx++) { const q = top * bw + bx; if (cloth(q) && !cloth(q - 1) && !cloth(q + 1)) lone.push(q); } for (const q of lone) paint(q, SK[3], SKM, false); }
+      // (...nor anywhere an art pixel of the top with none of it above, below or beside it: a strap's end behind the arm)
+      if (SKM) { const lone = []; for (let by = 1; by < bh - 1; by++) for (let bx = 1; bx < bw - 1; bx++) { const q = by * bw + bx; if (cloth(q) && !cloth(q - 1) && !cloth(q + 1) && !cloth(q - bw) && !cloth(q + bw)) lone.push(q); } for (const q of lone) paint(q, SK[3], SKM, false); }
+      if (SKM) { const hit = []; for (let by = 1; by < bh - 1; by++) for (let bx = 1; bx < bw - 1; bx++) { const q = by * bw + bx;
+        if (!skinT(q) || cloth(q) > skinT(q)) continue;
+        const nb = [q - 1, q + 1, q - bw, q + bw];
+        if (nb.some(skinAny)) continue;
+        const cl = nb.filter((r) => cloth(r) >= 2);
+        if (cl.length >= 2) hit.push(q, cl[0]); }
+        for (let k = 0; k < hit.length; k += 2) { let j = -1; cnt(hit[k + 1], (i) => { if (j < 0 && prims[PID[i]].g === GR.TORSO && MTL[i] !== SKM && !LN[i]) j = i; return 0; }); if (j >= 0) paint(hit[k], [CR[j], CG[j], CB[j]], MTL[j], true); } }
+    }
     points(true);   // (...and again, counting only what is still body: what the two rules above took off can leave a point where a step was)
     // (the inseam: facing the camera or away from it, the line between the legs runs on up from where they stand apart to the
     // crotch - or to the underwear, on bare skin. The thighs meet at one depth there, and the renderer's own lines want a
     // step in depth: without it the legs were one shape from the knees up - the owner, 11-20)
     if (PL.inseam && fig.dir8 % 4 === 0 && (fig.pose === 'idle' || fig.pose === 'stand' || fig.pose.startsWith('walk'))) {
       const leg = (r) => BA[r] >= 2 && (bg(r) === GR.LEGL || bg(r) === GR.LEGR);
-      let gx = -1, gy = -1;
+      let gx = -1, gy = -1, gx2 = -1;
       for (let by = 2; by < bh - 1 && gy < 0; by++) for (let bx = 1; bx < bw - 2; bx++) {
         const q = by * bw + bx;
         if (!leg(q)) continue;
         if (BA[q + 1] < 2 && leg(q + 2) && bg(q + 2) !== bg(q)) { gx = bx + 1; gy = by; break; }                               // (a gap one art pixel wide)
-        if (BA[q + 1] < 2 && BA[q + 2] < 2 && bx < bw - 3 && leg(q + 3) && bg(q + 3) !== bg(q)) { gx = bx + 1 + (((AX >> 1) + (ox ? 1 : 0)) > bx + 1 ? 1 : 0); gy = by; break; }   // (two wide: the one nearer the middle)
+        if (BA[q + 1] < 2 && BA[q + 2] < 2 && bx < bw - 3 && leg(q + 3) && bg(q + 3) !== bg(q)) { gx = bx + 1 + (((AX >> 1) + (ox ? 1 : 0)) > bx + 1 ? 1 : 0); gx2 = 2 * bx + 3 - gx; gy = by; break; }   // (two wide: the one nearer the middle; on bare legs the other too - below)
       }
       if (gy < 0) for (let by = bh - 2; by > 1 && gy < 0; by--) for (let bx = 1; bx < bw - 1; bx++) {   // (legs that touch all the way down: where the two meet, on the farther one)
         const q = by * bw + bx;
@@ -1997,6 +2034,12 @@ function render(fig, P, S, X, D, A, opt) {
         const k = 1 / Math.max(1, BN[q]), below = q + bw, kb = 1 / Math.max(1, BN[below]);
         if (BN[below] && Math.abs(BC[q * 3] * k - BC[below * 3] * kb) + Math.abs(BC[q * 3 + 1] * k - BC[below * 3 + 1] * kb) + Math.abs(BC[q * 3 + 2] * k - BC[below * 3 + 2] * kb) > 90 && g === GR.TORSO) break;   // (another cloth: the underwear, a shirt's hem)
         for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const x = 2 * gx - ox + dx, y = 2 * by - oy + dy, i = y * w + x; if (x >= 0 && y >= 0 && x < w && y < h && PID[i] >= 0 && PID[i] < prims.length) { CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; LN[i] = 1; } }
+        // (bare legs that stand two art pixels apart stay two apart up to the underwear: with one line over a gap of two, one
+        // thigh was an art pixel wider than the other for a row - "an extra skin pixel between the thighs", the owner, 11-20)
+        if (gx2 >= 0) { const q2 = by * bw + gx2, g2 = BA[q2] >= 2 ? bg(q2) : 0, j = BS[q2], SK = fig.W.skin;
+          if ((g2 === GR.LEGL || g2 === GR.LEGR) && j >= 0 && SK.some((c) => c[0] === CR[j] && c[1] === CG[j] && c[2] === CB[j]))
+            for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const x = 2 * gx2 - ox + dx, y = 2 * by - oy + dy, i = y * w + x; if (x >= 0 && y >= 0 && x < w && y < h && PID[i] >= 0 && PID[i] < prims.length) { CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; LN[i] = 1; } }
+          else gx2 = -1; }
       }
     }
     // (a sole's last pixel out beyond the shoe - the far foot's at an angle, a toe's under the near one: on its own it's a
@@ -2317,6 +2360,14 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const S = solve(D, P);
   if (opt.lineLen > 0 && P.line) P.line = opt.lineLen;              // (a pose's hands set its line while solving)
   const X = makeXF(th, P), seed = seedOf(A);
+  // (the polish pass, the owner 11-20 16:51: "arms/hands seem way too long on side view". The camera looks down, so what
+  // stands nearer to it is drawn lower: from the side the near arm - a shoulder's width nearer than the spine - hung two
+  // art pixels lower than it does from the front, its hand at the knee. Standing or walking in profile, the near arm is
+  // lifted by PL.armLift of that drop (PL.armLiftMax at most: a big build's shoulder is not lifted into his ear); what the hand holds or wears goes with it.)
+  if (PL && PL.armLift && (((dir | 0) % 4) + 4) % 4 === 2 && (pn === 'idle' || pn === 'stand' || pn.startsWith('walk'))) {
+    const mid = X.pt(vlerp(S.shL, S.shR, 0.5))[1];
+    for (const k of ['L', 'R']) { const dz = Math.min(PL.armLiftMax || 99, PL.armLift * (X.pt(S['sh' + k])[1] - mid) * (SA / CA)); if (dz <= 0) continue; for (const j of ['el', 'ha']) S[j + k] = vadd(S[j + k], [0, 0, dz]); S['shA' + k] = vadd(S['sh' + k], [0, 0, dz]); }
+  }
   const fig = buildFigure(A, D, P, S, X, kind, acc, seed);
   fig.dir8 = (((dir | 0) % 8) + 8) % 8; fig.pose = pn;
   // lying, rolling and swimming bodies are lowered onto the ground (or the water) as a whole

@@ -122,3 +122,14 @@ His list, and where each stands. All of it is now a rule in `tools/bodycheck.mjs
 - [~] Women big, white shirt: extra pixel on the neckline from the side - the neck now has a row set in from chin and chest; the pixel he saw may be the bare skin above the scoop. To look at with him.
 - Left, and said so: from the side an arm hangs over most of the hip, so underwear shows as a patch in front of and behind it; at an angle the far hand shows as a small nub on the wide builds; kneel / punch lose an eye at some angles.
 
+## 16:51 - his second look at the checked sheets ("WAY better ... can we isolate these fixes?")
+Each fix made against a snapshot of every figure; what it touched is in the DEVLOG entry of the same hour.
+- [x] An extra line on her leg (slim, three quarters behind); dark shading in the crotch (slim, angled); weird shading (curvy, angled) - lines on bare skin are the skin's own shade now, a leg's too.
+- [x] Straps missing, swimsuit not showing correctly (athletic, angled front and back); straps not working on big from behind and at an angle - a band across with a strap up from each end; straps up to the shoulder from behind.
+- [x] Arms / hands way too long from the side - the near arm lifted in profile; checked against the front view on every build.
+- [x] Extra white pixel on the neck (big, side); white pixel (average, side); a few extra white pixels (slim, average, side); a skin pixel in the white shirt (athletic, side) - the tank top's profile rule.
+- [x] Extra skin pixel between the thighs under the swimsuit (slim, front) - bare legs stay two apart up to the underwear.
+- [x] A pixel sticking out on the head (men slim, side) - short hair's one-pixel bump at the back.
+- [~] Arm shape weird on the slim woman's back - softer lines only; the shape itself kept (changing it changed her from every side). His call.
+- [ ] The outer outline "really dark" - three strengths sent (A now, B softer, C softest). His pick.
+
