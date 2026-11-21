@@ -25349,3 +25349,12 @@ The owner, on the striped underwear of an hour before: "the stripes are still dr
 - Striped underwear bends the same way (`under4`: the screen's row, a third of the way to the body's own height there).
 - Against the wardrobe snapshot: Rugby shirt, Striped tee, Breton top, Pajamas, Poncho and the striped underwear - 27 figures - and nothing else. With the pass off the old rows are drawn, exactly as before.
 
+## 2026-11-20 · Characters, stripes again: one art pixel thick, joined from side to side (branch characters, staged)
+
+The owner on the stripes of the entry above: "The lines aren't consistent across - they are thicker in places and thinner and not complete in others. Is there a way to make the full stripe connect all the way around?" He was right: deciding a stripe one world pixel at a time left it to the bake which of an art pixel's four to show.
+- **Stripes are laid on the art grid** (`people.js` render(), after the tidy pass; `POLISH.stripeN`): the pattern only says where a pixel sits along its part (`Q.sv`) and what the stripe's color is (`Q.sr`). For each part - the trunk, each sleeve, each leg - down every column of art pixels a stripe is every third one, exactly one thick; from a column to the next it moves one art pixel at most; where it would stop short of the part's edge it runs on to it. A limb held level is cut along its rows instead.
+- A part that fills half an art pixel or less (an arm in front of the rest) lays no stripe there, and a single pixel of a part alone in an art pixel takes what the rest is: what the bake shows of those was a guess. A cloth and its own stripe are no longer merged by the seam rule (a sleeve's ring is not the chest's).
+- Striped underwear: the bend is a whole art pixel a column, the same down the column - one thick, unbroken.
+- **A test** (`test/bodyshape.test.js`): Striped tee on both sexes, five builds, eight directions - no stripe two art pixels thick, none that stops with two art pixels of cloth beyond it.
+- Against the wardrobe snapshot: Rugby shirt, Striped tee, Breton top, Pajamas, Poncho only. Pass off: unchanged.
+

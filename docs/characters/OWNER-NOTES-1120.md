@@ -146,3 +146,6 @@ Each fix made against a snapshot of every figure; what it touched is in the DEVL
 ## 18:54 - "the stripes are still drawn perfectly horizontally ... is that still an option?"
 - [x] Stripes follow the garment: rings round the trunk (a slight dip in front, a slight lean at an angle), rings down the sleeves and legs at the limb's own height. Rugby shirt, Striped tee, Breton top, Pajamas, Poncho, the striped underwear. Shown: `characters-stripes-before-after.png`. Not yet seen by him.
 
+## 19:06 - "thicker in places and thinner and not complete in others ... make the full stripe connect all the way around"
+- [x] Stripes laid on the art grid: one art pixel thick, joined from one side of the part to the other, a test for it. Shown: `characters-stripes-v2.png`. Not yet seen by him.
+

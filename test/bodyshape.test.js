@@ -46,3 +46,25 @@ test('the wardrobe\'s sports bra, bikini top and bikini bottoms read at the game
     }
   } finally { setPolish(null); }
 });
+
+// (the owner, 11-20 19:06: stripes "thicker in places and thinner and not complete in others ... make the full stripe connect
+// all the way around". On the trunk a stripe is one art pixel thick everywhere and one piece from side to side.)
+test('stripes on a top: one art pixel thick, each one joined from side to side, on every build and from every side', () => {
+  setPolish(POLISH);
+  try {
+    // (the stripe: teal on white, over black jeans - colors the test can tell from skin)
+    for (const base of ['m', 'f']) for (const build of [0, 1, 2, 3, 4]) for (const dir of [0, 1, 2, 3, 4, 5, 6, 7]) {
+      const L = LK.emptyLook(base); L.hair.style = 2; L.body.skin = 2; L.body.build = build; L.outfit.top = LK.item('Striped tee', 'white', 'teal'); L.outfit.bottoms = LK.item('Jeans', 'black');
+      const S = bake(LK.lookArt(LK.validLook(L)), dir), red = (x, y) => { const p = S.at(x, y); return !!p && !p.ol && p.g === 4 && p.c[2] > p.c[0] + 30 && p.c[1] > p.c[0] + 30; }, who = `${base} build ${build} facing ${dir}`;
+      // (a stripe never stops in the middle of the cloth: beside each of its art pixels there is more of it - on the row, or
+      // one up or down - or the cloth ends there: an arm, the hair, the figure's edge)
+      const white = (x, y) => { const p = S.at(x, y); return !!p && !p.ol && !p.ln && p.g === 4 && p.c[0] > 170 && p.c[1] > 160 && p.c[2] > 140; };
+      const any = (x, y) => { const p = S.at(x, y); return !!p && !p.ol && p.c[2] > p.c[0] + 30 && p.c[1] > p.c[0] + 30; };   // (...the sleeve's ring where it meets the chest's counts)
+      let n = 0;
+      for (let y = 0; y < S.h; y++) for (let x = 0; x < S.w; x++) { if (!red(x, y)) continue; n++;
+        assert.ok(!red(x, y + 1), `${who}: a stripe two art pixels thick at ${x},${y}`);
+        for (const sd of [-1, 1]) assert.ok(!(white(x + sd, y) && white(x + 2 * sd, y)) || any(x + sd, y - 1) || any(x + sd, y + 1), `${who}: a stripe stops in the cloth at ${x},${y}`); }   // (the last art pixel at a part's edge may be the sleeve's: two of cloth beyond the stripe's end is a stop)
+      assert.ok(n >= (dir === 2 || dir === 6 ? 1 : 4), `${who}: ${n} art pixels of stripe on the trunk`);   // (in profile the arm hangs over most of the trunk)
+    }
+  } finally { setPolish(null); }
+});

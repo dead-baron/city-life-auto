@@ -856,8 +856,11 @@ function wardrobe(A, D, TF, seed) {
     // function). On the trunk that is its level on the screen plus a third (PL.stripeTilt) of what the high camera adds for a
     // point nearer to it: a stripe dips a little in front and leans a little on a body turned three quarters - all of it was
     // a sash from shoulder to hip. Down a sleeve or a leg it is the limb's own length: the rings turn with the arm and sit
-    // at the arm's height, not the chest's. The art grid's own rules make whole art pixels of it.)
-    if (p === 'stripes') return (Q) => { if (PL && PL.stripeK && Q.res === 1 && Q.sv !== undefined) { const k = PL.stripeK; return ((Q.sv % k) + k) % k < k / 3 ? b : null; } return (Q.res > 1 ? (Math.floor((Q.Z + 64) / 1.6) & 1) : (((Math.floor(Q.y / 2) % 3) + 3) % 3 === 0)) ? b : null; };
+    // at the arm's height, not the chest's. Decided a world pixel at a time it came out thick here, thin there and broken
+    // between (the owner, 19:06): the pattern only says where a pixel sits (Q.sv) and in what color a stripe would be
+    // (Q.sr); render() lays the stripes on the art grid, a whole art pixel thick, joined from one side to the other.)
+    if (p === 'stripes') return (Q) => { if (PL && PL.stripeN && Q.res === 1 && Q.sv !== undefined) { Q.sr = b; return null; }   // (the stripe itself is laid on the art grid - render(): one art pixel thick, unbroken)
+      return (Q.res > 1 ? (Math.floor((Q.Z + 64) / 1.6) & 1) : (((Math.floor(Q.y / 2) % 3) + 3) % 3 === 0)) ? b : null; };
     if (p === 'check') return (Q) => { const i = Q.res > 1 ? Math.floor((Q.X + Q.Y + 128) / 2.1) : Math.floor(Q.x / 4), j = Q.res > 1 ? Math.floor((Q.Z + 64) / 2.1) : Math.floor(Q.y / 4); if ((i & 1) && (j & 1)) return b; if ((i + j) & 1) return m; return null; };
     if (p === 'floral') return (Q) => { const n = Q.res > 1 ? hash(Math.floor(Q.X / 1.5), Math.floor(Q.Z / 1.5) + Math.floor(Q.Y / 1.5) * 7, seed + 5) : hash(Math.floor(Q.x / 2), Math.floor(Q.y / 2), seed + 5); return n > 0.8 ? b : n < 0.08 ? m : null; };
     if (p === 'camo') { const d = cloth(mixHex(spec.color || '#888888', '#000000', 0.45)); return (Q) => { const n = Q.res > 1 ? hash(Math.floor(Q.X / 2.6), Math.floor(Q.Y / 2.6) + Math.floor(Q.Z / 2.2) * 7, seed + 31) : hash(Math.floor(Q.x / 4), Math.floor(Q.y / 4), seed + 31); return n < 0.24 ? b : n < 0.4 ? d : null; }; }
@@ -1679,6 +1682,7 @@ function render(fig, P, S, X, D, A, opt) {
   const w = Math.min(200 * R, (x1 - x0) * R), h = Math.min(200 * R, (y1 - y0) * R), AX = -x0 * R, AY = -y0 * R, n = w * h;
   scratch(n);
   NEAR.fill(-1e9, 0, n); PID.fill(-1, 0, n); NOO.fill(0, 0, n); LN.fill(0, 0, n); AO.fill(0, 0, n); FL.fill(0, 0, n); EM.fill(null, 0, n); MTL.fill(0, 0, n); LG.fill(0, 0, n);
+  const RMP = [], SPAIR = new Map(); let SV = null, SRI = null;   // (the ramps by number; where a stripe could be: how far along its part, and the stripe's ramp)
   const MID = new Map();   // (each material's ramp, numbered: what a pixel is made of - the outline pass's tidy-up reads it)
   // 1. ray-cast every primitive into the depth buffer
   const smaxOf = (p) => p.bc[1] * CA + p.bc[2] * SA + p.br;          // the nearest any of a primitive's points can be
@@ -1738,11 +1742,12 @@ function render(fig, P, S, X, D, A, opt) {
     if (k < 0) continue;
     const p = prims[k], s = NEAR[i], sy = (y + 0.5 - AY) * iR;
     Q.X = (x + 0.5 - AX) * iR; Q.Y = sy * SA + s * CA; Q.Z = -sy * CA + s * SA;
-    Q.nx = NX[i]; Q.ny = NY[i]; Q.nz = NZ[i]; Q.l0 = L0[i]; Q.l1 = L1[i]; Q.l2 = L2[i]; Q.x = x - AX; Q.y = y - AY; Q.sv = undefined; Q.k = 0; Q.e = null; Q.gloss = 0; Q.part = p.part; Q.side = p.side || 0; Q.g = p.g; Q.res = R;
+    Q.nx = NX[i]; Q.ny = NY[i]; Q.nz = NZ[i]; Q.l0 = L0[i]; Q.l1 = L1[i]; Q.l2 = L2[i]; Q.x = x - AX; Q.y = y - AY; Q.sv = undefined; Q.sr = null; Q.k = 0; Q.e = null; Q.gloss = 0; Q.part = p.part; Q.side = p.side || 0; Q.g = p.g; Q.res = R;
     const RM = p.m(Q);
     let c, mi = MID.get(RM);
     if (!mi) MID.set(RM, mi = MID.size + 1);
-    MTL[i] = mi;
+    MTL[i] = mi; RMP[mi] = RM;
+    if (Q.sr && Q.sv !== undefined) { const sr = PL.rampFix ? PL.rampFix(Q.sr) : Q.sr; let si = MID.get(sr); if (!si) MID.set(sr, si = MID.size + 1); RMP[si] = sr; if (!SV) { SV = new Float32Array(n); SRI = new Uint16Array(n); } SV[i] = Q.sv; SRI[i] = si; SPAIR.set(si, mi); }
     if (RM.length === 3 && !Array.isArray(RM[0])) c = RM;
     else {
       const ndl = Q.nx * LT[0] + Q.ny * LT[1] + Q.nz * LT[2];
@@ -1826,6 +1831,42 @@ function render(fig, P, S, X, D, A, opt) {
     // (a line one art pixel long, on the body: no line - the top of an arm's line at the armpit, a scrap of one under a hand.
     // On its own it is a dark speck on the skin or the shirt. A line is two art pixels or more; peoplepolish.js lone)
     { const lone = PL.lone(LN, w, h, ox, oy); for (let i = 0; i < n; i++) if (lone[i] && PID[i] >= 0 && PID[i] < prims.length && bodyG(prims[PID[i]].g)) LN[i] = 0; }
+    // (stripes, on the art grid - the owner, 11-20 19:06: "thicker in places and thinner and not complete in others ... make
+    // the full stripe connect all the way around". Each part - the trunk, each sleeve, each leg - has its art pixels'
+    // places along it (SV); down each column of the part a stripe is every PL.stripeN-th art pixel, exactly one thick, and
+    // from one column to the next it moves an art pixel at most: one line from side to side. A limb held level is cut
+    // along its rows instead.)
+    if (SV) {
+      const STEP = 2 / CA, N3 = PL.stripeN, GS = new Map(), GC = new Map();
+      for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) { const acc = new Map(); let cov = 0;
+        for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const x = 2 * bx - ox + dx, y = 2 * by - oy + dy, i = y * w + x; if (x < 0 || y < 0 || x >= w || y >= h || PID[i] < 0) continue; cov++; if (!SRI[i] || PID[i] >= prims.length) continue; const g = prims[PID[i]].g, e = acc.get(g) || acc.set(g, [0, 0, 0]).get(g); e[0] += SV[i]; e[1]++; e[2] = i; }
+        for (const [g, e] of acc) {
+          // (one pixel of a part alone in an art pixel is no part of its stripes: it takes what the rest of the art pixel is, so
+          // the bake cannot show it as a dot of stripe - or of cloth in a stripe)
+          if (e[1] === 1) { let src = -1; for (let dy = 0; dy < 2 && src < 0; dy++) for (let dx = 0; dx < 2; dx++) { const x = 2 * bx - ox + dx, y = 2 * by - oy + dy, j = y * w + x; if (x >= 0 && y >= 0 && x < w && y < h && j !== e[2] && PID[j] >= 0 && PID[j] < prims.length && !NOO[j] && !LN[j]) { src = j; break; } }
+            if (src >= 0) { const i = e[2]; CR[i] = CR[src]; CG[i] = CG[src]; CB[i] = CB[src]; MTL[i] = MTL[src]; SRI[i] = SRI[src] && prims[PID[src]].g === g ? SRI[src] : 0; continue; } }
+          if (e[1] * 2 <= cov) continue;   // (...and a part that is half an art pixel or less - the rest an arm in front of it - lays no stripe there: what the bake shows of such an art pixel is anyone's guess, and a stripe would seem to stop, or to double)
+          (GS.get(g) || GS.set(g, new Map()).get(g)).set(by * bw + bx, e[0] / e[1]); GC.set(g * 65536 + by * bw + bx, e[1]); } }   // (an art pixel can be two parts' - a sleeve's edge on the chest: each part lays its own stripe on its own pixels there)
+      for (const [g, B] of GS) {
+        let dy = 0, ny = 0, dx = 0, nx = 0; for (const [q, v] of B) { if (B.has(q + bw)) { dy += B.get(q + bw) - v; ny++; } if (q % bw < bw - 1 && B.has(q + 1)) { dx += B.get(q + 1) - v; nx++; } }
+        const col = Math.abs(ny ? dy / ny : 0) >= Math.abs(nx ? dx / nx : 0), sg = (col ? dy : dx) < 0 ? -1 : 1;   // (cut down the columns, or along the rows; which way the part runs)
+        const L = new Map(); for (const [q, v] of B) { const a = col ? q % bw : (q / bw) | 0, t = col ? (q / bw) | 0 : q % bw, e = L.get(a) || L.set(a, [0, 0]).get(a); e[0] += v - sg * STEP * t; e[1]++; }
+        const keys = [...L.keys()].sort((a, b) => a - b), nOf = new Map(); let mid = keys[0]; for (const k of keys) if (L.get(k)[1] > L.get(mid)[1]) mid = k;
+        const base = (k) => Math.floor(L.get(k)[0] / L.get(k)[1] / STEP + 0.5);
+        nOf.set(mid, base(mid));
+        for (let i = keys.indexOf(mid) + 1; i < keys.length; i++) { const p = nOf.get(keys[i - 1]), v = keys[i] - keys[i - 1] > 1 ? base(keys[i]) : Math.max(p - 1, Math.min(p + 1, base(keys[i]))); nOf.set(keys[i], v); }
+        for (let i = keys.indexOf(mid) - 1; i >= 0; i--) { const p = nOf.get(keys[i + 1]), v = keys[i + 1] - keys[i] > 1 ? base(keys[i]) : Math.max(p - 1, Math.min(p + 1, base(keys[i]))); nOf.set(keys[i], v); }
+        const ST = new Set(); for (const q of B.keys()) { const a = col ? q % bw : (q / bw) | 0, t = col ? (q / bw) | 0 : q % bw, k = nOf.get(a) + sg * t; if (!(((k % N3) + N3) % N3)) ST.add(q); }
+        // (...and a stripe runs on to the part's edge: where the next art pixel along is the part's and the stripe would stop -
+        // its own turn in that column falls outside the part, under an arm or off the edge - the stripe takes it)
+        for (let pass = 0, ch = true; ch && pass < 6; pass++) { ch = false; for (const q of [...ST]) for (const sd of [-1, 1]) { const r = q + (col ? sd : sd * bw), u = col ? bw : 1; if (!B.has(r) || ST.has(r) || (col && ((r % bw) - (q % bw)) !== sd)) continue; if (ST.has(r - u) || ST.has(r + u)) continue; ST.add(r); ch = true; } }
+        for (const q of ST) {
+          const bx = q % bw, by = (q / bw) | 0;
+          for (let ddy = 0; ddy < 2; ddy++) for (let ddx = 0; ddx < 2; ddx++) { const x = 2 * bx - ox + ddx, y = 2 * by - oy + ddy, i = y * w + x; if (x < 0 || y < 0 || x >= w || y >= h || !SRI[i] || PID[i] < 0 || PID[i] >= prims.length || prims[PID[i]].g !== g) continue;
+            const RB = RMP[MTL[i]], RS = RMP[SRI[i]]; let j = 3; if (RB && Array.isArray(RB[0])) for (let t2 = 0; t2 < RB.length; t2++) if (RB[t2][0] === CR[i] && RB[t2][1] === CG[i] && RB[t2][2] === CB[i]) { j = t2; break; }
+            const c = RS[Math.min(RS.length - 1, j)]; CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2]; MTL[i] = SRI[i]; } }
+      }
+    }
   }
   // (at the game's scale an inner line is a whole art pixel after the bake: a step darker, as SPEC asks, not the
   // outline's near-black, which made a busy figure of every overlap)
@@ -1891,6 +1932,7 @@ function render(fig, P, S, X, D, A, opt) {
       for (const i of T) {
         const m = MTL[i];
         if (m === maj) continue;
+        if (SPAIR.get(m) === maj || SPAIR.get(maj) === m) continue;   // (a cloth and its own stripe: laid on the art grid already, a part at a time - a sleeve's ring is not the chest's)
         let c = 0;
         for (let y = Math.max(0, y0 - 1); y <= Math.min(h - 1, y0 + 2); y++) for (let x = Math.max(0, x0 - 1); x <= Math.min(w - 1, x0 + 2); x++) if ((x < x0 || x > x0 + 1 || y < y0 || y > y0 + 1) && PID[y * w + x] >= 0 && MTL[y * w + x] === m) c++;
         if (c < 3 && !(peekG(i) && majG !== peekG(i) && (majG === GR.HAT || majG === GR.HAIR))) continue;   // (...but hair through a hat's brim, or the head through hair, is no detail: two dark dots at the back of a sun hat)
