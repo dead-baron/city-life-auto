@@ -25193,3 +25193,48 @@ The security audit (branch `audit-security`, docs/audit/SECURITY.md) found three
   least a quarter more per piece than the best buy-back anywhere (`shared/items.js`, applied over the whole table), so
   picking and hunting stay the way to earn. `test/moneyloop.test.js` guards it.
 The audit's other findings (high and below) are for the pre-beta pass.
+
+## 2026-11-21 - The nature kit, first pass: every plant made at the art pixel (branch `nature`)
+The owner (11-21): "please start on the nature kit". Set beside his plant sheets (E3a-E3f, NK1-M), the game's trees
+and plants were flat and speckled. The cause was one, the same the animals had: `flora.js` paints a plant in world px -
+a crown of small leaf clusters, each lit on its upper left with a dark pocket under it - and the bake then halves it to
+the art pixel (2 world px), keeping one texel of four. A cluster five px across came out as noise. The old-growth
+redwoods, the only trees already made at the art pixel (`redwoods.js` `giantRedwoodArt`, `ap2`), were the proof: the
+best-looking trees in the game.
+
+- **`floraArt(k, maker)`** (`client/art2/flora.js`): the maker runs at half the asked size and its picture comes back
+  marked `ap2 = 2` - the chunk bake lays each of its pixels over 2 x 2 world px on the art grid
+  (`chunkbake.js` `compositeDepth2`, as for the giants and the mesas). `statics.js` `makeFlora` makes every species
+  that way (109 of them; the redwoods' own pictures were there already). The game shows the picture as it was
+  painted.
+- **How the makers follow.** They write their sizes in world px. The tree engines (broadleaf, conifer, pine tufts,
+  groves, palms, saguaro, joshua tree, redwood) multiplied theirs by the tree's scale already; they now follow it
+  everywhere (the pine's tufts, a grove's stems, the saguaro's arms by its true height, the palms' skirts and dates
+  had their own fixed px) and work in canvas px (`CAN`). Every other maker - shrubs, hedges, flower beds, ferns,
+  grasses, cacti, rocks, logs - stays in world px, and the painters convert what it hands them (`uu`): positions and
+  lengths by the unit `U`, a leaf cluster by less (`CQ`, with fewer of them, so the cover is the same), while what a
+  painter draws at a fixed size - a flower head, a berry, a frond's leaflet, the bark's grain - stays in canvas px.
+  At the art pixel a plant is made of fewer, bigger pieces, not a shrunken picture: tulips read as tulips, an apple
+  tree's apples as apples.
+- **Tuned by hand** where a plant closed up at half the room: the grasses, reeds, lavender, pampas, yucca and dry
+  grass keep fewer blades and set them against each other by tone (`nu`); the agave fewer, broader leaves; the
+  tumbleweed fewer hoops; a hedge and the topiary a fine, even face (`clip`); the ocotillo its canes; the cattails'
+  glints at the water a few, not a line.
+- **The olive, the Italian cypress and the small fan palm** came from the older painters (`trees.js`): made in
+  `flora.js` now (`oliveTree`, `italianCypress`, `smallFanPalm`), so they are at the art pixel with the rest;
+  `statics.js` no longer loads `trees.js`.
+- **Sizes hold**: a tree is as tall as it was within a few art pixels (`test/floraart.test.js`), and every picture
+  fits the room its map item claims (four species' rooms a few px wider: the whitebark pine, the twisted shrub, the
+  coastal cypress, the mesquite). Collision, the canopy fade and the wind don't change: they come from the map and
+  the leaf flag.
+- **The greens - the owner's pick, open.** The concept sheets' foliage is olive with gold where the sun catches; the
+  kit's is a brighter lime under the game's noon sun. `FOL` (the foliage ramp) can lean the greens toward the concept
+  (`TONE` 0..1: hue toward olive, less saturation, a deeper shade, gold lights - the autumn, blossom and blue
+  ramps keep their colour). A three-row sheet went to him (A today, B halfway, C the concept's); the branch stays
+  on A (`TONE` 0) until he picks.
+- **Cost.** One art batch: the art hash changes, so the world re-bakes once when this goes live (about five hours of
+  the server's bake). The bake itself draws a quarter of the pixels per plant; `node tools/perf.mjs` is within every
+  budget (bake 87 files, 1014 KB; `trees.js` no longer in it).
+- Seen as the game draws it (`tools/area-shot.mjs`, six places before and after): a mountain meadow, a pasture, a
+  desert oasis, a cove, a redwood road, a town block.
+- Not live: on the branch until the owner has seen it.

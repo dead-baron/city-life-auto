@@ -195,6 +195,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Character creator: the stage never moves or resizes between views, poses or zoom; the character stands centred on it by the rig's feet, not its sprite's box. (11-14 18:56; chat)
 - Title backdrop: no clouds for now (they didn't look good); stars, twinkling windows, car lights, the searchlight and the odd aircraft stay. (11-14; chat)
 
+- Art polish order after the characters (11-21 08:05): animals, then the UI's item and weapon pictures, then the nature kit, then buildings and districts, vehicles last - on Fable 5.2 while its usage lasts, then Opus 5.5 for the pre-beta fixes. (11-21; chat)
+- Nature kit (11-21 09:27: "please start on the nature kit"): every plant the world plants is made at the art pixel (`flora.js` `floraArt`), not painted in world px and halved - branch `nature`, one art batch, live after his review. OPEN, his pick from the three-greens sheet: A today's greens, B halfway, C the concept sheets' olive greens with gold where the sun catches (Claude suggests C; plants only - the ground's grass keeps its green unless he asks). The branch stays on A until he picks. (11-21; chat, DEVLOG 11-21)
 ## Music and sound
 - No soundtrack over play: music lives in the world (venues, shops, radios); only the main menu (maybe the tutorial) has soundtrack. (10-08; DEVLOG 10-08, chat)
 - The owner makes the music (ComfyUI, his own workflow, one prefilled JSON per piece); played as recordings, not rebuilt in the engine. (11-12; queue, chat)

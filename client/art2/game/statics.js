@@ -36,7 +36,6 @@ import * as WT from '../water.js';
 import * as RK from '../props-redwoods.js';   // (the redwoods' kit: basalt columns, the column falls, the forest floor - shared/world3-redwoods.js)
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
-import * as TR from '../trees.js';
 import * as RW from '../redwoods.js';
 import { boulder as rockLump, outcrop, rockSprite, seaStack, crystals, redStack } from '../terrain.js';
 import { distSq } from '../scene.js';
@@ -2237,10 +2236,10 @@ const SPECIES = {
   mapleAutumn: [FL.mapleAutumn, 48, 104], oak: [FL.bigOak, 66, 124], birch: [FL.birchClump, 48, 110], aspen: [FL.aspenGrove, 48, 112], willow: [FL.weepingWillow, 44, 106],
   apple: [FL.appleTree, 40, 92], orange: [FL.orangeTree, 40, 90], olive: [FL.oliveTree, 48, 94], cypress: [FL.italianCypress, 18, 108],
   fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], pine: [FL.ponderosaPine, 32, 138],   /* ('pine': Pine Hills' and the Lakeside course's - drawn as nothing till 2026-10-21) */ spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 110, 405],
-  mtnPine: [FL.mountainPine, 36, 150], mtnFir: [FL.mountainFir, 40, 157], whitePine: [FL.whitebarkPine, 50, 114], larch: [FL.goldenLarch, 38, 154],
-  mesquite: [FL.mesquite, 48, 116], paloVerde: [FL.paloVerde, 54, 115], joshua: [FL.joshuaTree, 52, 101], deadSnag: [FL.deadSnag, 38, 77],
+  mtnPine: [FL.mountainPine, 36, 150], mtnFir: [FL.mountainFir, 40, 157], whitePine: [FL.whitebarkPine, 58, 114], larch: [FL.goldenLarch, 38, 154],
+  mesquite: [FL.mesquite, 52, 116], paloVerde: [FL.paloVerde, 54, 115], joshua: [FL.joshuaTree, 52, 101], deadSnag: [FL.deadSnag, 38, 77],
   coconut: [FL.coconutPalm, 76, 151], cocoUp: [FL.cityCoconut, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
-  smallPalm: [FL.smallFanPalm, 36, 76], coastCypress: [FL.coastalCypress, 80, 98], banana: [FL.banana, 60, 99],
+  smallPalm: [FL.smallFanPalm, 36, 76], coastCypress: [FL.coastalCypress, 90, 98], banana: [FL.banana, 60, 99],
   // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
   giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
   redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 100, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
@@ -2255,7 +2254,7 @@ const SPECIES = {
   ocotillo: [FL.ocotillo, 36, 93], saguaroBig: [(s) => FL.saguaro(s, 128), 34, 140], saguaroMid: [FL.saguaroMid, 18, 80], saguaroSmall: [FL.saguaroSmall, 12, 52],
   hibiscus: [FL.hibiscus, 41, 58], bougain: [FL.bougainvillea, 41, 74], monstera: [FL.monstera, 35, 58], elephant: [FL.elephantEar, 33, 51], bird: [FL.birdOfParadise, 45, 83],
   duneGrass: [FL.duneGrass, 48, 61], beachGrass: [FL.beachGrass, 43, 45], icePlant: [FL.icePlant, 56, 33], flHedge: [FL.floweringHedge, 62, 55], poppies: [FL.poppies, 33, 45], lupines: [FL.lupines, 27, 64],
-  daisies: [FL.daisies, 35, 37], tallGrass: [FL.tallGrass, 51, 57], cattails: [FL.cattails, 27, 69], reeds: [FL.reeds, 26, 70], juniper: [FL.juniperMat, 63, 53], twisted: [FL.twistedShrub, 46, 73],
+  daisies: [FL.daisies, 35, 37], tallGrass: [FL.tallGrass, 51, 57], cattails: [FL.cattails, 27, 69], reeds: [FL.reeds, 26, 70], juniper: [FL.juniperMat, 63, 53], twisted: [FL.twistedShrub, 56, 73],
   berryShrub: [FL.berryShrub, 40, 56], aLupine: [FL.alpineLupine, 27, 60], paintbrush: [FL.paintbrush, 27, 51], heather: [FL.heather, 31, 36], aDaisies: [FL.alpineDaisies, 31, 33],
   weed: [FL.weedTuft, 31, 36], dryTuft: [(s) => FL.dryGrass(s, 0.6), 34, 31],
   sunflowers: [FL.sunflowers, 35, 69], wildflowers: [(s) => FL.wildflowerLawn(s), 68, 47],
@@ -2263,6 +2262,7 @@ const SPECIES = {
 // Every plant is made at the art pixel (flora.js floraArt: the maker run at half size, a pixel of it an art pixel) - the
 // owner's nature kit pass, 2026-11-21 - but the redwoods' own (redwoods.js: at the art pixel already).
 const OWN_ART_FLORA = new Set(['redwood', 'redwood2', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
+export const FLORA_SPECIES = Object.keys(SPECIES), floraExt = (sp, k = 1) => { const S = SPECIES[sp] || [null, 30, 60]; return [Math.ceil(S[1] * k) + 10, Math.ceil(S[2] * k) + 16, Math.ceil(S[1] * k) + 10, 30]; };   // (the tests: every species, and the room an item claims for its picture)
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
 function makeFlora(r) {
   const sp = SPECIES[r.sp];
@@ -2276,7 +2276,7 @@ function makeFlora(r) {
 function fitem(key, sp, seed, x, y, k = 1, extra = null, bare = false) {
   const S = SPECIES[sp] || [null, 30, 60];
   if (bare && BASED.has(sp)) key += ':n'; else bare = false;
-  const it = { key, recipe: bare ? { t: 'f', sp, s: seed, k, bare: 1 } : { t: 'f', sp, s: seed, k }, x, y, ext: [Math.ceil(S[1] * k) + 10, Math.ceil(S[2] * k) + 16, Math.ceil(S[1] * k) + 10, 30] };
+  const it = { key, recipe: bare ? { t: 'f', sp, s: seed, k, bare: 1 } : { t: 'f', sp, s: seed, k }, x, y, ext: floraExt(sp, k) };
   if (extra) Object.assign(it, extra);
   return it;
 }

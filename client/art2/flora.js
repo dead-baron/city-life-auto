@@ -669,7 +669,9 @@ export function topiaryBall(seed = 1) {
 export function topiaryCone(seed = 1) {
   const rnd = mulberry32(seed * 29 + 1), G = sprite(40, 74, 5), cx = G.ax, foot = G.ay;
   const soil = planterSprite(G, cx, foot, 10, 8, 10, 'stone', seed);
-  paintClusters(G, massCone(cx, soil - 50, soil + 1, 10.5, rnd, 2.5, 1.8, 0.1), { R: FOL('#3e7a30'), seed, core: true, clip: 1 });
+  const cone = massCone(cx, soil - 50, soil + 1, 10.5, rnd, 2.5, 1.8, 0.1);
+  if (U < 1) for (const c of cone) c.x = cx + (c.x - cx) * Math.min(1, 0.25 + (c.y - (soil - 50)) / 22);   // (at the art pixel: a clipped point, not a leaning one)
+  paintClusters(G, cone, { R: FOL('#3e7a30'), seed, core: true, clip: 1, tips: false });
   return done(G);
 }
 export const roseBush = (seed = 1) => shrub(seed, { w: 17, h: 26, R: FOL('#3a7228'), cs: 3, flowers: { R: RR('#c8243a', 6, 3, { light: 0.55 }), k: 0.13, kind: 'rose', size: 1 } });
@@ -1211,10 +1213,11 @@ export function joshuaTree(seed = 1) {
 }
 export function ocotillo(seed = 1) {
   const rnd = mulberry32(seed * 193 + 1), G = sprite(70, 100, 5), cx = G.ax, foot = G.ay, B = RR('#6a6a3e', 6, 3), Lf = FOL('#5a8a2a'), Fl = RR('#e8402a', 6, 3, { light: 0.6 });
-  for (let i = 0; i < 16; i++) {
-    const a = -PI / 2 + (i / 15 - 0.5) * 0.9 + (rnd() - 0.5) * 0.1, L = 60 + rnd() * 28, ex = cx + Math.cos(a) * L, ey = foot + Math.sin(a) * L, x0 = cx + (rnd() - 0.5) * 3;
+  const nc = nu(16, 0.7);
+  for (let i = 0; i < nc; i++) {
+    const a = -PI / 2 + (i / (nc - 1) - 0.5) * 0.9 + (rnd() - 0.5) * 0.1, L = 60 + rnd() * 28, ex = cx + Math.cos(a) * L, ey = foot + Math.sin(a) * L, x0 = cx + (rnd() - 0.5) * 3;
     limb(G, [x0, foot], [(x0 + ex) / 2 + (rnd() - 0.5) * 4, (foot + ey) / 2], [ex, ey], 1.1, 0.6, B, { tex: 'smooth', seed });
-    for (let k = 0; k < L * 0.8; k += 2) { const t = k / L, X = x0 + (ex - x0) * t + (k % 4 ? 1 : -1), Y = foot + (ey - foot) * t; if (rnd() < 0.7) px(G, X, Y, step(Lf, 0.4 + rnd() * 0.4, X | 0, Y | 0, 0), [k % 4 ? 0.5 : -0.5, 0.4, 0.8]); }
+    for (let k = 0; k < L * 0.8; k += (U < 1 ? 4 : 2)) { const t = k / L, X = x0 + (ex - x0) * t + (k % (U < 1 ? 8 : 4) ? 1 : -1) / U, Y = foot + (ey - foot) * t; if (rnd() < (U < 1 ? 0.55 : 0.7)) px(G, X, Y, step(Lf, 0.4 + rnd() * 0.4, X | 0, Y | 0, 0), [k % 4 ? 0.5 : -0.5, 0.4, 0.8]); }
     for (let k = 0; k < 6; k++) { const X = ex + Math.cos(a) * k * 0.6 + (k % 2), Y = ey - k; px(G, X, Y, step(Fl, 0.7 - k * 0.05 + (k % 2 ? -0.2 : 0), X | 0, Y | 0, 0), [-0.3, 0.2, 0.9]); }
   }
   pebbles(G, cx, foot, 5, 20, seed); tufts(G, cx, foot, 4, 16, seed, FOL('#8a9a3a'));
@@ -1623,17 +1626,18 @@ export const clover = (seed = 1) => shrub(seed, { w: 32, h: 20, R: FOL('#3e8a34'
 export function cattails(seed = 1, kind = 'cattail') {
   const rnd = mulberry32(seed * 443 + (kind === 'reed' ? 3 : kind === 'rush' ? 5 : 1)), h = kind === 'rush' ? 50 : 58, G = sprite(70, h + 20, 6), cx = G.ax, foot = G.ay;
   const R = kind === 'rush' ? FOL('#4e7a2a') : FOL('#5a8a2a'), C = RR('#6a3a1e', 6, 3), Pl = RR('#b08a50', 5, 2);
-  const bl = []; for (let i = 0; i < (kind === 'rush' ? 50 : 34); i++) bl.push({ x: cx + (rnd() - 0.5) * 24, a: -PI / 2 + (rnd() - 0.5) * 0.7, l: h * (0.5 + rnd() * 0.5), d: rnd() });
+  const bl = []; for (let i = 0; i < nu(kind === 'rush' ? 50 : 34, 0.55); i++) bl.push({ x: cx + (rnd() - 0.5) * 24, a: -PI / 2 + (rnd() - 0.5) * 0.7, l: h * (0.5 + rnd() * 0.5), d: rnd() });
   bl.sort((a, b) => a.d - b.d);
-  for (const b of bl) blade(G, b.x, foot - 1, b.a * 0.7 - PI * 0.15, b.l, kind === 'rush' ? 0.6 : 0.9, 0.004, R, { k: 0.3 + b.d * 0.4 });
-  for (let i = 0; i < (kind === 'rush' ? 9 : 5); i++) {
+  bl.forEach((b, i) => { b.j = U < 1 ? (i % 3 - 1) * 0.14 : 0; });
+  for (const b of bl) blade(G, b.x, foot - 1, b.a * 0.7 - PI * 0.15, b.l, kind === 'rush' ? 0.6 : 0.9, 0.004, R, { k: 0.3 + b.d * 0.4 + b.j });
+  for (let i = 0; i < nu(kind === 'rush' ? 9 : 5, 0.7); i++) {
     const x0 = cx + (rnd() - 0.5) * 20, a = -PI / 2 + (rnd() - 0.5) * 0.25, L = h * (0.8 + rnd() * 0.3);
     const [ex, ey] = blade(G, x0, foot - 1, a, L, 0.5, 0, R, { k: 0.45 });
     if (kind === 'cattail') { for (let k = 0; k < 8; k++) for (const q of [-1, 0, 1]) px(G, ex + q, ey + 3 + k, step(C, 0.55 - q * 0.25 + (k === 0 ? 0.15 : 0), 0, 0, 0), [q * 0.6, 0.3, 0.8], 0); stem(G, ex, ey + 3, ex, ey - 2, R, 0.5); }
     else if (kind === 'reed') { for (let k = 0; k < 9; k++) { const wd = 1.6 * Math.sin(PI * (k + 1) / 10); for (let q = -Math.ceil(wd); q <= wd; q++) px(G, ex + q + k * 0.25, ey + k, step(Pl, 0.6 - q * 0.2 + (k % 2 ? -0.12 : 0), 0, 0, 0), [q * 0.5, 0.3, 0.8]); } }
     else { for (let k = 0; k < 3; k++) px(G, ex + (k - 1), ey + 6 + (k % 2), step(C, 0.5, 0, 0, 0), [0, 0.3, 0.9], 0); }
   }
-  for (let k = -12; k <= 12; k++) if (hash(k, 1, seed) > 0.4) px(G, cx + k, foot + 1, [200, 225, 230], [0, 0, 1], F_GROUND | F_WATER, 0);
+  for (let k = -12; k <= 12; k += U < 1 ? 2 : 1) if (hash(k, 1, seed) > (U < 1 ? 0.62 : 0.4)) px(G, cx + k, foot + 1, [200, 225, 230], [0, 0, 1], F_GROUND | F_WATER, 0);   // (glints where the stems meet the water: a few, not a line)
   return done(G);
 }
 export const reeds = (seed = 1) => cattails(seed, 'reed'), rushes = (seed = 1) => cattails(seed, 'rush');
