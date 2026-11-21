@@ -1038,6 +1038,10 @@ function wardrobe(A, D, TF, seed) {
   W.leg = (Q) => {
     const along = Q.part === 'th' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5, side = Q.l1 * Q.side;
     if (T.bib) return along > 0.94 ? dark(top) : top;
+    // (the polish pass, the owner 11-20 17:44: "a random blue pixel here and there", "a random white pixel". The hem is a line
+    // level on the screen (underHem), and a thigh's top stands out beside the hips over that line: at an angle an art pixel of
+    // trousers in the shirt's side, and the shirt a row lower beside it. Over the hem's line a thigh is under the shirt too.)
+    if (PL && Q.res === 1 && Q.part === 'th' && along < 0.3 && HEMZ < 2 && !(T.dress || T.swimsuit || T.long || T.towel || T.tuck) && !A.founder) { tco(TF, Q); if (!underHem(Q)) return W.torso(Q); }
     if (A.founder) { if (Math.abs(along - 0.5) < 0.07) Q.k -= 0.22; return skin; }
     if (legSkin || (bk === 'shorts' && along > 0.33) || (bk === 'trunks' && along > 0.18)) {
       if (bk === 'shorts' && along < 0.37) Q.k -= 0.2;

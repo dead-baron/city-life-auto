@@ -131,5 +131,9 @@ Each fix made against a snapshot of every figure; what it touched is in the DEVL
 - [x] Extra skin pixel between the thighs under the swimsuit (slim, front) - bare legs stay two apart up to the underwear.
 - [x] A pixel sticking out on the head (men slim, side) - short hair's one-pixel bump at the back.
 - [~] Arm shape weird on the slim woman's back - softer lines only; the shape itself kept (changing it changed her from every side). His call.
-- [ ] The outer outline "really dark" - three strengths sent (A now, B softer, C softest). His pick.
+- [x] The outer outline "really dark" - three strengths sent; he picked A, the one in place (17:44).
+
+## 17:44 - "overall its looking really great ... call it good at this point and move on to everything else"
+- [x] A random blue pixel / a random white pixel (men, three quarters) - a thigh's top over the hem line is under the shirt.
+- Outline: A (as it is). Bodies: passed. Next: the wardrobe notes above, in the order of the queue.
 

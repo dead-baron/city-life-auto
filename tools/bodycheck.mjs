@@ -181,6 +181,18 @@ function skinline(S, skinM, dir) {
   each(S, (p, x, y) => { if (!p.ln || p.m !== skinM || teal(p.c) || ![TORSO, ARML, ARMR, LEGL, LEGR].includes(p.g)) return; if (dir % 4 === 0 && (p.g === LEGL || p.g === LEGR || p.part === 'pel' || p.part === 'seat') && Math.abs(x - S.ax + 0.5) <= 1.5) return; if (lum(p.c) < 0.5 * m) bad.push(`${x},${y} ${p.part}`); });
   return bad.length ? [`${bad.length} line art pixels on bare skin darker than half the skin's tone: ${bad.slice(0, 5).join('; ')}`] : [];
 }
+// 18. no art pixel of a garment (or of skin) on its own in another: one of a material the figure has plenty of, with none
+// of it on any side or corner ("a random blue pixel here and there", "a random white pixel" - the owner, 11-20 17:44)
+function stray(S, skinM) {
+  const n = new Map(), out = [], bodyP = (p) => p && !p.ol && [TORSO, ARML, ARMR, LEGL, LEGR].includes(p.g) && !['shoe', 'sole', 'boot', 'sh'].includes(p.part);   // (a sock's top at the ankle is its own thing)
+  each(S, (p) => { if (bodyP(p)) n.set(p.m, (n.get(p.m) || 0) + 1); });
+  each(S, (p, x, y) => {
+    if (!bodyP(p) || p.ln || n.get(p.m) < 6 || p.m === skinM) return;   // (a hand or an elbow showing past the body is not a stray)
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const q = S.at(x + dx, y + dy); if ((dx || dy) && q && !q.ol && q.m === p.m) return; }
+    out.push(`an art pixel on its own (${p.part}, ${p.c.join(',')}) at ${x},${y}`);
+  });
+  return out;
+}
 
 export const BUILDS = LK.BUILDS.map((b) => b.name);
 // every fault, as { who, rule, text }
@@ -196,7 +208,7 @@ export function check(POLISH, { bases = ['f', 'm'], builds = [0, 1, 2, 3, 4], di
         const cnt = new Map(); each(S, (p) => { if (['chest', 'bust'].includes(p.part) && p.m !== skinM) cnt.set(p.m, (cnt.get(p.m) || 0) + 1); });
         const topM = [...cnt].sort((x, y) => y[1] - x[1])[0]?.[0] || -1;
         const isTop = under ? (p) => teal(p.c) && !['pel', 'seat', 'th'].includes(p.part) && p.g === TORSO : (p) => p.m === topM && (p.g === TORSO || p.g === HEAD);   // (a strap's art pixel under the jaw is the top's by its cloth)
-        add(who, 'points', points(S)); add(who, 'bumps', bumps(S));
+        add(who, 'points', points(S)); add(who, 'bumps', bumps(S)); if (!under && idle && dir !== 2 && dir !== 6) add(who, 'stray', stray(S, skinM));   // (in profile the hanging arm parts a garment: the pixel of it in front of the hand is no stray)
         add(who, 'eyes', dir === 3 || dir === 4 || dir === 5 ? [] : eyes(S, dir));
         if (idle && (dir === 2 || dir === 6)) add(who, 'neck', neck(S, dir));
         if (idle && (dir === 2 || dir === 6)) { add(who, 'reach', reach(S, frontK)); add(who, 'nub', nub(S)); if (base === 'f' && !under) add(who, 'profile', profile(S, isTop, skinM)); }

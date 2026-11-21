@@ -25324,3 +25324,11 @@ The owner on the checked sheets: "overall this is WAY better", a dozen pixel-lev
 - Not changed: the slim woman's arms from behind keep their shape - what read as "weird" there was mostly the dark lines; thicker arms or wider shoulders were tried and changed her from every side. To look at with him.
 - Open: the outline's strength - three options sent.
 
+## 2026-11-20 · Characters: stray garment pixels at an angle, and the bodies passed (branch characters, staged)
+
+The owner's last two notes on the bodies - "a random blue pixel here and there", "a random white pixel" - were one thing: the hem is a line level on the screen, but a thigh's top stands out beside the hips over that line, so at an angle one art pixel of trousers sat in the shirt's side and the shirt hung a row lower next to it. Over the hem's line a thigh is under the shirt too now (`W.leg`, the same `underHem` as the pelvis and the waist). 39 of the 160 standing figures changed, all clothed, 8 art pixels at most; in the wardrobe the same few pixels on every figure in an untucked top.
+- A new rule in `tools/bodycheck.mjs` (`stray`: no art pixel of a garment on its own in another, standing, outside profile) finds 8 in the version before and none now.
+- Tried and dropped: a general "lone pixel of a big material takes its neighbor's" rule on the art grid. It touched two thirds of the wardrobe, because garments of one color share a material (a white tee and white sneakers) - the fix belonged at the hem.
+- Left: in profile the hanging arm parts a garment, and the bit of it in front of the hand can be a single pixel; walking frames have their own one-pixel peeks.
+- **The owner: the outline stays (option A); the bodies are good - on to the wardrobe notes.**
+
