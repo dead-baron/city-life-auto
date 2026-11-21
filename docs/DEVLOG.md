@@ -25483,3 +25483,107 @@ The owner at 04:54: "beards need similar texture as hair, right now beards and m
 - **The whole test suite**, for the first time this week. Three at a time it ran this 7 GB machine out of memory (the world tests' processes were killed), so every file that failed was run again alone. Alone, the world files pass. Eight files keep a failure: `prison` (the weapon back after a sentence), `uikit` (the touch buttons' CSS), `uiscreens` (the phone's Guide tile), `hudlayout` (a note under the status line on touch at 844x390 and 740x360), `scenes` (a live event near a player in their first minutes), `visaudit` (two placement audits), `world3arrivals` (the park block), `gridlock` (two junctions). All eight fail the same way on yesterday evening's commit (ae1bdf2b), before any of this work - they are this branch's distance from main or older breaks, not tonight's. (`gridlock` showed a second failing junction once, while sheets were rendering beside it; alone it fails the one it failed before.) None is in code this work touched. Left alone: they are not the characters' to fix on this branch, and each needs its owner's eye.
 - Lesson kept: run the whole suite one file at a time here (`--test-concurrency=1`), or the result is the machine's, not the code's.
 
+## 2026-11-19 - Pre-beta quick wins 1: debug hidden from players
+
+The second audit (REPORT2 B4): every player saw the debug button by the minimap and "Debug menu" in Settings > Help
+(a tap sent `devmode` with no password and got a refusal). Now only the owner and admins (`S.role`), anyone already
+in Dev Debug Mode (or on a private dev server, `S.dev`), and everyone while the server's open dev mode is on
+(`CLA_DEV_OPEN`, read from /launch.json `devOpen`) see them: `body.dbg-ok` shows the button and the row, and
+`openDebug` (the button, the row, the backquote key, the pad) does nothing for anyone else. While testing with the
+open dev mode on, nothing changes; at `CLA_DEV_OPEN=0` players stop seeing them. `client/main.js` debugOk /
+syncDebugUi, `client/style.css`, `index.html`; `test/hub.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 2: the arrival's letterbox doesn't cut the HUD
+
+REPORT2 B6: the arrival's black bars (`#arrival::before/::after`, over the HUD) sliced the minimap and the round
+buttons in half. The HUD is now away while the arrival (and its "Where to?" pick) is up with its bars in, and back as
+they slide off (`#arrival.leaving`). `client/style.css`; `test/ftue.test.js`.
+Not done - the sign "SANDPIPER / JUNCTION FIRST" (the desert first-aid post): the art's `signName`
+(`client/art2/game/statics.js` `clean(b.name, 26)`) cuts "Sandpiper Junction First Aid Station" at 26 characters, mid
+"FIRST AID", and the post's small front clips the two-line board. Fixing it changes the baked art (a new `art` hash, a
+rebake), which this pass mustn't: left for the owner (fix: hand the whole name to `layoutSign`, which already shortens to
+"SANDPIPER FIRST / AID STATION"-style lines, and give a two-line board its height on the small posts).
+
+## 2026-11-19 - Pre-beta quick wins 3: the bag findable
+
+The owner (11-17): the bag can't be found. A desktop had only the I key and MENU > BAG; on touch the ITEMS switch showed
+only while you held an item. Now a desktop (and a pad) has a backpack button in the HUD's row, between the emotes and
+MENU, with its I chip (`#b-bag`, `client/main.js` toggleBag; hidden on touch), and on touch the switch is always there
+(no `items` flag) and called BAG - the name the screen, the pause row and the Guide use (it was ITEMS:
+`shared/touchcontrols.js`, `shared/controls.js`, `client/touchicons.js`). The Guide's bag line and the README say so.
+The 10-24 hub (UI-3) had taken the bag's HUD button away; the hub tests now expect it back.
+
+## 2026-11-19 - Pre-beta quick wins 4: menus in the pixel font
+
+The owner (11-17): the menus weren't in the SNES pixel font. The page's body face (`--ui`, every menu's text and 5
+HUD bits) is now CLA Pixel: its Regular answers every weight under 700 (`@font-face` weight ranges), so what you read is
+the Regular face and heads, labels and buttons (700) the Bold - one readable face, no new font. Barlow Condensed stays
+only as the fallback for a glyph CLA Pixel lacks, and is no longer preloaded (CLA Pixel Regular is). The canvas text
+that was Barlow only (the ride and skate score cards, the knocked-out map's labels, the fish catch card, the spectator
+and debug maps) leads with CLA Pixel too. The age / consent gate and the Account panel (`client/account.js`) lost their
+76 inline "app" styles (system-ui, grey box, blue buttons): they're `.acc-*` classes in `client/style.css` - a UI v2
+navy plate with the gold rim, square, the pixel face, Google's and Discord's own buttons - and full screen the panel
+scrolls inside the screen (a phone on its side no longer cuts the gate's title). On a phone on its side the title keeps
+SIGN IN, compact in the player card. Checked in headless Chrome at 844x390 and 1440x900 (title, gate, Account,
+Settings). `test/uitokens.test.js`; DECISIONS (HUD and controls).
+
+## 2026-11-19 - Pre-beta quick wins 5: device words
+
+REPORT2 B4/B6: touch and pad players read keyboard keys. A key named inside a prompt or a note - the server's "Hold to
+revive Sam · hold F to finish them", any "press E" - or an `[[action]]` is now this device's own: the key's tile on a
+keyboard, the pad's button, and on touch the button in words (no chip on the touch prompt's card - the 11-14 rule:
+"hold the door button to finish them") - all on the page (`client/glyphs.js` keysHtml, localizeText), no server change.
+The cinematic panel and its notes speak the device (`client/director.js` say/key: no Esc, WASD, Q / E or F2 / F4 / F8
+on touch or a pad; the keys only on a keyboard), the horse's line says SHIFT / RT ALL THE WAY / HOLD GALLOP instead of
+SPRINT (`client/ridehud.js`), and the touch cinematic hint names the ✕, not MENU (`client/hudinfo.js`). A Windows touch
+tablet with no mouse (a Surface without its keyboard) is no longer taken for an Xbox: the pad-cursor test now needs a
+screen with no touch points (`client/platform.js`), so it gets the touch controls, not "A SELECT / B BACK".
+`test/devicewords.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 6: the starting looks
+
+REPORT2 B4/B6: the starting looks said "You can change everything later from the menu (Appearance)" - there's no
+such screen. Now: "You can change it later: CHARACTER on the title screen, or in the city the mirror at home" (the
+11-17 decision). Their carousel showed the browser's white scrollbar under the navy panel: every scrollbar on the page
+is now thin, a gold thumb on the panels' ink (`client/style.css`; a rule's own `scrollbar-width: none` still wins).
+`client/creator.js`; `test/uitokens.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 7: touch collisions on a 360x740 phone
+
+REPORT2 B3: on a 360x740 phone upright (a common Android size the layout test didn't have) the emote button ran into
+FIRE's disc and the chat button touched FIRE ON (0 px): both are placed by CSS offsets beside the move stick, and at
+360 px there's no room along the bottom. Under 380 px wide, upright, they now sit side by side in the free space just
+over the move stick's rest (8 px above its ring, by the left thumb, clear of the prompt card). `test/hudlayout.test.js`'s
+small-phone test now measures chat, the emotes and the move stick with the cluster, and its placement rule knows the
+narrow-phone spot (and the HUD row's new bag button). 44 px targets on touch: chat's tabs, quick lines and row
+buttons (34-36 px), the emote picker's tabs (36), What's next's skip (30) and goal buttons (32), and Settings' tabs on a
+short screen (40). `client/style.css`; `test/uitokens.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 8: no red cross on the knocked-out screen (and two more)
+
+The owner's rule (10-18): never a red cross. The knocked-out screen's map drew the ambulance you called as a white
+disc with a red cross; it's now a white cross on the clinics' green (`client/deathscreen.js`). The test's source
+guard (`test/storeicons.test.js`) only looked at lines assigning a `cross...` variable, so it missed it: it now also
+catches a plus painted as two turned bars (`fillRect` pairs) in any red - and that found two more, both fixed the same
+way: the hospital helipad's badge (`client/render/aircraft.js`) and the lifeguard tower's roof (`client/render/trains.js`
+drawLifeguardTower; its red flag stays). None is in the art bake's imports (no new art hash). The guard's walk of
+`client/` also works on Windows now (`fileURLToPath`).
+
+## 2026-11-19 - Pre-beta quick wins 9 (part): Next moves to the next shot
+
+The owner (recording trailers with the camera tool): "next scene" didn't move to the next shot. A shot tapped in the
+list was a reel of one, so Next (the panel's ⏭, the bar's Next, N, a pad's A / RB) just ended it. A tapped shot now
+keeps its list - its section's kept shots, or the unreviewed ones - so Next and the one before step through it; on its
+own it still stops when it's over (`one`: no auto-advance; Play all still plays on). `client/director.js` D.shot;
+`test/directorcam.test.js` (fails on the old code). A new test also plays every place shot on the page - held, go,
+then frames - and each one's camera travels, so the page side of "shots that don't play their camera move" checks out
+with the shots' own anchors; the live cause (a place whose anchors or cast don't resolve, the camera holding its last
+spot) needs a World v3 run to find. Not done: shots of NPCs playing their games (pool, cards, hoops) - new scenes with
+the watchable games' server sims, a server change.
+
+## 2026-11-20 - The "Before you play" screen: no checkbox
+
+The owner (11-20): smoother, without the tick box. The screen now says "By playing you confirm you're 13 or older
+(under 18: with a parent or guardian's permission)" and either button confirms it: **Accept** (with Google Analytics) or
+**Essential only** (without) - side by side, equally easy, as Europe's consent rules want; the analytics line is a small
+note under them. Shown once and remembered, as before. `client/account.js` showGate.

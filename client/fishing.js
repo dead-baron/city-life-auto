@@ -272,10 +272,10 @@ function drawCardBody(g, cw, m, f, now0) {
   g.save(); g.translate(cx, 76); g.rotate(Math.sin(now0 * 3) * 0.03); drawFish(g, f, 0, 0, L, { glow: leg ? '#ffd34a' : null }); g.restore();
   fit(f.name, 20, 700, '"CLA Pixel", "Barlow Condensed", sans-serif', cw - 20); g.fillStyle = '#fff'; g.fillText(f.name, cx, 134);
   const stars = `${m.lb} lb · ${'★'.repeat(f.rare)}${'☆'.repeat(Math.max(0, 5 - f.rare))} ${FS.RARITY[f.rare]}`;
-  fit(stars, 16, 700, '"Barlow Condensed", sans-serif', cw - 20); g.fillStyle = '#dde'; g.fillText(stars, cx, 158);
+  fit(stars, 16, 700, '"CLA Pixel", "Barlow Condensed", sans-serif', cw - 20); g.fillStyle = '#dde'; g.fillText(stars, cx, 158);
   g.fillStyle = '#bcd';
   const worth = `about $${fmt(m.v)} at the fish market`, log = `${m.n} of ${m.of} kinds in your log`;
-  if (fit(`${worth} · ${log}`, 15, 600, '"Barlow Condensed", sans-serif', cw - 20) >= 13) g.fillText(`${worth} · ${log}`, cx, 182);
-  else { fit(worth, 14, 600, '"Barlow Condensed", sans-serif', cw - 20); g.fillText(worth, cx, 176); fit(log, 14, 600, '"Barlow Condensed", sans-serif', cw - 20); g.fillText(log, cx, 193); }
+  if (fit(`${worth} · ${log}`, 15, 600, '"CLA Pixel", "Barlow Condensed", sans-serif', cw - 20) >= 13) g.fillText(`${worth} · ${log}`, cx, 182);
+  else { fit(worth, 14, 600, '"CLA Pixel", "Barlow Condensed", sans-serif', cw - 20); g.fillText(worth, cx, 176); fit(log, 14, 600, '"CLA Pixel", "Barlow Condensed", sans-serif', cw - 20); g.fillText(log, cx, 193); }
 }
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }

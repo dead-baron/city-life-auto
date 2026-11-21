@@ -553,7 +553,7 @@ function renderPage() {
     // (U18: the looks standing on round stages side by side, the picked one under a spotlight with its name on a plate,
     // "+ New character" at the end of the row; under it "Play as <name>" and "Customize this character")
     const n = LK.STARTERS.length, rnd = startPick === n, nm = rnd ? 'this one' : esc(LK.STARTERS[startPick].name);
-    h = `<p class="cc-note"><b class="cc-count">${n} LOOKS + RANDOM</b> Pick who you'll be. You can change everything later from the menu (Appearance).</p><div class="cc-stages">`
+    h = `<p class="cc-note"><b class="cc-count">${n} LOOKS + RANDOM</b> Pick who you'll be. You can change it later: CHARACTER on the title screen, or in the city the mirror at home.</p><div class="cc-stages">`
       + LK.STARTERS.map((s, i) => `<button class="cc-stage ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look, i === startPick ? 'stageon' : 'stage')}<span class="cc-plate">${esc(s.name)}</span><small class="cc-sub">${esc(s.sub || '')}</small></button>`).join('')
       + `<button class="cc-stage ${rnd ? 'on' : ''}" data-act="start" data-v="random">${rnd ? th(look, 'stageon') : '<span class="cc-q">?</span>'}<span class="cc-plate">Random</span><small class="cc-sub">Surprise me</small></button>`
       + `<button class="cc-stage cc-new" data-act="new-char"><b>+</b><span>New character</span></button></div>`

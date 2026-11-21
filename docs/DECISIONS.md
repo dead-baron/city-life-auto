@@ -118,6 +118,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Ads account (AdSense / Ad Placement API) is the owner's sign-up. (11-03; launch-plan 11-03) - OPEN: when.
 
 ## HUD and controls
+- The "Before you play" screen has no 13+ checkbox: its text says playing confirms 13+ (under 18 with permission) and either button (Accept / Essential only) confirms it; analytics as a small note, the two buttons equally easy. Shown once. (11-20; chat)
 - Car soccer: no goal replay (it confused) - a goal shows GOAL! and the scorer, the ball stays in the net, then kick-off puts the ball and every car back at the start. (11-17 21:05; chat)
 - Minimal HUD: a dot or one fading line, never a new on-screen panel; new UI lives in the phone. (10-24; agent-rules, chat)
 - World events (someone collapsed, a fire...): no arrow pointing at them off screen - you see one when it's on screen, marked by an SNES-style pixel highlight (corner brackets and a chevron in its colour); the radar still shows them. (11-17 20:34; chat)
@@ -128,6 +129,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Back and close in the same place on every screen. (11-03; DEVLOG 11-03 UI-10)
 - Portrait stays fully playable (no landscape-only). (11-12; queue)
 - HUD look: Direction A, the SNES pad - navy panels, gold rim, CLA Pixel everywhere in the HUD. (11-12; DEVLOG 11-12)
+- Menus in the pixel font too: CLA Pixel for every menu and the page default (Bold for heads, labels and buttons, Regular for what you read); no Barlow / system fonts in player screens (Barlow only a missing-glyph fallback); the age gate and Account panel in the UI v2 look; SIGN IN on a sideways title. (11-19; the owner 11-17 "not in the SNES pixel font", QUICKWINS task) - SUPERSEDES UI-1's "Barlow Condensed for everything you read" (10-24).
 - Button rule: a fixed action gets a simple symbol (FIRE crosshair, ROLL chevrons), a situational one gets a word (ACT shows its verb, BRAKE...). (11-12 19:28; queue) - SUPERSEDES words-only (19:26), symbols + chips (19:22), game-icons silhouettes (17:29).
 - The vehicle button: simple enter/exit door symbols; GET IN / ON / EXIT / OFF words only in tips and the Guide. (11-12 19:37; queue)
 - Button sizes 60 / 52 / 40 px, translucent navy with an accent rim, one word size, measured centering. (11-12; queue)

@@ -129,20 +129,20 @@ export class SkateView {
     }
     // the score and the special meter (top right, under the money)
     const rx = W - 16, ry = Math.max(96, H * 0.2);
-    g.textAlign = 'right'; g.font = '700 14px "Barlow Condensed", sans-serif';
+    g.textAlign = 'right'; g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif';
     shadow(`SCORE ${fmt(sk.s)}   BEST COMBO ${fmt(sk.b)}`, rx, ry, '#fff');
     const bw = 120, bx = rx - bw, by = ry + 12;
     g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(bx - 1, by - 1, bw + 2, 7);
     g.fillStyle = sk.on ? `hsl(${(now * 160) % 360},90%,62%)` : '#58b8ff'; g.fillRect(bx, by, bw * Math.min(1, sk.sp), 5);
-    g.font = '700 12px "Barlow Condensed", sans-serif';
+    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif';
     shadow(sk.on ? `SPECIAL ${sk.on}s` : 'SPECIAL', bx - 6, by + 3, sk.on ? '#ffb0f4' : '#bcd');
     // a session at a skate spot: its clock, its score, its goals
     if (sk.ses) {
       const X = sk.ses, mm = Math.floor(X.t / 60), ss = String(X.t % 60).padStart(2, '0');
-      g.textAlign = 'left'; g.font = '700 14px "Barlow Condensed", sans-serif';
+      g.textAlign = 'left'; g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif';
       const lx = 16, ly = Math.max(150, H * 0.3);
       shadow(`SESSION · ${X.spot} · ${mm}:${ss} · ${fmt(X.s)}`, lx, ly, '#fff');
-      g.font = '600 12px "Barlow Condensed", sans-serif';
+      g.font = '600 12px "CLA Pixel", "Barlow Condensed", sans-serif';
       X.g.forEach(([label, done], i) => shadow(`${done ? '✓' : '○'} ${label}`, lx, ly + 16 + i * 14, done ? '#7fe07f' : '#dde'));
     }
     g.restore();
