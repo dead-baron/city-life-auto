@@ -14,7 +14,7 @@ Written for the session that does the pre-beta fixes (the owner plans Opus 5.5 a
 | `fsrow` | Fullscreen switch in Settings > Graphics | no |
 | `animals` | Animal and critter art at the game's pixel | no |
 | `itemicons` | Item and weapon pictures in the bag and the quick wheel | no |
-| `nature` (to db7b9057) | Plants and rocks at the game's pixel, variety laid out and tested, undergrowth rules, nothing through fences | yes |
+| `nature` (merged again as it moves; see `git log`) | Plants and rocks at the game's pixel, variety laid out and tested, undergrowth rules, nothing through fences | yes |
 
 Not merged, on purpose: `egret` (a world change, and it clashes with the audit's lint counts in
 `tools/placementlint.mjs`: merge it as the first step of the world batch, keeping egret's lower counts for its three
@@ -60,7 +60,8 @@ follows this file, as `docs/tasks/PREBETA-TESTS.txt`. If that file is missing, t
 1. **The world batch** from `docs/audit/REPORT.md` and the pre-beta list section A: each row a class fix, the lint
    count brought down in `LINT_ALLOW`, never up. Start with `egret`. Also to place in the same batch: the nature
    pass's solid pieces (Summit Tarn's rock band, the redwood horseshoe falls, stone ruins, dry-stone wall and gate,
-   oak with a swing, stile) - the owner, 11-21 13:08. To check: a cactus and a red rock in a paddock's gate gap in his
+   oak with a swing, stile) - the owner, 11-21 13:08 - and a small pool with a little stream on the cliff top above each
+   of Coral Cay's falls (the owner, 14:54; `shared/world3-tropic.js`; the fall takes it as its source by itself). To check: a cactus and a red rock in a paddock's gate gap in his
    picture of 11-21 (a new row: a prop on a fence line or in a gate).
 2. **The pre-beta list** sections C to H, the audit 2 top 20 that `quickwins` did not cover, the security audit's
    remaining "high" items, and the owner's new notes.

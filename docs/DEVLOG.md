@@ -25857,6 +25857,29 @@ best-looking trees in the game.
   slim or as they were. Measured over the built world (`test/undergrowth.test.js`): trees with a twin within 160 px
   0% in three woods (12-21% live); undergrowth with a twin within 96 px 11-17% (81-85% live); a wood draws on about
   230 pictures where it drew on about 80.
+- **Waterfalls, first step: the sheet (the owner, 13:08: "They should look natural and like the concepts").** Sixteen
+  falls rendered as the game draws them showed the fault was mostly in one place: a fall's water fanned out to three
+  times its width by the foot, so a tall fall read as a white tent and the redwood horseshoe as a row of eighteen
+  cones; and its white with one-pixel streaks was halved to speckle. `water.js` `FALL_LOOK` (1, pending the owner's
+  pick between 1 and 2): the sheet drops nearly straight - a low fall widens at its foot as before (the owner's earlier note, held by `test/fallart.test.js`), a tall one no more than a low one - in ropes two px wide with their own length and
+  pace, whiter to the foot, glassy where it leaves the lip, the wet rock dark through its thin places, on a ramp of
+  its own from wet rock to white; the lip's water darker. A world's fall is drawn at the art pixel (`waterfall`
+  `o.art`, the bake's ap2). Not done: the settings - Summit Tarn's fall still stands on flat ground and the ledge
+  falls still read low; their rock changes the world's solid ground and goes in with the world batch.
+- **Waterfalls, second step: where the water comes from (the owner, 14:34).** Look 2 is his pick. A fall carried its
+  own little pool on top, pool-blue against the river's teal, and stood the same whether a river reached it or not.
+  `statics.js` `putFall` reads the map where each fall stands: if a river or lake lies on the ground above its lip
+  (`src` 1) the fall draws no water of its own up there - the source's own moving water runs to the lip under a
+  see-through glassy tongue (`water.js` `waterfall`); if nothing does (`src` 2: Coral Cay's, the canyon oasis') it comes
+  out of a dark cleft in a hood of rock, a spring. A fall's own pools (its shelf, a spring's tongue) are in the rivers'
+  teal. A resort's built fall keeps its pool. Seen in the world: the redwood horseshoe, Twin Falls, Summit Tarn,
+  Coral Cay.
+- **Waterfalls, third step.** A spring's rock is rougher: an uneven top with mossy boulders on it, roots hanging over
+  a ragged cleft. The ruled, dotted arc of foam round a plunge pool is gone (`water.js`: a pocket of kind 2 carries
+  flecks and short rafts of foam drifting on it, thinning outward). The owner's call for Coral Cay (14:54): "a little
+  stream and small pool feeding into it" - with the world batch; the fall takes it as its source by itself once it is
+  there. Seen and not fixed: a block of broken white squares in the river below Willow River Falls (there on the
+  live build too) - for the water audit.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
@@ -25866,7 +25889,8 @@ best-looking trees in the game.
   from 1020 to 1022 KB** (a decision, per the rule): the art-pixel kit stood at 1016, and the forest floor's pieces,
   the loose stones and mushrooms and the fences' lines brought it to 1021. The workers load this after the page, so
   it costs no start-up time. The `animals` branch raised the same number to 1024 for its own 4 KB: merged, the two
-  need 1026.
+  need 1026. Later the same day: the branch takes `characters`' 1080 (the owner's number of 11-20), so the branches
+  agree where they meet (`prebeta-art` measures 1062 with everything in).
 - Seen as the game draws it (`tools/area-shot.mjs`, six places before and after): a mountain meadow, a pasture, a
   desert oasis, a cove, a redwood road, a town block. And in the running game (a local copy: the mountain tarn, a pasture, the
   Giants Loop trail, the canyon oasis).

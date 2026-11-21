@@ -458,9 +458,20 @@ const autoUps = (w, sd) => { const out = []; let x = -w / 2 + 2; for (let i = 0;
 //            fall) | 'cliff' (one tall narrow fall from a high wall, with mist) | 'weir' (a concrete sill)
 //   o.width  water width; o.drop total drop (z); o.rock side rock width each side; o.frame / o.frames
 //   o.streams  for the lower tier of 'twoTier': [[x0, x1], ...] relative to the centre
+//   o.src    where its water comes from (the owner, 11-21 14:34: "a clear division between the water it comes from and
+//            the color of the water at the top of the waterfall ... some waterfalls seem to just appear out of
+//            nowhere"): 1 the river or lake on the ground above its lip - it draws no water of its own up there, the
+//            source runs to the lip under a glassy tongue (waterfall()); 2 nothing above it - it comes out of a dark
+//            cleft in a hood of rock, a spring; 0 its own pool on top, as before
 // The model's .face is the y of the lowest face (the anchor the sprite is placed by) and .lip the drop.
 const SANDROCK = R('#c49a6a', 7, 3, { dark: 0.55, light: 0.45 }), LAVAR = R('#46434a', 7, 3, { dark: 0.6, light: 0.55, shift: 0.2 });   // (LAVAR: the tropics' black rock, o.stone 'lava')
 const REDROCKW = R('#a8563c', 7, 3, { dark: 0.55, light: 0.45 });   // (o.stone 'red': the red rock desert's - Red Rock Canyon's spring)
+// (the nature pass, 2026-11-21, the owner: the falls "should look natural and like the concepts" - NR1-E, N5) the look
+// of a fall's water: 0 as it was (a white fan, three times as wide at its foot), 1 a sheet that drops straight in ropes
+// and veils with the wet rock dark through its thin places, 2 the same broken into more strands, more mist
+export const FALL_LOOK = { v: 2 };   // (the owner's pick, 11-21 14:34: "I think look 2 looks good, lets go for it")
+const FALLTOP = [[26, 80, 86], [36, 104, 106], [50, 130, 128], [68, 154, 148], [96, 178, 170], [148, 208, 198], [212, 236, 230]];   // (a fall's own pools - its shelf, a spring's tongue - in the rivers' teal, not a pool's blue)
+const FALLW = [[46, 58, 70], [78, 104, 124], [122, 154, 176], [166, 196, 214], [204, 224, 235], [234, 243, 247], [252, 253, 254]];   // (the sheet's own ramp: the wet rock dark through it, blue-grey veils, white ropes)
 export function fallModel(o = {}) {
   const kind = o.kind || 'ledge', seed = o.seed ?? 3, frames = o.frames || 4;
   const width = o.width ?? (kind === 'cliff' ? 22 : kind === 'weir' ? 120 : 60), drop = o.drop ?? (kind === 'cliff' ? 120 : kind === 'twoTier' ? 110 : kind === 'weir' ? 12 : 26);
@@ -468,19 +479,29 @@ export function fallModel(o = {}) {
   const W = Math.round(width + side * 2), cx = W / 2;
   const tier2 = kind === 'twoTier', mid = tier2 ? Math.round(drop * 0.48) : 0;
   const d1 = kind === 'weir' ? 18 : kind === 'cliff' ? 36 : tier2 ? 34 : 26, d2 = tier2 ? d1 + 30 : d1, apron = kind === 'weir' ? 16 : kind === 'cliff' ? 26 : 20;
-  const Dp = d2 + apron, Hh = drop + 14;
+  const src = o.src || 0, open = src === 1, spring = src === 2, sY = Math.round(d1 * 0.42);   // (sY: a spring's cleft, this far forward of the back)
+  const Dp = d2 + apron, Hh = drop + 14 + (spring ? 20 : 0);
   const m = new Vox(W, Dp, Hh);
   const frame = { v: o.frame || 0 };
   // basalt: columns from a jittered grid (Voronoi), each with its own top; seams between columns
   // (o.stone 'sand': a resort's rockwork of warm sandstone in courses - Lucky Mesa's Mesa Grande)
   const sand = o.stone === 'sand' || o.stone === 'red';
   const RK = rockKit(m, seed, o.stone === 'lava' ? 'lava' : o.stone === 'red' ? REDROCKW : sand), rock = kind === 'weir' ? m.mat({ ramp: CONC, k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5 }) : RK.rock;
-  const wtop = m.mat({ ramp: WATER.river, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => Math.sin(y * 0.6 - frame.v / frames * TAU * 2 + hash(Math.round(x), 1, seed) * 3) * 0.5 + (hash(Math.round(x), Math.round(y), seed) > 0.9 ? 1 : 0) - 0.2 - Math.max(0, d1 - 6 - y) / d1 * 1.6 + (vnoise(x, y, 6, seed + 75) > 0.72 ? 1.2 : 0) });   // (deeper and darker back from the lip, streaks of foam on it)
-  const sheet = m.mat({ ramp: WATER.fall, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y, z) => {
+  const wtop = m.mat({ ramp: FALL_LOOK.v ? FALLTOP : WATER.river, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => Math.sin(y * 0.6 - frame.v / frames * TAU * 2 + hash(Math.round(x), 1, seed) * 3) * 0.5 + (hash(Math.round(x), Math.round(y), seed) > 0.9 ? 1 : 0) - 0.2 - (FALL_LOOK.v ? 0.6 : 0) - Math.max(0, d1 - 6 - y) / d1 * 1.6 + (vnoise(x, y, 6, seed + 75) > 0.72 ? 1.2 : 0) });   // (deeper and darker back from the lip, streaks of foam on it)
+  const LK = FALL_LOOK.v;
+  const sheet = m.mat({ ramp: LK ? FALLW : WATER.fall, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y, z) => {
+    if (LK) {
+      // ropes two px wide (the art pixel), each its own length and pace: a bright head, a tail that thins to veil; whiter
+      // toward the foot; glassy and dark where it leaves the lip; thin places where the wet rock shows through
+      const c2 = Math.round(x / 2), h = hash(c2, 3, seed), len = 12 + h * 26, u = (Hh - z) / len - frame.v / frames * (1 + Math.floor(h * 2)), ph = u - Math.floor(u);
+      const lipT = z > sheetTop(x) - 4 - vnoise(x, 0, 7, seed + 71) * 8 ? -1.6 : 0, thin = vnoise(x * 0.5, z * 0.16, 5, seed + 74) < (LK > 1 ? 0.3 : 0.2) ? -2.6 : 0;
+      return (ph < 0.5 ? 1.5 : ph < 0.78 ? 0.3 : -0.9) + (h > 0.7 ? 1 : h < 0.28 ? -1.1 : 0) + lipT + thin + (Hh - z) / Hh * 0.9 - 0.3;
+    }
     const col = Math.round(x), h = hash(col, 3, seed), u = (Hh - z) / (7 + h * 7) + frame.v / frames * (2 + Math.floor(h * 2)) * -1;
     const band = Math.sin(TAU * (u + h * 5)), top = z > sheetTop(x) - 3 - vnoise(x, 0, 7, seed + 71) * 9 ? -1.1 : 0;   // (the glassy tongue over the lip, ragged)
     return (band > 0.2 ? 1.6 : band < -0.6 ? -0.7 : 0.5) + (h > 0.7 ? 0.8 : h < 0.2 ? -0.5 : 0) + top + (Hh - z) / Hh * 0.6 + (vnoise(x, z * 0.3, 5, seed + 74) < 0.22 ? -1.4 : 0);   // (thin places: the wet rock dark through it)
   } });
+  const dark = m.mat({ ramp: R('#0c0a0e', 5, 1), k: 0, flag: F_NOCAST });   // (a spring's cleft)
   const foam = m.mat({ ramp: WATER.foam, k: 2, flag: F_WATER | F_NOCAST, shade: (x, y, z) => (hash(Math.round(x), Math.round(y) + Math.round(frame.v * 3), Math.round(z)) - 0.4) * 2 });
   let sheetTop = () => drop;
   // the rock mass
@@ -499,6 +520,12 @@ export function fallModel(o = {}) {
       return z < drop - 1 ? rock : -1;                        // the sill
     }
     if (sideAt(x, y)) return -1;                              // (the walls: below, in ledges)
+    if (open && y < lipY(x)) return -1;                       // (the source is the ground's own water: nothing of the fall's up there)
+    if (spring && y < sY) {                                   // (a hood of rock at the back, the water out of a dark cleft in it)
+      const u = (x - cx) / Math.max(4, width / 2 - 2);
+      if (z >= drop + 9 + vnoise(x, y, 6, seed + 90) * 9 + vnoise(x, 3, 19, seed + 91) * 5 - Math.max(0, Math.abs(u) - 0.75) * 14) return -1;   // (its top uneven, its shoulders coming down)
+      return y >= sY - 4 && Math.abs(u) < 1 && z >= drop - 2 - zsOf(x) && z < drop - 1 + (9 + vnoise(x, 5, 8, seed + 92) * 5) * (1 - u * u) ? dark : rock;   // (the cleft: a ragged arch)
+    }
     if (y < lipY(x)) return z < drop - 2 - zsOf(x) && y >= backY(x) ? rock : -1;   // under the upper water
     if (tier2 && y < d2) return z < mid - 2 ? rock : -1;      // the shelf
     return -1;
@@ -516,6 +543,7 @@ export function fallModel(o = {}) {
         if (!sideAt(x + 0.5, y + 0.5)) continue;
         const lv = Math.max(0, Math.min(3, Math.floor(dn / Math.max(8, side / 3.3) + (vnoise(x, y, 11, seed + 35) - 0.5) * 0.9)));
         let H = Math.round(tp * LV[lv]);
+        if (spring && y < sY + 2 && dn < 16) H += 10;   // (the hood's shoulders)
         if (tier2 && y > d1 + edgeWob(x, 9)) H = Math.min(H, drop - 6);
         if (y > fr - 6) { if (!foot) continue; H = Math.min(H, Math.round(4 + vnoise(x, y, 6, seed + 39) * 7)); } else { yF = y; HF = H; }
         rockCol(m, RK, x, y, H, dn < 7 ? H : dn < 16 || y > fr - 6 ? Math.round(H * 0.45) : 0, vnoise(x, y, 8, seed + 36) + (dn > 10 ? 0.15 : -0.2), seed);
@@ -525,6 +553,13 @@ export function fallModel(o = {}) {
     for (let i = 0, n = Math.floor(width / 45); i < n; i++) {   // (rocks breaking the water above the lip)
       const r = 2.5 + hash(i, 13, seed) * 2.5, bx = cx + (hash(i, 11, seed) - 0.5) * width * 0.8, by = d1 * (0.35 + hash(i, 12, seed) * 0.4);
       m.ell(bx, by, drop - 2, r * 1.3, r, r * 0.8, RK.wet); m.ell(bx - 0.5, by - 0.5, drop - 1 + r * 0.4, r * 0.9, r * 0.7, r * 0.35, RK.moss);
+    }
+    if (spring) {   // (boulders with moss on the hood, roots hanging over the cleft: a spring out of broken rock, not a lintel)
+      for (let i = 0, n = 3 + Math.floor(width / 30); i < n; i++) {
+        const r = 4 + hash(i, 22, seed) * 4, bx = cx + (i / (n - 1) - 0.5) * (width + 14) + (hash(i, 21, seed) - 0.5) * 6, by = sY * (0.25 + hash(i, 23, seed) * 0.5), bz = drop + 9 + hash(i, 24, seed) * 5;
+        m.ell(bx, by, bz, r * 1.2, r, r * 0.8, RK.rock); m.ell(bx - 0.5, by - 0.5, bz + r * 0.45, r * 0.95, r * 0.75, r * 0.4, RK.moss);
+      }
+      for (let x = Math.ceil(cx - width / 2 + 3); x < cx + width / 2 - 3; x++) if (hash(x, 31, seed) < 0.16) roots(m, RK, x, sY, drop + 8, 3 + Math.floor(hash(x, 32, seed) * 6));
     }
     for (let i = 0; i < 5; i++) {
       const r = 3 + hash(i, 3, seed) * 4, sd = hash(i, 1, seed) < 0.5 ? -1 : 1, bx = cx + sd * (width / 2 + r + 2 + hash(i, 2, seed) * Math.max(4, side - 12)), by = d2 + 1 + hash(i, 5, seed) * 6;
@@ -538,17 +573,17 @@ export function fallModel(o = {}) {
     m.fill((x, y, z) => (inNotch(x) && z < drop + 1 && y >= d1 && y < d1 + 2 + (drop - z) * 0.25 ? sheet : -1), 0, d1, 0, W, d1 + 8, drop + 1);
   } else {
     // upper water runs to the edge of the top step
-    m.fill((x, y, z) => (inNotch(x, -width / 2 + 2, width / 2 - 2) && !sideAt(x, y) && y < lipY(x) && y >= backY(x) && z >= drop - 2 - zsOf(x) && z < drop - zsOf(x) ? wtop : -1), 0, 0, drop - 8, W, d1 + 10, drop);
+    if (!open) m.fill((x, y, z) => (inNotch(x, -width / 2 + 2, width / 2 - 2) && !sideAt(x, y) && y < lipY(x) && y >= (spring ? sY : backY(x)) && z >= drop - 2 - zsOf(x) && z < drop - zsOf(x) ? wtop : -1), 0, 0, drop - 8, W, d1 + 10, drop);
     // the upper (or only) fall: a sheet that leaves the lip and curves out a little as it falls
     const lo1 = tier2 ? mid - 2 : 0, w1 = kind === 'cliff' ? width : width - 4;
     sheetTop = (x) => drop - zsOf(x);
     // (a strand fans out as it falls - its edges ragged - so the rocks that split it at the lip are hidden below: they
     // break the water near the top and the strands join into one curtain further down, not posts down the face)
-    const spr = (z, top, k) => Math.max(0, (top - z) * 0.14 + (hash(Math.round(z / 4), k, seed + 11) - 0.5) * 2.6);
+    const spr = (z, top, k) => Math.max(0, (top - z) * (LK ? 0.12 : 0.14) + (hash(Math.round(z / 4), k, seed + 11) - 0.5) * 2.6);
     m.fill((x, y, z) => {
       const zt = drop - zsOf(x);
       if (z >= zt) return -1;
-      const fan = (drop - z) * 0.3;   // (the curtain spreads as it falls, out past the notch: wider at the foot)
+      const fan = LK ? Math.min((drop - z) * 0.3, 6 + Math.sqrt(drop - z) * 1.3) : (drop - z) * 0.3;   // (the curtain spreads as it falls, out past the notch: wider at the foot - the owner's note 2, test/fallart.test.js - but a tall fall no more than a low one: water drops straight)
       if (!inNotch(x, -w1 / 2 - fan + Math.sin(z * 0.2 + x) * 0.6 + (vnoise(z, 3, 7, seed + 70) - 0.5) * 7, w1 / 2 + fan - (vnoise(z, 4, 7, seed + 70) - 0.5) * 7)) return -1;
       const sk = ups ? ups.findIndex(([lo, hi], k) => inNotch(x, lo - (k ? spr(z, drop, k * 2) : fan * 0.9) + Math.sin(z * 0.3 + lo) * 0.8, hi + (k < ups.length - 1 ? spr(z, drop, k * 2 + 1) : fan * 0.9))) : 0;
       if (sk < 0) return -1;
@@ -586,14 +621,14 @@ export function fallModel(o = {}) {
     }
   }
   // the churn at the foot
-  const footW = kind === 'cliff' ? width * 1.6 : width + drop * 0.34 + 6;   // (as wide as the curtain has spread)
+  const footW = LK ? width + drop * 0.1 + 14 : kind === 'cliff' ? width * 1.6 : width + drop * 0.34 + 6;   // (as wide as the curtain has spread, and the churn a little past it)
   m.fill((x, y, z) => {
     const dx = (x - cx) / (footW / 2 + 4), dy = (y - d2) / apron, q = dx * dx + dy * dy * 1.4;
     if (q > 1 + (vnoise(x, y, 5, seed + 60) - 0.5) * 0.8 + Math.sin(Math.atan2(dy, dx) * 3 + seed) * 0.3 || y < d2 + 1) return -1;   // (its edge ragged, lobed)
     const hgt = (1 - q) * (kind === 'weir' ? 4 : kind === 'cliff' ? 9 : 7) * (0.6 + vnoise(x, y + frame.v * 3, 4, seed) * 0.8);
     return z < hgt ? foam : -1;
   }, 0, d2, 0, W, Dp, 12);
-  m.face = d2; m.lip = drop; m.depth = Dp; m.mid = mid; m.width = width; m.kind = kind; m.frameRef = frame; m.smooth = 1;
+  m.face = d2; m.lip = drop; m.depth = Dp; m.mid = mid; m.width = width; m.kind = kind; m.frameRef = frame; m.smooth = 1; m.open = open;
   return m;
 }
 // a rendered fall (heading 0, facing the camera), anchored at the foot of its lowest face; sheets get
@@ -601,23 +636,42 @@ export function fallModel(o = {}) {
 export function waterfall(o = {}, model = null) {
   const m = model || fallModel(o);
   if (o.frame != null) m.frameRef.v = o.frame;
-  const G = m.render(0, { dither: 0.4 });
-  G.ay += m.face - m.depth / 2;
+  // (o.art: drawn at the art pixel - one px here is 2 x 2 in the world, laid by the bake (ap2) - so its ropes and its
+  // rock's joints are whole pixels, not what halving leaves of them)
+  const S = o.art ? 2 : 1, G = m.render(0, { dither: 0.4, px: S });
+  G.ay += (m.face - m.depth / 2) / S;
   const tip = norm([-0.3, 0.25, 0.92]);
   for (let i = 0; i < G.w * G.h; i++) if (G.col[i * 4 + 3] && (G.flag[i] & F_WATER)) { const j = i * 4; G.nrm[j] = (tip[0] * 0.5 + 0.5) * 255; G.nrm[j + 1] = (tip[1] * 0.5 + 0.5) * 255; G.nrm[j + 2] = (tip[2] * 0.5 + 0.5) * 255; }
+  // (m.open: the source's own water runs to the lip - over it a glassy tongue, see-through: the water darkens and
+  // smooths as it gathers, a bright line where it breaks; the ground's water moves on under it)
+  if (m.open) {
+    const sd = o.seed ?? 3, T0 = Math.round(8 / S);
+    for (let x = 0; x < G.w; x++) {
+      let y0 = -1;
+      for (let y = 0; y < G.h; y++) { const i = y * G.w + x; if (G.col[i * 4 + 3] === 255 && (G.flag[i] & F_WATER)) { y0 = y; break; } if (G.col[i * 4 + 3] === 255 && y > G.ay - (m.lip - 8) / S) break; }
+      if (y0 < 2 || y0 > G.ay - (m.lip * 0.5) / S) continue;   // (only the top fall's lip)
+      const T1 = T0 + Math.round(hash(Math.round(x / 3), 4, sd) * 3);
+      for (let k = 1; k <= T1; k++) {
+        const y = y0 - k, j = (y * G.w + x) * 4; if (y < 0 || G.col[j + 3]) break;
+        const fleck = k === 1 && hash(x, 9, sd) > 0.35;
+        G.col[j] = fleck ? 236 : 22; G.col[j + 1] = fleck ? 246 : 58; G.col[j + 2] = fleck ? 248 : 70; G.col[j + 3] = fleck ? 170 : Math.round(105 * (1 - (k - 1) / T1)); G.flag[y * G.w + x] = F_NOCAST;
+      }
+    }
+  }
   const mist = o.mist ?? (m.kind === 'cliff' ? 1 : m.kind === 'twoTier' ? 0.5 : 0.2);
   if (mist > 0) {
-    const seed = o.seed ?? 3, f = m.frameRef.v, cx = G.ax, cy = G.ay - 4, rx = m.width * (m.kind === 'cliff' ? 1.6 : 0.72) + 30 + m.lip * 0.2, ry = 10 + mist * 34;   // (the spray spilling out past the walls)
+    const LK = FALL_LOOK.v, seed = o.seed ?? 3, f = m.frameRef.v, cx = G.ax, cy = G.ay - 4, rx = (LK ? m.width * 0.62 + 26 + m.lip * 0.12 : m.width * (m.kind === 'cliff' ? 1.6 : 0.72) + 30 + m.lip * 0.2) / S, ry = (10 + mist * 34) * (LK ? 1 + Math.min(1, m.lip / 160) * (LK > 1 ? 1 : 0.6) : 1) / S;   // (the spray spilling out past the walls; a tall fall's stands higher)
     for (let y = Math.floor(cy - ry * 1.6); y < Math.min(G.h, cy + ry * 0.5); y++) for (let x = Math.floor(cx - rx); x < cx + rx; x++) {
       if (!G.inside(x, y)) continue;
       const q = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2; if (q > 1.4) continue;
-      const nz = vnoise(x + f * 3, y - f * 5, 7, seed + 77) * 0.7 + vnoise(x, y - f * 2, 3, seed + 78) * 0.3;
+      const nz = vnoise(x * S + f * 3, y * S - f * 5, 7, seed + 77) * 0.7 + vnoise(x * S, y * S - f * 2, 3, seed + 78) * 0.3;
       const a = (1 - q / 1.4) * mist * (nz - 0.3) * 1.8; if (a <= 0.05) continue;
       const j = (y * G.w + x) * 4, A = Math.min(0.75, a);
       if (G.col[j + 3] === 255) { G.col[j] += (236 - G.col[j]) * A * 0.8; G.col[j + 1] += (244 - G.col[j + 1]) * A * 0.8; G.col[j + 2] += (246 - G.col[j + 2]) * A * 0.8; }
       else if (!G.col[j + 3]) { G.col[j] = 232; G.col[j + 1] = 242; G.col[j + 2] = 246; G.col[j + 3] = Math.round(A * 200); G.flag[y * G.w + x] = F_NOCAST; }
     }
   }
+  if (S > 1) { for (let i = 0; i < G.z.length; i++) G.z[i] = G.z[i] >> 1; G.ax *= S; G.ay *= S; G.ap = 1; G.ap2 = S; }   // (heights in its own px, as the bake's ap2 reads them)
   return G;
 }
 // n animation frames of one fall (the rock is voxelised once)
@@ -1215,7 +1269,7 @@ function channels(M) {
     for (let j = 0; j < p.length; j++) { if (j) s[j] = s[j - 1] + Math.hypot(p[j][0] - p[j - 1][0], p[j][1] - p[j - 1][1]); bb[0] = Math.min(bb[0], p[j][0]); bb[1] = Math.min(bb[1], p[j][1]); bb[2] = Math.max(bb[2], p[j][0]); bb[3] = Math.max(bb[3], p[j][1]); }
     const r = h.w / 2 + 4;
     // (each calm pocket's way out to the current: toward the nearest point of the centre line)
-    const pk = (h.p || []).map(([x, y, pr]) => { let bd = 1e9, ox = 0, oy = 0; for (const q of p) { const dx = q[0] - x, dy = q[1] - y, d = dx * dx + dy * dy; if (d < bd) { bd = d; ox = dx; oy = dy; } } const l = Math.hypot(ox, oy) || 1; return { x, y, r: pr, ox: ox / l, oy: oy / l }; });
+    const pk = (h.p || []).map(([x, y, pr, kd]) => { let bd = 1e9, ox = 0, oy = 0; for (const q of p) { const dx = q[0] - x, dy = q[1] - y, d = dx * dx + dy * dy; if (d < bd) { bd = d; ox = dx; oy = dy; } } const l = Math.hypot(ox, oy) || 1; return { x, y, r: pr, ox: ox / l, oy: oy / l, kd: kd || 0 }; });   // (kd 2: a plunge pool under a fall - world3-ledgefalls.js)
     return { ...h, s, pk, bb: [bb[0] - r, bb[1] - r, bb[2] + r, bb[3] + r], kind: h.k === 'creek' ? WK.CREEK : h.k === 'marsh' ? WK.MARSH : h.k === 'lake' ? WK.LAKE : WK.RIVER, sty: BY_T[h.t] ?? S.forest };
   });
   CH.set(W, c);
@@ -1335,7 +1389,7 @@ function channelTiles(chs, TX0, TY0, TN) {
       const R = P.r + 2.5;
       if (P.x + R < wx0 || P.x - R > wx1 || P.y + R < wy0 || P.y - R > wy1) continue;
       const pi = PKW.length;
-      PKW.push({ x: P.x * TILE, y: P.y * TILE, r: P.r * TILE, ox: P.ox, oy: P.oy });
+      PKW.push({ x: P.x * TILE, y: P.y * TILE, r: P.r * TILE, ox: P.ox, oy: P.oy, kd: P.kd || 0 });
       for (let j = Math.max(0, Math.floor(P.y - R) - wy0); j <= Math.min(TN - 1, Math.ceil(P.y + R) - wy0); j++) for (let i = Math.max(0, Math.floor(P.x - R) - wx0); i <= Math.min(TN - 1, Math.ceil(P.x + R) - wx0); i++) {
         const k = j * TN + i;
         if (F.k[k] !== WK.RIVER && F.k[k] !== WK.CREEK) continue;
@@ -1500,7 +1554,9 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     const P = PKW[pi], ex = X - P.x, ey = Y - P.y, D = Math.sqrt(ex * ex + ey * ey), u = D / P.r;
     c = mixTo(MIX, c, rr[0], 0.3 * pk);   // (a deep hole: darker, easing out)
     if (u < 0.9 && fine > 0.35 && Math.sin(D * 0.2 - Math.atan2(ey, ex) * 2 + seed) > 0.95) c = mixTo(MIX, c, rr[5], 0.16);
-    else if (Math.abs(D - P.r) < 2.2 + fine * 1.5 && ex * P.ox + ey * P.oy > D * 0.4 && vnc(X, Y, 7, seed + 237) > 0.45 && hh(x >> 1, y >> 1, seed + 239) > 0.35) c = sd(FOAM, 0.4 + fine * 0.3, x, y, 0.4);
+    else if (P.kd === 2) {   // (a plunge pool, the nature pass 11-21: no ruled arc of foam round it - flecks and short rafts of foam drifting on it, thinning outward)
+      if (u < 1 && vnc(X * 0.5, Y * 1.6, 9, seed + 241) > 0.8 + u * 0.1 && hh(x >> 1, y >> 1, seed + 239) > 0.5) c = sd(FOAM, 0.35 + fine * 0.3, x, y, 0.4);
+    } else if (Math.abs(D - P.r) < 2.2 + fine * 1.5 && ex * P.ox + ey * P.oy > D * 0.4 && vnc(X, Y, 7, seed + 237) > 0.45 && hh(x >> 1, y >> 1, seed + 239) > 0.35) c = sd(FOAM, 0.4 + fine * 0.3, x, y, 0.4);
   }
   // the water's edge
   if (k === WK.SEA) {
