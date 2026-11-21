@@ -43,10 +43,10 @@ export const ANIMALS = {
   terrier: { len: 17, h: 13.5, w: 8.5, coat: '#7a7c84', muzzle: '#b4b6bc', ears: 'flop', tail: 'up', tailN: 7, snout: 3.2, head: 4.6, fluffy: 1, beard: 1, collar: '#3a8a46', tongue: 1 },
   dalmatian: { len: 25, h: 20, w: 10, coat: '#f2f0ec', patch: '#26262c', pattern: 'dots', earC: '#26262c', ears: 'flop', tail: 'down', snout: 4, head: 5, collar: '#c83030', tongue: 1 },
   catBlack: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', coat: '#302e38', eye: '#e8c83a', ears: 'cat', tail: 'cat', snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
-  catTabby: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#8ac04a', coat: '#8a8c90', patch: '#4a4c52', pattern: 'tabby', muzzle: '#d8d8d4', ears: 'cat', tail: 'cat', tailBands: '#4a4c52', snout: 0.9, head: 4.5, cat: 1, collar: '#3a8a46' },
-  catGinger: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#e08a3a', patch: '#b85a20', pattern: 'tabby', belly: '#f4dcb8', muzzle: '#f4e4cc', ears: 'cat', tail: 'cat', tailBands: '#b85a20', snout: 0.9, head: 4.5, cat: 1, collar: '#3a8a46' },
-  catCalico: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#f2ece2', patch: '#d8783a', patch2: '#2a2830', pattern: 'calico', headC: '#d8783a', muzzle: '#f4f0ea', blaze: '#f4f0ea', ears: 'cat', tail: 'cat', tailC: '#d8783a', snout: 0.9, head: 4.5, cat: 1, collar: '#3a8a46' },
-  catWhite: { len: 18, h: 11.5, w: 8.5, legK: 0.85, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#4a9ad0', coat: '#f2eee8', ears: 'cat', tail: 'feather', snout: 0.9, head: 4.7, cat: 1, fluffy: 1, collar: '#3a6ab0' },
+  catTabby: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#e8c440', coat: '#8a8c90', patch: '#4a4c52', pattern: 'tabby', muzzle: '#d8d8d4', ears: 'cat', tail: 'cat', tailBands: '#4a4c52', snout: 0.9, head: 4.5, cat: 1, collar: '#3a8a46' },
+  catGinger: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#e08a3a', patch: '#b85a20', pattern: 'tabby', belly: '#f4dcb8', muzzle: '#f4e4cc', ears: 'cat', tail: 'cat', tailBands: '#b85a20', snout: 0.9, head: 4.5, cat: 1, collar: '#3a6ab0' },
+  catCalico: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#f2ece2', patch: '#d8783a', patch2: '#2a2830', pattern: 'calico', headC: '#d8783a', muzzle: '#f4f0ea', blaze: '#f4f0ea', ears: 'cat', tail: 'cat', tailC: '#d8783a', snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
+  catWhite: { len: 18, h: 11.5, w: 8.5, legK: 0.85, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#4a9ad0', coat: '#f2eee8', ears: 'cat', tail: 'feather', snout: 0.9, head: 4.7, cat: 1, fluffy: 1, collar: '#b04a9a' },
   cow: { len: 48, h: 31, w: 19, coat: '#f2f0ec', patch: '#26262c', pattern: 'spots', ears: 'side', earC: '#26262c', tail: 'thin', snout: 6, head: 8, hup: 0.5, muzzle: '#e8b4ac', nose: '#b87878', horns: 'short', udder: 1 },
   horse: { len: 50, h: 36, w: 14, coat: '#8a4a26', belly: '#8a4a26', mane: '#2a1e1a', ears: 'up', tail: 'long', snout: 9, head: 6, neck: 18, socks: '#f2eee8' },
   sheep: { len: 27, h: 19, w: 15, coat: '#ece2c8', headC: '#34303a', muzzle: '#34303a', legC: '#34303a', earC: '#34303a', eye: '#e8e0c8', ears: 'side', tail: 'stub', snout: 3, head: 5.2, hup: 0.5, fluffy: 2 },
@@ -62,11 +62,11 @@ export const ANIMALS = {
   wolf: { len: 32, h: 22, w: 11, coat: '#8e8a84', belly: '#dcd6cc', pattern: 'saddle', patch: '#5e5a56', ears: 'up', tail: 'bushy', snout: 5.6, head: 5.8, jl: 1, lower: '#b8b2a8', throat: '#e6e0d6', muzzle: '#d8d2c8', fluffy: 1, eye: '#c8a040' },
   // the wilds (shared/fauna.js): deer and their kin, the predators, the water's edge, small game
   elk: { len: 44, h: 32, w: 13, coat: '#b08458', belly: '#6a4a30', mane: '#4e3424', neckC: '#6a4a32', pattern: 'rump', patch: '#e2cea4', ears: 'up', tail: 'stub', snout: 6, head: 6, neck: 13, antlers: 2, jl: 1, lower: '#4a3222', hoof: 1 },
-  moose: { len: 42, h: 43, w: 16.5, coat: '#3e2c22', socks: '#a8988a', ears: 'side', tail: 'stub', snout: 10, head: 7.2, neck: 11, antlers: 3, hump: 2.4, slope: 4.5, hfwd: 0.95, hdrop: 0.85, bell: 1, droop: 1, muzzle: '#5a4638', jl: 1, lower: '#a8988a', hoof: 1 },
+  moose: { len: 42, h: 43, w: 16.5, legK: 0.62, coat: '#3e2c22', socks: '#a8988a', ears: 'side', tail: 'stub', snout: 10, head: 7.2, neck: 11, antlers: 3, hump: 2.4, slope: 4.5, hfwd: 0.95, hdrop: 0.85, bell: 1, droop: 1, muzzle: '#5a4638', jl: 1, lower: '#a8988a', hoof: 1 },
   mtgoat: { len: 27, h: 23, w: 12.5, coat: '#f2eee6', ears: 'side', tail: 'stub', snout: 4.5, head: 4.8, neck: 6, hup: 0.6, muzzle: '#e4dccc', horns: 'black', beard: 1, fluffy: 1, hump: 0.8, socks: '#2a262c', jl: 1, lower: '#ece6da', hoof: 1 },
   boar: { len: 32, h: 19, w: 12, coat: '#4a3a2e', mane: '#241c18', ears: 'up', tail: 'thin', snout: 7, head: 6.4, nose: '#6a5a52', tusks: 1, jl: 1, lower: '#2e2420', hoof: 1, tips: '#6e5a48' },
   blackbear: { len: 33, h: 25, w: 15.5, coat: '#2e2a32', muzzle: '#9a7a58', ears: 'round', tail: 'stub', snout: 4.6, head: 7, fluffy: 1, bear: 1, arch: 0.3, slope: -2.2, hfwd: 0.45, hdrop: 0.8, jl: 1 },
-  grizzly: { len: 41, h: 31, w: 19, coat: '#7a5634', muzzle: '#9a7650', tips: '#b89a70', ears: 'round', tail: 'stub', snout: 5.4, head: 8, fluffy: 1, bear: 1, hump: 1.5, arch: 0.26, slope: 1.2, hfwd: 0.5, hdrop: 0.85, jl: 1, lower: '#5a3e26' },
+  grizzly: { len: 41, h: 34, w: 19, coat: '#7a5634', muzzle: '#9a7650', tips: '#b89a70', ears: 'round', tail: 'stub', snout: 5.4, head: 8, fluffy: 1, bear: 1, hump: 0.7, arch: 0.14, slope: 0.6, hfwd: 0.5, hdrop: 0.85, jl: 1, lower: '#5a3e26' },
   cougar: { len: 34, h: 18, w: 9, coat: '#c08a54', belly: '#ecdcc0', ears: 'cat', tail: 'longcat', tailTip: '#3a2a22', snout: 2.2, head: 4.6, cat: 1, jl: 1 },
   bobcat: { len: 22, h: 14, w: 9, hk: 1.15, coat: '#a8885e', patch: '#5a4632', pattern: 'dots', belly: '#e8dcc4', muzzle: '#e8dcc4', ears: 'tufted', tail: 'stub', snout: 1.6, head: 4.6, cat: 1, jl: 1, eye: '#d8b040' },
   redfox: { len: 20, h: 12, w: 6.5, coat: '#d0682a', belly: '#f2ece0', ears: 'up', tail: 'fox', tailTip: '#f4f0e8', snout: 4, head: 4, socks: '#2a2228', jl: 1, lower: '#2a2228' },
@@ -275,7 +275,7 @@ export function animalModel(kind, o = {}) {
   // snout and nose (a moose's long drooping one; a bear's paler muzzle)
   const sx = hx + HD * 0.7, sz = hz - HD * 0.25 - (A.droop ? 1.6 : 0);
   m.ell(sx + A.snout * 0.5, cy, sz, A.snout * 0.7 + 1, HD * (A.droop ? 0.62 : 0.5), HD * (A.droop ? 0.55 : 0.42), A.muzzle ? R(A.muzzle) : A.mask ? R('#d8d4d0') : A.belly && !A.cat && !A.legend ? belly : coat(sx, cy, sz));
-  m.box(sx + A.snout + 0.5, cy - 1, sz, sx + A.snout + 1.8, cy + 1, sz + 1.5, nose);
+  if (!A.catFace) m.box(sx + A.snout + 0.5, cy - 1, sz, sx + A.snout + 1.8, cy + 1, sz + 1.5, nose);   // (a cat's face is its eyes: a nose pixel beside one read as a second eye)
   if (eatfish) {   // (AN5: the fish crosswise in its jaws, silver, the tail fin out to one side, a bite gone - wag: the chewing)
     const fx = sx + A.snout * 0.55, fz = sz - HD * 0.35 - (o.wag || 0) * 0.6;
     m.ell(fx, cy + 1, fz, 1.7, 4.8, 1.6, R('#dce6ee')); m.ell(fx, cy + 1, fz + 0.9, 1.2, 4.4, 0.7, R('#5a7a8c'));
@@ -301,10 +301,10 @@ export function animalModel(kind, o = {}) {
   // ears (each big enough for an art pixel or two; the hanging ones a shade off the coat, so they stand off the head)
   const HY = HD * (A.catFace ? 1.16 : hk > 1 ? 1.02 : 0.9), flopC = A.earC ? R(A.earC, 3, THIN) : A.pattern === 'saddle' ? asThin(patch) : R(darker(A.coat, 0.8), 3, THIN);
   for (const s of [-1, 1]) {
-    const ey = cy + s * HY * 0.62, ez = hz + HD * 0.62, ex = hx - HD * 0.1;
+    const ey = cy + s * HY * (A.catFace ? 0.74 : 0.62), ez = hz + HD * 0.62, ex = hx - HD * 0.1;   // (a cat's set wide: two triangles with the crown between them)
     const ear = A.earC ? flopC : A.ears === 'tufted' ? R(A.coat, 3, THIN) : asThin(A.ears === 'cat' || A.ears === 'up' || A.ears === 'big' ? coat(ex, ey, ez + 3) : A.pattern === 'saddle' ? patch : coat(ex, ey, ez));
     if (A.ears === 'up' || A.ears === 'cat' || A.ears === 'big' || A.ears === 'tufted') {
-      const eh = Math.max(3, HD * (A.ears === 'big' ? 1.25 : A.ears === 'up' ? 0.95 : A.catFace ? 0.95 : 0.8)), br = Math.max(1.5, HD * (A.ears === 'big' ? 0.5 : A.catFace ? 0.46 : 0.4));
+      const eh = Math.max(3, HD * (A.ears === 'big' ? 1.25 : A.ears === 'up' ? 0.95 : A.catFace ? 1.15 : 0.8)), br = Math.max(1.5, HD * (A.ears === 'big' ? 0.5 : A.catFace ? 0.52 : 0.4));
       for (let k = 0; k < eh; k += 0.5) { const r = (1 - k / eh) * br; m.ell(ex, ey + s * 0.2 * k, ez - 0.6 + k, r * 0.7 + 0.5, r + 0.4, 0.6, ear); }
       if (A.ears === 'tufted') m.box(ex - 0.5, ey + s * 0.8 - 0.5, ez + eh - 0.2, ex + 0.5, ey + s * 0.8 + 0.5, ez + eh + 0.8, R('#4a3a2c', 3, THIN));
     }
@@ -330,24 +330,30 @@ export function animalModel(kind, o = {}) {
     }
   }
   if (A.antlers === 3) for (const s of [-1, 1]) {   // a moose's palms: out to the side and up, broad and flat, the points its fingers
-    for (let k = 0; k < 3; k += 0.5) m.ell(hx - 0.5, cy + s * (HD * 0.5 + k), hz + HD * 0.7 + k * 0.5, 0.9, 0.9, 0.9, tine);
+    const palm = A.legend ? R('#d8c690', 3, THIN) : R('#96703e', 3, THIN), mt = A.legend ? tine : R('#d2aa66', 3, THIN);   // (a moose's: tan, as in AN4)
+    for (let k = 0; k < 3; k += 0.5) m.ell(hx - 0.5, cy + s * (HD * 0.5 + k), hz + HD * 0.7 + k * 0.5, 0.9, 0.9, 0.9, mt);
     // the palm: a broad plate leaning out and up like an open hand (u up along it, v front to back), its top edge cut
     // into fingers - from the side the palm and its points, as in AN4
     const by = cy + s * (HD * 0.5 + 2.5), bzz = hz + HD * 0.7 + 1.5, ca = Math.cos(0.95), sa = Math.sin(0.95), vx = hx - 4;
     m.fill((x, y, z) => {
       const dy = (y - by) * s, dz = z - bzz, u = dy * ca + dz * sa, w = -dy * sa + dz * ca, v = x - vx;
-      if (u < 0 || u > 9.5 || Math.abs(w) > 1.1) return -1;
-      if (u > 6) return Math.abs(v) <= 11 && Math.floor((v + 41) / 3) % 2 === 0 ? tine : -1;   // (the fingers)
-      return Math.abs(v) <= 4.5 + Math.min(u, 4) * 1.7 ? tine : -1;
-    }, Math.floor(hx - 18), Math.floor(Math.min(by, by + s * 12) - 1), Math.floor(bzz - 1), Math.ceil(hx + 8), Math.ceil(Math.max(by, by + s * 12) + 1), Math.ceil(bzz + 13));
+      if (u < 0 || u > 12.5 || Math.abs(w) > 1.1) return -1;
+      // (the palm sweeps back from the brow: longer behind than in front, its points up off the top edge - the
+      // tallest in the middle - and one brow point forward, low)
+      if (v > 4 && v < 10.5 && u > 1.2 && u < 3.4) return mt;
+      const vb = -(3.5 + Math.min(u, 6) * 1.5), vf = 2.5 + Math.min(u, 6) * 0.75;
+      if (v < vb || v > vf) return -1;
+      if (u > 6.5) { const f = ((v - vb) % 6 + 6) % 6; return f < 2.6 && u < 12.5 - Math.abs(v + 3) * 0.3 ? mt : -1; }
+      return u > 1.8 && u < 5.6 && v > vb + 2 && v < vf - 1.6 ? palm : mt;   // (the palm's hollow a tone darker than its rim and its points)
+    }, Math.floor(hx - 18), Math.floor(Math.min(by, by + s * 14) - 1), Math.floor(bzz - 1), Math.ceil(hx + 8), Math.ceil(Math.max(by, by + s * 14) + 1), Math.ceil(bzz + 16));
   }
   if (A.beard) m.ell(sx + A.snout * 0.35, cy, sz - HD * 0.5, 1.5, 1.4, 2, A.muzzle ? R(A.muzzle) : base);
   if (A.collar) { const col = R(A.collar), cx = Math.round(x1 + (hx - x1) * 0.25); for (let z = Math.floor(bz); z < m.h; z++) for (let y = 0; y < W; y++) for (const x of [cx, cx + 1]) { const i = m.idx(x, y, z); if (m.v[i] && z < hz - HD * 0.5) m.v[i] = col; } }
   // tail
   const tx = x0, tz = bz + bodyR * 0.5;
-  const tail = (pts, r) => pts.forEach(([dx, dz], i) => m.ell(tx - dx, cy, tz + dz, r(i), r(i), r(i), asThin(A.tail === 'ringed' ? (i % 2 ? R('#2a282c') : base) : A.tailBands && (i >> 1) % 2 ? R(A.tailBands) : A.tailC ? R(A.tailC) : coat(tx - dx, cy, tz + dz + 6))));
+  const tail = (pts, r) => pts.forEach(([dx, dz, dy = 0], i) => m.ell(tx - dx, cy + dy, tz + dz, r(i), r(i), r(i), asThin(A.tail === 'ringed' ? (i % 2 ? R('#2a282c') : base) : A.tailBands && (i >> 1) % 2 ? R(A.tailBands) : A.tailC ? R(A.tailC) : coat(tx - dx, cy, tz + dz + 6))));
   const wag = Math.sin((o.wag ?? phase) * Math.PI * 4) * 1.2;
-  if (A.tail === 'cat') tail([...Array(20)].map((_, i) => { const u = i / 19; return [1 + Math.sin(u * Math.PI * 1.15) * 3.2 - u * 1.2 + wag * 0.3 * u, u * 13 - (u > 0.82 ? (u - 0.82) * 14 : 0)]; }), () => 0.95);
+  if (A.tail === 'cat') tail([...Array(20)].map((_, i) => { const u = i / 19; return [0.6 + u * 3 + (u > 0.75 ? (u - 0.75) * 9 : 0) + wag * 0.3 * u, Math.sin(Math.min(1, u * 1.25) * Math.PI * 0.5) * 7.6 - (u > 0.8 ? (u - 0.8) * 5 : 0), u * 5]; }), () => 0.95);   // (up behind and hooked back at the tip, a little to one side: below the ears from the front)
   else if (A.tail === 'up') tail([...Array(A.tailN || 12)].map((_, i) => [i * 0.45 - wag * 0.25 * (i / 10) * (i / 10) - (i > 7 ? (i - 7) * 0.5 : 0), i * 0.85]), () => 1.25);
   else if (A.tail === 'curl') tail([...Array(10)].map((_, i) => [1.5 - Math.cos(i * 0.6) * 2.4, 2.5 + Math.sin(i * 0.6) * 3]), () => 1.4);
   else if (A.tail === 'down') tail([...Array(9)].map((_, i) => [i * 0.6, -i * 0.7]), () => 1.25);

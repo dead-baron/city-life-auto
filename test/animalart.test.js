@@ -63,7 +63,7 @@ test('the old one-ray picture is still there for the previews (px 1), and the ar
 // ink line round it, each keeping its size and shape. Only the sparrow is its own picture at the art pixel.
 test('the painted critters keep their shapes at the art pixel: same size as the game halved them, less of the ink line', () => {
   const lum = (g, i) => g.col[i * 4] * 0.3 + g.col[i * 4 + 1] * 0.5 + g.col[i * 4 + 2] * 0.2;
-  for (const kind of ['pigeon', 'seagull', 'bee', 'frog', 'rabbit', 'squirrel', 'heron']) {
+  for (const kind of ['pigeon', 'seagull', 'bee', 'frog', 'squirrel', 'heron']) {
     const fr = critterArt(kind, false), lf = critterArt(kind, true), painted = critterFrames(kind);
     assert.equal(fr.length, CRITTERS[kind].frames, `${kind}: its frames`);
     fr.forEach((g, f) => {
@@ -80,9 +80,13 @@ test('the painted critters keep their shapes at the art pixel: same size as the 
       assert.equal(lf[f].ax, lf[f].w - g.ax, `${kind} ${f}: mirrored round its anchor`);
     });
   }
-  // the butterflies and the dragonfly (their wings' dark veins are the picture) are left exactly as the game halves
-  // them; the leaves and the motes too
-  for (const kind of ['monarch', 'blueWing', 'sulphur', 'dragonfly', 'mapleLeaf', 'motes']) assert.equal(critterArt(kind, false), null, `${kind}: as painted`);
+  // the dragonfly (its wings' dark veins are the picture) is left exactly as the game halves it; the leaves and the
+  // motes too
+  for (const kind of ['dragonfly', 'mapleLeaf', 'motes']) assert.equal(critterArt(kind, false), null, `${kind}: as painted`);
+  // the rabbit keeps the pink inside its ears (the owner, 11-21 09:55)
+  const pink = (g) => { for (let i = 0; i < g.w * g.h; i++) { const r = g.col[i * 4], gg = g.col[i * 4 + 1], b = g.col[i * 4 + 2]; if (g.col[i * 4 + 3] && r > 170 && r - gg > 34 && r - b > 20) return true; } return false; };
+  assert.ok(critterArt('rabbit', false).every(pink), 'the rabbit: pink in its ears, every frame');
+  assert.equal(critterArt('rabbit', false).length, CRITTERS.rabbit.frames);
 });
 
 test('the sparrow is its own picture at the art pixel; the game hands the painted frames out at art pixel 1', () => {
@@ -91,7 +95,16 @@ test('the sparrow is its own picture at the art pixel; the game hands the painte
   for (const g of sp) { assert.equal(g.ap, 2); let n = 0; for (let i = 3; i < g.col.length; i += 4) if (g.col[i]) n++; assert.ok(n >= 12, `the sparrow draws (${n})`); }
   setArtPx(2);
   for (const kind of ['pigeon', 'seagull', 'sparrow', 'rabbit']) assert.equal(critterSprite(kind, 0, false).ap, 2, `${kind}: at the art pixel`);
-  assert.ok(!critterSprite('monarch', 0, false).ap, 'the monarch: the painted frame, for the game to halve');
+  assert.ok(!critterSprite('dragonfly', 0, false).ap, 'the dragonfly: the painted frame, for the game to halve');
+  // the butterflies too (the owner, 11-21 09:55: "monarch could look better"): wings either side of the body, the same
+  // either side, an edge and a pale spot
+  for (const kind of ['monarch', 'blueWing', 'sulphur']) {
+    const fr = critterArt(kind, false);
+    assert.equal(fr.length, CRITTERS[kind].frames, kind);
+    for (const g of fr) { assert.equal(g.ap, 2); for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) assert.equal(g.col[(y * g.w + x) * 4 + 3], g.col[(y * g.w + g.w - 1 - x) * 4 + 3], `${kind}: the same either side`); }
+    const open = fr[0], closed = fr[2], count = (g) => { let n = 0; for (let i = 3; i < g.col.length; i += 4) if (g.col[i]) n++; return n; };
+    assert.ok(count(open) > count(closed) * 2, `${kind}: the wings open and close`);
+  }
   setArtPx(1);
   assert.ok(!critterSprite('pigeon', 0, false).ap, 'px 1: the painted frame');
   setArtPx(2);

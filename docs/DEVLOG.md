@@ -25276,3 +25276,22 @@ makes it look better. Like the sparrow looks better after." / the moose's body "
 - Tests: `test/animalart.test.js` - the painted critters keep their size, shape and anchor and carry no more ink than
   before; the butterflies, dragonfly, leaves and motes untouched; the sparrow its own picture.
 
+## 2026-11-21 - Animals: the owner's notes of 09:55 (branch `animals`)
+- **Cats.** The face is its eyes: the nose pixel is gone (beside an eye it read as a second eye), and every cat's
+  collar is a different colour from its eyes (the tabby's eyes amber). The ears are bigger and set wide, so the front
+  and the back show two triangles with the crown between them. The tail goes up behind and hooks back at its tip,
+  a little to one side - it no longer stands over the head as a spire from the front (`tail: 'cat'`; the tail
+  helper takes a sideways offset).
+- **Grizzly.** The hump is a slight one (`hump` 1.5 -> 0.7, `arch` 0.26 -> 0.14) and the bear stands taller on its
+  legs (`h` 31 -> 34), so it reads as a bear and not a mound.
+- **Moose.** Slim legs (`legK` 0.62: it had the thick legs of a humped animal). The antlers are tan as in AN4 and
+  defined: a palm that sweeps back from the brow, darker in its hollow than its rim, separate points up off the top
+  edge and one brow point forward.
+- **Monarch (and the other two butterflies)** and **the rabbit** are their own pictures at the art pixel now, as the
+  sparrow is (`actors.js` `CART`, a palette per kind, a frame may carry its own anchor column): the butterflies from
+  above - black-edged wings with pale tip spots either side of the body, open / rising / closed / falling; the
+  rabbit sitting up, leaping, stretched out, landing, with the pink inside its ear, a white tail and a cream chest.
+  The pigeon, gull, bee, frog, squirrel and heron stay the painted frames with the light clean-up; the dragonfly
+  as painted. `critters.js` is untouched (the art hashes don't move).
+- `test/animalart.test.js`: the butterflies are the same either side and open and close; the rabbit has pink in
+  its ears in every frame.

@@ -948,7 +948,7 @@ export const critterKey = (kind, frame = 0, left = false) => `k|${kind}|${frame 
 // block's mean colour, a bright eye or bill kept when it is the block's only one); a block of line alone stays line, so
 // each keeps its size and its shape.
 // (Here, not in critters.js: that file is part of the chunks' bake, and a change to it is a new build of every chunk.)
-const TIDY = new Set(['pigeon', 'seagull', 'bee', 'frog', 'rabbit', 'squirrel', 'heron']);   // (not the butterflies or the dragonfly: their wings' dark veins are the picture)
+const TIDY = new Set(['pigeon', 'seagull', 'bee', 'frog', 'squirrel', 'heron']);   // (not the dragonfly: its wings' dark veins are the picture; the sparrow, the butterflies and the rabbit are their own pictures, below)
 function tidyDown(g) {
   const W = g.w, H = g.h, C = g.col, mx = Math.round(g.ax || 0) & 1, my = Math.round(g.ay || 0) & 1;
   const w = (W + mx + 1) >> 1, h = (H + my + 1) >> 1, on = (x, y) => x >= 0 && y >= 0 && x < W && y < H && C[(y * W + x) * 4 + 3] >= 128;
@@ -995,7 +995,18 @@ function tidyDown(g) {
 // the sparrow alone is its own picture at the art pixel (the owner: "the sparrow looks better after"): on the ground,
 // then three wingbeats; all face east
 const CP = { o: [42, 38, 52], N: [156, 108, 72], D: [94, 64, 46], c: [228, 210, 178], K: [72, 62, 58], i: [30, 30, 40] };
-const CART = { sparrow: [3, [['...ooo.|.ooNNiK|oDNcco.|.occo..|..o.o..', 5], ['..oD...|..Dooo.|.ooNNiK|oDNcco.|.ooo...', 5], ['...ooo.|.oDDNiK|oDNcco.|.ooo...', 4], ['...ooo.|.ooNNiK|oDNcco.|.oDDo..|..Do...', 3]]] };
+const BFLY2 = [['wk...kw|kOO.OOk|kOoboOk|.kobok.|.kObOk.|..k.k..', 6], ['.k...k.|.kO.Ok.|.kobok.|..kbk..|..obo..', 6], ['..k.k..|..kbk..|..obo..|...b...', 5], ['.w...w.|.kO.Ok.|.kObOk.|..obo..|..kbk..', 6]];
+const CART = { sparrow: [3, [['...ooo.|.ooNNiK|oDNcco.|.occo..|..o.o..', 5], ['..oD...|..Dooo.|.ooNNiK|oDNcco.|.ooo...', 5], ['...ooo.|.oDDNiK|oDNcco.|.ooo...', 4], ['...ooo.|.ooNNiK|oDNcco.|.oDDo..|..Do...', 3]]],
+  // the butterflies from above (the owner, 11-21: "monarch could look better"): open, rising, closed, falling - black-edged
+  // wings with their pale tip spots, the body between; O light, o main, k edge, w spot, b body
+  monarch: [3, BFLY2, { O: [252, 168, 64], o: [226, 104, 30], k: [40, 26, 34], w: [244, 236, 220], b: [30, 22, 28] }],
+  blueWing: [3, BFLY2, { O: [176, 214, 255], o: [96, 150, 230], k: [30, 38, 76], w: [236, 244, 255], b: [26, 30, 52] }],
+  sulphur: [3, BFLY2, { O: [255, 226, 110], o: [236, 176, 34], k: [44, 30, 30], w: [255, 246, 200], b: [36, 26, 28] }],
+  // the rabbit, facing east (the owner, 11-21: "the pink in its ears back and look a little better"): sitting up, the
+  // leap, stretched out in the air, landing - a frame's third number is its own anchor column
+  rabbit: [5, [['....oo...|...opo...|...opoo..|..oBLLLeo|WoBBBLLLo|.oBBBBcc.|.oDDoDco.', 7], ['.....oo...|....opo...|....opooo.|...oBLLLeo|..oBBBLLL.|WoBBBBcc..|.oDDocc...|oD........', 8],
+    ['....oo......|.....opooo..|..oooBBLLLeo|WoBBBBBLLLL.|.oDBBBBccoL.|oD.oooo...o.', 8, 6], ['.....oo..|....opo..|WoooopLo.|.oBBBLLeo|.oBBBBLLo|..oDBBcc.|...oD.co.', 7, 4]],
+    { o: [62, 42, 44], B: [162, 122, 82], L: [200, 164, 120], D: [118, 86, 60], c: [238, 222, 198], W: [252, 248, 240], p: [230, 150, 148], e: [26, 22, 28] }] };
 const ACACHE = new Map();
 export function critterArt(kind, left) {
   const key = kind + (left ? '<' : '>');
@@ -1004,11 +1015,11 @@ export function critterArt(kind, left) {
   const D = CART[kind], old = critterFrames(kind);
   if (D) {
     const flagOf = (f) => { const g = old[f % old.length]; for (let i = 0; i < g.w * g.h; i++) if (g.col[i * 4 + 3]) return g.flag[i]; return 0; };
-    fr = D[1].map(([art, ay], f) => {
+    fr = D[1].map(([art, ay, axf], f) => {
       const rows = art.split('|'), w = Math.max(...rows.map((r) => r.length)), G = new GBuf(w, rows.length), flag = flagOf(f);
-      G.ax = D[0]; G.ay = ay;
+      G.ax = axf ?? D[0]; G.ay = ay;
       // (each pixel faces the camera and a little up: the tones are in the picture; z its height over the anchor, in world px)
-      rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const c = CP[r[x]]; if (c) G.put(x, y, c, [0, 0.55, 0.83], Math.max(0, (ay - y) * 2), null, flag); } });
+      rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const c = (D[2] || CP)[r[x]]; if (c) G.put(x, y, c, [0, 0.55, 0.83], Math.max(0, (ay - y) * 2), null, flag); } });
       const M = left ? mirror(G) : G;
       M.ap = 2;
       return M;
