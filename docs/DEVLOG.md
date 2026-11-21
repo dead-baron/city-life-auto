@@ -25746,4 +25746,128 @@ and the HUD keep the clean line set.
   bat a bat - a knob, a slim taped handle, a long taper to the barrel; the silenced pistol's silencer is its own
   fatter tube on a short neck. The cooked steaks tell apart by colour and trimming (venison dark with a sprig of
   rosemary, elk redder and on the bone, game golden with a pat of butter), the raw meats by a wider spread of reds.
+
+## 2026-11-21 - The nature kit, first pass: every plant made at the art pixel (branch `nature`)
+The owner (11-21): "please start on the nature kit". Set beside his plant sheets (E3a-E3f, NK1-M), the game's trees
+and plants were flat and speckled. The cause was one, the same the animals had: `flora.js` paints a plant in world px -
+a crown of small leaf clusters, each lit on its upper left with a dark pocket under it - and the bake then halves it to
+the art pixel (2 world px), keeping one texel of four. A cluster five px across came out as noise. The old-growth
+redwoods, the only trees already made at the art pixel (`redwoods.js` `giantRedwoodArt`, `ap2`), were the proof: the
+best-looking trees in the game.
+
+- **`floraArt(k, maker)`** (`client/art2/flora.js`): the maker runs at half the asked size and its picture comes back
+  marked `ap2 = 2` - the chunk bake lays each of its pixels over 2 x 2 world px on the art grid
+  (`chunkbake.js` `compositeDepth2`, as for the giants and the mesas). `statics.js` `makeFlora` makes every species
+  that way (109 of them; the redwoods' own pictures were there already). The game shows the picture as it was
+  painted.
+- **How the makers follow.** They write their sizes in world px. The tree engines (broadleaf, conifer, pine tufts,
+  groves, palms, saguaro, joshua tree, redwood) multiplied theirs by the tree's scale already; they now follow it
+  everywhere (the pine's tufts, a grove's stems, the saguaro's arms by its true height, the palms' skirts and dates
+  had their own fixed px) and work in canvas px (`CAN`). Every other maker - shrubs, hedges, flower beds, ferns,
+  grasses, cacti, rocks, logs - stays in world px, and the painters convert what it hands them (`uu`): positions and
+  lengths by the unit `U`, a leaf cluster by less (`CQ`, with fewer of them, so the cover is the same), while what a
+  painter draws at a fixed size - a flower head, a berry, a frond's leaflet, the bark's grain - stays in canvas px.
+  At the art pixel a plant is made of fewer, bigger pieces, not a shrunken picture: tulips read as tulips, an apple
+  tree's apples as apples.
+- **Tuned by hand** where a plant closed up at half the room: the grasses, reeds, lavender, pampas, yucca and dry
+  grass keep fewer blades and set them against each other by tone (`nu`); the agave fewer, broader leaves; the
+  tumbleweed fewer hoops; a hedge and the topiary a fine, even face (`clip`); the ocotillo its canes; the cattails'
+  glints at the water a few, not a line.
+- **The small ground cover** too (`ground.js` `coverSprite(kind, v, art)`, stamped by `groundbake.js` in 2 x 2 blocks
+  on the art grid): the flowers, ferns, reeds, tall tufts, pebbles, cones and shells strewn over the ground are one
+  art pixel to the pixel. Not the dense turf: a lawn of blades one art pixel wide, each with its sunlit tip, came out
+  as yellow static in the running game - halved and averaged by the bake it stays the soft mottled grass it was.
+- **Birch and aspen**: fewer stems, set apart (six in a bundle read as a stone pillar at the art pixel).
+- **The olive, the Italian cypress and the small fan palm** came from the older painters (`trees.js`): made in
+  `flora.js` now (`oliveTree`, `italianCypress`, `smallFanPalm`), so they are at the art pixel with the rest;
+  `statics.js` no longer loads `trees.js`.
+- **Sizes hold**: a tree is as tall as it was within a few art pixels (`test/floraart.test.js`), and every picture
+  fits the room its map item claims (four species' rooms a few px wider: the whitebark pine, the twisted shrub, the
+  coastal cypress, the mesquite). Collision, the canopy fade and the wind don't change: they come from the map and
+  the leaf flag.
+- **The greens stay** (the owner, 11:11). Claude had set the plants beside the plant sheets alone and suggested
+  leaning their greens to the sheets' olive and gold; he asked whether the game's greens weren't chosen for the whole
+  game from a style anchor. They were: the Round 1 targets, R1-D's palette (dark blue-green through yellow-green to a
+  pale lime), which `FOL`'s ramps follow, and the plant sheets are lit at golden hour - the game's own golden hour
+  turns the same greens olive and gold. The colours are set as a whole, not sheet by sheet. The tone option is out
+  of the code.
+- **One outline rule** (the owner, 11:11: "some have dark outlines and others dont"). Halved, most of a plant's
+  outline was lost; made at the art pixel it is all there, so the differences showed: Claude had given the grasses a
+  softer one than the trees, shrubs and flowers. Every plant has the spec's outline now, the one the people, the
+  animals and the cars have (`done`: one art pixel, a dark tone of the colour beside it - so darker round a dark
+  plant than a pale one - never black, none along the foot). The ground and what is strewn on it have none, as the
+  spec says.
+- **Variety** (the owner, 11:40: "a few variations to each nature prop so that things dont look repetitive"). The
+  world drew 3 shapes of a species (4 of the ten commonest trees) and 2 of a boulder. Doubling them (`statics.js`
+  `NV`: 6 and 8; boulders 4, the town's 5) was not enough by itself: every oak the same height and width, every
+  palm leaning the same way, every saguaro with the same two arms. So each shape has its own build (`flora.js`
+  `VARY`, on inside `floraArt`, from the shape's seed): a broadleaf's height, crown width and depth and its crown a
+  little off the trunk; a conifer's height and spread, one in three with a bare lower trunk; a pine or a palm
+  leaning either way, the palm's height; a saguaro's height and none to three arms; a shrub's, a grass clump's, a
+  fern's and a flower bed's size and how many flowers (a planter keeps its own). The kit's own pictures don't vary
+  (a maker called on its own paints what it did). An item's room is a fifth over its species' size (`floraExt`).
+- **Cacti, colours** (the owner, 11:48). The saguaros' arms are each shape's own (`saguaro` under `VARY`: none to four,
+  each with its side, its height up the trunk, its length and reach, one in five a bud; white blossoms or red fruit on
+  the crown and the arm tips); the prickly pears and the barrel cacti come as clumps of their own number and size.
+  Flowers and berries take a stand's colour: `flora.js` `tc([...])` picks from a kind's list by `floraArt`'s tint
+  (`FLORA_TINTS`: 26 kinds, 2 to 4 colours each, all the palette's reds, oranges, yellows, pinks, purples, blues and
+  whites); `statics.js` `tintAt` gives a drift some nine tiles across one colour (a slanted grid) with one plant in
+  five a stray. A coloured shape is one more small sprite made once and kept.
+- **The painted light** (his question on the oaks' dark lower right). A plant's picture carries shading lit from the
+  upper left; the game's sun and shadows are added on top (lit at morning, noon, afternoon and golden hour off-line:
+  the lit side follows the sun, the painted dark stays). Leaving the left-right light to the game was tried
+  (`cluster`'s `SIDE`) and a sheet sent; it stays as it was (`SIDE` 1) unless he picks the other.
+- **The audit, and the pieces never placed** (the owner, 11:48 and 12:12; project doc
+  `claude/nature-audit-2026-11-21.md`). A first pass matched the concept sheets' pieces by name against the kinds of
+  thing `statics.js` draws and called many missing; the world's own files (`shared/world3-*.js`, the nature program
+  of 10-20 to 10-31) showed that wrong - the clearings, windfalls and nurse logs, the hoodoos and tinajas, the alpine
+  meadows, the farm ponds, the tidepools, the marsh boardwalk are all there. So the work ahead per biome is their look
+  at the art pixel (the rocks, logs, stumps and the places' props are still halved), spreading the same kit by rule
+  beyond the few hand-made places, and a short list of missing pieces (a hollow trunk, a root cave, stone ruins, a
+  playa, a dry-stone wall, a swing, a stile, marmots, tideline kelp, cypress knees). What the audit did find: `flora.js`
+  drew 144 things and the world planted 93. Placed now, as walk-through undergrowth by rule (`statics.js` `SPECIES`,
+  `NAT_SP`): trillium, fallen branches, pine cones, leaf litter, conifer saplings and wild strawberries on the forest
+  floor (trillium, branches and saplings under the redwoods too); daisies, buttercups and clover as two more kinds of
+  meadow drift; columbine and buttercups in the alpine ground; rushes at the water's edge.
+- **Nothing grows through a fence (the owner, 12:20).** The undergrowth is made per tile on the page and kept off the
+  map's props by the tile each prop stands on - but a fence is a line, and only its first tile was kept clear, so a
+  drift of lupines grew through a pasture's rails. Every fence, wall and hedge line is laid by `fenceLine`; it now hands
+  its line to `addGreenery`, which keeps beds, drifts and tufts out of every tile the line crosses
+  (`test/undergrowth.test.js`: one world build, the pastures, farms and a sample of the map's own fences). The audit of
+  11-19 has no row for this (its fence row is railings over water) and fixed nothing itself: its plants-on-walkways
+  list (2,914) is the towns' placed trees, shrubs, hedges and palms - the world batch's, not touched here.
+- **Rocks at the art pixel.** The wild's boulders, outcrops, sea stacks, seal rocks and the red rock's stacks were shaped
+  in world pixels and halved like the plants were: grain, moss and outline came out as speckle. They are shaped at
+  half size now and laid 2 x 2 by the bake (`statics.js` `artRock`, the mesas' way), so a rock reads as planes with a
+  lit top, a shaded side and one outline. Fallen logs and stumps are voxel models and already read cleanly; the cliff
+  faces keep their world-pixel outline (it is the solid rock's own shape) and wait for their biome.
+- **A rock never stands alone (concepts NR1-A, NS1-B).** The undergrowth used to keep a tile clear all round every
+  prop, so each boulder sat on a bare patch. A wild boulder and a fallen log keep only their own tiles now: ferns and
+  flowers come up to them, loose stones lie at a rock's foot (`flora.js` `looseStones`, in the rock's own stone -
+  granite, red sandstone, basalt) and mushrooms and ferns grow along a log (`toadstools`, three cap colors by stand).
+  `test/undergrowth.test.js` counts them over the built world.
+- **Variety, measured (the owner, 13:08: "the same tree used multiple times near each other").** A plant's shape was
+  picked by chance from six or eight, so twins were certain: on the live build one tree in five in the woods has the
+  very same picture (species, shape, size) within five tiles, and four ferns in five have theirs within three. Three
+  changes. (1) `statics.js` `shapeAt` lays the shapes out on a lattice over 32 px cells, the multiplier chosen per
+  count so the nearest same number is as far off as the count allows; a pure function of the place, so the server's
+  bake and every page's agree. (2) A wild tree's number also sets its size (three sizes), and the forest's main trees
+  and the carpeting ferns have twelve shapes each (`NV12`). (3) A shape is a build, not a wobble: conifers come young
+  (short, slim), old (bare lower trunk, thin top), ragged (gaps, off the plumb) or as they were; broadleaf trees young,
+  slim or as they were. Measured over the built world (`test/undergrowth.test.js`): trees with a twin within 160 px
+  0% in three woods (12-21% live); undergrowth with a twin within 96 px 11-17% (81-85% live); a wood draws on about
+  230 pictures where it drew on about 80.
+- **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
+  three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
+  per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
+- **Cost.** One art batch: the art hash changes, so the world re-bakes once when this goes live (about five hours of
+  the server's bake). The bake itself draws a quarter of the pixels per plant; `node tools/perf.mjs` is within every
+  budget with twice the shapes (`trees.js` no longer in the bake; the bakes 57x of 90x). **The bake's code budget goes
+  from 1020 to 1022 KB** (a decision, per the rule): the art-pixel kit stood at 1016, and the forest floor's pieces,
+  the loose stones and mushrooms and the fences' lines brought it to 1021. The workers load this after the page, so
+  it costs no start-up time. The `animals` branch raised the same number to 1024 for its own 4 KB: merged, the two
+  need 1026.
+- Seen as the game draws it (`tools/area-shot.mjs`, six places before and after): a mountain meadow, a pasture, a
+  desert oasis, a cove, a redwood road, a town block. And in the running game (a local copy: the mountain tarn, a pasture, the
+  Giants Loop trail, the canyon oasis).
 - Not live: on the branch until the owner has seen it.
