@@ -15,6 +15,8 @@
 import { TILE, T } from './constants.js';
 import { nearestEdge } from './roadcore.js';
 import { TIDY3, dropProps, homePaths3, onHomePath } from './world3-tidy.js';
+import { signBlocker } from './world3-greens.js';
+import { doorTiles } from './world3-clutter.js';
 
 export const WALKS = {
   TREES: /^(tree_[ab]|palm_[abcds]|redwood|mangrove|bamboo|topiary)$/,
@@ -71,6 +73,10 @@ export function clearWalks3(m) {
   const crowded = (x, y, self) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const q of grid.get(`${Math.floor(x / 32) + i},${Math.floor(y / 32) + j}`) || []) if (q !== self && Math.hypot(q.x - x, q.y - y) < WALKS.gap) return true; return false; };
   for (const p of m.props) if (plantKind(p)) put(p);
   const paths = homePaths3(m), onPath = (x, y, kind = "tree", palm = false) => !!onHomePath(m, paths, x, y, palm ? 58 : kind === "tree" ? 38 : 30);   // (never moved onto a house's path or drive - a tree by half its crown, as the lint measures it)
+  // (and never in front of a door or, for a tree, in front of a shop's sign - world3-clutter.js, world3-greens.js)
+  const doors = doorTiles(m), signAt = signBlocker(m);
+  const onDoor = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return m.inside(tx, ty) && doors.has(m.idx(tx, ty)); };
+  const badSpot = (x, y, kind, palm) => onPath(x, y, kind, palm) || onDoor(x, y) || (kind === 'tree' && signAt(x, y));
   const medianEdges = m.net && m.net.edges ? m.net.edges.filter((e) => e.median > 12) : [];
   const gone = new Set();
   for (const p of m.props) {
@@ -82,14 +88,14 @@ export function clearWalks3(m) {
       const e = nearestEdge({ edges: medianEdges }, p.x, p.y);
       if (e && e.d < e.e.median / 2 - 2) { p.median = 1; out.median++; continue; }
     }
-    if (kind === 'tree' && bad === T.SIDEWALK && near(p.x, p.y, WALKS.kerb, ROADS) && !onPath(p.x, p.y)) {
+    if (kind === 'tree' && bad === T.SIDEWALK && near(p.x, p.y, WALKS.kerb, ROADS) && !badSpot(p.x, p.y, kind, /^palm_/.test(p.t))) {
       // (a broadleaf by the kerb named as a park's kind - an oak, a maple - becomes the street's own tree, drawn in its iron
       // grate - statics.js BASED; one with no kind of its own the page picks for the street as it always has; a palm keeps
       // its kind: the promenades' palms, standing at the edge with the lane clear beside them)
       if (/^tree_/.test(p.t) && p.sp && !GRATED.has(p.sp)) p.sp = 'street';
       p.grate = 1; out.grate++; continue;
     }
-    if (kind === 'planter' && bad === T.SIDEWALK && near(p.x, p.y, WALKS.wall, WALLS) && !onPath(p.x, p.y)) { p.wall = 1; out.wall++; continue; }
+    if (kind === 'planter' && bad === T.SIDEWALK && near(p.x, p.y, WALKS.wall, WALLS) && !badSpot(p.x, p.y, kind)) { p.wall = 1; out.wall++; continue; }
     // moved to the nearest ground it can grow on, round it in rings, clear of the others - or taken up
     const ok = new Set([T.GRASS, T.DIRT, ...(/^palm_|^cactus$/.test(p.t) ? [T.SAND] : [])]);
     let to = null;
@@ -100,7 +106,7 @@ export function clearWalks3(m) {
         const n = Math.max(8, Math.round(r / 4));
         for (let k = 0; k < n && !to; k++) {
           const a = (k / n) * Math.PI * 2, x = Math.round(x0 + Math.cos(a) * r), y = Math.round(y0 + Math.sin(a) * r);
-          if (!ok.has(tileOf(m, x, y)) || crowded(x, y, p) || onPath(x, y, kind, /^palm_/.test(p.t))) continue;
+          if (!ok.has(tileOf(m, x, y)) || crowded(x, y, p) || badSpot(x, y, kind, /^palm_/.test(p.t))) continue;
           p.x = x; p.y = y;
           if (plantWalkHit(m, p, kind) < 0) to = [x, y]; else { p.x = x0; p.y = y0; }
         }
@@ -110,14 +116,14 @@ export function clearWalks3(m) {
     const l0 = grid.get(cell0); if (l0) { const i = l0.indexOf(p); if (i >= 0) l0.splice(i, 1); }
     // (a tree on a pavement with no ground to step onto: where it stands if that's the walkway's edge, else the nearest
     // edge - in its grate either way)
-    if (!to && kind === 'tree' && bad === T.SIDEWALK && near(p.x, p.y, WALKS.edge, EDGES) && !onPath(p.x, p.y)) { to = [p.x, p.y]; if (/^tree_/.test(p.t) && p.sp && !GRATED.has(p.sp)) p.sp = 'street'; p.grate = 1; out.grate++; out.moved--; }
+    if (!to && kind === 'tree' && bad === T.SIDEWALK && near(p.x, p.y, WALKS.edge, EDGES) && !badSpot(p.x, p.y, kind, /^palm_/.test(p.t))) { to = [p.x, p.y]; if (/^tree_/.test(p.t) && p.sp && !GRATED.has(p.sp)) p.sp = 'street'; p.grate = 1; out.grate++; out.moved--; }
     if (!to && kind === 'tree' && bad === T.SIDEWALK) {
       const x0 = p.x, y0 = p.y;
       for (let r = 8; r <= WALKS.move * 1.5 && !to; r += 8) {
         const n = Math.max(8, Math.round(r / 4));
         for (let k = 0; k < n && !to; k++) {
           const a = (k / n) * Math.PI * 2, x = Math.round(x0 + Math.cos(a) * r), y = Math.round(y0 + Math.sin(a) * r);
-          if (tileOf(m, x, y) !== T.SIDEWALK || !(near(x, y, WALKS.kerb, ROADS) || near(x, y, WALKS.edge, EDGES)) || crowded(x, y, p) || onPath(x, y, kind, /^palm_/.test(p.t))) continue;
+          if (tileOf(m, x, y) !== T.SIDEWALK || !(near(x, y, WALKS.kerb, ROADS) || near(x, y, WALKS.edge, EDGES)) || crowded(x, y, p) || badSpot(x, y, kind, /^palm_/.test(p.t))) continue;
           to = [x, y];
         }
       }
@@ -131,7 +137,7 @@ export function clearWalks3(m) {
         const n = Math.max(8, Math.round(r / 4));
         for (let k = 0; k < n && !to; k++) {
           const a = (k / n) * Math.PI * 2, x = Math.round(x0 + Math.cos(a) * r), y = Math.round(y0 + Math.sin(a) * r);
-          if (tileOf(m, x, y) !== T.SIDEWALK || !near(x, y, WALKS.wall * 0.6, WALLS) || crowded(x, y, p) || onPath(x, y, kind, /^palm_/.test(p.t))) continue;
+          if (tileOf(m, x, y) !== T.SIDEWALK || !near(x, y, WALKS.wall * 0.6, WALLS) || crowded(x, y, p) || badSpot(x, y, kind, /^palm_/.test(p.t))) continue;
           to = [x, y];
         }
       }

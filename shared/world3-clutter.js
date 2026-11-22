@@ -187,6 +187,8 @@ function judge(m, X, p, solidR, hand = null) {
 }
 const solidOf = (m) => { const o = new Map(); for (const [i, e] of m.propSolid || []) o.set(i, e); return o; };
 
+// the door tiles (a building's door, a walk-in's doorway, the spot a place's point stands on) - world3-walks.js keeps clear
+export function doorTiles(m) { return context(m).doors; }
 export function clutterOn(m, hand = m.handProps || null) {
   const X = context(m), S = solidOf(m), out = [];
   m.props.forEach((p, i) => { if (!p) return; const e = S.get(i), why = judge(m, X, p, e && !e.off ? e.r : 0, hand); if (why) out.push({ t: p.t, x: p.x, y: p.y, why }); });

@@ -12,7 +12,7 @@ function street() {
   const w = 30, h = 10, tiles = new Uint8Array(w * h);
   const row = (y) => (y <= 1 ? T.BUILDING : y <= 3 ? T.SIDEWALK : y <= 5 ? T.ROAD : y <= 7 ? T.SIDEWALK : T.GRASS);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) tiles[y * w + x] = row(y);
-  return { w, h, x0: 0, y0: 0, tiles, inside: (x, y) => x >= 0 && y >= 0 && x < w && y < h, idx: (x, y) => y * w + x, districtAt: () => null, props: [], net: { edges: [] }, homes: [], parking: [] };
+  return { w, h, x0: 0, y0: 0, tiles, inside: (x, y) => x >= 0 && y >= 0 && x < w && y < h, idx: (x, y) => y * w + x, districtAt: () => null, tileAtPx: (x, y) => tiles[Math.floor(y / TILE) * w + Math.floor(x / TILE)], props: [], net: { edges: [] }, homes: [], parking: [], buildings: [], pois: [], rails: [], dist: new Uint8Array(w * h) };
 }
 const at = (tx, ty) => [tx * TILE + TILE / 2, ty * TILE + TILE / 2];
 
