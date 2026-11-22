@@ -87,7 +87,7 @@ test('Esc, Start and MENU open the pause list; P, M, I a screen; back steps out;
   assert.equal(KB.hub, 'ESC'); assert.equal(PAD.hub[0], 'MENU'); assert.match(PAD.hubtab[0], /LB \/ RB/);
   const readme = read('README.md');
   assert.match(readme, /\| Menu \(the pause list: Resume, Map, Phone, Bag, People, Settings, Report a bug, Log off, Leave game\)/);
-  assert.match(readme, /\| Bag \(EQUIPMENT: [^\n]*\| tap ITEMS \|/);
+  assert.match(readme, /\| Bag \(EQUIPMENT: [^\n]*\| tap BAG \(always there\) \|/);
 });
 
 test('the hub\'s tabs load when first opened, not with the page', () => {

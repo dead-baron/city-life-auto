@@ -1446,13 +1446,13 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #t-gfxseg button.on { padding-left: 1px; }
   #t-gfxseg button.on i { display: none; }
   #t-tools button { padding: 0 var(--s3); }
-  #t-tools { gap: var(--s1); } #t-tools .btn { padding: 0 var(--s2); letter-spacing: 0; }
+  #t-tools { gap: var(--s1); } #t-tools .btn { padding: 0 6px; letter-spacing: 0; }   /* (6 px, not --s2: INSTALL APP, FULLSCREEN, DISCORD and the heart on one line at 390 px - at 8 the heart wrapped onto your card) */
   #t-support > span { display: none; } #t-support .ic { margin: 0; }   /* (upright: SUPPORT is its heart alone, so the row stays one line - its title says what it is) */
   /* (upright, UIC-08: PLAY and the pair the width of the screen, your card then who's online along the foot) */
   /* (the city risen behind the lower menu - the owner, 11-14: "raise them higher up ... for mobile portrait" - at the
      scale it had, 2 px a pixel: "it was cool to see it so far away as a big city skyline"; its foot --sky-up over the
      screen's, the near towers' colour carried down under it behind your card) */
-  #title { --sky-up: 120px; padding-bottom: calc(148px + env(safe-area-inset-bottom)); background: var(--sky, none) repeat-x 50% calc(100% - var(--sky-up)) / auto 144px, linear-gradient(var(--sky-base), var(--sky-base)) 0 100% / 100% calc(var(--sky-up) + 1px) no-repeat, radial-gradient(ellipse min(46vw, 560px) min(30vh, 300px) at var(--halo-at), var(--halo-a), var(--halo-b) 55%, transparent 75%), linear-gradient(180deg, var(--night-0) 0%, var(--ink) 28%, var(--navy) 58%, var(--night-a) 86%, var(--night-b) 100%); }
+  #title { --sky-up: 120px; padding-bottom: calc(156px + env(safe-area-inset-bottom)); background: var(--sky, none) repeat-x 50% calc(100% - var(--sky-up)) / auto 144px, linear-gradient(var(--sky-base), var(--sky-base)) 0 100% / 100% calc(var(--sky-up) + 1px) no-repeat, radial-gradient(ellipse min(46vw, 560px) min(30vh, 300px) at var(--halo-at), var(--halo-a), var(--halo-b) 55%, transparent 75%), linear-gradient(180deg, var(--night-0) 0%, var(--ink) 28%, var(--navy) 58%, var(--night-a) 86%, var(--night-b) 100%); }
   #title { --halo-at: 50% 18%; }
   #logo { width: min(320px, 86vw, 46vh); }   /* (by its height too: a short phone keeps room for the menu) */
   #play, #t-buttons, #t-row2, #t-load { width: 100%; min-width: 0; }
@@ -1783,9 +1783,13 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bc-ic:has(.iti) { overflow: visible; } .bd-ic .iti { width: 72px; height: 72px; } .bq-gl .iti, .wheel-slot .ic .iti { width: 24px; height: 24px; } .wheel-slot .ic .iti { margin: 0 auto; }
 @media (max-height: 560px) { .bd-ic .iti { width: 48px; height: 48px; } }
 .bc-nm { max-width: 100%; text-align: center; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dim); }
-.bc-n { position: absolute; right: 4px; bottom: 2px; font: 700 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--halo-s); }
-.bag-cell .bc-nm { margin-bottom: 8px; }
-.bc-tag { position: absolute; left: 4px; top: 4px; padding: 1px 4px; border-radius: var(--r1); background: var(--gold); color: var(--ink); font: 700 var(--fs-1) var(--pixel); }
+/* (a tile's footer: its tag - IN HAND, SLOT n - and its count, in a row of their own under the name, inside the tile:
+   the owner 11-22 - the tag hung off the corner, the count crowded the name) */
+.bc-ft { display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%; min-height: 12px; padding: 0 2px; }
+.bc-n { margin-left: auto; font: 700 var(--fs-1) var(--pixel); color: var(--cream); letter-spacing: 0; }
+.bc-n i { font-style: normal; color: var(--dim); padding: 0 1px; }
+.bc-tag { padding: 0 3px; border-radius: var(--r1); background: var(--gold); color: var(--ink); font: 700 var(--fs-1) var(--pixel); line-height: 12px; white-space: nowrap; }
+.bag-slot2 .bc-ft { justify-content: center; }
 .bag-detail { grid-area: detail; overflow-y: auto; padding: var(--s4); border-radius: var(--r2); background: var(--navy); border: 2px solid var(--gold-a); }
 .bag-hint { margin: 0; color: var(--dim); font: 500 var(--fs-3) var(--ui); line-height: 1.4; }
 .bd-head { display: flex; align-items: center; gap: var(--s3); }
@@ -1799,7 +1803,7 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bd-n { margin: 0 0 var(--s3); color: var(--dim); font: 600 var(--fs-2) var(--ui); }
 .bd-acts { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .bd-three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); width: 100%; }
-.bd-three .btn { padding: 0 var(--s1); font: 700 var(--fs-3) var(--pixel); letter-spacing: 1px; }
+.bd-three .btn { min-width: 0; padding: 0 2px; font: 700 var(--fs-2) var(--pixel); letter-spacing: 0; overflow: hidden; text-overflow: clip; }   /* (fs-2, no spacing: EQUIP and PUT AWAY whole in a narrow details column - they ran out of their buttons) */
 .bd-all { width: 100%; }
 .bag-pins, .bag-blade { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
 .bag-pins small, .bag-blade small { width: 100%; color: var(--dim); font: 600 var(--fs-2) var(--ui); }
@@ -1809,6 +1813,8 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag-blade .sw.on { border-color: var(--cream); box-shadow: 0 0 0 2px var(--gold); }
 .bag-wheel { grid-area: wheel; display: flex; align-items: center; gap: var(--s2); min-width: 0; padding: var(--s2); border: 2px solid var(--gold-a); border-radius: var(--r2); background: var(--navy); }
 .bag-wheel > small { flex: none; font: 700 var(--fs-2) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+.bag-wheel > small em { display: block; font: 400 var(--fs-1) var(--pixel); font-style: normal; color: var(--dim); letter-spacing: 0; text-transform: none; }
+.bd-eq { display: block; width: 100%; margin-top: var(--s1); color: var(--dim); font: 400 var(--fs-1) var(--pixel); line-height: 1.3; }
 .bag-slot { position: relative; flex: 1; min-width: 0; min-height: var(--tap-l); display: flex; align-items: center; gap: 6px; padding: 0 var(--s2); border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy2); color: var(--cream); font: 600 var(--fs-2) var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .bag-slot b { font: 700 var(--fs-2) var(--pixel); color: var(--gold); }
 .bag-slot.empty { border-style: dashed; color: var(--dim); cursor: default; }

@@ -178,7 +178,8 @@ test('crime table: taking a parked car is theft (no felony); carjacking is a fel
   assert.ok(!C.carjack.felony, 'carjacking someone stopped, unhurt: no felony');
   assert.ok(C.carjackHurt.felony && C.copCarjack.felony && C.policeTheft.felony, 'hurt, or a police car: felonies');
   assert.ok(!C.copPunch.felony && C.copAssault.felony, 'fists on an officer: no felony; a weapon: still one');
-  for (const k of ['murder', 'copMurder', 'vehKill', 'robbery', 'trainRobbery', 'escape', 'poaching']) assert.ok(C[k].felony, `${k}: still a felony`);
+  for (const k of ['murder', 'copMurder', 'robbery', 'trainRobbery', 'escape', 'poaching']) assert.ok(C[k].felony, `${k}: still a felony`);
+  assert.ok(!C.vehKill.felony && C.vehKill.heat < 30, 'vehKill: a lesser crime (the owner, 11-22: "too easily" wanted; an honest player\'s accident is no felony)');
   // a carjacking at speed goes on the record when it's seen
   const w = makeWorld();
   const { p, prof } = joinPlayer(w);

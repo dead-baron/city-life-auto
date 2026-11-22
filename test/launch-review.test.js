@@ -53,7 +53,7 @@ test('1. the gate and the panel on a gamepad: D-pad moves, A presses, B backs ou
     assert.ok(/modals\.push\(/.test(body) && /data-cla-modal|claModal/.test(body), `${what}: the pad drives it`);
   }
   assert.match(acc, /const FOCUS_CSS = 'cla-pfocus'/);
-  assert.match(acc, /\{outline:3px solid #ffd27f/, 'the pad\'s focus is shown');
+  assert.match(acc, /\{outline:3px solid (#ffd27f|var\(--pad-gold\))/, 'the pad\'s focus is shown (quick wins 4: the token, not the literal)');
 });
 
 // ---- 2: signing in on another device (also test/launch-auth.test.js) ----

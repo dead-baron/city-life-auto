@@ -33,7 +33,10 @@ export const CRIMES = {
   copAssault:  { heat: 40, label: 'Assaulting an officer', felony: true, sev: 1.3 },
   murder:      { heat: 45, label: 'Murder', felony: true, sev: 1.5 },
   copMurder:   { heat: 90, label: 'Killing an officer', felony: true, sev: 2 },
-  vehKill:     { heat: 40, label: 'Vehicular homicide', felony: true, sev: 1.4 },
+  // (the owner, 11-22: "You get wanted levels too easily still" ... "people on an honest path ... don't get penalized too
+  // hard if they accidentally do something": a pedestrian run down was a felony at once - two stars and no badge, ever, till
+  // the record's paid off. Now a lesser crime: on the tally with no stars (a warning, the second a star), no felony)
+  vehKill:     { heat: 22, label: 'Vehicular homicide', sev: 1.2 },
   hitrun:      { heat: 15, label: 'Hit and run', sev: 1.1 },
   brandish:    { heat: 6,  label: 'Shots fired', sev: 1.2 },
   theft:       { heat: 10, label: 'Vehicle theft', sev: 0.85 },
@@ -462,7 +465,9 @@ export function addHeat(world, p, amount, x, y, damp = false) {
   if (p.wanted > prof.peakWanted) { prof.peakWanted = p.wanted; }
   prof.peakWantedAt = Date.now();
   p.faction = FACTION.CRIMINAL;
-  if (p.wanted >= 4) p.cityBounty = Math.max(p.cityBounty || 0, 500 * p.wanted);
+  // (no "city bounty" at 4+ stars any more - the owner, 11-22: "The bounty system was supposed to be something players put
+  // on each other, I wasn't planning on having it something you get for committing crimes around the city". A bounty is
+  // only one a player places (bounties.js); the police still pay their own arrest reward by the stars)
   bounties.sync(world, p);
   if (p.hunter && p.wanted > 0) { p.hunter = false; world.notify(p, 'Bounty Hunter license suspended while wanted.', 'bad'); }
   p.meDirty = true;

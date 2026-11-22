@@ -1,6 +1,47 @@
 # The owner's pre-beta notes, feedback, ideas, tests and audits (2026-11-22)
 
-The words of his 15-page PDF, taken out by a script. Its 14 pictures are NOT here: read the PDF itself for those. Not yet triaged.
+The words of his 15-page PDF, taken out by a script. Its 14 pictures are NOT here: read the PDF itself for those. **Triaged 11-22 03:40 (Opus 5.5, with the pictures): the triage is at the top, his words below it.**
+
+
+## Triage (11-22, the pre-beta chat): each note, its ripple check, its package, its guard
+
+Packages are MASTER-HANDOVER section 5: **1** go-live of `prebeta-art`, **2** the world batch, **3** systems and UI
+fixes by area, **4** music and instruments, **5** regression checks, **6** art on Fable, **7** launch. "Guard" is the test
+or lint row that keeps it fixed (or eyes-only). Counts are from the code; the ones that need the built world are marked
+"world count" and are taken by one counting run before the world batch.
+
+| # | His note (short) | Ripple: same thing elsewhere / same kind / same cause | Pkg | Plan | Guard |
+|---|---|---|---|---|---|
+| N1 | Bag: the quick bar doesn't show what's in it; unclear how to equip guns / melee / thrown; a stray yellow button over the plasma blade; ammo text off-style, crowds the name | One bag screen (`client/bag.js`), every item in it; the quick bar is one row of 4. The yellow piece is the slot chip ("IN HAND") of the tile above, cut by the scroll. Same cause: tile chips laid over the tile | 3 (UI) | Now: the quick bar draws the item picture in each slot; EQUIPMENT slots say how to fill them; chips inside their tile; ammo on its own line in the pixel face | test row in `test/bag*.test.js` |
+| N2 | Item icons still weak vs the concepts; a UI/UX polish pass on every device and orientation | Every item/weapon picture (`client/itemart.js`, ~200), every menu | 6 (Fable) | Saved for Fable: art. Logged | eyes-only (sheet) |
+| N3 | Wanted levels come too easily | One heat table (`law.js` CRIMES + `rules.js`); the tally before the first star (11-07) | 3 (police) | Now: measure what one punch, one hit car, one shot gives, then soften; numbers into `rules.js` | `test/law*.test.js` row: N minor acts before a star |
+| N4 | A bounty from fighting the police; bounties are meant to be player-placed only | `law.js` gives a "city bounty" at 4+ stars (`cityBounty`); shown as a bounty on the HUD and paid to hunters | 3 (police) | Now: no city bounty - the stars alone; hunters and police still paid for wanted takedowns, under its own name | test: 5 stars -> `bounty` 0 |
+| N5 | BRUTE / TOUGH tags cover the NPC; above it, and not for long | One drawing (`main.js drawWorldLabels`): the brawl health bar and tag sit at the chest (24 px up, under the head's 46); the player name tag has the same fault (N19) | 3 (UI) | Now: one head-top anchor for every overhead label; the tag shows ~3 s when a fight starts | test: every overhead label's y above the head |
+| N6 | Two identical NPCs side by side outside the hospital | NPC looks (`npclooks.js`/`personas.js`): seeded per spawn; twins possible in a spawn burst | 3 (NPCs) | Check the seed; no twin within a screen | test: twins in a spawn burst |
+| N7 | How to reach the quick bar in play, desktop and phone | Keys 1-4 on desktop? the quick wheel on pad; touch has BAG only | 3 (UI) | With N1: number keys shown on the HUD's slots (desktop), a quick-bar strip on touch - design below N22 | README controls + `test/controls` |
+| N8 | Using an instrument from the bag leaves the bag open | Every "Use" that starts an activity from the bag (instruments, mat, boombox, rod, light...) | 3 (UI) | Now: Use closes the bag when the item starts something | test: Use on each activity item closes the bag |
+| N9 | The instrument game looks poor (blurred arrows with shadows); wants an SNES rhythm-game look; real songs, not random beats | The gig screen (`client/leisure/`), all five instruments, the mat | 4 (music) | Look: with the music package; songs need his recordings (folder access) | eyes-only |
+| N10 | See yourself play; NPCs react, tip; players can tip | Buskers (NPC), the player's gig, the mat | 4 | Design with the music package (the busker on the music clock) | - |
+| N11 | The event highlight still covers the NPC; subtler; easier from afar, fades when close | One drawing (`main.js drawEventArrows`), all 17 event kinds | 3 (UI) | Now: smaller brackets, no chevron within ~2 screens' third, fades as you near | test row on the mark's size/alpha by distance |
+| N12 | The highlight doesn't stay on a moving target | Same function draws at the event's last server spot, not the person | 3 (UI) | Now: anchored to the event's person (`ev.e`/`thief`) when known | test: mark follows the entity |
+| N13 | Four robbers at once inside a hospital: planned or a bug? | The calm-streets cap (`events.js busyNear`) counts happenings round a player; to check whether interiors and snatches are counted | 3 (NPCs/events) | Investigate; answer him | test: no more than CALM_STREETS.incidents near one spot |
+| N14 | The hospital's inside is dark at night | Every walk-in interior at night (world count) | 3 / 2 | Interiors lit by their own lamps at night | lint/test: interior light level at 23:00 |
+| N15 | Street performers have no animation; it should follow the beat; the player's too | Every busker kind (NPC), the player's five instruments | 4 | With the music clock (one beat for both) | eyes-only + test of the pose clock |
+| N16 | Going in / out pops; a smoother transition | One cutaway (`client/interiors.js`), every door | 3 (UI) | A short fade of the roof (~250 ms) both ways | eyes-only |
+| N17 | The awning over a door hides it; fade it as you step under | Every awning / canopy over a door (world count) | 3 (renderer) | The awning fades with the roof when you're under it | eyes-only |
+| N18 | An ATM under an awning | Every ATM against an awning (world count; `atmStray` 53 is the lint's nearest row) | 2 | New lint row `atmUnderAwning`, fixed in the world batch | lint |
+| N19 | Player names over the character | Same cause as N5 (one label anchor) | 3 (UI) | Now, with N5 | as N5 |
+| N20 | The hospital: two cut-off green signs; one good lit sign; looks like an apartment block; the glowing front washes out the name; the map icon over the H; better storefronts; see-through windows?; two ATMs side by side | Hospitals: 6 (Old Town, Northshore, Civic, Mesa, the desert's, the hand-made one) + clinics (world count); the icon-over-door rule for every place; ATMs within a few tiles of another (world count) | 2 + 6 | Signs/icon/ATMs: lint rows and the world batch. The hospital's look and storefronts: art on Fable (buildings pass). See-through windows: possible as a baked "lit interior" layer in the window art (cheap); live see-through costs every frame - say no for the beta | lint rows `signCut`, `atmPair`, `iconOverSign` |
+| N21 | The big map: a dashed diagonal line (a subway at 45 degrees?); labels covered by the numbered circles | The map's labels and markers (`client/worldmap.js`), every label | 3 (UI) | Check the line's source; labels laid out so a marker never covers a name (move the name) | test: no label under a marker |
+| N22 | Chat: long lines show in the log only; wants a small always-there chat feed, separate designs for desktop / phone upright / phone sideways; keep bubbles for quick phrases, maybe a sign above a player who's typed a long line; log and events in the same box?; a character limit? | Chat UI (`client/chat.js`) on 3 layouts; the HUD notes | 3 (UI) | Design first (a new HUD element: his pick - DECISIONS "variants only where they earn it"). The limit exists: 200 characters (guests 120), plus rate limits | test per layout |
+| N23 | Roof signs cut off by the roof | Every sign on a roof (world count) | 2 | Lint row `roofSignCut`, fixed in the world batch | lint |
+| A1 | How long to afford a first car / house | `rules.js` prices vs pay per job | 3 (economy) | A report with numbers | - |
+| A2 | How long to join the police | `law.js` officer requirements | 3 | Report | - |
+| A3 | How hard are crimes punished; how hard is Samaritan back | heat, fines, Samaritan losses/gains | 3 | Report | - |
+| A4 | Earn vs lose on death: balance; does crime pay; do honest jobs pay | payouts, death losses | 3 | Report with proposals (his call: prices are "ask first") | - |
+| A5 | Switching paths after the FTUE's answer (honest -> crime...) | the phone's Jobs, What's next, the Guide | 3 | Report, then fix gaps | guide test |
+| A6 | The illegal mushrooms: pointed to them? a guide once picked (illegal, worth a lot, where to sell, the risk) | foraging, the Guide, first-time moments | 3 | A first-time moment on picking one | ftue test |
+| A7 | Crime not caught shouldn't cost Samaritan points; explain the mix to players | `law.js` Samaritan losses (on the crime or on being seen?) | 3 | Check; if unseen crime costs points, change to "only when seen / caught"; a Guide entry | test: unseen crime keeps Samaritan |
 
 ---
 

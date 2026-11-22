@@ -96,7 +96,9 @@ test('the touch buttons: see-through discs with a colored ring, plain symbols an
   // ring in the palette's own color; the switches navy with the gold rim
   assert.match(root, /--pad-fire: #e8434b; --pad-act: #f6c945; --pad-roll: #4aa8ff; --pad-car: #3ccf6e;/);
   assert.match(root, /--disc: rgba\(20, 26, 51, \.55\); --disc-on: rgba\(20, 26, 51, \.8\);/, 'see-through, darker pressed');
-  for (const [slot, c] of [['fire', 'fire'], ['act', 'act'], ['roll', 'roll'], ['car', 'car']]) assert.match(CSS, new RegExp(`#tbtns \\[data-slot=${slot}\\] \\{ --acc: var\\(--pad-${c}\\); \\}`), slot);
+  for (const [slot, c] of [['fire', 'fire'], ['roll', 'roll']]) assert.match(CSS, new RegExp(`#tbtns \\[data-slot=${slot}\\] \\{ --acc: var\\(--pad-${c}\\); \\}`), slot);
+  // (ACT and the vehicle button by action, not slot: the vehicle button takes ACT's spot with nothing to act on - 11-15)
+  for (const [b, c] of [['action', 'act'], ['vehicle', 'car']]) assert.match(CSS, new RegExp(`#tbtns \\[data-slot\\]\\[data-b=${b}\\] \\{ --acc: var\\(--pad-${c}\\); \\}`), b);
   assert.match(CSS, /#tbtns button\.face \{ border: 3px solid var\(--acc\); background: var\(--disc\);/, 'the ring in its color, the disc see-through');
   assert.match(CSS, /#tbtns button \{[^}]*border: 2px solid var\(--pad-ink\); background: var\(--pad-navy\); box-shadow: var\(--pn-rim\)[^}]*font: 700 var\(--fs-w2\) var\(--pixel\);/, 'the switches: navy, the gold rim, a word in CLA Pixel');
   assert.match(CSS, /#tbtns \.w \{[^}]*font: 700 var\(--fs-w2\) var\(--pixel\); color: var\(--white\); text-shadow: 1px 0 0 var\(--pad-ink\), -1px 0 0 var\(--pad-ink\), 0 1px 0 var\(--pad-ink\), 0 -1px 0 var\(--pad-ink\)/, 'the words white with an even 1 px outline: centred');

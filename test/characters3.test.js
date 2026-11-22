@@ -211,7 +211,7 @@ test('props carried (a camera, a bouquet, a parasol): bags on things the rendere
 
 test('over the taller head: the name tag rises with the head, as the bubbles and the marks do; every pose keeps its parts together with the pass on', async () => {
   const { readFileSync } = await import('node:fs'), main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
-  assert.ok(/const SKULL_HEAD = window\.CLA_POLISH \? 50 : 46;/.test(main) && /const y = py - 26 \/ z - \(SKULL_HEAD - 46\);/.test(main), 'the name: up by the pass\'s two art pixels, and where it was with the pass off');
+  assert.ok(/const SKULL_HEAD = window\.CLA_POLISH \? 50 : 46;/.test(main) && /py - SKULL_HEAD/.test(main) && /const y = hd - 4 \/ z;/.test(main), 'the name: hung from the head\'s top (SKULL_HEAD, up by the pass\'s two art pixels) - the owner 11-22: over the head, not on it');
   // the head's top really is two art pixels (4 world px) higher: a standing figure, the pass off and on
   const A = plain('m'), off = baked(A, 0), on = withPass(() => baked(A, 0));
   assert.ok(on.ay - off.ay >= 1 && on.ay - off.ay <= 3, `feet to the top of the sprite: ${off.ay} -> ${on.ay} art px`);

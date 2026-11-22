@@ -190,7 +190,9 @@ export function visibleTo(world, p) {
   for (const m of L) {
     if (m.carrier && (m.carrier === ped.id || m.carrier === ped.vehId)) continue;   // (your own)
     if (!m.all && (Math.abs(Math.floor(m.x / CHUNK_PX) - pcx) > 1 || Math.abs(Math.floor(m.y / CHUNK_PX) - pcy) > 1)) continue;
-    out.push({ id: `x${m.id}`, k: m.all ? 'gold' : 'cargo', x: m.x, y: m.y });
+    const o = { id: `x${m.id}`, k: m.all ? 'gold' : 'cargo', x: m.x, y: m.y }, who = m.carrier && world.get(m.carrier);
+    if (who && who.kind === K.PED && !who.vehId) o.e = who.id;   // (a crate carried on foot: the page's highlight stays on its carrier - the owner, 11-22)
+    out.push(o);
   }
   return out;
 }

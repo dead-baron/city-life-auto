@@ -25958,3 +25958,37 @@ best-looking trees in the game.
   desert oasis, a cove, a redwood road, a town block. And in the running game (a local copy: the mountain tarn, a pasture, the
   Giants Loop trail, the canyon oasis).
 - Not live: on the branch until the owner has seen it.
+
+## 2026-11-22 - Pre-beta, first batch: the owner's notes of 11-22 (branch `prebeta-art`)
+His 15-page notes triaged with their pictures (`docs/tasks/PREBETA-NOTES-2026-11-22.md`, the table at the top: each
+note's ripple check, package and guard). Fixed in this batch, page and server, no world or art change:
+- **Overhead labels hang from the head** (N5, N19): names, title plates, the brawl bar and BRUTE / TOUGH, the wanted
+  flare, the bounty skull and an officer's suspect chevron were placed by a fixed offset from the feet in screen px,
+  so at most zooms they sat on the face or the chest. All seven now measure from the head's top (SKULL_HEAD); speech
+  bubbles and emote balloons over another player go over their name. BRUTE / TOUGH shows for the first 3 s of a fight
+  (a 6 s pause starts a new one). `test/overhead.test.js`.
+- **The event highlight** (N11, N12): it drew at the event's last server spot, so a runner left it over nothing. The
+  server now says who an event is about (a snatch's thief, a fight's two, the fainted, the wallet's owner, a crate's
+  carrier on foot) and the page frames that person where it draws them; the brackets are smaller and round the
+  figure, not over it; full strength from afar, faded to 30% within ~90 px, the chevron only from afar.
+- **The bag** (N1, N8): a tile's IN HAND / SLOT tag and its ammo count sit in a footer row inside the tile (the tag
+  hung off the corner - "part of a yellow button"; the count crowded the name). The EQUIPMENT slots show the weapon of
+  their kind you EQUIP (taken in hand), and keep it after you put it away; the details say what EQUIP does. The quick
+  bar says how to reach it in play on this device; an empty slot says "pin an item". Use on something you take out
+  into the world (an instrument, the boombox, the mat, a board, a rod, fireworks) closes the bag behind it, so you see
+  yourself play; a light or a consumable keeps it open. The three detail buttons fit at fs-2.
+- **The respawn map** (N21): the district names keep clear of the numbered places, and "You fell here" takes the
+  first side of its ring no place covers. (The dashed diagonal on the big map is the subway's tunnel: the map draws
+  every underground run of rail dashed. Not changed.)
+- **Wanted, less easily** (N3): the tally before the first star 24 -> 36 (a car stolen is a warning twice, a hit and
+  run twice, a carjacking once), small crimes seen before a star 4 -> 5, and running someone down is no longer a
+  felony at once: vehicular homicide 40 heat (two stars, and no badge until the record's paid off) -> 22, a lesser
+  crime on the tally. **No city bounty** (N4): 4+ stars put a "bounty" of $500 a star on you, shown as one and paid to
+  hunters; bounties are only what players place now. Police arrest pay is unchanged.
+- Tests brought up to date with decided behavior: the touch BAG button always there (quick wins 3), the README's bag
+  row, the pad focus token, the vehicle button's accent by action (11-15), the phone's Fish log (11-16). One real
+  layout fault fixed: on an upright phone with RESUME, SUPPORT wrapped onto your card (the tool row at 6 px padding, the
+  menu 8 px higher). `test/notes1122.test.js` guards the rest.
+- Answered, not changed: chat already has a limit (200 characters, guests 120, plus rate limits); a crime nobody saw or
+  called in costs nothing but Criminal XP - Samaritan points never go down for crime; only a seen felony blocks the
+  badge, and the record can be paid off at a courthouse or Police HQ.

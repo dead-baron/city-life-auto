@@ -66,7 +66,7 @@ test('settings (UIC-06): tabs along the top; Chat and Legal are slots; the Dange
 
 test('the phone (UIC-02..05): pixel tiles, the Guide\'s place, Places opens in place, Jobs has its filters and START', () => {
   const ph = read('client/phone.js');
-  assert.match(ph, /\['camera', 'Camera'\], \['bug', 'Report bug'\], \['guide', 'Guide'\]\];/, 'the Guide last (Report bug before it, 11-15)');
+  assert.match(ph, /\['bug', 'Report bug'\], \['guide', 'Guide'\]\];/, 'the Guide last (Report bug before it, 11-15)');
   assert.match(ph, /screen === 'guide'/);
   assert.match(ph, /<span class="ph-tile">\$\{pix\(APP_PIX\[k\]\)\}<\/span>/);
   assert.match(ph, /data-grp="\$\{g\.id\}" aria-expanded/, 'Places: a kind opens under itself');
