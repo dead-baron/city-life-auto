@@ -26038,3 +26038,7 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 - `tools/music/analyze.py`: for each of the owner's 25 primary takes, the beats, bar lines, a seamless loop and a clean
   ending, measured from the recording (details and results: docs/tasks/MUSIC-HANDOVER.md, `docs/audio/loops-2026-11-22`).
 - A listening page for the owner on his computer (each loop played three times, each ending), his ear to approve.
+
+## 2026-11-22 - A fisher always finds the bank
+- `server/systems/wildlife.js` edgeSpot: after its 30 random tries, rings outward from the water, nearest bank first. The
+  staged "bear fishing" at Pine Lake said "no room" on the world batch (`test/world3scenes.test.js` test 1).
