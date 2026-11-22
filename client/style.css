@@ -959,6 +959,7 @@ body.portrait #m-wallet small { display: none; }
 /* focused with a pad, the title's buttons keep their own fill (the kit's .pfocus would dim PLAY's gold) */
 #title button.pfocus { background: var(--navy) !important; color: var(--cream) !important; }
 #title :is(#t-resume, #t-resume.hidden + #play, #t-gfxseg button.on).pfocus { background: var(--gold) !important; color: var(--ink) !important; }
+#dip { position: absolute; inset: 0; background: var(--ink); opacity: 0; pointer-events: none; }   /* (the door's dip: main.js dipTick) */
 #veil { position: absolute; inset: 0; background: var(--ink); opacity: 0; pointer-events: none; transition: opacity .35s ease; display: flex; align-items: center; justify-content: center; }
 #veil.on { opacity: 1; transition: none; }
 #veil span { color: var(--dim); font: 600 var(--fs-3) var(--ui); }

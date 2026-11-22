@@ -22,6 +22,8 @@ import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bak
 // see-through buildings (_fades): seconds to ease in and out; the clear space's radius round you on foot, in a vehicle at
 // most (else half its length + 34 px), round another player
 export const FADE_IN = 0.35, FADE_OUT = 0.5, CLR_FOOT = 64, CLR_VEH_MAX = 130, CLR_OTHER = 48;
+const AWN_MIN = 6;   // a building's picture this far south of its foot is an overhang you can stand under (_fades)
+export const DIP_MS = 260;   // a walk-in's door: the screen dips this long, the cut-away swapped at its middle (main.js dipTick)
 const TURRET_TOP = 47;   // (_turret)
 // a bush a vehicle goes through (_bushes): knocked aside for KNOCK_S s, a burst of leaves once per BURST_GAP s; the
 // props that are bushes (never a tree), bucketed BUSH_CELL px; the leaves' colours (green, the desert's grey-green)
@@ -897,6 +899,16 @@ export class World2 {
           const st = this.chunkState.get(res.key);
           if (st && !st.preview && st.ver === res.ver && E.hasChunk(res.cx, res.cy)) { this.results.delete(res.jk); continue; }
         }
+        // (walking in or out of a walk-in: its chunks swap between the street's picture and the cut-away one. The owner,
+        // 11-22: "the inside view pops up ... Is it possible to have a slightly smoother transition here?" - a chunk on
+        // screen that changes its cut waits for a short dip of the screen (DIP_MS; main.js dipTick draws it) and swaps
+        // at its darkest, all of the building's chunks together)
+        const st0 = this.chunkState.get(res.key);
+        if (st0 && !res.preview && st0.mode !== res.mode && (st0.mode >= 0 || res.mode >= 0) && E.hasChunk(res.cx, res.cy) && (res.cx + 1) * CHUNK > this.vx0 && res.cx * CHUNK < this.vx1 && (res.cy + 1) * CHUNK > this.vy0 && res.cy * CHUNK < this.vy1) {
+          const now = performance.now();
+          if (!this.dipAt || now - this.dipAt > DIP_MS) this.dipAt = now;
+          if (now - this.dipAt < DIP_MS / 2) continue;   // (not yet: it swaps at the dip's darkest)
+        }
         n--;
         const t = performance.now();
         let ok = false;
@@ -1302,7 +1314,11 @@ export class World2 {
       if (!st.blds) continue;
       for (const r of st.blds) {
         const b = r[0], fading = (this.fades.get(b) || 0) !== 0, m = fading ? 16 : 0;
-        if (r[5] <= py + 2) continue;   // (its foot north of yours: it stands behind you)
+        // (its foot north of yours: it stands behind you - unless its picture hangs out over you: an awning, a canopy over
+        // its door. The owner, 11-22: "the awning over the doorway still hides a lot ... as soon as you go under the awning
+        // ... it makes the awning partly transparent ... so you can see the doors open as you go inside". Its footprint
+        // never fades, so only the overhang goes see-through, clear round you)
+        if (r[5] <= py + 2 && !(b < TREE_FADE && r[4] > r[5] + AWN_MIN && sy < r[4] + 4 && sy > r[5] - 10)) continue;   // (a building, not a tree)
         // a giant redwood only when it's really in front of you (not every tree whose box you're near)
         if (b >= TREE_FADE) { if (!onTrain && this._treeCovers(b - TREE_FADE, px, sy, inVeh, fading ? 10 : 0)) want.set(b, 1); continue; }
         if (r[3] < px - rx - m || r[1] > px + rx + m || r[4] < sy - up - m || r[2] > sy + down + m) continue;

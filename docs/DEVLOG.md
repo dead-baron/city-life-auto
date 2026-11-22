@@ -25992,3 +25992,15 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 - Answered, not changed: chat already has a limit (200 characters, guests 120, plus rate limits); a crime nobody saw or
   called in costs nothing but Criminal XP - Samaritan points never go down for crime; only a seen felony blocks the
   badge, and the record can be paid off at a courthouse or Police HQ.
+- **Walking in and out** (N16, N17): the walk-in's chunks swap between the street's picture and the cut-away one; a
+  chunk on screen that changes its cut now waits for a 260 ms dip of the screen (to 55% dark and back) and swaps at its
+  darkest, all of the building's chunks together - a door's transition instead of a pop (`host.js` DIP_MS, `main.js`
+  dipTick, `#dip`). A building whose picture hangs out south of its foot - an awning, a canopy over the door - goes
+  see-through round you while you stand under it (the building's own "ghost" fade, its footprint kept; trees excepted).
+  Not seen in a running game yet: checked by the tests and the code only.
+- **Chat you can see is going on** (N22): the feed (bottom left on a desktop, under the HUD on a phone) keeps four lines
+  on a desktop and two on a phone (was two and one), your own lines too (dimmer), each 10 s (was 8). A line said near you
+  that's too long for a bubble now gets one anyway - its start, cut at a word at 44 characters, with an ellipsis; the whole
+  of it in the feed and the log (DECISIONS' "long typed lines to the log (or a capped bubble)", the capped bubble chosen).
+  Events stay in their own fading note line (not merged into the chat feed). The limit was already there: 200 characters
+  a line, 120 for guests, with rate limits.

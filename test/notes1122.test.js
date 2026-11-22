@@ -44,3 +44,25 @@ test('N21: on the respawn map no name sits under a numbered place', () => {
 test('N5 / N19 / N11 / N12: overhead labels and the event highlight - test/overhead.test.js', () => {
   assert.ok(read('test/overhead.test.js').includes('the event highlight stays on its person'));
 });
+
+test('N16: in and out of a walk-in, the cut-away swaps inside a short dip, not with a pop', () => {
+  const host = read('client/art2/game/host.js'), main = read('client/main.js');
+  assert.match(host, /export const DIP_MS = \d+;/);
+  assert.match(host, /if \(now - this\.dipAt < DIP_MS \/ 2\) continue;/, 'the swap waits for the dip\'s middle');
+  assert.match(main, /dipTick\(v2\);/, 'the page draws the dip');
+});
+
+test('N17: an awning over a door goes see-through while you stand under it', () => {
+  const host = read('client/art2/game/host.js');
+  assert.match(host, /if \(r\[5\] <= py \+ 2 && !\(b < TREE_FADE && r\[4\] > r\[5\] \+ AWN_MIN && sy < r\[4\] \+ 4 && sy > r\[5\] - 10\)\) continue;/);
+});
+
+test('N22: chat you can see is going on - a fuller feed, your own lines in it, long lines bubbled by their start', async () => {
+  const c = read('client/chat.js');
+  assert.match(c, /const FEED_N = \{ desk: 4, side: 2, up: 2 \}, CAP_CH = 44;/);
+  assert.doesNotMatch(c, /if \(isOpen \|\| l\.own\) return;/, 'your own lines show too');
+  const { capLine } = await import('../client/chat.js');
+  assert.equal(capLine('short'), 'short');
+  const t = capLine('a long line that the server sent to the log only, with more words than fit');
+  assert.ok(t.endsWith('…') && t.length <= 45, t);
+});
