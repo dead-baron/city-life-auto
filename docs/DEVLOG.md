@@ -26115,3 +26115,7 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   `openOf`) are appended after the split towers' parts, like them split off older buildings - nothing renumbered. The
   test now accepts both kinds of piece after the park block's buildings.
 - World change: rides with the rest of the world batch (one world hash change for all of it).
+
+## 2026-11-22 - A fisher always finds the bank
+- `server/systems/wildlife.js` edgeSpot: after its 30 random tries, rings outward from the water, nearest bank first. The
+  staged "bear fishing" at Pine Lake said "no room" on the world batch (`test/world3scenes.test.js` test 1).
