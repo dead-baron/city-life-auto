@@ -429,7 +429,15 @@ export function wake(G, x, y, hd, len = 60, phase = 0) {
 // cliffs and the cave mouths share it.
 const LAYER = R('#9c8e7a', 7, 3, { dark: 0.6, light: 0.5, shift: 0.14 }), WETR = R('#4c4842', 6, 2, { dark: 0.6, light: 0.6 });
 const FERN = R('#4e7c2c', 5, 2, { dark: 0.55, light: 0.5, shift: 0.3 }), ROOTR = R('#5c4028', 5, 2, { dark: 0.5, light: 0.4 });
+const GRANITEW = [[42, 44, 50], [58, 60, 66], [76, 78, 82], [94, 96, 100], [114, 116, 118], [134, 136, 134], [154, 154, 152]], LICHENW = R('#8f9a5c', 5, 2);   // (o.stone 'granite': the mountains' - Summit Tarn's rim, the crags' faces; in the grey of the ground's own bare rock, ground.js crag)
 function rockKit(m, seed, sand) {
+  if (sand === 'granite') {
+    // jointed granite (concept N5): blocks split by dark joints - upright ones every 12 to 22 px, staggered course by
+    // course, level ones every 11 to 17 - each block its own tone, lichen in place of moss
+    const blk = (x, y, z) => { const c = Math.floor((z + (vnoise(x, y, 31, seed + 31) - 0.5) * 4) / 14), cz = (z + (vnoise(x, y, 31, seed + 31) - 0.5) * 4) - c * 14, L = 13 + Math.floor(hash(c, 3, seed) * 10), u = x + y * 0.5 + hash(c, 5, seed) * L, i = Math.floor(u / L), cu = u - i * L; return (hash(i, c, seed + 2) - 0.5) * 2 + (cz < 1.2 || cu < 1.2 ? -2.4 : cz > 12.4 ? 0.7 : 0) + (vnoise(x, z, 4, seed + 7) - 0.5) * 0.7; };
+    const mm = (r, k, f) => m.mat({ ramp: r, k, shade: f });
+    return { rock: mm(GRANITEW, 4, blk), wet: mm(WETR, 3, (x, y, z) => blk(x, y, z) * 0.6), moss: mm(LICHENW, 2, (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4), fern: mm(FERN, 2, (x, y, z) => (Math.round(z) % 2 ? 0.8 : -0.2)), root: mm(GRANITEW, 2, () => -1.5) };
+  }
   const bed = (x, y, z) => { const u = z + (vnoise(x, y, 23, seed + 31) - 0.5) * 5, b = Math.floor(u / 6), f = u - b * 6; return (hash(b, Math.floor(x / 37), seed) - 0.5) * 1.2 + (f < 1 ? -1 : f > 5 ? 0.55 : 0) + (hash(Math.floor(x / 3), b, seed + 2) < 0.05 ? -1.1 : 0) + (vnoise(x, z, 4, seed + 3) - 0.5) * 0.7; };
   const mm = (r, k, f) => m.mat({ ramp: r, k, shade: f });
   return {
@@ -486,7 +494,7 @@ export function fallModel(o = {}) {
   // basalt: columns from a jittered grid (Voronoi), each with its own top; seams between columns
   // (o.stone 'sand': a resort's rockwork of warm sandstone in courses - Lucky Mesa's Mesa Grande)
   const sand = o.stone === 'sand' || o.stone === 'red';
-  const RK = rockKit(m, seed, o.stone === 'lava' ? 'lava' : o.stone === 'red' ? REDROCKW : sand), rock = kind === 'weir' ? m.mat({ ramp: CONC, k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5 }) : RK.rock;
+  const RK = rockKit(m, seed, o.stone === 'granite' ? 'granite' : o.stone === 'lava' ? 'lava' : o.stone === 'red' ? REDROCKW : sand), rock = kind === 'weir' ? m.mat({ ramp: CONC, k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5 }) : RK.rock;
   const wtop = m.mat({ ramp: FALL_LOOK.v ? FALLTOP : WATER.river, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => Math.sin(y * 0.6 - frame.v / frames * TAU * 2 + hash(Math.round(x), 1, seed) * 3) * 0.5 + (hash(Math.round(x), Math.round(y), seed) > 0.9 ? 1 : 0) - 0.2 - (FALL_LOOK.v ? 0.6 : 0) - Math.max(0, d1 - 6 - y) / d1 * 1.6 + (vnoise(x, y, 6, seed + 75) > 0.72 ? 1.2 : 0) });   // (deeper and darker back from the lip, streaks of foam on it)
   const LK = FALL_LOOK.v;
   const sheet = m.mat({ ramp: LK ? FALLW : WATER.fall, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y, z) => {
