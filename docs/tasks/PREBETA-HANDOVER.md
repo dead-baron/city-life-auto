@@ -97,6 +97,20 @@ Summit Tarn and a bluff of cliff pieces at the cave - was rejected by the owner 
 page-side and is on this branch: it drains over a low sill.) Merge `nature-world` as part of the world batch, after
 the owner has seen the cave. The state of all the nature work: `claude/nature-status-2026-11-21.md` in the project.
 
+## Added late on 11-21 (all on this branch unless said)
+- **Water.** A recorder measures surface flicker (`tools/nature/waterwatch.sh`, see `tools/nature/README.md`): calm
+  water scores under about 1% of pixels jumping per tenth of a second. Fixed: the rapid sparkle (the owner, 11-17),
+  the crawling light-net on clear beds, white squares of foam where two river reaches meet. Checked at midday under a
+  clear sky only. Still to run: sunset, night, rain; then the garden pond's white blotches, water creeping beside
+  docks, koi drawn over the water. The sparkle is now quiet; if the owner finds it flat, lower `0.93` in
+  `lightgame.js` `waterSurf` (and in `test/calmwater.test.js`' mirror).
+- **Placeholders the owner wants fixed later** (11-21 20:11): Summit Tarn's low sill (page-side, here) and the sea
+  cave's rock hill (`nature-world`). Both want real ground levels: the tarn on a shelf with a fall down a rock face
+  (concept N5), the cave into a cliff or headland (N3, N8). His rule from the first, rejected try: never a line of
+  cliff pieces on flat ground.
+- **Seen, not fixed:** six cars jammed on Coral Cay's jungle track (NPC traffic); the redwood woods still denser than
+  concept N1 after the crowns-by-place rule.
+
 ## What comes next on top of this branch
 1. **The world batch** from `docs/audit/REPORT.md` and the pre-beta list section A: each row a class fix, the lint
    count brought down in `LINT_ALLOW`, never up. Start with `egret`. Also to place in the same batch: the nature
