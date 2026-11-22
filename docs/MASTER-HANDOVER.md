@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-22 morning (the pre-beta chat, Opus 5.5, first night). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-22 afternoon (the pre-beta chat, Opus 5.5). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -44,10 +44,10 @@ Nothing important should exist only in a chat. If it was decided or noticed, it 
 If two of these disagree, `docs/DECISIONS.md` wins, and the newer dated line wins inside it. Fix the other one.
 
 ## 3. How the owner wants work done (the ones that have cost time when missed)
-- **Nothing goes to `main` without his go-ahead.** Pushing `main` deploys live. Feature branches only. He does not
-  want to be a blocker for small safe fixes (11-22 03:07): the rule for what may go without asking is in DECISIONS,
-  Process - read as in force from his message of 11-22 03:23 (he can change it). In practice Claude's session can't
-  push `main` (its guard refuses): a go-live is a pull request he merges.
+- **Merging to `main`** (11-22 13:12): Claude merges its own pull requests when their tests pass and tells him after
+  in a line (`gh api -X PUT repos/dead-baron/city-life-auto/pulls/<n>/merge` - a plain push to `main` stays refused by
+  the session's guard). Still his word first: the world batch, anything touching saved progress, prices, accounts,
+  privacy, payments or legal text, a raised performance budget, launching the beta. DECISIONS, Process.
 - **Every fix is a class fix:** fixed everywhere it occurs, with a test or lint row over the whole world so it can't
   come back. A note fixed in one spot is not done. Every note gets a check, or is marked "eyes only".
 - **Check before eyes:** look at the result yourself (render it, beside its concept and its surroundings) before
