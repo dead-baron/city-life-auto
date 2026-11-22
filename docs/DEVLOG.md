@@ -26130,3 +26130,13 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   onto courtyards walled in by buildings, side-wall doors, a few blocked. Every other lint row unchanged.
 - `test/doorpaths.test.js` (3): round to the pavement, a pocket joined, nothing laid over water. placementlint 42/42,
   world3doors, world3clutter, world3arrivals 8/8, perf 6/6.
+
+## 2026-11-22 - World batch: every canoe and rowboat a real boat (branch `prebeta-world2`; not live)
+- The owner, 11-17: "every boat that looks usable is usable - a beached canoe/rowboat is a real vehicle (get in, push
+  off, paddle)". `shared/world3-boats.js` boatsAfloat3 (the done hook, after the props are final): each canoe or rowboat
+  prop (not on stands) becomes a river kayak or a rowboat in the water beside where it lay - its whole hull on water and
+  off the rocks (the lint's ROCKS), bow out - through the marina's list (`m.marina`, `kind`, `beached: true`: parked
+  boats, anyone's to take - server/systems/traffic.js marinaModel). 45 made; 3 with no water within reach stay props.
+- The audit's deadBoat 103 -> 58 (`LINT_ALLOW.deadBoat` 58). Left: the moored sailboats (27), yachts (19) and fishing
+  boats (9) - scenery; making them marina vehicles, or keeping them out of swimming reach, is the owner's call (asked).
+- `test/boatsafloat.test.js` (2); placementlint 42/42, fleet, core.
