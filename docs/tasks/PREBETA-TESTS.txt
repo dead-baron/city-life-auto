@@ -764,3 +764,52 @@
 # pass 4 # fail 0  test/overhead.test.js 1s rc=0
 # pass 11 # fail 0  test/notes1122.test.js 0s rc=0
 # failures: world3scenes 8 (skate scene skipped), world3wild 1 (station roads flagged notraffic), admin-console 1, scenes 8, hudlayout 1 - all with their test and code unchanged from main (world hash = main's): pre-existing. firefighter 2 failed once under load, passed twice alone.
+
+## World3 suites on prebeta-world (f94723d), 11-22 08:10-10:00, one file at a time (41 files)
+# pass 5 # fail 0  test/world3.test.js 1s rc=0
+# pass 7 # fail 1  test/world3arrivals.test.js 254s rc=1
+# pass 5 # fail 0  test/world3b.test.js 3s rc=0
+# pass 1 # fail 0  test/world3beach.test.js 183s rc=0
+# pass 1 # fail 0  test/world3biomes.test.js 178s rc=0
+# pass 3 # fail 0  test/world3caves.test.js 198s rc=0
+# pass 2 # fail 0  test/world3clearings.test.js 185s rc=0
+# pass 4 # fail 0  test/world3clutter.test.js 1s rc=0
+# pass 3 # fail 0  test/world3coast.test.js 178s rc=0
+# pass 1 # fail 0  test/world3desert.test.js 197s rc=0
+# pass 2 # fail 0  test/world3dirt.test.js 173s rc=0
+# pass 1 # fail 0  test/world3doors.test.js 167s rc=0
+# pass 2 # fail 0  test/world3estuary.test.js 7s rc=0
+# pass 3 # fail 0  test/world3ferries.test.js 170s rc=0
+# pass 2 # fail 0  test/world3fleet.test.js 197s rc=0
+# pass 3 # fail 0  test/world3hubs.test.js 192s rc=0
+# pass 1 # fail 0  test/world3interchanges.test.js 0s rc=0
+# pass 1 # fail 0  test/world3kestrel.test.js 196s rc=0
+# pass 9 # fail 0  test/world3keys.test.js 5s rc=0
+# pass 1 # fail 0  test/world3marsh.test.js 159s rc=0
+# pass 0 # fail 1  test/world3mesa.test.js 181s rc=1
+# pass 4 # fail 0  test/world3passes.test.js 1s rc=0
+# pass 1 # fail 0  test/world3peaks.test.js 172s rc=0
+# pass 14 # fail 0  test/world3rail.test.js 239s rc=0
+# pass 5 # fail 0  test/world3rapids.test.js 204s rc=0
+# pass 2 # fail 0  test/world3redwoods.test.js 158s rc=0
+# pass 2 # fail 0  test/world3regions.test.js 0s rc=0
+# pass 1 # fail 0  test/world3relief.test.js 191s rc=0
+# pass 2 # fail 0  test/world3rivers.test.js 192s rc=0
+# pass 1 # fail 0  test/world3roads.test.js 174s rc=0
+# pass 7 # fail 2  test/world3scenes.test.js 251s rc=1
+# pass 3 # fail 0  test/world3subway.test.js 203s rc=0
+# pass 1 # fail 0  test/world3townmodels.test.js 192s rc=0
+# pass 1 # fail 0  test/world3towns.test.js 179s rc=0
+# pass 1 # fail 0  test/world3tropic.test.js 192s rc=0
+# pass 1 # fail 0  test/world3water.test.js 182s rc=0
+# pass 1 # fail 0  test/world3waterbodies.test.js 170s rc=0
+# pass 0 # fail 1  test/world3wild.test.js 179s rc=1
+# pass 3 # fail 0  test/world3window.test.js 213s rc=0
+# pass 1 # fail 0  test/world3woods.test.js 195s rc=0
+# pass 1 # fail 0  test/world3world.test.js 174s rc=0
+DONE
+# failures: world3arrivals 4 (fails on main too - fixed since, test only: open-block pieces; passes on prebeta-world2 and
+#   prebeta-art), world3scenes 1 (new on the batch: the staged bear at Pine Lake found no bank - wildlife.js edgeSpot
+#   rings outward now; passes on prebeta-world2) and 8 (skate scene skipped: as before), world3mesa 1 (porte-cocheres:
+#   fails on main too), world3wild 1 (station roads flagged notraffic: as before).
+# prebeta-world2 also run: placementlint 42/42 (binBags 0), binbags 2/2, walks 3/3, world3arrivals park block, world3scenes 1.
