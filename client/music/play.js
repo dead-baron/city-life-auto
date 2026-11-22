@@ -154,16 +154,44 @@ function draw() {
   const hint = lanes ? `${KB.lanes} · ${PAD.lanes[0]} · tap the lanes · Esc / B: stop` : `${KB.pads} or tap: play · ${KB.chord} / ${PAD.chord[0]}: chord · ENTER / VIEW: gig · Esc / B: put it away`;
   if (G.hint && G.hint.textContent !== hint) G.hint.textContent = hint;
   const { cv, g } = G, dpr = devicePixelRatio || 1, r = cv.getBoundingClientRect();
-  const k = Math.max(1, Math.min(4, (r.width * dpr) / W)), bw = Math.round(W * k), bh = Math.round(H * k);
+  const k = Math.max(1, Math.min(4, Math.floor((r.width * dpr) / W))), bw = Math.round(W * k), bh = Math.round(H * k);   // (a whole number: every pixel of the art a whole block of the screen's - no blur at the edges)
   if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
-  g.setTransform(k, 0, 0, k, 0, 0);
+  g.setTransform(k, 0, 0, k, 0, 0); g.imageSmoothingEnabled = false;
   g.clearRect(0, 0, W, H);
   g.textAlign = 'center'; g.textBaseline = 'middle';
   if (G.set && (G.mode === 'rhythm' || G.mode === 'gig')) drawSet(g);
   else drawJam(g);
   if (G.res) drawResult(g);
 }
-function txt(g, s, x, y, size, col, align = 'center') { g.font = `bold ${size}px monospace`; g.textAlign = align; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(s, x + 1, y + 1); g.fillStyle = col; g.fillText(s, x, y); }
+// (the owner, 11-22: "the arrows with shadows on it, just looks blurry and hard to read ... more like an SNES looking beat
+// saber or dance dance revolution": text in the game's pixel face at its own grid (8 or 16 px), a solid one-pixel shadow,
+// whole pixels only; the arrows are pixel sprites - ARROW_MASK, a dark rim, the lane's colour, a lit edge - not glyphs)
+function txt(g, s, x, y, size, col, align = 'center') {
+  const px = size > 11 ? 16 : 8;
+  g.font = `bold ${px}px "CLA Pixel", monospace`; g.textAlign = align;
+  x = Math.round(x); y = Math.round(y);
+  g.fillStyle = '#0b0816'; g.fillText(s, x + 1, y + 1); g.fillStyle = col; g.fillText(s, x, y);
+}
+// an arrow pointing up, 11 x 11; drawn turned for its lane (0 left, 1 down, 2 up, 3 right)
+const ARROW_MASK = ['.....#.....', '....###....', '...#####...', '..#######..', '.#########.', '###########', '....###....', '....###....', '....###....', '....###....', '....###....'];
+const at = (dir, i, j) => (dir === 2 ? [i, j] : dir === 1 ? [i, 10 - j] : dir === 0 ? [j, i] : [10 - j, i]);
+function pixArrow(g, cx, cy, dir, body, s = 1, rim = '#0b0816', hollow = false) {
+  const x0 = Math.round(cx - 5.5 * s), y0 = Math.round(cy - 5.5 * s);
+  const on = (i, j) => i >= 0 && j >= 0 && i < 11 && j < 11 && ARROW_MASK[j][i] === '#';
+  g.fillStyle = rim;
+  for (let j = -1; j <= 11; j++) for (let i = -1; i <= 11; i++) {
+    if (on(i, j)) continue;
+    if (on(i - 1, j) || on(i + 1, j) || on(i, j - 1) || on(i, j + 1)) { const [u, v] = at(dir, i, j); g.fillRect(x0 + u * s, y0 + v * s, s, s); }
+  }
+  for (let j = 0; j < 11; j++) for (let i = 0; i < 11; i++) {
+    if (!on(i, j)) continue;
+    const edge = !on(i - 1, j) || !on(i + 1, j) || !on(i, j - 1) || !on(i, j + 1);
+    if (hollow && !edge) continue;
+    const [u, v] = at(dir, i, j);
+    g.fillStyle = !hollow && edge && (!on(i, j - 1) || !on(i - 1, j)) ? '#ffffff' : body;
+    g.fillRect(x0 + u * s, y0 + v * s, s, s);
+  }
+}
 function drawSet(g) {
   const st = G.set, ts = songNow(), now = performance.now();
   // the lanes, their line, the arrows at it (lit when pressed)
@@ -172,17 +200,14 @@ function drawSet(g) {
     g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(x + 1, 0, LANE_W - 2, H);
     const lit = now - (G.flash[l] || 0) < 120;
     g.fillStyle = lit ? LANE_COL[l] : 'rgba(255,255,255,.18)'; g.fillRect(x + 2, LINE_Y - 1, LANE_W - 4, 3);
-    txt(g, ARROW[l], x + LANE_W / 2, LINE_Y + 14, 14, lit ? '#fff' : LANE_COL[l]);
+    pixArrow(g, x + LANE_W / 2, LINE_Y + 1, l, lit ? LANE_COL[l] : '#5a5f7a', 2, '#0b0816', !lit);   // (the receptor on the line: hollow, filled when hit)
   }
   // the notes coming down
   for (const n of st.notes) {
     const dt = n.t - ts;
     if (dt > RHYTHM.leadS || dt < -0.25 || n.g === 0 || n.g === 1 || n.g === 2) continue;
     const y = LINE_Y - (dt / RHYTHM.leadS) * (LINE_Y - 4), x = LANE_X0 + n.lane * LANE_W;
-    g.fillStyle = n.g === 3 ? 'rgba(120,120,130,.6)' : LANE_COL[n.lane];
-    g.fillRect(x + 4, y - 5, LANE_W - 8, 10);
-    g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x + 4, y - 5, LANE_W - 8, 2);
-    txt(g, ARROW[n.lane], x + LANE_W / 2, y + 1, 9, '#1a1424');
+    pixArrow(g, x + LANE_W / 2, Math.round(y), n.lane, n.g === 3 ? '#6a6f80' : LANE_COL[n.lane], 2);   // (a falling note: the lane's arrow)
   }
   // the count-in, the grade, the score, the combo, the hype
   const cx = LANE_X0 + LANE_W * LANES / 2;

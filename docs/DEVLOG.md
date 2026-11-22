@@ -26010,3 +26010,15 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
   Two text gaps closed: the Guide's "Clean record, quiet money" (a crime nobody saw or reported costs nothing but
   Criminal XP; Samaritan points never drop for crime; a reported felony blocks the badge until paid off), and the
   ghostglass caps' price in their pick line and in "A little hustle".
+- **The gig screen, crisp** (N9, its look only - real songs wait for the music package): the arrows were Unicode
+  glyphs in a 9 px monospace with a soft shadow, scaled up pixelated into a blur. They are pixel sprites now (an 11 x 11
+  arrow at 2x: a dark rim, the lane's colour, a lit edge; the receptors on the line hollow until hit), the text in CLA
+  Pixel at its own grid with a solid one-pixel shadow, and the canvas at a whole-number scale.
+- **No twins in a uniform** (N6): the people who wear a fixed uniform (an ambulance's two medics, a SWAT team, a rescue
+  crew - the civilians already draw distinct looks from the wardrobe's pool) came out of one vehicle with the same
+  random skin and hair now and then, and with a cap on they were twins. A uniform's new person now takes another skin
+  (two steps on), hair cut and colour than any of the same uniform within 260 px (`npc.js unTwin`). Civilians who
+  wander together by chance are left to chance, as the owner said.
+- Seen, not fixed (pre-existing on `main`, logged for the UI package): on a small phone held sideways (740 x 360,
+  844 x 390) with a vehicle's readout up, a second two-line note runs down onto the status line under the map
+  (`test/hudlayout.test.js`). A one-rule fix was tried and backed out: it changed the test's measurements on desktop too.

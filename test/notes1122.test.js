@@ -66,3 +66,22 @@ test('N22: chat you can see is going on - a fuller feed, your own lines in it, l
   const t = capLine('a long line that the server sent to the log only, with more words than fit');
   assert.ok(t.endsWith('…') && t.length <= 45, t);
 });
+
+test('N9: the gig screen in pixels - drawn arrows at a whole-number scale, the game\'s pixel face', () => {
+  const p = read('client/music/play.js');
+  assert.match(p, /const ARROW_MASK = \[/, 'the arrows are pixel sprites');
+  assert.doesNotMatch(p, /txt\(g, ARROW\[/, 'no glyph arrows');
+  assert.match(p, /Math\.floor\(\(r\.width \* dpr\) \/ W\)/, 'a whole-number scale');
+  assert.match(p, /"CLA Pixel"/, 'the pixel face');
+  assert.doesNotMatch(p, /rgba\(0,0,0,\.6\)'; g\.fillText/, 'no soft shadow');
+});
+
+test('N6: a uniform\'s crew (an ambulance\'s two medics) never come out as twins', async () => {
+  const { unTwin } = await import('../server/systems/npc.js');
+  const peds = [], world = { query: () => peds }, mk = () => ({ s: 2, h: 1, hc: '#1a1410', b: 0, t: 6, tc: '#e8e8e8' });
+  for (let i = 0; i < 4; i++) peds.push({ archetype: 'medic', app: unTwin(world, mk(), 'medic', 0, 0) });
+  for (let i = 0; i < peds.length; i++) for (let j = i + 1; j < peds.length; j++) {
+    const a = peds[i].app, b = peds[j].app;
+    assert.ok(Math.abs(a.s - b.s) > 1 || a.hc !== b.hc, `medics ${i} and ${j} tell apart: ${JSON.stringify(a)} ${JSON.stringify(b)}`);
+  }
+});
