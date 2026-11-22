@@ -71,7 +71,13 @@ export function forPlayer(world, p) {
     if (e.lead && e.lead === ped.id) continue; // the lost pet at your heel (its owner is your arrow now)
     if (e.sched) continue;   // (the calendar's armored truck: its gold's marker, everyone's - extract.js)
     if (Math.hypot(e.x - ped.x, e.y - ped.y) > (e.kind === 'revive' ? HELP_PING_PX : EVENT_RANGE)) continue;
-    out.push({ id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y) });
+    // (who it's about, so the page's highlight stays on them as they move - the owner, 11-22: "the indicator will just show
+    // over nothing sometimes"; a street fight: both of them)
+    const who = e.kind === 'snatch' ? (e.dropAt ? 0 : e.thief) : e.kind === 'fight' ? e.a : e.kind === 'wallet' || e.kind === 'faint' ? e.who : 0;
+    const o = { id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y) };
+    if (who) o.e = who;
+    if (e.kind === 'fight' && e.b) o.e2 = e.b;
+    out.push(o);
   }
   // down and waiting: the ambulance you called, wherever it is
   const amb = p.amb && world.get(p.amb.vehId);

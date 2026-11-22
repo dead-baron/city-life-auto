@@ -306,7 +306,9 @@ float caustic(vec2 p, float t){
   return 1.0 - smoothstep(0.06, 0.32, abs(sin(q.x * 2.2 + t * 0.6) + sin(q.y * 2.0 - t * 0.5) + sin((q.x + q.y) * 1.6 + t * 0.7)));
 }
 vec3 caustics(vec2 w, float t, float k, ivec2 wq){
-  return caustic(w, t) * k > 0.38 + bayer4(wq) * 0.3 ? vec3(0.085, 0.105, 0.09) * (0.5 + k * 0.6) : vec3(0.0);
+  // (the water audit, 11-21: the net of light on a clear bed was drawn hard on or off, so as it drifted every line hopped
+  // from pixel to pixel - a cove's whole floor crawling. It comes up and dies away across its edge now)
+  return vec3(0.085, 0.105, 0.09) * (0.5 + k * 0.6) * smoothstep(0.26, 0.62, caustic(w, t) * k + (bayer4(wq) - 0.5) * 0.24);
 }
 float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 wq){
   float glint = 0.0, t = time;
@@ -338,11 +340,20 @@ float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 
     vec3 n1 = wnoiseD(vec2(q.x * 0.11 - t * 0.35, q.y * 0.045 + 13.0)), n2 = wnoiseD(vec2(r.x * 0.23 - t * 0.6, r.y * 0.09 + 57.0));
     vec2 g = (d1 * (n1.y * 0.11 + (n2.y * 0.184 - n2.z * 0.054) * 0.5) + e1 * (n1.z * 0.045 + (n2.y * 0.138 + n2.z * 0.072) * 0.5)) * (A * (inl ? 9.0 : 20.0) * f);
     alb *= 1.0 + (n1.x + n2.x * 0.5 - 0.75) * (inl ? (0.024 + wind4.x * 0.04) * (pond ? 0.35 : 1.0) : 0.05 + wind4.x * 0.06);
+    // (the water audit, 11-21 - the owner, 11-17: "water surface sparkle glistening rapidly". Measured with the art's
+    // clock stepped a tenth of a second (tools/nature/waterwatch.sh): 2 to 4% of a bay's pixels jumped every tenth of
+    // a second. The glints were single pixels under a needle-thin highlight on the ripples' slopes, so as the ripples
+    // slid by, each tenth of a second lit another set - and which pixels might glint was drawn afresh three times a
+    // second besides. A sparkle stands where it is now and breathes: one cell in fourteen can sparkle, each on its own
+    // beat of four to ten seconds, lit a fifth of the time, coming up and dying away; they gather on the ripples'
+    // crests (the broad field, which drifts slowly) and in the patches the sun finds)
     vec3 nw = normalize(vec3(n.xy + g, n.z));
-    glint = step(inl ? 0.8 + bayer4(wq) * 0.18 : 0.72 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), inl ? 200.0 : 60.0)) * (pond ? 0.22 : inl ? 0.4 : 0.5);
-    glint *= step(0.5, wnoise(w * 0.0053 - d1 * (t * 0.03) + 7.0)) * step(inl ? 0.6 : 0.75, hash2((inl ? wq : ivec2(floor(w * 0.5))) + ivec2(int(t * 3.0) * 131, 7)));   // (in patches, the odd pixel twinkling)
+    ivec2 gc = inl ? wq : ivec2(floor(w * 0.5));
+    float gh = hash2(gc + ivec2(7, 7)), crest = n1.x * 0.6 + n2.x * 0.4;
+    glint = step(0.93, hash2(gc + ivec2(31, 57))) * smoothstep(0.8, 1.0, 0.5 + 0.5 * sin(t * (0.6 + gh * 0.9) + gh * 40.0)) * smoothstep(0.42, 0.7, crest) * (pond ? 0.22 : inl ? 0.4 : 0.5);
+    glint *= smoothstep(0.45, 0.55, wnoise(w * 0.0053 - d1 * (t * 0.03) + 7.0));
     float k = inl ? (cf >= 192 && cf < 216 ? 1.0 : cf >= 216 && cf < 232 ? float(cf - (pond ? 224 : 216)) / 7.0 : 0.0) : cf >= 239 && cf <= 254 ? float(cf - 239) / 15.0 : cf >= 191 && cf <= 238 ? 0.55 * (1.0 - float(cf - 191) / 47.0) : 0.0;
-    if (k > 0.2) alb += caustics(w + d1 * (t * 3.5), t * 0.75, k * (pond ? 0.6 : 0.9), wq);
+    if (k > 0.2) alb += caustics(w + d1 * (t * 1.8), t * 0.45, k * (pond ? 0.6 : 0.9), wq);   // (still water: the net drifts slowly)
     if (inl) {
       n = nw;
       float sd = cf >= 192 && cf < 216 ? float(cf - 192) : 99.0, lap = 2.2 + sin(t * 1.3 + dot(w, vec2(0.05, 0.07))) * 1.1;

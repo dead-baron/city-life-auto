@@ -336,7 +336,7 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
     // up, facing away from it, a flash now and then - then on they go like anyone
     const now = world.time;
     n.state = 'film'; n.fx = 2 * at.x - at.mark.x; n.fy = 2 * at.y - at.mark.y; n.until = now + 20 + rng() * 20; n.filmedAt = now; n.photo = true; n.nextFlash = now + 1;
-    ped.filming = 2; ped.phoneOut = now; ped.appVer = (ped.appVer || 0) + 1; ped.a = Math.atan2(n.fy - at.y, n.fx - at.x);
+    ped.filming = 3; ped.phoneOut = now; ped.appVer = (ped.appVer || 0) + 1; ped.a = Math.atan2(n.fy - at.y, n.fx - at.x);   // (3: a selfie - the descriptor's ph; drawn as the filming hold until the polish pass draws the arm out)
   }
   if (P.sleep) { n.state = 'passed'; ped.passedOut = true; ped.downUntil = 0; ped.sleeping = true; }
   if (P.cart) { n.spot = { x: at.x, y: at.y }; ped.a = Math.PI / 2; }

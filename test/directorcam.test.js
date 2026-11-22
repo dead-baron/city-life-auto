@@ -289,3 +289,38 @@ test('the clean screen has nothing on it: the close X and the picture button hid
     assert.ok(!cls.has('cine-clean') && !cls.has('cine-woke'));
   } finally { document.body.classList = was; }
 });
+
+test('a shot tapped on its own: Next and the one before step through its list (they used to just end it); at its end it stops (pre-beta quick wins)', async () => {
+  const { D, sent } = page();
+  const id = KEPT.find((q) => { const l = shotsOf(SCENES[q].g); return l.length > 2 && l.indexOf(q) < l.length - 1; }), list = shotsOf(SCENES[id].g), i = list.indexOf(id);
+  D.shot(id);
+  D.script(begin(id, 1, false));
+  D.next(1);
+  assert.equal(sent.at(-1).id, list[i + 1], 'Next asks for the next shot of its section');
+  D.script(begin(sent.at(-1).id, 2, false));
+  D.next(-1);
+  assert.equal(sent.at(-1).id, id, 'and back');
+  D.script(begin(id, 3, false));
+  const n = sent.length;
+  D.script({ t: 'dscene', off: 1, seq: 3, why: 'done' });   // (its end: it stops - no next asked for)
+  await new Promise((r) => setTimeout(r, 750));
+  assert.ok(!sent.slice(n).some((m) => m.id), `nothing more asked for: ${JSON.stringify(sent.slice(n))}`);
+});
+
+test('a place shot plays its camera move on the page: held, go, then the camera travels with the shot (pre-beta quick wins)', () => {
+  const bad = [];
+  for (const q of placeShots) {
+    const { D, S, frame, setWarm } = page();
+    D.shot(q.id);
+    D.script(begin(q.id, 1, true));
+    setWarm({ ok: true, scrHave: 9, scr: 9 });
+    frame(1 / 30, 40);   // (past the hold's minimum: 'go')
+    D.script({ ...begin(q.id, 1, false, S.renderTick), held: 0 });
+    frame(1 / 30, 3);
+    const a = { x: S.cam.x, y: S.cam.y, z: S.cam.zoom };
+    frame(1 / 30, Math.round((q.len - 2) * 30));
+    const b = { x: S.cam.x, y: S.cam.y, z: S.cam.zoom };
+    if (!(Math.hypot(a.x - b.x, a.y - b.y) > 30 || Math.abs(a.z - b.z) > 0.05)) bad.push(`${q.n}: (${Math.round(a.x)},${Math.round(a.y)} z${a.z.toFixed(2)}) -> (${Math.round(b.x)},${Math.round(b.y)} z${b.z.toFixed(2)})`);
+  }
+  assert.deepEqual(bad, [], bad.join('\n'));
+});

@@ -37,7 +37,13 @@ const LABEL = { near: 'Near', crew: 'Crew', faction: 'Faction', phone: 'Phone' }
 const KEYS = [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"], ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?'], ['SHIFT', 'SPACE', 'DEL', 'SEND']];
 const SAY = ['near', 'crew', 'faction'];   // (the sheet's channels: phone messages live in the phone's Messages app)
 const OFF_LABEL = { near: 'Near - people around you, about ' + CHAT.nearM + ' m', crew: 'Crew - your crew, wherever they are', faction: 'Faction - the police on duty, or your gang', phone: 'Phone messages - kept for you while this is off' };
-const BUBBLE_MS = 6000, OWN_MS = 4500, BUBBLE_LINES = 2, TYPING_EVERY = 3000, FEED_MS = 8000, THREAD_MAX = 40, THREADS_MAX = 40;
+// (the owner, 11-22: "there isn't an active chat box on screen so you wouldn't really know people are talking"; "I do like
+// having speech bubbles with things people are typing": the feed keeps more lines - FEED_N by device - and your own too,
+// each for FEED_MS; a long line said near you gets a bubble cut at CAP_CH with an ellipsis, its whole in the feed and the log)
+const FEED_N = { desk: 4, side: 2, up: 2 }, CAP_CH = 44;
+const BUBBLE_MS = 6000, OWN_MS = 4500, BUBBLE_LINES = 2, TYPING_EVERY = 3000, FEED_MS = 10000, THREAD_MAX = 40, THREADS_MAX = 40;
+// a long line's bubble: its start, cut at the last word that fits CAP_CH, and an ellipsis
+export function capLine(t) { if (t.length <= CAP_CH) return t; const c = t.slice(0, CAP_CH); const i = c.lastIndexOf(' '); return (i > CAP_CH * 0.6 ? c.slice(0, i) : c).replace(/[\s,.;:!?-]+$/, '') + '\u2026'; }
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // (the kit's tokens only: test/uitokens.test.js reads this)
@@ -63,7 +69,7 @@ body:not(.touch) #hud:has(#hints:not(.off)) #cht-feed { bottom: calc(var(--sb) +
 body.touch.portrait #cht-feed { position: fixed; left: var(--sl); top: calc(var(--st) + 236px); width: calc(100vw - var(--sl) - var(--sr)); }
 #cht-feed:empty, body.cht-open #cht-feed { display: none; }
 .cht-fl { max-width: 100%; padding: 3px 8px 3px 6px; background: var(--pad-veil); border: 2px solid var(--pad-ink); border-left: 4px solid var(--pad-cream); border-radius: 0; box-shadow: none; font: 700 var(--fs-2) var(--pixel); line-height: 1.3; color: var(--pad-cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: auto; cursor: pointer; touch-action: manipulation; transition: opacity var(--t3) var(--ease); }
-.touch #cht-feed .cht-fl:not(:last-child) { display: none; }
+.cht-fl.own { opacity: .8; } .cht-fl.own.out { opacity: 0; }
 .cht-fl.out { opacity: 0; }
 .cht-fl.crew { border-left-color: var(--money); } .cht-fl.faction { border-left-color: var(--info); } .cht-fl.phone { border-left-color: var(--gold); } .cht-fl.em { border-left-color: var(--lotus); }
 .cht-fl b { color: var(--gold-hi); }
@@ -281,12 +287,13 @@ export function createChat(ctx) {
   if (tl) tl.appendChild(feed); else ($('hud') || host).appendChild(feed);
   feed.onclick = () => { if (ctx.playing()) open(); };
   function feedLine(l) {
-    if (isOpen || l.own) return;
+    if (isOpen) return;
     const d = doc.createElement('div');
-    d.className = `cht-fl ${l.k === 'emote' ? 'em' : l.ch || ''}`;
+    d.className = `cht-fl ${l.k === 'emote' ? 'em' : l.ch || ''}${l.own ? ' own' : ''}`;
     d.innerHTML = l.k === 'emote' ? `<b>${esc(l.n)}</b> ${esc(EMOTES[l.e].text)}` : `${l.ch !== 'near' ? `${LABEL[l.ch]} · ` : ''}<b>${esc(l.n)}:</b> ${esc(l.text)}`;
     feed.appendChild(d);
-    while (feed.children.length > 2) feed.firstChild.remove();   // (two on a desktop, the newest on a phone: its CSS)
+    const nMax = !doc.body.classList.contains('touch') ? FEED_N.desk : doc.body.classList.contains('portrait') ? FEED_N.up : FEED_N.side;
+    while (feed.children.length > nMax) feed.firstChild.remove();   // (FEED_N: four on a desktop, two on a phone either way)
     setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 300); }, FEED_MS);
   }
 
@@ -495,7 +502,7 @@ export function createChat(ctx) {
         if (m.ch === 'phone') threadAdd(m.own ? m.to : m.id, m.own ? m.tn : m.n, m.own, l.text, m.at || Date.now());
         push(l);
         if (m.ch === 'near') EM.typing(m.eid, false);
-        if (m.ch === 'near' && m.bb) bubble(m.eid, l.text, false, m.own, m.id, m.n);   // (a long line: the log only)
+        if (m.ch === 'near') bubble(m.eid, m.bb ? l.text : capLine(l.text), false, m.own, m.id, m.n);   // (a long line: its start, cut at a word, with an ellipsis - the whole of it in the feed and the log)
         return;
       }
       case 'emote': {

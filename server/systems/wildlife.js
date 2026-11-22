@@ -878,6 +878,16 @@ export function edgeSpot(map, x, y) {
     if (!ground(map, ax, ay)) continue;
     for (let j = 0; j < 8; j++) { const ang = j * 0.785; if (freshAt(map, ax + Math.cos(ang) * 40, ay + Math.sin(ang) * 40)) return [ax, ay]; }
   }
+  // the random tries missed (a thin bank, a small lake): rings outward from the water, nearest bank first - a lake with
+  // a shore always has one (the staged "bear fishing" at Pine Lake found "no room" on 11-22)
+  for (let r = 24; r <= 640; r += 24) {
+    const n = Math.max(8, Math.round(r / 16));
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * 6.2832, ax = x + Math.cos(a) * r, ay = y + Math.sin(a) * r;
+      if (!ground(map, ax, ay)) continue;
+      for (let j = 0; j < 8; j++) { const ang = j * 0.785; if (freshAt(map, ax + Math.cos(ang) * 40, ay + Math.sin(ang) * 40)) return [ax, ay]; }
+    }
+  }
   return null;
 }
 // the falls near (x, y) (where the salmon leap: the nature sites' falls, as shared/ledges.js reads them)

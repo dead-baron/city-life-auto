@@ -25,7 +25,7 @@ const storePoi = (w, id) => w.map.pois.find((p) => W.storeOf(p) === id && p.outs
 
 test('the catalogue is for sale: every piece sold somewhere, every store and store kind in the world as a walk-in', () => {
   const w = makeWorld();
-  for (const P of LK.PIECES) if (P && P.price > 0) assert.ok(W.sellerOf(P.i), `${P.name} is sold somewhere`);
+  for (const P of LK.PIECES) if (P && P.price > 0 && (W.PASS_SOLD || !P.d.pp)) assert.ok(W.sellerOf(P.i), `${P.name} is sold somewhere`);
   // every store has a place in the world (the hunting places sell outdoor clothes at their counters)
   for (const id of Object.keys(W.STORES)) assert.ok(w.map.pois.some((p) => W.storeOf(p) === id), `a place that is ${id}`);
   // every store kind of the catalogue is sold at a walk-in store

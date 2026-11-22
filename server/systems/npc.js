@@ -9,7 +9,7 @@ import { isTurf, PED_BLOCK, isSwimming, nearestLand } from '../../shared/map.js'
 import { mulberry32 } from '../../shared/rng.js';
 import { arenaAt } from '../../shared/carsoccer.js';
 import { circleVsObb } from '../../shared/math.js';
-import { ARCHETYPES, makeAppearance, BUILDS, rollBuild } from '../entities.js';
+import { ARCHETYPES, makeAppearance, BUILDS, rollBuild, SKINS, HAIR as HAIR_COLS } from '../entities.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
 import * as law from './law.js';
@@ -55,6 +55,21 @@ const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const CRAWL_SPEED = 0.17; // dragging themselves along on the stomach: this fraction of walking pace
 let rng = mulberry32(99);
 
+const TWIN_PX = 260;
+// two of a uniform look alike when their skins are a step apart or less and their hair the same colour (under a cap the
+// skin is most of what tells them apart)
+const twins = (a, b) => a.t === b.t && a.tc === b.tc && Math.abs((a.s | 0) - (b.s | 0)) <= 1 && a.hc === b.hc;
+export function unTwin(world, app, archetype, x, y) {
+  if (!world.query) return app;
+  const near = [];
+  for (const e of world.query(x, y, TWIN_PX, K.PED)) if (e.archetype === archetype && e.app && !e.app.lk && e.app !== app) near.push(e.app);
+  for (let k = 0; k < SKINS.length && near.some((o) => twins(o, app)); k++) {   // (two skins on, another hair colour and cut, until it's nobody's here)
+    app.s = (app.s + 2) % SKINS.length;
+    app.h = (app.h + 1) % 6;
+    app.hc = HAIR_COLS[(Math.max(0, HAIR_COLS.indexOf(app.hc)) + 3) % HAIR_COLS.length];
+  }
+  return app;
+}
 export function spawnNpc(world, archetype, x, y, role = 'civ') {
   const a = ARCHETYPES[archetype] || ARCHETYPES.casual;
   // dressed from the wardrobe (npclooks.js: a look for this kind of person in this district, its code on the wire); the
@@ -63,6 +78,10 @@ export function spawnNpc(world, archetype, x, y, role = 'civ') {
   const bi = dressed ? dressed.bi : rollBuild(rng, archetype);
   const b = BUILDS[bi];
   const app = dressed ? dressed.app : makeAppearance(rng, archetype);
+  // (a uniform's people - an ambulance's two medics, a SWAT team, a rescue crew - all wear the same thing: the owner, 11-22,
+  // "two identical NPCs next to each other outside the hospital". Nobody in one near you shares a face: another skin,
+  // hair and build than the same uniform beside them)
+  if (!dressed) unTwin(world, app, archetype, x, y);
   app.bd = bi;
   const hp = Math.round(a.hp * b.hp * (0.9 + rng() * 0.2));
   const ped = world.spawnPed(x, y, { hp, app, archetype, a: rng() * Math.PI * 2 });

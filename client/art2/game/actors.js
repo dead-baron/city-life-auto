@@ -10,7 +10,7 @@ import { vehicleModel, vehicleAnchors, carPaint, patchHidden, paintSheen, VEHICL
 import { animalModel, renderUpright, ANIMALS } from '../animals.js';
 import { birdModel, BIRDS } from '../birds.js';
 import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
-import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
+import { CRITTERS, critterFrames, shadowBlob, mirror } from '../critters.js';
 import { groundSprite as forageGround } from '../forage.js';
 import { VEHICLE_BY_INDEX, PAINTS, unpackVehDamage } from '../../../shared/vehicles.js';
 const ART = {};   // (useArt: ferrisCab, hotAirBalloon, starfish; horseModel - loadArt)
@@ -860,6 +860,7 @@ const copySprite = (S) => {
   const G = new GBuf(S.w, S.h);
   G.col.set(S.col); G.nrm.set(S.nrm); G.z.set(S.z); G.emi.set(S.emi); G.flag.set(S.flag);
   G.ax = S.ax; G.ay = S.ay;
+  if (S.ap) G.ap = S.ap;   // (drawn at the art pixel already)
   if (S.light) G.light = { ...S.light };
   return G;
 };
@@ -938,7 +939,101 @@ export function v1DecalFrame(d) {
 // left = mirrored (facing west). critterInfo(kind) -> frames, fps, flight altitude, shadow radius.
 export const CRITTER_NAMES = Object.keys(CRITTERS);
 export const critterKey = (kind, frame = 0, left = false) => `k|${kind}|${frame | 0}|${left ? 1 : 0}`;
-export function critterSprite(kind, frame = 0, left = false) { const fr = critterFrames(CRITTERS[kind] ? kind : 'pigeon', !!left); return copySprite(fr[((frame | 0) % fr.length + fr.length) % fr.length]); }
+// ---- the small live ones at the game's art pixel ----------------------------------------------------------------------
+// critters.js paints them 1 world px a pixel with a 1 px ink line round them - right for the chunks' scenery. As live
+// sprites the game halves each to its 2 px art pixel, and the halving kept the ink wherever a block met it: a pigeon ten
+// pixels long came out nearly all outline. The owner (11-21 09:27) likes their painted shapes - "return back to the
+// before but just see if a little more polish makes it look better" - so they stay the painted frames, halved here with
+// one rule changed: a block that holds any of the bird shows the bird, not the line round it (the texel nearest the
+// block's mean colour, a bright eye or bill kept when it is the block's only one); a block of line alone stays line, so
+// each keeps its size and its shape.
+// (Here, not in critters.js: that file is part of the chunks' bake, and a change to it is a new build of every chunk.)
+const TIDY = new Set(['pigeon', 'seagull', 'bee', 'frog', 'squirrel', 'heron']);   // (not the dragonfly: its wings' dark veins are the picture; the sparrow, the butterflies and the rabbit are their own pictures, below)
+function tidyDown(g) {
+  const W = g.w, H = g.h, C = g.col, mx = Math.round(g.ax || 0) & 1, my = Math.round(g.ay || 0) & 1;
+  const w = (W + mx + 1) >> 1, h = (H + my + 1) >> 1, on = (x, y) => x >= 0 && y >= 0 && x < W && y < H && C[(y * W + x) * 4 + 3] >= 128;
+  // the painted ink: the outermost ring, where it is dark
+  const ink = new Uint8Array(W * H);
+  let ring = 0, dark = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!on(x, y) || (on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1))) continue;
+    const j = (y * W + x) * 4; ring++;
+    if (C[j] * 0.3 + C[j + 1] * 0.5 + C[j + 2] * 0.2 < 80) { ink[y * W + x] = 1; dark++; }
+  }
+  if (dark <= ring * 0.5) return null;   // (painted without a line - the butterflies' wings: as the game halves it)
+  const G = new GBuf(w, h);
+  G.ax = (Math.round(g.ax || 0) + mx) >> 1; G.ay = (Math.round(g.ay || 0) + my) >> 1; G.ap = 2;
+  const T = [0, 0, 0, 0];
+  for (let by = 0; by < h; by++) for (let bx = 0; bx < w; bx++) {
+    let n = 0, all = 0, r = 0, gg = 0, b = 0, ik = -1;
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+      const x = 2 * bx - mx + dx, y = 2 * by - my + dy;
+      if (!on(x, y)) continue;
+      all++;
+      if (ink[y * W + x]) { ik = y * W + x; continue; }
+      const j = (y * W + x) * 4; T[n++] = y * W + x; r += C[j]; gg += C[j + 1]; b += C[j + 2];
+    }
+    if (all < 2) continue;
+    if (!n) T[n++] = ik;   // (only the line there: the line stays - the shape keeps its size)
+    else { r /= n; gg /= n; b /= n; }
+    // (a lone bright texel - an eye, a bill - is the block's; otherwise the one nearest the mean)
+    let best = T[0], bd = 1e9, sat = -1, sx = -1, ns = 0;
+    for (let q = 0; q < n; q++) {
+      const j = T[q] * 4, d = Math.abs(C[j] - r) + Math.abs(C[j + 1] - gg) + Math.abs(C[j + 2] - b);
+      if (d < bd) { bd = d; best = T[q]; }
+      const mxc = Math.max(C[j], C[j + 1], C[j + 2]), mnc = Math.min(C[j], C[j + 1], C[j + 2]), s2 = mxc > 90 ? (mxc - mnc) / mxc : 0;
+      if (s2 > 0.55) { ns++; if (s2 > sat) { sat = s2; sx = T[q]; } }
+    }
+    if (ns === 1 && n > 1) best = sx;
+    const j = best * 4, o = by * G.w + bx, oj = o * 4;
+    for (let q = 0; q < 4; q++) { G.col[oj + q] = C[j + q]; G.nrm[oj + q] = g.nrm[j + q]; G.emi[oj + q] = g.emi[j + q]; }
+    if (C[j + 3] >= 128 && !g.emi[j + 3]) G.col[oj + 3] = C[j + 3] > 200 ? 255 : C[j + 3];
+    G.z[o] = g.z[best]; G.flag[o] = g.flag[best];
+  }
+  return G;
+}
+// the sparrow alone is its own picture at the art pixel (the owner: "the sparrow looks better after"): on the ground,
+// then three wingbeats; all face east
+const CP = { o: [42, 38, 52], N: [156, 108, 72], D: [94, 64, 46], c: [228, 210, 178], K: [72, 62, 58], i: [30, 30, 40] };
+const BFLY2 = [['wk...kw|kOO.OOk|kOoboOk|.kobok.|.kObOk.|..k.k..', 6], ['.k...k.|.kO.Ok.|.kobok.|..kbk..|..obo..', 6], ['..k.k..|..kbk..|..obo..|...b...', 5], ['.w...w.|.kO.Ok.|.kObOk.|..obo..|..kbk..', 6]];
+const CART = { sparrow: [3, [['...ooo.|.ooNNiK|oDNcco.|.occo..|..o.o..', 5], ['..oD...|..Dooo.|.ooNNiK|oDNcco.|.ooo...', 5], ['...ooo.|.oDDNiK|oDNcco.|.ooo...', 4], ['...ooo.|.ooNNiK|oDNcco.|.oDDo..|..Do...', 3]]],
+  // the butterflies from above (the owner, 11-21: "monarch could look better"): open, rising, closed, falling - black-edged
+  // wings with their pale tip spots, the body between; O light, o main, k edge, w spot, b body
+  monarch: [3, BFLY2, { O: [252, 168, 64], o: [226, 104, 30], k: [40, 26, 34], w: [244, 236, 220], b: [30, 22, 28] }],
+  blueWing: [3, BFLY2, { O: [176, 214, 255], o: [96, 150, 230], k: [30, 38, 76], w: [236, 244, 255], b: [26, 30, 52] }],
+  sulphur: [3, BFLY2, { O: [255, 226, 110], o: [236, 176, 34], k: [44, 30, 30], w: [255, 246, 200], b: [36, 26, 28] }],
+  // the rabbit, facing east (the owner, 11-21: "the pink in its ears back and look a little better"): sitting up, the
+  // leap, stretched out in the air, landing - a frame's third number is its own anchor column
+  rabbit: [5, [['....oo...|...opo...|...opoo..|..oBLLLeo|WoBBBLLLo|.oBBBBcc.|.oDDoDco.', 7], ['.....oo...|....opo...|....opooo.|...oBLLLeo|..oBBBLLL.|WoBBBBcc..|.oDDocc...|oD........', 8],
+    ['....oo......|.....opooo..|..oooBBLLLeo|WoBBBBBLLLL.|.oDBBBBccoL.|oD.oooo...o.', 8, 6], ['.....oo..|....opo..|WoooopLo.|.oBBBLLeo|.oBBBBLLo|..oDBBcc.|...oD.co.', 7, 4]],
+    { o: [62, 42, 44], B: [162, 122, 82], L: [200, 164, 120], D: [118, 86, 60], c: [238, 222, 198], W: [252, 248, 240], p: [230, 150, 148], e: [26, 22, 28] }] };
+const ACACHE = new Map();
+export function critterArt(kind, left) {
+  const key = kind + (left ? '<' : '>');
+  let fr = ACACHE.get(key);
+  if (fr !== undefined) return fr;
+  const D = CART[kind], old = critterFrames(kind);
+  if (D) {
+    const flagOf = (f) => { const g = old[f % old.length]; for (let i = 0; i < g.w * g.h; i++) if (g.col[i * 4 + 3]) return g.flag[i]; return 0; };
+    fr = D[1].map(([art, ay, axf], f) => {
+      const rows = art.split('|'), w = Math.max(...rows.map((r) => r.length)), G = new GBuf(w, rows.length), flag = flagOf(f);
+      G.ax = axf ?? D[0]; G.ay = ay;
+      // (each pixel faces the camera and a little up: the tones are in the picture; z its height over the anchor, in world px)
+      rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const c = (D[2] || CP)[r[x]]; if (c) G.put(x, y, c, [0, 0.55, 0.83], Math.max(0, (ay - y) * 2), null, flag); } });
+      const M = left ? mirror(G) : G;
+      M.ap = 2;
+      return M;
+    });
+  } else if (TIDY.has(kind)) { fr = critterFrames(kind, !!left).map(tidyDown); if (fr.some((g) => !g)) fr = null; }
+  else fr = null;   // (the leaves, the motes, the rings on the water: as painted, halved by the game)
+  ACACHE.set(key, fr);
+  return fr;
+}
+export function critterSprite(kind, frame = 0, left = false) {
+  const k = CRITTERS[kind] ? kind : 'pigeon';
+  const fr = (ART_PX === 2 && critterArt(k, !!left)) || critterFrames(k, !!left);
+  return copySprite(fr[((frame | 0) % fr.length + fr.length) % fr.length]);
+}
 export function critterInfo(kind) { const d = CRITTERS[kind]; return d ? { frames: d.frames, fps: d.fps, fly: !!d.fly, alt: d.alt || null, shadow: d.shadow || 0, ground: d.ground || null, air: d.air || null } : null; }
 export function critterShadow(r = 3) { return copySprite(shadowBlob(r)); }
 

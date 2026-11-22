@@ -115,7 +115,7 @@ async function init(args) {
   if (P.actors && P.actors.setArtPx) P.actors.setArtPx(ART);   // (voxel things render straight at the art pixel)
   if (P.actors && P.actors.setActorBudget) P.actors.setActorBudget(args.modelMB ? { modelMB: args.modelMB } : { lowMem });
   if (P.actors && P.actors.artFrom && args.art) P.actors.artFrom({ fleet: () => import(args.art.fleet), horse: () => import(args.art.horse) });   // (the newer art: loaded here when a sprite first wants it)
-  AIR.url = (args.art && args.art.air) || null;   // (the aircraft's: the first time one's sprite is asked for)
+  AIR.url = (args.art && args.art.air) || null; AIR.polish = (args.art && args.art.polish) || null;   // (the aircraft's: the first time one's sprite is asked for)
   const t1 = performance.now();
   const m = args.M || (args.key ? await readWorld(args.key) : null);
   return { mapMod, m, result: { ground: pc.ground, statics: pc.statics, actors: !!P.actors, peds: !!P.peds, errors: { ...pc.errors, ...P.errors }, modsMs, readMs: args.M ? 0 : performance.now() - t1, needWorld: !m && !args.noWorld } };
@@ -419,6 +419,7 @@ async function handle(msg) {
     if (P.actors && P.actors.needsArt && P.actors.needsArt(kind, a)) await P.actors.loadArt();   // (the newer art, the first time it's wanted: actors.js artFrom)
     if ((kind === 'air' || kind === 'airRotor') && !AIR.m && AIR.url) AIR.m = await import(AIR.url);
     if (kind === 'ped' && P.peds && P.peds.loadPoses && /^em/.test(a[1]) && !P.peds.isEmote(a[1])) await P.peds.loadPoses();   // (the round-2 emotes' poses, the first time one's wanted here: art2/poses.js)
+    if (kind === 'ped' && P.peds && P.peds.usePolish) { const pl = !!key && key[0] === '~'; if (pl && AIR.polish) await P.peds.loadPolish(AIR.polish); P.peds.usePolish(pl); }   // (the character polish pass, staged: peds.js)
     const fn = kind === 'ped' ? P.peds && P.peds.pedSprite : (P.actors && P.actors.SPRITES && P.actors.SPRITES[kind]) || (SPRITE_FN[kind] && SPRITE_FN[kind]());
     if (!fn) throw new Error(`no provider for ${kind} sprites`);
     const g = key ? sprCache.get(key, () => fn(...a)) : fn(...a);

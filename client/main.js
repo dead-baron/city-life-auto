@@ -111,6 +111,8 @@ if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection 
 setTimeout(preloadAudio, 1500);
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
+// (the character polish pass, staged - the debug menu's switch: the title's portrait and the creator draw with it too; docs/characters/NOTES.md)
+try { if (localStorage.getItem('cla.polish') === '1') window.CLA_POLISH = Promise.all([import('./art2/people.js'), import('./art2/peoplepolish.js')]).then(([p, m]) => p.setPolish(m.POLISH)).catch(() => {}); } catch { /* blocked */ }
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
 const afloat = (e) => e.swim || (e.kind === K.VEH && !!e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).kind === 'boat');
 S.fx.water = (x, y) => { const t = S.map ? S.map.tileAtPx(x, y) : -1; return WATER_T[t] === 1 ? 1 : t === T.BRIDGE && afloatUnder(S.ents.values(), x, y, afloat) ? 2 : 0; };   // (render/fx.js: 2 under a deck)
@@ -158,7 +160,7 @@ function launchCall(k, a) {
     // Messages app and Settings > Chat; while its line has the keys, the game's input rests: S.chatUp)
     const chat = ch.createChat({
       send, canvas, toast, screenOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry }) : null; },
-      headOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry - (e.rz ? liftOf(e.rz) : 0) - ((e.d && e.d.gt === 'emote' && EM_HEAD[e.d.em]) || SKULL_HEAD) }) : null; },   // (the top of the head: the balloons, the bubbles)
+      headOf: (eid) => { const e = S.ents.get(eid); if (!e || e.rx === undefined) return null; const q = worldToScreen({ x: e.rx, y: e.ry - (e.rz ? liftOf(e.rz) : 0) - ((e.d && e.d.gt === 'emote' && EM_HEAD[e.d.em]) || SKULL_HEAD) }); if (q && e.d && e.d.pl && e.d.n && e.id !== S.myPedId) q.y -= e.d.np && e.d.np.t ? 26 : 15; return q; },   // (over another player's name tag, which hangs just over the head: drawWorldLabels)   // (the top of the head: the balloons, the bubbles)
       moreEmotes: () => { if (S.playing && !topOverlay()) openHub('phone', 'emotes'); },
       device: () => input.device, playing: () => !!(S.playing && S.welcomed && !S.practice),
       focus: (on) => { S.chatUp = !!on; }, dot: (on) => { S.chatDot = on; $('b-chat').classList.toggle('dot', on); $('b-talk').classList.toggle('dot', on); },
@@ -168,7 +170,7 @@ function launchCall(k, a) {
     // (noGate: the title shows the age gate itself, in its own slot, before the first PLAY - withGate)
     acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
     S.launch = { acc, ga, chat, er };
-    acc.launchInfo().then((i) => { discordLinks(i && i.discord); supportLinks(i && i.support); }).catch(() => {});
+    acc.launchInfo().then((i) => { S.devOpen = !!(i && i.devOpen); syncDebugUi(); discordLinks(i && i.discord); supportLinks(i && i.support); }).catch(() => {});
     // the title's slots (UI-10): SIGN IN opens the account panel in the sign-in screen, the gate shows in the gate's -
     // with no sign-in provider switched on (today), the panel still has the transfer code and the name
     setAccountUi({
@@ -184,7 +186,7 @@ function launchCall(k, a) {
     if (k === 'msg') {
       // (a new session's account state: GA's ids again - the server forgets them with a session - and any errors queued
       // while offline go now)
-      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) { L.ga.setId(a.ga); L.ga.resend(); L.er.flush(); S.role = a.role || null; } L.acc.onMessage(a); } else L.chat.onMessage(a);
+      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) { L.ga.setId(a.ga); L.ga.resend(); L.er.flush(); S.role = a.role || null; syncDebugUi(); } L.acc.onMessage(a); } else L.chat.onMessage(a);
     } else if (k === 'play') { L.ga.event('play_click'); send({ t: 'ftue', s: 'title_play' }); }
     else if (k === 'world') { L.ga.event('in_world'); send({ t: 'ftue', s: 'in_world' }); }
     else if (k === 'perf') L.ga.perf(a);
@@ -421,7 +423,7 @@ const lookWait = [];
 import('../shared/look.js').then((m) => { LOOKS = m; for (const d of lookWait.splice(0)) lookApp(d); }).catch((e) => console.warn('[looks]', e));
 function lookApp(d) { if (!LOOKS) { lookWait.push(d); return; } const L = LOOKS.decodeLook(d.app.lk); if (L) { const fd = d.app.fd; d.app = LOOKS.lookToApp(L, d.app.lk); if (fd) d.app.fd = 1; } }   // (fd: the founder's look over it - client/art2/game/peds.js)
 function openCreator(mode) {
-  creatorP ||= import('./creator.js').then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k), zoom: () => baseZoom() }); S.creator = m; return m; });   // (zoom: the game's CSS px per world px - the creator draws you a little bigger than that)
+  creatorP ||= Promise.resolve(window.CLA_POLISH).then(() => import('./creator.js')).then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k), zoom: () => baseZoom() }); S.creator = m; return m; });   // (zoom: the game's CSS px per world px - the creator draws you a little bigger than that)
   creatorP.then((m) => m.open(mode, S.looks)).catch((e) => console.warn('[creator]', e));
 }
 
@@ -433,7 +435,7 @@ function onText(m) {
       else if (worldChanged(m)) break;   // (the server runs another world than the one this page asked its city worker for)
       else if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
       try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
-      S.welcomed = true; S.restore = false; S.pid = m.pid; S.dev = !!m.dev;
+      S.welcomed = true; S.restore = false; S.pid = m.pid; S.dev = !!m.dev; syncDebugUi();
       S.day = Number(m.day) || 0; S.snapLoop = undefined;   // (the day: the server's count of the loop's turns; onBinary counts on)
       if (!m.practice) S.everConnected = true;
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
@@ -1594,7 +1596,13 @@ function enterCity() {
 
 // Open the debug menu straight away, switching Dev Debug Mode on first if it's off (no password while the team
 // and friends are testing; if the server asks for one after all, its prompt opens).
+// Who sees the debug entry points (the HUD's button, Settings > Help's row, the ` key / pad): the owner and admins,
+// anyone already in Dev Debug Mode (or on a private dev server), and everyone only while the server's open dev mode is
+// on (CLA_DEV_OPEN, /launch.json devOpen) - other players never see them (pre-beta quick wins).
+function debugOk() { return !!(S.dev || S.devMode || S.devOpen || S.role === 'owner' || S.role === 'admin'); }
+function syncDebugUi() { document.body.classList.toggle('dbg-ok', debugOk()); }
 function openDebug() {
+  if (!debugOk()) return;
   if (S.dev || S.devMode) { if (topOverlay() !== 'dev') openOverlay('dev'); return; }
   if (!S.welcomed) return;
   S.openDevOnEnter = true;
@@ -1607,6 +1615,7 @@ setInterval(() => { const el = document.getElementById('dev-sound'); if (el && e
 // first time it's on - the page itself only shows or hides its button.
 let devMenu = null, devMenuP = null;
 function setupDev() {
+  syncDebugUi();
   const on = S.dev || S.devMode;
   if (!on) { $('dev').classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
   devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
@@ -1819,7 +1828,7 @@ function deathPad() {
 let bagMod = null, bagP = null;
 const bag = {
   show() {
-    (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); } }))))
+    (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); }, leave: () => { if (topOverlay() === 'inv') closeHub(); } }))))
       .then((b) => { if (topOverlay() === 'inv') b.show(); }).catch((e) => { bagP = null; console.warn('[bag]', e); });
   },
   hide() { if (bagMod) bagMod.hide(); },
@@ -2368,11 +2377,15 @@ function toggleFullscreen(force, auto = false) {
     Promise.resolve(req).then(followRotation).catch(() => {});
   } else if (!want && isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
 }
-for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
+$('t-fs').onclick = () => toggleFullscreen();
+// Settings > Graphics: a plain switch that shows whether you're in fullscreen now (F11 and Esc move it too; the owner, 11-17)
+$('s-fsnow').onchange = (e) => { toggleFullscreen(e.target.checked); setTimeout(() => { $('s-fsnow').checked = isFullscreen(); }, 600); };   // (refused: the switch goes back)
+$('s-fsnow').checked = isFullscreen();
 // the HUD's row: MENU (the hub on its last tab), PHONE, MAP - each closes the hub when it's on that tab
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
 $('b-chat').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };   // (chat: client/chat.js - the sheet, or away again)
+$('b-bag').onclick = () => { if (S.playing) toggleBag(); };   // (the bag on the HUD's row, I - pre-beta quick wins)
 $('b-emo').onclick = () => { if (S.playing && !S.practice) launchCall('emotes'); };   // (the emotes beside it on a desktop: the picker, as B - client/emotes.js)
 // the thumb's chat button (touch): a tap the sheet; the emote button beside it: a tap the emote picker (client/emotes.js)
 $('b-talk').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };
@@ -2381,7 +2394,7 @@ for (const id of ['b-talk', 'b-emote']) $(id).addEventListener('pointerdown', (e
 $('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
 $('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub('pause'); };
 $('ph-back').onclick = () => phone.back();
-for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });   // (older iPad Safari: the prefixed one)
+for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { document.body.classList.toggle('fs', isFullscreen()); $('s-fsnow').checked = isFullscreen(); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });   // (older iPad Safari: the prefixed one)
 
 // Let the phone rotate freely, even in fullscreen and in the installed app. 'any' follows the
 // rotation sensor and overrides an older landscape-only install (Android only refreshes an installed
@@ -2961,6 +2974,21 @@ function callCruiser() {
 // World events: a pixel highlight marks each one where it is (no arrow off screen: the owner, 11-17); the radar blip
 // shows the ones further away.
 const evSeen = new Map();
+const EV_NEAR = [90, 320], EV_NEAR_A = 0.3;   // the highlight: faded to EV_NEAR_A within EV_NEAR[0] world px of you, full from EV_NEAR[1]
+// Where an event's highlight goes: round the person it's about, where they are now (ev.e; a fight: both, ev.e2), framing
+// a standing figure (feet to head, SKULL_HEAD) - or, for a place (a robbed store, a crate), a square on the spot.
+// -> { x, cy (the frame's middle), rx, ry (its half sizes), y (the feet, for the distance) } | null
+function evFrame(ev) {
+  const at = (id) => { const e = id && S.ents.get(id); return e && e.rx !== undefined && !(e.flags & PF.INVEH) ? e : null; };
+  const a = at(ev.e), b = at(ev.e2);
+  if (a || b) {
+    const xs = [a, b].filter(Boolean), x0 = Math.min(...xs.map((q) => q.rx)), x1 = Math.max(...xs.map((q) => q.rx)), y0 = Math.min(...xs.map((q) => q.ry)), y1 = Math.max(...xs.map((q) => q.ry));
+    const x = (x0 + x1) / 2, foot = (y0 + y1) / 2;
+    return { x, y: foot, cy: (y0 - SKULL_HEAD + y1) / 2, rx: (x1 - x0) / 2 + 14, ry: (y1 - y0 + SKULL_HEAD) / 2 + 6 };
+  }
+  if (ev.e) return null;   // (about someone the page doesn't have in view yet: nothing over an empty spot)
+  return { x: ev.x, y: ev.y, cy: ev.y, rx: 14, ry: 14 };
+}
 let lostArt = 0;
 function drawEventArrows(g, list, z, now) {
   const tNow = performance.now() / 1000;
@@ -2990,25 +3018,37 @@ function drawEventArrows(g, list, z, now) {
       g.fillStyle = '#fff'; g.fillText(t, bx + 25 * u, oy + u); g.textAlign = 'center';
     }
     // (the owner, 11-17: no arrow pointing off screen - you see an event when it's on screen; there it gets an
-    // SNES-style highlight: four pixel corner brackets in its colour, stepping in and out, and a small bobbing chevron)
+    // SNES-style highlight: four pixel corner brackets in its colour and a small bobbing chevron. 11-22: "it still covers
+    // up the NPC a lot ... more subtle ... easier to see when you're further away ... once you start getting closer to it
+    // maybe it is a little faded away"; "the indicator will just show over nothing sometimes" - so: on the person it's
+    // about (ev.e, and a fight's second, ev.e2) where they are now, the brackets framing the figure, not over it; full
+    // strength from afar, fading to EV_NEAR_A as you walk up, the chevron gone up close)
+    const f = evFrame(ev);
+    if (!f) continue;
+    const me = S.ents.get(S.myPedId), dist = me && me.rx !== undefined ? Math.hypot(me.rx - f.x, me.ry - f.y) : 1e9;
+    const near = Math.max(0, Math.min(1, (dist - EV_NEAR[0]) / (EV_NEAR[1] - EV_NEAR[0])));   // 0 up close .. 1 far
     g.save();
-    g.globalAlpha = alpha;
-    const u = 1 / Math.max(z, 0.5), st = Math.floor(now * 4) % 2, R = (14 + st * 3) * u, L = 6 * u, w = 3 * u;
-    g.fillStyle = 'rgba(0,0,0,.8)';
-    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const cx = ev.x + sx * R, cy = ev.y + sy * R;
+    g.globalAlpha = alpha * (EV_NEAR_A + (1 - EV_NEAR_A) * near);
+    const u = 1 / Math.max(z, 0.5), st = Math.floor(now * 3) % 2, RX = f.rx + st * 2, RY = f.ry + st * 2, L = 5 * u, w = 2 * u;
+    const pts = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+    g.fillStyle = 'rgba(0,0,0,.7)';
+    for (const [sx, sy] of pts) {
+      const cx = f.x + sx * RX, cy = f.cy + sy * RY;
       g.fillRect(cx - (sx > 0 ? L : 0) - u, cy - (sy > 0 ? w : 0) - u, L + 2 * u, w + 2 * u);
       g.fillRect(cx - (sx > 0 ? w : 0) - u, cy - (sy > 0 ? L : 0) - u, w + 2 * u, L + 2 * u);
     }
     g.fillStyle = kind.color;
-    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const cx = ev.x + sx * R, cy = ev.y + sy * R;
+    for (const [sx, sy] of pts) {
+      const cx = f.x + sx * RX, cy = f.cy + sy * RY;
       g.fillRect(cx - (sx > 0 ? L : 0), cy - (sy > 0 ? w : 0), L, w);
       g.fillRect(cx - (sx > 0 ? w : 0), cy - (sy > 0 ? L : 0), w, L);
     }
-    const cy0 = ev.y - R - (10 + st * 2) * u;   // the chevron over it
-    g.beginPath(); g.moveTo(ev.x - 5 * u, cy0 - 4 * u); g.lineTo(ev.x + 5 * u, cy0 - 4 * u); g.lineTo(ev.x, cy0 + 2 * u); g.closePath();
-    g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 2 * u; g.stroke(); g.fill();
+    if (near > 0.35) {   // the chevron over it, from afar only
+      const cy0 = f.cy - RY - (8 + st * 2) * u;
+      g.globalAlpha *= Math.min(1, (near - 0.35) / 0.3);
+      g.beginPath(); g.moveTo(f.x - 4 * u, cy0 - 3 * u); g.lineTo(f.x + 4 * u, cy0 - 3 * u); g.lineTo(f.x, cy0 + 2 * u); g.closePath();
+      g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 2 * u; g.stroke(); g.fill();
+    }
     g.restore();
     slot++;
   }
@@ -3023,7 +3063,7 @@ function drawSuspectMarks(g, ids, z, now) {
     const e = S.ents.get(id);
     if (!e || e.rx === undefined || (e.flags & PF.INVEH)) continue;
     const down = e.flags & (PF.DOWN | PF.STUN | PF.DEAD);
-    const y = e.ry - 22;
+    const y = e.ry - SKULL_HEAD - 7 / z;   // (over the head at any zoom, not on the chest: the owner, 11-22 - overhead marks cover the person)
     g.save();
     if (down) {
       g.globalAlpha = 0.55 + 0.35 * Math.sin(now * 6);
@@ -3033,7 +3073,7 @@ function drawSuspectMarks(g, ids, z, now) {
       g.globalAlpha = 0.7;
       g.fillStyle = (now * 2 | 0) % 2 ? '#ff4a4a' : '#5b8cff';
       g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 1.2 / z;
-      g.beginPath(); g.moveTo(e.rx, y + 5); g.lineTo(e.rx - 4.5, y - 1); g.lineTo(e.rx + 4.5, y - 1); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(e.rx, y + 5 / z); g.lineTo(e.rx - 4.5 / z, y - 1 / z); g.lineTo(e.rx + 4.5 / z, y - 1 / z); g.closePath(); g.fill(); g.stroke();
     }
     g.restore();
   }
@@ -3232,6 +3272,7 @@ function render(dt) {
   else if (v1Draws(F)) drawWorldV1(F);
   else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, canvas.width, canvas.height); }
   veilTick(S, v2);   // (a teleport or a respawn: dark until what's on screen is baked - client/warmup.js)
+  dipTick(v2);   // (in or out of a walk-in: a short dip of the screen over the swap - art2/game/host.js DIP_MS)
   if (S.art2 && S.art2.exitHint) S.art2.exitHint(F, v2);   // (the way out of a walk-in while its inside is on its way: art2/game/host.js exitHint)
   if (F.spec) { // spectating close in: the new renderer's picture, the spectator's names / grid / players on top
     S.spec.overlay(g, W, H, DPR);
@@ -4141,6 +4182,17 @@ function walkInAt(x, y) {
 }
 // The walk-in you're standing in (riding the subway under a shop doesn't open it), easing every
 // walk-in's roof fade; `art` gets the ones whose floor plan shows this frame.
+// The door's dip (the owner, 11-22: a smoother way in and out than the inside popping up): while the art host holds a
+// walk-in's cut-away for the dip's middle (host.js dipAt), the screen darkens to DIP_A and back over DIP_MS - the swap
+// lands at the darkest. A div over the canvas, under the HUD; nothing at all when no swap is under way.
+const DIP_A = 0.55, DIP_MS_PAGE = 260;
+let dipEl = null;
+function dipTick(on) {
+  const h = S.art2, t = on && h && h.dipAt ? performance.now() - h.dipAt : 1e9;
+  const a = t < DIP_MS_PAGE ? DIP_A * Math.sin(Math.PI * t / DIP_MS_PAGE) : 0;
+  if (!dipEl) { if (!a) return; dipEl = document.createElement('div'); dipEl.id = 'dip'; const v = $('view'); if (v) v.after(dipEl); else document.body.appendChild(dipEl); }
+  dipEl.style.opacity = a ? a.toFixed(3) : '0';
+}
 function interiorTick(sp, art) {
   // (a balloon over a shop doesn't open it, nor a train under it; cuffed - custody.js walks you - it does)
   const cuffed = S.ctrlKind === CTRL.RIDER && !!S.ents.get(S.myPedId)?.d?.cf;
@@ -5161,7 +5213,8 @@ function drawSpanWire(sg, n) {
 // to see - the target too. A little pixel skull, made once and drawn crisp at any zoom, with a slow gold glow.
 const SKULL = ['...#####...', '.#########.', '###########', '###########', '##...#...##', '##...#...##', '###########', '.####.####.', '..#######..', '..#.#.#.#..', '..#######..'];
 let skullImg = null;
-const SKULL_HEAD = 46;   // world px from a standing person's feet to the top of their head (art v2 people)
+const TAG_S = 3, FIGHT_GAP_S = 6;   // BRUTE / TOUGH over a brawler: the first TAG_S s of a fight (a pause of FIGHT_GAP_S starts a new one)
+const SKULL_HEAD = window.CLA_POLISH ? 50 : 46;   // (the polish pass's people stand two art pixels taller: line 115)  // world px from a standing person's feet to the top of their head (art v2 people)
 const EM_HEAD = { sit: 30, crouch: 30, kneel: 36, lie: 14, sleep: 16, faceplant: 12, pushups: 16 };   // (the same, sat, crouched, knelt or lying: an emote's pose - client/art2/poses.js)
 function skullSprite() {
   if (skullImg) return skullImg;
@@ -5293,24 +5346,33 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
     if (p.flags & PF.INVEH && !p.d.pl) continue;
     let py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
     if (p.flags & PF.INVEH) py = tagY(p, vehs, py, z);
+    // (every overhead label hangs from the top of the head at any zoom - the owner, 11-22: names, BRUTE / TOUGH and the
+    // brawl bar sat over the face and chest. hd: the head's top; tagged: a player whose name shows - the marks over it go higher)
+    const hd = p.flags & PF.INVEH ? py - 22 / z : py - SKULL_HEAD,   // (in a vehicle: tagY's spot over it, the name where it was)
+      tagged = p.d.pl && p.d.n && p.id !== S.myPedId, tagUp = tagged ? (p.d.np && p.d.np.t ? 26 : 15) / z : 0;
     // (clear above the head at any zoom: the head's top is ~46 world px up; then a gap and half the skull, in screen px)
-    if ((!only || only.marks) && p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD) && !(S.launch && S.launch.chat.balloonOn(p.id))) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
+    if ((!only || only.marks) && p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD) && !(S.launch && S.launch.chat.balloonOn(p.id))) drawSkull(p.rx, hd - tagUp - ((p.flags & PF.FLARE) ? 46 : 16) / z, z, now);
     if ((!only || only.marks) && p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
       const bob = Math.sin(now * 10) * 3 / z;
-      g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, py - 30 / z + bob + 1.5 / z);
-      g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, py - 30 / z + bob);
+      g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, hd - tagUp - 6 / z + bob + 1.5 / z);
+      g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, hd - tagUp - 6 / z + bob);
       g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
     }
     if ((!only || only.rest) && !p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
-      // health bar over whoever you're brawling with; tough/brute builds get a tag so you can size them up
-      const y = py - 24 / z, bd = p.d.app ? p.d.app.bd : 1;
+      // health bar over whoever you're brawling with, just over the head; tough/brute builds get a tag so you can size them
+      // up - over the bar, and only for the first seconds of a fight (TAG_S; the owner, 11-22: "I dont think it needs to stay
+      // on for long"): a fight that stops for FIGHT_GAP_S and starts again shows it again
+      const y = hd - 9 / z, bd = p.d.app ? p.d.app.bd : 1;
       g.fillStyle = 'rgba(0,0,0,.75)'; g.fillRect(p.rx - 16 / z, y, 32 / z, 5 / z);
       g.fillStyle = p.hp < 0.3 ? '#ff4d5e' : '#7fe07f'; g.fillRect(p.rx - 15 / z, y + 1 / z, 30 / z * p.hp, 3 / z);
-      if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
+      if (!p.tagAt || S.loopClock - (p.tagSeen || 0) > FIGHT_GAP_S) p.tagAt = S.loopClock;
+      p.tagSeen = S.loopClock;
+      const ta = Math.min(1, (TAG_S - (S.loopClock - p.tagAt)) / 0.5);
+      if (bd >= 2 && ta > 0) { g.globalAlpha = ta; g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 3 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.globalAlpha = 1; }
     }
     if ((!only || only.tags) && p.d.pl && p.d.n && p.id !== S.myPedId) {
-      const y = py - 26 / z;
+      const y = hd - 4 / z;   // (the name's foot just over the head at any zoom - the owner, 11-22: "slightly above the player so it doesn't cover the player's character"; SKULL_HEAD carries the polish pass's taller people)
       const np = p.d.np, nm = np && np.k ? `[${np.k}] ${p.d.n}` : p.d.n;   // (their name color, title plate and crew tag: server cosmetics.js)
       const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade, a faint shadow and no edge; members bright, with a dark edge all round - told apart by lightness and the edge, no word: the owner, 11-16)
       if (gu) { g.fillStyle = 'rgba(0,0,0,.45)'; g.fillText(nm, p.rx + 1 / z, y + 1 / z); }

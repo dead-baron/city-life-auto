@@ -13,8 +13,8 @@ import { IN } from './input.js';
 // screen, the safe areas) with an icon and the label. An entry: [action, label, the flag it needs, { flag: the label then }].
 export const TOUCH_SLOTS = ['stick', 'fire', 'roll', 'act', 'car', 'c1', 'c2', 'u1', 'u2', 'u3', 'u4', 'wp'];
 const WP = ['nextw', 'WEAPON', 'wpn'];
-const UT = { stick: ['stick', 'AIM'], u1: ['use', 'ITEMS', 'items'], u2: ['light', 'LIGHT', 'light'], u3: ['cruiser', 'COP CAR', 'call'], u4: ['firetog', 'FIRE ON'], wp: WP };
-const UV = { stick: UT.stick, u1: UT.u1, u4: UT.u4, wp: WP };   // (in a vehicle, on a board, in the water: the stick, ITEMS, FIRE ON, the weapon)
+const UT = { stick: ['stick', 'AIM'], u1: ['use', 'BAG'], u2: ['light', 'LIGHT', 'light'], u3: ['cruiser', 'COP CAR', 'call'], u4: ['firetog', 'FIRE ON'], wp: WP };
+const UV = { stick: UT.stick, u1: UT.u1, u4: UT.u4, wp: WP };   // (in a vehicle, on a board, in the water: the stick, BAG, FIRE ON, the weapon)
 const AT = { act: ['action', 'ACT', 'pact'], ...UV };   // (in a vehicle ACT only with something to do)
 // (on foot too, since the owner's 11-13: "ACT and that Enter button do the same thing" - ACT shows only while the prompt names
 // it, pact: client/hud.js; by a car with nothing else there only the vehicle button shows, so the two never double up)

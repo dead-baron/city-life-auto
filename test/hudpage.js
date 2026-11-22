@@ -161,7 +161,7 @@ document.fonts.ready.then(() => setTimeout(() => { if (sc.dev === 'touch') fitPr
 export function framePage() {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="/client/style.css"><style>body { background: #4a5d48; } #game { background: repeating-linear-gradient(45deg, #4a5d48 0 40px, #55694f 40px 80px); }</style></head>
-<body><div id="game">${HUD}${TOUCH}</div><script type="module">${FRAME_JS}</script></body></html>`;
+<body class="dbg-ok"><div id="game">${HUD}${TOUCH}</div><script type="module">${FRAME_JS}</script></body></html>`;
 }
 
 // every scenario in an iframe of its size; the boxes collected into <pre id="out"> (read with chrome --dump-dom)

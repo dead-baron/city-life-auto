@@ -1,0 +1,766 @@
+# pass 2 # fail 0  test/acctdelete.test.js 6s
+# pass 12 # fail 0  test/acticons.test.js 0s
+# pass 9 # fail 0  test/activities.test.js 13s
+# pass 9 # fail 0  test/activityquit.test.js 9s
+# pass 6 # fail 0  test/admin-console.test.js 1s
+# pass 2 # fail 0  test/aircam.test.js 1s
+# pass 6 # fail 0  test/aircraftart.test.js 1s
+# pass 7 # fail 0  test/airhockey.test.js 1s
+# pass 2 # fail 0  test/airport.test.js 1s
+# pass 6 # fail 0  test/airtraffic.test.js 9s
+# pass 6 # fail 0  test/ambience.test.js 0s
+# pass 7 # fail 0  test/animalart.test.js 4s
+# pass 10 # fail 0  test/arcade.test.js 19s
+# pass 5 # fail 0  test/areaname.test.js 0s
+# pass 8 # fail 0  test/arms.test.js 8s
+# pass 15 # fail 0  test/arrests.test.js 20s
+# pass 12 # fail 0  test/art2.test.js 9s
+# pass 4 # fail 0  test/art2teleport.test.js 1s
+# pass 3 # fail 0  test/artcarry.test.js 23s
+# pass 9 # fail 0  test/artcdn.test.js 36s
+# pass 5 # fail 0  test/artlow.test.js 0s
+# pass 4 # fail 0  test/arts.test.js 1s
+# pass 2 # fail 0  test/atmpopup.test.js 7s
+# pass 2 # fail 0  test/autoweapons.test.js 10s
+# pass 8 # fail 0  test/b8jobs.test.js 10s
+# pass 1 # fail 0  test/barriers.test.js 8s
+# pass 6 # fail 0  test/bathhouse.test.js 13s
+# pass 6 # fail 0  test/bathhouses2.test.js 12s
+# pass 2 # fail 0  test/bayside.test.js 0s
+# pass 4 # fail 0  test/bikes.test.js 11s
+# pass 3 # fail 0  test/biolum.test.js 194s
+# pass 2 # fail 0  test/birds.test.js 0s
+# pass 9 # fail 0  test/biz.test.js 13s
+# pass 5 # fail 0  test/bladecolor.test.js 5s
+# pass 4 # fail 0  test/blades.test.js 11s
+# pass 6 # fail 0  test/blocking.test.js 11s
+# pass 1 # fail 0  test/bluffs.test.js 0s
+# pass 1 # fail 0  test/boatjam.test.js 11s
+# pass 15 # fail 0  test/bodyshape.test.js 53s
+# pass 4 # fail 0  test/bootplan.test.js 0s
+# pass 4 # fail 0  test/border.test.js 12s
+# pass 6 # fail 0  test/bounties.test.js 12s
+# pass 7 # fail 0  test/bowling.test.js 12s
+# pass 6 # fail 0  test/brawls.test.js 11s
+# pass 3 # fail 0  test/bridgelayers.test.js 5s
+# pass 7 # fail 0  test/bugreports.test.js 1s
+# pass 7 # fail 0  test/burning.test.js 12s
+# pass 13 # fail 0  test/business.test.js 17s
+# pass 10 # fail 0  test/calendar.test.js 19s
+# pass 5 # fail 1  test/calevents.test.js 16s
+# pass 2 # fail 0  test/calmstreets.test.js 476s
+# pass 2 # fail 0  test/calmwater.test.js 188s
+# pass 3 # fail 0  test/campfire-ui.test.js 0s
+# pass 4 # fail 0  test/campfires.test.js 8s
+# pass 9 # fail 0  test/careers.test.js 8s
+# pass 10 # fail 0  test/carsoccer.test.js 15s
+# pass 4 # fail 0  test/carts.test.js 10s
+# pass 6 # fail 0  test/casino.test.js 8s
+# pass 4 # fail 0  test/casinofloor.test.js 1s
+# pass 3 # fail 0  test/caveexit.test.js 8s
+# pass 3 # fail 0  test/cavelight.test.js 1s
+# pass 1 # fail 0  test/cedarfalls.test.js 0s
+# pass 10 # fail 0  test/cells.test.js 15s
+# pass 1 # fail 0  test/chaos.test.js 130s
+# pass 9 # fail 0  test/characters2.test.js 3s
+# pass 11 # fail 0  test/characters3.test.js 10s
+# pass 7 # fail 0  test/characters4.test.js 7s
+# pass 7 # fail 0  test/characters5.test.js 2s
+# pass 7 # fail 0  test/chatsafety.test.js 0s
+# pass 3 # fail 0  test/chatui.test.js 5s
+# pass 1 # fail 0  test/chesstables.test.js 8s
+# pass 3 # fail 0  test/cinema.test.js 9s
+# pass 1 # fail 0  test/cliffs.test.js 416s
+# pass 12 # fail 0  test/contacts.test.js 209s
+# pass 8 # fail 0  test/contacts2.test.js 7s
+# pass 1 # fail 0  test/contacts2w3.test.js 180s
+# pass 1 # fail 0  test/cooking.test.js 174s
+# pass 1 # fail 0  test/coralcay.test.js 165s
+# pass 48 # fail 0  test/core.test.js 61s
+# pass 1 # fail 0  test/country.test.js 6s
+# pass 2 # fail 0  test/covers.test.js 13s
+# pass 2 # fail 0  test/crag.test.js 6s
+# pass 5 # fail 0  test/crews.test.js 10s
+# pass 4 # fail 0  test/crime.test.js 8s
+# pass 5 # fail 0  test/crush.test.js 0s
+# pass 6 # fail 0  test/custody.test.js 11s
+# pass 6 # fail 0  test/dance.test.js 13s
+# pass 8 # fail 0  test/daylight.test.js 1s
+# pass 5 # fail 0  test/deathpack.test.js 8s
+# pass 1 # fail 0  test/desertwaters.test.js 0s
+# pass 3 # fail 0  test/devicewords.test.js 0s
+# pass 8 # fail 0  test/devplay.test.js 9s
+# pass 2 # fail 0  test/devtp.test.js 0s
+# pass 7 # fail 0  test/director.test.js 6s
+# pass 13 # fail 0  test/directorcam.test.js 2s
+# pass 4 # fail 0  test/dmath.test.js 9s
+# pass 5 # fail 0  test/doors.test.js 0s
+# pass 2 # fail 0  test/doorsbake.test.js 15s
+# pass 3 # fail 0  test/doorways.test.js 8s
+# pass 3 # fail 0  test/drivefx.test.js 0s
+# pass 2 # fail 0  test/drivein.test.js 9s
+# pass 7 # fail 0  test/drivejobs.test.js 11s
+# pass 5 # fail 0  test/dusting.test.js 7s
+# pass 6 # fail 0  test/elplatform.test.js 191s
+# pass 9 # fail 0  test/emotes.test.js 9s
+# pass 4 # fail 0  test/ems.test.js 16s
+# pass 16 # fail 0  test/explosions.test.js 21s
+# pass 3 # fail 0  test/facades.test.js 9s
+# pass 2 # fail 0  test/fallart.test.js 2s
+# pass 1 # fail 0  test/fallscenter.test.js 0s
+# pass 9 # fail 0  test/farming.test.js 8s
+# pass 6 # fail 0  test/felling.test.js 199s
+# pass 3 # fail 0  test/fenceexits.test.js 1s
+# pass 8 # fail 0  test/fences.test.js 8s
+# pass 9 # fail 0  test/ferries.test.js 184s
+# pass 4 # fail 0  test/festoon.test.js 0s
+# pass 3 # fail 0  test/finds.test.js 6s
+# pass 4 # fail 0  test/firebow.test.js 14s
+# pass 9 # fail 0  test/firefighter.test.js 20s
+# pass 3 # fail 0  test/fireflies.test.js 11s
+# pass 8 # fail 0  test/firstcar.test.js 14s
+# pass 14 # fail 0  test/fishing.test.js 9s
+# pass 8 # fail 0  test/fixwave.test.js 8s
+# pass 4 # fail 0  test/flags.test.js 6s
+# pass 4 # fail 0  test/fleet.test.js 6s
+# pass 13 # fail 0  test/flight.test.js 17s
+# pass 5 # fail 0  test/floraart.test.js 8s
+# pass 2 # fail 0  test/flow.test.js 0s
+# pass 3 # fail 0  test/fog.test.js 6s
+# pass 4 # fail 0  test/foodrooms.test.js 7s
+# pass 4 # fail 0  test/foraging.test.js 13s
+# pass 3 # fail 0  test/fountains.test.js 5s
+# pass 17 # fail 0  test/ftue.test.js 19s
+# pass 6 # fail 0  test/gamepad.test.js 7s
+# pass 15 # fail 0  test/gameplay.test.js 11s
+# pass 1 # fail 0  test/gangquiet.test.js 5s
+# pass 6 # fail 0  test/gardening.test.js 7s
+# pass 7 # fail 0  test/goals.test.js 6s
+# pass 5 # fail 0  test/golf.test.js 8s
+# pass 2 # fail 0  test/golfcart.test.js 8s
+# pass 3 # fail 0  test/grenades.test.js 7s
+# pass 1 # fail 2  test/gridlock.test.js 315s
+# pass 7 # fail 0  test/guestnames.test.js 1s
+# pass 5 # fail 0  test/guide.test.js 0s
+# pass 1 # fail 0  test/gullharbor.test.js 0s
+# pass 8 # fail 0  test/happenings.test.js 21s
+# pass 5 # fail 0  test/harvestart.test.js 0s
+# pass 3 # fail 0  test/heist.test.js 9s
+# pass 4 # fail 0  test/homeart.test.js 3s
+# pass 6 # fail 0  test/homedecor.test.js 7s
+# pass 10 # fail 0  test/homeinside.test.js 9s
+# pass 2 # fail 0  test/homeprompt.test.js 7s
+# pass 3 # fail 0  test/homereconnect.test.js 7s
+# pass 11 # fail 0  test/homes.test.js 12s
+# pass 1 # fail 0  test/homesofa.test.js 7s
+# pass 5 # fail 0  test/homeups.test.js 8s
+# pass 3 # fail 0  test/homewalls.test.js 1s
+# pass 9 # fail 0  test/honestliving.test.js 12s
+# pass 6 # fail 0  test/horses.test.js 9s
+# pass 9 # fail 1  test/hub.test.js 8s
+# pass 9 # fail 0  test/hudinfo.test.js 0s
+# pass 2 # fail 0  test/hudlayers.test.js 0s
+# pass 2 # fail 1  test/hudlayout.test.js 28s
+# pass 7 # fail 0  test/hunting.test.js 17s
+# pass 2 # fail 0  test/iconmerge.test.js 0s
+# pass 3 # fail 0  test/idle.test.js 14s
+# pass 2 # fail 0  test/idlepose.test.js 0s
+# pass 2 # fail 0  test/indoorchase.test.js 6s
+# pass 3 # fail 0  test/inputword.test.js 5s
+# pass 6 # fail 0  test/interiorload.test.js 7s
+# pass 3 # fail 0  test/itemart.test.js 0s
+# pass 3 # fail 0  test/jobcardinfo.test.js 7s
+# pass 4 # fail 0  test/jobrecall.test.js 9s
+# pass 4 # fail 0  test/jobway.test.js 9s
+# pass 5 # fail 0  test/k9.test.js 8s
+# pass 4 # fail 0  test/kbdrive.test.js 0s
+# pass 1 # fail 0  test/lakeside.test.js 1s
+# pass 10 # fail 0  test/launch-analytics.test.js 0s
+# pass 16 # fail 0  test/launch-auth.test.js 0s
+# pass 8 # fail 0  test/launch-chat.test.js 1s
+# pass 17 # fail 1  test/launch-review.test.js 0s
+# pass 12 # fail 0  test/launch-review2.test.js 1s
+# pass 10 # fail 0  test/launch-roles.test.js 0s
+# pass 8 # fail 0  test/launch-world.test.js 7s
+# pass 6 # fail 0  test/law.test.js 5s
+# pass 5 # fail 0  test/lazypage.test.js 1s
+# pass 3 # fail 0  test/ledges.test.js 5s
+# pass 9 # fail 0  test/leisure.test.js 12s
+# pass 6 # fail 0  test/lightning.test.js 0s
+# pass 4 # fail 0  test/lights.test.js 12s
+# pass 5 # fail 0  test/limits.test.js 0s
+# pass 5 # fail 0  test/line.test.js 6s
+# pass 4 # fail 0  test/loadbays.test.js 7s
+# pass 1 # fail 0  test/loadorder.test.js 2s
+# pass 9 # fail 0  test/lobby.test.js 8s
+# pass 7 # fail 0  test/logoff.test.js 14s
+# pass 13 # fail 0  test/look.test.js 7s
+# pass 7 # fail 0  test/lostpets.test.js 10s
+# pass 5 # fail 0  test/lowres.test.js 0s
+# pass 1 # fail 0  test/mansiondoor.test.js 5s
+# pass 12 # fail 0  test/mapwindow.test.js 14s
+# pass 2 # fail 0  test/meleefire.test.js 11s
+# pass 4 # fail 0  test/menupolish.test.js 0s
+# pass 3 # fail 0  test/minigames.test.js 8s
+# pass 5 # fail 0  test/mining.test.js 9s
+# pass 1 # fail 0  test/moneyloop.test.js 0s
+# pass 9 # fail 0  test/motorbikes.test.js 19s
+# pass 10 # fail 0  test/music.test.js 33s
+# pass 4 # fail 0  test/mycar.test.js 20s
+# pass 2 # fail 0  test/names.test.js 12s
+# pass 2 # fail 0  test/natcave.test.js 0s
+# pass 1 # fail 0  test/natcounty.test.js 191s
+# pass 43 # fail 0  test/nature.test.js 9s
+# pass 4 # fail 0  test/neonart.test.js 1s
+# pass 6 # fail 0  test/neonstrip.test.js 184s
+# pass 7 # fail 0  test/nightclubs.test.js 23s
+# pass 2 # fail 0  test/northgate2.test.js 0s
+# pass 1 # fail 0  test/northpoint.test.js 0s
+# pass 1 # fail 0  test/northshore.test.js 0s
+# pass 9 # fail 0  test/npcpeople.test.js 15s
+# pass 2 # fail 0  test/oldquarter.test.js 1s
+# pass 3 # fail 0  test/outfits.test.js 0s
+# pass 1 # fail 0  test/pagemodules.test.js 1s
+# pass 5 # fail 0  test/paramedic.test.js 12s
+# pass 2 # fail 0  test/parkducks.test.js 9s
+# pass 2 # fail 0  test/passersby.test.js 8s
+# pass 1 # fail 0  test/pelican.test.js 0s
+# pass 7 # fail 0  test/peoplelook.test.js 16s
+# pass 10 # fail 0  test/peoplepolish-wardrobe.test.js 31s
+# pass 6 # fail 0  test/peoplepolish.test.js 3s
+# pass 6 # fail 0  test/perf.test.js 26s
+# pass 4 # fail 0  test/pets.test.js 14s
+# pass 5 # fail 0  test/phones.test.js 8s
+# pass 1 # fail 0  test/pinehills.test.js 0s
+# pass 3 # fail 0  test/pinkmile.test.js 0s
+# pass 40 # fail 2  test/placementlint.test.js 339s
+# pass 17 # fail 0  test/plainblocks.test.js 346s
+# pass 11 # fail 0  test/police.test.js 170s
+# pass 7 # fail 0  test/policeair.test.js 10s
+# pass 6 # fail 0  test/pool.test.js 1s
+# pass 3 # fail 0  test/poolmatch.test.js 0s
+# pass 6 # fail 0  test/poolnpc.test.js 10s
+# pass 1 # fail 0  test/poolwater.test.js 1s
+# pass 1 # fail 0  test/port.test.js 0s
+# pass 4 # fail 0  test/portrait.test.js 0s
+# pass 3 # fail 0  test/practice.test.js 6s
+# pass 4 # fail 0  test/precut.test.js 0s
+# pass 10 # fail 0  test/predation.test.js 14s
+# pass 7 # fail 1  test/prison.test.js 327s
+# pass 1 # fail 0  test/promptfade.test.js 163s
+# pass 4 # fail 0  test/racebook.test.js 22s
+# pass 3 # fail 0  test/racers.test.js 170s
+# pass 1 # fail 0  test/railahead.test.js 159s
+# pass 6 # fail 0  test/reactions.test.js 11s
+# pass 8 # fail 0  test/realestate.test.js 8s
+# pass 3 # fail 0  test/redrock.test.js 170s
+# pass 2 # fail 0  test/redwood-art.test.js 7s
+# pass 2 # fail 0  test/redwood-fade.test.js 1s
+# pass 7 # fail 0  test/regions.test.js 13s
+# pass 13 # fail 0  test/regionwindow.test.js 11s
+# pass 2 # fail 0  test/replandecor.test.js 5s
+# pass 7 # fail 0  test/reputation.test.js 8s
+# pass 8 # fail 0  test/reroute.test.js 12s
+# pass 5 # fail 0  test/rescue.test.js 9s
+# pass 3 # fail 0  test/restspots.test.js 7s
+# pass 8 # fail 0  test/revive.test.js 11s
+# pass 7 # fail 0  test/ridegear.test.js 10s
+# pass 4 # fail 0  test/riders.test.js 7s
+# pass 1 # fail 0  test/ridexray.test.js 1s
+# pass 8 # fail 0  test/roadends.test.js 8s
+# pass 6 # fail 0  test/roads.test.js 20s
+# pass 8 # fail 0  test/robbery.test.js 10s
+# pass 4 # fail 0  test/rotorwash.test.js 0s
+# pass 1 # fail 0  test/roundcorners.test.js 1s
+--- second run (the files after test/roundcorners.test.js; stopped by the machine's two-hour limit after test/world3regions.test.js: 25 files not run) ---
+# pass 2 # fail 0  test/sam.test.js 7s
+# pass 9 # fail 0  test/sar.test.js 195s
+# pass 9 # fail 1  test/scenes.test.js 35s
+# pass 8 # fail 0  test/seasons.test.js 8s
+# pass 1 # fail 0  test/seethrough-gl.test.js 3s
+# pass 5 # fail 0  test/seethrough.test.js 0s
+# pass 2 # fail 0  test/serverload.test.js 15s
+# pass 1 # fail 0  test/shadowing.test.js 0s
+# pass 6 # fail 0  test/sharks.test.js 10s
+# pass 1 # fail 0  test/shopmarks.test.js 0s
+# pass 10 # fail 0  test/shoprooms.test.js 54s
+# pass 4 # fail 0  test/signals.test.js 6s
+# pass 8 # fail 0  test/signin-password.test.js 5s
+# pass 6 # fail 0  test/signs.test.js 164s
+# pass 11 # fail 0  test/sinks.test.js 7s
+# pass 14 # fail 0  test/skate.test.js 9s
+# pass 5 # fail 0  test/skills.test.js 7s
+# pass 5 # fail 0  test/skydive.test.js 8s
+# pass 5 # fail 0  test/slips.test.js 10s
+# pass 18 # fail 0  test/sound.test.js 0s
+# pass 1 # fail 0  test/southside.test.js 0s
+# pass 1 # fail 0  test/spawnmap.test.js 5s
+# pass 3 # fail 1  test/staffplayers.test.js 1s
+# pass 8 # fail 0  test/starter.test.js 8s
+# pass 5 # fail 0  test/startfresh.test.js 5s
+# pass 1 # fail 0  test/stocktanks.test.js 9s
+# pass 11 # fail 0  test/stops.test.js 13s
+# pass 2 # fail 0  test/storeicons.test.js 0s
+# pass 2 # fail 0  test/streetdice.test.js 6s
+# pass 13 # fail 0  test/streetlife.test.js 20s
+# pass 2 # fail 0  test/stretcher.test.js 0s
+# pass 1 # fail 0  test/strip.test.js 0s
+# pass 14 # fail 0  test/struggle.test.js 9s
+# pass 3 # fail 0  test/studio.test.js 0s
+# pass 1 # fail 0  test/sunsetbeach.test.js 0s
+# pass 12 # fail 0  test/surf.test.js 9s
+# pass 2 # fail 0  test/tableau.test.js 8s
+# pass 4 # fail 0  test/tabout.test.js 8s
+# pass 5 # fail 0  test/tank.test.js 8s
+# pass 6 # fail 0  test/tennis.test.js 11s
+# pass 0 # fail 1  test/titlebuttons.test.js 1s
+# pass 2 # fail 0  test/titlemenu.test.js 1s
+# pass 1 # fail 0  test/touchair.test.js 0s
+# pass 7 # fail 1  test/touchslots.test.js 1s
+# pass 5 # fail 0  test/tow.test.js 17s
+# pass 2 # fail 0  test/townfolk.test.js 184s
+# pass 6 # fail 0  test/townwork.test.js 6s
+# pass 5 # fail 0  test/track.test.js 1s
+# pass 7 # fail 0  test/trafficbox.test.js 9s
+# pass 11 # fail 0  test/trafficwalls.test.js 12s
+# pass 19 # fail 0  test/trains.test.js 21s
+# pass 2 # fail 0  test/trainsign.test.js 0s
+# pass 2 # fail 0  test/trainturns.test.js 1s
+# pass 13 # fail 0  test/transit.test.js 24s
+# pass 3 # fail 0  test/tunnelart.test.js 1s
+# pass 7 # fail 0  test/tunnels.test.js 5s
+# pass 6 # fail 1  test/uikit.test.js 0s
+# pass 11 # fail 1  test/uiscreens.test.js 0s
+# pass 7 # fail 0  test/uitokens.test.js 1s
+# pass 3 # fail 0  test/umbrellas.test.js 1s
+# pass 2 # fail 0  test/underdeck.test.js 6s
+# pass 7 # fail 0  test/underground.test.js 7s
+# pass 3 # fail 0  test/undergrowth.test.js 170s
+# pass 8 # fail 1  test/unlocks.test.js 9s
+# pass 5 # fail 0  test/unlocks2.test.js 8s
+# pass 6 # fail 0  test/updates.test.js 13s
+# pass 13 # fail 0  test/vehdamage.test.js 7s
+# pass 3 # fail 0  test/view.test.js 9s
+# pass 2 # fail 0  test/views.test.js 7s
+# pass 1 # fail 2  test/visaudit.test.js 254s
+# pass 2 # fail 0  test/walkinfront.test.js 180s
+# pass 3 # fail 0  test/walkinrooms.test.js 8s
+# pass 3 # fail 0  test/wantedladder.test.js 5s
+# pass 11 # fail 0  test/wardrobe.test.js 9s
+# pass 7 # fail 0  test/warmup.test.js 0s
+# pass 10 # fail 0  test/water.test.js 11s
+# pass 5 # fail 0  test/waterbake.test.js 8s
+# pass 10 # fail 0  test/waterlife.test.js 9s
+# pass 2 # fail 0  test/wayout.test.js 0s
+# pass 2 # fail 0  test/westhills.test.js 1s
+# pass 2 # fail 0  test/westhills2.test.js 0s
+# pass 2 # fail 0  test/westport.test.js 0s
+# pass 6 # fail 0  test/whatsnext.test.js 8s
+# pass 7 # fail 0  test/wildart.test.js 20s
+# pass 5 # fail 0  test/wildfolk.test.js 12s
+# pass 5 # fail 0  test/wildlife.test.js 12s
+# pass 5 # fail 0  test/wildmoves.test.js 9s
+# pass 8 # fail 0  test/wind.test.js 2s
+# pass 1 # fail 0  test/windowbake.test.js 9s
+# pass 2 # fail 0  test/windowlink.test.js 1s
+# pass 5 # fail 0  test/witnesses.test.js 11s
+# pass 1 # fail 0  test/woodjob.test.js 6s
+# pass 8 # fail 0  test/workjobs.test.js 11s
+# pass 7 # fail 0  test/world.test.js 9s
+# pass 5 # fail 0  test/world3.test.js 0s
+# pass 7 # fail 1  test/world3arrivals.test.js 212s
+# pass 5 # fail 0  test/world3b.test.js 2s
+# pass 1 # fail 0  test/world3beach.test.js 166s
+# pass 1 # fail 0  test/world3biomes.test.js 157s
+# pass 3 # fail 0  test/world3caves.test.js 178s
+# pass 4 # fail 0  test/world3city.test.js 3s
+# pass 2 # fail 0  test/world3clearings.test.js 163s
+# pass 4 # fail 0  test/world3clutter.test.js 0s
+# pass 3 # fail 0  test/world3coast.test.js 162s
+# pass 1 # fail 0  test/world3desert.test.js 179s
+# pass 2 # fail 0  test/world3dirt.test.js 164s
+# pass 1 # fail 0  test/world3doors.test.js 171s
+# pass 2 # fail 0  test/world3estuary.test.js 6s
+# pass 3 # fail 0  test/world3ferries.test.js 175s
+# pass 2 # fail 0  test/world3fleet.test.js 170s
+# pass 3 # fail 0  test/world3hubs.test.js 358s
+# pass 1 # fail 0  test/world3interchanges.test.js 175s
+# pass 1 # fail 0  test/world3kestrel.test.js 169s
+# pass 9 # fail 0  test/world3keys.test.js 169s
+# pass 1 # fail 0  test/world3marsh.test.js 170s
+# pass 0 # fail 1  test/world3mesa.test.js 347s
+# pass 4 # fail 0  test/world3passes.test.js 182s
+# pass 1 # fail 0  test/world3peaks.test.js 165s
+# pass 14 # fail 0  test/world3rail.test.js 409s
+# pass 5 # fail 0  test/world3rapids.test.js 404s
+# pass 2 # fail 0  test/world3redwoods.test.js 354s
+# pass 2 # fail 0  test/world3regions.test.js 423s
+
+# 2026-11-22 (pre-beta chat, Opus 5.5): the 23 files never run, then the fast files again (343, under 40 s each) on the batch-1 commits
+# pass 2 # fail 0  test/naturepieces.test.js 0s rc=0
+# pass 1 # fail 0  test/world3relief.test.js 207s rc=0
+# pass 2 # fail 0  test/world3rivers.test.js 209s rc=0
+# pass 1 # fail 0  test/world3roads.test.js 159s rc=0
+# pass 8 # fail 1  test/world3scenes.test.js 245s rc=1
+# pass 21 # fail 0  test/world3server.test.js 250s rc=0
+# pass 3 # fail 0  test/world3shops.test.js 5s rc=0
+# pass 3 # fail 0  test/world3subway.test.js 196s rc=0
+# pass 1 # fail 0  test/world3townmodels.test.js 170s rc=0
+# pass 1 # fail 0  test/world3towns.test.js 172s rc=0
+# pass 1 # fail 0  test/world3tropic.test.js 169s rc=0
+# pass 1 # fail 0  test/world3water.test.js 163s rc=0
+# pass 1 # fail 0  test/world3waterbodies.test.js 174s rc=0
+# pass 1 # fail 0  test/world3west.test.js 163s rc=0
+# pass 0 # fail 1  test/world3wild.test.js 185s rc=1
+# pass 3 # fail 0  test/world3window.test.js 313s rc=0
+# pass 1 # fail 0  test/world3woods.test.js 364s rc=0
+# pass 1 # fail 0  test/world3world.test.js 187s rc=0
+# pass 6 # fail 0  test/worldbuild.test.js 9s rc=0
+# pass 6 # fail 0  test/worldframe.test.js 17s rc=0
+# pass 2 # fail 0  test/worldmap.test.js 7s rc=0
+# pass 1 # fail 0  test/wrecks.test.js 0s rc=0
+# pass 3 # fail 0  test/xray.test.js 1s rc=0
+# pass 2 # fail 0  test/acctdelete.test.js 8s rc=0
+# pass 12 # fail 0  test/acticons.test.js 0s rc=0
+# pass 9 # fail 0  test/activities.test.js 18s rc=0
+# pass 9 # fail 0  test/activityquit.test.js 15s rc=0
+# pass 5 # fail 1  test/admin-console.test.js 1s rc=1
+# pass 2 # fail 0  test/aircam.test.js 0s rc=0
+# pass 6 # fail 0  test/aircraftart.test.js 2s rc=0
+# pass 7 # fail 0  test/airhockey.test.js 1s rc=0
+# pass 2 # fail 0  test/airport.test.js 0s rc=0
+# pass 6 # fail 0  test/airtraffic.test.js 15s rc=0
+# pass 6 # fail 0  test/ambience.test.js 1s rc=0
+# pass 7 # fail 0  test/animalart.test.js 5s rc=0
+# pass 10 # fail 0  test/arcade.test.js 36s rc=0
+# pass 5 # fail 0  test/areaname.test.js 1s rc=0
+# pass 8 # fail 0  test/arms.test.js 16s rc=0
+# pass 15 # fail 0  test/arrests.test.js 25s rc=0
+# pass 12 # fail 0  test/art2.test.js 13s rc=0
+# pass 4 # fail 0  test/art2teleport.test.js 1s rc=0
+# pass 3 # fail 0  test/artcarry.test.js 44s rc=0
+# pass 9 # fail 0  test/artcdn.test.js 84s rc=0
+# pass 5 # fail 0  test/artlow.test.js 0s rc=0
+# pass 4 # fail 0  test/arts.test.js 1s rc=0
+# pass 2 # fail 0  test/atmpopup.test.js 23s rc=0
+# pass 2 # fail 0  test/autoweapons.test.js 20s rc=0
+# pass 8 # fail 0  test/b8jobs.test.js 15s rc=0
+# pass 1 # fail 0  test/barriers.test.js 15s rc=0
+# pass 6 # fail 0  test/bathhouse.test.js 51s rc=0
+# pass 6 # fail 0  test/bathhouses2.test.js 30s rc=0
+# pass 2 # fail 0  test/bayside.test.js 0s rc=0
+# pass 4 # fail 0  test/bikes.test.js 33s rc=0
+# pass 2 # fail 0  test/birds.test.js 0s rc=0
+# pass 9 # fail 0  test/biz.test.js 30s rc=0
+# pass 5 # fail 0  test/bladecolor.test.js 25s rc=0
+# pass 4 # fail 0  test/blades.test.js 18s rc=0
+# pass 6 # fail 0  test/blocking.test.js 33s rc=0
+# pass 1 # fail 0  test/bluffs.test.js 0s rc=0
+# pass 1 # fail 0  test/boatjam.test.js 24s rc=0
+# pass 4 # fail 0  test/bootplan.test.js 0s rc=0
+# pass 4 # fail 0  test/border.test.js 27s rc=0
+# pass 6 # fail 0  test/bounties.test.js 42s rc=0
+# pass 7 # fail 0  test/bowling.test.js 25s rc=0
+# pass 6 # fail 0  test/brawls.test.js 28s rc=0
+# pass 3 # fail 0  test/bridgelayers.test.js 16s rc=0
+# pass 7 # fail 0  test/bugreports.test.js 1s rc=0
+# pass 7 # fail 0  test/burning.test.js 17s rc=0
+# pass 13 # fail 0  test/business.test.js 43s rc=0
+# pass 10 # fail 0  test/calendar.test.js 45s rc=0
+# pass 6 # fail 0  test/calevents.test.js 16s rc=0
+# pass 3 # fail 0  test/campfire-ui.test.js 1s rc=0
+# pass 4 # fail 0  test/campfires.test.js 15s rc=0
+# pass 9 # fail 0  test/careers.test.js 13s rc=0
+# pass 10 # fail 0  test/carsoccer.test.js 15s rc=0
+# pass 4 # fail 0  test/carts.test.js 11s rc=0
+# pass 6 # fail 0  test/casino.test.js 8s rc=0
+# pass 4 # fail 0  test/casinofloor.test.js 1s rc=0
+# pass 3 # fail 0  test/caveexit.test.js 9s rc=0
+# pass 3 # fail 0  test/cavelight.test.js 0s rc=0
+# pass 1 # fail 0  test/cedarfalls.test.js 0s rc=0
+# pass 10 # fail 0  test/cells.test.js 17s rc=0
+# pass 9 # fail 0  test/characters2.test.js 6s rc=0
+# pass 11 # fail 0  test/characters3.test.js 16s rc=0
+# pass 7 # fail 0  test/characters4.test.js 11s rc=0
+# pass 7 # fail 0  test/characters5.test.js 4s rc=0
+# pass 7 # fail 0  test/chatsafety.test.js 1s rc=0
+# pass 3 # fail 0  test/chatui.test.js 2s rc=0
+# pass 1 # fail 0  test/chesstables.test.js 11s rc=0
+# pass 3 # fail 0  test/cinema.test.js 14s rc=0
+# pass 8 # fail 0  test/contacts2.test.js 10s rc=0
+# pass 1 # fail 0  test/country.test.js 8s rc=0
+# pass 2 # fail 0  test/covers.test.js 18s rc=0
+# pass 2 # fail 0  test/crag.test.js 9s rc=0
+# pass 5 # fail 0  test/crews.test.js 12s rc=0
+# pass 4 # fail 0  test/crime.test.js 8s rc=0
+# pass 5 # fail 0  test/crush.test.js 1s rc=0
+# pass 6 # fail 0  test/custody.test.js 12s rc=0
+# pass 6 # fail 0  test/dance.test.js 13s rc=0
+# pass 8 # fail 0  test/daylight.test.js 1s rc=0
+# pass 5 # fail 0  test/deathpack.test.js 7s rc=0
+# pass 1 # fail 0  test/desertwaters.test.js 0s rc=0
+# pass 3 # fail 0  test/devicewords.test.js 0s rc=0
+# pass 8 # fail 0  test/devplay.test.js 10s rc=0
+# pass 2 # fail 0  test/devtp.test.js 1s rc=0
+# pass 7 # fail 0  test/director.test.js 6s rc=0
+# pass 13 # fail 0  test/directorcam.test.js 2s rc=0
+# pass 4 # fail 0  test/dmath.test.js 9s rc=0
+# pass 5 # fail 0  test/doors.test.js 0s rc=0
+# pass 2 # fail 0  test/doorsbake.test.js 15s rc=0
+# pass 3 # fail 0  test/doorways.test.js 9s rc=0
+# pass 3 # fail 0  test/drivefx.test.js 0s rc=0
+# pass 2 # fail 0  test/drivein.test.js 10s rc=0
+# pass 7 # fail 0  test/drivejobs.test.js 16s rc=0
+# pass 5 # fail 0  test/dusting.test.js 11s rc=0
+# pass 9 # fail 0  test/emotes.test.js 20s rc=0
+# pass 4 # fail 0  test/ems.test.js 40s rc=0
+# pass 16 # fail 0  test/explosions.test.js 26s rc=0
+# pass 3 # fail 0  test/facades.test.js 1s rc=0
+# pass 2 # fail 0  test/fallart.test.js 3s rc=0
+# pass 1 # fail 0  test/fallscenter.test.js 1s rc=0
+# pass 9 # fail 0  test/farming.test.js 23s rc=0
+# pass 3 # fail 0  test/fenceexits.test.js 1s rc=0
+# pass 8 # fail 0  test/fences.test.js 22s rc=0
+# pass 4 # fail 0  test/festoon.test.js 1s rc=0
+# pass 3 # fail 0  test/finds.test.js 15s rc=0
+# pass 4 # fail 0  test/firebow.test.js 23s rc=0
+# pass 8 # fail 1  test/firefighter.test.js 29s rc=1
+# pass 3 # fail 0  test/fireflies.test.js 8s rc=0
+# pass 8 # fail 0  test/firstcar.test.js 20s rc=0
+# pass 14 # fail 0  test/fishing.test.js 14s rc=0
+# pass 8 # fail 0  test/fixwave.test.js 12s rc=0
+# pass 4 # fail 0  test/flags.test.js 9s rc=0
+# pass 4 # fail 0  test/fleet.test.js 10s rc=0
+# pass 13 # fail 0  test/flight.test.js 26s rc=0
+# pass 5 # fail 0  test/floraart.test.js 17s rc=0
+# pass 2 # fail 0  test/flow.test.js 1s rc=0
+# pass 3 # fail 0  test/fog.test.js 17s rc=0
+# pass 4 # fail 0  test/foodrooms.test.js 23s rc=0
+# pass 4 # fail 0  test/foraging.test.js 26s rc=0
+# pass 3 # fail 0  test/fountains.test.js 9s rc=0
+# pass 17 # fail 0  test/ftue.test.js 27s rc=0
+# pass 6 # fail 0  test/gamepad.test.js 11s rc=0
+# pass 15 # fail 0  test/gameplay.test.js 18s rc=0
+# pass 1 # fail 0  test/gangquiet.test.js 8s rc=0
+# pass 6 # fail 0  test/gardening.test.js 12s rc=0
+# pass 7 # fail 0  test/goals.test.js 8s rc=0
+# pass 5 # fail 0  test/golf.test.js 15s rc=0
+# pass 2 # fail 0  test/golfcart.test.js 12s rc=0
+# pass 3 # fail 0  test/grenades.test.js 12s rc=0
+# pass 7 # fail 0  test/guestnames.test.js 0s rc=0
+# pass 5 # fail 0  test/guide.test.js 0s rc=0
+# pass 1 # fail 0  test/gullharbor.test.js 1s rc=0
+# pass 8 # fail 0  test/happenings.test.js 25s rc=0
+# pass 5 # fail 0  test/harvestart.test.js 1s rc=0
+# pass 3 # fail 0  test/heist.test.js 13s rc=0
+# pass 4 # fail 0  test/homeart.test.js 6s rc=0
+# pass 6 # fail 0  test/homedecor.test.js 11s rc=0
+# pass 10 # fail 0  test/homeinside.test.js 13s rc=0
+# pass 2 # fail 0  test/homeprompt.test.js 11s rc=0
+# pass 3 # fail 0  test/homereconnect.test.js 10s rc=0
+# pass 11 # fail 0  test/homes.test.js 17s rc=0
+# pass 1 # fail 0  test/homesofa.test.js 12s rc=0
+# pass 5 # fail 0  test/homeups.test.js 12s rc=0
+# pass 3 # fail 0  test/homewalls.test.js 0s rc=0
+# pass 9 # fail 0  test/honestliving.test.js 17s rc=0
+# pass 6 # fail 0  test/horses.test.js 12s rc=0
+# pass 10 # fail 0  test/hub.test.js 12s rc=0
+# pass 9 # fail 0  test/hudinfo.test.js 0s rc=0
+# pass 2 # fail 0  test/hudlayers.test.js 0s rc=0
+# pass 2 # fail 1  test/hudlayout.test.js 35s rc=1
+# pass 7 # fail 0  test/hunting.test.js 24s rc=0
+# pass 2 # fail 0  test/iconmerge.test.js 0s rc=0
+# pass 3 # fail 0  test/idle.test.js 21s rc=0
+# pass 2 # fail 0  test/idlepose.test.js 1s rc=0
+# pass 2 # fail 0  test/indoorchase.test.js 9s rc=0
+# pass 3 # fail 0  test/inputword.test.js 8s rc=0
+# pass 6 # fail 0  test/interiorload.test.js 10s rc=0
+# pass 3 # fail 0  test/itemart.test.js 1s rc=0
+# pass 3 # fail 0  test/jobcardinfo.test.js 11s rc=0
+# pass 4 # fail 0  test/jobrecall.test.js 14s rc=0
+# pass 4 # fail 0  test/jobway.test.js 13s rc=0
+# pass 5 # fail 0  test/k9.test.js 13s rc=0
+# pass 4 # fail 0  test/kbdrive.test.js 0s rc=0
+# pass 1 # fail 0  test/lakeside.test.js 0s rc=0
+# pass 10 # fail 0  test/launch-analytics.test.js 0s rc=0
+# pass 16 # fail 0  test/launch-auth.test.js 1s rc=0
+# pass 8 # fail 0  test/launch-chat.test.js 0s rc=0
+# pass 18 # fail 0  test/launch-review.test.js 1s rc=0
+# pass 12 # fail 0  test/launch-review2.test.js 0s rc=0
+# pass 10 # fail 0  test/launch-roles.test.js 1s rc=0
+# pass 8 # fail 0  test/launch-world.test.js 11s rc=0
+# pass 6 # fail 0  test/law.test.js 8s rc=0
+# pass 5 # fail 0  test/lazypage.test.js 0s rc=0
+# pass 3 # fail 0  test/ledges.test.js 8s rc=0
+# pass 9 # fail 0  test/leisure.test.js 18s rc=0
+# pass 6 # fail 0  test/lightning.test.js 0s rc=0
+# pass 4 # fail 0  test/lights.test.js 19s rc=0
+# pass 5 # fail 0  test/limits.test.js 0s rc=0
+# pass 5 # fail 0  test/line.test.js 7s rc=0
+# pass 4 # fail 0  test/loadbays.test.js 11s rc=0
+# pass 1 # fail 0  test/loadorder.test.js 3s rc=0
+# pass 9 # fail 0  test/lobby.test.js 13s rc=0
+# pass 7 # fail 0  test/logoff.test.js 21s rc=0
+# pass 13 # fail 0  test/look.test.js 11s rc=0
+# pass 7 # fail 0  test/lostpets.test.js 16s rc=0
+# pass 5 # fail 0  test/lowres.test.js 1s rc=0
+# pass 1 # fail 0  test/mansiondoor.test.js 7s rc=0
+# pass 12 # fail 0  test/mapwindow.test.js 21s rc=0
+# pass 2 # fail 0  test/meleefire.test.js 15s rc=0
+# pass 4 # fail 0  test/menupolish.test.js 1s rc=0
+# pass 3 # fail 0  test/minigames.test.js 12s rc=0
+# pass 5 # fail 0  test/mining.test.js 10s rc=0
+# pass 1 # fail 0  test/moneyloop.test.js 0s rc=0
+# pass 9 # fail 0  test/motorbikes.test.js 16s rc=0
+# pass 10 # fail 0  test/music.test.js 30s rc=0
+# pass 4 # fail 0  test/mycar.test.js 12s rc=0
+# pass 2 # fail 0  test/names.test.js 9s rc=0
+# pass 2 # fail 0  test/natcave.test.js 1s rc=0
+# pass 43 # fail 0  test/nature.test.js 7s rc=0
+# pass 4 # fail 0  test/neonart.test.js 0s rc=0
+# pass 7 # fail 0  test/nightclubs.test.js 14s rc=0
+# pass 2 # fail 0  test/northgate2.test.js 1s rc=0
+# pass 1 # fail 0  test/northpoint.test.js 0s rc=0
+# pass 1 # fail 0  test/northshore.test.js 0s rc=0
+# pass 9 # fail 0  test/npcpeople.test.js 15s rc=0
+# pass 2 # fail 0  test/oldquarter.test.js 0s rc=0
+# pass 3 # fail 0  test/outfits.test.js 1s rc=0
+# pass 1 # fail 0  test/pagemodules.test.js 1s rc=0
+# pass 5 # fail 0  test/paramedic.test.js 17s rc=0
+# pass 2 # fail 0  test/parkducks.test.js 13s rc=0
+# pass 2 # fail 0  test/passersby.test.js 13s rc=0
+# pass 1 # fail 0  test/pelican.test.js 0s rc=0
+# pass 7 # fail 0  test/peoplelook.test.js 25s rc=0
+# pass 10 # fail 0  test/peoplepolish-wardrobe.test.js 47s rc=0
+# pass 6 # fail 0  test/peoplepolish.test.js 2s rc=0
+# pass 6 # fail 0  test/perf.test.js 29s rc=0
+# pass 4 # fail 0  test/pets.test.js 8s rc=0
+# pass 5 # fail 0  test/phones.test.js 9s rc=0
+# pass 1 # fail 0  test/pinehills.test.js 0s rc=0
+# pass 3 # fail 0  test/pinkmile.test.js 1s rc=0
+# pass 7 # fail 0  test/policeair.test.js 16s rc=0
+# pass 6 # fail 0  test/pool.test.js 1s rc=0
+# pass 3 # fail 0  test/poolmatch.test.js 0s rc=0
+# pass 6 # fail 0  test/poolnpc.test.js 24s rc=0
+# pass 1 # fail 0  test/poolwater.test.js 1s rc=0
+# pass 1 # fail 0  test/port.test.js 0s rc=0
+# pass 4 # fail 0  test/portrait.test.js 1s rc=0
+# pass 3 # fail 0  test/practice.test.js 22s rc=0
+# pass 4 # fail 0  test/precut.test.js 0s rc=0
+# pass 10 # fail 0  test/predation.test.js 42s rc=0
+# pass 4 # fail 0  test/racebook.test.js 64s rc=0
+# pass 6 # fail 0  test/reactions.test.js 30s rc=0
+# pass 8 # fail 0  test/realestate.test.js 12s rc=0
+# pass 2 # fail 0  test/redwood-art.test.js 1s rc=0
+# pass 2 # fail 0  test/redwood-fade.test.js 0s rc=0
+# pass 7 # fail 0  test/regions.test.js 19s rc=0
+# pass 13 # fail 0  test/regionwindow.test.js 15s rc=0
+# pass 2 # fail 0  test/replandecor.test.js 8s rc=0
+# pass 7 # fail 0  test/reputation.test.js 12s rc=0
+# pass 8 # fail 0  test/reroute.test.js 17s rc=0
+# pass 5 # fail 0  test/rescue.test.js 13s rc=0
+# pass 3 # fail 0  test/restspots.test.js 11s rc=0
+# pass 8 # fail 0  test/revive.test.js 17s rc=0
+# pass 7 # fail 0  test/ridegear.test.js 14s rc=0
+# pass 4 # fail 0  test/riders.test.js 19s rc=0
+# pass 1 # fail 0  test/ridexray.test.js 1s rc=0
+# pass 8 # fail 0  test/roadends.test.js 26s rc=0
+# pass 6 # fail 0  test/roads.test.js 39s rc=0
+# pass 8 # fail 0  test/robbery.test.js 15s rc=0
+# pass 4 # fail 0  test/rotorwash.test.js 0s rc=0
+# pass 1 # fail 0  test/roundcorners.test.js 1s rc=0
+# pass 2 # fail 0  test/sam.test.js 10s rc=0
+# pass 9 # fail 1  test/scenes.test.js 48s rc=1
+# pass 8 # fail 0  test/seasons.test.js 13s rc=0
+# pass 1 # fail 0  test/seethrough-gl.test.js 2s rc=0
+# pass 5 # fail 0  test/seethrough.test.js 0s rc=0
+# pass 2 # fail 0  test/serverload.test.js 22s rc=0
+# pass 1 # fail 0  test/shadowing.test.js 1s rc=0
+# pass 6 # fail 0  test/sharks.test.js 15s rc=0
+# pass 1 # fail 0  test/shopmarks.test.js 0s rc=0
+# pass 4 # fail 0  test/signals.test.js 10s rc=0
+# pass 8 # fail 0  test/signin-password.test.js 6s rc=0
+# pass 11 # fail 0  test/sinks.test.js 11s rc=0
+# pass 14 # fail 0  test/skate.test.js 12s rc=0
+# pass 5 # fail 0  test/skills.test.js 13s rc=0
+# pass 5 # fail 0  test/skydive.test.js 13s rc=0
+# pass 5 # fail 0  test/slips.test.js 13s rc=0
+# pass 18 # fail 0  test/sound.test.js 0s rc=0
+# pass 1 # fail 0  test/southside.test.js 0s rc=0
+# pass 1 # fail 0  test/spawnmap.test.js 8s rc=0
+# pass 4 # fail 0  test/staffplayers.test.js 1s rc=0
+# pass 8 # fail 0  test/starter.test.js 13s rc=0
+# pass 5 # fail 0  test/startfresh.test.js 8s rc=0
+# pass 1 # fail 0  test/stocktanks.test.js 13s rc=0
+# pass 11 # fail 0  test/stops.test.js 19s rc=0
+# pass 2 # fail 0  test/storeicons.test.js 1s rc=0
+# pass 2 # fail 0  test/streetdice.test.js 9s rc=0
+# pass 13 # fail 0  test/streetlife.test.js 36s rc=0
+# pass 2 # fail 0  test/stretcher.test.js 0s rc=0
+# pass 1 # fail 0  test/strip.test.js 0s rc=0
+# pass 14 # fail 0  test/struggle.test.js 15s rc=0
+# pass 3 # fail 0  test/studio.test.js 0s rc=0
+# pass 1 # fail 0  test/sunsetbeach.test.js 0s rc=0
+# pass 12 # fail 0  test/surf.test.js 13s rc=0
+# pass 2 # fail 0  test/tableau.test.js 10s rc=0
+# pass 4 # fail 0  test/tabout.test.js 13s rc=0
+# pass 5 # fail 0  test/tank.test.js 12s rc=0
+# pass 6 # fail 0  test/tennis.test.js 16s rc=0
+# pass 1 # fail 0  test/titlebuttons.test.js 2s rc=0
+# pass 2 # fail 0  test/titlemenu.test.js 0s rc=0
+# pass 1 # fail 0  test/touchair.test.js 0s rc=0
+# pass 8 # fail 0  test/touchslots.test.js 1s rc=0
+# pass 5 # fail 0  test/tow.test.js 24s rc=0
+# pass 6 # fail 0  test/townwork.test.js 11s rc=0
+# pass 5 # fail 0  test/track.test.js 0s rc=0
+# pass 7 # fail 0  test/trafficbox.test.js 15s rc=0
+# pass 11 # fail 0  test/trafficwalls.test.js 15s rc=0
+# pass 19 # fail 0  test/trains.test.js 31s rc=0
+# pass 2 # fail 0  test/trainsign.test.js 0s rc=0
+# pass 2 # fail 0  test/trainturns.test.js 1s rc=0
+# pass 13 # fail 0  test/transit.test.js 36s rc=0
+# pass 3 # fail 0  test/tunnelart.test.js 1s rc=0
+# pass 7 # fail 0  test/tunnels.test.js 8s rc=0
+# pass 7 # fail 0  test/uikit.test.js 1s rc=0
+# pass 12 # fail 0  test/uiscreens.test.js 0s rc=0
+# pass 7 # fail 0  test/uitokens.test.js 0s rc=0
+# pass 3 # fail 0  test/umbrellas.test.js 2s rc=0
+# pass 2 # fail 0  test/underdeck.test.js 9s rc=0
+# pass 7 # fail 0  test/underground.test.js 12s rc=0
+# pass 9 # fail 0  test/unlocks.test.js 13s rc=0
+# pass 5 # fail 0  test/unlocks2.test.js 12s rc=0
+# pass 6 # fail 0  test/updates.test.js 19s rc=0
+# pass 13 # fail 0  test/vehdamage.test.js 12s rc=0
+# pass 3 # fail 0  test/view.test.js 13s rc=0
+# pass 2 # fail 0  test/views.test.js 11s rc=0
+# pass 3 # fail 0  test/walkinrooms.test.js 11s rc=0
+# pass 3 # fail 0  test/wantedladder.test.js 8s rc=0
+# pass 11 # fail 0  test/wardrobe.test.js 13s rc=0
+# pass 7 # fail 0  test/warmup.test.js 0s rc=0
+# pass 10 # fail 0  test/water.test.js 16s rc=0
+# pass 5 # fail 0  test/waterbake.test.js 13s rc=0
+# pass 10 # fail 0  test/waterlife.test.js 12s rc=0
+# pass 2 # fail 0  test/wayout.test.js 0s rc=0
+# pass 2 # fail 0  test/westhills.test.js 0s rc=0
+# pass 2 # fail 0  test/westhills2.test.js 1s rc=0
+# pass 2 # fail 0  test/westport.test.js 0s rc=0
+# pass 6 # fail 0  test/whatsnext.test.js 12s rc=0
+# pass 7 # fail 0  test/wildart.test.js 31s rc=0
+# pass 5 # fail 0  test/wildfolk.test.js 17s rc=0
+# pass 5 # fail 0  test/wildlife.test.js 18s rc=0
+# pass 5 # fail 0  test/wildmoves.test.js 13s rc=0
+# pass 8 # fail 0  test/wind.test.js 3s rc=0
+# pass 1 # fail 0  test/windowbake.test.js 13s rc=0
+# pass 2 # fail 0  test/windowlink.test.js 0s rc=0
+# pass 5 # fail 0  test/witnesses.test.js 15s rc=0
+# pass 1 # fail 0  test/woodjob.test.js 10s rc=0
+# pass 8 # fail 0  test/workjobs.test.js 15s rc=0
+# pass 7 # fail 0  test/world.test.js 13s rc=0
+# pass 5 # fail 0  test/world3.test.js 2s rc=0
+# pass 5 # fail 0  test/world3b.test.js 3s rc=0
+# pass 4 # fail 0  test/world3city.test.js 3s rc=0
+# pass 4 # fail 0  test/world3clutter.test.js 0s rc=0
+# pass 2 # fail 0  test/world3estuary.test.js 8s rc=0
+# pass 4 # fail 0  test/overhead.test.js 1s rc=0
+# pass 11 # fail 0  test/notes1122.test.js 0s rc=0
+# failures: world3scenes 8 (skate scene skipped), world3wild 1 (station roads flagged notraffic), admin-console 1, scenes 8, hudlayout 1 - all with their test and code unchanged from main (world hash = main's): pre-existing. firefighter 2 failed once under load, passed twice alone.

@@ -261,12 +261,13 @@ test('chat\'s data: the quick lines (the crew\'s are the Crew app\'s), the reaso
 test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, mute / block / report, the Messages app, Settings', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
   const o = await run('kbm', '1280,720');
   assert.ok(o.inboxAsked, 'what came while away is asked for on joining');
-  assert.equal(o.bubbles, 2, 'speech only: an emote has no words over the head; a long line none (the server says: bb)');
+  assert.equal(o.bubbles, 3, 'speech only: an emote has no words over the head; a long line its start (the owner, 11-22)');
+  assert.ok(o.bubLines.some((l) => l.length === 1 && /\u2026$/.test(l[0]) && l[0].length <= 45), 'the long line cut at a word, with an ellipsis: ' + JSON.stringify(o.bubLines));
   assert.deepEqual(o.bubLines[0], ['nice car', 'want to race?'], 'two lines at most in a bubble, the newest last');
   assert.ok(o.bubApart, 'two speakers side by side: their bubbles kept apart');
   assert.ok(o.bubAbove, 'above the speaker');
   assert.match(o.bubFont, /CLA Pixel/, 'in the game\'s pixel face');
-  assert.equal(o.feed.length, 2, 'two lines in the feed on a desktop');
+  assert.equal(o.feed.length, 4, 'four lines in the feed on a desktop (the owner, 11-22: chat you can see is going on)');
   assert.ok(o.feed.every((l) => !l.includes(EMOTES.laugh.text)), 'a laugh: no log spam');
   assert.deepEqual(o.pops, ['url("data:image/png;base64'], 'its pixel balloon over the head');
   assert.deepEqual(o.balloonOn, [true, false], 'the bounty skull gives way there only');

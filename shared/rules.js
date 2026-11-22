@@ -195,7 +195,9 @@ export const DELIVER_BONUS = 0.5;      // an officer who drives the prisoner in 
 // and the third in a while a star (the second in front of an officer); a carjacking a warning, the second a star. Felonies
 // (murder, hitting or killing an officer, a robbery, an escape) and assaults are stars at once, as ever; small crimes
 // (a punch, a bike lifted) have their own count (SUSPICION_*).
-export const LENIENCY = { star: 24, cop: 2, holdS: 45, fade: 0.4 };
+// (the owner, 11-22: "You get wanted levels too easily still": 24 -> 36 - a car stolen is a warning twice and a star the
+// fourth time in a while (the second in front of an officer), a hit and run the third, a carjacking the second)
+export const LENIENCY = { star: 36, cop: 2, holdS: 45, fade: 0.4 };
 // The police by your stars (police.js, struggle.js, custody.js, law.js): sharp at 4-5 as they've always been, worse at
 // 1-3. drive: their top speed in a chase (x 720 px/s after a car, 520 on the roads); react: how stale (s) the spot they
 // steer for is - they turn late and wide; ram: they lean on your car to spin it (a PIT) - only at 4-5; foot / drain:
@@ -535,7 +537,7 @@ export const SAW_NOTE_S = 600;           // "you saw a crime" pops up at most th
 export const REPORT_SEARCH_S = 45;       // the unit looks round the caller this long
 export const REPORT_SPOT_PX = 360;       // ...and knows the suspect when it has them in sight this close
 // Small crimes seen add up (law.js): this many is a star (one an officer sees: at once); each fades after a quiet while
-export const SUSPICION_STAR = 4;
+export const SUSPICION_STAR = 5;   // (4 -> 5, the owner 11-22: too easily wanted - a fifth punch or bump people see in a while, not a fourth)
 export const SUSPICION_HOLD_S = 30;
 export const SUSPICION_FADE_S = 40;
 // That star: an officer for a word (stops.js). A word ends [warn, fine, arrest]; ran first: STOP_RAN of the warning
@@ -802,7 +804,8 @@ export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];
 export const STARTER_WARDROBE = ['Plain tee', 'Graphic tee', 'Long-sleeve tee', 'Tank top', 'Hoodie', 'Flannel shirt', 'Blouse', 'Crop top',
   'Jeans', 'Black jeans', 'Chinos', 'Joggers', 'Shorts', 'Skirt', 'Leggings', 'Sundress',
   'Sneakers', 'Skate shoes', 'Slip-ons', 'Sandals', 'Ballet flats',
-  'Zip hoodie', 'Denim jacket', 'Baseball cap', 'Beanie', 'Sunglasses'];   // what every player owns from the start (with the starting look's pieces)
+  'Zip hoodie', 'Denim jacket', 'Baseball cap', 'Beanie', 'Sunglasses',
+  'Boxers', 'Briefs', 'Boxer briefs', 'Undershirt and boxers', 'Tank and briefs', 'Bra and briefs', 'Sports bra and shorts', 'Crew socks'];   // (the underwear basics: the owner, 11-19; a pair of socks)   // what every player owns from the start (with the starting look's pieces)
 // the barbershop and the hair salon (ST3): what each change costs; the salon charges SALON_K times as much
 export const BARBER_PRICES = { cut: 15, colour: 25, beard: 12, moustache: 8 };
 export const SALON_K = 2;

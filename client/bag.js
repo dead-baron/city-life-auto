@@ -8,17 +8,19 @@ import { WEAPONS, ITEMS, BLADE_COLORS } from '../shared/items.js';
 import { keyName } from './glyphs.js';
 import { input } from './input.js';
 import { glyph, glyphOfWeapon, addGlyphs } from './touchicons.js';
+import { itemIcon, weaponIcon } from './itemart.js';
 
 // a weapon's picture in a tile: its class's line icon (pistol, rifle, knife, bat...: the touch buttons' family,
 // client/touchicons.js) - the top-down sprites are thin bars or blocks at this size and read as broken art (11-04 review)
 function wIcon(id, w, h) {
   const s = document.createElement('span');
   s.className = 'bc-gl';
-  s.innerHTML = glyph(glyphOfWeapon(id, (WEAPONS[id] || {}).type), Math.round(h * 1.15));
+  s.innerHTML = weaponIcon(id) || glyph(glyphOfWeapon(id, (WEAPONS[id] || {}).type), Math.round(h * 1.15));   // (its own pixel picture - client/itemart.js; the class's line icon for one without)
   return s;
 }
-// a thing's picture: its line icon too (the owner, 11-05: the bag's icons "don't look very good" - the emoji went), by the
-// first pattern its id matches, else by what it is
+// a thing's picture: its own pixel picture (client/itemart.js - the owner, 11-21: "Items are looking good"), and for a
+// thing without one its family's line icon (11-05: the emoji went), by the first pattern its id matches, else by what it is
+const pic = (id, px) => itemIcon(id) || glyph(itemGlyph(id), px);
 const ITEM_GLYPH = [
   [/^legend_|^prize_|goldStar/, 'trophy'], [/^seed_/, 'sprout'], [/^medkit/, 'briefcase-medical'], [/bandage/, 'bandage'], [/revivekit/, 'heart-pulse'],
   [/Gloves|moccasins|furHat|Jacket|Coat|camo/, 'shirt'],
@@ -176,11 +178,18 @@ export function describe(id) {
   return it.sell ? 'Something to sell.' : '';
 }
 
+const CARRY_NAME = { gun: 'GUN', melee: 'MELEE', throw: 'THROWN' };
 const loadPref = (k, d) => { try { return localStorage.getItem('cla.bag.' + k) || d; } catch { return d; } };
 const savePref = (k, v) => { try { localStorage.setItem('cla.bag.' + k, v); } catch { /* storage blocked */ } };
 
 // el: the #inv tab; send(msg); me() the self record; refocus() after a render (the pad's focus)
-export function createBag({ el, send, me, refocus }) {
+// Use on these takes the thing out into the world (client: the bag closes behind it): the tools you hold or set down - an
+// instrument, the boombox, a board, a rod, fireworks - but not a light (switched on and off from here) or a consumable
+export function leavesBag(id) {
+  const it = ITEMS[id];
+  return !!it && !it.light && !!(it.tool || it.music || it.ride || it.fun);
+}
+export function createBag({ el, send, me, refocus, leave }) {
   let open = false, cat = loadPref('cat', 'all'), sort = loadPref('sort', 'kind'), sel = null, armDrop = '';
   el.innerHTML = '<div class="bag"><section class="bag-eq" aria-label="Carried"><h3>EQUIPMENT</h3><div class="bag-slots"></div><div class="bag-gear"></div><p class="bag-caps"></p></section>'
     + `<div class="bag-tools"><h3>BAG</h3><span class="bag-cash"></span><div class="bag-cats" role="tablist" aria-label="Show"></div>`
@@ -212,9 +221,12 @@ export function createBag({ el, send, me, refocus }) {
     b.className = 'bag-cell' + (t.k === sel ? ' sel' : '') + (on ? ' on' : '');
     b.dataset.k = t.k; b.setAttribute('role', 'listitem');
     b.title = t.name;
-    b.innerHTML = `<span class="bc-ic">${t.kind === 'i' ? glyph(itemGlyph(t.id), 32) : ''}</span><span class="bc-nm">${esc(t.name)}</span>`
-      + (t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n">${t.w.mag}|${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '')
-      + (on ? '<span class="bc-tag">IN HAND</span>' : pin >= 0 ? `<span class="bc-tag">SLOT ${pin + 1}</span>` : '');
+    // (the owner, 11-22: "part of a yellow button above the plasma blade" - the IN HAND chip hung off the tile's corner;
+    // "ammo text is a little out of place ... gets too close to the name": both now in a footer row of the tile's own,
+    // the tag at its left, the count at its right, in the pixel face)
+    const tag = on ? '<span class="bc-tag">IN HAND</span>' : pin >= 0 ? `<span class="bc-tag">SLOT ${pin + 1}</span>` : '';
+    const cnt = t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n" title="in the gun | spare">${t.w.mag}<i>|</i>${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '';
+    b.innerHTML = `<span class="bc-ic">${t.kind === 'i' ? pic(t.id, 32) : ''}</span><span class="bc-nm">${esc(t.name)}</span><span class="bc-ft">${tag}${cnt}</span>`;
     if (t.kind === 'w') b.querySelector('.bc-ic').appendChild(wIcon(t.id, 64, 36));
     b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; render(); };
     return b;
@@ -234,12 +246,13 @@ export function createBag({ el, send, me, refocus }) {
     let acts = '<div class="bd-three">'
       + `<button class="btn btn-1" data-a="use"${canUse ? '' : ' disabled'}>${!canUse ? 'USE' : it.light ? (m.light ? 'TURN OFF' : 'TURN ON') : it.ride === 'blades' ? 'PUT ON' : it.ride ? 'TAKE IN HAND' : 'USE'}</button>`
       + `<button class="btn btn-d" data-a="drop"${t.id === 'fists' ? ' disabled' : ''}>${armDrop === t.k ? 'AGAIN TO DROP' : t.n > 1 ? 'DROP ONE' : 'DROP'}</button>`
-      + (held ? `<button class="btn" data-a="holster"${t.id === 'fists' ? ' disabled' : ''}>PUT AWAY</button>` : `<button class="btn" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`) + '</div>';
+      + (held ? `<button class="btn" data-a="holster"${t.id === 'fists' ? ' disabled' : ''}>PUT AWAY</button>` : `<button class="btn" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`) + '</div>'
+      + (t.kind === 'w' && carryKind(t.id) && !held ? `<small class="bd-eq">EQUIP takes it in hand and puts it in your ${CARRY_NAME[carryKind(t.id)]} slot.</small>` : '');
     if (t.kind === 'w' && t.id !== 'fists' && m.crew && m.crew.ids && m.crew.ids.length) acts += '<button class="btn btn-x bd-all" data-a="give">Hand to a crewmate close by</button>';   // (server arms.js handTo)
     if (t.n > 1 && t.id !== 'fists') acts += `<button class="btn btn-x bd-all" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>`;
     if (t.id === 'plasma') acts += `<div class="bag-blade"><small>Blade color</small>${BLADE_COLORS.map((bc, i) => `<button class="sw${i === (m.blade | 0) ? ' on' : ''}" data-blade="${i}" aria-label="${esc(bc.name)}" style="--sw:${esc(bc.c)};--swc:${esc(bc.core)}"></button>`).join('')}</div>`;
     if (canUse) acts += `<div class="bag-pins"><small>Quick bar slot</small>${Array.from({ length: SLOTS }, (_, i) => `<button class="btn bag-pin${quick[i] === t.id ? ' on' : ''}" data-pin="${i}" aria-pressed="${quick[i] === t.id}">${i + 1}</button>`).join('')}</div>`;
-    d.innerHTML = `<div class="bd-head"><span class="bd-ic">${t.kind === 'i' ? glyph(itemGlyph(t.id), 48) : ''}</span><div><h3>${esc(t.name)}</h3><small>${esc(BAG_CATS.find((c) => c[0] === t.cat)[1])}</small></div>`
+    d.innerHTML = `<div class="bd-head"><span class="bd-ic">${t.kind === 'i' ? pic(t.id, 48) : ''}</span><div><h3>${esc(t.name)}</h3><small>${esc(BAG_CATS.find((c) => c[0] === t.cat)[1])}</small></div>`
       + '<button class="x bd-x" data-a="close" aria-label="Back to the bag">✕</button></div>'
       + `<p class="bd-what">${esc(what)}</p>${count ? `<p class="bd-n">${esc(count)}</p>` : ''}<div class="bd-acts">${acts}</div>`;
     d.querySelector('.bd-head small').textContent = t.kind === 'w' ? (carryKind(t.id) === 'gun' ? 'Gun' : carryKind(t.id) === 'melee' ? 'Melee' : carryKind(t.id) === 'throw' ? 'Throwable' : 'Weapon') : (usable(t.id) ? 'Consumable · ' : '') + BAG_CATS.find((c) => c[0] === t.cat)[1];
@@ -252,7 +265,13 @@ export function createBag({ el, send, me, refocus }) {
     if (a === 'close') { sel = null; armDrop = ''; render(); return; }
     if (a === 'equip') send({ t: 'weapon', id: t.id });
     else if (a === 'holster') send({ t: 'weapon', id: 'fists' });
-    else if (a === 'use') send({ t: 'inv', a: 'use', id: t.id });
+    else if (a === 'use') {
+      send({ t: 'inv', a: 'use', id: t.id });
+      // (something you take out into the world - an instrument, the boombox, a board, a rod, fireworks: the bag gets out of
+      // the way so you see yourself play - the owner, 11-22: "you cant close the 'bag' ... so you can't see yourself
+      // playing"; a light or something eaten keeps it open)
+      if (leavesBag(t.id) && leave) { sel = null; armDrop = ''; leave(); return; }
+    }
     else if (a === 'give') send({ t: 'inv', a: 'give', id: t.id });
     else if (a === 'drop' || a === 'dropall') {
       // two presses: dropping isn't something to do by accident (it lands in a bag at your feet: anyone can take it)
@@ -265,7 +284,8 @@ export function createBag({ el, send, me, refocus }) {
     render();
   }
   const weaponLine = (d) => (d.type === 'melee' ? 'A melee weapon: up close.' : d.type === 'tool' ? 'A tool you hold.' : d.type === 'throw' ? 'Thrown: aim and let go.' : `${d.mag ? `A ${d.mag}-round magazine. ` : ''}Aim and fire; ${keyName('reload')} reloads.`);
-  const wheelHint = () => `${input.device === 'gamepad' ? 'Hold View' : input.device === 'touch' ? 'Hold ITEMS' : `Hold ${keyName('use')}`} for the quick wheel, then let go on a slot.`;
+  const wheelKey = () => (input.device === 'gamepad' ? 'hold View' : input.device === 'touch' ? 'hold BAG' : `hold ${keyName('use')}`);
+  const wheelHint = () => `${input.device === 'gamepad' ? 'Hold View' : input.device === 'touch' ? 'Hold BAG' : `Hold ${keyName('use')}`} for the quick wheel, then let go on a slot.`;
 
   function render() {
     const m = me();
@@ -278,8 +298,16 @@ export function createBag({ el, send, me, refocus }) {
     for (const b of cb.querySelectorAll('[data-cat]')) b.onclick = () => { cat = b.dataset.cat; savePref('cat', cat); render(); };
     $q('.bag-cash').innerHTML = `<b>$${(m.cash || 0).toLocaleString('en-US')}</b><span>${all.length} thing${all.length === 1 ? '' : 's'}${m.creel ? ` · cooler ${m.creel.n}/${m.creel.max} fish (~$${m.creel.v.toLocaleString('en-US')})` : ''}</span>`;
     // the carried slots (UIC-19): the first gun, the second, a melee weapon, a throwable; the gear's slots locked
+    // (the owner, 11-22: "It isnt clear how to equip guns or melee or thrown stuff". A slot shows the one of its kind you
+    // EQUIP - taken in hand - and keeps it after you put it away (cla.bag.eq.<kind>); before that, the first you own)
     const slotted = new Set(), byKind = { gun: [], melee: [], throw: [] };
     for (const t of all) if (t.kind === 'w' && carryKind(t.id)) byKind[carryKind(t.id)].push(t);
+    const held = WEAPONS[m.weapon] && carryKind(m.weapon);
+    if (held) savePref('eq.' + held, m.weapon);
+    for (const k of Object.keys(byKind)) {
+      const want = k === held ? m.weapon : loadPref('eq.' + k, ''), i = byKind[k].findIndex((t) => t.id === want);
+      if (i > 0) byKind[k].unshift(byKind[k].splice(i, 1)[0]);
+    }
     const take = { gun: 0, melee: 0, throw: 0 };
     $q('.bag-slots').innerHTML = CARRY.map(([k, label], si) => {
       const t = byKind[k][take[k]++];
@@ -304,7 +332,8 @@ export function createBag({ el, send, me, refocus }) {
     detail(all.find((t) => t.k === sel) || null, m);
     // the quick wheel as it stands (a slot picks its item; pin from an item's details)
     const quick = m.quick || [];
-    $q('.bag-wheel').innerHTML = `<small>QUICK BAR</small>${Array.from({ length: SLOTS }, (_, i) => { const id = quick[i], n = id ? m.inv[id] || 0 : 0; return `<button class="bag-slot${id ? '' : ' empty'}" data-slot="${i}"${id ? '' : ' disabled'}><b>${i + 1}</b>${id ? `<span class="bq-gl">${glyph(itemGlyph(id), 20)}</span>${esc(ITEMS[id].name)}${n ? '' : ' (none left)'}` : 'empty'}</button>`; }).join('')}`;
+    // (the owner, 11-22: "I'm not sure how to access my quick bar when I'm in game" - the row says how, on this device)
+    $q('.bag-wheel').innerHTML = `<small>QUICK BAR<em>${wheelKey()}</em></small>${Array.from({ length: SLOTS }, (_, i) => { const id = quick[i], n = id ? m.inv[id] || 0 : 0; return `<button class="bag-slot${id ? '' : ' empty'}" data-slot="${i}"${id ? '' : ' disabled'}><b>${i + 1}</b>${id ? `<span class="bq-gl">${pic(id, 20)}</span>${esc(ITEMS[id].name)}${n ? '' : ' (none left)'}` : 'empty - pin an item'}</button>`; }).join('')}`;
     for (const b of el.querySelectorAll('[data-slot]')) b.onclick = () => { const id = quick[Number(b.dataset.slot)]; if (id) { sel = 'i:' + id; render(); } };
     cue(grid);
     refocus?.();
