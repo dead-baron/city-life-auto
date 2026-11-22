@@ -198,7 +198,8 @@ test('World v3: the park block - the station\'s board, Park West Motors and its 
   const tail = M.buildings.slice(office.id), k = tail.findIndex((b) => b.towerPart);
   const block = k < 0 ? tail : tail.slice(0, k), parts = k < 0 ? [] : tail.slice(k);
   assert.ok(block.length >= 4 && block.every((b) => b.whole && !b.towerPart && (b.business === 'usedlot' || ['Lane Mart', 'Park West Coffee', 'Greenfield Flowers'].includes(b.name))), 'the block\'s buildings last but the towers\' parts');
-  assert.ok(parts.every((b) => b.towerPart && b.towerPart.role !== 'tower' && b.towerPart.of < office.id), 'after them only the split towers\' new parts');
+  // (and the open blocks' pieces - shared/world3-openblocks.js, split off older buildings or off a tower's part, appended last)
+  assert.ok(parts.every((b) => (b.towerPart && b.towerPart.role !== 'tower' && b.towerPart.of < office.id) || (b.openOf !== undefined && (b.openOf < office.id || (M.buildings[b.openOf] && M.buildings[b.openOf].towerPart)))), 'after them only the split towers\' and open blocks\' new parts');
 });
 
 test('World v3: the arrival on a line - the page\'s train, the newcomer unseen by others until the doors open', () => {
