@@ -26033,3 +26033,8 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
   plants' painted left-right light is gone (`client/art2/flora.js` `SIDE` 1 -> 0), so the lit side follows the
   game's sun like everything else. "I think the light should work with the game." DECISIONS, Art direction.
 - An art change: rides in PR #1's re-bake.
+
+## 2026-11-22 - The soundtrack's loops and endings, measured (branch `prebeta-art`; nothing in the game yet)
+- `tools/music/analyze.py`: for each of the owner's 25 primary takes, the beats, bar lines, a seamless loop and a clean
+  ending, measured from the recording (details and results: docs/tasks/MUSIC-HANDOVER.md, `docs/audio/loops-2026-11-22`).
+- A listening page for the owner on his computer (each loop played three times, each ending), his ear to approve.

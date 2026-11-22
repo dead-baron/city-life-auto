@@ -98,3 +98,21 @@ How to build that (Claude's plan, nothing built):
 - The instrument game's look is poor (blurred arrows with shadows); it should read like an SNES rhythm game.
 - Its songs are random beats; he wants to play along to real songs.
 - Using an instrument from the bag leaves the bag open, so the player can't see the character play.
+
+## 11-22 morning: loops and endings measured (the owner: "I don't think they end right on some of them or loop right")
+- Folder access granted: `Desktop\City Life Auto\_audio\_DONE`. The 25 primaries' `MASTER.flac` and `SCORE.txt` read.
+- The owner on rebuild vs recordings: unsure; asked for the songs to be "looked at and edited" like the title track.
+  Done that way: the recordings are cut and joined, not rebuilt (the 11-12 decision stands).
+- `tools/music/analyze.py` (numpy/scipy, no beat library - installs are blocked here): beats by dynamic programming,
+  the score's written tempo (`Q:`) only to pick between the recording's own tempo readings; downbeats by kick + chord
+  change; a loop of 8-32 bars, 20-75 s, on a phrase line, whose next bar sounds like its first and whose last bar like
+  the one before its start; the title's seam method (aligned to the sample, 90 ms blend). Checked on the title loop:
+  92.57 BPM against 92.7, 16 bars. All 25 measured tempos within 1-3 BPM of the written ones.
+- Endings: a take ending quietly (last 0.5 s under -30 dB, or 20 dB under the body) keeps its own (7 songs); the other
+  18 end on the downbeat after their last full 4-bar phrase, that beat ringing, faded over two beats.
+- Results: `docs/audio/loops-2026-11-22/*.json`. Seams: none sharper than 0.31 of the music's own sharpest sample
+  steps (no clicks by measure). Flagged for the ear: A12 Grease Fire (+12 dB at the join), T05 Waiting Room Disco
+  (-15 dB), T03 Sunburnt Tape (-8 dB); A09 First Sprouts and A16 Jester's Parade the weakest matches.
+- The owner's review page: `...\City Life Auto Music and Instruments\Claude-Loop-Review\index.html` on his computer
+  (each loop three times, each ending; "sounds right / redo" and a Copy my notes button). Nothing in the game yet:
+  after his notes, the approved ones go through `make-loop.py` (loops) and an ending cut into `assets/music/`.
