@@ -129,3 +129,10 @@ How to build that (Claude's plan, nothing built):
 - Review page v2 on his computer (`tools/music/review-page.py`): the alternates and the full songs, the approved marked.
   Next: his notes on v2, then the approved files into `assets/music/` (loops through `make-loop.py`, full songs with the
   new ending), streamed when a player comes near a speaker, never at start-up.
+
+## 11-22 11:13: review v2 approved
+- The owner marked every clip of v2 "good": the full songs of all 56 takes, and the alternates' loops and endings -
+  except two loops left unmarked (C10, A01: neither approved nor sent back - ask). D02's ending was approved in v1.
+- Next (package 4): encode the approved takes into `assets/music/` (each take: the loop via `make-loop.py`'s seam
+  method, and the full song to its ending; mono where the channels are alike), then the world's music per his 11-22
+  03:07 direction (sources in the world, synced across players, rotation 70/30, sound by source, muffled from outside).
