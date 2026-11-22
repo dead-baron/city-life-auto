@@ -101,7 +101,10 @@ the owner has seen the cave. The state of all the nature work: `claude/nature-st
 - **Water.** A recorder measures surface flicker (`tools/nature/waterwatch.sh`, see `tools/nature/README.md`): calm
   water scores under about 1% of pixels jumping per tenth of a second. Fixed: the rapid sparkle (the owner, 11-17),
   the crawling light-net on clear beds, white squares of foam where two river reaches meet. Checked at midday under a
-  clear sky only. Still to run: sunset, night, rain; then the garden pond's white blotches, water creeping beside
+  clear sky only at first; then at night (23:00): pier 0.27%, cove 0.11%, tarn 0% - calm. A sunset run (18:30) is
+  NOT valid: the recorder finds water by its blue, and at sunset the water is lit warm, so it saw almost none (0.7 to
+  8.5% of the frame) - `waterprobe.js` needs a mask that doesn't go by colour (the bake's water flag) first.
+  Still to run: sunset (after that fix), rain; then the garden pond's white blotches, water creeping beside
   docks, koi drawn over the water. The sparkle is now quiet; if the owner finds it flat, lower `0.93` in
   `lightgame.js` `waterSurf` (and in `test/calmwater.test.js`' mirror).
 - **Placeholders the owner wants fixed later** (11-21 20:11): Summit Tarn's low sill (page-side, here) and the sea
