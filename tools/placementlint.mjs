@@ -133,7 +133,7 @@ export const LINT_ALLOW = {
   festoonDensity: 9,        // more than FESTOON_CAP runs of lights within FESTOON_R
   cropInTown: 49,           // a crop field, strip or orchard in a town or by a beach
   heliOffPad: 10,           // a hospital with no ground helipad, a helipad on a sidewalk or a road
-  deadBoat: 58,            // a boat prop you can reach that isn't a vehicle and isn't stored (11-22: every canoe and rowboat a real boat - world3-boats.js; left: the moored sailboats, yachts and fishing boats, and 3 with no water near)
+  deadBoat: 3,              // a boat prop you can reach that isn't a vehicle and isn't stored (11-22: every one a real boat - world3-boats.js; left: 3 with no water near)
   bigEmptyPlaza: 14,        // an empty stretch of paving 19+ tiles across
   binBags: 0,               // bin bags away from any bin outside the rough districts (cleared by the build: world3-tidy.js strayBags3)
 };

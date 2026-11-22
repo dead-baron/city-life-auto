@@ -26153,3 +26153,6 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   (shared/fences.js), so they hold where they're drawn.
 - railOverWater 110 -> 0 (`LINT_ALLOW` 0). Not yet seen in pictures: before / after with `tools/regress/` before the
   batch goes live. `test/railtrim.test.js` (2).
+- The moored ones too (the owner, 15:03: "Let's make them drivable"): sailboat -> Gull 26 Sailboat, yacht -> Seaview 32
+  Cruiser, fishing boat -> Fishing Trawler (BOAT_AS), parked in the marina's list like the rest. 100 boats in all;
+  deadBoat 103 -> 3 (`LINT_ALLOW` 3: no water near). DECISIONS, World and places.

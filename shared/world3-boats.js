@@ -4,14 +4,16 @@
 // lying on the water - become real boats: a river kayak for a canoe, a rowboat for a rowboat (shared/vehicles.js), each
 // waiting in the water right beside where it lay, its bow out, through the marina's list (m.marina: the parked boats,
 // server/systems/traffic.js marinaModel - anyone's to take). A prop on stands (lift: stored) stays a prop. The moored
-// sailboats, yachts and fishing boats stay scenery: making them marina vehicles is the owner's call (logged).
+// sailboats, yachts and fishing boats likewise (BOAT_AS).
 // For the whole-world build's done hook (shared/world3-world.js), after the props are final.
 //   boatsAfloat3(m) -> { made, kept }
 import { TILE, T } from './constants.js';
 import { dropProps } from './world3-tidy.js';
 import { VEHICLES } from './vehicles.js';
 
-export const BOAT_AS = { canoe: 'kayak', rowboat: 'rowboat' };
+export const BOAT_AS = { canoe: 'kayak', rowboat: 'rowboat', sailboat: 'sailboat', yacht: 'cabincruiser', fishboat: 'trawler' };
+// (the moored sailboats, yachts and fishing boats too - the owner, 11-22 15:03: "Let's make them drivable" - a Gull 26
+// Sailboat, a Seaview 32 Cruiser, a Fishing Trawler: anyone's to take, like every parked boat)
 const REACH = 3;   // (tiles from the prop to the water it's put in)
 
 const wet = (m, x, y) => { const t = m.tileAtPx(x, y); return t === T.WATER || t === T.DEEP; };

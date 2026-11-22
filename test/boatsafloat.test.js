@@ -43,3 +43,13 @@ test('no water near, on stands, or a rock in the way: handled', () => {
   const b = m.marina[0];
   assert.ok(b && Math.hypot(b.x - 21.5 * TILE, b.y - 15 * TILE) > 30 + 32, 'clear of the boulder');
 });
+
+test('the moored sailboats, yachts and fishing boats: drivable too (the owner, 11-22 15:03)', () => {
+  const m = shore();
+  m.props.push({ t: 'sailboat', x: 30 * TILE, y: 10 * TILE, a: 0 }, { t: 'yacht', x: 30 * TILE, y: 4 * TILE, a: 0 }, { t: 'fishboat', x: 30 * TILE, y: 16 * TILE, a: 0 });
+  const out = boatsAfloat3(m);
+  assert.equal(out.made, 3);
+  assert.deepEqual(m.marina.map((b) => b.kind), ['sailboat', 'cabincruiser', 'trawler']);
+  assert.equal(m.props.length, 0);
+  for (const b of m.marina) assert.ok(VEHICLES[b.kind] && VEHICLES[b.kind].kind === 'boat');
+});
