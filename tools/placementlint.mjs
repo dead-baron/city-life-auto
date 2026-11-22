@@ -93,7 +93,7 @@ export const LINT_ALLOW = {
   // the spaces laid over a pavement or a plaza when this check came in (2026-11-14): a few districts' kerb bays and car
   // parks drawn a tile off (Pine Hills' street, the airport motel's, the trades row's). (A golf cart's stand on its cart
   // path is its place: not counted.) Left empty at run time (traffic.js badBay); fix them in the data and bring this down - never up.
-  parked: 124,
+  parked: 0,                // (11-22: taken off the list at the build - parkcheck.js badBays3)
   // the ATMs with no front wall in reach - the kiosks of the districts that are all houses or open ground (West Hills'
   // and Pine Hills' streets of houses, Gull Harbor's and Egret Point's greens, the beaches, a park), left at the back of
   // the pavement as their district's cash of its own, or where a move would leave a street out of the cash's reach

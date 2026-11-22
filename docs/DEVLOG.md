@@ -26156,3 +26156,10 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
 - The moored ones too (the owner, 15:03: "Let's make them drivable"): sailboat -> Gull 26 Sailboat, yacht -> Seaview 32
   Cruiser, fishing boat -> Fishing Trawler (BOAT_AS), parked in the marina's list like the rest. 100 boats in all;
   deadBoat 103 -> 3 (`LINT_ALLOW` 3: no water near). DECISIONS, World and places.
+
+## 2026-11-22 - World batch: no parking space on a pavement (branch `prebeta-world2`; not live)
+- The audit's parked (124): spaces whose car would stand on a pavement, a promenade, a lawn, the sand, a pier or a
+  building. The server already left them empty (traffic.js badBay), but their wheel stops were still drawn and the lint
+  counted them. `shared/parkcheck.js` badBays3 (the done hook) takes them off `m.parking` by the same measure (parkWhy,
+  the spot's own model else a sedan); a driveway's, a golf cart's and the car lots' spaces are their own. 124 -> 0
+  (`LINT_ALLOW.parked` 0). Tests: placementlint 42/42, firstcar, starter, mycar, homes, trafficbox, world3arrivals.
