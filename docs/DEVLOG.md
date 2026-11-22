@@ -25334,6 +25334,14 @@ best-looking trees in the game.
   the art pixel - one voxel 2 x 2 px - and drawn by a recipe of their own (`statics.js` `'va'`, `artVox`), set beside
   concepts NS1-E and NS1-B. Not placed: placing them changes the world, which waits for the world batch.
   `test/naturepieces.test.js`. The spray at a fall's foot stands a little thicker and lies out over the pool.
+- **The redwoods' crowns by place (the owner, 15:39).** In the redwood woods the crowns hid the floor, the creek and
+  the trails; concept N1 is trunks with the floor between them. The owner's rule: the high crown where it would cover
+  a path, a mix elsewhere. `statics.js` `crownOver` looks up the screen from a tree's foot, over the band its boughs
+  draw in, for a trail or clearing (the designed places' reserve bit), water, a road or a bridge: such a tree is drawn
+  with its crown high - the common redwood's third build (`redwoodC`), and high-crowned versions of the giants and
+  the young redwoods (`giantLH`, `giantH`, `giantSH`, `redwood2H`), which were most of the cover in the picture that
+  raised it. Deeper in, the common redwood is A, B or C by place. Page-side: the world is unchanged; the giants still
+  fade round the player as before.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
