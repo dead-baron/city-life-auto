@@ -25365,6 +25365,31 @@ best-looking trees in the game.
   of cliff on flat ground - rejected. Page-side instead: a spill a step high over a granite sill between boulders
   (where the world's own solid line is), the stream starting at its foot (`statics.js`, `FALLS_LOOK.tarn`; the granite
   kit in `water.js` `rockKit`).
+- **Water, step 1: a way to measure it, and the two worst things it showed (the owner, 13:08 and 20:11: "I'm always
+  finding glitches on the surface ... in different types of water bodies"; "Please move onto water").**
+  *The recorder* (`tools/nature/waterwatch.sh`, `waterprobe.js`): a local headless game jumps to each kind of water
+  place, lets its chunks bake, then - in the page - steps the art's clock a tenth of a second a frame (a hook for
+  tests: `host.js` reads `globalThis.__claArtTime` when it is set) and counts the water pixels whose brightness jumps
+  from one frame to the next. It leaves a picture with those pixels in red. A headless screenshot takes twenty
+  seconds, so pictures a moment apart could not show flicker; stepping the clock can.
+  *Sparkle* (the owner, 11-17, Harbor Marina: "glistening rapidly"): under a clear sky at 13:00, 2.4 to 4.2% of the
+  sea's pixels at the pier jumped every tenth of a second. The glints were single pixels under a needle-thin highlight
+  on the ripples' slopes, so each tenth of a second lit another set; and which pixels might glint was drawn afresh
+  three times a second. A sparkle now stands where it is and breathes: one cell in fourteen can sparkle, each on its
+  own beat of four to ten seconds, coming up and dying away, gathered on the ripples' crests and in patches
+  (`lightgame.js` `waterSurf`; `test/calmwater.test.js`' mirror follows). The net of light on a clear bed was hard
+  on or off too and hopped from pixel to pixel as it drifted (a cove's whole floor crawling, 4.2 to 4.7%): it comes
+  up across its edge now and drifts at half the pace. Measured after, same sky and hour: the pier 0.65 to 0.87%, the
+  cove 0.88 to 0.99%, the marsh 0.25% (was about 1), Summit Tarn 0.22% (was about 1). What still moves is what
+  should: the wave on the beach, boats, the Ferris wheel. A first measurement that looked better still (0.04%) was a
+  clouded sky, where nothing glints - the recorder clears the sky now. The sparkle is sparser and quieter than it
+  was; if it reads too flat in play, its share (`0.93`) is the number to lower.
+  *White squares* below Willow River Falls (on the live build too): a river's white water was only drawn where all
+  four tiles round a pixel belonged to one reach, so where two reaches meet it came and went tile by tile, in flat
+  white. It is laid by the place now and always broken (`water.js`).
+  Run so far at midday only: pier, beach, cove, creek, pond, marsh, hot springs, oasis, lake camp, tarn - all under
+  1% now. Still to look at: sunset, night and rain; rivers in spate; the garden pond's white blotches; water creeping
+  beside docks; koi over the water. Seen by the way: a jam of six cars on Coral Cay's jungle track.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
