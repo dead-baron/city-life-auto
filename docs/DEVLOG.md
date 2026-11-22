@@ -26022,3 +26022,8 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 - Seen, not fixed (pre-existing on `main`, logged for the UI package): on a small phone held sideways (740 x 360,
   844 x 390) with a vehicle's readout up, a second two-line note runs down onto the status line under the map
   (`test/hudlayout.test.js`). A one-rule fix was tried and backed out: it changed the test's measurements on desktop too.
+- **Regression pictures** (package 5, its first half): `tools/regress/` - a fixed list of 55 places (every district's
+  middle, one of each kind of place, the named hand-made ones), rendered with `area-shot`'s bake before and after a world
+  or art change, and a place-by-place diff that lists what moved (`diff.py`, side-by-sides with the change in red). The
+  other half - a guard column beside every note in the decisions register - is the triage table's "Guard" column for the
+  11-22 notes; the older notes still to do.

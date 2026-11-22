@@ -22,6 +22,34 @@ gate, not an after-launch list. The big pass starts after the weekly reset (Frid
 4. Section C (systems and features) - server + page batches.
 5. Section D decisions, G walkthrough, H launch steps.
 
+## The owner's notes of 11-22 (his 15-page PDF; triaged 11-22 in the pre-beta chat - each note's ripple check and guard: `docs/tasks/PREBETA-NOTES-2026-11-22.md`)
+Done 11-22 (on `prebeta-art`, live with its go-live): N1 the bag's tags, ammo and slots; N3 wanted less easily; N4 no city
+bounty; N5/N19 overhead labels from the head; N6 no twins in a uniform; N8 the bag closes when you take something out;
+N9 the gig screen's look (crisp pixel arrows - real songs wait for music); N11/N12 the event highlight on its person,
+faded close up; N16 a door dip over the walk-in swap; N17 awnings see-through underfoot; N21 the respawn map's labels;
+N22 the chat feed (4 lines desktop, 2 phone, yours too) and capped bubbles for long lines; A6/A7 Guide text; the
+balance audit A1-A7 (`docs/audit/BALANCE-2026-11-22.md`).
+Still open, by package:
+- **World batch (A above)** - new rows: `roofSignCut` (N23, signs cut by their roof), `atmUnderAwning` (N18; the world
+  data has no two ATM machines within 3 tiles - the pair he saw on a hospital is likely the front's own dressing: look at
+  St. Neon General), `iconOverSign` (N20: a place's map badge over the door covers the awning's H - the badge goes over
+  the door, the sign off it), `darkInterior` (N14: a walk-in with no lamp of its own is dark at night - lights belong to
+  things), hospitals' signs one per front, lit (N20). Counts: 31 medical places (about 6 hospitals, 14 clinics, first-aid
+  and ranger stations), 977 walk-ins, 385 ATMs.
+- **Art on Fable** - N2 item icons toward the concepts and a UI/UX polish over every device and orientation; N20 the
+  hospitals' and storefronts' design (a hospital reads as a hospital: entrance canopy, EMERGENCY, one green lit sign; the
+  front's glow not washing out the name); see-through windows as a baked "lit room" layer in the window art (cheap) -
+  live see-through is not for the beta; N15 the buskers' and the player's playing animations (on the beat).
+- **Systems / UI** - N7 the quick bar in play (today: hold X / View / BAG for the wheel; an always-on strip is a new HUD
+  element - the owner's call); N13 the four "robbers" in a hospital (likely four carriers of valuable crates - their marks
+  follow them now; the calm-streets cap is 2 happenings within 900 px - to confirm in play); the HUD's second note on
+  small sideways phones (pre-existing, `test/hudlayout.test.js`); the dashed diagonal on the big map is the subway's
+  tunnel (answered).
+- **Music (package 4)** - N9 real songs in the gig; N10 NPCs reacting and tipping, players tipping; N15 the playing
+  animation on the beat - with the music clock.
+- **Economy** - pay and prices unchanged; the audit's proposals 1, 3, 4 wait for the owner and the first test weekend's
+  `/admin` money sources.
+
 ## A. The world batch (each with its world-wide lint row) - details below
 - Sidewalks clear: no hedge, bush, tree or planter on a sidewalk, path, road or plaza (`plantOnWalk`) - AGAIN, 11-17.
 - Entrances face south / SE / SW, never north (hospital, the Neon casino, ...) (`northDoor`).
