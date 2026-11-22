@@ -23,6 +23,9 @@ const LOOK = 0.3, TICK = 0.08, MAX_SOURCES = 2;
 let SONGS = null, SONGS_P = null, OPUS_OK = null;
 const OPUS = () => { if (OPUS_OK === null) { try { OPUS_OK = !!new Audio().canPlayType('audio/ogg; codecs="opus"'); } catch { OPUS_OK = false; } } return OPUS_OK; };
 const SYNC_S = 0.35;
+// the speakers (hp, lp in Hz): a pocket radio's little cone (no bass, a boxy top), a boombox's (fuller), a car's from
+// inside (its own speakers) and from outside (the bass through the body and glass), the mat's and a gig's (full)
+const SPEAKER = { radio: { hp: 380, lp: 4200 }, boombox: { hp: 70, lp: 11000 }, carIn: { hp: 70, lp: 12000 }, carOut: { hp: 40, lp: 700 }, mat: { hp: 50, lp: 14000 }, none: { hp: 20, lp: 16000 } };
 // on for everyone (the owner, 11-22 13:12: "you can go for it"); the debug menu's *Recorded music* turns them off in one
 // browser (cla.recmusic '0': the synth's scores, as before) - to compare, or if one misbehaves
 export const recOn = () => { try { return localStorage.getItem('cla.recmusic') !== '0'; } catch { return true; } };
@@ -118,11 +121,11 @@ Object.assign(EVENT_SOUNDS, {
 export class StageSound {
   constructor(E) { this.E = E; this.ctx = E.ctx; this.vs = new Map(); this.jams = new Map(); this.next = 0; this.mobile = E.pool.max <= 12; live = this; }
   chain(pan = true) {
-    const c = this.ctx, inp = c.createGain(), lp = krate(c.createBiquadFilter()), pn = pan && c.createStereoPanner ? krate(c.createStereoPanner()) : null, lvl = c.createGain();
-    inp.gain.value = 4; lp.type = 'lowpass'; lp.frequency.value = 16000; lvl.gain.value = 0;
-    inp.connect(lp); if (pn) { lp.connect(pn); pn.connect(lvl); } else lp.connect(lvl);
+    const c = this.ctx, inp = c.createGain(), hp = krate(c.createBiquadFilter()), lp = krate(c.createBiquadFilter()), pn = pan && c.createStereoPanner ? krate(c.createStereoPanner()) : null, lvl = c.createGain();
+    inp.gain.value = 4; hp.type = 'highpass'; hp.frequency.value = 20; hp.Q.value = 0.8; lp.type = 'lowpass'; lp.frequency.value = 16000; lvl.gain.value = 0;
+    inp.connect(hp); hp.connect(lp); if (pn) { lp.connect(pn); pn.connect(lvl); } else lp.connect(lvl);
     lvl.connect(this.E.mix.mus);
-    return { inp, lp, pan: pn, lvl };
+    return { inp, hp, lp, pan: pn, lvl };
   }
   // each frame (sound/index.js frame): what's playing near, how loud and where, its notes scheduled ahead
   update(F, S, t, scene) {
@@ -137,9 +140,14 @@ export class StageSound {
       if (d >= range) continue;
       const inCar = s.kind === 'car' && s.att === myVeh, k = 1 - d / range;
       let g = (inCar ? 0.75 : 0.85 * k * k) * (s.kind === 'radio' ? 0.7 : 1), lp = inCar ? 16000 : 3500 + 12000 * k;
-      if (s.kind === 'car' && !inCar) { lp = Math.min(lp, 700); g *= 0.6; }
-      if (L.inside) { lp = Math.min(lp, 800); g *= 0.4; }
-      want.push({ s, g, lp, pan: inCar ? 0 : Math.max(-0.8, Math.min(0.8, (s.x - L.x) / 400)) });
+      // each sounds like what it comes out of (the owner, 11-22: "a night club's good speakers are clean; a cheap radio is
+      // not"): its speaker's band - SPEAKER - before the distance's muffle
+      const sp = SPEAKER[s.kind === 'car' ? (inCar ? 'carIn' : 'carOut') : s.kind] || SPEAKER.none;
+      let hp = sp.hp;
+      lp = Math.min(lp, sp.lp);
+      if (s.kind === 'car' && !inCar) g *= 0.6;
+      if (L.inside) { lp = Math.min(lp, 800); g *= 0.4; hp = Math.min(hp, 60); }
+      want.push({ s, g, lp, hp, pan: inCar ? 0 : Math.max(-0.8, Math.min(0.8, (s.x - L.x) / 400)) });
     }
     want.sort((a, b) => b.g - a.g);
     const keep = new Set();
@@ -184,6 +192,7 @@ export class StageSound {
     const broken = s.brAt !== null, wind = broken ? Math.max(0, 1 - (performance.now() / 1000 - s.brAt) / MUSIC_GEAR.windS) : 1;
     setp(v.c.lvl.gain, w.g * (broken ? wind : 1), t, 0.25);
     setp(v.c.lp.frequency, broken ? Math.max(200, w.lp * wind * wind) : w.lp, t, 0.2);
+    if (v.c.hp) setp(v.c.hp.frequency, w.hp || 20, t, 0.2);
     if (v.c.pan) setp(v.c.pan.pan, w.pan, t, 0.25);
     if (broken && wind <= 0) return;
     const key = s.track + '/' + (recOn() && s.take || '');

@@ -26086,3 +26086,11 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 - The owner, 13:12: "I don't think I need to wait for me to check the music you can go for it". `recOn` (client/sound/stage.js)
   and the places' `rec` (client/sound/music.js) now on unless `cla.recmusic` is '0'; the debug menu's *Recorded music*
   turns them off on one screen (the synth's tunes, as before). DECISIONS: the soundtrack, and merging to main (Process).
+
+## 2026-11-22 - Music: the casino and the roadhouse, and each source its own speaker
+- A casino's floor (a walk-in with `casino`: shared/casinorooms.js) plays House Odds or Brass Ticket (a day each, the
+  take by the hour); the roadhouse plays Dust on the Dial - their loops through the places' chain (client/sound/music.js
+  REC, places.js). The city's neon bars are storefronts with no room inside: no music there yet.
+- Each source sounds like its speaker (client/sound/stage.js SPEAKER, a high-pass added to every source's chain): a pocket
+  radio thin (380 Hz - 4.2 kHz), a boombox full, a car's own speakers inside, only its bass through the body outside.
+- Tests: sound, music, nightclubs, drivein, casino, casinofloor. Page-only: no restart, no re-bake.
