@@ -25388,6 +25388,11 @@ changes here, where `nature` is page-only.
 - **The sea cave (`shared/world3-caves.js`; `caveMouth` deep).** One bluff: the pieces laid out from the mouth at one
   height, running on into each other; the mouth as tall and as deep as the face either side, level-topped and mossed
   like it, where it was a lower, paler hump with gaps beside it.
-- Not done: the six river ledge falls' height; Coral Cay's pool and stream; the other cave mouth (by Redwood Creek
-  Falls); the bluff's top meeting the ground behind it (beach behind its west half).
+- The cave mouth by Redwood Creek Falls was looked at and left: it already stands in the gorge's basalt wall.
+- Tests (one file at a time, on this branch before the last merge of `nature`): cliffs, crag, fallart, floraart,
+  ledges, nature, naturepieces, perf, placementlint, undergrowth, wildart, world3caves, world3coast, world3peaks,
+  world3redwoods, world3relief, world3woods - all pass. The whole suite has not been run on it.
+- Not done: the river ledge falls' setting (drawn taller on `nature`; they want a lower, darker river below and a
+  face either side); Coral Cay's pool and stream; the bluff's top meeting the ground behind it (beach behind its west
+  half).
 
