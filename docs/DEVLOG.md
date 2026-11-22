@@ -26027,3 +26027,9 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
   or art change, and a place-by-place diff that lists what moved (`diff.py`, side-by-sides with the change in red). The
   other half - a guard column beside every note in the decisions register - is the triage table's "Guard" column for the
   11-22 notes; the older notes still to do.
+
+## 2026-11-22 - The plants lit by the game's sun alone (branch `prebeta-art`)
+- The owner picked between two sheets (oak, maple, birch, pine, rose, hydrangea at morning and afternoon): the
+  plants' painted left-right light is gone (`client/art2/flora.js` `SIDE` 1 -> 0), so the lit side follows the
+  game's sun like everything else. "I think the light should work with the game." DECISIONS, Art direction.
+- An art change: rides in PR #1's re-bake.
