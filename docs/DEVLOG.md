@@ -25381,31 +25381,19 @@ best-looking trees in the game.
   Giants Loop trail, the canyon oasis).
 - Not live: on the branch until the owner has seen it.
 
-## 2026-11-21 - Falls and caves set in the land (branch `nature-world`, off `nature`)
-The owner, 17:32 and 17:33, of Summit Tarn's fall and the sea cave at Redwood Cove: a fall needs "a rock wall or cliff
-or land structure that this waterfall is embedded in that holds up the body of water", a cave should read as "going into
-a mountain or large rock structure". Both change the world's solid ground, so this is its own branch: the world hash
-changes here, where `nature` is page-only.
-- **Summit Tarn (`shared/world3-tarn.js`, `TARN3.rim`).** The relief walled the gorge below the falls on two sides
-  but left the tarn's own lip open: lake, then bare ground at the gorge's floor, the fall a piece on its own. A row of
-  solid rock now runs along the lip from the gorge's west wall to its east, the fall's notch left in it, and a cliff
-  face stands along it in line with the fall's foot. Every south edge of the gorge's own walls with open ground below
-  it gets a face too - they had none and read as paving.
-- **Jointed granite (`client/art2/water.js` `rockKit` 'granite', `cliffWall` stone 1).** The faces were the coasts'
-  layered brown rock with a green cap, on ground rock drawn grey. A granite kit in the ground rock's own ramp
-  (`ground.js` crag): blocks split by dark joints, staggered course by course, lichen in patches. The tarn's fall
-  takes the same stone.
-- **One wall, not a row of blocks (`cliffWall` join).** Each piece of a cliff stepped down into the ground at both
-  ends, so a face of several pieces read as separate blocks with gaps. A piece can now run on into its neighbour at
-  either end (`join`); the tarn's rim and the sea cave's bluff use it.
-- **The sea cave (`shared/world3-caves.js`; `caveMouth` deep).** One bluff: the pieces laid out from the mouth at one
-  height, running on into each other; the mouth as tall and as deep as the face either side, level-topped and mossed
-  like it, where it was a lower, paler hump with gaps beside it.
-- The cave mouth by Redwood Creek Falls was looked at and left: it already stands in the gorge's basalt wall.
-- Tests (one file at a time, on this branch before the last merge of `nature`): cliffs, crag, fallart, floraart,
-  ledges, nature, naturepieces, perf, placementlint, undergrowth, wildart, world3caves, world3coast, world3peaks,
-  world3redwoods, world3relief, world3woods - all pass. The whole suite has not been run on it.
-- Not done: the river ledge falls' setting (drawn taller on `nature`; they want a lower, darker river below and a
-  face either side); Coral Cay's pool and stream; the bluff's top meeting the ground behind it (beach behind its west
-  half).
-
+## 2026-11-21 - The sea cave in a rock of its own (branch `nature-world`, off `nature`)
+Two tries. The first (17:32-18:30) set Summit Tarn behind a rim of granite cliff and the sea cave in a bluff of cliff
+pieces; the owner, 19:18: "Both of these fixes do not work ... just added a line of cliffs that dont look good and dont
+consider topographical levels". Both withdrawn. What stands:
+- **Summit Tarn** is page-side now and lives on `nature`: it drains over a low sill into its stream. This branch's
+  `shared/world3-tarn.js` is `nature`'s again.
+- **The sea cave (`shared/world3-caves.js`).** The cove is flat: there is no cliff to set a mouth in, and none within
+  ninety tiles (checked over the built world). So the cave has a rock of its own, as the mine has: one mass of dark
+  basalt behind the cobble pocket (`'cliff'` with `st: 'basalt'`), its outline ragged and its top stepping back in
+  tiers, solid where it is drawn (`shared/cliffshape.js` `cliffSolid`), the way in a low black arch at its foot
+  (`water.js` `caveArch`). The world changes here (the `world3` hash moves).
+- Kept from the first try, unused for now: `cliffWall`'s granite stone and `join`, `caveMouth` deep.
+- Tests on this branch: world3caves (updated: one rock mass, no row of cliff pieces), world3coast, world3redwoods,
+  cliffs, placementlint pass. The first build of the rock cleared the cove's fire ring from the beach beside it
+  (world3coast caught it): the rock now clears only what stands on its own tiles, and never a fire ring. The whole
+  suite has not been run on this branch.

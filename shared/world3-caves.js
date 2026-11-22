@@ -142,8 +142,9 @@ export function buildCaves3(m, H3) {
     // mine has (naturesites.js): one mass of dark basalt standing as a hill behind the pocket - its outline ragged, its
     // top stepping back in tiers, solid where it is drawn (shared/cliffshape.js) - the way in a low arch at its foot.
     const CW = 16 * TILE, CD = 7 * TILE, CH = 132, CS = 37, face = Math.round(rimY + 42);
-    for (const [qx, qy] of cliffSolid(MX, face, CW, CD, CH, CS)) { if (!inF(qx, qy)) continue; const i = idx(qx, qy), t = m.tiles[i]; if (t === T.GRASS || t === T.DIRT || t === T.SAND) { m.tiles[i] = T.WALL; m.reserve[i] |= RES; } }
-    for (let dy = -CD - CH * 0.6; dy <= 0; dy += 24) for (let dx = -CW / 2; dx <= CW / 2; dx += 24) dropNear(MX + dx, face + dy, 26);   // (what stood where the rock is)
+    for (const [qx, qy] of cliffSolid(MX, face, CW, CD, CH, CS)) { if (!inF(qx, qy)) continue; if (m.props.some((p) => p && p.t === 'campfire' && Math.hypot(p.x - (qx + 0.5) * TILE, p.y - (qy + 0.5) * TILE) < 3 * TILE)) continue; /* (open ground round a fire ring) */ const i = idx(qx, qy), t = m.tiles[i]; if (t === T.GRASS || t === T.DIRT || t === T.SAND) { m.tiles[i] = T.WALL; m.reserve[i] |= RES; } }
+    const rockT = cliffSolid(MX, face, CW, CD, CH, CS);
+    for (const [qx, qy] of rockT) if (inF(qx, qy)) dropNear((qx + 0.5) * TILE, (qy + 0.5) * TILE, 22, /^(campfire|logseat|pbench)$/);   // (what stood where the rock is - never the cove's fire ring: world3-coast.js)
     P('cliff', MX, face, 0, { w: CW, d: CD, h: CH, s: CS, st: 'basalt' });
     P('cavemouth', MX, face + 2, 0, { w: 84, h: 64, style: 'sea', arch: 1 });
     // the tall trees in front of it in this view (the camera looks north: a redwood south of it hides it) taken off
