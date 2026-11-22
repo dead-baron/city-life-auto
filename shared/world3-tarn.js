@@ -19,12 +19,13 @@ export const TARN3 = {
   turf: 4,          // the green round the north and east shores: tiles from the water
   beach: 3,         // the pebble beach on the west shore: tiles from the water
   slabs: 5,         // a slab every this many tiles of the north shore
+  rim: { h: 78, reach: 26, notch: 1, below: 16 },   // the rock rim that holds the tarn up at its outlet: the face's height (px), how far each way it looks for the gorge's walls (tiles), the fall's notch (tiles each side of its middle), how many rows down the gorge its walls get their faces
   camp: { name: 'Summit Tarn Camp', back: 4 },   // the camp's shelf: this many tiles back from the beach's water
   crag: { name: 'Eagle Crag', reach: 36, foot: 3 },   // looked for within reach tiles of the tarn's middle; the gear's row this many 8-px steps below its foot
 };
 
 export function tarnByHand3(m, H3) {
-  const out = { tarn: 0, turf: 0, beach: 0, slabs: 0, camp: null, crag: null };
+  const out = { tarn: 0, turf: 0, beach: 0, slabs: 0, rim: 0, faces: 0, camp: null, crag: null };
   const site = (m.natureSites || []).find((s) => s.kind === 'tarn' && s.name === 'Summit Tarn');
   if (!H3 || !H3.addProp || !site || !m.lake) return out;
   const W = m.w, HH = m.h, inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH, idx = (x, y) => y * W + x;
@@ -145,6 +146,45 @@ export function tarnByHand3(m, H3) {
     m.natureSites.push({ kind: 'crag', name: C.name, x: Math.round(X + 10), y: Math.round(FY + 22) });
     (m.landmarks ||= []).push({ name: C.name, type: 'crag', x: Math.round(X - 4 * TILE), y: Math.round(Y - 5 * TILE), w: 9 * TILE, h: 8 * TILE });
     out.crag = spot;
+  }
+  // The rim (the owner, 2026-11-21 17:32: "a rock wall or cliff or land structure that this waterfall is embedded in that
+  // holds up the body of water at the top above the body of water below"; concept N5). The relief walls the gorge below
+  // the falls on its two sides, but the tarn's own lip stood open: the lake met bare ground at the gorge's floor, the
+  // fall a piece on its own. One row of solid rock now runs along the lip from the gorge's west wall to its east, the
+  // fall's notch left in it, and a cliff face stands along it - so the tarn lies on a shelf, held, and its water goes
+  // over the one low place in the rim into the gorge.
+  if (outlet) {
+    const fx = Math.floor(outlet[0]), fy = Math.floor(outlet[1]), R = TARN3.rim, rock = (x, y) => inF(x, y) && m.tiles[idx(x, y)] === T.WALL;
+    let xl = fx - R.notch - 1, xr = fx + R.notch + 1;
+    while (xl > fx - R.reach && !(rock(xl, fy) && rock(xl - 2, fy) && rock(xl - 4, fy))) xl--;   // (the gorge's wall itself: not a lone rock on the way)
+    while (xr < fx + R.reach && !(rock(xr, fy) && rock(xr + 2, fy) && rock(xr + 4, fy))) xr++;
+    if (rock(xl, fy) && rock(xr, fy)) {
+      for (let x = xl + 1; x < xr; x++) {
+        if (Math.abs(x - fx) <= R.notch) continue;
+        const i = idx(x, fy);
+        if (water.has(i) || m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP) continue;
+        if (m.tiles[i] !== T.WALL) { m.tiles[i] = T.WALL; out.rim++; }
+        m.reserve[i] |= RES | KEEP; taken.add(i);
+      }
+      // the faces: along the rim, and along every south edge of the gorge's own walls round it - a run of rock with open
+      // ground below it gets a cliff face (they had none: the walls read as paving). The rim's stands in line with the
+      // fall's foot; the others at their rock's edge, lower the further down the gorge
+      const D = 44, edge = 58, openT = (x, y) => { if (!inF(x, y)) return false; const t = m.tiles[idx(x, y)]; return t === T.DIRT || t === T.GRASS || t === T.SAND; };
+      const pieces = (x0, x1, yFace, h, sd, jl = 0, jr = 0) => { if (x1 - x0 < 40) return; const n = Math.max(1, Math.round((x1 - x0) / 210)), l = (x1 - x0) / n; for (let k = 0; k < n; k++) { P('cliffwall', x0 + l * (k + 0.5), yFace - D / 2, 0, { len: Math.round((l + 8) / 8) * 8, h: h + ((sd + k) % 3) * 4 - 2, d: D, s: sd + k * 7, stone: 'granite', join: (k > 0 || jl ? 1 : 0) | (k < n - 1 || jr ? 2 : 0) }); out.faces++; } };   // (one wall: its pieces run on into each other, and into the fall's own rock)
+      for (let y = fy - 3; y <= fy + R.below; y++) {
+        let a = -1;
+        for (let x = fx - R.reach - 6; x <= fx + R.reach + 7; x++) {
+          const face = rock(x, y) && openT(x, y + 1) && !(y === fy && Math.abs(x - fx) <= R.notch);
+          if (face && a < 0) a = x;
+          if (!face && a >= 0) {
+            const rim = y === fy, x0 = a * TILE, x1 = x * TILE;
+            pieces(rim && a === fx + R.notch + 1 ? site.falls.x + edge : x0, rim && x === fx - R.notch ? site.falls.x - edge : x1, rim ? site.falls.y + 8 : (y + 1) * TILE - 6, rim ? R.h : Math.max(48, R.h - 10 - Math.abs(y - fy) * 2), 61 + a + y * 3, rim && a === fx + R.notch + 1 ? 1 : 0, rim && x === fx - R.notch ? 1 : 0);
+            a = -1;
+          }
+        }
+      }
+      if (H3.removeProps) H3.removeProps(m, (x, y) => Math.abs(y - (fy + 0.5) * TILE) < TILE && x > xl * TILE && x < (xr + 1) * TILE && Math.abs(x - site.falls.x) > edge);   // (nothing left standing in the rock)
+    }
   }
   if (drop.length && H3.removeProps) H3.removeProps(m, (x, y) => drop.some(([a, b, r]) => Math.hypot(x - a, y - b) < r));
   // (nothing left standing on the beach or the turf's water edge: the shore's own furniture goes on after)

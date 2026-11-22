@@ -135,12 +135,17 @@ export function buildCaves3(m, H3) {
     // the cliff along its north rim (its face to the south, columnar basalt), the mouth in it; a boulder spur on the east
     const rimY = (BY - R + 0.6) * TILE, x0 = (best.sea + 1) * TILE, x1 = (BX + R) * TILE;
     const MX = Math.round((BX - 1.5) * TILE), MY = Math.round(rimY + 16);
-    for (let x = x0, k = 0; x < x1; x += 150, k++) {
-      if (Math.abs(x + 75 - MX) < 70) continue;   // (where the mouth is: its own rock)
-      P('cliffwall', x + 75, rimY + (k % 2) * 6, 0, { len: 150, h: 132 + (k % 3) * 16, d: 84, s: 40 + k });
+    // (the owner, 2026-11-21 17:33: "it doesn't look like a cave going into a mountain or large rock structure it just
+    // looks like a standalone cave entrance": one bluff - its pieces run on into each other at one height, the mouth
+    // set in it as tall as the face, the face carried on past the pocket's ends)
+    const xs = []; for (let x = MX - 75 - 150 * Math.floor((MX - 75 - (x0 - 48)) / 150); x < x1 + 110; x += 150) xs.push(x);   // (laid out from the mouth: its neighbours meet it, no slit beside it)
+    for (let k = 0; k < xs.length; k++) {
+      const x = xs[k];
+      if (x + 75 === MX) continue;   // (where the mouth is: its own rock)
+      P('cliffwall', x + 75, rimY, 0, { len: 152, h: 140 + (k % 2) * 6, d: 84, s: 40 + k, join: (k > 0 ? 1 : 0) | (k < xs.length - 1 ? 2 : 0) });
       if (m.addSolidProp) for (let dx = -64; dx <= 64; dx += 20) m.addSolidProp(x + 75 + dx, rimY - 8, 12);
     }
-    P('cavemouth', MX, MY, 0, { w: 136, h: 120, style: 'sea' });
+    P('cavemouth', MX, rimY, 0, { w: 152, h: 142, style: 'sea', deep: 84 });
     // the tall trees in front of it in this view (the camera looks north: a redwood south of it hides it) taken off
     const VEG = /^(tree_|redwood|shrub_|bush_|rwstump|rwlog|fern)/;
     for (const p of m.props) if (p && VEG.test(p.t) && Math.abs(p.x - MX) < 7 * TILE + Math.max(0, p.y - MY) * 0.25 && p.y > MY - 2 * TILE && p.y < MY + 26 * TILE) drop.add(p.x + ',' + p.y);

@@ -25367,3 +25367,27 @@ best-looking trees in the game.
   desert oasis, a cove, a redwood road, a town block. And in the running game (a local copy: the mountain tarn, a pasture, the
   Giants Loop trail, the canyon oasis).
 - Not live: on the branch until the owner has seen it.
+
+## 2026-11-21 - Falls and caves set in the land (branch `nature-world`, off `nature`)
+The owner, 17:32 and 17:33, of Summit Tarn's fall and the sea cave at Redwood Cove: a fall needs "a rock wall or cliff
+or land structure that this waterfall is embedded in that holds up the body of water", a cave should read as "going into
+a mountain or large rock structure". Both change the world's solid ground, so this is its own branch: the world hash
+changes here, where `nature` is page-only.
+- **Summit Tarn (`shared/world3-tarn.js`, `TARN3.rim`).** The relief walled the gorge below the falls on two sides
+  but left the tarn's own lip open: lake, then bare ground at the gorge's floor, the fall a piece on its own. A row of
+  solid rock now runs along the lip from the gorge's west wall to its east, the fall's notch left in it, and a cliff
+  face stands along it in line with the fall's foot. Every south edge of the gorge's own walls with open ground below
+  it gets a face too - they had none and read as paving.
+- **Jointed granite (`client/art2/water.js` `rockKit` 'granite', `cliffWall` stone 1).** The faces were the coasts'
+  layered brown rock with a green cap, on ground rock drawn grey. A granite kit in the ground rock's own ramp
+  (`ground.js` crag): blocks split by dark joints, staggered course by course, lichen in patches. The tarn's fall
+  takes the same stone.
+- **One wall, not a row of blocks (`cliffWall` join).** Each piece of a cliff stepped down into the ground at both
+  ends, so a face of several pieces read as separate blocks with gaps. A piece can now run on into its neighbour at
+  either end (`join`); the tarn's rim and the sea cave's bluff use it.
+- **The sea cave (`shared/world3-caves.js`; `caveMouth` deep).** One bluff: the pieces laid out from the mouth at one
+  height, running on into each other; the mouth as tall and as deep as the face either side, level-topped and mossed
+  like it, where it was a lower, paler hump with gaps beside it.
+- Not done: the six river ledge falls' height; Coral Cay's pool and stream; the other cave mouth (by Redwood Creek
+  Falls); the bluff's top meeting the ground behind it (beach behind its west half).
+
