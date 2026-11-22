@@ -25348,6 +25348,10 @@ best-looking trees in the game.
   counts moved). It now takes a plant's own half-width (`statics.js` `floraHalf`) and counts through `pxOver`, which
   knows an art-pixel sprite. Not caught earlier because the lint's test was never reached in the two partial runs on
   this branch - the lesson is in the handover: the lint is run before a branch is called tested.
+- **Mountain and desert, looked over** (eight places as the game draws them). The canyon oasis, the desert camp, the
+  mission and the mine read well with the art-pixel plants and rocks. Changed: sagebrush and white bursage a shade
+  greener and darker at the art pixel - in the sun they read as pale boulders among the desert's grey rocks. Noted,
+  not changed: the standing stones are thin slabs that barely read; the mission ruin is small for a landmark.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
