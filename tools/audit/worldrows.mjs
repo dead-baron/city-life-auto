@@ -34,7 +34,7 @@
 //                  alleys", 10-10)
 //   drinkSign      a sign line pairing drink with riding or driving ("RIDE DRINK REPEAT", the owner 11-17)
 import { TILE, T } from '../../shared/constants.js';
-import { TIDY3 } from '../../shared/world3-tidy.js';
+import { TIDY3, strayBags } from '../../shared/world3-tidy.js';
 import { plantKind, plantWalkHit } from '../../shared/world3-walks.js';
 import { airfields } from '../../shared/flight.js';
 import { FLY } from '../../shared/flight.js';
@@ -348,20 +348,9 @@ export function auditRows(M, rows, seen) {
     }
   }
 
-  // ---- binBags ----
-  {
-    const bins = M.props.filter((p) => p && /^(trashcan|dump_[gbo]|trashpile|burnbarrel)$/.test(p.t));
-    const BC = 256, g = new Map();
-    for (const b of bins) { const k = Math.floor(b.y / BC) * 100000 + Math.floor(b.x / BC); let l = g.get(k); if (!l) g.set(k, (l = [])); l.push(b); }
-    for (const p of M.props) {
-      if (!p || p.t !== 'bags') continue;
-      const D = M.districtAt(p.x, p.y);
-      if (D && D.tier === 'rough') continue;
-      let ok = false;
-      for (let j = -1; j <= 1 && !ok; j++) for (let i = -1; i <= 1 && !ok; i++) for (const b of g.get((Math.floor(p.y / BC) + j) * 100000 + Math.floor(p.x / BC) + i) || []) if (Math.hypot(b.x - p.x, b.y - p.y) < 3 * TILE) { ok = true; break; }
-      if (!ok) add('binBags', { what: 'bin bags', x: p.x, y: p.y, why: `no bin within 3 tiles (${D ? D.tier : '?'} district)` });
-    }
-  }
+  // ---- binBags ---- (shared/world3-tidy.js strayBags: the same rule the build clears with)
+  for (const p of strayBags(M)) { const D = M.districtAt(p.x, p.y); add('binBags', { what: 'bin bags', x: p.x, y: p.y, why: `no bin within 3 tiles (${D ? D.tier : '?'} district)` }); }
+
 
   // ---- drinkSign ----
   {

@@ -135,7 +135,7 @@ export const LINT_ALLOW = {
   heliOffPad: 10,           // a hospital with no ground helipad, a helipad on a sidewalk or a road
   deadBoat: 103,            // a boat prop you can reach that isn't a vehicle and isn't stored
   bigEmptyPlaza: 14,        // an empty stretch of paving 19+ tiles across
-  binBags: 44,              // bin bags away from any bin outside the rough districts
+  binBags: 0,               // bin bags away from any bin outside the rough districts (cleared by the build: world3-tidy.js strayBags3)
 };
 export const CANOPY_MAX = [4 * TILE, 2 * TILE], ALLEY_GAP = 26;
 const CANOPIES = new Set(['porte', 'canopy', 'pergola']);

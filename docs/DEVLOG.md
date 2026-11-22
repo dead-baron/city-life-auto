@@ -26105,3 +26105,13 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   not run yet - run them before this goes anywhere.
 - World change: a new world hash and art hash - every player fetches the city again and the art re-bakes. Goes live only
   with the rest of the world batch, on the owner's word.
+
+## 2026-11-22 - World batch: bin bags by a bin (branch `prebeta-world2`, on top of `prebeta-world`; not live)
+- Black bin bags only by a bin or in the rough districts (DECISIONS, World 10-10). One rule, `strayBags` in
+  `shared/world3-tidy.js`, is what the lint counts (`tools/audit/worldrows.mjs` binBags) and what the build clears with
+  (`strayBags3`, after the walks pass): the audit's 44 lone bags are taken up. `LINT_ALLOW.binBags` 44 -> 0;
+  `test/binbags.test.js` guards the rule.
+- `test/world3arrivals.test.js` test 4 (failing on `main` too): the open blocks' pieces (`shared/world3-openblocks.js`,
+  `openOf`) are appended after the split towers' parts, like them split off older buildings - nothing renumbered. The
+  test now accepts both kinds of piece after the park block's buildings.
+- World change: rides with the rest of the world batch (one world hash change for all of it).

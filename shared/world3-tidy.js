@@ -166,3 +166,27 @@ export function clearHomePaths3(m, removeProps) {
   if (gone.size) removeProps(m, (x, y) => gone.has(x + ',' + y));
   return gone.size;
 }
+
+// Black bin bags only by a bin, or anywhere in the rough districts (DECISIONS, World: "Black bin bags only a few, near cans
+// or in rough alleys", 10-10; the audit's binBags, 44 on 11-19): the bags that are neither. The lint counts with this
+// (tools/audit/worldrows.mjs) and the build takes them up (strayBags3, the done hook) - one rule, no drift.
+export const BAGS = { near: 3 * TILE, BINS: /^(trashcan|dump_[gbo]|trashpile|burnbarrel)$/ };
+export function strayBags(m) {
+  const bins = m.props.filter((p) => p && BAGS.BINS.test(p.t)), BC = 256, g = new Map(), out = [];
+  for (const b of bins) { const k = Math.floor(b.y / BC) * 100000 + Math.floor(b.x / BC); let l = g.get(k); if (!l) g.set(k, (l = [])); l.push(b); }
+  for (const p of m.props) {
+    if (!p || p.t !== 'bags') continue;
+    const D = m.districtAt ? m.districtAt(p.x, p.y) : null;
+    if (D && D.tier === 'rough') continue;
+    let ok = false;
+    for (let j = -1; j <= 1 && !ok; j++) for (let i = -1; i <= 1 && !ok; i++) for (const b of g.get((Math.floor(p.y / BC) + j) * 100000 + Math.floor(p.x / BC) + i) || []) if (Math.hypot(b.x - p.x, b.y - p.y) < BAGS.near) { ok = true; break; }
+    if (!ok) out.push(p);
+  }
+  return out;
+}
+export function strayBags3(m) {
+  if (!Array.isArray(m.props)) return 0;
+  const gone = new Set(strayBags(m));
+  if (gone.size) dropProps(m, gone);
+  return gone.size;
+}
