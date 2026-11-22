@@ -654,8 +654,8 @@ function renderPage() {
 // style if one is - an optional slot left empty if there's none; free players and the dev's wear: anything
 // the polish pass's hairstyles (lookcore.js HAIR_STYLES' fourth field) are offered only while the pass is switched on:
 // off, each would draw as the style it's built on
-const passOn = () => { try { return localStorage.getItem('cla.polish') === '1'; } catch { return false; } };   // (pieces only the pass draws - d.pp - likewise)
-function hairShown(s) { try { return !s[3] || localStorage.getItem('cla.polish') === '1'; } catch { return !s[3]; } }
+const passOn = () => { try { return localStorage.getItem('cla.polish') !== '0'; } catch { return false; } };   // (on unless switched off - the owner, 11-22; storage blocked: off, as main.js line 115)   // (pieces only the pass draws - d.pp - likewise)
+function hairShown(s) { try { return !s[3] || localStorage.getItem('cla.polish') !== '0'; } catch { return !s[3]; } }
 function wearable(R, base, seed) {
   if (state.free || devWear) return R.outfit;
   const O = { ...R.outfit };

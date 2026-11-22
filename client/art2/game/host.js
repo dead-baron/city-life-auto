@@ -489,7 +489,7 @@ export class World2 {
       const t = performance.now();
       const [A, Pd] = await Promise.all([import('./actors.js').catch(() => null), import('./peds.js').catch(() => null)]);
       this.A = A; this.Pd = Pd;
-      try { if (Pd && localStorage.getItem('cla.polish') === '1') { await Pd.loadPolish(new URL('../peoplepolish.js', import.meta.url).href); Pd.usePolish(true); } } catch { /* off */ }
+      try { if (Pd && localStorage.getItem('cla.polish') !== '0') { await Pd.loadPolish(new URL('../peoplepolish.js', import.meta.url).href); Pd.usePolish(true); } } catch { /* off */ }
       if (A && A.artFrom) A.artFrom({ fleet: () => import('../fleet.js'), horse: () => import('../horse.js') });   // (the batch-4 fleet's models, the horse: when first needed - actors.js)
       this._loadMark('artmods', performance.now() - t);
     } catch { /* providers optional */ }
