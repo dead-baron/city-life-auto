@@ -25352,6 +25352,10 @@ best-looking trees in the game.
   mission and the mine read well with the art-pixel plants and rocks. Changed: sagebrush and white bursage a shade
   greener and darker at the art pixel - in the sun they read as pale boulders among the desert's grey rocks. Noted,
   not changed: the standing stones are thin slabs that barely read; the mission ruin is small for a landmark.
+- **Coast, marsh and jungle looked over** (eight places). The coves, the wreck beach, the marsh boardwalk and Coral
+  Cay's lagoon read well. Changed: where a beach's sand met its grass on a slant the border ran as a staircase of
+  tile corners; `groundbake.js` now takes, at each (warped) point, whichever soft ground weighs most among the four
+  tiles round it, so the border runs through on the slant and the warp makes it wander. Smaller teeth, not gone.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
