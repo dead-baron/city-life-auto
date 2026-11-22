@@ -44,6 +44,24 @@ roomier item, an art-pixel sprite's pixels), not anything out of place; fixed in
 `floraHalf`) - the `signCovered` loop on this branch, since that row comes from the audit. All 42 rows pass.
 Lesson: run `test/placementlint.test.js` on a branch before calling it tested; it reads the art as well as the world.
 
+**State of the run (11-21 evening): 396 of 418 files run, in two runs, both stopped by the machine's two-hour limit;
+the results are in `docs/tasks/PREBETA-TESTS.txt`. Not run - run these first:**
+test/world3relief.test.js test/world3rivers.test.js test/world3roads.test.js test/world3scenes.test.js test/world3server.test.js test/world3shops.test
+.js test/world3subway.test.js test/world3townmodels.test.js test/world3towns.test.js test/world3tropic.test.js test/world3water.test.js test/world3wat
+erbodies.test.js test/world3west.test.js test/world3wild.test.js test/world3window.test.js test/world3woods.test.js test/world3world.test.js test/worl
+dbuild.test.js test/worldframe.test.js test/worldmap.test.js test/wrecks.test.js test/xray.test.js
+
+Note the first 274 files ran before the nature merges of the afternoon and the lint fix; a clean full run on the
+final commit has not been done. On a machine without the two-hour limit: the loop below, about three hours.
+
+More failures from the second run, traced as far as said:
+- `test/titlebuttons.test.js`, `test/touchslots.test.js`: fail here, pass on `main` and on `characters` - UI layout,
+  so most likely quick wins (its touch-layout and SUPPORT-button changes); not run on `quickwins` alone.
+- `test/scenes.test.js`, `test/uikit.test.js`, `test/uiscreens.test.js` test 5, `test/world3arrivals.test.js` test 4:
+  fail on `main` too.
+- `test/staffplayers.test.js`, `test/unlocks.test.js`: failed once under load, pass run alone.
+- `test/world3mesa.test.js`, `test/visaudit.test.js`: failed here; not yet compared with `main`.
+
 Triage of the other failures seen (11-21; the first run was stopped by the machine's two-hour limit at 274 of 418
 files, the rest run after it):
 - `test/hub.test.js` test 3 and `test/launch-review.test.js` test 1 fail on `quickwins` alone, pass on `main` and on
