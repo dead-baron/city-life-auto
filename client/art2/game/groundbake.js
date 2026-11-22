@@ -834,8 +834,21 @@ function classify(C) {
         const gi = gy * GW + (px >> 2), gfx = (px & 3) / 4;
         const ox = (b.wx[gi] * (1 - gfx) + b.wx[gi + 1] * gfx) * (1 - gfy) + (b.wx[gi + GW] * (1 - gfx) + b.wx[gi + GW + 1] * gfx) * gfy;
         const oy = (b.wy[gi] * (1 - gfx) + b.wy[gi + 1] * gfx) * (1 - gfy) + (b.wy[gi + GW] * (1 - gfx) + b.wy[gi + GW + 1] * gfx) * gfy;
-        const t2 = (Math.floor((Y + oy) / TILE) - TY0) * TN + Math.floor((X + ox) / TILE) - TX0;
-        if (t2 >= 0 && t2 < TN * TN && isSoft(b.tm[t2]) && !b.tw[t2]) m = b.tm[t2];
+        // (the nature pass, 11-21: the warped lookup alone left a border that runs on the slant as a staircase of tile
+        // corners - a beach's sand against its grass in saw-teeth. The ground here is whichever soft ground weighs most
+        // among the four tiles round the (warped) point, each by how near its centre is: on a slant the border runs
+        // straight through between the centres, and the warp makes it wander)
+        const fx = (X + ox) / TILE - 0.5 - TX0, fy = (Y + oy) / TILE - 0.5 - TY0, i0 = Math.floor(fx), j0 = Math.floor(fy), ax = fx - i0, ay = fy - j0;
+        let m0 = -1, w0 = 0, m1 = -1, w1 = 0, m2 = -1, w2 = 0, m3 = -1, w3 = 0;
+        for (let q = 0; q < 4; q++) {
+          const ii = i0 + (q & 1), jj = j0 + (q >> 1);
+          if (ii < 0 || jj < 0 || ii >= TN || jj >= TN) continue;
+          const kk = jj * TN + ii, mm = b.tm[kk];
+          if (!isSoft(mm) || b.tw[kk]) continue;
+          const w = ((q & 1) ? ax : 1 - ax) * ((q >> 1) ? ay : 1 - ay);
+          if (m0 === mm || m0 < 0) { m0 = mm; w0 += w; } else if (m1 === mm || m1 < 0) { m1 = mm; w1 += w; } else if (m2 === mm || m2 < 0) { m2 = mm; w2 += w; } else { m3 = mm; w3 += w; }
+        }
+        if (m0 >= 0) { let mb = m0, wb = w0; if (w1 > wb) { mb = m1; wb = w1; } if (w2 > wb) { mb = m2; wb = w2; } if (w3 > wb) { mb = m3; } m = mb; }
       }
       // --- the desert's waters (shared/world3-tinajas.js): a tinaja's bowl of slickrock, a seep's ring of cracked mud -
       // round the water out to a ragged edge, per pixel (a tile's step would show as a square)
