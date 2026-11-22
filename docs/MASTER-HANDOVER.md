@@ -10,9 +10,17 @@ at the end of every chat.
 ## 1. How a chat starts
 1. Read this file, then `CLAUDE.md` and `docs/DECISIONS.md` (the rules say so too), then the handover for the package
    you are picking up (section 5).
-2. Read the owner's opening message. It names the package. If he brings notes for other areas, log them (section 4);
+2. Catch up by package, not on everything (the owner, 11-22 02:33; reading all 45 project docs and 460 concept
+   pictures at the start of every chat would spend his usage on things the package never touches):
+   - Know what exists: read the titles of the project's doc list and the index of the concepts
+     (`claude/world-concepts-catalogue.md`, `claude/concepts-crossref-midtown-and-shared.md`).
+   - Read in full: the package's "Read first" documents (section 5).
+   - Look at, as pictures: the approved style targets (`docs/art-v2/targets/`) in any chat that draws or places art;
+     and, before touching a place, every concept the catalogue lists for it. Say in the first report which concepts
+     were looked at. A place with no concept: say so before building it.
+3. Read the owner's opening message. It names the package. If he brings notes for other areas, log them (section 4);
    don't act on them in this chat unless he says so.
-3. Before planning anything, check the waiting branches for work that already covers it (`git branch -r`,
+4. Before planning anything, check the waiting branches for work that already covers it (`git branch -r`,
    `claude/branch-map-2026-11-21.md`). Doubling up and overwriting are the two things he has asked to be protected from.
 
 ## 2. Where the truth lives
@@ -67,6 +75,11 @@ If two of these disagree, `docs/DECISIONS.md` wins, and the newer dated line win
 - About anything else (a UI note during world work, a gameplay idea, a bug seen in passing): **log it, don't act.**
   Add it to `claude/prebeta-list.md` (before the beta) or `claude/postlaunch-fixes.md` / DECISIONS "Future features"
   (after), with the date and his words, and tell him in one line where it went.
+- **A picture he attaches** (11-22 02:33): judge what it is. A screenshot pointing at a fault is feedback - log the
+  note in words, don't keep the file. A concept or a reference for how something should look is kept: commit it under
+  `docs/art-v2/` (the folder for its subject), add a line to the concepts catalogue saying which place or thing it
+  is for, and tell him in one line that it was saved and where. Unsure which: ask him in one line. Never keep one
+  silently, never drop a reference silently.
 - A decision ("let's do X", "I prefer B") goes into `docs/DECISIONS.md` with the date and his words, in the same
   commit as the work it governs, whichever package it belongs to.
 
@@ -96,6 +109,9 @@ Chats that can run side by side: 4 with any other; nothing else safely.
 1. Tests for what changed pass; say which were not run.
 2. Stamp, commit, push the feature branch. Nothing left uncommitted.
 3. New decisions are in `docs/DECISIONS.md`; a DEVLOG entry for each feature; notes for other areas are logged.
+   Then the loose-ends sweep: go back over the owner's messages in this chat and list what he said that is in no
+   file yet - a passing remark, a half-idea, the point of a picture, something tried that failed. Log each, or tell
+   him it was left out.
 4. Update sections 5 and 6 of this file, and the package's own handover.
 5. Copy this file to the project (`claude/master-handover.md`) so the next chat sees it wherever it starts.
 6. Give the owner the opening message for the next chat, like this:
