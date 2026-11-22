@@ -26004,3 +26004,9 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
   of it in the feed and the log (DECISIONS' "long typed lines to the log (or a capped bubble)", the capped bubble chosen).
   Events stay in their own fading note line (not merged into the chat feed). The limit was already there: 200 characters
   a line, 120 for guests, with rate limits.
+- **The balance audit** (A1-A7): `docs/audit/BALANCE-2026-11-22.md` - the owner's questions answered from the rules and
+  one world build (3,467 homes from $5,000, median $18,000; 31 medical places of which ~6 are hospitals; a first car in
+  one job, the badge in 10-20 minutes of the city's little events). Estimates, not telemetry; nothing priced changed.
+  Two text gaps closed: the Guide's "Clean record, quiet money" (a crime nobody saw or reported costs nothing but
+  Criminal XP; Samaritan points never drop for crime; a reported felony blocks the badge until paid off), and the
+  ghostglass caps' price in their pick line and in "A little hustle".
