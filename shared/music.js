@@ -20,38 +20,81 @@ import { ITEMS } from './items.js';
 import { SONGS } from './music-songs.js';
 import { MUSIC_PRICES, RHYTHM, CROWD, FREESTYLE, JAM } from './rules-music.js';
 import { mulberry32 } from './rng.js';
+import { SONG_TAKES } from './songtimes.js';
 
 // ---- the track list -----------------------------------------------------------------------------------------------
 // id: the song (shared/music-songs.js; its score client/sound/songbook/<id>.json); title, by, genre: what the menus and the
 // tapes say; tape: sold on cassette at the record stores; file / secs: the owner's recording, when there is one (null: the
 // synth plays the score)
 export const TRACKS = [
-  { id: 'sunburnt-tape', title: 'Sunburnt Tape', by: 'Haze Collective', genre: 'haze', tape: true, file: null, secs: null },
-  { id: 'sugar-haze', title: 'Sugar Haze', by: 'Haze Collective', genre: 'haze', tape: true, file: null, secs: null },
-  { id: 'waiting-room', title: 'Waiting Room Disco', by: 'The Receptionists', genre: 'haze', tape: true, file: null, secs: null },
-  { id: 'clockwork-kitty', title: 'Clockwork Kitty', by: 'Tin Whiskers', genre: 'haze', tape: true, file: null, secs: null },
-  { id: 'heist-fm', title: 'Smash and Grab', by: 'The Getaway Big Band', genre: 'heist', tape: true, file: null, secs: null },
-  { id: 'heist-getaway', title: 'Getaway Job', by: 'The Getaway Big Band', genre: 'heist', tape: true, file: null, secs: null },
-  { id: 'precinct-brass', title: 'Badge and Brass', by: 'The Precinct Horns', genre: 'heist', tape: true, file: null, secs: null },
-  { id: 'jester-parade', title: "Jester's Parade", by: 'Old Town Brass', genre: 'heist', tape: true, file: null, secs: null },
-  { id: 'grease-fire', title: 'Grease Fire', by: 'Deep Fryer', genre: 'grease', tape: true, file: null, secs: null },
-  { id: 'double-scoop', title: 'Double Scoop', by: 'Deep Fryer', genre: 'grease', tape: true, file: null, secs: null },
-  { id: 'kickflip', title: 'Kickflip', by: 'Grip Tape', genre: 'skate', tape: true, file: null, secs: null },
-  { id: 'rescue-run', title: 'Rescue Run', by: 'Siren Song', genre: 'skate', tape: true, file: null, secs: null },
-  { id: 'menu-wide-awake', title: 'Wide Awake City', by: 'Siren Song', genre: 'skate', tape: true, file: null, secs: null },
-  { id: 'first-sprouts', title: 'First Sprouts', by: 'The Allotments', genre: 'garden', tape: true, file: null, secs: null },
-  { id: 'garden-morning', title: 'Tomatoes in the Morning', by: 'The Allotments', genre: 'garden', tape: true, file: null, secs: null },
-  { id: 'porch-light', title: 'Porch Light', by: 'Cedar Point Pickers', genre: 'garden', tape: true, file: null, secs: null },
+  { id: 'sunburnt-tape', cue: '01', title: 'Sunburnt Tape', by: 'Haze Collective', genre: 'haze', tape: true, file: null, secs: null },
+  { id: 'sugar-haze', cue: '02', title: 'Sugar Haze', by: 'Haze Collective', genre: 'haze', tape: true, file: null, secs: null },
+  { id: 'waiting-room', cue: '03', title: 'Waiting Room Disco', by: 'The Receptionists', genre: 'haze', tape: true, file: null, secs: null },
+  { id: 'clockwork-kitty', cue: '04', title: 'Clockwork Kitty', by: 'Tin Whiskers', genre: 'haze', tape: true, file: null, secs: null },
+  { id: 'heist-fm', cue: '05', title: 'Smash and Grab', by: 'The Getaway Big Band', genre: 'heist', tape: true, file: null, secs: null },
+  { id: 'heist-getaway', cue: '06', title: 'Getaway Job', by: 'The Getaway Big Band', genre: 'heist', tape: true, file: null, secs: null },
+  { id: 'precinct-brass', cue: '07', title: 'Badge and Brass', by: 'The Precinct Horns', genre: 'heist', tape: true, file: null, secs: null },
+  { id: 'jester-parade', cue: '08', title: "Jester's Parade", by: 'Old Town Brass', genre: 'heist', tape: true, file: null, secs: null },
+  { id: 'grease-fire', cue: '09', title: 'Grease Fire', by: 'Deep Fryer', genre: 'grease', tape: true, file: null, secs: null },
+  { id: 'double-scoop', cue: '10', title: 'Double Scoop', by: 'Deep Fryer', genre: 'grease', tape: true, file: null, secs: null },
+  { id: 'kickflip', cue: '11', title: 'Kickflip', by: 'Grip Tape', genre: 'skate', tape: true, file: null, secs: null },
+  { id: 'rescue-run', cue: '12', title: 'Rescue Run', by: 'Siren Song', genre: 'skate', tape: true, file: null, secs: null },
+  { id: 'menu-wide-awake', cue: '13', title: 'Wide Awake City', by: 'Siren Song', genre: 'skate', tape: true, file: null, secs: null },
+  { id: 'first-sprouts', cue: '14', title: 'First Sprouts', by: 'The Allotments', genre: 'garden', tape: true, file: null, secs: null },
+  { id: 'garden-morning', cue: '15', title: 'Tomatoes in the Morning', by: 'The Allotments', genre: 'garden', tape: true, file: null, secs: null },
+  { id: 'porch-light', cue: '16', title: 'Porch Light', by: 'Cedar Point Pickers', genre: 'garden', tape: true, file: null, secs: null },
   // the live synth's own little loops (client/sound/music.js): the street beat every mat plays when you've no tape, the rest
   // what the shops and lobbies play
-  { id: 'club', title: 'Street Beat', by: 'the mat', genre: 'beat', tape: false, file: null, secs: null },
-  { id: 'shop', title: 'Aisle Bossa', by: 'In-Store Sounds', genre: 'lobby', tape: true, file: null, secs: null },
-  { id: 'lobby', title: 'Visiting Hours', by: 'In-Store Sounds', genre: 'lobby', tape: true, file: null, secs: null },
-  { id: 'drivein', title: 'Starlite Slow Dance', by: 'The Speaker Posts', genre: 'lobby', tape: true, file: null, secs: null },
+  { id: 'club', cue: '20', title: 'Street Beat', by: 'the mat', genre: 'beat', tape: false, file: null, secs: null },
+  { id: 'shop', cue: '17', title: 'Aisle Bossa', by: 'In-Store Sounds', genre: 'lobby', tape: true, file: null, secs: null },
+  { id: 'lobby', cue: '18', title: 'Visiting Hours', by: 'In-Store Sounds', genre: 'lobby', tape: true, file: null, secs: null },
+  { id: 'drivein', cue: '19', title: 'Starlite Slow Dance', by: 'The Speaker Posts', genre: 'lobby', tape: true, file: null, secs: null },
+  // the places' own (the owner's cues 21-25, 11-22): the night clubs, the casinos, the bars - beds that loop, not on tape
+  { id: 'neon-current', cue: '21', title: 'Neon Current', by: 'Afterhours', genre: 'club', tape: false, file: null, secs: null },
+  { id: 'mirrorball', cue: '22', title: 'Mirrorball Traffic', by: 'Afterhours', genre: 'club', tape: false, file: null, secs: null },
+  { id: 'dust-dial', cue: '23', title: 'Dust on the Dial', by: 'The Back Booth', genre: 'bar', tape: false, file: null, secs: null },
+  { id: 'house-odds', cue: '24', title: 'House Odds', by: 'The Pit Boss Quartet', genre: 'casino', tape: false, file: null, secs: null },
+  { id: 'brass-ticket', cue: '25', title: 'Brass Ticket', by: 'The Pit Boss Quartet', genre: 'casino', tape: false, file: null, secs: null },
 ];
 export const TRACK = Object.fromEntries(TRACKS.map((t, i) => [t.id, Object.assign(t, { i })]));
 export const BEAT_TRACK = 'club';   // (the mat's own beat)
-export const trackSecs = (id) => (TRACK[id] && (TRACK[id].secs || (SONGS[id] && SONGS[id].secs))) || 30;
+// ---- the owner's recordings (11-22: every take approved by ear; shared/songtimes.js) -----------------------------------
+// A song with recordings plays them - on tapes and the stations as the full song from the top, in the places as its loop -
+// in place of the score. Which take (the primary, or now and then an alternate - the owner: "should go with the primary
+// song the most but might be nice to have some variety"): takeOf, the same on the server and every page.
+export const TAKE_PRIMARY = 0.7;   // (the primary's share; the alternates share the rest evenly)
+export const takesOf = (id) => (TRACK[id] && TRACK[id].cue && SONG_TAKES[TRACK[id].cue]) || null;
+// the take a play of song `id` uses, from an integer n (which play this is): [take, full s, loop s, BPM, first downbeat]
+export function takeOf(id, n) {
+  const T = takesOf(id);
+  if (!T) return null;
+  if (T.length === 1) return T[0];
+  let h = (Math.imul(n | 0, 0x9e3779b1) ^ Math.imul(T[0][0].charCodeAt(1) * 977 + T[0][0].charCodeAt(2) * 31 + 7, 0x85ebca6b)) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0; h = (h ^ (h >>> 13)) >>> 0;
+  const u = h / 4294967296;
+  return u < TAKE_PRIMARY ? T[0] : T[1 + Math.min(T.length - 2, Math.floor(((u - TAKE_PRIMARY) / (1 - TAKE_PRIMARY)) * (T.length - 1)))];
+}
+// how long a song plays: its recording's primary (the full song), else its score
+// a score's own length (the synth's: the mat's rhythm game keeps it)
+export const scoreSecs = (id) => (SONGS[id] && SONGS[id].secs) || 30;
+export const trackSecs = (id) => { const T = takesOf(id); return T ? T[0][1] : (TRACK[id] && (TRACK[id].secs || (SONGS[id] && SONGS[id].secs))) || 30; };
+// a run of `rounds` plays of these songs in turn, each its take: [{ track, take, secs }] - a station's round, or a tape
+// playing round and round (a fixed run, so where it is at any moment is a sum, not a walk through every play since t = 0)
+const RUN_ROUNDS = 8;
+function run(ids, seed) {
+  const out = [];
+  for (let r = 0; r < RUN_ROUNDS; r++) for (let k = 0; k < ids.length; k++) {
+    const tk = takeOf(ids[k], seed * 131 + r * 17 + k);
+    out.push({ track: ids[k], take: tk ? tk[0] : null, secs: tk ? tk[1] : trackSecs(ids[k]) });
+  }
+  return out;
+}
+function runAt(R, x) {
+  const all = R.reduce((a, q) => a + q.secs, 0);
+  x = ((x % all) + all) % all;
+  for (const q of R) { if (x < q.secs) return { track: q.track, take: q.take, pos: x, left: q.secs - x }; x -= q.secs; }
+  return { track: R[0].track, take: R[0].take, pos: 0, left: R[0].secs };
+}
 export const songOf = (id) => SONGS[id] || SONGS[BEAT_TRACK];
 
 // ---- the radio's stations -----------------------------------------------------------------------------------------
@@ -68,13 +111,18 @@ export const stationName = (i) => (STATIONS[i] ? `${STATIONS[i].freq} ${STATIONS
 export function stationAt(i, t) {
   const S = STATIONS[i];
   if (!S) return null;
-  const len = S.tracks.map(trackSecs), all = len.reduce((a, b) => a + b, 0);
-  let x = (((t + i * 41.3) % all) + all) % all;
-  for (let k = 0; k < len.length; k++) { if (x < len[k]) return { track: S.tracks[k], pos: x, left: len[k] - x }; x -= len[k]; }
-  return { track: S.tracks[0], pos: 0, left: len[0] };
+  const R = STATION_RUNS[i] || (STATION_RUNS[i] = run(S.tracks, i + 1));
+  return runAt(R, t + i * 41.3);
 }
-// where a tape (or the mat's song) is, started at world time t0: it plays round and round
-export const tapePos = (id, t0, t) => { const L = trackSecs(id); return (((t - t0) % L) + L) % L; };
+const STATION_RUNS = [];
+// how long a station takes to come round to the same take of the same song (its run: RUN_ROUNDS rounds)
+export const stationLoopSecs = (i) => { stationAt(i, 0); return STATION_RUNS[i] ? STATION_RUNS[i].reduce((a, q) => a + q.secs, 0) : 0; };// where a tape (or the mat's song) is, started at world time t0: it plays round and round
+// (each time round, a take of its own: the tape's start time seeds them)
+export const tapeAt = (id, t0, t) => runAt(run([id], Math.floor(t0) & 0xffff), t - t0);
+export const tapePos = (id, t0, t) => tapeAt(id, t0, t).pos;
+// the beat a take is on at pos (s): its measured BPM from its first downbeat; null for a score (beatAt(songOf(id), pos))
+export function takeBeat(tk, pos) { return tk ? (pos - tk[4]) * tk[3] / 60 : null; }
+export const takeById = (id, take) => { const T = takesOf(id); return T ? T.find((q) => q[0] === take) || null : null; };
 
 // ---- the items ----------------------------------------------------------------------------------------------------
 // music: what it is to the server (music.js use): the boombox and the radio play out loud, set down or carried; the mat

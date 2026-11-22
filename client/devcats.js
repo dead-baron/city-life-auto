@@ -30,6 +30,7 @@ export const DEV_SECTIONS = [
   // what the owner's phone does (the perf work, 10-26): the readout over the screen, kept on in this browser till switched off
   { id: 'perf', title: '📈 Performance', items: [['📈 Performance readout on / off (your screen)', '@perf']] },
   { id: 'polish', title: '🧍 Character polish', items: [['🧍 Character polish pass on / off (your screen; reloads)', '@polish']] },
+  { id: 'recmusic', title: '🎵 Recorded music', items: [['🎵 The owner\'s recordings on / off - radios, tapes, the places (your screen; reloads)', '@recmusic']] },
   // the scene director's scenes (server/systems/director.js, shared/scenes/): started now, at the place nearest you - your
   // camera follows the script's (client/director.js; Esc gives it back)
   { id: 'scenes', title: '🎬 Director scenes', items: [...SCENE_LIST.map((q) => [`🎬 ${q.n}`, 'scene', { id: q.id, hold: 1 }]), ['⏹ End the scene you\'re watching', 'scene', { k: 'stop' }]] },

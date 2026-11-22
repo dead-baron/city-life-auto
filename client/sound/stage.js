@@ -19,6 +19,16 @@ import { MUSIC_HEAR, MUSIC_GEAR } from '../../shared/rules-music.js';
 const R = Math.random;
 const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const LOOK = 0.3, TICK = 0.08, MAX_SOURCES = 2;
+// the recordings: their file list (lazily), Opus where the browser plays it (else the MP3), how far a stream may drift
+let SONGS = null, SONGS_P = null, OPUS_OK = null;
+const OPUS = () => { if (OPUS_OK === null) { try { OPUS_OK = !!new Audio().canPlayType('audio/ogg; codecs="opus"'); } catch { OPUS_OK = false; } } return OPUS_OK; };
+const SYNC_S = 0.35;
+// staged (11-22): the recordings play only with the debug menu's *Recorded music* on (cla.recmusic '1') until the owner has
+// heard them in the game; then on for everyone (as the character polish went)
+export const recOn = () => { try { return localStorage.getItem('cla.recmusic') === '1'; } catch { return false; } };
+// a recording at the title track's loudness (client/sound/track.js TARGET_LUFS, trackGain; a mono file plays 3 dB up),
+// under the chain's make-up of 4 (the synth's notes are written quiet)
+const recGain = (lufs, ch) => Math.pow(10, (-15 - (lufs + (ch === 1 ? 3 : 0))) / 20) / 4;
 export let live = null;   // (the one in use: client/music/play.js plays your own notes through it)
 
 // ---- the songbook ---------------------------------------------------------------------------------------------------
@@ -176,10 +186,12 @@ export class StageSound {
     setp(v.c.lp.frequency, broken ? Math.max(200, w.lp * wind * wind) : w.lp, t, 0.2);
     if (v.c.pan) setp(v.c.pan.pan, w.pan, t, 0.25);
     if (broken && wind <= 0) return;
-    if (s.track !== v.track) { this.stopFile(v); v.track = s.track; v.data = null; v.u = -1; }
+    const key = s.track + '/' + (recOn() && s.take || '');
+    if (key !== v.track) { this.stopFile(v); this.stopTake(v); v.track = key; v.data = null; v.u = -1; }
+    if (s.take && recOn()) { this.playTake(v, s, broken ? wind : 1); return; }
     const T = TRACK[s.track];
     if (T && T.file) { this.playFile(v, s, T, t, broken ? wind : 1); return; }
-    if (!v.data) { v.data = song(s.track); if (!v.data) return; v.u = -1; }
+    if (!v.data) { v.data = song(s.track); if (!v.data) return; v.u = -1; }   // (the score: v.track is 'id/')
     const secs = v.data.secs;
     // where the song is now (s.pos: the server's word for it) - picked up from there when it's somewhere else
     const posNow = v.ctxT0 !== undefined && v.u >= 0 ? v.pos0 + (t - v.ctxT0) * v.rate : null;
@@ -231,11 +243,49 @@ export class StageSound {
     }
     setp(v.file.src.playbackRate, Math.max(0.15, rate), t, 0.2);
   }
+  // the owner's recording (shared/music.js takeOf: which take; client/sound/songs.js: its files, loaded when first wanted):
+  // the full song streamed through an <audio> element - never decoded whole, so a radio and a club side by side don't fill a
+  // phone's memory - into the source's own chain (level, muffle, pan), kept where the song is for everyone: put back when
+  // it drifts more than SYNC_S from the shared clock's position
+  playTake(v, s, rate) {
+    if (!SONGS_P) SONGS_P = import('./songs.js').then((m) => { SONGS = m.SONGS; }).catch(() => { SONGS = false; });
+    if (!SONGS) return;
+    const T = SONGS.takes[s.take];
+    if (!T) return;
+    if (!v.el) {
+      const el = new Audio();
+      el.preload = 'auto';
+      try { el.preservesPitch = false; } catch { /* old browser */ }
+      el.src = new URL('../../' + (OPUS() ? T.full.opus : T.full.mp3), import.meta.url).href;
+      let node = null, g = null;
+      try {
+        node = this.ctx.createMediaElementSource(el); g = this.ctx.createGain();
+        g.gain.value = recGain(T.full.lufs, T.channels);
+        node.connect(g); g.connect(v.c.inp);
+      } catch { /* no route: leave it silent */ }
+      v.el = el; v.node = node; v.elG = g; v.elOk = false;
+      el.addEventListener('canplay', () => { v.elOk = true; }, { once: true });
+      el.addEventListener('error', () => { if (!el.dataset.mp3 && OPUS()) { el.dataset.mp3 = '1'; el.src = new URL('../../' + T.full.mp3, import.meta.url).href; } }, { once: false });
+    }
+    const el = v.el;
+    if (s.pos < 0) return;
+    const want = Math.min(s.pos, Math.max(0, T.full.seconds - 0.05));
+    if (!v.elOk) { try { el.currentTime = want; } catch { /* not seekable yet */ } return; }
+    el.playbackRate = Math.max(0.25, rate);
+    if (el.paused) { try { el.currentTime = want; } catch { /* - */ } el.play().catch(() => {}); return; }
+    if (rate >= 1 && Math.abs(el.currentTime - want) > SYNC_S) { try { el.currentTime = want; } catch { /* - */ } }
+  }
+  stopTake(v) {
+    if (!v.el) return;
+    try { v.el.pause(); v.el.removeAttribute('src'); v.el.load(); } catch { /* gone */ }
+    try { if (v.node) v.node.disconnect(); if (v.elG) v.elG.disconnect(); } catch { /* gone */ }
+    v.el = null; v.node = null; v.elG = null;
+  }
   stopFile(v) { if (v.file && v.file.src) { try { v.file.src.stop(); v.file.src.disconnect(); } catch { /* gone */ } } v.file = null; }
   fade(id, v, t) {
     setp(v.c.lvl.gain, 0, t, 0.3);
     if (!v.quiet) v.quiet = t;
-    else if (t - v.quiet > 2) { this.stopFile(v); try { v.c.lvl.disconnect(); } catch { /* gone */ } this.vs.delete(id); }
+    else if (t - v.quiet > 2) { this.stopFile(v); this.stopTake(v); try { v.c.lvl.disconnect(); } catch { /* gone */ } this.vs.delete(id); }
   }
   silence() { const t = this.ctx.currentTime; for (const [id, v] of this.vs) this.fade(id, v, t); if (this.busk) setp(this.busk.c.lvl.gain, 0, t, 0.3); }
   // someone's notes on their instrument (the 'jamn' event), from where they stand

@@ -26046,3 +26046,27 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 ## 2026-11-22 - Soundtrack: full songs and the alternates measured (branch `prebeta-art`; nothing in the game yet)
 - `tools/music/analyze.py` renders each take whole from the top too; the 31 alternates measured; review page v2
   (`tools/music/review-page.py`) on the owner's computer. All 25 primaries' loops and endings approved (11-22 10:12).
+
+## 2026-11-22 - The owner's songs in the game, staged (branch `music`)
+- **The files** (`tools/music/make-songs.py`): the 56 approved takes (25 primaries, 31 alternates), each as its loop (the
+  title track's seam: aligned to the sample, an equal-power blend, wrap-around margins; decoded seams -17 to -32 dB) and
+  as the full song from the top to its ending (its own, or the new one), Opus (56/80 kbps) and MP3 (80/112 kbps), mono
+  where the channels are alike: `assets/music/songs/` (80 MB Opus, 102 MB MP3; a player fetches one). Files:
+  `client/sound/songs.js` (lazily); timing: `shared/songtimes.js` (3 KB: what the server and page agree on).
+- **Which take** (`shared/music.js` `takeOf`): a pure function of the song and the play - the primary 70%, the
+  alternates the rest. The stations (`stationAt`) and tapes (`tapeAt`) play runs of 8 rounds, each play its take, so
+  where a station is at any moment is a sum - the same on every page, nothing on the wire. Five new tracks for the
+  places' own songs (cues 21-25: Neon Current, Mirrorball Traffic, Dust on the Dial, House Odds, Brass Ticket), at the
+  end of the list (no tape index moves).
+- **Playing them**: radios, tapes, car radios (`client/sound/stage.js` `playTake`): the full song streamed through an
+  `<audio>` element into the source's chain (distance, muffle, pan), re-synced when it drifts over 0.35 s - never decoded
+  whole (a phone's memory). The places (`client/sound/music.js` `rec`): the loop decoded and looped margin to margin into
+  the same chain as before - the shops Aisle Bossa, the lobbies Visiting Hours through the ceiling-speaker band, the
+  drive-in Starlite Slow Dance, the night club Neon Current or Mirrorball Traffic a day each; let go 4 s after it's no
+  longer heard. Level: the title's (-15 LUFS target, `track.js` trackGain). The mat's rhythm game keeps its score (its
+  chart is the score's beats) - the recordings there come with the gig work.
+- **Staged**: off for players; the debug menu's *🎵 Recorded music* turns them on in one browser (`cla.recmusic`).
+- Not yet heard in a running game (Claude can't hear; the owner will). Not yet placed: Dust on the Dial (bars), House
+  Odds and Brass Ticket (the casino) - their tracks exist, their places don't play them yet.
+- Tests: `test/music.test.js` (12: the rotation's shares, every station's song recorded, the files on disk, stations
+  round and round by take), sound, track, drivein, nightclubs, perf, the dev menu's.

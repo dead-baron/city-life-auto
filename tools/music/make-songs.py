@@ -73,6 +73,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('takes')
     ap.add_argument('--only', default='')
+    ap.add_argument('--manifest-only', action='store_true', help='rewrite shared/songtimes.js from client/sound/songs.js, no encoding')
     a = ap.parse_args()
     prim = json.load(open(os.path.join(DATA, '_songs.json')))
     alts = json.load(open(os.path.join(DATA, '_alternates.json')))
@@ -92,7 +93,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     for s in prim + alts:
         tid = s['id']
-        if only and tid not in only:
+        if a.manifest_only or (only and tid not in only):
             continue
         info = json.load(open(os.path.join(DATA, tid + '.json')))
         ch = 1 if info['stereo_alike'] >= MONO_AT else 2
@@ -147,6 +148,30 @@ def main():
                  '// where Opus won\'t play. All approved by the owner by ear, 2026-11-22. Loaded only when music is wanted.\n')
         fh.write('export const SONGS = ' + json.dumps(M, indent=1) + ';\n')
     print('wrote', path)
+    times(M)
+
+
+def times(M):
+    """shared/songtimes.js: what the server and the page both need to agree what plays when - by cue, its takes (the
+    primary first): [take, the full song's seconds, the loop's seconds, BPM, the first downbeat (s)]. Tiny on purpose:
+    shared/music.js imports it (the page's start-up budget); the files themselves are client/sound/songs.js, loaded lazily."""
+    out = {}
+    for cue, c in M['cues'].items():
+        rows = []
+        for tid in [c['primary']] + c['alts']:
+            T = M['takes'].get(tid)
+            if not T:
+                continue
+            info = json.load(open(os.path.join(DATA, tid + '.json')))
+            rows.append([tid, T['full']['seconds'], T['loop']['loop'], info['bpm'], info['first_downbeat'] or 0])
+        out[cue] = rows
+    path = os.path.join(ROOT, 'shared', 'songtimes.js')
+    with open(path, 'w', encoding='utf-8') as fh:
+        fh.write('// The owner\'s songs, by cue: each take (the primary first) as [take, full song s, loop s, BPM, first downbeat s] -\n'
+                 '// made by tools/music/make-songs.py from the measured takes (docs/audio/loops-2026-11-22); edit there, not here.\n'
+                 '// The files: client/sound/songs.js (the page, lazily). Which take plays when: shared/music.js takeOf.\n')
+        fh.write('export const SONG_TAKES = {\n' + ',\n'.join(f"  '{k}': {json.dumps(v)}" for k, v in out.items()) + ',\n};\n')
+    print('wrote', path, os.path.getsize(path), 'bytes')
 
 
 if __name__ == '__main__':

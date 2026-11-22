@@ -136,3 +136,10 @@ How to build that (Claude's plan, nothing built):
 - Next (package 4): encode the approved takes into `assets/music/` (each take: the loop via `make-loop.py`'s seam
   method, and the full song to its ending; mono where the channels are alike), then the world's music per his 11-22
   03:07 direction (sources in the world, synced across players, rotation 70/30, sound by source, muffled from outside).
+
+## 11-22 afternoon: in the game, staged (branch `music`; DEVLOG "The owner's songs in the game, staged")
+- Built: the files, the take rotation (shared), radios / tapes / car radios streaming the full songs, the shops / lobbies /
+  drive-in / club playing loops. Behind the debug menu's *Recorded music* (off for players).
+- Next: the owner listens in the game -> on for everyone; the casino and the bars get their songs (House Odds, Brass
+  Ticket, Dust on the Dial: no place plays them yet); each source's sound (a tinny pocket radio, the car's body, the
+  club's door) tuned; the gigs and the mat to the recordings (charts from the measured beats - N9, N15).

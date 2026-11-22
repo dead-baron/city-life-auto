@@ -99,8 +99,51 @@ function drum(E, out, kind, t, v) {
   }
 }
 
+// The owner's recordings in place of these tunes (11-22, every take approved by ear): the places' beds are his songs'
+// loops - the shops Aisle Bossa, the lobbies Visiting Hours, the drive-in Starlite Slow Dance, the night club Neon Current
+// or Mirrorball Traffic (a night each) - fed into the same chain (the ceiling speaker's band, the echo, the muffle and
+// the place), so they sound where they're played. The take: shared/music.js takeOf, by the hour (the alternates now and
+// then); the files: client/sound/songs.js, loaded when first wanted. The synth plays only while a recording can't.
+const REC = { shop: ['shop'], lobby: ['lobby'], drivein: ['drivein'], club: ['neon-current', 'mirrorball'] };
+let SONGS_M = null, SONGS_MP = null;
+const opusOk = () => { try { return !!new Audio().canPlayType('audio/ogg; codecs="opus"'); } catch { return false; } };
+
 export class Music {
   constructor(E) { this.E = E; this.ctx = E.ctx; this.players = {}; }
+  // a place's recording: its loop decoded once it's on, looped from margin to margin + loop (its seam is in the file)
+  rec(p) {
+    const ids = REC[p.name];
+    try { if (localStorage.getItem('cla.recmusic') !== '1') return false; } catch { return false; }   // (staged: client/sound/stage.js recOn)
+    if (!ids || p.rec === false) return false;
+    if (!SONGS_MP) SONGS_MP = Promise.all([import('./songs.js'), import('../../shared/music.js'), import('./track.js')]).then(([a, b, c]) => { SONGS_M = { S: a.SONGS, M: b, T: c }; }).catch(() => { SONGS_M = false; });
+    if (!SONGS_M) return SONGS_M === false ? (p.rec = false) : null;
+    if (!p.rec) {
+      const hour = Math.floor(Date.now() / 3600000), id = ids[Math.floor(hour / 24) % ids.length], tk = SONGS_M.M.takeOf(id, hour);
+      const T = tk && SONGS_M.S.takes[tk[0]];
+      if (!T) { p.rec = false; return false; }
+      p.rec = { take: tk[0], T, buf: null, src: null, g: null };
+      const url = (f) => new URL('../../' + f, import.meta.url).href;
+      const get = (f) => fetch(url(f)).then((r) => r.arrayBuffer()).then((b) => this.ctx.decodeAudioData(b));
+      (opusOk() ? get(T.loop.opus).catch(() => get(T.loop.mp3)) : get(T.loop.mp3)).then((b) => { if (p.rec) p.rec.buf = b; }).catch(() => { p.rec = false; });
+    }
+    const R = p.rec;
+    if (!R.buf) return true;
+    if (!R.src && p.on) {
+      const c = this.ctx, src = c.createBufferSource(), g = c.createGain();
+      src.buffer = R.buf; src.loop = true; src.loopStart = R.T.loop.margin; src.loopEnd = R.T.loop.margin + R.T.loop.loop;
+      g.gain.value = SONGS_M.T.trackGain({ lufs: R.T.loop.lufs, channels: R.T.channels }) / 4;   // (inp's make-up of 4 is the synth's)
+      src.connect(g); g.connect(p.inp);
+      src.start(c.currentTime + 0.05, R.T.loop.margin + Math.random() * R.T.loop.loop);   // (joined somewhere in: a bed, not a song starting)
+      R.src = src; R.g = g;
+    }
+    return true;
+  }
+  unrec(p) {
+    const R = p.rec;
+    if (!R) return;
+    try { if (R.src) { R.src.stop(); R.src.disconnect(); } if (R.g) R.g.disconnect(); } catch { /* gone */ }
+    p.rec = null;   // (the decoded loop let go: decoded again when the place is next heard - its bytes are in the browser's cache)
+  }
   // a song's player and its chain: level -> low-pass -> pan -> the music bus, with a small echo of its own
   player(name) {
     if (this.players[name]) return this.players[name];
@@ -145,8 +188,9 @@ export class Music {
       if (!p.on) continue;
       if (p.want <= 0.001) {
         if (!p.quietAt) p.quietAt = t;
-        else if (t - p.quietAt > 4) { try { p.lvl.disconnect(); } catch { /* gone */ } p.on = false; continue; }
+        else if (t - p.quietAt > 4) { try { p.lvl.disconnect(); } catch { /* gone */ } p.on = false; this.unrec(p); continue; }
       } else p.quietAt = 0;
+      if (this.rec(p) !== false) continue;   // (the recording plays - or is on its way: nothing from the synth meanwhile; false: none for this place, or it can't load)
       if (p.nextT < t - 0.5) p.nextT = t + 0.05;   // (the tab was asleep: start again from now, not catch up)
       // (a note that's already late - the page stalled longer than the look-ahead - is skipped, not started in the past:
       // its envelope would jump instead of ramping, and that jump is a click)
