@@ -26140,3 +26140,16 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
 - The audit's deadBoat 103 -> 58 (`LINT_ALLOW.deadBoat` 58). Left: the moored sailboats (27), yachts (19) and fishing
   boats (9) - scenery; making them marina vehicles, or keeping them out of swimming reach, is the owner's call (asked).
 - `test/boatsafloat.test.js` (2); placementlint 42/42, fleet, core.
+
+## 2026-11-22 - World batch: railings on the land, not out over the water (branch `prebeta-world2`; not live)
+- The audit's railOverWater (110: "the promenade's railings jutting out over the sea on a diagonal shore"). One rule for
+  the build and the lint (`shared/world3-railtrim.js` railWetAt, railWetRun; tools/audit/worldrows.mjs): a point of a
+  railing is out over the water when there's water under it and no footing either side of it (water, or a wall's foot)
+  - a railing along a seawall, a few px into the water tile, is on the shore.
+- `railTrim3` (the done hook): a run out over the water is first moved back onto the shore - the smallest shift across
+  it, up to 48 px either way, with none of it over the water and none on a building, a wall or a road (79, mostly the
+  Neon Strip's and the Arts District's promenade railings a tile out at sea); else cut back to its dry stretch (7); a
+  run with no dry stretch of a tile is taken up (23). Fences people collide with come from these props
+  (shared/fences.js), so they hold where they're drawn.
+- railOverWater 110 -> 0 (`LINT_ALLOW` 0). Not yet seen in pictures: before / after with `tools/regress/` before the
+  batch goes live. `test/railtrim.test.js` (2).

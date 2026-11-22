@@ -35,6 +35,7 @@
 //   drinkSign      a sign line pairing drink with riding or driving ("RIDE DRINK REPEAT", the owner 11-17)
 import { TILE, T } from '../../shared/constants.js';
 import { TIDY3, strayBags } from '../../shared/world3-tidy.js';
+import { railWetRun } from '../../shared/world3-railtrim.js';
 import { plantKind, plantWalkHit } from '../../shared/world3-walks.js';
 import { airfields } from '../../shared/flight.js';
 import { FLY } from '../../shared/flight.js';
@@ -201,8 +202,7 @@ export function auditRows(M, rows, seen) {
     let dx = 0, dy = 0;
     if (p.t === 'yfence') { dx = p.x1 - p.x; dy = p.y1 - p.y; } else if (p.t === 'crail') { dx = p.len || 0; } else { dx = p.tx || 0; dy = p.ty || 0; }
     const L = Math.hypot(dx, dy), n = Math.max(1, Math.ceil(L / 8));
-    let run = 0, worst = 0;
-    for (let i = 0; i <= n; i++) { const t = tileAt(p.x + dx * i / n, p.y + dy * i / n); if (wetT(t)) { run++; worst = Math.max(worst, run); } else run = 0; }
+    const worst = railWetRun(M, p);   // (shared/world3-railtrim.js: water under it and either side - the build's rule too)
     if (worst >= 2) add('railOverWater', { what: `a ${p.t}${p.kind ? ` (${p.kind})` : ''} ${Math.round(L / TILE)} tiles`, x: p.x + dx / 2, y: p.y + dy / 2, why: `${worst * 8} px of it over open water` });
   }
 

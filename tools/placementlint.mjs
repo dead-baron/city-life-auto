@@ -126,7 +126,7 @@ export const LINT_ALLOW = {
   frontNames: 7,            // a shop's sign naming none of its places, or another trade
   lobbyDoor: 161,           // an apartment's lobby door at a shop front
   rampCrossesRoad: 9,       // a ramp below deck height over a street that isn't its junction
-  railOverWater: 110,       // a railing or fence run out over open water
+  railOverWater: 0,       // a railing or fence run out over open water (11-22: moved back onto the shore or cut back - world3-railtrim.js; the rule: water under it and either side)
   dockOverlap: 5,           // boardwalks or piers over each other (the Egret Marsh boardwalk's bends)
   railOverWaterArt: 18,     // a railway span over water without real bridge art (piers, abutments)
   portalOnFlat: 16,         // a tunnel mouth with no hill over the bore
