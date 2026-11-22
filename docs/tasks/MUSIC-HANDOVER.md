@@ -116,3 +116,16 @@ How to build that (Claude's plan, nothing built):
 - The owner's review page: `...\City Life Auto Music and Instruments\Claude-Loop-Review\index.html` on his computer
   (each loop three times, each ending; "sounds right / redo" and a Copy my notes button). Nothing in the game yet:
   after his notes, the approved ones go through `make-loop.py` (loops) and an ending cut into `assets/music/`.
+
+## 11-22 10:12: the owner's answers
+- All 25 primaries' loops and endings approved ("sounds pretty good"; every one "good").
+- "Were these recreated?" No: his recordings, cut and joined. He asked for **the songs from the top too** (a boombox, or
+  anything that starts a song fresh): every take now also has a full version, its intro and all, to its ending (its own,
+  or the new one) - `analyze.py` renders `ID-full.opus`. In the game: the full song for a source starting a song, the
+  loop for a bed, a synced radio joins the full song part way through.
+- **The alternates in rotation**: the 31 core alternates measured the same way (all within 4% of their written tempo):
+  `docs/audio/loops-2026-11-22/_alternates.json` and their JSON. Rotation as the brief: the song first, then its take,
+  about 70% primary / 30% its alternates together. The 20 optional takes (no primary) stay parked until he places them.
+- Review page v2 on his computer (`tools/music/review-page.py`): the alternates and the full songs, the approved marked.
+  Next: his notes on v2, then the approved files into `assets/music/` (loops through `make-loop.py`, full songs with the
+  new ending), streamed when a player comes near a speaker, never at start-up.

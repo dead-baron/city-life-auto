@@ -277,6 +277,20 @@ def render(path, info, out, oid):
     enc(seg, sr, f)
     files['ending'] = os.path.basename(f)
     e['preview_from'] = round(start, 3)
+    # the song from the top: the whole take, its intro and all, to its ending (its own, or the new one) - for a boombox,
+    # a jukebox, a radio starting a song fresh
+    if e['kind'] == 'own':
+        whole = y
+    else:
+        b = int((e['at'] + e['ring_s']) * sr)
+        whole = y[:b].copy()
+        f0 = int((e['at'] + 0.06) * sr)
+        n = len(whole) - f0
+        if n > 0:
+            whole[f0:] *= (np.linspace(1, 0, n) ** 2)[:, None]
+    f = os.path.join(out, f'{oid}-full.opus')
+    enc(whole, sr, f)
+    files['full'] = os.path.basename(f)
     return files
 
 

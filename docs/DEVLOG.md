@@ -26042,3 +26042,7 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 ## 2026-11-22 - A fisher always finds the bank
 - `server/systems/wildlife.js` edgeSpot: after its 30 random tries, rings outward from the water, nearest bank first. The
   staged "bear fishing" at Pine Lake said "no room" on the world batch (`test/world3scenes.test.js` test 1).
+
+## 2026-11-22 - Soundtrack: full songs and the alternates measured (branch `prebeta-art`; nothing in the game yet)
+- `tools/music/analyze.py` renders each take whole from the top too; the 31 alternates measured; review page v2
+  (`tools/music/review-page.py`) on the owner's computer. All 25 primaries' loops and endings approved (11-22 10:12).

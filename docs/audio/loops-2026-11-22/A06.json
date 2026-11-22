@@ -97,6 +97,7 @@
  "stereo_alike": 0.99,
  "files": {
   "loop3": "A06-loop3.opus",
-  "ending": "A06-ending.opus"
+  "ending": "A06-ending.opus",
+  "full": "A06-full.opus"
  }
 }

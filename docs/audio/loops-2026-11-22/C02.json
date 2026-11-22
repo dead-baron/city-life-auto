@@ -66,6 +66,7 @@
  "stereo_alike": 0.949,
  "files": {
   "loop3": "C02-loop3.opus",
-  "ending": "C02-ending.opus"
+  "ending": "C02-ending.opus",
+  "full": "C02-full.opus"
  }
 }

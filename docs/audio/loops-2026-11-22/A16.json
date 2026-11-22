@@ -130,6 +130,7 @@
  "stereo_alike": 0.962,
  "files": {
   "loop3": "A16-loop3.opus",
-  "ending": "A16-ending.opus"
+  "ending": "A16-ending.opus",
+  "full": "A16-full.opus"
  }
 }

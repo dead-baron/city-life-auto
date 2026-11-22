@@ -86,6 +86,7 @@
  "stereo_alike": 0.919,
  "files": {
   "loop3": "C08-loop3.opus",
-  "ending": "C08-ending.opus"
+  "ending": "C08-ending.opus",
+  "full": "C08-full.opus"
  }
 }

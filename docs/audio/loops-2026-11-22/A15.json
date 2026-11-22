@@ -91,6 +91,7 @@
  "stereo_alike": 0.942,
  "files": {
   "loop3": "A15-loop3.opus",
-  "ending": "A15-ending.opus"
+  "ending": "A15-ending.opus",
+  "full": "A15-full.opus"
  }
 }

@@ -84,6 +84,7 @@
  "stereo_alike": 0.954,
  "files": {
   "loop3": "B16-loop3.opus",
-  "ending": "B16-ending.opus"
+  "ending": "B16-ending.opus",
+  "full": "B16-full.opus"
  }
 }

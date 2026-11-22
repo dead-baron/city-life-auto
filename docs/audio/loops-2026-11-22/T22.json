@@ -128,6 +128,7 @@
  "stereo_alike": 0.872,
  "files": {
   "loop3": "T22-loop3.opus",
-  "ending": "T22-ending.opus"
+  "ending": "T22-ending.opus",
+  "full": "T22-full.opus"
  }
 }

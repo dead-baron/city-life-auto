@@ -223,6 +223,7 @@
  "stereo_alike": 0.985,
  "files": {
   "loop3": "B17-loop3.opus",
-  "ending": "B17-ending.opus"
+  "ending": "B17-ending.opus",
+  "full": "B17-full.opus"
  }
 }

@@ -80,6 +80,7 @@
  "stereo_alike": 0.955,
  "files": {
   "loop3": "T03-loop3.opus",
-  "ending": "T03-ending.opus"
+  "ending": "T03-ending.opus",
+  "full": "T03-full.opus"
  }
 }
