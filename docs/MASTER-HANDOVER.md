@@ -96,30 +96,24 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 
 | # | Package | Starts from | Read first | State |
 |---|---|---|---|---|
-| 1 | Merge and go-live of the finished art and UI | branch `prebeta-art`, **PR #1** | `docs/tasks/PREBETA-HANDOVER.md` | **Ready to merge** (11-22): tested (the 23 never-run files, the 343 fast ones again, the slow ones touching police and events; failures all pre-existing on `main`), with the first batch of the 11-22 notes in it. Claude's session can't push `main` (the permission guard refused it): the owner merges PR #1 on GitHub; it deploys and re-bakes the art once (~5 h). |
+| 1 | Merge and go-live of the finished art and UI | `main` | `docs/tasks/PREBETA-HANDOVER.md` | **Done 11-22:** PR #1 merged (the art re-bakes once, ~5 h), PR #2 the new people on for everyone (the old kept on branch `people-before-polish`). Claude now merges its own PRs when tests pass (DECISIONS, Process, 11-22 13:12); the world batch and the beta launch still need his word. |
 | 2 | The world batch (the audit's placement fixes, `egret`, the nature pass's solid pieces, the 11-22 rows) | branch **`prebeta-world2`** (on `prebeta-world`, off `prebeta-art`), plus `nature-world` | `docs/audit/REPORT.md`, `docs/audit/PREBETA-LIST.md` (A and the 11-22 section), the DEVLOG's "World batch" entries | **Under way (11-22):** egret merged (overlap fixed as a class); walkways clear of plants (plantOnWalk 2,914 -> 0, planterOnWalk 422 -> 0, plantOnPath -> 0); bin bags only by a bin (binBags 44 -> 0); door paths go round and join stranded plazas (doorOnGrass 372 -> 89); the staged bear finds its bank (wildlife edgeSpot). Lint 42/42; world3 suites recorded in `docs/tasks/PREBETA-TESTS.txt` (failures all pre-existing or fixed). Next rows: signCovered 158, lobbyDoor 161, railOverWater 110, deadBoat 103, the 89 doors left (walled courtyards: a gap in a building is a bigger call), then the 11-22 rows (roofSignCut, atmUnderAwning, iconOverSign, darkInterior), `nature-world`, the solid nature pieces. Before / after with `tools/regress/`. |
-| 3 | Systems and UI fixes, by area (NPCs, vehicles, minigames, menus) | `main` after 1 | `docs/audit/PREBETA-LIST.md` sections C-D and the 11-22 section, `docs/audit/REPORT2.md` | Batch 1 done 11-22 (in PR #1). Open: N7 the quick bar in play - Claude's proposal sent 11-22 (a strip of pinned slots with number keys on desktop only; touch a hold-to-open wheel button; pad keeps its wheel): build it unless he says otherwise; N13 the hospital "robbers" (confirm in play), the HUD's second note on small sideways phones (`hudlayout`), the prison gun test. |
-| 4 | Music and the instrument sound pack | `prebeta-art` (tools) / `main` after 1 | `docs/tasks/MUSIC-HANDOVER.md` (the 11-22 sections), DECISIONS "Music and sound" | **Under way (11-22):** folder connected; the 25 primaries' loops and endings measured and **approved by ear** (all 50); recordings cut, not rebuilt. Each take also rendered whole from the top (boombox, jukebox). The 31 alternates measured; review page v2 on his computer (`Claude-Loop-Review\index.html` beside the handoff) - waiting on his notes. Then: the files into `assets/music/` and the world's music (sources, sync, rotation 70/30, sound by source) per his 11-22 03:07 direction. |
+| 3 | Systems and UI fixes, by area (NPCs, vehicles, minigames, menus) | `main` | `docs/audit/PREBETA-LIST.md` sections C-D and the 11-22 section, `docs/audit/REPORT2.md` | Batch 1 live (PR #1); N7 the quick bar live (PR #5: a strip over the weapon plate on a keyboard; touch and pad keep the wheel). Open: N13 the hospital "robbers" (confirm in play), N14 the hospital dark inside at night (started: how walk-in rooms get their light), the HUD's second note on small sideways phones (`hudlayout`, failing on main too), the prison gun test. |
+| 4 | Music and the instrument sound pack | `main` | `docs/tasks/MUSIC-HANDOVER.md` (the 11-22 sections), DECISIONS "Music and sound" | **Live 11-22 (PRs #3, #4):** all 56 approved takes as files (loop + full song, Opus + MP3); radios, tapes, car radios stream the full songs, takes rotating 70/30 in sync; shops, lobbies, drive-in, night club, casino, roadhouse loop theirs; each source its speaker sound. The debug menu's *Recorded music* turns them off on one screen. Next: the gigs and the mat to the recordings (charts from the measured beats - N9, N15, N10 tips), the city's neon bars (storefronts with no room: no music yet), the 20 optional takes when he places them. |
 | 5 | Checks that stop regressions | `main` after 1 | `tools/regress/README.md` | Half built 11-22: 55 fixed places, shots and a diff (`tools/regress/`); a guard column for the 11-22 notes (their triage table). Still: a guard column for the older notes in the register. |
 | 6 | Art, continued (water at sunset and in rain, then buildings and districts, then vehicles) - and from the 11-22 notes: item icons toward the concepts + a UI/UX polish on every device (N2), the hospitals' and storefronts' design (N20), the playing animations on the beat (N15) | branch `nature` | `claude/nature-status-2026-11-21.md`, the 11-22 section of the pre-beta list | For Fable. |
 | 7 | Launch steps | `main` | `docs/audit/PREBETA-LIST.md` section H, `claude/launch-plan-2026-11-03.md` | On his word "launch the beta". |
 
 Chats that can run side by side: 4 with any other; nothing else safely.
 
-## 6. Where things stand (2026-11-22, late morning)
-- `main` (live): unchanged since 2026-11-19 (the security fixes). **PR #1 (`prebeta-art` -> `main`) is ready**: merging
-  it is the go-live (the owner's click; Claude's session isn't allowed to push `main`); the art re-bakes once (~5 h).
-- `prebeta-art` (PR #1): the combined art and UI, batch 1 of the 11-22 notes, the plants lit by the game's sun alone
-  (his pick 11-22), the wildlife bank fix, the arrivals test fix, the music tools (`tools/music/analyze.py`,
-  `review-page.py`) and their results (`docs/audio/loops-2026-11-22/`).
-- `prebeta-world2` (on `prebeta-world`): the world batch so far (section 5, row 2). Not live; one world change for all.
+## 6. Where things stand (2026-11-22, afternoon)
+- `main` (live): PRs #1-#5 merged 11-22 - the pre-beta art and UI with batch 1 of the 11-22 notes, the new people, the
+  owner's music in the world, the quick bar. The art re-bake from PR #1 runs about five hours from 11:45.
+- `prebeta-world2` (on `prebeta-world`): the world batch so far (section 5, row 2). Not live; his word before it goes.
 - `nature-world`: the sea cave's rock hill - goes with the world batch.
-- The 11-22 notes: triaged (`docs/tasks/PREBETA-NOTES-2026-11-22.md`), in `docs/audit/PREBETA-LIST.md` (the 11-22
-  section). The balance audit: `docs/audit/BALANCE-2026-11-22.md`.
+- The 11-22 notes: triaged (`docs/tasks/PREBETA-NOTES-2026-11-22.md`), in `docs/audit/PREBETA-LIST.md`.
 - Placeholders he wants fixed later: Summit Tarn's low sill, the sea cave's rock hill.
-- Open picks waiting on him: whether the calmer water sparkle is too flat (best judged in play after PR #1); the
-  balance proposals 1, 3, 4; whether the push rule as read from his message stands (DECISIONS, Process); his notes on
-  the music review v2.
+- Open picks waiting on him: whether the calmer water sparkle is too flat (in play now); the balance proposals 1, 3, 4.
 
 ## 7. How a chat ends (do all of it, in this order)
 1. Tests for what changed pass; say which were not run.
