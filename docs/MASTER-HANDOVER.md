@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-22 (end of the Fable art session). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-22 morning (the pre-beta chat, Opus 5.5, first night). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -95,30 +95,30 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 
 | # | Package | Starts from | Read first | State |
 |---|---|---|---|---|
-| 1 | Merge and go-live of the finished art and UI | branch `prebeta-art` | `docs/tasks/PREBETA-HANDOVER.md` | Ready. 25 test files not yet run; four UI checks from quick wins to settle; a clean full run owed. |
-| 2 | The world batch (the audit's placement fixes, `egret`, the nature pass's solid pieces) | `prebeta-art` after 1, plus `nature-world` | `docs/audit/REPORT.md`, `claude/prebeta-list.md` section A, the handover's "what comes next" | Not started. One world rebuild. |
-| 3 | Systems and UI fixes, by area (NPCs, vehicles, minigames, menus) | `main` after 1 | `claude/prebeta-list.md` sections C-D, `docs/audit/REPORT2.md`, the owner's new notes | Not started. One chat per area; merge each before the next. |
-| 4 | Music and the instrument sound pack | `main` after 1 | `claude/music-briefs.md`, DECISIONS "Music and sound" | The owner's kit arrived 11-22 (25 songs, backups, an instrument kit; on his computer - ask for the folder). Read `docs/tasks/MUSIC-HANDOVER.md` first: Claude advises playing the recordings (his decision of 11-12), not rebuilding them as ChatGPT's brief says; his answer is still to come. |
-| 5 | Checks that stop regressions (a guard per note; a fixed set of places re-rendered before and after any world or art change) | `main` after 1 | the handover's "Two checks worth building first" | Not started. Worth doing early: it saves his usage. |
-| 6 | Art, continued (water at sunset and in rain, then buildings and districts, then vehicles) | branch `nature` | `claude/nature-status-2026-11-21.md` | Paused until he returns to the art model. |
-| 7 | Launch steps | `main` | `claude/prebeta-list.md` section H, `claude/launch-plan-2026-11-03.md` | On his word "launch the beta". |
+| 1 | Merge and go-live of the finished art and UI | branch `prebeta-art`, **PR #1** | `docs/tasks/PREBETA-HANDOVER.md` | **Ready to merge** (11-22): tested (the 23 never-run files, the 343 fast ones again, the slow ones touching police and events; failures all pre-existing on `main`), with the first batch of the 11-22 notes in it. Claude's session can't push `main` (the permission guard refused it): the owner merges PR #1 on GitHub; it deploys and re-bakes the art once (~5 h). |
+| 2 | The world batch (the audit's placement fixes, `egret`, the nature pass's solid pieces, the 11-22 rows) | branch `prebeta-world` (off `prebeta-art`), plus `nature-world` | `docs/audit/REPORT.md`, `docs/audit/PREBETA-LIST.md` (A and the 11-22 section), the DEVLOG entry "World batch, start" | **Started 11-22:** egret merged; walkways clear of plants (plantOnWalk 2,914 -> 0, planterOnWalk 422 -> 0, plantOnPath -> 0). First: the egret interior overlap (26 vs 25), then the world3 suites, then the next rows (doorOnGrass 372, signCovered 158, lobbyDoor 161, railOverWater 110, deadBoat 103...), the 11-22 rows (roofSignCut, atmUnderAwning, iconOverSign, darkInterior), `nature-world`, the solid nature pieces. Before / after with `tools/regress/`. |
+| 3 | Systems and UI fixes, by area (NPCs, vehicles, minigames, menus) | `main` after 1 | `docs/audit/PREBETA-LIST.md` sections C-D and the 11-22 section, `docs/audit/REPORT2.md` | Batch 1 done 11-22 (in PR #1). Open: N7 the quick bar in play (his call: an always-on strip is a new HUD element), N13 the hospital "robbers" (confirm in play), the HUD's second note on small sideways phones (`hudlayout`), the prison gun test. |
+| 4 | Music and the instrument sound pack | `main` after 1 | `claude/music-briefs.md`, DECISIONS "Music and sound" | The gig screen's look fixed 11-22 (crisp pixels). Waiting on: the owner's answer recordings / rebuilt, and access to his music folder (`Desktop\City Life Auto\_audio\_DONE\City Life Auto Music and Instruments`). `docs/tasks/MUSIC-HANDOVER.md`. |
+| 5 | Checks that stop regressions | `main` after 1 | `tools/regress/README.md` | Half built 11-22: 55 fixed places, shots and a diff (`tools/regress/`); a guard column for the 11-22 notes (their triage table). Still: a guard column for the older notes in the register. |
+| 6 | Art, continued (water at sunset and in rain, then buildings and districts, then vehicles) - and from the 11-22 notes: item icons toward the concepts + a UI/UX polish on every device (N2), the hospitals' and storefronts' design (N20), the playing animations on the beat (N15) | branch `nature` | `claude/nature-status-2026-11-21.md`, the 11-22 section of the pre-beta list | For Fable. |
+| 7 | Launch steps | `main` | `docs/audit/PREBETA-LIST.md` section H, `claude/launch-plan-2026-11-03.md` | On his word "launch the beta". |
 
 Chats that can run side by side: 4 with any other; nothing else safely.
 
-## 6. Where things stand (2026-11-22)
-- `main` (live): unchanged since 2026-11-19 (the security fixes).
-- `prebeta-art`: characters, animals, item pictures, quick wins, the fullscreen row, the audit reports and all
-  page-side nature and water work, merged and stamped. Not live. The owner has seen sheets and area pictures, not the
-  running game.
-- `nature-world`: the sea cave's rock hill (a world change). A placeholder by his word; goes with the world batch.
+## 6. Where things stand (2026-11-22, end of the pre-beta chat's first night)
+- `main` (live): unchanged since 2026-11-19 (the security fixes). **PR #1 (`prebeta-art` -> `main`) is ready**: merging
+  it is the go-live (the owner's click; Claude's session isn't allowed to push `main`).
+- `prebeta-art`: the combined art and UI, plus batch 1 of the owner's 11-22 notes (DEVLOG 11-22). Tested; see PR #1.
+- `prebeta-world` (off `prebeta-art`): the world batch, started - egret merged, walkways clear. Not live; a world change.
+- `nature-world`: the sea cave's rock hill - goes with the world batch.
+- The 11-22 notes: triaged with their pictures (`docs/tasks/PREBETA-NOTES-2026-11-22.md`, the table: each note's ripple
+  check, package and guard), in `docs/audit/PREBETA-LIST.md` (the 11-22 section). The balance audit:
+  `docs/audit/BALANCE-2026-11-22.md`.
 - Placeholders he wants fixed later: Summit Tarn's low sill, the sea cave's rock hill.
-- Open picks waiting on him: the plants' painted light; whether the calmer water sparkle is too flat; go-live;
-  music as recordings or rebuilt; the proposed push rule (DECISIONS, Process).
-- **His new pre-beta notes (11-22 02:48), not yet triaged:** `docs/tasks/PREBETA-NOTES-2026-11-22.md` (project copy
-  `claude/prebeta-notes-2026-11-22.md`) holds the words of his 15-page PDF; its 14 pictures are NOT in it - ask him
-  to attach the PDF again and read it with the pictures. First job: run the ripple check on each note, sort them into
-  the packages, add them to `claude/prebeta-list.md`. Nobody has read it through yet.
-- His music and instrument kit: `docs/tasks/MUSIC-HANDOVER.md`.
+- Open picks waiting on him: the plants' painted light; whether the calmer water sparkle is too flat; music as
+  recordings or rebuilt; the quick bar in play (N7); the balance proposals 1, 3, 4; whether the push rule as read from
+  his message stands (DECISIONS, Process).
+- His music and instrument kit: `docs/tasks/MUSIC-HANDOVER.md` (the folder not connected yet).
 
 ## 7. How a chat ends (do all of it, in this order)
 1. Tests for what changed pass; say which were not run.

@@ -144,3 +144,13 @@ applied across the world."
 - Variants only for a new, costly-to-reverse look; otherwise pick and say the pick in one line (the owner, 11-22).
   A note about one thing is a note about its class: count the related cases first (the ripple check, DECISIONS,
   Process). Reports short, 2-3 small pictures.
+
+## 11-22: the pre-beta chat's first night (Opus 5.5)
+- The 23 files never run: run (21 pass; `world3scenes`, `world3wild` fail with code and test unchanged from `main`). The
+  fast files again on the final commits, and the slow ones touching police, custody and events: the results and the
+  pre-existing failures in `docs/tasks/PREBETA-TESTS.txt`. The quick-wins test failures settled: four tests brought up
+  to date with what quick wins decided (the BAG button, the README row, the focus token), one real layout fault fixed
+  (SUPPORT on your card, upright).
+- Batch 1 of the owner's 11-22 notes is on this branch (DEVLOG 11-22). **PR #1** is the go-live: Claude's push to
+  `main` was refused by the session's guard; the owner merges.
+- The world batch has started on `prebeta-world` (DEVLOG "World batch, start").
