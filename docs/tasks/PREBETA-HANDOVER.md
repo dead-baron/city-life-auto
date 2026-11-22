@@ -141,4 +141,6 @@ applied across the world."
 - Heavy commands one at a time under `flock /tmp/cla-heavy.lock`, Node heap 3072 MB.
 - The disk is nearly full: use sparse worktrees without `docs/art-v2/` (this one is 62 MB); delete captures once seen.
 - Stamp before every commit; a DEVLOG entry per feature; an owner decision into DECISIONS in the same commit.
-- Show the owner 2-3 variants before wiring in a visual direction; reports short, 2-3 small pictures.
+- Variants only for a new, costly-to-reverse look; otherwise pick and say the pick in one line (the owner, 11-22).
+  A note about one thing is a note about its class: count the related cases first (the ripple check, DECISIONS,
+  Process). Reports short, 2-3 small pictures.

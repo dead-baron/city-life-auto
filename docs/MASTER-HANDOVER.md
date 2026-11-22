@@ -41,7 +41,17 @@ If two of these disagree, `docs/DECISIONS.md` wins, and the newer dated line win
 - **Check before eyes:** look at the result yourself (render it, beside its concept and its surroundings) before
   showing him. For terrain: no straight ruled line, stone that matches what is round it, and it must make sense with
   the ground level that is really there. Never a line of cliff pieces on flat ground.
-- **Show 2-3 variants** side by side before wiring in a visual direction. Reports short; 2-3 small pictures.
+- **The ripple check:** a note about one thing is a note about its class. Before fixing, widen it - the same thing
+  elsewhere (the other hospitals), the same kind (other buildings with that fault), the same cause (the shared rule or
+  code, and how players use the place) - and count each from the world's data and the code, not from renders. Tell him
+  the counts in one line, and what is fixed now against logged for later. He does not want to call out each case.
+- **Variants only where they earn it** (11-22; narrows the 11-12 rule): 2-3 side by side only for a new look that sets
+  a direction and is costly to reverse (logo, HUD style, a new art style). Otherwise pick, build, and say the pick and
+  why in one line; he redirects if he wants. A ruling given once is applied everywhere without asking again. Count the
+  places a pick touches first: many or hard to undo, show him; few, pick. Good alternatives go into the world as
+  variety, not in the bin.
+- **Pictures:** reports short; 2-3 small pictures. Show what the check-before-eyes render already produced; don't
+  render only to show.
 - **Colors and style are set game-wide** by the style anchor, never per sheet. One outline rule.
 - **Batch:** world changes into one rebuild; art changes into one re-bake (about five hours on the server); server
   changes together.
