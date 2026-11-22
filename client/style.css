@@ -490,6 +490,18 @@ body.portrait.touch #purse { flex-direction: row; justify-content: space-between
 #w-ammo { font: 700 var(--fs-4) var(--pixel); line-height: 1.1; color: var(--pad-cream); }
 #w-quick { grid-column: 1 / -1; display: flex; margin: 3px -12px -6px calc(-1 * var(--s2)); border-top: 2px solid var(--pad-ink); }
 #w-quick:empty { display: none; }
+/* N7 (the owner's notes 11-22: "how to reach the quick bar in play"): the four items pinned to the quick wheel, over the
+   weapon plate on a keyboard - dim till the pointer is on it or one was just used (UI-9's minimal HUD); a click uses
+   one; held, the use key opens the wheel. Hidden with nothing pinned. client/hud.js quickBar */
+#qbar { position: absolute; right: var(--sr); display: flex; gap: 2px; align-items: stretch; pointer-events: auto; opacity: 0.5; transition: opacity 0.25s; }
+#qbar:hover, #qbar.on { opacity: 1; }
+#qbar:empty { display: none; }
+#qbar .qb { position: relative; width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border: 2px solid var(--pad-ink); background: var(--pad-navy); color: var(--pad-cream); cursor: pointer; box-shadow: var(--pn-rim); }
+#qbar .qb.empty { opacity: 0.35; cursor: default; }
+#qbar .qb canvas, #qbar .qb img { width: 28px; height: 28px; image-rendering: pixelated; }
+#qbar .qb .ic { font-size: var(--fs-4); line-height: 1; }
+#qbar .qb small { position: absolute; right: -2px; bottom: -2px; padding: 0 2px; font: 700 var(--fs-w1)/var(--fs-1) var(--pixel); color: var(--pad-cream); background: var(--pad-ink); }
+#qbar .qk { align-self: center; margin-right: 4px; font: 700 var(--fs-w1) var(--pixel); color: var(--pad-mute); text-shadow: 1px 1px 0 var(--pad-ink); white-space: nowrap; }
 #weapon:not(.wq-on):not(:hover) #w-quick { display: none; }   /* (UI-9: a few seconds after a switch, or under the pointer) */
 #w-quick .wq { position: relative; flex: 1; display: grid; place-items: center; min-width: 56px; height: 34px; padding: 0; border: 0; border-left: 2px solid var(--pad-ink); background: transparent; cursor: pointer; }
 #w-quick .wq:first-child { border-left: 0; }

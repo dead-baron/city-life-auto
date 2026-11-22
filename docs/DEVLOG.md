@@ -26094,3 +26094,13 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 - Each source sounds like its speaker (client/sound/stage.js SPEAKER, a high-pass added to every source's chain): a pocket
   radio thin (380 Hz - 4.2 kHz), a boombox full, a car's own speakers inside, only its bass through the body outside.
 - Tests: sound, music, nightclubs, drivein, casino, casinofloor. Page-only: no restart, no re-bake.
+
+## 2026-11-22 - N7: the quick bar in play, on a keyboard (branch `quickbar`)
+- The owner's note N7 ("how to reach the quick bar in play, desktop and phone"): the quick wheel was there (hold X, hold
+  View, hold BAG) but nothing on screen said so. Now on a keyboard the four pinned things sit in a small strip over the
+  weapon plate (`#qbar`, client/hud.js quickBar): each its picture and count, "HOLD X" beside them, a click uses one (the
+  wheel's `{ t: 'inv', a: 'use' }`). Dim till the pointer is on it or a count changed (UI-9's minimal HUD); hidden with
+  nothing pinned; measured onto the plate twice a second, not every frame. Number keys stay the weapons'.
+- Touch and pad keep the wheel (hold BAG, hold View): the owner's call was a strip only where it costs no screen.
+- Guide (the bag entry) and README's controls updated. Tests: guide, uitokens, uiscreens, uikit, touchslots, lazypage,
+  perf pass; hudlayout fails as on main (pre-existing, logged).

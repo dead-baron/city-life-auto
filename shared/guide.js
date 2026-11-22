@@ -191,7 +191,7 @@ export function guideSections(map = null) {
       { id: 'gang', t: 'The Syndicate', b: `Members pay ${$(GANG_JOIN_FEE)} once; the turf leaves them be, and the Smuggler's Den has their work: poaching runs from ${$(POACH_PAY.turtle)}.` },
     ] },
     { id: 'items', title: 'Items', blurb: 'Your bag, healing, lights and gear.', entries: [
-      { id: 'bag', t: 'Your bag', b: '[[bag]] or the bag button on the HUD (always there, even empty) opens your bag; it doesn\'t pause the city. Hold [[use]] for the quick wheel: point at a thing and let go to use it.' },
+      { id: 'bag', t: 'Your bag', b: '[[bag]] or the bag button on the HUD (always there, even empty) opens your bag; it doesn\'t pause the city. Hold [[use]] for the quick wheel: point at a thing and let go to use it. Pin up to four things to it from an item\'s details in the bag; on a keyboard they also sit in a small strip over your weapon - click one to use it.' },
       { id: 'heal', t: 'Healing', b: `A bandage heals ${ITEMS.bandage.heal} and stops bleeding (${$(priceOf('pharmacy', 'bandage'))} at a pharmacy), a med kit ${ITEMS.medkit.heal} (${$(priceOf('pharmacy', 'medkit'))}). A hospital patches you up fully for ${$(HOSPITAL_FEE)}.` },
       { id: 'revive', t: 'Reviving someone', b: `Hold [[action]] over someone who's down. A revive kit (${$(REVIVE_KIT_PRICE)}) brings them back at full health and is never used up.` },
       { id: 'light', t: 'Lights', b: `A flashlight (${$(FLASHLIGHT_PRICE)} at hardware and corner stores) never wears out: [[light]] switches it on and off.` },
