@@ -27,6 +27,9 @@ export const CH = {   // root (bass octave) and the chord's tones (an octave up)
   Am7: [45, [55, 57, 60, 64]], G7: [43, [53, 55, 59, 62]], Bb: [46, [58, 62, 65]], A7: [45, [55, 57, 61, 64]],
 };
 export const SONGS = {
+  // (a casino's floor and a bar's room: the owner's recordings only - REC below; no score of their own, silent without them)
+  casino: { bpm: 100, steps: 8, bars: 1, echo: 0.12, room: { t: 0.11, fb: 0.22 } },
+  bar: { bpm: 100, steps: 8, bars: 1, echo: 0.1 },
   title: { bpm: 96, steps: 8, bars: 16, swing: 0.04, echo: 0.3,
     lead: { inst: 'lead', notes: TITLE_LEAD, vol: 0.075 },
     chords: TITLE_CHORDS, bassPat: [1, 0, 2, 0, 1, 0, 3, 0], arpPat: [1, 2, 3, 2, 1, 2, 3, 2], arpVol: 0.022,
@@ -104,7 +107,7 @@ function drum(E, out, kind, t, v) {
 // or Mirrorball Traffic (a night each) - fed into the same chain (the ceiling speaker's band, the echo, the muffle and
 // the place), so they sound where they're played. The take: shared/music.js takeOf, by the hour (the alternates now and
 // then); the files: client/sound/songs.js, loaded when first wanted. The synth plays only while a recording can't.
-const REC = { shop: ['shop'], lobby: ['lobby'], drivein: ['drivein'], club: ['neon-current', 'mirrorball'] };
+const REC = { shop: ['shop'], lobby: ['lobby'], drivein: ['drivein'], club: ['neon-current', 'mirrorball'], casino: ['house-odds', 'brass-ticket'], bar: ['dust-dial'] };
 let SONGS_M = null, SONGS_MP = null;
 const opusOk = () => { try { return !!new Audio().canPlayType('audio/ogg; codecs="opus"'); } catch { return false; } };
 
