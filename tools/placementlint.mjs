@@ -98,7 +98,7 @@ export const LINT_ALLOW = {
   // and Pine Hills' streets of houses, Gull Harbor's and Egret Point's greens, the beaches, a park), left at the back of
   // the pavement as their district's cash of its own, or where a move would leave a street out of the cash's reach
   // (shared/world3-shops.js seatAtms3; world3server.test.js): a shop front there takes one in - bring this down, never up
-  atmStray: 53,
+  atmStray: 52,
   // (11-22, the world batch: shared/world3-walks.js takes up any plant whose crown stands over a house's path - egret's two
   // included)
   plantOnPath: 0,
@@ -121,7 +121,7 @@ export const LINT_ALLOW = {
   // (the owner's 11-17 notes, tools/audit/worldrows.mjs - what each row means is there)
   plantOnWalk: 0,           // trees (not a street tree in its grate, nor a boulevard median's), shrubs, bushes, hedges on a sidewalk, road, lot (a plaza outside the paved districts) - 2,914 at the audit; 0 since shared/world3-walks.js (11-22)
   planterOnWalk: 0,         // planters and pots on a sidewalk, a road or a lot, not set against a wall - 422 at the audit; 0 since 11-22
-  northDoor: 21,            // a business's entrance on its north wall
+  northDoor: 19,            // (21 at the audit; 19 with egret, 11-22) a business's entrance on its north wall
   interiorOverlap: 25,      // a walk-in's room under another building's footprint or its drawn front
   frontNames: 7,            // a shop's sign naming none of its places, or another trade
   lobbyDoor: 161,           // an apartment's lobby door at a shop front

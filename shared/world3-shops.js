@@ -259,6 +259,9 @@ export function shops3(m, H) {
   const lotOk = (x0, y0, w, h, d, any, wild) => {
     // (never on a handcrafted district's ground - its forecourts, its squares, its lawns are its plan's)
     if (handPlanAt(x0, y0) || handPlanAt(x0 + w, y0) || handPlanAt(x0, y0 + h) || handPlanAt(x0 + w, y0 + h)) return false;
+    // (never with its back against a walk-in's front: the walk-in's doors are there, and this one's front would be drawn
+    // over the room behind them - Egret Point General Store against Speedy Stop's, the lint's interiorOverlap, 11-22)
+    for (let y = y0 - 3; y <= y0 - 1; y++) for (let x = x0; x < x0 + w; x++) { if (!m.inside(x, y)) continue; const bi = m.bld[m.idx(x, y)]; if (bi >= 0 && m.buildings[bi] && m.buildings[bi].walkIn) return false; }
     const resOk = wild ? ~4 : ~0;
     for (let y = y0 - 1; y <= y0 + h; y++) for (let x = x0 - 1; x <= x0 + w; x++) {
       if (!m.inside(x, y)) return false;
