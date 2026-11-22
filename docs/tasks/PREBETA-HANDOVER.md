@@ -44,7 +44,7 @@ roomier item, an art-pixel sprite's pixels), not anything out of place; fixed in
 `floraHalf`) - the `signCovered` loop on this branch, since that row comes from the audit. All 42 rows pass.
 Lesson: run `test/placementlint.test.js` on a branch before calling it tested; it reads the art as well as the world.
 
-**State of the run (11-21 evening): 396 of 418 files run, in two runs, both stopped by the machine's two-hour limit;
+**State of the run (11-21 evening): 393 of 418 files run, in two runs, both stopped by the machine's two-hour limit;
 the results are in `docs/tasks/PREBETA-TESTS.txt`. Not run - run these first:**
 test/world3relief.test.js test/world3rivers.test.js test/world3roads.test.js test/world3scenes.test.js test/world3server.test.js test/world3shops.test
 .js test/world3subway.test.js test/world3townmodels.test.js test/world3towns.test.js test/world3tropic.test.js test/world3water.test.js test/world3wat

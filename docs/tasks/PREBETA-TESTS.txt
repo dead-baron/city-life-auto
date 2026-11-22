@@ -272,7 +272,7 @@
 # pass 8 # fail 0  test/robbery.test.js 10s
 # pass 4 # fail 0  test/rotorwash.test.js 0s
 # pass 1 # fail 0  test/roundcorners.test.js 1s
---- second run (the files after test/roundcorners.test.js; stopped by the machine's two-hour limit after test/world3regions.test.js: 22 files not run) ---
+--- second run (the files after test/roundcorners.test.js; stopped by the machine's two-hour limit after test/world3regions.test.js: 25 files not run) ---
 # pass 2 # fail 0  test/sam.test.js 7s
 # pass 9 # fail 0  test/sar.test.js 195s
 # pass 9 # fail 1  test/scenes.test.js 35s
