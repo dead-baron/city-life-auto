@@ -90,11 +90,12 @@ files, the rest run after it):
 3. `node tools/stamp-version.mjs`, the suite, then merge to `main` and push at a quiet time. The server rolls back
    a version that fails its health check.
 
-## A third branch: `nature-world` (the owner, 11-21 17:32)
-Off `nature`, not merged here because it changes the world (the `world3` hash moves): Summit Tarn held by a rim of
-jointed granite with its fall in the notch, the sea cave at Redwood Cove set in one bluff. Seventeen world and art test
-files pass on it (its DEVLOG entry lists them); the whole suite has not been run. Merge it as part of the world batch.
-The state of all the nature work, for whoever carries it on: `claude/nature-status-2026-11-21.md` in the project.
+## A third branch: `nature-world` (the owner, 11-21 17:32 and 19:18)
+Off `nature`, not merged here because it changes the world (the `world3` hash moves). It holds one thing: the sea cave
+at Redwood Cove in a basalt rock hill of its own, built as the mine's entrance is. (A first try - a granite rim round
+Summit Tarn and a bluff of cliff pieces at the cave - was rejected by the owner and withdrawn; the tarn's fix is
+page-side and is on this branch: it drains over a low sill.) Merge `nature-world` as part of the world batch, after
+the owner has seen the cave. The state of all the nature work: `claude/nature-status-2026-11-21.md` in the project.
 
 ## What comes next on top of this branch
 1. **The world batch** from `docs/audit/REPORT.md` and the pre-beta list section A: each row a class fix, the lint
