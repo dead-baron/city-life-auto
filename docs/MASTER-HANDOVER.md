@@ -1,6 +1,7 @@
 # City Life Auto - master handover
 
-**Every new chat reads this first.** The owner works in one chat per work package and moves between them. This file is
+**Every new chat reads this first.** The owner works in one chat per phase - pre-beta, beta, launch (11-22 02:48) -
+and talks about every part of the game in it; a phase chat is restarted from this file when it grows slow. This file is
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
@@ -71,8 +72,11 @@ If two of these disagree, `docs/DECISIONS.md` wins, and the newer dated line win
   on any dashboard; nothing about his son saved anywhere.
 
 ## 4. Notes that arrive mid-chat
-- About this chat's package: act on it.
-- About anything else (a UI note during world work, a gameplay idea, a bug seen in passing): **log it, don't act.**
+- He talks about any area in the phase chat (UI, music, art, design, bugs, ideas): that is how he likes to work, and
+  it is fine. What keeps it safe is that the work itself still goes one package at a time.
+- About the package in hand: act on it.
+- About anything else (a UI note during world work, a gameplay idea, a bug seen in passing): **log it, don't act**
+  until its turn, unless he says to do it now.
   Add it to `claude/prebeta-list.md` (before the beta) or `claude/postlaunch-fixes.md` / DECISIONS "Future features"
   (after), with the date and his words, and tell him in one line where it went.
 - **A picture he attaches** (11-22 02:33): judge what it is. A screenshot pointing at a fault is feedback - log the
@@ -83,13 +87,16 @@ If two of these disagree, `docs/DECISIONS.md` wins, and the newer dated line win
 - A decision ("let's do X", "I prefer B") goes into `docs/DECISIONS.md` with the date and his words, in the same
   commit as the work it governs, whichever package it belongs to.
 
-## 5. Work packages (one chat each, one at a time unless they share no files)
+## 5. Work packages (the order of work inside the phase chat; one at a time)
+Restart the phase chat from this file at a go-live, or once it has been collapsed twice, or when replies slow down:
+he says "make the handover", the chat does section 7, and he opens a new one.
+
 | # | Package | Starts from | Read first | State |
 |---|---|---|---|---|
 | 1 | Merge and go-live of the finished art and UI | branch `prebeta-art` | `docs/tasks/PREBETA-HANDOVER.md` | Ready. 25 test files not yet run; four UI checks from quick wins to settle; a clean full run owed. |
 | 2 | The world batch (the audit's placement fixes, `egret`, the nature pass's solid pieces) | `prebeta-art` after 1, plus `nature-world` | `docs/audit/REPORT.md`, `claude/prebeta-list.md` section A, the handover's "what comes next" | Not started. One world rebuild. |
 | 3 | Systems and UI fixes, by area (NPCs, vehicles, minigames, menus) | `main` after 1 | `claude/prebeta-list.md` sections C-D, `docs/audit/REPORT2.md`, the owner's new notes | Not started. One chat per area; merge each before the next. |
-| 4 | Music and the instrument sound pack | `main` after 1 | `claude/music-briefs.md`, DECISIONS "Music and sound" | Waiting for the owner's files. To decide: remade in the engine or played as audio. For rhythm games: each song's tempo and where beat one falls. |
+| 4 | Music and the instrument sound pack | `main` after 1 | `claude/music-briefs.md`, DECISIONS "Music and sound" | The owner's kit arrived 11-22 (25 songs, backups, an instrument kit; on his computer - ask for the folder). Read `docs/tasks/MUSIC-HANDOVER.md` first: Claude advises playing the recordings (his decision of 11-12), not rebuilding them as ChatGPT's brief says; his answer is still to come. |
 | 5 | Checks that stop regressions (a guard per note; a fixed set of places re-rendered before and after any world or art change) | `main` after 1 | the handover's "Two checks worth building first" | Not started. Worth doing early: it saves his usage. |
 | 6 | Art, continued (water at sunset and in rain, then buildings and districts, then vehicles) | branch `nature` | `claude/nature-status-2026-11-21.md` | Paused until he returns to the art model. |
 | 7 | Launch steps | `main` | `claude/prebeta-list.md` section H, `claude/launch-plan-2026-11-03.md` | On his word "launch the beta". |
@@ -103,7 +110,13 @@ Chats that can run side by side: 4 with any other; nothing else safely.
   running game.
 - `nature-world`: the sea cave's rock hill (a world change). A placeholder by his word; goes with the world batch.
 - Placeholders he wants fixed later: Summit Tarn's low sill, the sea cave's rock hill.
-- Open picks waiting on him: the plants' painted light; whether the calmer water sparkle is too flat; go-live.
+- Open picks waiting on him: the plants' painted light; whether the calmer water sparkle is too flat; go-live;
+  music as recordings or rebuilt.
+- **His new pre-beta notes (11-22 02:48), not yet triaged:** `docs/tasks/PREBETA-NOTES-2026-11-22.md` (project copy
+  `claude/prebeta-notes-2026-11-22.md`) holds the words of his 15-page PDF; its 14 pictures are NOT in it - ask him
+  to attach the PDF again and read it with the pictures. First job: run the ripple check on each note, sort them into
+  the packages, add them to `claude/prebeta-list.md`. Nobody has read it through yet.
+- His music and instrument kit: `docs/tasks/MUSIC-HANDOVER.md`.
 
 ## 7. How a chat ends (do all of it, in this order)
 1. Tests for what changed pass; say which were not run.
