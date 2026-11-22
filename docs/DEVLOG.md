@@ -25360,6 +25360,11 @@ best-looking trees in the game.
   weirs across a wide river. They are drawn half as tall again (`statics.js` `LEDGE_TALL`), their dry bluffs with
   them; the world's own lip of rock and the drop the game plays by are unchanged. A step, not the answer: they still
   want a darker, lower river below and a face either side (`nature-world`).
+- **Summit Tarn drains over a low sill (the owner, 19:18).** The tarn and its stream lie at one level in the world, so
+  the tall two-tier fall stood on flat ground, and the granite rim tried that afternoon on `nature-world` was a line
+  of cliff on flat ground - rejected. Page-side instead: a spill a step high over a granite sill between boulders
+  (where the world's own solid line is), the stream starting at its foot (`statics.js`, `FALLS_LOOK.tarn`; the granite
+  kit in `water.js` `rockKit`).
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.

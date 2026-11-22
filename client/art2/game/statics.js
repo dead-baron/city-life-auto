@@ -3810,7 +3810,7 @@ function rkItem(I, p, pi) {
 }
 // the nature sites' falls as drawn (2026-10-21, the falls chain): at least this wide and this high (px), the mist
 const LEDGE_TALL = 1.5;
-const FALLS_LOOK = { tarn: { w: 96, drop: 76, mist: 0.6 }, creek: { drop: 56, mist: 0.5, rock: 56 } };
+const FALLS_LOOK = { tarn: { w: 30, drop: 12, mist: 0.1, rock: 10 }, creek: { drop: 56, mist: 0.5, rock: 56 } };
 // a falls' gorge walls (notes 2: the cliffs "embedded into the environment"): each drawn on toward the falls till it
 // meets the falls' own rock (a falls hw px either side of x), its end by the water dark and wet
 function fallWalls(I, list, x, hw) {
@@ -3842,8 +3842,13 @@ function addNature(c, I) {
       continue;
     }
     if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge
-      const f = s.falls, w = Math.max(f.w, FALLS_LOOK.tarn.w), drop = Math.max(f.drop, FALLS_LOOK.tarn.drop);
-      putFall(c, I, { key: `fall:t:${w}:${drop}:g`, recipe: { t: 'fall', kind: 'twoTier', w, drop, seed: 9, mist: FALLS_LOOK.tarn.mist, stone: 'granite' }, x: f.x, y: f.y + 8, ext: [w / 2 + 60, drop + 100, w / 2 + 60, 50] });
+      // (the owner, 11-21 19:18: "I dont know if that size body of water needs that big of a waterfall going into that
+      // small of a stream so maybe it just needs a tiny little stream waterfall") The tarn and its stream lie at one
+      // level, so a tall fall there stood on flat ground. It drains over a low granite sill now: a spill a step high
+      // between boulders, the stream starting at its foot. (The boulders stand where the world's own solid line is.)
+      const f = s.falls, T3 = FALLS_LOOK.tarn;
+      putFall(c, I, { key: `fall:t:spill:${T3.w}:${T3.drop}`, recipe: { t: 'fall', kind: 'ledge', w: T3.w, drop: T3.drop, seed: 9, mist: T3.mist, rock: T3.rock, stone: 'granite' }, x: f.x, y: f.y + 8, ext: [T3.w / 2 + T3.rock + 24, T3.drop + 60, T3.w / 2 + T3.rock + 24, 40] });
+      for (const [dx, dy, size, sd] of [[-40, -6, 22, 1], [-62, 0, 28, 2], [-88, -4, 18, 3], [42, -4, 26, 0], [66, 2, 20, 1], [90, -5, 24, 2]]) put(I, { key: `rk:granite:${size}:${sd}:0:0`, recipe: { t: 'rock', style: 'granite', size, s: sd, moss: 0, barn: 0 }, x: f.x + dx, y: f.y + 6 + dy, ext: [size * 1.4 + 16, size * 1.8 + 24, size * 1.4 + 16, size + 14] });
       continue;
     }
     if (s.kind === 'river') {
