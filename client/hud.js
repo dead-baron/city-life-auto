@@ -48,6 +48,7 @@ function optKind(o) {
 const KIND_NAME = { pistols: 'PISTOLS', rifles: 'RIFLES', melee: 'MELEE', throw: 'THROWABLES', ammo: 'AMMO', gear: 'GEAR' };
 const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', usedlot: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs' };
 const WEAPON_BY_ID = WEAPONS;
+let QB_ART = null, QB_P = null;   // (the item pictures for the quick bar: client/itemart.js, loaded when first wanted)
 export const WQ_MS = 4000;   // the quick weapons stay this long after a switch (UI-9)
 // a note's icon (UIK-00 6A/B): money in, a tick, a warning, an alarm, or the info mark
 const toastIcon = (tone, msg) => (/^\+\$|\bpaid\b|\+\$\d/i.test(msg) && tone !== 'bad' ? 'money' : tone === 'good' ? 'check' : tone === 'warn' ? 'warn' : tone === 'bad' ? 'alert' : 'info');
@@ -120,6 +121,34 @@ export class HUD {
   setInfoCtx(c) { this.infoCtx = c; this.info?.setCtx(c); }
   hint(k) { return !!this.info && this.info.hint(k); }
 
+  // N7 (the owner's notes 11-22): the quick wheel's four slots as a strip over the weapon plate, on a keyboard - the items
+  // pinned from the bag, a click uses one (as the wheel does: { t: 'inv', a: 'use' }), held the use key opens the wheel.
+  // Dim (UI-9's minimal HUD) till the pointer is on it or a slot's count changed; none pinned, none shown.
+  quickBar(me) {
+    const el = $('qbar');
+    if (!el) return;
+    const q = me.dead ? [] : (me.quick || []), any = q.some(Boolean);
+    const key = any ? q.map((id) => (id ? `${id}:${me.inv[id] || 0}${ITEMS[id] && ITEMS[id].light ? (me.light ? '+' : '-') : ''}` : '')).join() + '|' + keyName('use') + (QB_ART ? 'a' : '') : '';
+    const now = performance.now();
+    if (any && now - (this.qbAt || 0) > 500) {   // (sat on the weapon plate, whatever its height: measured twice a second, not every frame)
+      this.qbAt = now;
+      const w = $('weapon'), bottom = w ? w.offsetHeight + (parseFloat(getComputedStyle(w).bottom) || 0) + 4 : 64;
+      if (this.qbB !== bottom) { this.qbB = bottom; el.style.bottom = `${bottom}px`; }
+    }
+    if (el.dataset.q === key) return;
+    const was = el.dataset.q;
+    el.dataset.q = key;
+    if (!any) { el.innerHTML = ''; return; }
+    if (!QB_ART && !QB_P) QB_P = import('./itemart.js').then((a) => { QB_ART = a; el.dataset.q = ''; }).catch(() => {});
+    const pic = (id) => (QB_ART && QB_ART.itemIcon(id)) || '<span class="ic">•</span>';
+    el.innerHTML = `<span class="qk">HOLD ${esc(keyName('use'))}</span>` + Array.from({ length: 4 }, (_, i) => {
+      const id = q[i], n = id ? me.inv[id] || 0 : 0, I = id && ITEMS[id];
+      if (!I) return `<button type="button" class="qb empty" tabindex="-1" aria-label="Empty slot"></button>`;
+      const tag = I.light ? (me.light ? 'on' : 'off') : n > 1 ? `x${n}` : n ? '' : '0';
+      return `<button type="button" class="qb${n ? '' : ' empty'}" data-i="${i}" title="${esc(I.name)}" aria-label="${esc(I.name)}">${pic(id)}${tag ? `<small>${tag}</small>` : ''}</button>`;
+    }).join('');
+    if (was) { el.classList.add('on'); clearTimeout(this.qbT); this.qbT = setTimeout(() => el.classList.remove('on'), WQ_MS); }
+  }
   setMe(me) {
     const prev = this.me;
     this.me = me;
@@ -333,6 +362,7 @@ export class HUD {
       $('w-quick').dataset.q = qs;
       $('w-quick').innerHTML = me.dead ? '' : qk.map(([x, n]) => { const d = WEAPON_BY_ID[x.id]; return d ? `<button type="button" class="wq" data-w="${esc(x.id)}" title="${esc(d.name)}${n < 9 ? ` (${n + 1})` : ''}" aria-label="${esc(d.name)}"><img alt="" src="${weaponThumb(d.i)}">${n < 9 ? `<span class="kchip kbm-only">${n + 1}</span>` : ''}</button>` : ''; }).join('');
     }
+    this.quickBar(me);
     // (UI-9, the owner's minimal HUD: the quick weapons show a few seconds after you take one out, and while the pointer is
     // on the plate - not all the time)
     if (this.wqW !== me.weapon) { const first = this.wqW === undefined; this.wqW = me.weapon; if (!first) { $('weapon').classList.add('wq-on'); clearTimeout(this.wqT); this.wqT = setTimeout(() => $('weapon').classList.remove('wq-on'), WQ_MS); } }

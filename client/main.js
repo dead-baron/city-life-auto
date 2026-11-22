@@ -2816,6 +2816,7 @@ $('radar').onclick = () => { if (S.playing) toggleMap(true); };
 // on touch the weapon box is a button too: a tap takes out the next weapon, holding it opens the picker
 { const wb = $('weapon'); const tap = () => { if (S.playing) virtualTap('nextw'); }; tapHold(wb, tap, () => { if (S.playing) openWeaponPick(); }); }
 // the weapon plate's quick weapons (UI-9, the HUD concepts UIC-11/12): a click takes that one out (its number key does too)
+{ const q = $('qbar'); if (q) q.addEventListener('pointerup', (e) => { const b = e.target.closest('.qb[data-i]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const id = S.me && S.me.quick && S.me.quick[+b.dataset.i]; if (S.playing && id && (S.me.inv[id] || 0) > 0) send({ t: 'inv', a: 'use', id }); }); }   // (N7: the quick bar - client/hud.js quickBar)
 { const q = $('w-quick'); const pick = (e) => { const b = e.target.closest('.wq'); if (!b) return; e.preventDefault(); e.stopPropagation(); if (S.playing && S.me) send({ t: 'weapon', id: b.dataset.w }); };
   q.addEventListener('mousedown', pick); q.addEventListener('touchstart', pick, { passive: false }); q.addEventListener('mouseup', (e) => e.stopPropagation()); q.addEventListener('touchend', (e) => e.stopPropagation()); }
 $('radar').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.playing) toggleMap(true); }, { passive: false });
