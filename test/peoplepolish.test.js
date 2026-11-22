@@ -56,7 +56,7 @@ test('the game\'s switch: a polished sprite has its own key, and nothing is poli
   assert.equal(PD.pedSprite(A, 'idle', 0, 0, 0).h, g0.h, 'off again');
 });
 
-test('the pass is loaded only when switched on: it is in nobody\'s code - the page\'s, the renderer\'s, the chunk baker\'s', () => {
+test('the pass is loaded on its own (on unless switched off): it is in nobody\'s code - the page\'s, the renderer\'s, the chunk baker\'s', () => {
   const root = ROOT.pathname.replace(/^\/([A-Za-z]:)/, '$1'), has = (files) => files.some((f) => /peoplepolish/.test(f));
   assert.ok(!has(closure(['client/boot.js', 'client/main.js'], { root })), 'the page');
   assert.ok(!has(closure(['client/art2/game/host.js', 'client/art2/game/engine.js', 'client/art2/game/peds.js'], { root })), 'the renderer');
@@ -64,7 +64,8 @@ test('the pass is loaded only when switched on: it is in nobody\'s code - the pa
   // the world's baked art doesn't change with it: the chunk baker never reads the people
   const baker = closure(['client/art2/game/chunkbake.js', 'client/art2/game/chunkpack.js', 'client/art2/game/chunkstore.js'], { root });
   assert.ok(!baker.some((f) => /art2[\\/]people/.test(f)), 'the chunk baker draws no people');
-  assert.ok(/'cla\.polish'\) === '1'/.test(readFileSync(new URL('client/art2/game/host.js', ROOT), 'utf8')), 'the renderer reads the switch');
+  // (on for everyone since 11-22 - the owner: "ready to turn on to go live"; the switch turns it off, '0', showing the old people)
+  for (const f of ['client/art2/game/host.js', 'client/main.js']) assert.ok(/'cla\.polish'\) !== '0'/.test(readFileSync(new URL(f, ROOT), 'utf8')), `${f} reads the switch: on unless turned off`);
 });
 
 // (the owner, 2026-11-20: "stay chunky" and closer to the concepts - which, shrunk to the game's size, are a big head on a

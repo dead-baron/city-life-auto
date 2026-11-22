@@ -26046,3 +26046,15 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 ## 2026-11-22 - Soundtrack: full songs and the alternates measured (branch `prebeta-art`; nothing in the game yet)
 - `tools/music/analyze.py` renders each take whole from the top too; the 31 alternates measured; review page v2
   (`tools/music/review-page.py`) on the owner's computer. All 25 primaries' loops and endings approved (11-22 10:12).
+
+## 2026-11-22 - The new people on for everyone (branch `chars-on`)
+- The owner, 12:41: "I think the human/player art is ready to turn on to go live". The character polish pass
+  (`client/art2/peoplepolish.js`, staged behind `cla.polish` since 11-19) is now on unless switched off: `main.js`,
+  `game/host.js`, `creator.js` read `cla.polish !== '0'`; the debug menu's *Character polish* turns it off on one screen
+  (the old people, still drawn by `people.js` without the pass). Blocked storage: off, as before.
+- Kept safe: the branch `people-before-polish` (the live version just before this change).
+- Cost: the page now loads `peoplepolish.js` at start (lazily, beside `people.js`); `test/perf.test.js` 6/6 (budgets
+  unchanged). No art re-bake: the world's baked chunks draw no people.
+- Tests: characters2-5, npcpeople, peoplelook, peoplepolish (the switch test now expects "on unless '0'"),
+  peoplepolish-wardrobe, wardrobe, portrait, menupolish, perf - all pass. The page loads with the pass and no console
+  errors (headless, title screen); the people themselves were seen in play by the owner with the switch on.

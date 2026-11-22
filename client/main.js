@@ -112,7 +112,7 @@ setTimeout(preloadAudio, 1500);
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
 // (the character polish pass, staged - the debug menu's switch: the title's portrait and the creator draw with it too; docs/characters/NOTES.md)
-try { if (localStorage.getItem('cla.polish') === '1') window.CLA_POLISH = Promise.all([import('./art2/people.js'), import('./art2/peoplepolish.js')]).then(([p, m]) => p.setPolish(m.POLISH)).catch(() => {}); } catch { /* blocked */ }
+try { if (localStorage.getItem('cla.polish') !== '0') window.CLA_POLISH = Promise.all([import('./art2/people.js'), import('./art2/peoplepolish.js')]).then(([p, m]) => p.setPolish(m.POLISH)).catch(() => {}); } catch { /* blocked */ }
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
 const afloat = (e) => e.swim || (e.kind === K.VEH && !!e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).kind === 'boat');
 S.fx.water = (x, y) => { const t = S.map ? S.map.tileAtPx(x, y) : -1; return WATER_T[t] === 1 ? 1 : t === T.BRIDGE && afloatUnder(S.ents.values(), x, y, afloat) ? 2 : 0; };   // (render/fx.js: 2 under a deck)
