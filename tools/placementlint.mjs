@@ -61,11 +61,19 @@ import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy } from '../shared/parkcheck.js';
 import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
-import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName } from '../client/art2/game/statics.js';
+import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf } from '../client/art2/game/statics.js';
 import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
 import { textAudit } from './textaudit.mjs';
 
 // what the test lets by, each explained (else what the lint found is fixed in the data)
+// how many world px of a sprite G (its top left at ox, oy in the world) lie in the box X0, Y0 .. X1, Y1. A sprite made at the
+// art pixel (G.ap2 = 2: the nature kit's plants and rocks, 11-21) covers 2 x 2 world px with each of its own.
+const pxOver = (G, ox, oy, X0, Y0, X1, Y1) => {
+  const ap = G.ap2 || 1;
+  let n = 0;
+  for (let y = Math.max(0, Math.ceil((Y0 - oy) / ap)); y < Math.min(G.h, Math.floor((Y1 - oy) / ap)); y++) for (let x = Math.max(0, Math.ceil((X0 - ox) / ap)); x < Math.min(G.w, Math.floor((X1 - ox) / ap)); x++) if (G.col[(y * G.w + x) * 4 + 3] > 128) n += ap * ap;
+  return n;
+};
 export const LINT_ALLOW = {
   // four lake jetties whose roots sit on the bank a tile back from the water (a kink in the planks at the shoreline):
   // what shows there is the lake's own shore rounding off by the jetty, not a band along planks over a beach
@@ -381,7 +389,7 @@ function artRows(M, rows, seen) {
         for (const q of bx) {
           const [X0, Y0, X1, Y1] = q.r, area = (X1 - X0) * (Y1 - Y0);
           let n = 0;
-          for (let y = Math.max(0, Math.ceil(Y0 - oy)); y < Math.min(G.h, Math.floor(Y1 - oy)); y++) for (let x = Math.max(0, Math.ceil(X0 - ox)); x < Math.min(G.w, Math.floor(X1 - ox)); x++) if (G.col[(y * G.w + x) * 4 + 3] > 128) n++;
+          n = pxOver(G, ox, oy, X0, Y0, X1, Y1);
           const id = `${f.bi}|${q.t}|${o.key}`;
           if (n >= Math.max(12, area * 0.1) && !hitOnce.has(id)) { hitOnce.add(id); rows.nameCovered.push({ what: `${o.recipe.m || o.recipe.t} "${o.key}" in front of ${b.name || b.kind}'s "${q.t}"`, x: o.x, y: o.y, why: `${Math.round(100 * n / area)}% of it` }); }
         }
@@ -405,7 +413,7 @@ function plantRows(M, I, rows, seen) {
         const id = `${o.key}@${o.x},${o.y}`;
         if (seenAt.has(id)) continue;
         seenAt.add(id);
-        const h = over(o.x, o.y, Math.max(4, (o.ext[0] - 10) * 0.5));
+        const h = over(o.x, o.y, Math.max(4, floraHalf(o.recipe.sp, o.recipe.k || 1) * 0.5));   // (half the plant's own half-width - not its item's room, which the nature kit made a size roomier, 11-21)
         if (h) rows.plantOnPath.push({ what: `a ${o.recipe.sp} on ${h.name}'s path`, x: o.x, y: o.y });
       }
     }

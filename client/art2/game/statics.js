@@ -2271,6 +2271,7 @@ const SPECIES = {
 // Every plant is made at the art pixel (flora.js floraArt: the maker run at half size, a pixel of it an art pixel) - the
 // owner's nature kit pass, 2026-11-21 - but the redwoods' own (redwoods.js: at the art pixel already).
 const OWN_ART_FLORA = new Set(['redwood', 'redwoodB', 'redwoodC', 'giantLH', 'giantH', 'giantSH', 'redwood2', 'redwood2H', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
+export const floraHalf = (sp, k = 1) => (SPECIES[sp] || [null, 30])[1] * k;   // (a plant's own half-width in world px - tools/placementlint.mjs; floraExt is its item's room, a size roomier)
 export const FLORA_SPECIES = Object.keys(SPECIES), floraExt = (sp, k = 1) => { const S = SPECIES[sp] || [null, 30, 60]; return [Math.ceil(S[1] * k * 1.2) + 10, Math.ceil(S[2] * k * 1.16) + 16, Math.ceil(S[1] * k * 1.2) + 10, 30]; };   // (every species; the room an item claims for its picture - a fifth over the species' size: each shape has its own build, flora.js VARY)
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
 function makeFlora(r) {
