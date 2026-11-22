@@ -1503,8 +1503,11 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     if (chan) {
       sa = (F.sa[k00] * (1 - vx) + F.sa[k00 + 1] * vx) * (1 - vy) + (F.sa[k00 + TN] * (1 - vx) + F.sa[k00 + TN + 1] * vx) * vy;
       su = (F.su[k00] * (1 - vx) + F.su[k00 + 1] * vx) * (1 - vy) + (F.su[k00 + TN] * (1 - vx) + F.su[k00 + TN + 1] * vx) * vy;
-      rp = (F.rp[k00] * (1 - vx) + F.rp[k00 + 1] * vx) * (1 - vy) + (F.rp[k00 + TN] * (1 - vx) + F.rp[k00 + TN + 1] * vx) * vy;
     }
+    // (the water audit, 11-21: the white water was only drawn where all four tiles round a pixel were one channel's -
+    // below a fall, where two reaches meet, it came and went tile by tile: white squares. How rough the water is, is
+    // the tiles' own, whichever reach they are)
+    if (c0 >= 0 && k !== WK.LAKE && k !== WK.POND) rp = (F.rp[k00] * (1 - vx) + F.rp[k00 + 1] * vx) * (1 - vy) + (F.rp[k00 + TN] * (1 - vx) + F.rp[k00 + TN + 1] * vx) * vy;
     pk = (F.pk[k00] * (1 - vx) + F.pk[k00 + 1] * vx) * (1 - vy) + (F.pk[k00 + TN] * (1 - vx) + F.pk[k00 + TN + 1] * vx) * vy;
     if (pk > 0) pi = F.pi[ti] >= 0 ? F.pi[ti] : F.pi[k00] >= 0 ? F.pi[k00] : F.pi[k00 + TN + 1];
   }
@@ -1553,10 +1556,12 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
   else if (lat) c = mixTo(MIX, c, rr[Math.min(rr.length - 1, 5)], q < 0.6 ? 0.34 : 0.2);
   if (lane) c = mixTo(MIX, c, rr[5], 0.22);
   if (rp > 0.04) {   // the rapids: churns of white water in patches, standing waves in trains by them (thin crests across the current), foam streaks along it, the rest paled with air
-    const ww = vnc(sa * 0.5, su, 26, seed + 241) - 0.8 + rp * 0.32, bit = vnc(X, Y, 4, seed + 231);
-    if (ww > 0 && bit > 0.62 - ww * 1.6) c = sd(FOAM, (hh(x >> 1, y >> 1, seed + 243) > 0.45 ? 0.68 : 0.4) + fine * 0.25, x, y, 0.4);   // (broken: bright foam and blue-grey, gaps between, solid in the middle)
-    else if (ww > -0.12 && Math.sin(sa * 0.3 + Math.sin(su * 0.045 + seed) * 1.4 + big * 2.5) > 0.93 && hh(x >> 1, y >> 1, seed + 235) > 0.3) c = sd(FOAM, 0.38 + fine * 0.2, x, y, 0.4);
-    else if (vnc(sa * 0.1, su * 1.1, 6, seed + 233) > 0.88 - rp * 0.1) c = mixTo(MIX, c, WET, 0.2 + 0.2 * rp);
+    // (the churn's patches are laid by the place, not by the reach's own along-and-across: those jump where reaches
+    // meet. And never a flat white sheet: broken all through - foam, paler foam, the water between)
+    const ww = vnc(X * 0.8, Y, 26, seed + 241) - 0.82 + rp * 0.32, bit = vnc(X, Y, 4, seed + 231);
+    if (ww > 0 && bit > Math.max(0.36, 0.62 - ww * 1.6)) c = sd(FOAM, (hh(x >> 1, y >> 1, seed + 243) > 0.45 ? 0.62 : 0.36) + fine * 0.25 - (bit < 0.5 ? 0.14 : 0), x, y, 0.4);
+    else if (chan && ww > -0.12 && Math.sin(sa * 0.3 + Math.sin(su * 0.045 + seed) * 1.4 + big * 2.5) > 0.93 && hh(x >> 1, y >> 1, seed + 235) > 0.3) c = sd(FOAM, 0.38 + fine * 0.2, x, y, 0.4);
+    else if (chan && vnc(sa * 0.1, su * 1.1, 6, seed + 233) > 0.88 - rp * 0.1) c = mixTo(MIX, c, WET, 0.2 + 0.2 * rp);
     else c = mixTo(MIX, c, WET, 0.2 * rp);
   } else if (pi >= 0 && pk > 0.04) {   // a calm pocket: a slow swirl turning in it, the eddy's line of foam where the current goes by
     const P = PKW[pi], ex = X - P.x, ey = Y - P.y, D = Math.sqrt(ex * ex + ey * ey), u = D / P.r;

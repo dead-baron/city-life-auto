@@ -676,7 +676,7 @@ export class World2 {
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
     // the sea's sparkle tonight (render/atmos.js bioAt: some nights, along some shores; the day from the server)
     const bio = S.bioForce || bioAt((S.day || 0) * DAY_LOOP_S + (S.loopTime || 0), F.sky.minutes, this.bioArr || (this.bioArr = [0, 0]));   // (S.bioForce: the debug menu's)
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, clear: this.clr || null, push: sub ? null : this.pushA, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: globalThis.__claArtTime ?? F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, clear: this.clr || null, push: sub ? null : this.pushA, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
