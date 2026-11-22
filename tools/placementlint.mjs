@@ -113,7 +113,7 @@ export const LINT_ALLOW = {
   // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
   // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
   // the most part (West Hills', Southside's, Old Town's lots)
-  doorOnGrass: 372,
+  doorOnGrass: 89,
   // the places you'd walk into still served at the wall: a building too shallow for a room (Pelican Key Charters, a few
   // of World v3's added shop rows), a row shared with a place that isn't a shop (Egret Marsh Outfitters' and the Marsh
   // Bait & Tackle's), a lot building with a home or a bay behind the same front, the hand-built Greenfield Park shops

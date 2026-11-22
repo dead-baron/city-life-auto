@@ -26119,3 +26119,14 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
 ## 2026-11-22 - A fisher always finds the bank
 - `server/systems/wildlife.js` edgeSpot: after its 30 random tries, rings outward from the water, nearest bank first. The
   staged "bear fishing" at Pine Lake said "no room" on the world batch (`test/world3scenes.test.js` test 1).
+
+## 2026-11-22 - World batch: a path to the doors on the lawn (branch `prebeta-world2`; not live)
+- `shared/world3-doorpaths.js` doorPaths3: where the straight path from a door can't be laid (no paving in its columns,
+  or something in the way), the way round - the fewest new tiles over open ground (out from the door first, then to the
+  sides) to a path that reaches a road, at most `PATH_ROUND` 22. A door on a plaza or yard that reaches no road (a pocket
+  of paving on a lawn) is joined to one that does the same way. Same rules as before: no building, water, rail or
+  reserved ground under it, nothing solid but plants (taken up).
+- The audit's doorOnGrass 372 -> 89 (124 routed round, 129 pockets joined; `LINT_ALLOW.doorOnGrass` 89). Left: doors
+  onto courtyards walled in by buildings, side-wall doors, a few blocked. Every other lint row unchanged.
+- `test/doorpaths.test.js` (3): round to the pavement, a pocket joined, nothing laid over water. placementlint 42/42,
+  world3doors, world3clutter, world3arrivals 8/8, perf 6/6.
