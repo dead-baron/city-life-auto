@@ -45,8 +45,9 @@ If two of these disagree, `docs/DECISIONS.md` wins, and the newer dated line win
 
 ## 3. How the owner wants work done (the ones that have cost time when missed)
 - **Nothing goes to `main` without his go-ahead.** Pushing `main` deploys live. Feature branches only. He does not
-  want to be a blocker for small safe fixes (11-22 03:07): a rule for what may go without asking is PROPOSED in
-  DECISIONS, Process. It is not in force until he says yes to it; ask him in the first reply.
+  want to be a blocker for small safe fixes (11-22 03:07): the rule for what may go without asking is in DECISIONS,
+  Process - read as in force from his message of 11-22 03:23 (he can change it). In practice Claude's session can't
+  push `main` (its guard refuses): a go-live is a pull request he merges.
 - **Every fix is a class fix:** fixed everywhere it occurs, with a test or lint row over the whole world so it can't
   come back. A note fixed in one spot is not done. Every note gets a check, or is marked "eyes only".
 - **Check before eyes:** look at the result yourself (render it, beside its concept and its surroundings) before
