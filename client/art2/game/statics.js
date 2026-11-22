@@ -338,6 +338,7 @@ export function makeStatic(r) {
     case 'b': return makeBld(r);
     case 'cut': return makeCut(r);
     case 'v': { const m = voxModel(r.m, r.a || []); return m && typeof m.prepare !== 'function' && m.col ? m : voxSprite(m, r.hd || 0, r.pv || null); }   // (a few props come drawn already: the greenhouse's glass over its plants)
+    case 'va': return artRock(voxSprite(artVox(r.m, r.a || []), r.hd || 0));   // (a voxel model built at the art pixel: one voxel 2 x 2 px - props-rural.js's meadow and woods pieces)
     case 'f': return makeFlora(r);
     case 'rw': return r.k === 'stump' ? RW.oldStump(11 + r.s * 7, 26) : RW.nurseLog(5 + r.s * 13, r.len || 200, 18, r.flip);   // (redwoods.js: an old stump, a fallen giant)
     case 'deck': return makeDeck(r);
@@ -2230,6 +2231,7 @@ function signalModel(L = 70, heads = []) {
 // ================================================================================================
 // species: [maker(seed), sprite half-width, height at scale 1]
 const LEAF_GOLD = [[220, 170, 50], [196, 132, 40], [232, 196, 80]];
+const HIGH_CROWN = { low: 0.76, crown: 0.5 };   // (a giant's boughs from three quarters of the way up, and fewer)
 const SPECIES = {
   street: [(s) => FL.streetTree(s, 'grate'), 46, 128], streetPl: [(s) => FL.streetTree(s, 'planter'), 46, 128], ginkgo: [FL.ginkgo, 40, 124], redMaple: [FL.redMaple, 44, 122],
   young: [FL.youngTree, 26, 114], flowerTree: [FL.flowerTree, 42, 124], magnolia: [FL.magnoliaTree, 44, 118], cherry: [FL.cherryTree, 42, 118], maple: [FL.mapleGreen, 48, 106],
@@ -2242,7 +2244,9 @@ const SPECIES = {
   smallPalm: [FL.smallFanPalm, 36, 76], coastCypress: [FL.coastalCypress, 90, 98], banana: [FL.banana, 60, 99],
   // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
   giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
-  redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 100, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
+  giantLH: [(s) => RW.giantRedwoodArt(s, 720, 70, HIGH_CROWN), 250, 770], giantH: [(s) => RW.giantRedwoodArt(s, 620, 54, HIGH_CROWN), 210, 660], giantSH: [(s) => RW.giantRedwoodArt(s, 520, 40, HIGH_CROWN), 175, 555],   // (the same giants, their crowns carried high: over a trail, a creek, a road - crownOver)
+  redwoodB: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.48, cone: 1 }), 110, 405], redwoodC: [(s) => RW.giantRedwoodArt(s, 380, 20, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 110, 405],   // (11-21: the common redwood's two higher crowns - redwoodAt picks among the three by where the tree stands)
+  redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 100, 365], redwood2H: [(s) => RW.giantRedwoodArt(s, 340, 18, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 100, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
   gate: [(s) => RW.giantRedwoodArt(s, 760, 78, { tunnel: { w: 46, h: 60 } }), 270, 815],   // (Giant's Gate, the drive-through: shared/world3-drivetree.js)
   fernR: [(s) => RW.swordFernArt(s, 78 + (s % 3) * 8), 52, 64],
   // shrubs, bushes and flowers
@@ -2266,7 +2270,8 @@ const SPECIES = {
 };
 // Every plant is made at the art pixel (flora.js floraArt: the maker run at half size, a pixel of it an art pixel) - the
 // owner's nature kit pass, 2026-11-21 - but the redwoods' own (redwoods.js: at the art pixel already).
-const OWN_ART_FLORA = new Set(['redwood', 'redwood2', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
+const OWN_ART_FLORA = new Set(['redwood', 'redwoodB', 'redwoodC', 'giantLH', 'giantH', 'giantSH', 'redwood2', 'redwood2H', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
+export const floraHalf = (sp, k = 1) => (SPECIES[sp] || [null, 30])[1] * k;   // (a plant's own half-width in world px - tools/placementlint.mjs; floraExt is its item's room, a size roomier)
 export const FLORA_SPECIES = Object.keys(SPECIES), floraExt = (sp, k = 1) => { const S = SPECIES[sp] || [null, 30, 60]; return [Math.ceil(S[1] * k * 1.2) + 10, Math.ceil(S[2] * k * 1.16) + 16, Math.ceil(S[1] * k * 1.2) + 10, 30]; };   // (every species; the room an item claims for its picture - a fifth over the species' size: each shape has its own build, flora.js VARY)
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
 function makeFlora(r) {
@@ -2304,6 +2309,27 @@ const WILDS = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);
 // end of town, a tuft of grass up through the cracks instead.
 const PLANTERS = new Set(['tulips', 'daffodils', 'boxStone', 'boxIron', 'topBall', 'topCone', 'hedge', 'flHedge']);
 const POTTED = /^(shrub_|bush_|flowers_)/, DRYBED = /^(agave|yucca|pear|barrel|cholla|ocotillo|saguaro|creosote|sage|brittle|bursage|dryGrass|dFlowers|dPoppies)/;   // (the desert towns' gravel beds: the Strip's agave and cactus)
+// The common redwood's crown by where it stands (the owner, 11-21 15:39: "use C for areas it's covering the paths but
+// in other areas a combo of A or B"): a tree whose crown would hang over a trail, a clearing or a hand-made place, a
+// creek, a road or a bridge - anything of those in the band up the screen from its foot, where its lower boughs
+// draw - carries its crown in its top third (C: redwoodC); deeper in the wood a mix of the three by place.
+const REDWOOD_OPEN = new Set([T.WATER, T.DEEP, T.ROAD, T.BRIDGE, T.DOCK, T.SIDEWALK, T.PLAZA, T.LOT]);
+// whether a crown drawn from d0 to d1 tiles up the screen from (x, y), hw tiles to each side, would hang over any of those
+function crownOver(c, x, y, d0, d1, hw) {
+  const M = c.M, tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  for (let dy = -d1; dy <= -d0; dy++) for (let dx = -hw; dx <= hw; dx++) {
+    if (!M.inside(tx + dx, ty + dy)) continue;
+    const i = M.idx(tx + dx, ty + dy);
+    if ((M.reserve[i] & 32) || REDWOOD_OPEN.has(M.tiles[i])) return true;
+  }
+  return false;
+}
+function redwoodAt(c, x, y, sp) {
+  if (sp !== 'redwood') return sp;
+  if (crownOver(c, x, y, -1, 12, 3)) return 'redwoodC';
+  const h = hh(x, y, 47);
+  return h < 0.4 ? 'redwood' : h < 0.8 ? 'redwoodB' : 'redwoodC';
+}
 function plantFor(c, p) {
   const r = plantFor0(c, p);
   if (r && (r[0] === 'coconut' || r[0] === 'leaning') && !palmMayLean(c, p)) return ['cocoUp', r[1]];
@@ -2339,7 +2365,7 @@ function plantFor0(c, p) {
     // (p.g: the stand the map put it in - one kind of tree over a wide area: 0 conifers, 1 mixed, 2 broadleaf,
     // 3 birch and aspen)
     const g = p.g ?? -1;
-    if (di === 29 && wild && forest) return g === 2 ? [pick(['maple', 'oak', 'maple'], u), 1.4 + u2 * 0.2] : g === 3 ? [pick(['birch', 'aspen'], u), 1.35] : [pick(['redwood', 'redwood', 'cedar', 'redwood', 'fir'], u), u < 0.45 ? 1.1 : 1.4];
+    if (di === 29 && wild && forest) return g === 2 ? [pick(['maple', 'oak', 'maple'], u), 1.4 + u2 * 0.2] : g === 3 ? [pick(['birch', 'aspen'], u), 1.35] : [redwoodAt(c, p.x, p.y, pick(['redwood', 'redwood', 'cedar', 'redwood', 'fir'], u)), u < 0.45 ? 1.1 : 1.4];
     if (wild && forest) {
       if (g === 0) return [pick(['fir', 'cedar', 'pondPine', 'fir', 'spruce'], u), 1.45 + u2 * 0.3];
       if (g === 2) return [pick(['oak', 'maple', 'oak', 'mapleAutumn', 'maple'], u), 1.4 + u2 * 0.25];
@@ -2453,7 +2479,9 @@ function propItems(c, p, pi, I) {
   const V = (key, m, a, hd = 0, pv = null, extra = null) => put(I, vitem(key, m, a, x, y, hd, pv, { pi, ...(p.lift ? { z0: p.lift } : null), ...(extra || {}) }));   // (p.lift: stands on something raised, a pier's deck)
   if (t === 'redwood') {
     const sp = SPECIES[p.sp] ? p.sp : 'giant', S = SPECIES[sp], v = shapeAt(sp, x, y, NV(sp)), tr = RW_R[sp] || 20, rr = tr * 1.35, fw = tr * 1.5 + 24;
-    put(I, { key: `f:${sp}:${v}:1`, recipe: { t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k: 1 }, x, y, ext: [S[1], S[2], S[1], 60], fbox: [fw, S[2], fw, 60], pi, fade: 1, b: TREE_FADE + pi, fp: [x + rr, y - rr * 0.5, x - rr, y + rr * 0.5] });   // (x0 > x1: an ellipse, engine.js STATIC_FS)
+    // (the owner, 11-21 15:39: a giant whose boughs would hang over a trail, a clearing, a creek or a road carries them high)
+    const art = SPECIES[sp + 'H'] && crownOver(c, x, y, Math.floor(S[2] * (sp === 'redwood2' ? 0.2 : 0.4) / TILE), Math.ceil(S[2] / TILE), Math.ceil(S[1] * 0.55 / TILE)) ? sp + 'H' : sp;
+    put(I, { key: `f:${art}:${v}:1`, recipe: { t: 'f', sp: art, s: 1000 + v * 37 + sp.length * 7, k: 1 }, x, y, ext: [S[1], S[2], S[1], 60], fbox: [fw, S[2], fw, 60], pi, fade: 1, b: TREE_FADE + pi, fp: [x + rr, y - rr * 0.5, x - rr, y + rr * 0.5] });   // (x0 > x1: an ellipse, engine.js STATIC_FS)
     return;
   }
   if (t === 'rk') { rkItem(I, p, pi); return; }
@@ -2915,6 +2943,17 @@ function putFall(c, I, it) {
     r.src = open ? 1 : 2; it.key += open ? ':o' : ':s';
   }
   put(I, it);
+}
+// the models built at the art pixel (recipe 'va'): the nature pass's missing pieces, placed with the world batch
+function artVox(m, a) {
+  switch (m) {
+    case 'dryWall': return U.dryStoneWall(a[0] || 44, a[1] || 1);
+    case 'fieldGate': return U.fieldGate(a[0] || 26);
+    case 'stile': return U.stile();
+    case 'swing': return U.ropeSwing(a[0] ?? 1);
+    case 'ruins': return U.woodRuins(a[0] || 1);
+    default: return U.dryStoneWall(20, 1);
+  }
 }
 const artRock = (G) => { G.ax *= 2; G.ay *= 2; G.ap2 = 2; return G; };
 function makeRock(r) {

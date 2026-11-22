@@ -38,7 +38,14 @@ follows this file, as `docs/tasks/PREBETA-TESTS.txt`. If that file is missing, t
 (below) before relying on this branch. Known to fail on `main` too: `test/uiscreens.test.js` test 5,
 `test/world3arrivals.test.js` test 4. The audit of 11-19 listed 13 failures on Windows to recheck on Linux.
 
-Triage of the failures seen so far on this branch (11-21, 215 of 418 files run):
+Found by this run and fixed (11-21): `test/placementlint.test.js` failed two rows on the combined branch - `plantOnPath`
+(14, allowed 0) and `signCovered` (346, allowed 312). Both were the lint misreading the nature kit's art (a plant's
+roomier item, an art-pixel sprite's pixels), not anything out of place; fixed in `tools/placementlint.mjs` (`pxOver`,
+`floraHalf`) - the `signCovered` loop on this branch, since that row comes from the audit. All 42 rows pass.
+Lesson: run `test/placementlint.test.js` on a branch before calling it tested; it reads the art as well as the world.
+
+Triage of the other failures seen (11-21; the first run was stopped by the machine's two-hour limit at 274 of 418
+files, the rest run after it):
 - `test/hub.test.js` test 3 and `test/launch-review.test.js` test 1 fail on `quickwins` alone, pass on `main` and on
   `characters`: they came in with quick wins. Both assert text - the README's controls row for the bag
   (`| Bag (EQUIPMENT: ... | tap ITEMS |`) and the gate's pad focus in `client/account.js` - that quick wins 3 and 4

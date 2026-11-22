@@ -25880,6 +25880,27 @@ best-looking trees in the game.
   stream and small pool feeding into it" - with the world batch; the fall takes it as its source by itself once it is
   there. Seen and not fixed: a block of broken white squares in the river below Willow River Falls (there on the
   live build too) - for the water audit.
+- **The meadow's and the woods' missing pieces, drawn (the owner, 13:08: "please do create any missing art you find
+  that would be useful").** `props-rural.js`: a dry-stone wall (coursed stones each its own tone, cap stones with
+  notches between, a stone fallen out, lichen), a five-bar field gate, a stile, a rope swing off a bough, stone ruins
+  in the woods (an L of wall with a doorway and a window, its corner standing, blocks fallen round it, ivy). Built at
+  the art pixel - one voxel 2 x 2 px - and drawn by a recipe of their own (`statics.js` `'va'`, `artVox`), set beside
+  concepts NS1-E and NS1-B. Not placed: placing them changes the world, which waits for the world batch.
+  `test/naturepieces.test.js`. The spray at a fall's foot stands a little thicker and lies out over the pool.
+- **The redwoods' crowns by place (the owner, 15:39).** In the redwood woods the crowns hid the floor, the creek and
+  the trails; concept N1 is trunks with the floor between them. The owner's rule: the high crown where it would cover
+  a path, a mix elsewhere. `statics.js` `crownOver` looks up the screen from a tree's foot, over the band its boughs
+  draw in, for a trail or clearing (the designed places' reserve bit), water, a road or a bridge: such a tree is drawn
+  with its crown high - the common redwood's third build (`redwoodC`), and high-crowned versions of the giants and
+  the young redwoods (`giantLH`, `giantH`, `giantSH`, `redwood2H`), which were most of the cover in the picture that
+  raised it. Deeper in, the common redwood is A, B or C by place. Page-side: the world is unchanged; the giants still
+  fade round the player as before.
+- **A break the combined branch's test run found, fixed.** The placement lint (`tools/placementlint.mjs`) read two
+  things the nature kit changed: a plant's width from its item's room (now a size roomier: 14 planter boxes "on a
+  path" that are not) and a sprite's pixels as world pixels (an art-pixel sprite's cover 2 x 2 each: the covered-sign
+  counts moved). It now takes a plant's own half-width (`statics.js` `floraHalf`) and counts through `pxOver`, which
+  knows an art-pixel sprite. Not caught earlier because the lint's test was never reached in the two partial runs on
+  this branch - the lesson is in the handover: the lint is run before a branch is called tested.
 - **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
   three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
   per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
