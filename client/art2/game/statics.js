@@ -3809,6 +3809,7 @@ function rkItem(I, p, pi) {
   if (k === 'ray') { const w = q8(p.w, 70), h = q8(p.h, 260), s = (p.s || 1) % 4; put(I, { key: `rkr:${w}:${h}:${s}`, recipe: { t: 'rk', k, a: [w, h, s] }, x, y, ext: [w + h * 0.6 + 8, h + 8, w + 8, 12], pi }); }
 }
 // the nature sites' falls as drawn (2026-10-21, the falls chain): at least this wide and this high (px), the mist
+const LEDGE_TALL = 1.5;
 const FALLS_LOOK = { tarn: { w: 96, drop: 76, mist: 0.6 }, creek: { drop: 56, mist: 0.5, rock: 56 } };
 // a falls' gorge walls (notes 2: the cliffs "embedded into the environment"): each drawn on toward the falls till it
 // meets the falls' own rock (a falls hw px either side of x), its end by the water dark and wet
@@ -3835,7 +3836,8 @@ function addNature(c, I) {
     }
     if (s.kind === 'ledgefall') {
       // (notes 2: not one ruled row - each piece a little forward or back of the next, a little higher or lower)
-      for (const g of s.segs) { if (g.dry) { const len = Math.round((g.w + 34) / 8) * 8, h = g.d + 6; put(I, vitem(`cliffw:${len}:${h}:${g.s}:44`, 'cliffWall', [len, h, 44, g.s, 0], g.x, g.y - 12, 0)); continue; }   // (a dry stretch of the lip: a bluff of rock the water parts round)
+      for (const g0 of s.segs) { const g = { ...g0, d: Math.round(g0.d * LEDGE_TALL) };   // (the nature pass, 11-21: drawn half as tall again - at their true drop the river's ledge falls read as low weirs)
+        if (g.dry) { const len = Math.round((g.w + 34) / 8) * 8, h = g.d + 6; put(I, vitem(`cliffw:${len}:${h}:${g.s}:44`, 'cliffWall', [len, h, 44, g.s, 0], g.x, g.y - 12, 0)); continue; }   // (a dry stretch of the lip: a bluff of rock the water parts round)
         const j = (Math.imul(g.x | 0, 0x9e3779b1) >>> 0) / 4294967296, d = g.d + (Math.floor(j * 3) - 1) * 4; putFall(c, I, { key: `fall:l:${g.k}:${g.w}:${d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8 + Math.round(((j * 7) % 1 - 0.5) * 14), ext: [g.w / 2 + 60, d + 120, g.w / 2 + 60, 40] }); }
       continue;
     }
