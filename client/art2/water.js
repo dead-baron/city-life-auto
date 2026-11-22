@@ -714,6 +714,24 @@ export function cliffWall(len = 120, h = 60, depth = 40, seed = 1, wet = 0, ston
   m.smooth = 1;
   return m;
 }
+// the way into a rock that is drawn by something else (a sea cave in its basalt hill - statics.js 'cliff'): only the
+// hole - a low black arch, a few dark stones round its rim, wet shingle and a glint of water on its floor
+export function caveArch(w = 84, h = 64) {
+  const m = new Vox(w, 10, h + 4), cx = w / 2, seed = 9;
+  const dark = m.mat({ ramp: R('#0c0a0e', 5, 1), k: 0, flag: F_NOCAST });
+  const rim = m.mat({ ramp: [[30, 30, 34], [44, 44, 48], [60, 60, 64], [78, 78, 80], [98, 98, 98]], k: 2, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 2.4 });
+  const glint = m.mat({ ramp: R('#1a2e38', 5, 2), k: 2, flag: F_WATER | F_NOCAST, shade: (x, y) => (hash(Math.round(x), Math.round(y), 9) - 0.5) * 1.2 - 0.4 });
+  const top = (x) => { const u = (x - cx) / (w / 2 - 3); return Math.abs(u) > 1 ? -1 : h * (0.5 + 0.5 * Math.sqrt(Math.max(0, 1 - u * u))) - Math.abs(u) * 4 + (vnoise(x, 1, 7, seed) - 0.5) * 6; };
+  for (let x = 0; x < w; x++) {
+    const t = top(x); if (t < 0) continue;
+    for (let z = 0; z < t; z++) for (let y = 0; y < 8; y++) m.set(x, y, z, z < 2 && y > 3 && Math.abs(x - cx) < w * 0.2 ? glint : dark);
+    const edge = top(x - 2) < 0 || top(x + 2) < 0;   // (stones standing proud round the rim, broken)
+    if (hash(Math.round(x / 3), 3, seed) > 0.35) for (let k = 0; k < 3; k++) m.set(x, 8, Math.round(t) + k - 1, rim);
+    if (edge) for (let z = 0; z < t + 2; z++) if (hash(x, Math.round(z / 3), seed + 2) > 0.3) m.set(x, 8, z, rim);
+  }
+  m.smooth = 0;
+  return m;
+}
 // a cave's mouth in a face of columnar basalt (Nature-B2): the rock w wide and h tall with a dark arch in its middle
 // running back into black; style 0 'moss' (a forest falls' - moss on the columns' tops, strands hanging over the arch,
 // ferns at its foot), 1 'sea' (a sea cave's - a dark wet band of barnacles along its foot, a glint of water inside)
