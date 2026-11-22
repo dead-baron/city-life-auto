@@ -102,7 +102,7 @@ export function tidyProps3(m) {
 }
 
 // take these props away (the solids that were theirs with them; the hand-placed solids stay)
-function dropProps(m, gone) {
+export function dropProps(m, gone) {
   const keep = [], remap = new Map();
   m.props.forEach((pr, i) => { if (gone.has(pr)) return; remap.set(i, keep.length); keep.push(pr); });
   m.props = keep;

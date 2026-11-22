@@ -99,9 +99,9 @@ export const LINT_ALLOW = {
   // the pavement as their district's cash of its own, or where a move would leave a street out of the cash's reach
   // (shared/world3-shops.js seatAtms3; world3server.test.js): a shop front there takes one in - bring this down, never up
   atmStray: 53,
-  // two trees by the door paths laid 11-16 (shared/world3-doorpaths.js), their feet a few px over a path's edge: West Hills
-  // House #2971's palm, Pine Hills House #3332's apple tree - take them up and bring this to 0
-  plantOnPath: 2,
+  // (11-22, the world batch: shared/world3-walks.js takes up any plant whose crown stands over a house's path - egret's two
+  // included)
+  plantOnPath: 0,
   // (11-16: the cash machine is lower now - props-kit.js atmWall - and the self storage's board clear of it)
   nameCovered: 0,
   // (the rows that came in 11-16 - the owner's Egret Point shots - each at what's left after the class fixes: bring them
@@ -109,7 +109,7 @@ export const LINT_ALLOW = {
   // the street's furniture standing in front of a shop's words - an el's piers, a shelter's or a stall's canopy, a phone
   // booth, a porch's posts, a lamp, a flag or power pole, a run of lights (shared/festoon.js's lint is its own) - and the
   // badge of a place at a wall over its window's OPEN
-  signCovered: 159,
+  signCovered: 158,   // (11-22: egret's 159, one fewer with the walkways cleared)
   // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
   // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
   // the most part (West Hills', Southside's, Old Town's lots)
@@ -119,8 +119,8 @@ export const LINT_ALLOW = {
   // Bait & Tackle's), a lot building with a home or a bay behind the same front, the hand-built Greenfield Park shops
   wallOnly: 17,
   // (the owner's 11-17 notes, tools/audit/worldrows.mjs - what each row means is there)
-  plantOnWalk: 2914,        // trees (not a street tree in its grate), shrubs, bushes, hedges on a sidewalk, road, lot (a plaza outside the paved districts)
-  planterOnWalk: 422,       // planters and pots on a sidewalk, a road or a lot
+  plantOnWalk: 0,           // trees (not a street tree in its grate, nor a boulevard median's), shrubs, bushes, hedges on a sidewalk, road, lot (a plaza outside the paved districts) - 2,914 at the audit; 0 since shared/world3-walks.js (11-22)
+  planterOnWalk: 0,         // planters and pots on a sidewalk, a road or a lot, not set against a wall - 422 at the audit; 0 since 11-22
   northDoor: 21,            // a business's entrance on its north wall
   interiorOverlap: 25,      // a walk-in's room under another building's footprint or its drawn front
   frontNames: 7,            // a shop's sign naming none of its places, or another trade

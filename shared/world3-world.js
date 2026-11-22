@@ -57,7 +57,8 @@ import { driveTree3 } from './world3-drivetree.js';
 import { desertRoadside3 } from './world3-roadside.js';
 import { stockTanks3 } from './world3-stocktanks.js';
 import { tidyProps3, clearHomePaths3 } from './world3-tidy.js';
-import { doorPaths3 } from './world3-doorpaths.js';   // (a path to every door - the owner, 11-16)
+import { doorPaths3 } from './world3-doorpaths.js';
+import { clearWalks3 } from './world3-walks.js';   // (walkways clear of plants - the owner, 11-17)   // (a path to every door - the owner, 11-16)
 import { sunkenWrecks3 } from './world3-wrecks.js';
 import { desertWaters3 } from './world3-tinajas.js';
 import { desertKit3 } from './redrock.js';
@@ -347,6 +348,7 @@ export function worldOpts(asked) {
       m.world3.festoons = hangLights3(m, H3);   // (last of the lights: every run of bistro bulbs or lanterns made fast at both ends, slack, over people's heads - the owner, 11-16: shared/festoon.js)
       m.world3.lowByPlatforms = lowByPlatforms(m);
       if (city) m.world3.atmsSeated = seatAtms3(m, H3);   // (last: every ATM set into a front wall or inside, none left standing on its own - the owner, 11-14: world3-shops.js)
+      if (city) m.world3.walks = clearWalks3(m);   // (last of the planting: no tree, shrub, hedge or pot out on a sidewalk, a road or a lot - the owner, 11-17, the audit's plantOnWalk: world3-walks.js)
       m.world3.pumps = pumpProps3(m);   // (last: every filling station's pump a prop - its solid its own - at the end of the list: they go up, server props.js)   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)

@@ -35,6 +35,7 @@
 //   drinkSign      a sign line pairing drink with riding or driving ("RIDE DRINK REPEAT", the owner 11-17)
 import { TILE, T } from '../../shared/constants.js';
 import { TIDY3 } from '../../shared/world3-tidy.js';
+import { plantKind, plantWalkHit } from '../../shared/world3-walks.js';
 import { airfields } from '../../shared/flight.js';
 import { FLY } from '../../shared/flight.js';
 import { staticIndex } from '../../client/art2/game/statics.js';
@@ -77,24 +78,15 @@ export function auditRows(M, rows, seen) {
   const bizOf = (bi) => (placesOf.get(bi) || []).filter((p) => !NOT_PLACES.has(p.kind) || p.casino);
 
   // ---- plantOnWalk ----
+  // (the same test the world's own pass clears with: shared/world3-walks.js plantWalkHit - a boulevard median's palms, a
+  // street tree in its grate and a pot set against a wall are kept, as decided 11-19)
   seen.plants = 0;
   for (const p of M.props) {
-    if (!p) continue;
-    const tree = TREES.test(p.t) || TIDY3.PLANT.test(p.t) && !BUSHES.test(p.t), bush = BUSHES.test(p.t), hedge = p.t === 'hedgerun' || p.t === 'hedgebox', pl = PLANTERS.test(p.t);
-    if (!tree && !bush && !hedge && !pl) continue;
+    const kind = plantKind(p);
+    if (!kind) continue;
     seen.plants++;
-    const pts = [];
-    if (p.t === 'hedgerun') { const n = Math.max(1, Math.ceil(Math.hypot(p.tx, p.ty) / 12)); for (let i = 0; i <= n; i++) pts.push([p.x + p.tx * i / n, p.y + p.ty * i / n]); }
-    else if (p.t === 'hedgebox') { for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) pts.push([p.x + p.w * i / 4, p.y + p.d * j / 4]); }
-    else if (tree) pts.push([p.x, p.y]);   // (a trunk's foot: a crown over a pavement is a street tree's)
-    else { const r = pl ? 8 : 9; for (const [dx, dy] of [[0, 0], [r, 0], [-r, 0], [0, r * 0.5], [0, -r * 0.5]]) pts.push([p.x + dx, p.y + dy]); }
-    // (a plaza: a hedge or a bush on it only where the district's own ground isn't paving - Midtown's, the Strip's blocks
-    // are plaza underfoot, their yards' hedges in them; a tree or a planter on a plaza is the plaza's furniture; a street
-    // tree in its grate on a sidewalk is the street's)
-    const D = M.districtAt(p.x, p.y), plazaOk = tree || pl || (D && D.ground === T.PLAZA);
-    const bad = pts.map(([x, y]) => tileAt(x, y)).find((t) => WALK_T.has(t) && !(t === T.PLAZA && plazaOk));
-    if (bad === undefined) continue;
-    if (tree && p.grate && bad === T.SIDEWALK) continue;
+    const bad = plantWalkHit(M, p, kind), pl = kind === 'planter';
+    if (bad < 0) continue;
     add(pl ? 'planterOnWalk' : 'plantOnWalk', { what: `a ${p.t}${p.sp ? ` (${p.sp})` : ''}`, x: p.x, y: p.y, why: `on ${TN[bad]}` });
   }
 

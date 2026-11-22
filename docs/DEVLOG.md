@@ -26076,3 +26076,25 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   rows; it logs every row's count), test/world3server.test.js (a new shop's door spot is outside, its place inside).
 - The world and the art are re-keyed (the village, the walk-ins, the paths; the ATM, the OPEN, the neon boards); the
   chunk carry keeps the unchanged chunks. No budget changed.
+
+## 2026-11-22 - World batch, start (branch `prebeta-world`, not live)
+- **`egret` merged** (Egret Point's interiors, door paths, signs clear) with its lint rows; the clash in
+  `tools/placementlint.mjs` settled keeping both sides (egret's `badgeOf` from host.js, the audit's rows and `pxOver`).
+- **Walkways clear of plants** (the owner, 11-17: "still spawning over sidewalks"; the audit's plantOnWalk 2,914 and
+  planterOnWalk 422): `shared/world3-walks.js`, the last planting pass of the build, with the same test the lint counts by
+  (`plantWalkHit`, now imported by `tools/audit/worldrows.mjs` - the fix and the check can't drift apart). Kept as decided
+  (11-19): 514 palms and trees down boulevard medians, 659 street trees by a kerb or at the walkway's edge in their grate
+  (an oak or a maple named so becomes the street's own grated tree; the page's own street picks unchanged), 469 pots set
+  tight against a wall. Moved onto ground beside (grass, dirt; sand for palms and cacti), clear of the plants there and
+  off every house's path: 1,235. Taken up: 459 (shrubs in parking lots, loose pots in the middle of plazas and wide
+  pavements, hedge runs and boxes on walkways) and 6 whose crowns stood over a house's path.
+  Lint: plantOnWalk 2,914 -> 0, planterOnWalk 422 -> 0, plantOnPath 2 -> 0 (egret's two named ones among them),
+  signCovered 159 -> 158. `test/walks.test.js`.
+- Regression pictures (`tools/regress/`, 55 places, before = `prebeta-art`): 11 places changed, all under 2%, each the
+  plants coming off a pavement (Copper Gulch, Mesa Flats, Northshore Beaches, the stations' forecourts...).
+- **Open on this branch:** `interiorOverlap` is 26 against 25 allowed - egret's: Speedy Stop - Egret Coast's room
+  under Egret Point General Store's drawn front (it's in the world without this batch too). One try (no room behind a
+  front another building stands close in front of) didn't reach it and was backed out. To fix first in the next world
+  session. Not run yet on this branch: the world3 suites (they rebuild the world; run them before it goes anywhere).
+- World change: a new world hash and art hash - every player fetches the city again and the art re-bakes. Goes live only
+  with the rest of the world batch, on the owner's word.
