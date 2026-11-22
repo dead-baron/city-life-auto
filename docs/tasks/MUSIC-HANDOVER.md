@@ -51,6 +51,36 @@ decision stands until the owner changes it.
 7. **Check the license** of the model the songs were generated with for commercial use before any recording ships.
    Claude is not a lawyer; this is one thing to look up, not a finding.
 
+## The owner's direction for music in the world (11-22 03:07)
+His words, shortened: music "living in the world", "synced across all players so you're hearing the same music at the
+same time in the same places in a proximity kind of way"; it does not always start at the beginning; not every place
+has music, or has it all the time; not the same song every time you walk in; the hospital lobby always plays; each
+source sounds like what it comes from (thin ceiling speakers in the hospital, good speakers in a night club); a loud
+interior is heard muffled from the street, louder toward the door, full inside, and the reverse on leaving. Sources he
+named: speakers, the street, radios (cars, the garden and farm radio), lobbies, stores, casino, bar, night club,
+dancing, street and NPC musicians, arcades, the music minigames. And: where a song has no clean ending, analyze it and
+make a loop or an ending.
+
+How to build that (Claude's plan, nothing built):
+- **One music clock, owned by the server.** What a source is playing - which song, which version, when it started,
+  when it is silent - is a pure function of server time and the source's seed, kept in `shared/` (deterministic: no
+  `Math.random`, numbers in `shared/rules.js`). The server sends no audio and no per-tick music messages; the page
+  already knows server time, works out the song and how far in it is, and starts the file at that point. Everyone at
+  the same speaker hears the same bar; every car tuned to a station is in step; walking in mid-song is the normal case.
+- **A source's schedule** has gaps (no music now), a rotation that avoids repeats (the brief's rules), and fixed cases
+  (the hospital: always on, one bed).
+- **Starting mid-song** needs the files to be fetched from a given time. To check: that the host serving them allows
+  partial requests.
+- **The sound of the source** is a chain per kind of speaker (filter, echo, a little grit for a cheap radio; none for
+  a club's system), applied in the page.
+- **Inside and outside:** volume and a low-pass filter set by the listener's distance to the nearest door and whether
+  he is inside. To check first: how the page knows a player is inside a building.
+- **Phones:** only the nearest one or two sources sound at once; players are pooled, not made and thrown away.
+- **Endings and loops by measuring:** find the beats and the phrases; a cut-off take ends at its last whole phrase
+  with a short tail; on a radio the next song comes in over that tail, as a station does; a bed loops over whole bars.
+- **Musicians and gigs** play notes through the engine on the same clock, so two players watch the same busker play
+  the same bar.
+
 ## Questions for the owner
 - Recordings (his decision of 11-12, Claude's advice) or rebuilt in the engine (ChatGPT's brief)?
 - For the gigs: can he make a version of a song without its lead instrument, or should the player play over it?

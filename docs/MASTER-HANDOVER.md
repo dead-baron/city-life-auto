@@ -44,7 +44,9 @@ Nothing important should exist only in a chat. If it was decided or noticed, it 
 If two of these disagree, `docs/DECISIONS.md` wins, and the newer dated line wins inside it. Fix the other one.
 
 ## 3. How the owner wants work done (the ones that have cost time when missed)
-- **Nothing goes to `main` without his go-ahead.** Pushing `main` deploys live. Feature branches only.
+- **Nothing goes to `main` without his go-ahead.** Pushing `main` deploys live. Feature branches only. He does not
+  want to be a blocker for small safe fixes (11-22 03:07): a rule for what may go without asking is PROPOSED in
+  DECISIONS, Process. It is not in force until he says yes to it; ask him in the first reply.
 - **Every fix is a class fix:** fixed everywhere it occurs, with a test or lint row over the whole world so it can't
   come back. A note fixed in one spot is not done. Every note gets a check, or is marked "eyes only".
 - **Check before eyes:** look at the result yourself (render it, beside its concept and its surroundings) before
@@ -111,7 +113,7 @@ Chats that can run side by side: 4 with any other; nothing else safely.
 - `nature-world`: the sea cave's rock hill (a world change). A placeholder by his word; goes with the world batch.
 - Placeholders he wants fixed later: Summit Tarn's low sill, the sea cave's rock hill.
 - Open picks waiting on him: the plants' painted light; whether the calmer water sparkle is too flat; go-live;
-  music as recordings or rebuilt.
+  music as recordings or rebuilt; the proposed push rule (DECISIONS, Process).
 - **His new pre-beta notes (11-22 02:48), not yet triaged:** `docs/tasks/PREBETA-NOTES-2026-11-22.md` (project copy
   `claude/prebeta-notes-2026-11-22.md`) holds the words of his 15-page PDF; its 14 pictures are NOT in it - ask him
   to attach the PDF again and read it with the pictures. First job: run the ripple check on each note, sort them into
