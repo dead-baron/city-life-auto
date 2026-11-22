@@ -26093,12 +26093,15 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   signCovered 159 -> 158. `test/walks.test.js`.
 - Regression pictures (`tools/regress/`, 55 places, before = `prebeta-art`): 11 places changed, all under 2%, each the
   plants coming off a pavement (Copper Gulch, Mesa Flats, Northshore Beaches, the stations' forecourts...).
-- **Open on this branch:** `interiorOverlap` is 26 against 25 allowed - egret's: Speedy Stop - Egret Coast's room
-  under Egret Point General Store's drawn front (it's in the world without this batch too). Found: both are egret's
-  hand-built Egret Point strips with rooms (`b.rooms`, map.js buildInteriors) - the Speedy Stop's (tiles 1221-1227 x
-  3276-3281) has the General Store's (1212-1223 x 3282-3287) right against its foot, so the General Store's front is
-  drawn over the Speedy Stop's floor. The fix that fits: shops3 doesn't put a second convenience store into the strip
-  right behind the village's General Store (or the strip moves north a few tiles in world3-west.js). To do first in the
-  next world session. Not run yet on this branch: the world3 suites (they rebuild the world; run them before it goes anywhere).
+- Moved plants also keep off every door and, a tree, out of every shop's sign (`world3-clutter.js doorTiles`,
+  `world3-greens.js signBlocker`): `world3server` found the first try setting pots on doors.
+- **Egret Point's room under its neighbour** (interiorOverlap 26 against 25, from the egret merge): shops3 had built
+  Egret Point General Store with its back against Speedy Stop - Egret Coast's front - its doors walled in, the General
+  Store's front drawn over the Speedy Stop's room. Class fix in `world3-shops.js` lotOk: a new building never stands with
+  its back against a walk-in's front. interiorOverlap 25; northDoor 21 -> 19 and atmStray 53 -> 52 lowered to where they
+  stand.
+- Tests on this branch: `placementlint` 42/42, `world3server` 21/21, `world3west`, `world3shops`, `undergrowth`,
+  `walkinfront`, `signs`, `world3city`, `walks` pass; `visaudit` fails its two as on `main`. The other world3 suites are
+  not run yet - run them before this goes anywhere.
 - World change: a new world hash and art hash - every player fetches the city again and the art re-bakes. Goes live only
   with the rest of the world batch, on the owner's word.
