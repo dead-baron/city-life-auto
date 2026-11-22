@@ -413,6 +413,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 
 ## Process
 - Read this file before any task; a new owner decision goes into it in the same commit. (11-14; chat)
+- One chat per work package, one at a time, all under the project; each starts from `docs/MASTER-HANDOVER.md` and ends by updating it (the owner, 11-22 00:23: "a master handover which every time I start a new chat ... it knows I'm coming from one chat with all the information needed ... takes all the past information and feedback and everything and applies it consistently"). Notes for another area are logged, not acted on, in the chat where they come up. (11-22; chat)
 - Nothing gets lost: every owner note goes into a doc and the task list. (10-08; DESIGN-NOTES.md)
 - The owner trusts Claude with production and build-order calls; tune together afterwards. (10-05; chat)
 - Art polish runs on Fable 5.2 (High) until its usage is spent; then back to Opus 5.5 for the pre-beta fixes, after the owner's further pre-beta notes - the pre-beta list waits for that unless an item is art already in hand. (11-21 08:05; chat)

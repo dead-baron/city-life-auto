@@ -1,5 +1,6 @@
 # City Life Auto - working notes
 
+- **A new chat starts with docs/MASTER-HANDOVER.md** (the owner works one chat per work package: it says where the truth is written down, how he wants work done, where things stand, and what a chat must do before it ends).
 - Read docs/DECISIONS.md before starting any task; follow it.
 - A new owner decision goes into it in the same commit.
 - Authoritative Node server (`server/`), "dumb window" client (`client/`), shared code in `shared/`. Zero runtime dependencies.
