@@ -113,7 +113,7 @@ export class Music {
   // a place's recording: its loop decoded once it's on, looped from margin to margin + loop (its seam is in the file)
   rec(p) {
     const ids = REC[p.name];
-    try { if (localStorage.getItem('cla.recmusic') !== '1') return false; } catch { return false; }   // (staged: client/sound/stage.js recOn)
+    try { if (localStorage.getItem('cla.recmusic') === '0') return false; } catch { /* on */ }   // (switched off in this browser: client/sound/stage.js recOn)
     if (!ids || p.rec === false) return false;
     if (!SONGS_MP) SONGS_MP = Promise.all([import('./songs.js'), import('../../shared/music.js'), import('./track.js')]).then(([a, b, c]) => { SONGS_M = { S: a.SONGS, M: b, T: c }; }).catch(() => { SONGS_M = false; });
     if (!SONGS_M) return SONGS_M === false ? (p.rec = false) : null;

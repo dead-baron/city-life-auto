@@ -26081,3 +26081,8 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 - Tests: characters2-5, npcpeople, peoplelook, peoplepolish (the switch test now expects "on unless '0'"),
   peoplepolish-wardrobe, wardrobe, portrait, menupolish, perf - all pass. The page loads with the pass and no console
   errors (headless, title screen); the people themselves were seen in play by the owner with the switch on.
+
+## 2026-11-22 - The recordings on for everyone
+- The owner, 13:12: "I don't think I need to wait for me to check the music you can go for it". `recOn` (client/sound/stage.js)
+  and the places' `rec` (client/sound/music.js) now on unless `cla.recmusic` is '0'; the debug menu's *Recorded music*
+  turns them off on one screen (the synth's tunes, as before). DECISIONS: the soundtrack, and merging to main (Process).

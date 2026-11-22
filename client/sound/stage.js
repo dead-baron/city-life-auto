@@ -23,9 +23,9 @@ const LOOK = 0.3, TICK = 0.08, MAX_SOURCES = 2;
 let SONGS = null, SONGS_P = null, OPUS_OK = null;
 const OPUS = () => { if (OPUS_OK === null) { try { OPUS_OK = !!new Audio().canPlayType('audio/ogg; codecs="opus"'); } catch { OPUS_OK = false; } } return OPUS_OK; };
 const SYNC_S = 0.35;
-// staged (11-22): the recordings play only with the debug menu's *Recorded music* on (cla.recmusic '1') until the owner has
-// heard them in the game; then on for everyone (as the character polish went)
-export const recOn = () => { try { return localStorage.getItem('cla.recmusic') === '1'; } catch { return false; } };
+// on for everyone (the owner, 11-22 13:12: "you can go for it"); the debug menu's *Recorded music* turns them off in one
+// browser (cla.recmusic '0': the synth's scores, as before) - to compare, or if one misbehaves
+export const recOn = () => { try { return localStorage.getItem('cla.recmusic') !== '0'; } catch { return true; } };
 // a recording at the title track's loudness (client/sound/track.js TARGET_LUFS, trackGain; a mono file plays 3 dB up),
 // under the chain's make-up of 4 (the synth's notes are written quiet)
 const recGain = (lufs, ch) => Math.pow(10, (-15 - (lufs + (ch === 1 ? 3 : 0))) / 20) / 4;
