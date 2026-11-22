@@ -14,7 +14,7 @@ import { CARD_RECT, FELT_H } from './casinorooms.js';
 export const SHOP_PLAN = {
   convenience: 'corner', gasstation: 'fuel', grocery: 'grocery', gunshop: 'gunshop', hardware: 'hardware', pawn: 'pawn',
   fence: 'fence', bank: 'bank', courthouse: 'court', pharmacy: 'pharmacy', barber: 'barber', clothing: 'boutique',
-  sports: 'sports', tackle: 'tackle', fishmarket: 'fishmarket', club: 'club', roadhouse: 'saloon',
+  sports: 'sports', tackle: 'tackle', fishmarket: 'fishmarket', club: 'club', roadhouse: 'saloon', charter: 'office',
 };
 // (the bar trade is one of IN5's three bars, by its name: barPlan)
 export const TRADE_PLAN = { mart: 'corner', bar: 'bar', liquor: 'liquor', pawn: 'pawn', barber: 'barber', lobby: 'office', records: 'records' };
@@ -29,7 +29,7 @@ export function planOf(u) {
 export function barPlan(name, seed = 0) {
   const n = String(name || '').toUpperCase();
   if (/LOUNGE|VELVET|COCKTAIL|MARTINI|JAZZ|SUPPER|SILK|SATIN|BLUE NOTE|CLUB ROOM|ROOFTOP|\bWINE\b/.test(n)) return 'lounge';
-  if (/TAVERN|\bPUB\b|\bINN\b|\bARMS\b|\bOAK\b|\bMUG\b|\bALE\b|CROWN|\bHEAD\b|\bSTAG\b|\bFOX\b|ANCHOR|BREW|SALOON|\bTAP ROOM/.test(n)) return 'tavern';
+  if (/TAVERN|\bPUB\b|\bINN\b|\bARMS\b|\bOAK\b|\bMUG\b|\bALE\b|CROWN|\bHEAD\b|\bSTAG\b|\bFOX\b|ANCHOR|BREW|SALOON|\bTAP ROOM|\bGAFF\b|\bHOOK\b/.test(n)) return 'tavern';
   if (/SPORT|LOCAL|\bTAP\b|TAPHOUSE|\bGAME\b|SCORE|DUGOUT|BULLPEN|PLAYOFF|HUDDLE|\bGOAL\b|TOUCHDOWN|STADIUM/.test(n)) return 'sportsbar';
   return BAR_PLANS[(seed >>> 3) % 3];
 }
@@ -121,7 +121,7 @@ export function shopRoom(b, u, TILE, M) {
     if (X1 - 4 - (dx + dw + 10) >= 18) regs.push({ x0: dx + dw + 10, y0, x1: X1 - 4, y1, side: 1 });
     regs.sort((p, q) => (q.x1 - q.x0) - (p.x1 - p.x0));
   }
-  const ctx = { R, r, regs, atm, name, TILE, X0, X1, Ya, Yb, y0, y1, back, cy, dx, dw, dc, tillX, W: X1 - X0, FH: Yb - Ya, BH: cy - back, H: wi.h || 0 };
+  const ctx = { R, r, regs, atm, name, kind: u.kind, TILE, X0, X1, Ya, Yb, y0, y1, back, cy, dx, dw, dc, tillX, W: X1 - X0, FH: Yb - Ya, BH: cy - back, H: wi.h || 0 };
   FIT[plan](ctx);
   R.people = R.people.filter(inReach(R));
   return R;
@@ -847,6 +847,7 @@ FIT.saloon = (c) => {
 FIT.office = (c) => {
   const { R, r } = c, nm = c.name;
   const inn = /\b(INN|HOTEL|MOTEL|LODGE|HOSTEL)\b/.test(nm), optic = /OPTIC|EYE|VISION/.test(nm), cash = /CASH|LOAN|PAWN|CHECK/.test(nm), travel = /TRAVEL|TOUR/.test(nm);
+  if (c.kind === 'charter') return charterOffice(c);   // (a charter office: its desk, the charts and the catches - 11-16)
   R.floor = pick(r, inn ? F.posh : F.wood.concat(F.lino.slice(3))); R.wall = pick(r, inn ? W.posh : W.pastel.concat(W.white));
   R.counter = { top: inn ? '#e8e4dc' : '#d8d4cc', front: R.wall[2], trim: inn ? '#c8a050' : null, k: cash ? 'teller' : 'plain', on: inn ? ['bell', 'pens'] : ['pens'] };
   if (inn) { wall(c, 'keys', c.tillX - 30, c.tillX + 30, 18, 46); wall(c, 'clock', c.tillX - 50, c.tillX - 36, 36, 50); }
@@ -875,6 +876,31 @@ FIT.office = (c) => {
   lamp(c, c.tillX, c.Ya - 6, 46, WARM, 0.8);
   waiting(c);
 };
+// A charter office (the deep-sea charters: server/systems/economy.js 'charter' - booked at its desk): sea charts and
+// photos of the boats' catches up the back wall, a trophy fish over the desk, a skipper's desk and chairs by the window,
+// a rack of big-game rods, a cooler and a life ring; planks underfoot
+function charterOffice(c) {
+  const { R, r } = c;
+  R.floor = pick(r, F.surf.concat(F.wood.slice(0, 2))); R.wall = pick(r, W.surf);
+  R.counter = { top: '#d8c8a0', front: '#2a5a7a', trim: '#e8e4dc', k: 'plain', on: ['pens'] };
+  const n = Math.max(1, Math.floor((c.W - 12) / 40));
+  for (let i = 0; i < n; i++) { const x = c.X0 + 6 + (i + 0.5) * ((c.W - 12) / n); if (Math.abs(x - c.tillX) < 34) continue; wall(c, 'poster', x - 13, x + 13, 18, 46); }   // (the charts and the photos)
+  wall(c, 'fish', c.tillX - 18, c.tillX + 18, 50, 66);
+  sign(c, pick(r, ['CHARTERS', 'DEEP SEA', 'BOOK HERE']), pick(r, ['#5ae8ff', '#ffd24a']));
+  const [a, b] = c.regs;
+  if (a) aisles(c, a, 18, 26, (x0, y, x1, y1) => { const p = put(c, 'desk', a.side < 0 ? x0 : x1 - 44, y, a.side < 0 ? x0 + 44 : x1, y1, 18, { c: '#5a3a26' }); if (p && r() < 0.5) shopper(c, p.x0 + 20, p.y1 + 4, -Math.PI / 2, 'sit'); return p; });
+  if (b) {
+    put(c, 'chairs', b.side > 0 ? b.x1 - 54 : b.x0, b.y1 - 12, b.side > 0 ? b.x1 : b.x0 + 54, b.y1, 18, { c: '#2a5a7a' });
+    const q = corner(b, 10, 8, false); put(c, 'box', q[0], b.y0, q[2], b.y0 + 8, 24, { c: '#e2e4e6', cooler: true });
+  }
+  fill(c, [
+    KS([22, 14], (c, x0, y0, x1, y1, g) => put(c, 'shelf', x0, y0, x1, y1, 22, { c: '#6a4a30', g: G.tackle, gk: 'tackle' }, g)),
+    K([16, 16], (c, x0, y0, x1, y1, g) => put(c, 'barrel', x0, y0, x1, y1, 20, { c: '#3a6a8a' }, g)),
+    K([12, 10], (c, x0, y0, x1, y1, g) => put(c, 'plant', x0, y0, x1, y1, 22, {}, g)),
+  ]);
+  lamp(c, c.tillX, c.Ya - 6, 46, WARM, 0.8);
+  waiting(c);
+}
 // the record shop (its counter: server music.js): sleeves up the wall, guitars hung, crates of vinyl, a booth, a jukebox
 FIT.records = (c) => {
   const { R, r } = c;

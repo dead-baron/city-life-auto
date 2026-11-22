@@ -8,7 +8,7 @@
 // pools and sea stacks below; the coves down the Redwood Coast Road. One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateCity, DISTRICTS } from '../shared/map.js';
+import { generateCity, DISTRICTS, PED_BLOCK } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
@@ -57,7 +57,59 @@ test('World v3: the west coast - Egret Point, its light, the raceway and the mar
 
   // 3. the village: its places, the shacks for sale, the quay, the piers and the fleet, the charter boat
   const pois = m.pois.filter((p) => p && distAt(p.x, p.y) === 65);
-  for (const [kind, label] of [['fishmarket', 'Egret Point Fish Market'], ['club', 'The Gaff Hook'], ['tackle', 'Egret Point Bait & Tackle'], ['charter', 'Egret Point Charters']]) check(pois.some((p) => p.kind === kind && p.label === label), `${label} (${kind}) in Egret Point`);
+  const PLACES = [['fishmarket', 'Egret Point Fish Market'], ['delivery', 'The Gaff Hook'], ['tackle', 'Egret Point Bait & Tackle'], ['charter', 'Egret Point Charters']];
+  for (const [kind, label] of PLACES) check(pois.some((p) => p.kind === kind && p.label === label), `${label} (${kind}) in Egret Point`);
+  check(pois.some((p) => p.label === 'The Gaff Hook' && p.walk && p.store === 'bar'), 'The Gaff Hook a bar you walk into (its counter: the bar)');
+
+  // 3b. (the owner, 11-16: "these places don't have interiors, they just have you interact at the wall ... they just sit
+  // on grass") each business walked into - in from Wharf Street through its door to its counter, served there, back out
+  // the same way - and every door, the shacks' too, on a path that reaches the street
+  const walk = (tx, ty) => { const t = m.tiles[ty * W + tx]; return !PED_BLOCK[t] && t !== T.WATER && t !== T.DEEP; };
+  const steps = (from, to) => {
+    const seen = new Map([[from[1] * W + from[0], 0]]), q = [from];
+    for (let h = 0; h < q.length; h++) {
+      const [x, y] = q[h], d = seen.get(y * W + x);
+      if (x === to[0] && y === to[1]) return d;
+      if (d > 220) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, j = ny * W + nx; if (!seen.has(j) && walk(nx, ny)) { seen.set(j, d + 1); q.push([nx, ny]); } }
+    }
+    return -1;
+  };
+  const street = [1300, EGRET.road];
+  for (const [kind, label] of PLACES) {
+    const p = pois.find((q) => q.kind === kind && q.label === label), b = p && m.buildings[p.b], wi = b && b.walkIn;
+    const u = wi && wi.units.find((q) => q.poi === p.id);
+    check(!!u, `${label}: a room inside, its counter (a walk-in)`);
+    if (!u) continue;
+    const at = [Math.floor(p.x / TILE), Math.floor(p.y / TILE)];
+    check(at[0] >= wi.x0 && at[0] <= wi.x1 && at[1] >= wi.y0 && at[1] <= wi.y1 && m.tiles[at[1] * W + at[0]] === T.FLOOR, `${label}: served inside, in front of its counter`);
+    check(Math.abs(u.clerk.y / TILE - (u.counterRow + 0.5)) <= 1.2, `${label}: the clerk behind the counter`);
+    check(wi.south && b.door && b.door.ty === b.ty + b.th, `${label}: its door in its front as drawn (south)`);
+    const inn = steps(street, at), out = steps(at, street);
+    check(inn > 0 && out > 0, `${label}: in from Wharf Street to the counter (${inn} steps) and back out (${out})`);
+    const step = [u.door.tx, u.door.ty + 1], t = m.tiles[step[1] * W + step[0]];
+    check(t === T.PLAZA || t === T.DOCK, `${label}: its door onto the forecourt (${t})`);
+  }
+  const PATH = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK, T.ROAD, T.DIRT]);
+  const toRoad = (x0, y0) => {
+    const seen = new Set([y0 * W + x0]), q = [[x0, y0, 0]];
+    for (let h = 0; h < q.length; h++) {
+      const [x, y, d] = q[h];
+      if (m.tiles[y * W + x] === T.ROAD) return d;
+      if (d > 60) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, j = ny * W + nx; if (!seen.has(j) && PATH.has(m.tiles[j])) { seen.add(j); q.push([nx, ny, d + 1]); } }
+    }
+    return -1;
+  };
+  let doors = 0;
+  for (const b of m.buildings) {
+    if (!b || !b.door || m.dist[(b.ty + (b.th >> 1)) * W + b.tx + (b.tw >> 1)] !== 65 || b.ty < EGRET.box[1] || b.ty > EGRET.box[3]) continue;
+    if (b.home === undefined && !b.rooms) continue;
+    doors++;
+    const [x, y] = b.walkIn ? [b.walkIn.units[0].door.tx, b.walkIn.units[0].door.ty + 1] : [b.door.tx, b.door.ty];
+    check(PATH.has(m.tiles[y * W + x]) && toRoad(x, y) >= 0, `${b.name}'s door at ${x}, ${y}: on a path to the street (${m.tiles[y * W + x]})`);
+  }
+  check(doors >= 16, `${doors} doors in the village`);
   const shacks = m.homes.filter((h) => /^Egret Point Shack/.test(h.name));   // (v3b: a dozen or more along its shorter Wharf Street)
   check(shacks.length >= 12 && shacks.every((h) => h.kind === 'shack' && h.price > 0 && pois.some((p) => p.kind === 'home' && p.home === h.id)), `${shacks.length} fishing shacks for sale`);
   check(B.quay >= 150, `the quay: ${B.quay} tiles`);

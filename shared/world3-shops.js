@@ -91,7 +91,7 @@ const FRONT_OK = new Set([T.GRASS, T.DIRT, T.SAND, T.LOT, T.PLAZA, T.SIDEWALK]);
 const KEEP = new Set(['atmw', 'sigpole', 'busstop', 'upole', 'billboard', 'textsign', 'roadsign', 'fingerpost', 'mapboard', 'rails', 'cliff', 'cliffwall', 'redwood']);
 const needsOf = (kind) => NEED_KEYS.filter((k) => SHOP_NEEDS[k].includes(kind));
 
-// The pass (map.js, after the street ATMs). H: { addProp, removeProps, simpleBuilding, wallAtm(b, x, look, loose) }
+// The pass (map.js, after the street ATMs). H: { addProp, removeProps, simpleBuilding, wallAtm(b, x, look, loose), walkInRoom, WALK_IN }
 export function shops3(m, H) {
   const out = { rows: 0, built: 0, retyped: 0, carts: 0, kiosks: 0, atms: 0, units: {}, stuck: {}, wild: 0, list: [] };
   const W = m.w, X0 = m.x0 || 0, Y0 = m.y0 || 0;
@@ -188,6 +188,12 @@ export function shops3(m, H) {
       for (const loose of [false, true]) for (const x of xs) if (!a) a = H.wallAtm(b, x, ATM_LOOK[Math.floor(hash2(b.tx, b.ty, 77) * ATM_LOOK.length)], loose);
       if (!a) a = kiosk((b.tx + (b.tw >> 1)), fy + 1, 6);
       if (a) { addSrc('atm', a.x / TILE, a.y / TILE); out.atms++; pois.atm = a; }
+    }
+    // walked into (the owner, 11-16: "they just have you interact at the wall"): a room behind each walk-in unit's door,
+    // its counter inside - shared/map.js walkInRoom, as the generator's own shops and Southside's lots have
+    if (H.walkInRoom && H.WALK_IN && b.tw >= 5 && b.th >= 5 && pois.some((p) => H.WALK_IN.has(p.kind))) {
+      const mine = m.pois.filter((p) => p && p.b === b.id && p.kind !== 'atm');
+      if (mine.every((p) => H.WALK_IN.has(p.kind)) && H.walkInRoom(m, b, mine, mine.slice(), true)) out.walkIns = (out.walkIns || 0) + 1;
     }
     return pois;
   };
@@ -343,6 +349,12 @@ export function shops3(m, H) {
     addSrc(kind, p.x / TILE, p.y / TILE);
     out.units[kind] = (out.units[kind] || 0) + 1; out.retyped++;
     out.list.push([d, kind, label]);
+    // (walked into, as a row's units are: its room behind the door - when every door in it is a shop's or a delivery's)
+    if (H.walkInRoom && H.WALK_IN && !b.walkIn && b.tw >= 5 && b.th >= 5) {
+      const list = m.pois.filter((q) => q && q.b === b.id && q.kind !== 'atm'), main = list.filter((q) => H.WALK_IN.has(q.kind) || q.kind === 'delivery');
+      const south = b.prefab >= 0 && m.prefabs[b.prefab] ? m.prefabs[b.prefab].rot === 0 : true;
+      if (main.length === list.length && H.walkInRoom(m, b, list, main, south)) out.walkIns = (out.walkIns || 0) + 1;
+    }
   };
   // the units a spot still lacks (the need that called first), at most what the front has room for (5 tiles a unit)
   const UNIT_OF = (need, d, x, y) => {

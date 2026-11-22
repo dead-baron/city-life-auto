@@ -75,10 +75,7 @@ import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/bui
 import { textAudit } from './textaudit.mjs';
 import { WALK_IN } from '../shared/map.js';
 import { auditRows } from './audit/worldrows.mjs';
-import { badgeAt } from '../client/art2/game/host.js';
-// where a place's badge floats, as host.js shopMarks draws it: a walk-in's under its door's lintel, any other's 64 px over
-// where you stand at it (the audit, 11-19: branch egret moves the wall places' badges and exports this from host.js)
-const badgeOf = (M, p, door) => (door ? badgeAt(door.x, door.y) : { x: p.x, y: p.y - 64, size: 24 });
+import { badgeOf } from '../client/art2/game/host.js';
 
 // what the test lets by, each explained (else what the lint found is fixed in the data)
 // how many world px of a sprite G (its top left at ox, oy in the world) lie in the box X0, Y0 .. X1, Y1. A sprite made at the
@@ -102,18 +99,25 @@ export const LINT_ALLOW = {
   // the pavement as their district's cash of its own, or where a move would leave a street out of the cash's reach
   // (shared/world3-shops.js seatAtms3; world3server.test.js): a shop front there takes one in - bring this down, never up
   atmStray: 53,
-  // a cash machine set in a one-storey self storage's front, its top a few px over the foot of the board above it
-  nameCovered: 1,
-  // ---- the audit's rows (2026-11-19, docs/audit/REPORT.md - every hit listed in docs/audit/hits.json): each at the count
-  // the audit found, before the fix pass. Bring them down, never up.
-  // (branch egret's three rows - the owner's Egret Point shots, 11-16 - here before egret's class fixes; egret ships them
-  // at signCovered 159, doorOnGrass 372, wallOnly 17)
-  // something over a front's sign: a prop standing in front of its words, a place's badge over them
-  signCovered: 312,
-  // a business's or a home's door with no path to it
-  doorOnGrass: 1777,
-  // a place you'd walk into served at the wall (no room behind its door)
-  wallOnly: 111,
+  // two trees by the door paths laid 11-16 (shared/world3-doorpaths.js), their feet a few px over a path's edge: West Hills
+  // House #2971's palm, Pine Hills House #3332's apple tree - take them up and bring this to 0
+  plantOnPath: 2,
+  // (11-16: the cash machine is lower now - props-kit.js atmWall - and the self storage's board clear of it)
+  nameCovered: 0,
+  // (the rows that came in 11-16 - the owner's Egret Point shots - each at what's left after the class fixes: bring them
+  // down, never up)
+  // the street's furniture standing in front of a shop's words - an el's piers, a shelter's or a stall's canopy, a phone
+  // booth, a porch's posts, a lamp, a flag or power pole, a run of lights (shared/festoon.js's lint is its own) - and the
+  // badge of a place at a wall over its window's OPEN
+  signCovered: 159,
+  // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
+  // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
+  // the most part (West Hills', Southside's, Old Town's lots)
+  doorOnGrass: 372,
+  // the places you'd walk into still served at the wall: a building too shallow for a room (Pelican Key Charters, a few
+  // of World v3's added shop rows), a row shared with a place that isn't a shop (Egret Marsh Outfitters' and the Marsh
+  // Bait & Tackle's), a lot building with a home or a bay behind the same front, the hand-built Greenfield Park shops
+  wallOnly: 17,
   // (the owner's 11-17 notes, tools/audit/worldrows.mjs - what each row means is there)
   plantOnWalk: 2914,        // trees (not a street tree in its grate), shrubs, bushes, hedges on a sidewalk, road, lot (a plaza outside the paved districts)
   planterOnWalk: 422,       // planters and pots on a sidewalk, a road or a lot

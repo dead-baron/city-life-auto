@@ -57,6 +57,7 @@ import { driveTree3 } from './world3-drivetree.js';
 import { desertRoadside3 } from './world3-roadside.js';
 import { stockTanks3 } from './world3-stocktanks.js';
 import { tidyProps3, clearHomePaths3 } from './world3-tidy.js';
+import { doorPaths3 } from './world3-doorpaths.js';   // (a path to every door - the owner, 11-16)
 import { sunkenWrecks3 } from './world3-wrecks.js';
 import { desertWaters3 } from './world3-tinajas.js';
 import { desertKit3 } from './redrock.js';
@@ -329,6 +330,7 @@ export function worldOpts(asked) {
       m.world3.mansions = moreMansions3(m);   // (the finest villa of each rich district a mansion too - the owner, 10-16: "More than one mansion": world3-mansions.js)
       if (H3 && city) m.world3.greens = streetGreens3(m, H3);   // (notes 2: the street trees off the signs, and not palms everywhere - world3-greens.js)
       if (city) m.world3.kerbBays = kerbBays3(m, (tx, ty) => !!handPlanAt(tx, ty));   // (notes 2: the parked cars' bays along those streets' kerbs - world3-kerbs.js)
+      if (city) m.world3.doorPaths = doorPaths3(m, H3 || {});   // (a paved path from every door on the lawn out to the pavement - the owner, 11-16: "they just sit on grass": world3-doorpaths.js)
       if (H3 && city) m.world3.clutter = clearClutter3(m, H3);   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors - world3-clutter.js)
       m.world3.skateSolids = skateSolids3(m);   // (the skate parks' ledges, boxes, rails and benches solid on foot - the owner, 11-14: world3-skatesolids.js)
       m.world3.tidy = tidyProps3(m);

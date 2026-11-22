@@ -78,8 +78,11 @@ test('shops where you need them: every built-up district has each need within re
   assert.ok(mine.length >= 100, `${mine.length} new places`);
   for (const S of WILD_SHOPS3) for (const [, name] of S.units) assert.ok(mine.some((p) => p.label === name), `${name} in the wild`);
   // every new place: its door on open ground in front of its building (or a cart on the pavement), nothing solid on it
-  for (const p of mine) {
-    const t = M.tileAtPx(p.x, p.y);
+  // (a walk-in's - 11-16, walked into: shared/world3-shops.js - its place in front of its counter, inside; its door's spot
+  // outside, p.outside)
+  for (const p0 of mine) {
+    const p = p0.outside ? { ...p0, ...p0.outside } : p0, t = M.tileAtPx(p.x, p.y);
+    if (p0.outside) assert.equal(M.tileAtPx(p0.x, p0.y), T.FLOOR, `${p.label}: served inside, on its floor`);
     assert.ok(t === T.SIDEWALK || t === T.PLAZA || t === T.LOT || t === T.GRASS || t === T.DIRT || t === T.SAND, `${p.label}: its door on open ground (${t})`);
     const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of M.solidProps.get(M.idx(tx + dx, ty + dy)) || []) assert.ok(Math.hypot(e.x - p.x, e.y - p.y) > e.r + 6, `${p.label}: nothing solid on its door`);

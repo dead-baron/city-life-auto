@@ -9,7 +9,7 @@
 // worker caches sprites by key.
 import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
-import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox } from '../buildings.js';
+import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW } from '../buildings.js';
 import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, paintBoard, paintLine, lineMask, rgbOf, TRADES } from '../signfont.js';   // (wave A1: the sign faces, by trade)
 import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
@@ -1125,6 +1125,28 @@ function stylePlaque(pq, A, seed) {
 
 // the makeBuilding spec, rooftop kit and lights of one section. lights: [dx, dy, z, r, col, k, kind] from the
 // section's south-west corner (dy south of the front wall)
+// The cash machines set into the fronts (map.js wallAtm: an 'atmw' 5 px out from the wall's foot) and the planters stood
+// against them, by the row of the wall's foot -> a front's [x0, x1] spans of them (facade px from its section's west
+// edge, the thing's width and a margin)
+const ATM_ROWS = new WeakMap(), PLANTER_REACH = 44;
+export function frontAtms(M, tx, footTy, tw) {
+  let I = ATM_ROWS.get(M);
+  if (!I) {
+    I = new Map();
+    const add = (row, x, hw) => { let l = I.get(row); if (!l) I.set(row, (l = [])); l.push([x, hw]); };
+    for (const p of M.props || []) {
+      if (!p) continue;
+      if (p.t === 'atmw' && p.inside === undefined) add(Math.floor((p.y - 5) / TILE), p.x, 21);
+      // (and a flower box or a potted shrub stood in front - plantFor: a planter on the paving - within PLANTER_REACH px
+      // of the wall's foot, tall enough to reach the window: the OPEN not behind it either)
+      else if (POTTED.test(p.t) || /^planter_/.test(p.t)) for (let ty = Math.floor((p.y - PLANTER_REACH) / TILE); ty <= Math.floor(p.y / TILE); ty++) if (p.y >= ty * TILE) add(ty, p.x, 26);
+    }
+    ATM_ROWS.set(M, I);
+  }
+  const out = [], X0 = tx * TILE, X1 = (tx + tw) * TILE;
+  for (const [x, hw] of I.get(footTy) || []) if (x > X0 - hw && x < X1 + hw) out.push([Math.round(x - X0 - hw), Math.round(x - X0 + hw)]);
+  return out;
+}
 function specOf(c, b, A, s, D) {
   const rnd = rndOf(b.id * 31 + s.k, 911), w = s.tw * TILE, d = s.th * TILE, seed = ((b.id * 7919 + s.k * 131) >>> 0) % 100000 + 7;
   const st = D.style, tier = D.tier, rough = tier === 'rough', low = tier === 'low' || tier === 'red';
@@ -1147,6 +1169,8 @@ function specOf(c, b, A, s, D) {
     if (!sh.sign && !sh.awning) sh.band = pick(AWN, rnd());
     if (o.grille) sh.grille = true;
     if (o.openSign) sh.openSign = { col: [255, 60, 70] };
+    const av = s.south ? frontAtms(c.M, s.tx, s.ty + s.th, s.tw) : null;
+    if (av && av.length) sh.avoid = av;   // (a cash machine set in this front: the window's OPEN sign not behind it)
     spec.shop = sh;
     const dx = typeof sh.door === 'number' ? sh.door + (sh.doorW || 22) / 2 : sh.door === 'left' ? 21 : w - 21;
     shopSpill(lights, w, dx);
@@ -1637,7 +1661,7 @@ function addBuildings(c, I) {
       for (const [dx, dy, z, r, col, k, kind] of lights) lightAt(I, x0 + dx, y1 + dy, z, r, col, k, kind, 1);
       // garage doors (the yard keeps their driveways clear), shopfronts (dressed later)
       for (const q of spec.doors || []) if (q.kind === 'garage' && s.south) { let l = I.garages.get(bi); if (!l) I.garages.set(bi, (l = [])); l.push([x0 + q.x - 10, x0 + q.x + q.w + 10]); }
-      if (spec.shop && s.south && !s.vox && !s.frame) { const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10; I.fronts.push({ x0, y1, w, dx, dw, kind: sh.kind, A, st: D.style, b: bi }); }
+      if (spec.shop && s.south && !s.vox && !s.frame) { const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10; const ox = openSignX(sh, w); I.fronts.push({ x0, y1, w, dx, dw, kind: sh.kind, A, st: D.style, b: bi, open: ox === null ? null : [ox, ox + openSignW()] }); }
     }
   });
 }
@@ -3099,7 +3123,10 @@ function makeSignBoard(r) {
   const t = clean(r.text, 24), fk = r.face || 'civic', neonF = fk === 'neon', fg = rgbOf(r.fg || [236, 240, 248]);
   const P = r.pal ? { ...r.pal } : neonF ? palOf({ p: '#16141e', i: fg, neon: true }) : palOf([r.bg || '#1c2a44', fg]);   // (r.pal: a shop sign's own palette - the towns' false fronts)
   if (!neonF && !r.pal) legible(P);
-  const L0 = layoutSign(t, 200, { face: fk, lines: 1 }), L = r.maxW && L0.cw + 4 > r.maxW / 2 ? layoutSign(t, Math.floor(r.maxW / 2), { face: fk, lines: 2 }) : layoutSign(t, Math.max(L0.cw + 4, r.w ? Math.floor(r.w / 2) : 0), { face: fk, lines: 1 });   // (r.maxW: as wide as that at most, on two lines if it must)
+  const L1 = r.maxW && L0w(t, fk) + 4 > r.maxW / 2 ? layoutSign(t, Math.floor(r.maxW / 2), { face: fk, lines: 2 }) : layoutSign(t, Math.max(L0w(t, fk) + 4, r.w ? Math.floor(r.w / 2) : 0), { face: fk, lines: 1 });   // (r.maxW: as wide as that at most, on two lines if it must)
+  // (a neon board: a dark row between its lit rim and the tubes' halo, above and below - the owner, 11-16: the Gaff Hook's
+  // rooftop BAR read "Uar", the capital's top tube run into the rim; NEON_PAD)
+  const L = neonF ? { ...L1, h: L1.h + 2 * NEON_PAD } : L1;
   const w = L.w * 2, h = L.h * 2, F = new GBuf(w, h);
   paintBoard((x, y, c, e) => F.put(x, y, c, [0, 1, 0.1], 0, e, 0), L, P, 0, 0, { lit: r.lit ? (neonF ? 'neon' : 'panel') : false, night: 0.7 });
   const S = upright(F, r.z || 0);
@@ -3107,6 +3134,8 @@ function makeSignBoard(r) {
   return S;
 }
 
+const L0w = (t, fk) => layoutSign(t, 200, { face: fk, lines: 1 }).cw;
+export const NEON_PAD = 1;   // (art px clear between a neon board's rim and its words' halo, top and bottom: makeSignBoard)
 // half a text sign's board, world px (as makeSignBoard lays it out)
 function signHalfW(text) { const t = clean(text, 24), L0 = layoutSign(t, 200, { face: 'civic', lines: 1 }); return layoutSign(t, L0.cw + 4, { face: 'civic', lines: 1 }).w; }
 // A trail sign (the owner, 2026-11-13: "it should just be a more appropriate wooden sign" - the wilds' signs): weathered
@@ -4076,6 +4105,7 @@ function addFrontage(c, I) {
     const pool = POTS[st] || POTS.commercial;
     for (const px of [x0 + dx - 13, x0 + dx + dw + 13]) {
       if (px < x0 + 8 || px > x0 + w - 8 || !paved(px) || rnd() < 0.3) continue;
+      if (f.open && px + 18 > x0 + f.open[0] && px - 18 < x0 + f.open[1]) continue;   // (not in front of the window's OPEN - 11-16)
       const k = pick(pool, rnd());
       if (k === 'pot') put(I, vitem('pot', 'pottedPalm', [], Math.round(px), y1 + 12));
       else if (k === 'plg') put(I, vitem('plg', 'planter', [true], Math.round(px), y1 + 9));
