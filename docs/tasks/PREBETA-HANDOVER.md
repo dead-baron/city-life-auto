@@ -60,7 +60,8 @@ More failures from the second run, traced as far as said:
 - `test/scenes.test.js`, `test/uikit.test.js`, `test/uiscreens.test.js` test 5, `test/world3arrivals.test.js` test 4:
   fail on `main` too.
 - `test/staffplayers.test.js`, `test/unlocks.test.js`: failed once under load, pass run alone.
-- `test/world3mesa.test.js`, `test/visaudit.test.js`: failed here; not yet compared with `main`.
+- `test/world3mesa.test.js` test 1, `test/visaudit.test.js` tests 2-3: the same tests fail on `main` too (the counts
+  inside them were not compared).
 
 Triage of the other failures seen (11-21; the first run was stopped by the machine's two-hour limit at 274 of 418
 files, the rest run after it):
@@ -88,6 +89,12 @@ files, the rest run after it):
 2. Best: do the world batch (below) on top of this branch first, so the world and the art re-bake once together.
 3. `node tools/stamp-version.mjs`, the suite, then merge to `main` and push at a quiet time. The server rolls back
    a version that fails its health check.
+
+## A third branch: `nature-world` (the owner, 11-21 17:32)
+Off `nature`, not merged here because it changes the world (the `world3` hash moves): Summit Tarn held by a rim of
+jointed granite with its fall in the notch, the sea cave at Redwood Cove set in one bluff. Seventeen world and art test
+files pass on it (its DEVLOG entry lists them); the whole suite has not been run. Merge it as part of the world batch.
+The state of all the nature work, for whoever carries it on: `claude/nature-status-2026-11-21.md` in the project.
 
 ## What comes next on top of this branch
 1. **The world batch** from `docs/audit/REPORT.md` and the pre-beta list section A: each row a class fix, the lint
