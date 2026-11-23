@@ -142,9 +142,22 @@ export function buildCaves3(m, H3) {
     // mine has (naturesites.js): one mass of dark basalt standing as a hill behind the pocket - its outline ragged, its
     // top stepping back in tiers, solid where it is drawn (shared/cliffshape.js) - the way in a low arch at its foot.
     const CW = 16 * TILE, CD = 7 * TILE, CH = 132, CS = 37, face = Math.round(rimY + 42);
-    for (const [qx, qy] of cliffSolid(MX, face, CW, CD, CH, CS)) { if (!inF(qx, qy)) continue; if (m.props.some((p) => p && p.t === 'campfire' && Math.hypot(p.x - (qx + 0.5) * TILE, p.y - (qy + 0.5) * TILE) < 3 * TILE)) continue; /* (open ground round a fire ring) */ const i = idx(qx, qy), t = m.tiles[i]; if (t === T.GRASS || t === T.DIRT || t === T.SAND) { m.tiles[i] = T.WALL; m.reserve[i] |= RES; } }
     const rockT = cliffSolid(MX, face, CW, CD, CH, CS);
-    for (const [qx, qy] of rockT) if (inF(qx, qy)) dropNear((qx + 0.5) * TILE, (qy + 0.5) * TILE, 22, /^(campfire|logseat|pbench)$/);   // (what stood where the rock is - never the cove's fire ring: world3-coast.js)
+    // the cove's fire ring (world3-coast.js) where the rock now stands: moved with its seats, driftwood and lantern to the
+    // nearest open sand clear of the rock, so every tile of the rock is solid (it kept 3 tiles open round the fire, under
+    // drawn rock - test/cliffs, 11-23); a ring with nowhere to go is dropped with the rock's other clutter
+    const rockK = new Set(rockT.map(([qx, qy]) => qx + ',' + qy));
+    const nearRock = (x, y, r) => { const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE); for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (rockK.has((cx + dx) + ',' + (cy + dy))) return true; return false; };
+    const FIRE_SET = /^(campfire|logseat|log|driftwood|pbench|lantern)$/, LAND = [T.SAND, T.GRASS, T.DIRT];
+    for (const f of m.props.filter((p) => p && p.t === 'campfire' && nearRock(p.x, p.y, 3))) {
+      const set = m.props.filter((p) => p && FIRE_SET.test(p.t) && Math.hypot(p.x - f.x, p.y - f.y) < 3 * TILE);
+      const fits = (dx, dy) => set.every((p) => { const x = p.x + dx * TILE, y = p.y + dy * TILE, qx = Math.floor(x / TILE), qy = Math.floor(y / TILE); return inF(qx, qy) && LAND.includes(m.tiles[idx(qx, qy)]) && !nearRock(x, y, 3); });
+      let best = null;   // (the nearest spot that fits, within 8 tiles - the cove's fire stays the cove's: test/world3coast)
+      for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) if (dx * dx + dy * dy <= 64 && (!best || dx * dx + dy * dy < best[2]) && fits(dx, dy)) best = [dx, dy, dx * dx + dy * dy];
+      if (best) for (const p of set) { p.x += best[0] * TILE; p.y += best[1] * TILE; }
+    }
+    for (const [qx, qy] of rockT) { if (!inF(qx, qy)) continue; const i = idx(qx, qy), t = m.tiles[i]; if (t === T.GRASS || t === T.DIRT || t === T.SAND) { m.tiles[i] = T.WALL; m.reserve[i] |= RES; } }
+    for (const [qx, qy] of rockT) if (inF(qx, qy)) dropNear((qx + 0.5) * TILE, (qy + 0.5) * TILE, 22);   // (what stood where the rock is - the fire ring moved out of it above)
     P('cliff', MX, face, 0, { w: CW, d: CD, h: CH, s: CS, st: 'basalt' });
     P('cavemouth', MX, face + 2, 0, { w: 84, h: 64, style: 'sea', arch: 1 });
     // the tall trees in front of it in this view (the camera looks north: a redwood south of it hides it) taken off

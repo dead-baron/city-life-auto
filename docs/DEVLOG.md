@@ -26475,3 +26475,11 @@ consider topographical levels". Both withdrawn. What stands:
   Both start with this version; until the first of each, their cards say so.
 - Seen before shipping: the page served with made-up facts (a redraw, then trouble) and shot on a desktop and a phone.
   `test/status.test.js`; admin-console, perf.
+
+## 2026-11-23 · The sea cave's rock solid all through (the cove's fire ring moved out of it)
+
+The final run before the world batch: test/cliffs found 12 walkable tiles under a hand-placed face's rock - the sea cave's
+basalt mass (11-21) stood over the cove's fire ring (world3-coast.js), and the ground within 3 tiles of the fire had been
+left open, under drawn rock. Now the ring moves, with its seats, driftwood and lantern, to the nearest open sand at
+least 3 tiles clear of the rock (within 8 tiles: it stays the cove's - test/world3coast), and every tile of the rock is
+solid (shared/world3-caves.js). cliffs, world3caves, world3coast, caveexit, cavelight, natcave pass.
