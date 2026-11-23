@@ -36,10 +36,19 @@ export function createModeration({ store, now = Date.now }) {
     store.touch();
     return r;
   }
-  function resolve(id, by, note) {
+  // how: 'fixed' (dealt with), 'ok' (not a problem), 'bug' (a bug to look at later) - the admin console's review list (the
+  // owner, 11-23: "a way to check off things in the review list ... or save it as a bug to review later")
+  function resolve(id, by, note, how = 'fixed') {
     const r = reviews().find((q) => q.id === id);
     if (!r || r.done) return null;
-    r.done = { at: now(), by: by ? { id: by.id, n: by.n } : null, note: String(note || '').slice(0, 300) };
+    r.done = { at: now(), by: by ? { id: by.id, n: by.n } : null, note: String(note || '').slice(0, 300), how: ['fixed', 'ok', 'bug'].includes(how) ? how : 'fixed' };
+    store.touch();
+    return r;
+  }
+  function reopen(id) {
+    const r = reviews().find((q) => q.id === id);
+    if (!r || !r.done) return null;
+    r.done = null;
     store.touch();
     return r;
   }
@@ -88,5 +97,5 @@ export function createModeration({ store, now = Date.now }) {
     store.touch();
     return { review: r, escalated, total };
   }
-  return { review, resolve, openReviews, reviews, strike, unstrike, activeStrikes, mutedUntil, mute, unmute, report };
+  return { review, resolve, reopen, openReviews, reviews, strike, unstrike, activeStrikes, mutedUntil, mute, unmute, report };
 }
