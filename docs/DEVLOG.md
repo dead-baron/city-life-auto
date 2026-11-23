@@ -26204,3 +26204,10 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   HOSP_PAD_R (900 px); `findPadSpot` / `clearPad` take the tile set (the other pads keep PAD_OK). 10 -> 1 (`LINT_ALLOW`
   1): the one left has no open ground near and keeps its roof pad. flight, aircraftart, policeair, rescue,
   placementlint 42/42.
+
+## 2026-11-22 - World batch: the arrival tunnels go into a hill (branch `prebeta-world2`; not live)
+- The audit's portalOnFlat (16: every one an arrival line's bore - the cover's hill drawn over flat ground, so nothing
+  shaded it as a rise). `shared/world3-arrivals.js` moundOf, with each bore: MOUND.h (6 m) of the land's relief over the
+  bore, falling away steeply on the portal's side (3 tiles: the stretch to the platform stays flat), gently behind the
+  blind end (6) and to the sides (5); open ground and the bore's rock only. Only the art reads the relief this late
+  (the hillshade). 16 -> 0 (`LINT_ALLOW` 0). world3arrivals, ftue, dmath, mapwindow, placementlint 42/42.
