@@ -87,7 +87,7 @@ test('Esc, Start and MENU open the pause list; P, M, I a screen; back steps out;
   assert.equal(KB.hub, 'ESC'); assert.equal(PAD.hub[0], 'MENU'); assert.match(PAD.hubtab[0], /LB \/ RB/);
   const readme = read('README.md');
   assert.match(readme, /\| Menu \(the pause list: Resume, Map, Phone, Bag, People, Settings, Report a bug, Log off, Leave game\)/);
-  assert.match(readme, /\| Bag \(EQUIPMENT: [^\n]*\| tap BAG \(always there\) \|/);
+  assert.match(readme, /\| Inventory \(was the Bag\): [^\n]*\| tap BAG; tap, the ✕ on a slot \|/);
 });
 
 test('the hub\'s tabs load when first opened, not with the page', () => {
@@ -248,5 +248,5 @@ test('a sideways phone: the shop\'s menu has a compact head and a scroll cue; th
   assert.match(css, /\.cue-down \{[^}]*mask-image/);
   assert.match(read('client/hud.js'), /box\.classList\.toggle\('cue-down'/, 'the menu shows when there is more below');
   assert.match(read('client/bag.js'), /export function cue\(el\) \{ el\.classList\.toggle\('cue-down'/, 'the bag\'s grid too');
-  assert.match(css, /@media \(max-height: 560px\) \{\n  \.bag \{ grid-template-columns: 200px minmax\(0, 1fr\) 240px;/, 'the bag beside its slots and its details at 844x390');
+  assert.match(css, /@media \(max-height: 560px\) \{\n  \.bag \{ grid-template-columns: 250px minmax\(0, 1fr\) 190px;/, 'the bag beside its slots and its details at 844x390');
 });

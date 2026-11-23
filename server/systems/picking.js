@@ -1,6 +1,6 @@
 // Picking: the trees in Willow River Orchard, the vines in the vineyard and the rows at Cedar Point Lavender
 // (map.pickables, laid out by shared/naturesites.js). Stand by a tree, a vine or a row and press the action button:
-// a few apples, oranges, bunches of grapes or of lavender go in your bag (fruit you can eat for a little health;
+// a few apples, oranges, bunches of grapes or of lavender go in your inventory (fruit you can eat for a little health;
 // all of it sells - the winery pays best for grapes, the farm stand for lavender), then that tree, vine or stretch
 // of row is picked clean for PICK_REGROW_S.
 import { PICK_MAX, PICK_REGROW_S, PICK_REACH } from '../../shared/rules.js';

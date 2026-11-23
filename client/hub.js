@@ -9,10 +9,10 @@ import { crewHtml, wireCrew } from './phone.js';
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // what each action is called, grouped as you'd look for it: [group, [[action, words]...]]
 export const BIND_GROUPS = [
-  ['ON FOOT', [['move', 'Move'], ['sprint', 'Sprint'], ['aim', 'Aim'], ['fire', 'Attack or fire'], ['block', 'Block (fists, a bat, a blade)'], ['dive', 'Dive roll'], ['action', 'Interact'], ['throw', 'Throw or drop a crate'], ['reload', 'Reload'], ['nextw', 'Next weapon'], ['wpnwheel', 'Pick a weapon'], ['use', 'Quick wheel (items)'], ['light', 'Flashlight'], ['dance', 'Dance']]],
+  ['ON FOOT', [['move', 'Move'], ['sprint', 'Sprint'], ['aim', 'Aim'], ['fire', 'Attack or fire'], ['block', 'Block (fists, a bat, a blade)'], ['dive', 'Dive roll'], ['action', 'Interact'], ['throw', 'Throw or drop a crate'], ['reload', 'Reload'], ['nextw', 'Next weapon'], ['wpnwheel', 'Weapon wheel'], ['quick', 'Quick bar: weapons 1-4, things 5-8'], ['use', 'Quick wheel (items)'], ['light', 'Flashlight'], ['dance', 'Dance']]],
   ['AT THE WHEEL', [['vehicle', 'Get in or out'], ['gas', 'Gas'], ['brake', 'Brake, reverse'], ['steer', 'Steer'], ['horn', 'Horn and siren'], ['drivefire', 'Drive-by'], ['cruiser', 'Call a cruiser (police)']]],
   ['IN THE AIR', [['climb', 'Climb'], ['descend', 'Descend'], ['vehicle', 'Get out (again: jump)']]],
-  ['MENUS', [['hub', 'Open the menu'], ['hubtab', 'Change tab'], ['map', 'Map'], ['phone', 'Phone'], ['chat', 'Chat'], ['emote', 'Emotes'], ['bag', 'Bag'], ['back', 'Back']]],
+  ['MENUS', [['hub', 'Open the menu'], ['hubtab', 'Change tab'], ['map', 'Map'], ['phone', 'Phone'], ['chat', 'Chat'], ['emote', 'Emotes'], ['bag', 'Inventory'], ['invtab', 'Inventory tabs'], ['back', 'Back']]],
 ];
 export const DEVICES = [['kbm', 'Keyboard and mouse'], ['pad', 'Gamepad'], ['touch', 'Touch']];
 // a binding's chip for a device: the controls tables (shared/controls.js), one source for every hint in the game

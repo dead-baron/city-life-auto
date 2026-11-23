@@ -20,7 +20,7 @@ test('N3: wanted levels come less easily (the tally and the small crimes\' count
 
 test('N8: Use on something you take out into the world closes the bag', () => {
   const bag = read('client/bag.js'), main = read('client/main.js');
-  assert.match(bag, /if \(leavesBag\(t\.id\) && leave\)/, 'the bag asks to be closed');
+  assert.match(bag, /if \(leavesBag\(t\.id\)\) \{ sel = null; armDrop = ''; \(leave \|\| close\)\(\); return; \}/, 'the Inventory asks to be closed');
   assert.match(main, /leave: \(\) => \{ if \(topOverlay\(\) === 'inv'\) closeHub\(\); \}/, 'the page closes it');
   assert.match(bag, /return !!it && !it\.light && !!\(it\.tool \|\| it\.music \|\| it\.ride \|\| it\.fun\)/, 'instruments, the boombox, boards, rods, fireworks - not a light');
 });
@@ -30,8 +30,10 @@ test('N1: the bag tile keeps its tag and its count inside it; the slots show wha
   assert.match(bag, /<span class="bc-ft">\$\{tag\}\$\{cnt\}<\/span>/, 'a footer row');
   assert.doesNotMatch(css, /\.bc-tag \{ position: absolute/, 'no chip hung off the corner');
   assert.doesNotMatch(css, /\.bc-n \{ position: absolute/, 'no count over the name');
-  assert.match(bag, /savePref\('eq\.' \+ held, m\.weapon\)/, 'the slot remembers what you equipped');
-  assert.match(bag, /QUICK BAR<em>\$\{wheelKey\(\)\}<\/em>/, 'the quick bar says how to reach it in play');
+  // (the Inventory, 11-16: the weapon slots are the server's loadout - shared/loadout.js - and the keys line under the quick
+  // bar says how to reach it in play, on this device)
+  assert.match(bag, /loadout\(/, 'the slots show the loadout you carry');
+  assert.match(bag, /class="iv-keys"/, 'the quick bar says how to reach it in play');
 });
 
 test('N21: on the respawn map no name sits under a numbered place', () => {

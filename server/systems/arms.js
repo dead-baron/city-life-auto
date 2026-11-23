@@ -17,40 +17,17 @@
 //   - dropped on the ground (the bag's Drop) or handed to a crewmate close by: both a pickup (dropAt / pickUp).
 // Rounds: profile.weapons[id] is every round you have for it, those in the magazine (ped.mag) among them - as combat.js
 // counts them; the stash keeps the same total.
-import { WEAPONS, SHOPS, weaponOrder } from '../../shared/items.js';
+import { WEAPONS, weaponOrder } from '../../shared/items.js';
 import { ARMS, DROP_LIFE_S } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as crews from './crews.js';
+// a weapon's lowest price, what can be lost and its carry class: shared/loadout.js (the page's Inventory reads the same)
+import { shopPrice, atRisk, classOf, issued } from '../../shared/loadout.js';
 
-// a weapon's lowest price at any counter (null: sold at none - the plasma blade, the dev tools)
-let PRICE = null;
-export function shopPrice(id) {
-  if (!PRICE) {
-    PRICE = {};
-    for (const s of Object.values(SHOPS)) for (const o of s.buy || []) if (o.kind === 'weapon' && o.price > 0) PRICE[o.id] = Math.min(PRICE[o.id] ?? Infinity, o.price);
-  }
-  return PRICE[id] ?? null;
-}
-const DEPT = new Set(['taser', 'baton']);   // (the department's, with the police: law.js DEPT_GEAR)
-const issued = (w) => !!w.police || DEPT.has(w.id) || !!w.dev;
-// can it be lost (and does it take a slot)?
-export function atRisk(id) {
-  const w = WEAPONS[id];
-  if (!w || id === 'fists' || issued(w)) return false;
-  if (w.illegal) return true;
-  if (w.type === 'melee' || w.type === 'tool' || w.type === 'spray') { const pr = shopPrice(id); return pr === null || pr > ARMS.keepMax; }
-  return true;
-}
+export { shopPrice, atRisk, classOf };
 // can it go in the stash (anything of your own: not your fists, not police issue)
 export const stashable = (id) => !!WEAPONS[id] && id !== 'fists' && !issued(WEAPONS[id]);
 export const carried = (prof) => Object.keys(prof.weapons || {}).filter(atRisk);
-// a weapon's carry class: 'gun' (guns, bows, launchers, the flamethrower), 'melee' (the blades and the dear tools),
-// 'throw' (grenades) - null for what doesn't count (not at risk)
-export function classOf(id) {
-  if (!atRisk(id)) return null;
-  const t = WEAPONS[id].type;
-  return t === 'grenade' ? 'throw' : t === 'melee' || t === 'tool' || t === 'spray' ? 'melee' : 'gun';
-}
 const CLASS_NAME = { gun: 'guns', melee: 'melee weapon', throw: 'throwable' };
 // how many of a class you can carry: ARMS.carry, plus the carry upgrades you have (profile.carryUp { gun, melee, throw }:
 // none yet - a holster, a sling, a chest rig to come), up to ARMS.carryMax

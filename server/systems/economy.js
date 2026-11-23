@@ -430,7 +430,7 @@ function menuOf(world, p, poi) {
         }
         opts.push({ id: 'hspawn', label: prof.spawnHome === h.id ? 'Respawn point: HERE' : 'Make this my respawn point', dis: prof.spawnHome === h.id });
         skate.shopOptions(p, opts, true);   // (your skateboard, set down by the front door: skate.js)
-        gear.surfOptions(p, opts, true);   // (your surfboard, home again: into your bag - gear.js)
+        gear.surfOptions(p, opts, true);   // (your surfboard, home again: into your inventory - gear.js)
         if (h.garage) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: inside ? `Garage: ${d.name}` : `Take out ${d.name}`, note: inside ? 'drive out' : 'garage' }); });
         starter.homeOpts(world, p, h, opts);   // (your starter car, kept in the garage: starter.js)
         if (h.dock) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind === 'boat') opts.push({ id: `hboat:${i}`, label: inside ? `Boathouse: ${d.name}` : `Take out your ${d.name}`, note: inside ? 'head down to the dock' : 'boathouse' }); });
@@ -655,7 +655,7 @@ function execute(world, p, poi, opt) {
     case 'ar': return arcade.execute(world, p, poi, opt, pay);   // (an arcade: arcade.js)
     case 'ba': return bathhouse.execute(world, p, poi, opt);   // (a bathhouse's locker: bathhouse.js)
     case 'bd': return skate.shopExecute(world, p, poi, parts[1], pay);   // (a skateboard bought, or yours brought out: skate.js)
-    case 'sb': return gear.surfExecute(world, p);   // (your surfboard from home, into your bag: gear.js)
+    case 'sb': return gear.surfExecute(world, p);   // (your surfboard from home, into your inventory: gear.js)
     case 'trainjob': return trains.startTrainJob(world, p);
     case 'armor': return armor.buy(world, p, Number(parts[1]), pay);   // (a vest from the black market: armor.js)
     case 'w': {   // (w:<id>:<price>, or :s - to your stash: arms.js)
@@ -687,11 +687,11 @@ function execute(world, p, poi, opt) {
       if (it.tool && prof.inventory[id] > 0) return `You already have a ${it.name}.`; // tools are never used up: one is enough (checked before paying)
       if (!pay(p, price)) return 'Not enough money.';
       prof.inventory[id] = (prof.inventory[id] || 0) + qty;
-      if (it.ride) { gear.sync(world, p); world.notify(p, it.ride === 'blades' ? 'Rollerblades in your bag - sit on a bench to put them on (the action button by one).' : 'A surfboard in your bag - in the sea, the action button puts you on it.', 'good'); }   // (yours now: gear.js)
+      if (it.ride) { gear.sync(world, p); world.notify(p, it.ride === 'blades' ? 'Rollerblades in your inventory - sit on a bench to put them on (the action button by one).' : 'A surfboard in your inventory - in the sea, the action button puts you on it.', 'good'); }   // (yours now: gear.js)
       if (poi.kind === 'club') biz.onSpend(world, p, poi, price);   // (the owner's cut of the bar: biz.js)
       autoSlot(p, id);
-      if (it.buff) world.notify(p, `${it.name} in your bag - drink it from the quick wheel (${'X / View / ITEMS'}).`, 'good');
-      if (it.light) world.notify(p, `${it.name} in your bag - press L to switch it on and off (or use it from the bag). It doesn't take a hand: you keep your weapon.`, 'good');
+      if (it.buff) world.notify(p, `${it.name} in your inventory - drink it from the quick wheel (${'X / View / ITEMS'}).`, 'good');
+      if (it.light) world.notify(p, `${it.name} in your inventory - press L to switch it on and off (or use it from the bag). It doesn't take a hand: you keep your weapon.`, 'good');
       store.touch();
       return null;
     }

@@ -349,7 +349,7 @@ function gear(world, p) {
   if (!fishing.canFish(p)) { inv[FTUE.rod] = (inv[FTUE.rod] || 0) + 1; got.push(`a ${ITEMS[FTUE.rod].name.toLowerCase()}`); }
   const [bait, n] = FTUE.bait;
   if (!Object.keys(inv).some((k) => ITEMS[k] && ITEMS[k].bait && inv[k] > 0)) { inv[bait] = (inv[bait] || 0) + n; got.push(`${n} ${ITEMS[bait].name.toLowerCase()}`); }
-  if (got.length) world.notify(p, `In your bag: ${got.join(' and ')}.`, 'good');
+  if (got.length) world.notify(p, `In your Inventory: ${got.join(' and ')}.`, 'good');
   if (p.ped && !p.ped.dead && p.ped.weapon === 'fists') combat.selectWeapon(world, p.ped, 'rod');   // (the rod in your hand: you fish with it out - fishing.js)
   store.touch();
 }

@@ -1,13 +1,29 @@
-// The bag (UI-3, the hub's BAG tab; the owner: "much cleaner and modern and easier to work through"): everything you
-// carry as a grid of cells by category - weapons, healing, food and drink, tools, clothes, fishing, hunting, the garden,
-// valuables - with a filter and a sort, and one thing's details beside it: its name, what it does, how many, and what you
-// can do with it (Use / Equip / Drop / pin it to the quick wheel's four slots). The quick wheel's slots under the grid.
+// The Inventory (the hub's 'bag' tab, #inv - the owner, 11-16: "The inventory system needs a huge overhaul ... It doesn't
+// need to be called a bag, just Inventory"; concepts U6, U14, U15, UIC-19): three columns on a desktop or a phone on its
+// side - your character and what they wear | everything you carry as a grid under tabs | one thing's details - and upright
+// the character on top, the grid under it, the details a sheet from the bottom.
+//   - Your character: the game's own sprite of your look (client/art2/people.js, as the city draws you - never the close-up
+//     renderer), turnable (U15: the arrows, a drag); holding the instrument you play or have picked. The slots round it -
+//     Hat, Top, Jacket, Bottoms | Glasses, Accessory, Bag, Shoes - each with an X to take it off, "Remove all", and
+//     your saved looks. Health, armor, stamina and cash under it.
+//   - The grid: tabs All, Clothes, Weapons, Tools, Food & Meds, Materials, Valuables (they wrap, never cut off); the
+//     clothes you own are in it as things you can wear. The quick bar under it: 1-4 your weapon slots (Gun 1, Gun 2, Melee,
+//     Thrown: shared/loadout.js), 5-8 four things to use - the number keys take them out or use them in play.
+//   - The details: what it is and does, how many; USE, DROP, EQUIP (WEAR / TAKE OFF, PUT AWAY) always in the same three
+//     places; a quick bar slot (5-8, or drag it there), hand a gun to a crewmate, the plasma blade's color.
 // The client only asks; the server checks and does it (server/session.js inv, weapon; economy.js useItem, setQuick;
-// cargo.js dropItem). Loaded the first time the bag opens (client/main.js). The layout keeps a place for crafting.
+// cargo.js dropItem; looks.js off / wear / outfit - clothes change only where the creator's would: never a free disguise).
+// A gamepad: LT / RT change the tab, A picks, X equips or wears, Y drops, B backs out (LB / RB stay the hub's screens).
+// Loaded the first time the Inventory opens (client/main.js).
 import { WEAPONS, ITEMS, BLADE_COLORS } from '../shared/items.js';
 import { keyName } from './glyphs.js';
 import { input } from './input.js';
 import { glyph, glyphOfWeapon, addGlyphs } from './touchicons.js';
+import { PIECES, SLOTS as LOOK_SLOTS, CLOTH, decodeLook, encodeLook, lookArt } from '../shared/lookcore.js';
+import { loadout, SLOT_NAMES } from '../shared/loadout.js';
+import { INSTRUMENTS } from '../shared/music.js';
+import { person } from './art2/people.js';
+import { packGBuf, downsample2 } from './art2/gbuf.js';
 import { itemIcon, weaponIcon } from './itemart.js';
 
 // a weapon's picture in a tile: its class's line icon (pistol, rifle, knife, bat...: the touch buttons' family,
@@ -104,7 +120,7 @@ export function itemGlyph(id) {
   return it.food ? 'utensils' : it.fish ? 'fish' : it.loot ? 'gem' : it.pelt ? 'paw-print' : it.game ? 'bone' : it.crafted ? 'shirt' : it.light ? 'flashlight' : it.music ? 'eighth-notes' : it.tool ? 'wrench' : 'package';
 }
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const SLOTS = 4;
+const SLOTS = 4;   // (the quick bar's four things to use: server economy.js QUICK_SLOTS - keys 5-8)
 const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music || ITEMS[id].fun || ITEMS[id].ride));   // (ride: a board into your hand, blades on at a bench - server gear.js)
 // the categories, in the grid's order: [id, name, test(item def, id)] - an item goes in the first that takes it
 export const BAG_CATS = [
@@ -178,102 +194,242 @@ export function describe(id) {
   return it.sell ? 'Something to sell.' : '';
 }
 
-const CARRY_NAME = { gun: 'GUN', melee: 'MELEE', throw: 'THROWN' };
+// ---- the Inventory ------------------------------------------------------------------------------------------------
+// the tabs (U14), each the categories it shows
+export const TABS = [['all', 'All'], ['clothes', 'Clothes'], ['weapons', 'Weapons'], ['tools', 'Tools'], ['food', 'Food & Meds'], ['materials', 'Materials'], ['valuables', 'Valuables']];
+const TAB_OF = { weapons: 'weapons', clothes: 'clothes', healing: 'food', food: 'food', tools: 'tools', music: 'tools', fishing: 'tools', outdoors: 'tools', materials: 'materials', hunting: 'materials', garden: 'materials', valuables: 'valuables', other: 'valuables' };
+export const tabOf = (cat) => TAB_OF[cat] || 'valuables';
+// the paper doll's slots round the figure (U6): [look slot, label] - the left column, then the right
+export const DOLL = [[['hat', 'HAT'], ['top', 'TOP'], ['jacket', 'JACKET'], ['bottoms', 'BOTTOMS'], ['under', 'UNDIES']], [['glasses', 'GLASSES'], ['jewel', 'JEWELRY'], ['bag', 'BAG'], ['shoes', 'SHOES'], ['socks', 'SOCKS']]];
+const SLOT_WORD = { top: 'Top', jacket: 'Jacket', bottoms: 'Bottoms', set: 'Dress or set', shoes: 'Shoes', hat: 'Hat', glasses: 'Glasses or mask', jewel: 'Accessory', bag: 'Bag', under: 'Underwear', socks: 'Socks' };
+// a clothing piece's line icon by its slot (the touch family; the shapes Lucide has no icon for drawn in its manner)
+addGlyphs({
+  pants: 'M6 2h12l1 20h-5l-2-12-2 12H5zM6 6h12',
+  dress: 'M9 2h6l-.5 5 4.5 15H5l4.5-15zM9.5 7h5',
+  cap: 'M3 16c0-5 4-9 9-9s9 4 9 9zM12 7V5M3 16h18l2 2',
+  glasses: 'M2 15a4 4 0 1 0 8 0a4 4 0 1 0-8 0M14 15a4 4 0 1 0 8 0a4 4 0 1 0-8 0M10 15a2 2 0 0 1 4 0M2.5 13 5 7c.7-1.3 1.4-2 3-2M21.5 13 19 7c-.7-1.3-1.5-2-3-2',
+  jacket: 'M8 3 4 6v15h5V9M16 3l4 3v15h-5V9M8 3l4 4 4-4M12 7v14',
+});
+const SLOT_GLYPH = { top: 'shirt', jacket: 'jacket', bottoms: 'pants', set: 'dress', shoes: 'footprints', hat: 'cap', glasses: 'glasses', jewel: 'gem', bag: 'backpack', under: 'shirt', socks: 'footprints' };
+const freePiece = (P) => !!P && P.price === 0 && !P.d.issued && !P.d.gift;   // (shared/wardrobe.js free: everyone's)
+const hexOf = (c) => (CLOTH[c] || CLOTH[0])[0];
+const pieceTile = (it, px) => `${glyph(SLOT_GLYPH[PIECES[it.id].slot] || 'shirt', px)}<i class="iv-dot" style="--c:${hexOf(it.c)};--t:${hexOf(it.t)}"></i>`;
+
+// the figure: your look as the city draws it (person() at the game's size, put on the art grid), one canvas a pose, kept
+const SPR = new Map();
+function figure(code, dir, f, pp) {
+  const k = `${code}|${dir}|${f}|${pp || ''}`;
+  let S = SPR.get(k);
+  if (S) return S;
+  const L = decodeLook(code);
+  let D = null;
+  if (L) {
+    let A = lookArt(L, { code });
+    if (pp) A = { ...A, pp, carry: pp };   // (an instrument in hand: client/art2/game/peds.js withProp, as the city draws a busker)
+    try { D = downsample2(packGBuf(person(A, dir, 'idle', f, { tight: true }))); } catch (e) { console.warn('[inventory] figure', e); }
+  }
+  const cv = document.createElement('canvas');
+  cv.width = D && D.w ? D.w : 1; cv.height = D && D.h ? D.h : 1;
+  if (D && D.w && D.h) { const g = cv.getContext('2d'), id = g.createImageData(D.w, D.h); id.data.set(D.p0.subarray(0, D.w * D.h * 4)); g.putImageData(id, 0, 0); }
+  S = { cv, w: cv.width, h: cv.height, ax: D ? D.ax : 0, ay: D ? D.ay : 0 };
+  SPR.set(k, S);
+  if (SPR.size > 160) SPR.delete(SPR.keys().next().value);
+  return S;
+}
+// the figure's reach from the rig's anchor (the point between the feet), the widest and tallest over the eight turns, in art
+// px: the scale is fitted to it once a look, so turning never resizes it and a wide look (arms out, a big coat) still fits
+const REACH = new Map();
+function reach(code, pp) {
+  const k = `${code}|${pp || ''}`;
+  let R = REACH.get(k);
+  if (R) return R;
+  R = { side: 6, up: 20, down: 1 };
+  for (let d = 0; d < 8; d++) { const S = figure(code, d, 0, pp); R.side = Math.max(R.side, S.ax, S.w - S.ax); R.up = Math.max(R.up, S.ay); R.down = Math.max(R.down, S.h - S.ay); }
+  REACH.set(k, R);
+  if (REACH.size > 60) REACH.delete(REACH.keys().next().value);
+  return R;
+}
+// your character on its stand: the game's own sprite at its true proportions, made bigger only by whole device pixels an
+// art pixel (crisp, nearest-neighbour), as big as the box allows - about 85% of its height - centered, the feet on the
+// stand's shadow near the foot. The box's real size on screen (a desktop's --zk zoom included: getBoundingClientRect) is
+// the backing store, so one art pixel is exactly s device pixels.
+function drawFigure(cv, code, dir, f, pp) {
+  if (!cv || !code) return;
+  const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1)), rc = cv.getBoundingClientRect();
+  const W = Math.max(1, Math.round(rc.width * dpr)), H = Math.max(1, Math.round(rc.height * dpr));
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const g = cv.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.clearRect(0, 0, W, H);
+  const R = reach(code, pp);
+  const s = Math.max(1, Math.floor(Math.min(H * 0.94 / (R.up + R.down + 1), W / (2 * R.side))));
+  const cx = Math.round(W / 2), feet = Math.round(Math.min(H - (R.down + 1) * s - 2, H / 2 + (R.up - R.down) * s / 2 + s));
+  g.fillStyle = 'rgba(255,236,180,.10)'; g.beginPath(); g.ellipse(cx, feet, Math.min(W / 2, s * R.side * 1.15), s * 3, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(8,10,24,.45)'; g.beginPath(); g.ellipse(cx, feet, s * 5, s * 1.4, 0, 0, Math.PI * 2); g.fill();
+  const S = figure(code, dir, f, pp);
+  g.drawImage(S.cv, 0, 0, S.w, S.h, cx - S.ax * s, feet - S.ay * s, S.w * s, S.h * s);
+  cv.dataset.fig = `${s}|${feet - R.up * s}|${feet}`;   // (the art px's size, the head's top and the feet: test/invpage.js measures it)
+}
+export const INST_PP = (id) => (INSTRUMENTS[id] ? INSTRUMENTS[id].pp : null);
+
+const DEBUG = typeof location !== 'undefined' && /[?&]debug\b/.test(location.search);
 const loadPref = (k, d) => { try { return localStorage.getItem('cla.bag.' + k) || d; } catch { return d; } };
 const savePref = (k, v) => { try { localStorage.setItem('cla.bag.' + k, v); } catch { /* storage blocked */ } };
 
-// el: the #inv tab; send(msg); me() the self record; refocus() after a render (the pad's focus)
-// Use on these takes the thing out into the world (client: the bag closes behind it): the tools you hold or set down - an
+// el: the #inv tab; send(msg); me() the self record; refocus() after a render (the pad's focus); looks() the looks state
+// (server looks.js stateMsg: cur, own, saved); look() the code your ped wears (a vest over it shows); pp() the prop in your
+// hands (an instrument you play); stamina() [now, full]; close() puts the Inventory away
+const CARRY_NAME = { gun: 'GUN', melee: 'MELEE', throw: 'THROWN' };
+// Use on these takes the thing out into the world (the Inventory closes behind it): the tools you hold or set down - an
 // instrument, the boombox, a board, a rod, fireworks - but not a light (switched on and off from here) or a consumable
 export function leavesBag(id) {
   const it = ITEMS[id];
   return !!it && !it.light && !!(it.tool || it.music || it.ride || it.fun);
 }
-export function createBag({ el, send, me, refocus, leave }) {
-  let open = false, cat = loadPref('cat', 'all'), sort = loadPref('sort', 'kind'), sel = null, armDrop = '';
-  el.innerHTML = '<div class="bag"><section class="bag-eq" aria-label="Carried"><h3>EQUIPMENT</h3><div class="bag-slots"></div><div class="bag-gear"></div><p class="bag-caps"></p></section>'
-    + `<div class="bag-tools"><h3>BAG</h3><span class="bag-cash"></span><div class="bag-cats" role="tablist" aria-label="Show"></div>`
-    + `<label class="bag-sort"><span>Sort</span><select aria-label="Sort">${SORTS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label></div>`
-    + '<div class="bag-grid" role="list"></div><aside class="bag-detail" aria-live="polite"></aside><div class="bag-wheel"></div>'
+export function createBag({ el, send, me, refocus, leave, looks = () => null, look = () => null, pp = () => null, stamina = () => null, close = () => {} }) {
+  let open = false, tab = loadPref('tab', 'all'), sort = loadPref('sort', 'kind'), sel = null, armDrop = '', dir = 0, fr = 0, timer = 0, showLooks = false, trig = [0, 0];
+  if (!TABS.some((t) => t[0] === tab)) tab = 'all';
+  el.innerHTML = '<div class="bag">'
+    + '<section class="iv-me bag-eq" aria-label="Your character"><h3>CHARACTER</h3><div class="iv-doll"><div class="iv-col"></div>'
+    + '<div class="iv-fig"><canvas class="iv-cv" aria-label="Your character - turn them with the arrows"></canvas><div class="iv-turn"><button class="btn" data-turn="1" aria-label="Turn left">‹</button><button class="btn" data-turn="-1" aria-label="Turn right">›</button></div></div>'
+    + '<div class="iv-col"></div></div><div class="iv-dacts"><button class="btn" data-a="strip">REMOVE ALL</button><button class="btn" data-a="looks">SAVED LOOKS</button></div><div class="iv-stats"></div></section>'
+    + '<section class="iv-items"><div class="bag-tools"><div class="bag-cats" role="tablist" aria-label="Show"></div>'
+    + `<label class="bag-sort"><span>Sort</span><select aria-label="Sort">${SORTS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label><span class="bag-cash"></span></div>`
+    + '<div class="bag-grid" role="list"></div><div class="bag-wheel"></div><p class="iv-keys"></p></section>'
+    + '<aside class="bag-detail" aria-live="polite"></aside>'
     + '<section class="bag-craft" hidden aria-label="Crafting"></section></div>';
-  const $q = (s) => el.querySelector(s), grid = $q('.bag-grid');
+  const $q = (s) => el.querySelector(s), grid = $q('.bag-grid'), cv = $q('.iv-cv');
   $q('.bag-sort select').value = sort;
   $q('.bag-sort select').onchange = (e) => { sort = e.target.value; savePref('sort', sort); render(); };
   grid.addEventListener('scroll', () => cue(grid), { passive: true });
+  for (const b of el.querySelectorAll('[data-turn]')) b.onclick = () => { dir = (dir + Number(b.dataset.turn) + 8) % 8; paint(); };
+  $q('[data-a="strip"]').onclick = () => send({ t: 'look', a: 'off', s: 'all' });
+  $q('[data-a="looks"]').onclick = () => { showLooks = !showLooks; if (showLooks) { tab = 'clothes'; savePref('tab', tab); } render(); };
+  // a drag across the figure turns it (U15)
+  let dragX = null;
+  cv.addEventListener('pointerdown', (e) => { dragX = e.clientX; cv.setPointerCapture?.(e.pointerId); });
+  cv.addEventListener('pointermove', (e) => { if (dragX === null) return; const d = e.clientX - dragX; if (Math.abs(d) >= 24) { dir = (dir + (d > 0 ? -1 : 1) + 8) % 8; dragX = e.clientX; paint(); } });
+  cv.addEventListener('pointerup', () => { dragX = null; });
+  cv.addEventListener('pointercancel', () => { dragX = null; });
 
-  // everything you carry: [{ k, kind: 'w' | 'i', id, name, n, cat, value }]
+  const outfitOf = () => { const L = decodeLook(look() || (looks() || {}).cur || ''); return L ? L.outfit : null; };
+  // what's selected in the grid shows in the hands: an instrument (else the one you're playing)
+  const heldProp = () => { const id = sel && sel.startsWith('i:') ? sel.slice(2) : null; return (id && INST_PP(id)) || pp() || null; };
+  function paint() { drawFigure(cv, look() || (looks() || {}).cur, dir, fr, heldProp()); }
+
+  // everything you carry: [{ k, kind: 'w' | 'i' | 'p', id, name, n, cat, value }] - weapons, things, the clothes you own
   function things(m) {
-    const out = [];
-    for (const w of m.weapons || []) { const d = WEAPONS[w.id]; if (d) out.push({ k: 'w:' + w.id, kind: 'w', id: w.id, name: d.name, n: 1, cat: 'weapons', value: 0, w, i: d.i }); }
+    const out = [], O = outfitOf(), worn = new Set(O ? LOOK_SLOTS.map((s) => O[s] && O[s].id).filter(Boolean) : []);
+    for (const w of m.weapons || []) { const d = WEAPONS[w.id]; if (d && w.id !== 'fists') out.push({ k: 'w:' + w.id, kind: 'w', id: w.id, name: d.name, n: 1, cat: 'weapons', value: 0, w, i: d.i }); }
     for (const [id, n] of Object.entries(m.inv || {})) if (n > 0 && ITEMS[id]) out.push({ k: 'i:' + id, kind: 'i', id, name: ITEMS[id].name, n, cat: itemCat(id), value: (ITEMS[id].sell || 0) * n });
+    const st = looks();
+    const own = new Set([...((st && st.own) || []), ...worn]);
+    for (const P of PIECES) if (P && P.d.bath) own.add(P.i);   // (the towels: everyone's, worn where you can change - looks.js)
+    for (const pid of own) { const P = PIECES[pid]; if (P && (!freePiece(P) || P.d.bath) || (P && worn.has(pid))) out.push({ k: 'p:' + pid, kind: 'p', id: pid, name: P.name, n: 1, cat: 'clothes', value: P.price || 0, worn: worn.has(pid), slot: P.slot }); }
     const order = new Map(BAG_CATS.map(([c], i) => [c, i]));
     const by = {
-      kind: (a, b) => order.get(a.cat) - order.get(b.cat) || (a.kind === 'w' ? (WEAPONS[a.id].i - WEAPONS[b.id].i) : a.name.localeCompare(b.name)),
+      kind: (a, b) => order.get(a.cat) - order.get(b.cat) || (a.kind === 'w' && b.kind === 'w' ? (WEAPONS[a.id].i - WEAPONS[b.id].i) : (b.worn ? 1 : 0) - (a.worn ? 1 : 0) || a.name.localeCompare(b.name)),
       name: (a, b) => a.name.localeCompare(b.name),
       count: (a, b) => b.n - a.n || a.name.localeCompare(b.name),
       value: (a, b) => b.value - a.value || a.name.localeCompare(b.name),
     };
     return out.sort(by[sort] || by.kind);
   }
+  const slotOfWeapon = (m, id) => loadout((m.weapons || []).map((w) => w.id)).indexOf(id);
+  function iconOf(t, px) { return t.kind === 'p' ? pieceTile(O_ITEM(t), px) : t.kind === 'i' ? pic(t.id, px) : ''; }
+  // a piece as worn (its colors) or as it comes
+  let O_ITEM = (t) => { const O = outfitOf(), it = O && O[t.slot]; return it && it.id === t.id ? it : { id: t.id, c: PIECES[t.id].c, t: PIECES[t.id].t }; };
   function cell(t, m) {
-    const pin = t.kind === 'i' ? (m.quick || []).indexOf(t.id) : -1, on = t.kind === 'w' && m.weapon === t.id;
+    const pin = t.kind === 'i' ? (m.quick || []).indexOf(t.id) : -1, on = t.kind === 'w' && m.weapon === t.id, ws = t.kind === 'w' ? slotOfWeapon(m, t.id) : -1;
     const b = document.createElement('button');
-    b.className = 'bag-cell' + (t.k === sel ? ' sel' : '') + (on ? ' on' : '');
+    b.className = 'bag-cell' + (t.k === sel ? ' sel' : '') + (on || t.worn ? ' on' : '');
     b.dataset.k = t.k; b.setAttribute('role', 'listitem');
     b.title = t.name;
-    // (the owner, 11-22: "part of a yellow button above the plasma blade" - the IN HAND chip hung off the tile's corner;
-    // "ammo text is a little out of place ... gets too close to the name": both now in a footer row of the tile's own,
-    // the tag at its left, the count at its right, in the pixel face)
-    const tag = on ? '<span class="bc-tag">IN HAND</span>' : pin >= 0 ? `<span class="bc-tag">SLOT ${pin + 1}</span>` : '';
+    // (the owner, 11-22: the IN HAND chip hung off the tile's corner, the ammo count crowded the name - both in a footer
+    // row of the tile's own: the tag at its left, the count at its right)
+    // (a gun in hand with its count: its slot number on the gold tag - the tile's own highlight says it's the one in hand;
+    // "IN HAND" and "12|36" didn't fit a phone's tile together, 11-23)
+    const tag = on ? `<span class="bc-tag bc-held" title="In your hand">${t.kind === 'w' && WEAPONS[t.id].mag && ws >= 0 ? ws + 1 : 'IN HAND'}</span>` : t.worn ? '<span class="bc-tag">WORN</span>' : ws >= 0 ? `<span class="bc-tag">${ws + 1}</span>` : pin >= 0 ? `<span class="bc-tag">${pin + 5}</span>` : '';
     const cnt = t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n" title="in the gun | spare">${t.w.mag}<i>|</i>${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '';
-    b.innerHTML = `<span class="bc-ic">${t.kind === 'i' ? pic(t.id, 32) : ''}</span><span class="bc-nm">${esc(t.name)}</span><span class="bc-ft">${tag}${cnt}</span>`;
-    if (t.kind === 'w') b.querySelector('.bc-ic').appendChild(wIcon(t.id, 64, 36));
-    b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; render(); };
+    b.innerHTML = `<span class="bc-ic">${iconOf(t, 30)}</span><span class="bc-nm">${esc(t.name)}</span><span class="bc-ft">${tag}${cnt}</span>`;
+    if (t.kind === 'w') b.querySelector('.bc-ic').appendChild(wIcon(t.id, 64, 32));
+    b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; showLooks = false; render(); };
+    // (a mouse: drag a thing you can use onto the quick bar's 5-8 - UIC-19)
+    if (t.kind === 'i' && usable(t.id)) { b.draggable = true; b.ondragstart = (e) => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed = 'move'; }; }
     return b;
   }
-  const portrait = () => document.body.classList.contains('portrait');
+  // upright on a phone or in a narrow window: stacked, the details a sheet (a tall desktop window keeps three columns)
+  const portrait = () => document.body.classList.contains('portrait') && (document.body.classList.contains('touch') || innerWidth < 820);
+
+  // the paper doll: each slot what you wear there (a dress or a set in the top's, its bottoms' slot says so), an X to
+  // take it off; a tap shows the piece in the details
+  function doll() {
+    const O = outfitOf(), cols = el.querySelectorAll('.iv-col');
+    DOLL.forEach((col, ci) => {
+      cols[ci].innerHTML = col.map(([s, label]) => {
+        const it = O && (s === 'top' && O.set ? O.set : O[s]), P = it && PIECES[it.id], under = s === 'bottoms' && O && O.set;
+        return `<div class="iv-slot${it ? '' : ' empty'}${it && sel === 'p:' + it.id ? ' sel' : ''}" data-s="${s}"><small>${s === 'top' && O && O.set ? 'OUTFIT' : label}</small>`
+          + (it ? `<button class="iv-sb" data-k="p:${it.id}" title="${esc(P.name)}" aria-label="${esc(P.name)}">${pieceTile(it, 26)}</button><button class="iv-off" data-off="${O.set && s === 'top' ? 'set' : s}" aria-label="Take off the ${esc(P.name)}"${s === 'under' ? ' title="At home, a bathhouse or a shower"' : ''}>✕</button>`
+            : `<button class="iv-sb" data-k="" disabled aria-label="${label}: nothing">${under ? '<em>with the outfit</em>' : glyph(SLOT_GLYPH[s], 22)}</button>`) + '</div>';
+      }).join('');
+    });
+    for (const b of el.querySelectorAll('.iv-sb[data-k]:not([disabled])')) b.onclick = () => { sel = b.dataset.k; armDrop = ''; render(); };
+    for (const b of el.querySelectorAll('[data-off]')) b.onclick = () => send({ t: 'look', a: 'off', s: b.dataset.off === 'set' ? 'top' : b.dataset.off });
+  }
+  function stats(m) {
+    const st = stamina(), arm = m.arm, row = (ic, name, v, max, col) => `<div class="iv-stat"><span class="iv-sl">${glyph(ic, 16)}${name}</span><span class="iv-bar"><i style="width:${max ? Math.round(Math.max(0, Math.min(1, v / max)) * 100) : 0}%;background:${col}"></i></span><b>${max ? Math.round(v) : '-'}</b></div>`;
+    $q('.iv-stats').innerHTML = row('heart-pulse', 'HEALTH', m.hp || 0, m.maxHp || 100, 'var(--danger)') + row('shield', 'ARMOR', arm ? arm[0] : 0, arm ? arm[1] : 0, 'var(--info)') + row('footprints', 'STAMINA', st ? st[0] : 0, st ? st[1] : 0, 'var(--money)');
+  }
 
   function detail(t, m) {
     const d = $q('.bag-detail');
     el.querySelector('.bag').classList.toggle('has-sel', !!t);
-    if (!t) { d.innerHTML = `<p class="bag-hint">Pick something to see what it does.<br>${wheelHint()}</p>`; return; }
+    if (!t) { d.innerHTML = `<h3>DETAILS</h3><p class="bag-hint">Pick something to see what it does and what you can do with it.</p><p class="bag-hint">${keysHint()}</p>`; return; }
     const quick = m.quick || [];
-    const it = t.kind === 'i' ? ITEMS[t.id] : null, def = t.kind === 'w' ? WEAPONS[t.id] : null;
-    const what = t.kind === 'w' ? weaponLine(def) : describe(t.id);
-    const count = t.kind === 'w' ? (def.mag ? `${t.w.mag} in the gun · ${Math.max(0, t.w.ammo - t.w.mag)} spare` : '') : `${t.n} carried${it.sell ? ` · sells for about $${it.sell} each` : ''}`;
+    const it = t.kind === 'i' ? ITEMS[t.id] : null, def = t.kind === 'w' ? WEAPONS[t.id] : null, P = t.kind === 'p' ? PIECES[t.id] : null;
+    const what = t.kind === 'w' ? weaponLine(def) : t.kind === 'p' ? pieceLine(P, t) : describe(t.id);
+    const ws = t.kind === 'w' ? slotOfWeapon(m, t.id) : -1;
+    const count = t.kind === 'w' ? [def.mag ? `${t.w.mag} in the gun · ${Math.max(0, t.w.ammo - t.w.mag)} spare` : '', ws >= 0 ? `Quick key ${ws + 1} (${SLOT_NAMES[ws].toLowerCase()})` : ''].filter(Boolean).join(' · ')
+      : t.kind === 'p' ? (t.worn ? 'You have it on.' : 'In your wardrobe.') : `${t.n} carried${it.sell ? ` · sells for about $${it.sell} each` : ''}`;
     // (UIC-19: USE, DROP and EQUIP always in the same three places, the ones that don't apply greyed)
     const held = t.kind === 'w' && m.weapon === t.id, canUse = t.kind === 'i' && usable(t.id);
     let acts = '<div class="bd-three">'
-      + `<button class="btn btn-1" data-a="use"${canUse ? '' : ' disabled'}>${!canUse ? 'USE' : it.light ? (m.light ? 'TURN OFF' : 'TURN ON') : it.ride === 'blades' ? 'PUT ON' : it.ride ? 'TAKE IN HAND' : 'USE'}</button>`
-      + `<button class="btn btn-d" data-a="drop"${t.id === 'fists' ? ' disabled' : ''}>${armDrop === t.k ? 'AGAIN TO DROP' : t.n > 1 ? 'DROP ONE' : 'DROP'}</button>`
-      + (held ? `<button class="btn" data-a="holster"${t.id === 'fists' ? ' disabled' : ''}>PUT AWAY</button>` : `<button class="btn" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`) + '</div>'
+      + `<button class="btn btn-1" data-a="use"${canUse ? '' : ' disabled'}>${!canUse ? 'USE' : it.music === 'inst' ? 'PLAY' : it.light ? (m.light ? 'TURN OFF' : 'TURN ON') : it.ride === 'blades' ? 'PUT ON' : it.ride ? 'TAKE IN HAND' : 'USE'}</button>`
+      + `<button class="btn btn-d" data-a="drop"${t.kind === 'p' ? ' disabled' : ''}>${armDrop === t.k ? 'AGAIN TO DROP' : t.n > 1 ? 'DROP ONE' : 'DROP'}</button>`
+      + thirdBtn() + '</div>'
       + (t.kind === 'w' && carryKind(t.id) && !held ? `<small class="bd-eq">EQUIP takes it in hand and puts it in your ${CARRY_NAME[carryKind(t.id)]} slot.</small>` : '');
-    if (t.kind === 'w' && t.id !== 'fists' && m.crew && m.crew.ids && m.crew.ids.length) acts += '<button class="btn btn-x bd-all" data-a="give">Hand to a crewmate close by</button>';   // (server arms.js handTo)
-    if (t.n > 1 && t.id !== 'fists') acts += `<button class="btn btn-x bd-all" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>`;
+    function thirdBtn() { return t.kind === 'p' ? `<button class="btn btn-1" data-a="${t.worn ? 'takeoff' : 'wear'}">${t.worn ? 'TAKE OFF' : 'WEAR'}</button>`
+      : held ? `<button class="btn" data-a="holster">PUT AWAY</button>` : `<button class="btn${t.kind === 'w' ? ' btn-1' : ''}" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`; }
+
+    if (t.kind === 'w' && m.crew && m.crew.ids && m.crew.ids.length) acts += '<button class="btn btn-x bd-all" data-a="give">Hand to a crewmate close by</button>';   // (server arms.js handTo)
+    if (t.n > 1) acts += `<button class="btn btn-x bd-all" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>`;
     if (t.id === 'plasma') acts += `<div class="bag-blade"><small>Blade color</small>${BLADE_COLORS.map((bc, i) => `<button class="sw${i === (m.blade | 0) ? ' on' : ''}" data-blade="${i}" aria-label="${esc(bc.name)}" style="--sw:${esc(bc.c)};--swc:${esc(bc.core)}"></button>`).join('')}</div>`;
-    if (canUse) acts += `<div class="bag-pins"><small>Quick bar slot</small>${Array.from({ length: SLOTS }, (_, i) => `<button class="btn bag-pin${quick[i] === t.id ? ' on' : ''}" data-pin="${i}" aria-pressed="${quick[i] === t.id}">${i + 1}</button>`).join('')}</div>`;
-    d.innerHTML = `<div class="bd-head"><span class="bd-ic">${t.kind === 'i' ? pic(t.id, 48) : ''}</span><div><h3>${esc(t.name)}</h3><small>${esc(BAG_CATS.find((c) => c[0] === t.cat)[1])}</small></div>`
-      + '<button class="x bd-x" data-a="close" aria-label="Back to the bag">✕</button></div>'
+    if (canUse) acts += `<div class="bag-pins"><small>On the quick bar (keys 5-8)</small>${Array.from({ length: SLOTS }, (_, i) => `<button class="btn bag-pin${quick[i] === t.id ? ' on' : ''}" data-pin="${i}" aria-pressed="${quick[i] === t.id}">${i + 5}</button>`).join('')}</div>`;
+    const kind = t.kind === 'w' ? (ws >= 0 ? SLOT_NAMES[ws][0] + SLOT_NAMES[ws].slice(1).toLowerCase() : carryKind(t.id) === 'gun' ? 'Gun' : carryKind(t.id) === 'melee' ? 'Melee' : carryKind(t.id) === 'throw' ? 'Throwable' : 'Weapon')
+      : t.kind === 'p' ? `Clothes · ${SLOT_WORD[P.slot]}` : (usable(t.id) ? 'Consumable · ' : '') + BAG_CATS.find((c) => c[0] === t.cat)[1];
+    d.innerHTML = `<div class="bd-head"><span class="bd-ic">${iconOf(t, 44)}</span><div><h3>${esc(t.name)}</h3><small>${esc(kind)}</small></div>`
+      + '<button class="x bd-x" data-a="close" aria-label="Back to the inventory">✕</button></div>'
       + `<p class="bd-what">${esc(what)}</p>${count ? `<p class="bd-n">${esc(count)}</p>` : ''}<div class="bd-acts">${acts}</div>`;
-    d.querySelector('.bd-head small').textContent = t.kind === 'w' ? (carryKind(t.id) === 'gun' ? 'Gun' : carryKind(t.id) === 'melee' ? 'Melee' : carryKind(t.id) === 'throw' ? 'Throwable' : 'Weapon') : (usable(t.id) ? 'Consumable · ' : '') + BAG_CATS.find((c) => c[0] === t.cat)[1];
-    if (t.kind === 'w') d.querySelector('.bd-ic').appendChild(wIcon(t.id, 96, 54));
+    if (t.kind === 'w') d.querySelector('.bd-ic').appendChild(wIcon(t.id, 96, 48));
     for (const b of d.querySelectorAll('[data-a]')) b.onclick = () => act(b.dataset.a, t);
     for (const b of d.querySelectorAll('[data-pin]')) b.onclick = () => { const i = Number(b.dataset.pin); send({ t: 'inv', a: 'slot', i, id: quick[i] === t.id ? null : t.id }); };
     for (const b of d.querySelectorAll('[data-blade]')) b.onclick = () => send({ t: 'look', a: 'blade', c: Number(b.dataset.blade) });
   }
   function act(a, t) {
+    if (!t) return;
     if (a === 'close') { sel = null; armDrop = ''; render(); return; }
-    if (a === 'equip') send({ t: 'weapon', id: t.id });
+    if (a === 'equip') { if (t.kind === 'w') send({ t: 'weapon', id: t.id }); else if (t.kind === 'p') send({ t: 'look', a: 'wear', id: t.id }); }
     else if (a === 'holster') send({ t: 'weapon', id: 'fists' });
+    else if (a === 'wear') send({ t: 'look', a: 'wear', id: t.id });
+    else if (a === 'takeoff') send({ t: 'look', a: 'off', s: t.slot === 'set' ? 'top' : t.slot });
     else if (a === 'use') {
       send({ t: 'inv', a: 'use', id: t.id });
-      // (something you take out into the world - an instrument, the boombox, a board, a rod, fireworks: the bag gets out of
-      // the way so you see yourself play - the owner, 11-22: "you cant close the 'bag' ... so you can't see yourself
-      // playing"; a light or something eaten keeps it open)
-      if (leavesBag(t.id) && leave) { sel = null; armDrop = ''; leave(); return; }
-    }
-    else if (a === 'give') send({ t: 'inv', a: 'give', id: t.id });
+      // something you take out into the world - an instrument, the boombox, a board, a rod, fireworks: the Inventory gets
+      // out of the way so the pad and your character are in view (the owner, 11-22); a light or something eaten keeps it
+      if (leavesBag(t.id)) { sel = null; armDrop = ''; (leave || close)(); return; }
+    } else if (a === 'give') send({ t: 'inv', a: 'give', id: t.id });
     else if (a === 'drop' || a === 'dropall') {
+      if (t.kind === 'p') return;
       // two presses: dropping isn't something to do by accident (it lands in a bag at your feet: anyone can take it)
       const key = t.k + (a === 'dropall' ? '*' : '');
       if (armDrop !== key) { armDrop = key; render(); return; }
@@ -283,68 +439,111 @@ export function createBag({ el, send, me, refocus, leave }) {
     }
     render();
   }
-  const weaponLine = (d) => (d.type === 'melee' ? 'A melee weapon: up close.' : d.type === 'tool' ? 'A tool you hold.' : d.type === 'throw' ? 'Thrown: aim and let go.' : `${d.mag ? `A ${d.mag}-round magazine. ` : ''}Aim and fire; ${keyName('reload')} reloads.`);
-  const wheelKey = () => (input.device === 'gamepad' ? 'hold View' : input.device === 'touch' ? 'hold BAG' : `hold ${keyName('use')}`);
-  const wheelHint = () => `${input.device === 'gamepad' ? 'Hold View' : input.device === 'touch' ? 'Hold BAG' : `Hold ${keyName('use')}`} for the quick wheel, then let go on a slot.`;
+  const weaponLine = (d) => (d.type === 'melee' ? 'A melee weapon: up close.' : d.type === 'tool' ? 'A tool you hold.' : d.type === 'throw' || d.type === 'grenade' ? 'Thrown: aim and let go.' : `${d.mag ? `A ${d.mag}-round magazine. ` : ''}Aim and fire; ${keyName('reload')} reloads.`);
+  const pieceLine = (P, t) => `${SLOT_WORD[P.slot]}${P.tags && P.tags[0] ? ` - ${P.tags[0]}` : ''}. ${t.worn ? 'Take it off here, or put on something else of yours for the slot.' : 'Put it on from here - only where you could change: not while the police are after you, unless you are home.'}`;
+  const keysHint = () => (input.device === 'gamepad' ? `Tap ${keyName('nextw')} for the next weapon, hold it for the weapon wheel; hold ${keyName('use')} for the quick wheel.`
+    : input.device === 'touch' ? 'Tap the weapon button for the next weapon, hold it for all of them; hold BAG for the quick wheel.'
+      : `In play: 1-4 take out your weapons, 5-8 use the quick bar, the mouse wheel or ${keyName('nextw')} steps through, hold ${keyName('nextw')} for the weapon wheel.`);
 
-  function render() {
+  // the quick bar (UIC-19, U14): 1-4 your weapon slots, 5-8 the things to use (a tap picks it; drop a thing on 5-8)
+  function quickBar(m) {
+    const lo = loadout((m.weapons || []).map((w) => w.id)), quick = m.quick || [];
+    const qb = $q('.bag-wheel');
+    qb.innerHTML = '<small>QUICK BAR</small><div class="iv-qb">' + lo.map((id, i) => `<button class="bag-slot iv-w${id ? '' : ' empty'}${id && m.weapon === id ? ' on' : ''}${id && sel === 'w:' + id ? ' sel' : ''}" data-q="w:${id || ''}"${id ? '' : ' disabled'} title="${esc(id ? WEAPONS[id].name : SLOT_NAMES[i])}"><b>${i + 1}</b><span class="bq-gl"></span><small>${SLOT_NAMES[i]}</small></button>`).join('')
+      + Array.from({ length: SLOTS }, (_, i) => { const id = quick[i], n = id ? (m.inv || {})[id] || 0 : 0; return `<button class="bag-slot${id ? '' : ' empty'}${!n && id ? ' none' : ''}${id && sel === 'i:' + id ? ' sel' : ''}" data-q="i:${id || ''}" data-slot="${i}" title="${esc(id ? ITEMS[id].name : 'Empty')}"><b>${i + 5}</b><span class="bq-gl">${id ? glyph(itemGlyph(id), 20) : ''}</span>${n > 1 ? `<i class="bq-n">×${n}</i>` : ''}<small>${id ? esc(ITEMS[id].name) : 'empty'}</small></button>`; }).join('') + '</div>';
+    qb.querySelectorAll('.iv-w[data-q]').forEach((b, i) => { if (lo[i]) b.querySelector('.bq-gl').appendChild(wIcon(lo[i], 40, 20)); });
+    for (const b of qb.querySelectorAll('[data-q]')) {
+      b.onclick = () => { const k = b.dataset.q; if (k.length > 2 && things(m).some((t) => t.k === k)) { sel = k; armDrop = ''; render(); } };
+      if (b.dataset.slot !== undefined) {
+        b.ondragover = (e) => { e.preventDefault(); b.classList.add('drop'); };
+        b.ondragleave = () => b.classList.remove('drop');
+        b.ondrop = (e) => { e.preventDefault(); b.classList.remove('drop'); const id = e.dataTransfer.getData('text/plain'); if (id && ITEMS[id]) send({ t: 'inv', a: 'slot', i: Number(b.dataset.slot), id }); };
+      }
+    }
+    $q('.iv-keys').textContent = input.device === 'touch' ? 'Tap the weapon button: next weapon - hold it for the wheel.' : input.device === 'gamepad' ? `${keyName('nextw')}: next weapon - hold it for the wheel. Hold ${keyName('use')}: the quick wheel.` : `Keys 1-8 in play · mouse wheel or ${keyName('nextw')}: next weapon · hold ${keyName('nextw')}: the wheel`;
+  }
+  // the saved looks (CC10): each a small figure in it, a tap puts its clothes on
+  function savedLooks() {
+    const st = looks(), saved = (st && st.saved) || [];
+    const box = document.createElement('div'); box.className = 'iv-looks';
+    box.innerHTML = `<h4 class="bag-h">SAVED LOOKS</h4>${saved.length ? '' : '<p class="bag-hint">No saved looks yet. The creator saves them: your home\'s wardrobe, or Settings > Help > Change your look.</p>'}`;
+    saved.forEach((s, i) => {
+      const b = document.createElement('button'); b.className = 'iv-look'; b.dataset.look = i;
+      const c = document.createElement('canvas'); c.className = 'iv-lcv'; b.appendChild(c);
+      const nm = document.createElement('span'); nm.textContent = s.n; b.appendChild(nm);
+      b.onclick = () => send({ t: 'look', a: 'outfit', i });
+      box.appendChild(b);
+      requestAnimationFrame(() => { const cur = decodeLook((st && st.cur) || ''), S = decodeLook(s.c); if (cur && S) { cur.outfit = S.outfit; drawFigure(c, encodeLook(cur), 0, 0, null); } });
+    });
+    return box;
+  }
+
+  let lastSig = '';
+  function render(force) {
     const m = me();
     if (!open || !m) return;
-    const all = things(m), cats = new Set(all.map((t) => t.cat));
-    if (cat !== 'all' && !cats.has(cat)) cat = 'all';
-    // the filter: All, then each category you have something in
+    // the server's 'me' comes many times a second: rebuild only when something shown changed (a button swapped under
+    // the pointer between press and release loses the click), else just the bars
+    const st0 = looks();
+    const sig = JSON.stringify([m.weapons, m.weapon, m.inv, m.quick, m.cash, m.crew && m.crew.ids, m.blade, m.light, m.creel, st0 && st0.cur, st0 && st0.own, st0 && st0.saved, look(), pp(), tab, sort, sel, armDrop, showLooks, input.device, portrait()]);
+    if (sig === lastSig && force !== true) { stats(m); return; }
+    lastSig = sig;
+    if (DEBUG) { window.__invSig = sig; window.__invRenders = (window.__invRenders || 0) + 1; }   // (the capture scripts: what a rebuild was for)
+    const all = things(m);
+    el.querySelector('.bag').classList.toggle('stack', portrait());
     const cb = $q('.bag-cats');
-    cb.innerHTML = [['all', 'All'], ...BAG_CATS.filter(([c]) => cats.has(c))].map(([c, n]) => `<button class="chip${c === cat ? ' on' : ''}" role="tab" aria-selected="${c === cat}" data-cat="${c}">${n}</button>`).join('');
-    for (const b of cb.querySelectorAll('[data-cat]')) b.onclick = () => { cat = b.dataset.cat; savePref('cat', cat); render(); };
-    $q('.bag-cash').innerHTML = `<b>$${(m.cash || 0).toLocaleString('en-US')}</b><span>${all.length} thing${all.length === 1 ? '' : 's'}${m.creel ? ` · cooler ${m.creel.n}/${m.creel.max} fish (~$${m.creel.v.toLocaleString('en-US')})` : ''}</span>`;
-    // the carried slots (UIC-19): the first gun, the second, a melee weapon, a throwable; the gear's slots locked
-    // (the owner, 11-22: "It isnt clear how to equip guns or melee or thrown stuff". A slot shows the one of its kind you
-    // EQUIP - taken in hand - and keeps it after you put it away (cla.bag.eq.<kind>); before that, the first you own)
-    const slotted = new Set(), byKind = { gun: [], melee: [], throw: [] };
-    for (const t of all) if (t.kind === 'w' && carryKind(t.id)) byKind[carryKind(t.id)].push(t);
-    const held = WEAPONS[m.weapon] && carryKind(m.weapon);
-    if (held) savePref('eq.' + held, m.weapon);
-    for (const k of Object.keys(byKind)) {
-      const want = k === held ? m.weapon : loadPref('eq.' + k, ''), i = byKind[k].findIndex((t) => t.id === want);
-      if (i > 0) byKind[k].unshift(byKind[k].splice(i, 1)[0]);
-    }
-    const take = { gun: 0, melee: 0, throw: 0 };
-    $q('.bag-slots').innerHTML = CARRY.map(([k, label], si) => {
-      const t = byKind[k][take[k]++];
-      if (t) slotted.add(t.k);
-      return `<button class="bag-slot2${t ? '' : ' empty'}${t && t.k === sel ? ' sel' : ''}${t && m.weapon === t.id ? ' on' : ''}" data-carry="${t ? t.k : ''}" data-si="${si}"${t ? '' : ' disabled'}><small>${label}</small><span class="bc-ic"></span><b>${t ? esc(t.name) : 'empty'}</b></button>`;
-    }).join('');
-    $q('.bag-slots').querySelectorAll('[data-carry]').forEach((b) => {
-      const t = all.find((q) => q.k === b.dataset.carry);
-      if (t) { b.querySelector('.bc-ic').appendChild(wIcon(t.id, 64, 36)); b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; render(); }; }
-    });
-    $q('.bag-gear').innerHTML = '<small>CARRY GEAR</small>' + CARRY_GEAR.map(([, add, name]) => `<div class="bag-slot2 locked" title="${esc(name)}"><small>${esc(add)}</small><b>${esc(name)}</b></div>`).join('');
-    $q('.bag-caps').textContent = `On you: 2 guns, 1 melee, 1 throwable. Carry gear adds slots - up to ${CARRY_CAPS.gun} guns, ${CARRY_CAPS.melee} melee, ${CARRY_CAPS.throw} throwables.`;
-    const shown = all.filter((t) => (cat === 'all' || t.cat === cat) && !slotted.has(t.k));
+    cb.innerHTML = TABS.map(([c, n]) => `<button class="chip${c === tab ? ' on' : ''}" role="tab" aria-selected="${c === tab}" data-cat="${c}">${n}</button>`).join('');
+    for (const b of cb.querySelectorAll('[data-cat]')) b.onclick = () => { tab = b.dataset.cat; savePref('tab', tab); if (tab !== 'clothes') showLooks = false; render(); };
+    $q('.bag-cash').innerHTML = `<b>$${(m.cash || 0).toLocaleString('en-US')}</b>${m.creel ? `<span>cooler ${m.creel.n}/${m.creel.max} fish</span>` : ''}`;
+    doll(); stats(m); quickBar(m);
+    $q('[data-a="looks"]').classList.toggle('on', showLooks);
+    const shown = all.filter((t) => tab === 'all' || tabOf(t.cat) === tab);
     grid.innerHTML = '';
+    if (showLooks && tab === 'clothes') grid.appendChild(savedLooks());
     let last = '';
     for (const t of shown) {
-      if (cat === 'all' && sort === 'kind' && t.cat !== last) { last = t.cat; const h = document.createElement('h4'); h.className = 'bag-h'; h.textContent = BAG_CATS.find((c) => c[0] === t.cat)[1]; grid.appendChild(h); }
+      if ((tab === 'all' || tab === 'tools' || tab === 'materials' || tab === 'food' || tab === 'valuables') && sort === 'kind' && t.cat !== last) { last = t.cat; const h = document.createElement('h4'); h.className = 'bag-h'; h.textContent = BAG_CATS.find((c) => c[0] === t.cat)[1]; grid.appendChild(h); }
       grid.appendChild(cell(t, m));
     }
-    if (!shown.length) grid.innerHTML = '<p class="bag-hint">Nothing here yet. Pharmacies sell med kits and bandages; coffee shops and corner stores sell drinks.</p>';
+    if (!shown.length && !(showLooks && tab === 'clothes')) grid.insertAdjacentHTML('beforeend', `<p class="bag-hint">${tab === 'clothes' ? 'The clothes you own show here. Clothes stores sell more; the fitting room puts them in your wardrobe.' : tab === 'weapons' ? 'No weapons on you. Gun shops and pawn shops sell them; your stash keeps the rest.' : 'Nothing here yet. Pharmacies sell med kits and bandages; coffee shops and corner stores sell drinks.'}</p>`);
     if (sel && !all.some((t) => t.k === sel)) sel = null;
     detail(all.find((t) => t.k === sel) || null, m);
-    // the quick wheel as it stands (a slot picks its item; pin from an item's details)
-    const quick = m.quick || [];
-    // (the owner, 11-22: "I'm not sure how to access my quick bar when I'm in game" - the row says how, on this device)
-    $q('.bag-wheel').innerHTML = `<small>QUICK BAR<em>${wheelKey()}</em></small>${Array.from({ length: SLOTS }, (_, i) => { const id = quick[i], n = id ? m.inv[id] || 0 : 0; return `<button class="bag-slot${id ? '' : ' empty'}" data-slot="${i}"${id ? '' : ' disabled'}><b>${i + 1}</b>${id ? `<span class="bq-gl">${pic(id, 20)}</span>${esc(ITEMS[id].name)}${n ? '' : ' (none left)'}` : 'empty - pin an item'}</button>`; }).join('')}`;
-    for (const b of el.querySelectorAll('[data-slot]')) b.onclick = () => { const id = quick[Number(b.dataset.slot)]; if (id) { sel = 'i:' + id; render(); } };
+    paint();
     cue(grid);
     refocus?.();
   }
+  function step(d) { const i = TABS.findIndex((t) => t[0] === tab); tab = TABS[(i + d + TABS.length) % TABS.length][0]; savePref('tab', tab); showLooks = false; render(); }
   return {
     get open() { return open; },
-    show() { open = true; render(); },
-    hide() { open = false; sel = null; armDrop = ''; },
-    refresh: render,
+    show() {
+      open = true; dir = 0; render(true);
+      send({ t: 'look', a: 'get' });   // (what you own and your saved looks, fresh)
+      clearInterval(timer);
+      timer = setInterval(() => { if (!open) return; fr = (fr + 1) % 4; paint(); }, 420);   // (the idle: breathing, an instrument played)
+    },
+    hide() { open = false; sel = null; armDrop = ''; showLooks = false; clearInterval(timer); timer = 0; },
+    refresh: () => render(),
     // the pad's B with something picked: back to the grid first
-    back() { if (sel) { sel = null; armDrop = ''; render(); return true; } return false; },
+    back() { if (sel || showLooks) { sel = null; armDrop = ''; showLooks = false; render(); return true; } return false; },
+    // the pad (client/main.js overlayPad): LT / RT the tabs, X equips or wears (or takes off), Y drops
+    pad(inp) {
+      const ax = inp.padAxes || {}, lt = ax.lt > 0.5 ? 1 : 0, rt = ax.rt > 0.5 ? 1 : 0;
+      const tl = lt && !trig[0], tr = rt && !trig[1];
+      trig = [lt, rt];
+      if (tl || tr) { step(tr ? 1 : -1); return true; }
+      const m = me(), t = m && sel ? things(m).find((q) => q.k === sel) : null;
+      if (inp.padX && t) { act(t.kind === 'p' ? (t.worn ? 'takeoff' : 'wear') : m.weapon === t.id ? 'holster' : t.kind === 'w' ? 'equip' : 'use', t); return true; }
+      if (inp.padY && t && t.kind !== 'p') { act('drop', t); return true; }
+      return false;
+    },
+    // a number key with the Inventory open: 5-8 put the picked thing on that quick slot (1-4 are your weapon slots)
+    numberKey(n) {
+      const m = me(), id = sel && sel.startsWith('i:') ? sel.slice(2) : null;
+      if (!m || !id || !usable(id) || n < 4 || n > 7) return false;
+      send({ t: 'inv', a: 'slot', i: n - 4, id });
+      return true;
+    },
+    tab: () => tab,
   };
 }
 // a scroller with more below shows a fade at its foot (the scroll cue)

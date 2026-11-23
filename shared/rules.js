@@ -343,7 +343,7 @@ export const PACK_BLINK_S = 30;               // ...and blinks for its last seco
 // +1 throwable - profile.carryUp; not built yet). Your stash (one per
 // character): opened at your home's safe, and at any gun shop or pawn shop; a gun bought "to stash" goes straight into
 // it. giveR: hand a weapon to a crewmate this close (px). Police issue is the department's: never at risk, never a slot.
-export const ARMS = { carry: { gun: 2, melee: 1, throw: 1 }, carryMax: { gun: 4, melee: 2, throw: 2 }, keepMax: 300, dropS: 60, blinkS: 15, giveR: 120, stashKinds: ['gunshop', 'pawn'] };
+export { ARMS } from './rules-arms.js';   // (its own file: the page's quick keys read the carry classes - shared/loadout.js)
 export { GUN_PRICES } from './rules-base.js';   // (the basic pistol's prices: kept low now a carried gun can be lost - shared/rules-base.js)
 // Your car (the owner, 2026-11-14: "map + valet delivery, no teleport"; server/systems/mycar.js): the car you last took
 // out stays where you left it (through a logout, and a restart: profile.carAt) and shows on your map. The phone's "Have it
@@ -722,7 +722,7 @@ export const SKATE_SCORE = { comboGap: 0.6, specialPts: 2500, specialMul: 3, spe
 export const CART = { hit: 70, hard: 230, driverP: 0.55, hurt: [3, 14] };
 // a session at a skate spot: s seconds, each goal pays goalPay
 export const SKATE_SESSION = { s: 120, goalPay: 40, goals: [['bank', 3000, 'Bank a 3,000-point combo'], ['tricks', 5, 'Land a 5-trick combo'], ['gap', 1, 'Hit a gap'], ['score', 15000, 'Score 15,000']] };
-export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
+export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your inventory and never wears out
 
 // Lost pets (server/systems/pets.js)
 export const PET_EVERY_S = 480;            // about how often one goes missing near a player

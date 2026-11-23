@@ -394,6 +394,63 @@ test("the page's clock: the server's time from a music message's tick, even one 
   assert.ok(Math.abs(ev.now - (1 + w.tick * 0.05)) < 0.01);
 });
 
+// The Inventory's PLAY (the owner, 11-16: "When I'm trying to play an instrument I can't see what I'm doing on the screen
+// ... If I equip something like an instrument I should see my character playing it"): the player's ped carries the
+// instrument on the wire for every page (pp, as the buskers), the people renderer draws it in the hands, the pads are one
+// compact strip, and the Inventory goes away (client/bag.js act 'use'; main.js closes the hub for a music game).
+test('an instrument from the Inventory: held and played in the city for everyone, a compact pad strip, the Inventory away', async () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  const { descriptor: describe } = await import('../server/net.js');
+  for (const [id, pp] of [['bucketdrum', 'drums'], ['violin', 'violin'], ['guitar', 'guitar'], ['sax', 'sax']]) {
+    prof.inventory[id] = 1;
+    economy.useItem(w, p, id);
+    assert.equal(p.ped.pp, pp, `${id} in the hands`);
+    assert.equal(describe(p.ped).pp, pp, `${id}: on the wire for every page`);
+    music.stopPerf(w, p);
+    assert.ok(!p.ped.pp, `${id} put away`);
+  }
+  // drawn: the figure with the drums differs from the one without (client/art2/people.js, as a busker's)
+  const LK = await import('../shared/look.js');
+  const { person } = await import('../client/art2/people.js');
+  const A = LK.lookArt(LK.STARTERS[0].look), sig = (g) => { let n = 0; for (let i = 3; i < g.col.length; i += 4) if (g.col[i]) n++; return `${g.w}x${g.h}:${n}`; };
+  assert.notEqual(sig(person({ ...A, pp: 'drums', carry: 'drums' }, 0, 'idle', 1, { tight: true })), sig(person(A, 0, 'idle', 1, { tight: true })), 'the drums drawn in front of them');
+  // the pads: eight in one row; a tap finds its pad, off the row nothing
+  const play = readFileSync(new URL('../client/music/play.js', import.meta.url), 'utf8');
+  assert.match(play, /const LAYOUT = \{ lanes: \[200, 240\], jam: \[400, 72\] \}/, 'a strip, wide and low');
+  assert.match(play, /#arcade\.mus #arc-cv\{width:min\(94vw,calc\(22vh\*400\/72\),720px\)/, 'at most 22% of the screen\'s height');
+  assert.match(play, /#arcade\.mus:not\(\.lanes\)\{pointer-events:none\}/, 'see-through to the city round it');
+  const { padAt, PAD_ROW } = await import('../client/music/play.js');
+  for (let i = 0; i < 8; i++) assert.equal(padAt(PAD_ROW.x0 + i * PAD_ROW.w + PAD_ROW.w / 2, PAD_ROW.y0 + PAD_ROW.h / 2), i);
+  assert.equal(padAt(200, 4), -1, 'the strip\'s head is CHORD and GIG, not a pad');
+  const bag = readFileSync(new URL('../client/bag.js', import.meta.url), 'utf8'), main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
+  assert.match(bag, /if \(leavesBag\(t\.id\)\) \{ sel = null; armDrop = ''; \(leave \|\| close\)\(\); return; \}/, 'PLAY puts the Inventory away');
+  assert.match(main, /if \(\(m\.game === 'jam' \|\| m\.game === 'rhythm'\) && inHub\(\)\) closeHub\(\);/, 'and the music game never opens over it');
+});
+
+test('playing an instrument, the dance key (one of its pads) doesn\'t start a dance or take the instrument out of your hands', async () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.inventory.bucketdrum = 1;
+  economy.useItem(w, p, 'bucketdrum');
+  assert.equal(p.ped.pp, 'drums');
+  assert.equal(dance.next(w, p), -1);
+  assert.ok(!p.ped.dancing); assert.equal(p.ped.pp, 'drums'); assert.ok(p.perf && p.perf.kind === 'jam');
+  music.stopPerf(w, p);
+  assert.ok(dance.next(w, p) >= 0, 'put away: the dance key dances again');
+});
+
+test('playing an instrument puts what you held away (both hands on it - the city draws the instrument, not a gun), back after', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.weapons.pistol = 24; p.ped.weapon = 'pistol';
+  prof.inventory.violin = 1;
+  economy.useItem(w, p, 'violin');
+  assert.equal(p.ped.weapon, 'fists'); assert.equal(p.ped.pp, 'violin');
+  music.stopPerf(w, p);
+  assert.equal(p.ped.weapon, 'pistol', 'back in your hands');
+});
+
 // The owner's recordings (11-22): which take plays is the same for everyone (a pure function of the song and the play), the
 // primary most of the time, every alternate now and then; a tape goes from take to take as it comes round.
 test('the recordings: the primary most of the time, every alternate now and then, the same everywhere', () => {

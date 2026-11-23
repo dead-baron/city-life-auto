@@ -31,6 +31,7 @@ export function free(ped) {
 // server/launch.js -> chat.js announce) - quiet: the Dance emote, which says so itself (chat.js emote).
 export function next(world, p, quiet = false) {
   const ped = p.ped;
+  if (p.perf && (p.perf.kind === 'jam' || p.perf.kind === 'gig')) return -1;   // (an instrument in your hands: the dance key is one of its pads - G - and the drums stay drawn: the Inventory's PLAY, 11-16)
   if (!free(ped)) { stop(ped); return -1; }
   const i = ped.dancing ? DANCE_PLAYER.indexOf(ped.dm) + 1 : 0;
   if (i >= DANCE_PLAYER.length) { stop(ped); return -1; }
