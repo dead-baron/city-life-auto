@@ -200,7 +200,7 @@ export const TABS = [['all', 'All'], ['clothes', 'Clothes'], ['weapons', 'Weapon
 const TAB_OF = { weapons: 'weapons', clothes: 'clothes', healing: 'food', food: 'food', tools: 'tools', music: 'tools', fishing: 'tools', outdoors: 'tools', materials: 'materials', hunting: 'materials', garden: 'materials', valuables: 'valuables', other: 'valuables' };
 export const tabOf = (cat) => TAB_OF[cat] || 'valuables';
 // the paper doll's slots round the figure (U6): [look slot, label] - the left column, then the right
-export const DOLL = [[['hat', 'HAT'], ['top', 'TOP'], ['jacket', 'JACKET'], ['bottoms', 'BOTTOMS'], ['under', 'UNDIES']], [['glasses', 'GLASSES'], ['jewel', 'JEWELRY'], ['bag', 'BAG'], ['shoes', 'SHOES'], ['socks', 'SOCKS']]];
+export const DOLL = [[['hat', 'HAT'], ['top', 'TOP'], ['jacket', 'JACKET'], ['bottoms', 'BOTTOMS'], ['under', 'UNDERWEAR']], [['glasses', 'GLASSES'], ['jewel', 'JEWELRY'], ['bag', 'BAG'], ['shoes', 'SHOES'], ['socks', 'SOCKS']]];
 const SLOT_WORD = { top: 'Top', jacket: 'Jacket', bottoms: 'Bottoms', set: 'Dress or set', shoes: 'Shoes', hat: 'Hat', glasses: 'Glasses or mask', jewel: 'Accessory', bag: 'Bag', under: 'Underwear', socks: 'Socks' };
 // a clothing piece's line icon by its slot (the touch family; the shapes Lucide has no icon for drawn in its manner)
 addGlyphs({

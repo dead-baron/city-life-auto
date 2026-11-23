@@ -26278,6 +26278,21 @@ the details; a pad picks and presses. Found on the way: CARRIED didn't switch th
 when what it shows changes, and the side shown wasn't in that) - now it is. test/invdrag.test.js (test/invpage.js
 ?drag=1: a mouse, a finger held, a finger scrolling, onto STASH).
 
+<<<<<<< HEAD
+## 2026-11-23 · The Inventory's tiles and slots, from the owner's notes
+
+The owner (11-23, on a screenshot): the names cover the art; the ✕ buttons are too big, cut off at the sides or under
+other buttons; "UNDIES" - UNDERWEAR in smaller text; names cut off ("Compone...") - whole if possible.
+- **A tile**: its picture in a box of its own height (48 px: the 24-px art at 2x ran 12 px under the name), the name under
+  it in a smaller size on up to two lines - whole ("Perfect Mountain Goat Hide", "Component Scrap"), never "...". Tiles a
+  little taller (100 px; 96 on a phone upright, 78 on a phone on its side).
+- **The ✕**: a 14-px box on the slot's top corner, inside its column (a 22-px finger's reach round it, invisible); the
+  touch sizes that made it 28 px went.
+- **The slots' labels** a size smaller, their line as tall as before (the figure's stand, sized by the slots, unchanged):
+  UNDERWEAR whole.
+test/invpage.js counts a name cut on its two lines as cut off (the layout test, every size); a long-named hide in the
+test player's kit.
+=======
 ## 2026-11-23 · A vehicle's trunk
 
 The owner (11-23) took Claude's suggestion: a trunk is its own small storage, not a door to the stash (a car that opened
@@ -26289,3 +26304,4 @@ button says "Open the trunk (n/6)" and the Inventory shows CARRIED | TRUNK (stas
 things go - arms.js toStash / fromStash take the pool). Wrecked (insurance.js wrecked): what was in it spills where it is,
 a bag anyone can take. Cargo crates never go in - they ride in the open (cargo.js), so who carries something worth taking
 shows. The Guide's "Your trunk", the README's row; test/trunk.test.js.
+>>>>>>> origin/main
