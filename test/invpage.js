@@ -22,7 +22,7 @@ const uiScale = (w, h) => Math.round(Math.min(1.6, Math.max(1, Math.min(h / 615,
 export const ME = {
   name: 'Tester', hp: 72, maxHp: 100, arm: [40, 60], cash: 3420, bank: 12750, weapon: 'pistol', blade: 0, light: false,
   weapons: [{ id: 'fists', ammo: 0, mag: 0 }, { id: 'pistol', ammo: 48, mag: 12 }, { id: 'shotgun', ammo: 16, mag: 6 }, { id: 'bat', ammo: 0, mag: 0 }, { id: 'grenade', ammo: 3, mag: 1 }, { id: 'rod', ammo: 0, mag: 0 }],
-  inv: { medkit: 3, bandage: 5, coffee: 2, energy: 1, hotdog: 2, apple: 4, flashlight: 1, batteries: 6, bucketdrum: 1, guitar: 1, dancemat: 1, lure: 12, worms: 20, scrap: 8, stone: 14, jewelry: 1, wallet: 2, seed_tomato: 5, deerHide: 1 },
+  inv: { medkit: 3, bandage: 5, coffee: 2, energy: 1, hotdog: 2, apple: 4, flashlight: 1, batteries: 6, bucketdrum: 1, guitar: 1, dancemat: 1, lure: 12, worms: 20, scrap: 8, stone: 14, jewelry: 1, wallet: 2, seed_tomato: 5, deerHide: 1, goatHide_3: 1 },
   quick: ['medkit', 'bandage', 'coffee', null], creel: null, crew: null,
 };
 export function looksFor(LK) {
@@ -93,7 +93,7 @@ for (const el of inv.querySelectorAll('button, select, .bc-n, .bc-tag, .bc-nm, .
   // (in a column that scrolls: only the part in its view counts - the rest is reachable by scrolling, not on show)
   const x0 = sr ? Math.max(r.left, sr.left) : r.left, y0 = sr ? Math.max(r.top, sr.top) : r.top, x1 = sr ? Math.min(r.right, sr.right) : r.right, y1 = sr ? Math.min(r.bottom, sr.bottom) : r.bottom;
   const hidden = x1 - x0 < 2 || y1 - y0 < 2;
-  const clip = (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).textOverflow !== 'ellipsis') && !/canvas|select/i.test(el.tagName);
+  const clip = ((el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).textOverflow !== 'ellipsis') || (el.classList.contains('bc-nm') && el.scrollHeight > el.clientHeight + 1)) && !/canvas|select/i.test(el.tagName);   // (a name: whole on its two lines - 11-23)
   boxes.push({ name: (el.className || el.tagName) + ':' + (el.dataset.k || el.dataset.cat || el.dataset.q || el.dataset.a || el.dataset.s || el.dataset.off || el.textContent.trim().slice(0, 18)), x0: Math.round(x0), y0: Math.round(y0), x1: Math.round(x1), y1: Math.round(y1), hidden, clip, par: el.parentElement && el.parentElement.className, cell: (el.closest('.bag-cell') || {}).dataset?.k || '', cls: el.className, tag: el.tagName, off: el.classList.contains('iv-off'), sheet: H > W && !!el.closest('.bag-detail') });
 }
 const fr = hub.querySelector('.hub-frame').getBoundingClientRect();

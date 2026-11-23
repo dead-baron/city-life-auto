@@ -1773,13 +1773,14 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .touch .iv-doll { grid-template-columns: 72px minmax(0, 1fr) 72px; } .touch .iv-slot { width: 70px; } .touch .iv-sb { height: 38px; } .touch .iv-col { gap: 2px; }   /* (the touch type is bigger: ACCESSORY fits) */   /* (sized by its slots: the figure fills the space between them - client/bag.js drawFigure) */
 .iv-col { display: flex; flex-direction: column; gap: 3px; }   /* (five slots a side since underwear and socks: 11-23 - the column no taller than four were) */
 .iv-slot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; width: 62px; margin: 0 auto; }
-.iv-slot > small { max-width: 100%; overflow: hidden; font: 700 var(--fs-1) var(--ui); color: var(--dim); white-space: nowrap; }
+.iv-slot > small { max-width: 100%; overflow: hidden; font: 700 var(--fs-w1)/var(--fs-1) var(--ui); letter-spacing: 0; color: var(--dim); white-space: nowrap; }   /* (a size down: UNDERWEAR whole) */
 .iv-sb { position: relative; display: grid; place-items: center; width: 56px; height: 40px; padding: 0; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy2); color: var(--cream); cursor: pointer; touch-action: manipulation; }
 .iv-sb .gl { width: 26px; height: 26px; }
 .iv-sb em { padding: 2px; font: 600 var(--fs-1)/1 var(--ui); font-style: normal; line-height: 1.1; color: var(--dim); text-align: center; }
 .iv-slot.empty .iv-sb { border-style: dashed; color: var(--edge); cursor: default; }
 .iv-slot.sel .iv-sb, .iv-sb.pfocus, .iv-sb:hover:not([disabled]) { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
-.iv-off { position: absolute; right: -5px; bottom: -5px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border-radius: var(--r1); border: 2px solid var(--danger); background: var(--navy); color: var(--danger); font: 700 var(--fs-1) var(--ui); line-height: 1; cursor: pointer; touch-action: manipulation; }
+.iv-off { position: absolute; right: -2px; top: calc(var(--fs-1) - 3px); z-index: 1; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; background: transparent; color: var(--danger); font: 700 var(--fs-w1) var(--ui); line-height: 1; cursor: pointer; touch-action: manipulation; }   /* (a small box inside its slot, a finger's reach round it: the 22-px box ran off the column's edge and under the next slot - the owner, 11-23) */
+.iv-off::before { content: ''; position: absolute; inset: 4px; z-index: -1; border-radius: var(--r1); border: 1px solid var(--danger); background: var(--navy); }
 .iv-off:hover, .iv-off.pfocus { background: var(--danger); color: var(--ink); }
 .iv-dot { position: absolute; right: 4px; top: 4px; width: 10px; height: 10px; border-radius: var(--r3); background: var(--c); box-shadow: 0 0 0 2px var(--t), 0 0 0 3px var(--ink); }
 .bag-cell .iv-dot { right: 6px; top: 6px; }
@@ -1821,22 +1822,23 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag-cell.in-stash { background: var(--navy); border-style: dashed; }
 /* press and drag (client/bag.js dragStart): the tile follows the pointer; where it can go lights up */
 .bag-cell { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
-.iv-ghost { position: fixed; left: 0; top: 0; z-index: 9999; display: grid; place-items: center; width: 48px; height: 48px; border: 2px solid var(--gold); border-radius: var(--r2); background: var(--navy2); box-shadow: 0 4px 12px rgba(0, 0, 0, .5); pointer-events: none; opacity: .92; }
+.iv-ghost { position: fixed; left: 0; top: 0; z-index: 9999; display: grid; place-items: center; width: 48px; height: 48px; border: 2px solid var(--gold); border-radius: var(--r2); background: var(--navy2); box-shadow: var(--shadow); pointer-events: none; opacity: .92; }
 .iv-ghost canvas, .iv-ghost img, .iv-ghost svg { max-width: 36px; max-height: 36px; image-rendering: pixelated; }
 .iv-dragging .bag-slot.drop, .iv-dragging .iv-slot.drop .iv-sb, .iv-dragging .bag-seg .chip.drop { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), inset 0 0 0 1px var(--gold); }
 .bd-stash { display: flex; gap: var(--s1); margin-bottom: var(--s2); } .bd-stash .btn { flex: 1; min-width: 0; }
-.bag-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 86px; min-width: 0; padding: var(--s2) 4px 4px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy); color: var(--cream); font: 600 var(--fs-1) var(--ui); cursor: pointer; touch-action: manipulation; transition: border-color var(--t1) var(--ease); }
+.bag-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 100px; min-width: 0; padding: 6px 4px 4px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy); color: var(--cream); font: 600 var(--fs-1) var(--ui); cursor: pointer; touch-action: manipulation; transition: border-color var(--t1) var(--ease); }
 .bag-cell:hover { border-color: var(--gold-a); }
 .bag-cell.sel, .bag-cell.pfocus { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 2px var(--gold-a); }
 .bag-cell.on { background: var(--pick), var(--navy); border-color: var(--gold); }
 .bc-tag.bc-held { background: var(--cream); }   /* (the one in your hand: its tag cream, its tile ringed gold) */
-.bc-ic { display: grid; place-items: center; height: 36px; font-size: var(--fs-5); line-height: 1; }
-.bc-ic canvas { max-width: 64px; max-height: 36px; image-rendering: pixelated; }
+.bc-ic { flex: none; display: grid; place-items: center; height: 48px; font-size: var(--fs-5); line-height: 1; }   /* (the picture's own height: it ran under the name - the owner, 11-23) */
+.bc-ic canvas { max-width: 64px; max-height: 48px; image-rendering: pixelated; }
 /* the things' and the weapons' own pixel pictures (client/itemart.js: 24 x 24, shown at whole multiples) */
 .iti { display: block; image-rendering: pixelated; width: 48px; height: 48px; }
-.bc-ic:has(.iti) { overflow: visible; } .bd-ic .iti { width: 72px; height: 72px; } .bq-gl .iti, .wheel-slot .ic .iti { width: 24px; height: 24px; } .wheel-slot .ic .iti { margin: 0 auto; }
+.bc-ic:has(.iti) { overflow: hidden; } .bd-ic .iti { width: 72px; height: 72px; } .bq-gl .iti, .wheel-slot .ic .iti { width: 24px; height: 24px; } .wheel-slot .ic .iti { margin: 0 auto; }
 @media (max-height: 560px) { .bd-ic .iti { width: 48px; height: 48px; } }
-.bc-nm { max-width: 100%; text-align: center; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dim); }
+.bc-nm { flex: none; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; text-align: center; font: 600 var(--fs-w1)/1.15 var(--ui); overflow-wrap: anywhere; color: var(--dim); }   /* (the whole name, on two lines in a smaller size, never "Compone..." - the owner, 11-23) */
+body.touch .bc-nm { font-size: var(--fs-w2); }
 /* (a tile's footer: its tag - IN HAND, SLOT n - and its count, in a row of their own under the name, inside the tile:
    the owner 11-22 - the tag hung off the corner, the count crowded the name) */
 .bc-ft { display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%; min-height: 12px; padding: 0 2px; }
@@ -1900,7 +1902,7 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
   .iv-me { padding: 4px 6px 6px; gap: 6px; }
   .iv-me > h3, .iv-keys, .bag-wheel > small, .bag-sort, .bag-cash, .bag-detail > h3 { display: none; }
   .iv-doll, .touch .iv-doll { grid-template-columns: 46px minmax(0, 1fr) 46px; }
-  .iv-col, .touch .iv-col { gap: 2px; } .iv-slot, .touch .iv-slot { width: 44px; } .iv-slot > small { display: none; }
+  .iv-col, .touch .iv-col { gap: 2px; } .iv-slot, .touch .iv-slot { width: 44px; } .iv-slot > small { display: none; } .iv-off { top: -4px; }   /* (no labels here: the box's own corner) */
   .iv-sb, .touch .iv-sb { width: 44px; height: 32px; } .iv-sb .gl { width: 22px; height: 22px; }
   .iv-turn { display: none; }   /* (a drag turns the figure: the arrows would cover it here) */
   .iv-dacts .btn { min-height: 32px; font-size: var(--fs-1); letter-spacing: 0; }
@@ -1911,13 +1913,12 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
   .bag-cats { flex: none; flex-direction: column; flex-wrap: nowrap; gap: 3px; }
   .bag-cats .chip { min-height: 29px; height: auto; padding: 2px 6px; font-size: var(--fs-1); text-align: left; white-space: normal; line-height: 1.1; }   /* ("Food & Meds" on two lines rather than cut: 11-23) */
   .bag-grid { grid-column: 2; grid-row: 2; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 6px; }
-  .bag-cell { height: 68px; padding-top: 4px; } .bc-ic { height: 26px; } .bc-ic .gl { width: 24px; height: 24px; }
+  .bag-cell { height: 78px; padding-top: 4px; } .bc-ic { height: 26px; } .bc-ic .gl { width: 24px; height: 24px; }
   .bag-wheel { grid-column: 1 / -1; grid-row: 3; padding: 4px; } .iv-qb { gap: 4px; } .bag-slot { height: 40px; } .bag-slot > small { display: none; }
   .bc-ic .iti { width: 24px; height: 24px; } .bc-ic:has(.iti) { height: 28px; }
   .bag-detail { padding: var(--s2); }
   .bd-ic { width: 44px; height: 44px; } .bd-ic .gl { width: 28px; height: 28px; }
   .bd-what { margin-top: var(--s2); }
-  .iv-off, .touch .iv-off { width: 20px; height: 20px; right: -5px; bottom: -5px; }
   .bc-tag { transform: scale(.8); transform-origin: 0 0; }
 }
 @media (max-height: 560px) and (max-width: 780px) { .bag { grid-template-columns: 236px minmax(0, 1fr) 166px; } }
@@ -1931,7 +1932,7 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag.stack .iv-sb { width: 52px; height: 32px; } .bag.stack .iv-sb .gl { width: 22px; height: 22px; }
 .bag.stack .iv-dacts .btn { min-height: 36px; }
 .bag.stack .bag-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; }
-.bag.stack .bag-cell { height: 82px; padding-top: 6px; } .bag.stack .bc-ic { height: 30px; }   /* (a fixed height: an aspect-ratio tile in the scrolling grid let the rows collapse onto each other) */
+.bag.stack .bag-cell { height: 96px; padding-top: 4px; } .bag.stack .bc-ic { height: 48px; }   /* (a fixed height: an aspect-ratio tile in the scrolling grid let the rows collapse onto each other) */
 .bag.stack .bag-cats .chip { height: 34px; padding: 0 10px; font-size: var(--fs-1); }
 .bag.stack .bag-slot { height: 46px; } .bag.stack .bag-slot > small { display: none; }
 .bag.stack .iv-qb { gap: 4px; } .bag.stack .iv-qb > .bag-slot:nth-child(4) { margin-right: 3px; }
@@ -1939,7 +1940,6 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag.stack.has-sel .bag-detail { display: block; animation: sheet-up var(--t2) var(--ease); }
 .bag.stack .bd-x { display: inline-grid; width: var(--tap); height: var(--tap); }
 /* touch: bigger things to press */
-.touch .iv-off { width: 28px; height: 28px; right: -7px; bottom: -7px; }
 .touch .iv-turn .btn { width: 40px; height: 40px; min-height: 40px; }
 
 /* the People tab: who's online, your crew */
