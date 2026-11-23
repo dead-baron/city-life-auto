@@ -287,6 +287,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 
 ## World and places
 - The farms back from the beach (11-22 16:45: "We should get the farm away from the beach"): no crop field, strip or orchard within 6 tiles of a beach's sand; a beach town's district may hold farms well back from the sand. `shared/world3-croptidy.js`. (11-22; chat)
+- Greenfield Park's Lane Mart and Park West Coffee get rooms you walk into, like the other shops (11-23 07:09: "I think they should get rooms yes") - the city arrival's own shops, laid with the hand-built block. (11-23; chat)
+- Bin bags: a few piled beside some bins in the rough districts - "a few bags but not too many, just some bins have some bags piled next to it in rough neighborhoods" (11-23 07:09); never a bag on its own away from a bin (the binBags lint row stays). (11-23; chat)
+- A casino's entrance faces the street (11-23 07:09: "Yes entrances should face street on casino"): the Neon Strip's and Old Downtown's casino blocks re-planned so their doors open onto the street, not a back lot or an alley (the audit's northDoor). (11-23; chat)
 - An ATM that can't be set into a wall (a kiosk that is some street's only cash) gets a booth of its own (11-22 16:45: "Booth works for atms") - art, for Fable; until then it stands as a kiosk. (11-22; chat)
 - Every boat that looks usable is usable (11-17; 11-22 15:03 for the moored ones: "Let's make them drivable"): the canoes and rowboats on the shores become kayaks and rowboats in the water beside them; the moored sailboats, yachts and fishing boats become a Gull 26 Sailboat, a Seaview 32 Cruiser and a Fishing Trawler - parked boats, anyone's to take. `shared/world3-boats.js`. (11-22; chat)
 - World v3: the whole world handcrafted, district by district; Claude has full creative control within the world's size and region placements. (10-17; chat)

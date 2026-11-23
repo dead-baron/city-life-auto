@@ -34,3 +34,27 @@ test('every kind of bin counts, across a grid cell edge', () => {
     assert.equal(strayBags(m).length, 0, t);
   }
 });
+
+// (11-23, the owner: "a few bags but not too many, just some bins have some bags piled next to it in rough neighborhoods")
+test('a few bags beside some bins in a rough district - not in the road, not elsewhere', async () => {
+  const { binBags3, BIN_BAGS } = await import('../shared/world3-tidy.js');
+  const { T, TILE } = await import('../shared/constants.js');
+  const { DISTRICTS } = await import('../shared/mapcore.js');
+  const rough = DISTRICTS.find((d) => d.tier === 'rough'), calm = DISTRICTS.find((d) => d.tier === 'mid');
+  const make = (D) => {
+    const w = 120, h = 8, tiles = new Uint8Array(w * h).fill(T.SIDEWALK);
+    for (let x = 0; x < w; x++) tiles[7 * w + x] = T.ROAD;
+    const m = { w, h, x0: 0, y0: 0, tiles, props: [], buildings: [], inside: (x, y) => x >= 0 && y >= 0 && x < w && y < h, idx: (x, y) => y * w + x, districtAt: () => D };
+    for (let k = 0; k < 40; k++) m.props.push({ t: 'trashcan', x: (3 * k + 1.5) * TILE, y: 3.5 * TILE });
+    return m;
+  };
+  const H3 = { addProp: (mm, t, x, y) => mm.props.push({ t, x, y }) };
+  const m = make(rough), n = binBags3(m, H3);
+  const bags = m.props.filter((p) => p.t === 'bags');
+  assert.ok(n > 0 && n === bags.length);
+  const withBags = m.props.filter((b) => b.t === 'trashcan' && bags.some((q) => Math.hypot(q.x - b.x, q.y - b.y) < BIN_BAGS.near)).length;
+  assert.ok(withBags >= 4 && withBags <= 20, `some bins, not too many: ${withBags} of 40`);
+  for (const q of bags) assert.equal(m.tiles[m.idx(Math.floor(q.x / TILE), Math.floor(q.y / TILE))], T.SIDEWALK, 'on the pavement');
+  const c = make(calm);
+  assert.equal(binBags3(c, H3), 0, 'a calm district keeps its bins tidy');
+});

@@ -56,7 +56,7 @@ import { beachCamps3 } from './world3-camps.js';
 import { driveTree3 } from './world3-drivetree.js';
 import { desertRoadside3 } from './world3-roadside.js';
 import { stockTanks3 } from './world3-stocktanks.js';
-import { tidyProps3, clearHomePaths3, strayBags3 } from './world3-tidy.js';
+import { tidyProps3, clearHomePaths3, strayBags3, binBags3 } from './world3-tidy.js';
 import { boatsAfloat3 } from './world3-boats.js';
 import { railTrim3 } from './world3-railtrim.js';
 import { badBays3 } from './parkcheck.js';
@@ -358,6 +358,7 @@ export function worldOpts(asked) {
       if (city) m.world3.atmsSeated = seatAtms3(m, H3);   // (last: every ATM set into a front wall or inside, none left standing on its own - the owner, 11-14: world3-shops.js)
       if (city) m.world3.walks = clearWalks3(m);   // (last of the planting: no tree, shrub, hedge or pot out on a sidewalk, a road or a lot - the owner, 11-17, the audit's plantOnWalk: world3-walks.js)
       m.world3.strayBags = strayBags3(m);   // (bin bags only by a bin or in the rough districts - DECISIONS 10-10, the audit's binBags: world3-tidy.js)
+      m.world3.binBags = binBags3(m, H3);   // (and a few piled beside some bins in the rough districts - the owner, 11-23: world3-tidy.js)
       m.world3.boatsAfloat = boatsAfloat3(m);   // (every canoe and rowboat a real boat in the water beside where it lay - the owner, 11-17, the audit's deadBoat: world3-boats.js)
       m.world3.railTrim = railTrim3(m);   // (no railing or fence out over open water - the audit's railOverWater: world3-railtrim.js)
       m.world3.badBays = badBays3(m);   // (no parking space whose car would stand on a pavement, a lawn or a pier - the audit's parked: parkcheck.js)

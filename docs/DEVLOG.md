@@ -26417,3 +26417,12 @@ consider topographical levels". Both withdrawn. What stands:
   alike. plazafill, world3server, placementlint 42/42 (bigEmptyPlaza still 0).
 - `test/world3woods.test.js` "a canoe by it" (the islet camp): its canoe looked for as a kayak in the water beside it
   (m.marina), as the other suites' boats now are.
+
+## 2026-11-23 - World batch: a few bags beside some bins in the rough districts
+- The owner (11-23 07:09): "a few bags but not too many, just some bins have some bags piled next to it in rough
+  neighborhoods". `shared/world3-tidy.js` binBags3 (the done hook, after the stray bags go): in a rough district
+  (The Yards, Southside, Smuggler's Rock, Prison Island) a quarter of the trash cans and dumpsters that had none get a bag
+  or two at their side - the same ground, never the road, a door's step or another thing. With the bags the alleys had:
+  Southside 71 of 207 bins, The Yards 3 of 10 (its bins are mostly trash piles already). Seen in pictures (Southside: a
+  bag beside the can on the pavement). `test/binbags.test.js` (+1). DECISIONS: the three calls of 11-23 07:09 (rooms for
+  Lane Mart and Park West Coffee, these bags, casinos facing the street).

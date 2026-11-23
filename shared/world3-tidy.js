@@ -11,6 +11,7 @@
 // For the whole-world build only. Deterministic: arithmetic.
 import { TILE, T } from './constants.js';
 import { DISTRICTS } from './mapcore.js';
+import { hash2 } from './rng.js';
 
 // LAND: the prop types that need dry ground under them (plants by species: reeds and cattails grow in the water);
 // WET_SP: the plants that stand in water; FENCE: the fence kinds that stop at a road or the water; step: px along a run
@@ -183,6 +184,52 @@ export function strayBags(m) {
     if (!ok) out.push(p);
   }
   return out;
+}
+// A few bags piled beside some bins in the rough districts (the owner, 11-23 07:09: "a few bags but not too many, just some
+// bins have some bags piled next to it in rough neighborhoods"): about one bin in three with the ones that had bags
+// already (BIN_BAGS.share of the rest, a trash can or a
+// dumpster - a trash pile is one already), a bag or two at its side on the same kind of ground - never in the road, on a
+// door's step, or on another thing. One with bags beside it already is left as it is.
+export const BIN_BAGS = { share: 0.25, BINS: /^(trashcan|dump_[gbo])$/, near: 3 * TILE, clear: 14 };
+const BAG_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DIRT]);
+export function binBags3(m, H3) {
+  if (!Array.isArray(m.props) || !H3 || !H3.addProp) return 0;
+  const C = 128, grid = new Map(), cell = (x, y) => Math.floor(y / C) * 100000 + Math.floor(x / C);
+  const index = (p) => { const k = cell(p.x, p.y); let l = grid.get(k); if (!l) grid.set(k, (l = [])); l.push(p); };
+  for (const p of m.props) if (p) index(p);
+  const nearAny = (x, y, r, test) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const q of grid.get(cell(x, y) + j * 100000 + i) || []) if ((!test || test(q)) && Math.hypot(q.x - x, q.y - y) < r) return true; return false; };
+  const doors = new Set();
+  for (const b of m.buildings || []) {   // (a building's door and its walk-in's doorways: the step kept clear)
+    if (!b) continue;
+    if (b.door && m.inside(b.door.tx, b.door.ty)) for (let k = 0; k < (b.door.w || 2); k++) if (m.inside(b.door.tx + k, b.door.ty)) doors.add(m.idx(b.door.tx + k, b.door.ty));
+    for (const u of (b.walkIn && b.walkIn.units) || []) if (u.door) for (let k = 0; k < (u.door.w || 2); k++) for (const ty of [u.door.ty, u.door.ty + 1, u.door.ty - 1]) if (m.inside(u.door.tx + k, ty)) doors.add(m.idx(u.door.tx + k, ty));
+  }
+  const bins = m.props.filter((p) => p && BIN_BAGS.BINS.test(p.t));
+  let n = 0;
+  for (const b of bins) {
+    const D = m.districtAt ? m.districtAt(b.x, b.y) : null;
+    if (!D || D.tier !== 'rough') continue;
+    const bx = Math.round(b.x), by = Math.round(b.y);
+    if (hash2(bx, by, 1123) >= BIN_BAGS.share) continue;
+    if (nearAny(b.x, b.y, BIN_BAGS.near, (q) => q.t === 'bags')) continue;
+    const big = b.t !== 'trashcan', off = big ? 34 : 22, count = big || hash2(bx, by, 1124) < 0.5 ? 2 : 1;
+    const ground = m.inside(Math.floor(b.x / TILE), Math.floor(b.y / TILE)) ? m.tiles[m.idx(Math.floor(b.x / TILE), Math.floor(b.y / TILE))] : -1;
+    const sides = hash2(bx, by, 1125) < 0.5 ? [[1, 0], [-1, 0], [0, 1], [0, -1]] : [[-1, 0], [1, 0], [0, 1], [0, -1]];
+    const fits = (x, y) => {
+      const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+      if (!m.inside(tx, ty)) return false;
+      const i = m.idx(tx, ty), t = m.tiles[i];
+      return BAG_GROUND.has(t) && (t === ground || ground === -1) && !doors.has(i) && !nearAny(x, y, BIN_BAGS.clear, (q) => q !== b);
+    };
+    for (const [dx, dy] of sides) {
+      const spots = [];
+      for (let k = 0; k < count; k++) spots.push([b.x + dx * (off + k * 12) + dy * (k ? 7 : 0), b.y + dy * (off + k * 12) + dx * (k ? 6 : 0)]);
+      if (!spots.every(([x, y]) => fits(x, y))) continue;
+      for (const [x, y] of spots) { H3.addProp(m, 'bags', Math.round(x), Math.round(y), 0); index(m.props[m.props.length - 1]); n++; }
+      break;
+    }
+  }
+  return n;
 }
 export function strayBags3(m) {
   if (!Array.isArray(m.props)) return 0;
