@@ -26696,3 +26696,12 @@ open water (F_WATER, not ground) takes shadows only from casters standing within
 hull, a swimmer - over a short march (WATER_TMAX 56): lightgame.js sunVis(P, wq, reach, tmax), both its paths. Ground is
 as before. test/watershadow-gl.test.js renders the lit frame on the GPU (a block 60 high on water, then on ground, a
 golden-hour sun): on main the water was shadowed (146 vs 227), now not; the ground still is.
+
+## 2026-11-23 · The review list: checked off on the page
+
+The owner (11-23): "Not seeing a way to check off things in the review list ... options that lets me check off things
+that aren't a problem or save it as a bug to review later". The admin console's review list (/admin/reviews: reports,
+filter hits, movement and economy flags) now has, on each open entry, **Resolved**, **Not a problem** and **Bug for later**
+(moderation.js resolve's how), and **Open again** on a done one - a POST with the session's own token, as the bug
+reports', each in the admin log. The open ones come first. The page no longer shows players' account ids (the owner's
+rule: none on any dashboard). test/bugreports.test.js.

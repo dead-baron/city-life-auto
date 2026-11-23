@@ -65,10 +65,18 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
     return `<p>${verdict} Newest first, the last 300${q ? `, for ${esc(q)}` : ''}. Filter: add ?q=&lt;account id or action&gt;.</p>`
       + table(['when (UTC)', 'who', 'role', 'what', 'target', 'before', 'after', 'note', 'ok'], list.map((e) => [when(e.at), e.who ? `${esc(e.who.n)}<br><small>${esc(e.who.id)}</small>` : '', esc(e.who && e.who.role), esc(e.what), e.target ? `${esc(e.target.n || '')}<br><small>${esc(e.target.id || '')}</small>` : '', j(e.before), j(e.after), esc(e.note || ''), e.ok ? '<span class="ok">yes</span>' : '<span class="bad">refused</span>']));
   }
-  function reviewsPage() {
-    const list = mod.reviews().slice(0, 200);
-    return '<p>Reports, filter hits, movement and economy flags, floods - newest first. Resolve them from the game (admin tools).</p>'
-      + table(['when (UTC)', 'kind', 'player', 'by', 'note', 'times', 'data', 'resolved'], list.map((r) => [when(r.at), esc(r.kind), r.who ? `${esc(r.who.n)}<br><small>${esc(r.who.id)}</small>` : '', r.by ? esc(r.by.n) : '', esc(r.note), r.n || 1, j(r.data), r.done ? `${when(r.done.at)} ${esc(r.done.by && r.done.by.n)}: ${esc(r.done.note)}` : `<small>${esc(r.id)}</small>`]));
+  // the review list: each open one checked off here - Resolved, Not a problem, Bug for later - or opened again (a POST with
+  // the session's token, as the bug reports; the admin log keeps who did what). The owner, 11-23.
+  const HOW = { fixed: 'resolved', ok: 'not a problem', bug: 'a bug for later' };
+  function reviewForm(w, r) {
+    const f = (a, label, cls = '') => `<form method="post" action="/admin/reviews" style="display:inline"><input type="hidden" name="csrf" value="${esc(w.s.csrf)}"><input type="hidden" name="id" value="${esc(r.id)}"><input type="hidden" name="a" value="${a}"><button type="submit"${cls ? ` class="${cls}"` : ''}>${label}</button></form>`;
+    return r.done ? `<small class="ok">${esc(HOW[r.done.how] || 'resolved')} ${esc(when(r.done.at))}${r.done.by ? ` by ${esc(r.done.by.n)}` : ''}</small> ${f('open', 'Open again')}` : `${f('fixed', 'Resolved')} ${f('ok', 'Not a problem')} ${f('bug', 'Bug for later')}`;
+  }
+  function reviewsPage(w) {
+    const all = mod.reviews(), list = [...all.filter((r) => !r.done), ...all.filter((r) => r.done)].slice(0, 200), flash = w.s.flash;
+    w.s.flash = null;
+    return `${flash ? `<p class="${flash.ok ? 'ok' : 'bad'}">${esc(flash.text)}</p>` : ''}<p>Reports, filter hits, movement and economy flags, floods - the open ones first, newest first. Check each one off here.</p>`
+      + table(['when (UTC)', 'kind', 'player', 'by', 'note', 'times', 'data', ''], list.map((r) => [when(r.at), esc(r.kind), r.who ? esc(r.who.n) : '', r.by ? esc(r.by.n) : '', esc(r.note), r.n || 1, j(r.data), reviewForm(w, r)]));   // (no account ids on the page: the owner's rule)
   }
   function dashboardPage() {
     const S = analytics.data, keys = Object.keys(S.days).sort().reverse();
@@ -161,6 +169,17 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
       + `${r.done ? `<small class="ok">done ${esc(when(r.done.at))} by ${esc(r.done.by)}</small> ` : ''}<button type="submit">${r.done ? 'Open again' : 'Mark done'}</button></form></div></div>`;
     return `${flash ? `<p class="${flash.ok ? 'ok' : 'bad'}">${esc(flash.text)}</p>` : ''}<p>${bugs.count} report${bugs.count === 1 ? '' : 's'}, <b>${bugs.open}</b> open${bugs.webhookOn ? ' · each one is posted to the Discord too' : ' · no Discord webhook set (BUG_WEBHOOK_URL): kept here only'}. Newest first${openOnly ? ', open ones only - <a href="/admin/bugs">all</a>' : ' - <a href="/admin/bugs?open=1">open ones only</a>'}${shown.length < (openOnly ? bugs.open : bugs.count) ? `, the newest ${shown.length}` : ''}.</p>`
       + (shown.map(card).join('') || '<p>No reports yet.</p>');
+  }
+  async function reviewsPost(req, res, w) {
+    if (req.headers['sec-fetch-site'] === 'cross-site') { sendHTML(res, 403, 'Refused.'); return; }
+    const form = await readForm(req);
+    if (!form || typeof form.csrf !== 'string' || !w.s.csrf || !safeEqual(form.csrf, w.s.csrf)) { sendHTML(res, 403, 'This form is out of date - open the page again.'); return; }
+    const id = String(form.id || ''), a = String(form.a || ''), by = { id: w.pid, n: w.name };
+    const r = a === 'open' ? mod.reopen(id) : HOW[a] ? mod.resolve(id, by, '', a) : null;
+    if (r) log.append({ who: { id: w.pid, n: w.name, role: w.role }, what: a === 'open' ? 'review-open' : `review-${a}`, note: id.slice(0, 24), ok: true });
+    w.s.flash = { ok: !!r, text: r ? (a === 'open' ? 'Opened again.' : `Checked off: ${HOW[a]}.`) : 'No such entry, or already done.' };
+    res.writeHead(303, { location: '/admin/reviews', 'cache-control': 'no-store' });
+    res.end();
   }
   async function bugsPost(req, res, w) {
     if (req.headers['sec-fetch-site'] === 'cross-site') { sendHTML(res, 403, 'Refused.'); return; }
@@ -307,7 +326,8 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
     const need = page === 'log' ? 'adminlog' : page === 'dashboard' ? 'dashboard' : page === 'reviews' ? 'reviews' : null;
     if (!need) { sendHTML(res, 404, 'No such page.'); return true; }
     if (!allowed(w.role, need)) { sendHTML(res, 403, 'Not for your role.'); return true; }
-    const body = page === 'log' ? logPage(req, url) : page === 'dashboard' ? dashboardPage() : reviewsPage();
+    if (page === 'reviews' && req.method === 'POST') { await reviewsPost(req, res, w); return true; }
+    const body = page === 'log' ? logPage(req, url) : page === 'dashboard' ? dashboardPage() : reviewsPage(w);
     sendHTML(res, 200, shell(page === 'log' ? 'Admin log' : page === 'dashboard' ? 'Analytics' : 'Review list', body, w));
     return true;
   }
