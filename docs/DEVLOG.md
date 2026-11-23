@@ -26239,3 +26239,9 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
 - `test/biz.test.js`: "each kind for sale, priced, with a place" now looks at the whole list - the app shows the nearest
   30, so whether a farm out in the country made it turned on where the test's player spawned (it failed on some spawns,
   on main too).
+
+## 2026-11-22 - Tests: the desert's walk-in places reached by car at their door (branch `prebeta-world2`)
+- `test/cliffs.test.js` (failing on main too, not from the world batch - its tiles checked: nothing the batch lays stops a
+  car): eight desert places (three hospitals, shops at Mesa Flats and Red Rock) have their map point on their walk-in
+  room's floor, a few tiles behind the door, where no car goes - one there now counts as reached when the ground within
+  4 tiles (its door) is. The known two (a convenience store and a roadhouse with no drivable way in) stay as they were.

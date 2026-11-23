@@ -158,8 +158,9 @@ test('World v3: the cliffs are solid where they are drawn - on foot, by car, fro
   const carBlock = CAR_BLOCK.map((v, t) => (v || t === T.WATER || t === T.DEEP ? 1 : 0));
   for (const [how, block] of [['on foot', PED_BLOCK], ['by car', carBlock]]) {
     const Rr = flood(block), lost = [];
-    // (a place in the water - a lake, a tinaja - by its shore)
-    const reached = (tx, ty) => { const t = m.tiles[ty * W + tx], r = t === T.WATER || t === T.DEEP ? 40 : 2; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = tx + dx, y = ty + dy; if (x >= 0 && y >= 0 && x < W && y < H && Rr[y * W + x]) return true; } return false; };
+    // (a place in the water - a lake, a tinaja - by its shore; one inside its walk-in room - its point on the floor, a few
+    // tiles behind the door, where no car goes - by the ground at its door)
+    const reached = (tx, ty) => { const t = m.tiles[ty * W + tx], r = t === T.WATER || t === T.DEEP ? 40 : t === T.FLOOR || t === T.COUNTER ? 4 : 2; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = tx + dx, y = ty + dy; if (x >= 0 && y >= 0 && x < W && y < H && Rr[y * W + x]) return true; } return false; };
     for (const [name, tx, ty] of targets) if (!reached(tx, ty)) lost.push(name);
     assert.ok(lost.length <= KNOWN_UNREACHED[how], `the desert ${how}: ${lost.length} of ${targets.length} out of reach (${lost.slice(0, 12).join('; ')})`);
   }
