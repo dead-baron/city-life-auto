@@ -26686,3 +26686,13 @@ took none of them) - it fails on the engine before this.
   Keep / Cut / Bug in its bar (a tap brings the bar back); the More (unreviewed) list shows each mark, Copy marks puts them
   on the clipboard to send, a cut shot leaves the reel (and can be put back). Kept in this browser.
 test/notes1123.test.js; test/directorcam's hold now moves its clock past the 2 s.
+
+## 2026-11-23 · No long shadows across open water (P3 of the 11-23 notes)
+
+The owner (11-23): long, huge shadows from cars on a bridge, boats, the seaplane's wings, fish, across the water. The sun's
+shadow marches toward the sun through the height map, and open water took a shadow from anything above it up to 140 px
+high - a bridge deck and the cars on it, a mast, a wing, a leaping fish - thrown a long way across it at a low sun. Now
+open water (F_WATER, not ground) takes shadows only from casters standing within WATER_REACH (22) of its own level - a
+hull, a swimmer - over a short march (WATER_TMAX 56): lightgame.js sunVis(P, wq, reach, tmax), both its paths. Ground is
+as before. test/watershadow-gl.test.js renders the lit frame on the GPU (a block 60 high on water, then on ground, a
+golden-hour sun): on main the water was shadowed (146 vs 227), now not; the ground still is.

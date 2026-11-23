@@ -250,6 +250,8 @@ const HEAD = (T, AP = 1) => `#version 300 es
 #define STEPC ${T.stepC.toFixed(4)}
 #define STEPG ${T.stepG.toFixed(4)}
 #define THIN_D 10.0
+#define WATER_REACH 22.0   // (open water: a caster at most this far above it - a hull, not a deck or a mast; sunVis)
+#define WATER_TMAX 56.0    // (and the march over it this short)
 #define CONTACT ${T.contact}
 #define BANDS ${T.bands}
 #define REFL ${T.refl}
@@ -424,7 +426,10 @@ float rainMarks(vec2 w, bool water, float up){
   return add * rain;
 }
 // how much sun reaches P (1 .. 0): a march toward the sun through the height map, or (Low) a few taps
-float sunVis(vec3 P, ivec2 wq){
+// reach: how far above P's own height a caster still counts; tmax: how far the march goes. Open water takes shadows only from what
+// floats on it, close: a hull, a swimmer - not a bridge deck or a car on it far above, a mast, a leaping fish, which threw
+// long shadows across it (the owner, 11-23; WATER_REACH / WATER_TMAX)
+float sunVis(vec3 P, ivec2 wq, float reach, float tmax){
   float sh = 1.0;
 #if RAYS > 0
   float occSum = 0.0;
@@ -440,13 +445,13 @@ float sunVis(vec3 P, ivec2 wq){
       if (s.x < 0 || s.y < 0 || s.x >= isize.x || s.y >= isize.y || R.z > 700.0) break;
       vec4 b = texelFetch(tB, s, 0);
       float hz = zOf(b);
-      if (hz > R.z + 1.5 && hz - R.z < 140.0) {
+      if (hz > R.z + 1.5 && hz - R.z < 140.0 && hz - P.z < reach) {
         int f2 = flOf(b);
         // (a thin thing - a post, a person - only blocks rays that pass just behind its face)
         if ((f2 & ${F_NOCAST}) == 0 && ((f2 & ${F_THIN}) == 0 || hz - R.z < THIN_D)) { occ = max(occ, (f2 & ${F_LEAF}) != 0 ? 0.75 : 1.0); if (occ >= 1.0) break; }
       }
       t += STEPC + t * STEPG;
-      if (t > shadowLen) break;
+      if (t > min(shadowLen, tmax)) break;
     }
     occSum += occ;
   }
@@ -461,7 +466,7 @@ float sunVis(vec3 P, ivec2 wq){
     vec4 b = texelFetch(tB, s, 0);
     float hz = zOf(b);
     int f2 = flOf(b);
-    if (hz > R.z + 1.5 && hz - R.z < ((f2 & ${F_THIN}) != 0 ? THIN_D : 140.0) && (f2 & ${F_NOCAST}) == 0) occ = max(occ, 1.0 - float(i - 1) * 0.2);
+    if (hz > R.z + 1.5 && hz - R.z < ((f2 & ${F_THIN}) != 0 ? THIN_D : 140.0) && hz - P.z < reach && (f2 & ${F_NOCAST}) == 0) occ = max(occ, 1.0 - float(i - 1) * 0.2);
   }
   sh = 1.0 - occ * 0.8;
 #endif
@@ -552,7 +557,8 @@ void main(){
   int fl = flOf(B);
   ivec2 wq = (q + org) / AP;                                       // the art pixel of the world
   vec3 P = vec3(float(q.x) + 0.5, float(q.y) + 0.5 + Z, Z);
-  float sh = dot(n, sunDir) > 0.0 && sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, wq) : 1.0;
+  bool openW = (fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0;
+  float sh = dot(n, sunDir) > 0.0 && sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, wq, openW ? WATER_REACH : 140.0, openW ? WATER_TMAX : 1e4) : 1.0;
   vec3 plight = vec3(0.0), refl = vec3(0.0);
   pointLights(P, n, q, (fl & ${F_GROUND}) != 0 && wet > 0.0, plight, refl);
   vec3 alb = pow(A.rgb, vec3(2.2));
@@ -576,7 +582,8 @@ void main(){
   float Z = zOf(B);
   int fl = flOf(B);
   vec3 P = vec3(float(q.x) + 0.5, float(q.y) + 0.5 + Z, Z);
-  float sh = sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, (q + org) / AP) : 1.0;
+  bool openW = (fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0;
+  float sh = sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, (q + org) / AP, openW ? WATER_REACH : 140.0, openW ? WATER_TMAX : 1e4) : 1.0;
   vec3 plight = vec3(0.0), refl = vec3(0.0);
   pointLights(P, n, q, (fl & ${F_GROUND}) != 0 && wet > 0.0, plight, refl);
   oL = vec4(sqrt(clamp(plight * 0.125, 0.0, 1.0)), sh);
