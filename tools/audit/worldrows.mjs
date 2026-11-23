@@ -36,6 +36,7 @@
 import { TILE, T } from '../../shared/constants.js';
 import { TIDY3, strayBags } from '../../shared/world3-tidy.js';
 import { railWetRun } from '../../shared/world3-railtrim.js';
+import { cropWhy } from '../../shared/world3-croptidy.js';
 import { plantKind, plantWalkHit } from '../../shared/world3-walks.js';
 import { airfields } from '../../shared/flight.js';
 import { FLY } from '../../shared/flight.js';
@@ -280,13 +281,9 @@ export function auditRows(M, rows, seen) {
     }
   }
 
-  // ---- cropInTown ----
+  // ---- cropInTown ---- (shared/world3-croptidy.js cropWhy: the build clears the scraps by the same test)
   {
-    // (a beach: sand in a beach district - a lake's or a river's sandy bank in the farmland isn't one)
-    const sandNear = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let j = -CROP_BEACH; j <= CROP_BEACH; j += 2) for (let i = -CROP_BEACH; i <= CROP_BEACH; i += 2) if (tileT(tx + i, ty + j) === T.SAND) { const D = M.districtAt((tx + i) * TILE, (ty + j) * TILE); if (D && D.style === 'beach') return true; } return false; };
-    const why = (x, y) => { const D = M.districtAt(x, y); if (D && !FARM_STYLES.has(D.style)) return `in ${D.name} (${D.style})`; if (sandNear(x, y)) return 'by a beach'; return null; };
-    // the field tiles, in components
-    const lab = new Int32Array(0); void lab;
+    const why = (x, y) => cropWhy(M, x, y);
     const seenT = new Uint8Array(M.w * M.h);
     seen.fieldPatches = 0;
     for (let ty = M.y0; ty < M.y0 + M.h; ty++) for (let tx = M.x0; tx < M.x0 + M.w; tx++) {

@@ -26163,3 +26163,11 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   counted them. `shared/parkcheck.js` badBays3 (the done hook) takes them off `m.parking` by the same measure (parkWhy,
   the spot's own model else a sedan); a driveway's, a golf cart's and the car lots' spaces are their own. 124 -> 0
   (`LINT_ALLOW.parked` 0). Tests: placementlint 42/42, firstcar, starter, mycar, homes, trafficbox, world3arrivals.
+
+## 2026-11-22 - World batch: the stray crop scraps cleared (branch `prebeta-world2`; not live)
+- The audit's cropInTown (49; the owner's 16:15 shot). One rule for the build and the lint (`shared/world3-croptidy.js`
+  cropWhy: in a town's or city's district, or within CROP_BEACH tiles of a beach district's sand). `cropScraps3` (the
+  done hook): a crop patch of at most 40 tiles so placed goes back to grass, its crop strips and vine rows with it -
+  26 patches, 150 tiles. 49 -> 23 (`LINT_ALLOW` 23). Left on purpose: Gull Harbor's farms inside its district's line
+  (2,000-3,300 tiles each - whole farms, the owner's call) and five orchards near a beach.
+- Tests: placementlint 42/42, farming, harvestart.
