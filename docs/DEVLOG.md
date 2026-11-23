@@ -26179,3 +26179,15 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   the crop strips and vine rows on the new grass go. cropWhy: a beach town's district may hold farms back from the
   sand (only the sand counts there). cropInTown 49 -> 0 (`LINT_ALLOW` 0). DECISIONS: the farms, and the ATM booths.
 - Tests: placementlint 42/42, farming, harvestart, fences.
+
+## 2026-11-22 - World batch: every shop sign names what's behind it (branch `prebeta-world2`; not live)
+- The audit's frontNames (7: "FRAME & MAT" over the Arts District Clinic, "LOBSTER POT" over Gull Harbor Clinic,
+  "HILLS ANIMAL CLINIC" over a donut shop, "QUICK MART 24 7" over a pawn shop and a barber...: old signs left when a
+  building's use changed). One rule for the build and the lint (`shared/world3-signfix.js` signWrong). `frontNames3`
+  (the done hook): a shop front's sign naming none of its places takes the name of the place nearest its middle; a
+  hanging sign with another trade's word (CLINIC, MART, TATTOO) the name of the place nearest it. An airport's own
+  signs stay. 7 -> 0 (`LINT_ALLOW` 0). `test/signfix.test.js`; placementlint 42/42, world3shops, signs.
+- Tried and reverted: facing every walk-in south whenever its south side reaches a road (northDoor 19 -> 10). The
+  pictures showed it wrong for the hand-made blocks whose street is to the north - the Strip's casinos' drop-off loops
+  and Old Downtown's casino row: their way in moved round to the back lots. Those blocks want re-planning (the street
+  to their south), the owner's call - logged.

@@ -123,7 +123,7 @@ export const LINT_ALLOW = {
   planterOnWalk: 0,         // planters and pots on a sidewalk, a road or a lot, not set against a wall - 422 at the audit; 0 since 11-22
   northDoor: 19,            // (21 at the audit; 19 with egret, 11-22) a business's entrance on its north wall
   interiorOverlap: 25,      // a walk-in's room under another building's footprint or its drawn front
-  frontNames: 7,            // a shop's sign naming none of its places, or another trade
+  frontNames: 0,            // a shop's sign naming none of its places, or another trade (11-22: renamed at the build - world3-signfix.js)
   lobbyDoor: 161,           // an apartment's lobby door at a shop front
   rampCrossesRoad: 9,       // a ramp below deck height over a street that isn't its junction
   railOverWater: 0,       // a railing or fence run out over open water (11-22: moved back onto the shore or cut back - world3-railtrim.js; the rule: water under it and either side)

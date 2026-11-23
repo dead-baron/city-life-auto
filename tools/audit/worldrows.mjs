@@ -37,6 +37,7 @@ import { TILE, T } from '../../shared/constants.js';
 import { TIDY3, strayBags } from '../../shared/world3-tidy.js';
 import { railWetRun } from '../../shared/world3-railtrim.js';
 import { cropWhy } from '../../shared/world3-croptidy.js';
+import { signWrong } from '../../shared/world3-signfix.js';
 import { plantKind, plantWalkHit } from '../../shared/world3-walks.js';
 import { airfields } from '../../shared/flight.js';
 import { FLY } from '../../shared/flight.js';
@@ -145,16 +146,12 @@ export function auditRows(M, rows, seen) {
     if (!texts.length) continue;
     const biz = bizOf(b.id), homes = (placesOf.get(b.id) || []).filter((p) => p.kind === 'home');
     if (shopSign) seen.shopFronts++;
-    if (biz.length) {
-      const names = new Set([...biz.flatMap((p) => sig(p.label)), ...sig(b.name)]);
-      const kinds = new Set(biz.map((p) => (p.casino ? 'casino' : p.kind)));
+    if (biz.length) {   // (shared/world3-signfix.js signWrong: the build renames a wrong shop sign by the same rule)
       for (const t of new Set(texts.map(up))) {
-        const ws = t.split(' ');
-        const trade = ws.filter((w) => TRADE[w]);
-        const wrongTrade = trade.filter((w) => !TRADE[w].split(' ').some((k) => kinds.has(k)));
-        const named = sig(t).some((w) => names.has(w));
-        if (wrongTrade.length && !named) add('frontNames', { what: `"${t}" over ${biz.map((p) => `${p.label} (${p.kind})`).join(', ')}`, x: (b.tx + b.tw / 2) * TILE, y: (b.ty + b.th) * TILE, why: `${wrongTrade.join(', ')} on the sign` });
-        else if (!named && !trade.length && sig(t).length && t === up(shopSign)) add('frontNames', { what: `"${t}" over ${biz.map((p) => `${p.label} (${p.kind})`).join(', ')}`, x: (b.tx + b.tw / 2) * TILE, y: (b.ty + b.th) * TILE, why: 'the sign names none of its places' });
+        const w = signWrong(t, biz, b, t === up(shopSign));
+        if (!w) continue;
+        const kinds = new Set(biz.map((p) => (p.casino ? 'casino' : p.kind))), wrongTrade = t.split(' ').filter((x) => TRADE[x] && !TRADE[x].split(' ').some((k) => kinds.has(k)));
+        add('frontNames', { what: `"${t}" over ${biz.map((p) => `${p.label} (${p.kind})`).join(', ')}`, x: (b.tx + b.tw / 2) * TILE, y: (b.ty + b.th) * TILE, why: w === 'trade' ? `${wrongTrade.join(', ')} on the sign` : 'the sign names none of its places' });
       }
     }
     if (shopSign && homes.length) {
