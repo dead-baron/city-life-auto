@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-23 early morning (the pre-beta chat, Opus 5.5, overnight). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-23 afternoon (the pre-beta chat, Opus 5.5). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -106,18 +106,39 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 
 Chats that can run side by side: 4 with any other; nothing else safely.
 
-## 6. Where things stand (2026-11-23, early morning)
-- `main` (live): PRs #1-#12 - the pre-beta art and UI with batch 1 of the 11-22 notes, the new people, the owner's music,
-  the quick bar, rooms lit at night (N14, #11), one note at a time on a small sideways phone and the prison test (#12).
-- `prebeta-world2`: the world batch, main and `nature-world` merged in (section 5, row 2). Ready; not live - his word
-  first. Going live re-bakes the art (~5 h, identical chunks carried over).
-- Tests on the branch: the whole suite one file at a time (429 files, `docs/tasks/PREBETA-TESTS.txt`); failing on main
-  too and open: gridlock, world3mesa, world3wild, scenes test 8, visaudit's by-kind counts; flaky: calevents, happenings,
-  police, unlocks. The fast files (327) run again on the final state: all pass but calevents (flaky) and scenes 8.
-- Open picks waiting on him: the world batch going live; more bin bags outside the bins in the rough districts; Greenfield
-  Park's Lane Mart and Park West Coffee rooms; the casino blocks' re-planning (northDoor); whether the calmer water sparkle
-  is too flat; the balance proposals 1, 3, 4.
-- Placeholders he wants fixed later: Summit Tarn's low sill, the sea cave's rock hill.
+## 6. Where things stand (2026-11-23 afternoon)
+**The plan the owner agreed (11-23 15:37, "this shouldn't switch directions"):** Opus 5.5 finishes everything that isn't
+art, pushing as it goes; then a new chat on **Fable 5.2** does the art pass; then the cinematics are reshot and added on
+the final art; then the beta's walkthrough, load test and launch. The order for the Opus part:
+1. ~~Art that vanishes in view~~ (PR #29). 2. ~~Cinematics groundwork~~ (#30). 3. ~~Shadows over water~~ (#31); the water
+   streaks (likely the boats' wakes) and the beach's long shadows - look in a running game first.
+4. **Buildings covering streets, sidewalks and alleys** (P5, the owner's repeated note): a world rule + a lint row measuring
+   street hidden per block; its own world batch and re-bake - push after the 11-23 re-bake is done. **Next.**
+5. The small mechanics: P6 fences cars pass through, P7 NPCs stuck (fences, lamps, the pool table), P9 the hat/head
+   flicker, P10 the hoop arrow, P11 the pier's water and the market hall door (check after the batch), P12 the cinematic
+   train; the admin review list's check-off is done (#32).
+6. P8 NPC driving (police transport first; lanes, medians, unsticking, re-routing).
+7. The UI pass on every screen: a harness shooting the real game's screens (pause, settings, map, phone, shops, death) at
+   four sizes; the stash's desktop side-by-side to the owner's UIC-21 concept (`docs/art-v2/targets/ui/UIC-21_stash.png`).
+8. The rest of `docs/audit/PREBETA-LIST.md` sections C-D (systems, finish-or-hide calls) and the balance proposals 1, 3, 4.
+Then **the Fable 5.2 chat**: the art list in `docs/tasks/PREBETA-NOTES-2026-11-23.md` section 3 (and the 11-22 PDF's art
+items, PREBETA-LIST "Art on Fable"), mouths (a face-stability check first), the UI art, item icons; then the cinematics
+(section 2 there: reshoot, wildlife first, new behaviour scenes) and C4's variants.
+
+**Live today (main, PRs #17-#32):** the quick bar a keyboard's only; the ellipsis and touch ammo; the Inventory (character,
+clothes, underwear and socks, towels, REMOVE ALL); the stash in the Inventory (home, gun/pawn counters, hideout); press and
+drag on every device; the trunk (its own slots, spills when wrecked); tile and slot polish; walk-ins dissolve (no screen
+dip); the world batch (#25, its re-bake running); the triage of the 11-23 PDF; chunks never evicted in view; cinematics'
+clean start, quiet page and Keep/Cut/Bug marks; no long shadows on water; the review list's check-off.
+**Decisions of 11-23** (in docs/DECISIONS.md): rooms for Lane Mart and Park West Coffee; a few bags by bins in rough
+districts; casinos kept, doors made to read; the stash holds items and weapons (clothes stay in the wardrobe); the trunk
+its own storage, at risk; cargo crates always visible; REMOVE ALL (not "take it all off") leaves underwear on; underwear
+and towels change only at home, a bathhouse or a shower.
+**Known failing on main too:** scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
+picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz. Follow-ups: two
+north doors at Northshore Beaches under trees.
+**Waiting on the owner:** the balance proposals 1, 3, 4; the Pixel 7 Pro's debug line if loading is still slow; whether
+clothes should go in the stash after all.
 
 ## 7. How a chat ends (do all of it, in this order)
 1. Tests for what changed pass; say which were not run.
