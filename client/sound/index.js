@@ -48,6 +48,10 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
     // recipe's parameters - the thunder's distance and strength)
     legacy(name, vol, p = null) {
       if (quiet || E.isMuted(name)) return;
+      // (a cinematic shot playing: the page's own unplaced sounds - your notes' pings, the phone, the menus - stay quiet; the
+      // scene's sounds come placed, heard from the camera. The owner, 11-23: "the sound is still playing that is around my
+      // character ... phone notifications" - client/director.js sets cine-shot)
+      if (typeof document !== 'undefined' && document.body && document.body.classList.contains('cine-shot')) return;
       let n = name in LEGACY ? LEGACY[name] : name;
       if (name === 'swing' && S && S.me) n = meleeSwing(WEAPONS[S.me.weapon]);   // (your own swing, the moment you press: by what's in your hand)
       if (n && INSTR[n]) E.play(n, undefined, undefined, vol, p);
