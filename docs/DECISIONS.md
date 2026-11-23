@@ -127,6 +127,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The touch sticks' behavior is untouchable (layout may move, behavior may not). (10-24; agent-rules, queue 11-06)
 - The aim stick stays (drag-to-aim on FIRE was rejected). (10-24; DEVLOG 10-24)
 - Every screen and mode has a way to back out on every device and control scheme. (11-12; chat, queue)
+- The Bag is the Inventory, overhauled: easy to navigate and see what you have, using the screen on desktop and phones (landscape and portrait) - your character in the middle of their slots, change or take off clothes (one piece or everything) from it, weapons and gear clearly shown and equipped from it; the concepts U6/U14/U15/CC10/UIC-19 and similar games (GTA's wheel, Stardew/Terraria's hotbar, Zomboid's slots) as the guide. (11-16; chat: "The inventory system needs a huge overhaul ... It doesn't need to be called a bag, just Inventory", DEVLOG 11-16)
+- Switch weapons and use items without opening the Inventory: the quick bar's keys (1-4 weapon slots, 5-8 items), Tab or the mouse wheel to step, a wheel on hold (Tab, RB, the weapon button's hold on touch). (11-16; chat: "scroll through different items and equipment and weapons without digging through the inventory", DEVLOG 11-16)
+- Playing an instrument: the Inventory gets out of the way and the pad is a compact see-through strip at the foot; your character visibly plays it in the world. (11-16; chat: "When I'm trying to play an instrument I can't see what I'm doing ... If I equip something like an instrument I should see my character playing it", DEVLOG 11-16)
+- Changing clothes from the Inventory is no free wanted-level escape: refused while wanted except inside your own home, and only a change at home or a store's fitting room counts as a disguise, as before. (11-16; Claude's call in the inventory job, DEVLOG 11-16)
 - Back and close in the same place on every screen. (11-03; DEVLOG 11-03 UI-10)
 - Portrait stays fully playable (no landscape-only). (11-12; queue)
 - HUD look: Direction A, the SNES pad - navy panels, gold rim, CLA Pixel everywhere in the HUD. (11-12; DEVLOG 11-12)
@@ -356,6 +360,14 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Weapons at risk: guns, bows, launchers, grenades, illegal items and dear blades drop on death as pickups anyone can take (a minute); fists, police issue and cheap legal tools stay. (11-14; decisions-11-14*, DEVLOG 11-14) - SUPERSEDES "a weapon you buy is yours forever; death drops cargo, never weapons" (11-03).
 - Arrest: illegal guns confiscated for good; legal guns go to your stash. (11-14; DEVLOG 11-14) - conflicts with launch-plan's impound lot (fee to get a seized gun back): OPEN if the impound idea is still wanted.
 - One stash per character: your home's safe and every gun / pawn shop counter. (11-14; decisions-11-14*)
+- The stash holds what you own and don't carry - items and weapons - one pool reached from many doors: inside your home,
+  gun and pawn counters, your (or your crew's) hideout office, later bank boxes. Clothes stay in your wardrobe: always
+  yours, never at risk, so there's nothing to stash (Claude's call, 11-23). Nothing in the stash is ever lost; what you carry is at
+  risk; carrying is limited by your backpack. The Inventory is a real inventory: your character with its loadout and
+  clothes, drag items into slots or select and EQUIP / USE, and at a stash door carried and stash side by side. (11-23)
+- The Inventory's clear-the-outfit button says REMOVE ALL - "take it all off" read as suggestive (the owner, 11-23).
+- REMOVE ALL leaves the underwear on. The underwear's own X, swapping it, or a towel in its place (a bath towel or one
+  round the hips - everyone has both) only where you can change: at home, at a bathhouse, under a shower. (11-23)
 - Buy straight to the stash (bulk), drop weapons, hand one to a crewmate nearby. (11-14; queue)
 - Phone "Find my weapons": a waypoint to the nearest stash. (11-14; DEVLOG 11-14)
 - No weapon blueprints or crafting. (11-03; launch-plan 11-03)
@@ -365,6 +377,11 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - A SAM launcher to fight helicopters, without making them weak. (10-16; DEVLOG 10-22)
 
 ## Vehicles and the car
+- A vehicle's trunk is its own small inventory, not a door to the stash (about 6 slots in a car, 2 on a motorbike): it stays
+  in a parked car, waits at the impound lot with an impounded one, and spills as pickups when the vehicle is destroyed -
+  the owner took Claude's suggestion over a trunk that shares the stash (it would let anyone bank loot mid-run). (11-23)
+- Cargo crates always show: on a car's roof, in a truck's bed, on a bike's rack, a boat's deck or in your hands - never in
+  a trunk or the inventory, so other players can see who carries something worth taking. (11-23)
 - The first car is earned by your FTUE path: Honest = cash to buy a beater at the station's used lot; Hustle = steal one in the alley; Outdoors = a cheap pickup; Roam = cash + the dealer marked. (11-06; queue, DEVLOG 11-06) - SUPERSEDES the free starter car (11-03).
 - The free starter car stays only with players who already had one. (11-06; CLAUDE.md)
 - Hustle path gets pocket money ($200: food, ammo, bail - not enough for a lot car). (11-07; DEVLOG 11-07)

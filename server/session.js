@@ -1,4 +1,5 @@
 import * as revive from './systems/revive.js';
+import * as stash from './systems/stash.js';
 // One connected client: handshake, input decoding and message routing. Shared by the
 // Node WebSocket server and the in-browser offline practice worker.
 import { decodeInput, MSG_INPUT } from '../shared/protocol.js';
@@ -169,6 +170,7 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'logoff') { const r = logoff.request(world, player, msg.a); if (r) conn.sendJSON(r); return; }   // the pause menu's LOG OFF: the safe exit (logoff.js)
       if (msg.t === 'surrender') { const err = unstuck.surrender(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'cruiser') { const err = cruiser.call(world, player); if (err) world.notify(player, err, 'warn'); return; }
+      if (msg.t === 'stash') { stash.handle(world, player, msg); return; }   // (your stash, open in the Inventory: stash.js)
       if (msg.t === 'look') { const r = looks.handle(world, player, msg); if (r) conn.sendJSON(r); return; } // the character creator (and the blade's colour)
       // Start fresh (task #413): this session's own character deleted for good - never anyone else's (no pid is read from
       // the message); the page forgets its token and comes back as a new player

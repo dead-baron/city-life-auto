@@ -9,7 +9,7 @@
 // machine): walk up to one and Act puts in a credit and plays it on its own little screen. Down the east wall the prize
 // counter: Act there for the prizes. The page plays the game and sends the score back; it's worth tickets
 // (ARCADE.perTicket points each, at most ARCADE.maxTickets a game - a score is checked against how long the game took,
-// as a page could say anything), and tickets buy the prizes (an item in your bag, a piece for your home, delivered, or a
+// as a page could say anything), and tickets buy the prizes (an item in your inventory, a piece for your home, delivered, or a
 // skateboard of your own). Out by the door you came in. The mansion's own cabinets play for free (homeinside.js): no
 // tickets, the high score.
 // (2026-10-25, the owner: "a really awesome arcade in the neon district (we can have the points from all the arcades in
@@ -183,7 +183,7 @@ export function execute(world, p, poi, opt) {
       if (q.item) prof.inventory[q.item] = (prof.inventory[q.item] || 0) + 1;
       else if (q.board) { prof.board = { paint: Math.floor(world.rand() * 14), variant: Math.floor(world.rand() * 1000) }; skate.bringOut(world, p, poi.outside || poi); }
       else { prof.furn ||= {}; prof.furn[q.decor] = (prof.furn[q.decor] || 0) + 1; }
-      world.notify(p, `Won: ${prizeName(q)}${q.decor ? ' - delivered to your home\'s storage (place it from the hall table: Decorate)' : q.board ? ' - by the door outside (the vehicle button steps on and off it)' : ' - in your bag'}.`, 'good');
+      world.notify(p, `Won: ${prizeName(q)}${q.decor ? ' - delivered to your home\'s storage (place it from the hall table: Decorate)' : q.board ? ' - by the door outside (the vehicle button steps on and off it)' : ' - in your inventory'}.`, 'good');
       p.meDirty = true;
       store.touch();
       return null;

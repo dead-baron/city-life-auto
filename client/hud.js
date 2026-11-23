@@ -1,6 +1,7 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, shop menus, death screen, radar + big map.
 import { logNote, noteLine, promptWords, promptFades, fitPrompt } from './notelog.js';
+import { loadout } from '../shared/loadout.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -127,8 +128,10 @@ export class HUD {
   quickBar(me) {
     const el = $('qbar');
     if (!el) return;
-    const q = me.dead ? [] : (me.quick || []), any = q.some(Boolean);
-    const key = any ? q.map((id) => (id ? `${id}:${me.inv[id] || 0}${ITEMS[id] && ITEMS[id].light ? (me.light ? '+' : '-') : ''}` : '')).join() + '|' + keyName('use') + (QB_ART ? 'a' : '') : '';
+    // (a keyboard's: touch and a pad keep the quick wheel - the owner, 11-22 N7; on a phone the strip sat under BAG with
+    // "HOLD HOLD BAG" - the touch key's own name is "hold BAG" - 11-23)
+    const q = me.dead || input.device !== 'keyboard' ? [] : (me.quick || []), any = q.some(Boolean);
+    const key = any ? q.map((id) => (id ? `${id}:${me.inv[id] || 0}${ITEMS[id] && ITEMS[id].light ? (me.light ? '+' : '-') : ''}` : '')).join() + (QB_ART ? '|a' : '') : '';
     const now = performance.now();
     if (any && now - (this.qbAt || 0) > 500) {   // (sat on the weapon plate, whatever its height: measured twice a second, not every frame)
       this.qbAt = now;
@@ -141,7 +144,7 @@ export class HUD {
     if (!any) { el.innerHTML = ''; return; }
     if (!QB_ART && !QB_P) QB_P = import('./itemart.js').then((a) => { QB_ART = a; el.dataset.q = ''; }).catch(() => {});
     const pic = (id) => (QB_ART && QB_ART.itemIcon(id)) || '<span class="ic">•</span>';
-    el.innerHTML = `<span class="qk">HOLD ${esc(keyName('use'))}</span>` + Array.from({ length: 4 }, (_, i) => {
+    el.innerHTML = Array.from({ length: 4 }, (_, i) => {
       const id = q[i], n = id ? me.inv[id] || 0 : 0, I = id && ITEMS[id];
       if (!I) return `<button type="button" class="qb empty" tabindex="-1" aria-label="Empty slot"></button>`;
       const tag = I.light ? (me.light ? 'on' : 'off') : n > 1 ? `x${n}` : n ? '' : '0';
@@ -345,7 +348,10 @@ export class HUD {
       requestAnimationFrame(tick);
     } else if (!me.reloading && this.rlAt) { this.rlAt = 0; fb?.classList.remove('cooling'); }
     const ow = me.weapons.find((x) => x.id === me.weapon);
-    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : '';   // (UI-9: no standing "TAB to switch" - the first-time hints and the README say it)
+    // (on touch the plate is a round button: the count without its spaces, and smaller when it's long - "30 | 120" ran
+    // past its sides on a phone upright, 11-23; test/hudlayout's cut check)
+    const tAm = input.device === 'touch', amT = w.mag ? (me.reloading ? (tAm ? 'RELOAD' : 'RELOADING') : `${ow ? ow.mag : 0}${tAm ? '|' : ' | '}${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : '';
+    $('w-ammo').textContent = amT; $('w-ammo').classList.toggle('long', tAm && amT.length > 5);   // (UI-9: no standing "TAB to switch" - the first-time hints and the README say it)
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
     const wg = $('w-glyph'), gk = glyphOfWeapon(me.weapon, w.type);   // (on touch the button shows what you hold as a one-color silhouette - the owner, 11-03)
@@ -355,9 +361,10 @@ export class HUD {
       const hg = document.querySelector('#tbtns [data-lbl="HIT"] svg.gl');
       if (hg) hg.outerHTML = monoGlyph(iconOf('fire', 'HIT'));
     }
-    // the quick weapons (UIC-11/12: under what you hold, the next ones you carry - their number keys on a keyboard; a
-    // click takes one out: client/main.js)
-    const qk = me.weapons.map((x, n) => [x, n]).filter(([x]) => x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');
+    // the quick weapons (UIC-11/12: under what you hold, the others of your weapon slots - Gun 1, Gun 2, Melee, Thrown:
+    // shared/loadout.js - with their number keys 1-4 on a keyboard, as the Inventory's quick bar; a click takes one out:
+    // client/main.js)
+    const qk = loadout(me.weapons.map((x) => x.id)).map((id, n) => [me.weapons.find((x) => x.id === id), n]).filter(([x]) => x && x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');
     if ($('w-quick').dataset.q !== qs) {
       $('w-quick').dataset.q = qs;
       $('w-quick').innerHTML = me.dead ? '' : qk.map(([x, n]) => { const d = WEAPON_BY_ID[x.id]; return d ? `<button type="button" class="wq" data-w="${esc(x.id)}" title="${esc(d.name)}${n < 9 ? ` (${n + 1})` : ''}" aria-label="${esc(d.name)}"><img alt="" src="${weaponThumb(d.i)}">${n < 9 ? `<span class="kchip kbm-only">${n + 1}</span>` : ''}</button>` : ''; }).join('');

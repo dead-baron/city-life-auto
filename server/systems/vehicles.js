@@ -606,7 +606,7 @@ export function tryEnter(world, ped, noBoard = false) {
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
   { const no = p && v.def.police ? careers.vehicleRefusal(p, v.model) : null; if (no) { world.notify(p, no, 'warn'); return false; } }   // (the SWAT truck, the helicopter: by police rank - careers.js)
   if (v.def.surfboard) return !!p && gear.pickUp(world, p, v);   // (a surfboard set down: up under your arm - yours only: gear.js)
-  if (p && !gear.canEnter(world, p, ped)) return false;   // (not on rollerblades; a board in your hand goes in your bag - gear.js)
+  if (p && !gear.canEnter(world, p, ped)) return false;   // (not on rollerblades; a board in your hand goes in your inventory - gear.js)
   if (v.def.board) {   // a skateboard on the ground: taken up and ridden as the board (skate.js) - someone else's, theft
     const crime = p ? entryInfo(world, p, v).crime : null, victim = v.owner ? world.players.get(v.owner)?.ped || null : null, x = v.x, y = v.y;
     if (!p || !skate.mount(world, p, ped, v)) return false;

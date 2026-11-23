@@ -24649,6 +24649,73 @@ number in those lists moves):
   and night (the owner's folder of the job). Re-keys World v3's hashes (`world3`, `art3`) once; today's world and art
   hashes stay (chunks baked the same carry over: server/artcdn.js).
 
+## 2026-11-16 · The Inventory (was the Bag): your character, your clothes, your weapons, quick switching
+
+The owner (11-16, with two screenshots of the Bag): "The inventory system needs a huge overhaul. Too hard to navigate.
+Hard to see what I have. On desktop the inventory is all squished to the side. When I'm trying to play an instrument I
+can't see what I'm doing on the screen. I can't change my clothes or take off clothes ... It doesn't need to be called a
+bag, just Inventory." Built to the concepts U6, U14, U15, CC10 and UIC-19.
+
+- **The screen** (client/bag.js, style.css "the Inventory"): named INVENTORY everywhere you see it (the hub's head, the
+  pause list, Settings' controls, the Guide, the quick wheel, the server's "in your inventory" lines). On a desktop or a
+  phone on its side three columns that use the screen (the frame was 720 px wide, unzoomed - the "squished to the side"):
+  your character | the grid under its tabs with the quick bar | the details. Upright: the character on top, the grid under
+  it, the details a sheet from the bottom. The tabs are U14's seven - All, Clothes, Weapons, Tools, Food & Meds,
+  Materials, Valuables - and wrap rather than run off the edge ("Healin" cut off is gone); the weapon slots' labels are
+  short words in the UI face, never two on one tile (MELEE and THROWN ran together). The sort stays.
+- **Your character** (U6, U15): the game's own sprite of your look (client/art2/people.js through lookArt, as the city
+  draws you - not the close-up renderer), breathing, turned with the arrows or a drag. A vest you wear shows over it (it
+  draws your ped's own look code). The slots round it - Hat, Top, Jacket, Bottoms | Glasses, Accessory, Bag, Shoes (a
+  dress or a set fills the top's slot as OUTFIT, the bottoms' says "with the outfit") - each with an X to take it off;
+  TAKE IT ALL OFF; SAVED LOOKS (CC10) shows your saved looks as small figures, a tap puts that look's clothes on. Health,
+  armor and stamina bars under it.
+- **The character fills its stand** (the owner's review of the first shots: "character is super short in that space"):
+  the stand was stretched to the column's height with a small figure at its foot. Now the stand is sized by the slots
+  round it, the column is wider (the figure gets the room between the slots), and the sprite - its true proportions, the
+  widest and tallest of its eight turns - is scaled by whole device pixels (the desktop's zoom included) to about 85-90%
+  of the stand, centered, feet on the shadow, the turn arrows in the top corners beside the head. The item counts sit on
+  their own line under the names (they ran over them on a phone upright). invlayout.test.js fails a count on a name and
+  a character under 70% of its stand.
+- **Clothes from the inventory, on the server** (server/systems/looks.js): `{ t: 'look', a: 'off', s: slot | 'all' }`,
+  `a: 'wear', id` (a piece you own, in its colors or the ones worn), `a: 'outfit', i` (a saved look's clothes over your
+  own body and hair). All three go through the creator's own `put()`: refused in cuffs, in uniform, and **while you're
+  wanted anywhere but inside your own home** - and only a change at home counts as a disguise (the home's "Change
+  outfit"), as before. So changing out in the street is never a free way to shed the police; the disguise benefit stays
+  where it was (home, the stores' fitting rooms). Everything off leaves the underwear the renderer draws under nothing (a
+  tank or a bare chest, briefs). A top or bottoms over a dress takes the dress off and puts on bottoms (or a top) of yours.
+  The clothes you own are in the grid too (the Clothes tab, and All), each with its colors; WEAR / TAKE OFF in the
+  details' third place.
+- **Weapons at a glance, switched without opening it** (shared/loadout.js - the server's arms.js reads it too; the weapon
+  numbers moved to shared/rules-arms.js, re-exported by rules.js, so the page's start-up code stays off rules.js): the quick
+  bar under the grid has eight slots - 1 GUN 1, 2 GUN 2, 3 MELEE, 4 THROWN (the guns and throwable that take a slot, the
+  melee slot the dear blade else a bat or a knife), then 5-8 the four things to use (pin one from its details, or drag a
+  tile onto the slot). In play the number keys 1-4 take those weapons out (again: put it away), 5-8 use the things, 9
+  your fists - the HUD's weapon plate shows the others of the four with their keys (was the n-th weapon you carried). Tab:
+  a tap the next weapon (on its release), held the weapon wheel - point with the mouse, let go (as RB on a pad). The
+  mouse wheel steps through them as before. On touch the weapon button's hold opens a ring of your weapons in the middle
+  of the screen (a tray only past twelve) - tap one. The pad's wheel (hold RB) and the quick wheel (hold View / X /
+  ITEMS) as they were. No new panel on the HUD.
+- **Instruments** (client/music/play.js): PLAY on an instrument puts the Inventory away; the pads are one see-through
+  strip along the foot of the screen (eight in a row, CHORD and GIG over them; 22% of the screen's height at most, never
+  over your character), the gig's track list and a set's result grow it upward while they show. Your character holds and
+  plays it in the city for everyone (the server's descriptor `pp`, as the buskers: sax, violin, bucket drums, guitar - the
+  keytar as a guitar), and the Inventory's figure plays the instrument you pick. While you play, the dance key (G, one of the
+  pads) no longer starts a dance that took the instrument's pose away (server/systems/dance.js). A gun in your hands goes away while you
+  play (both hands on the instrument; the city drew the gun in place of it) and comes back when you put it away.
+- **A gamepad**: LT / RT change the Inventory's tabs (LB / RB stay the hub's screens, the rule since UI-3), the D-pad or
+  stick moves, A picks, X equips, wears or takes off, Y drops, B backs out of the details then the screen.
+- What I took from similar games: GTA V's weapon wheel (hold a button, point, let go - our Tab / RB / the ring on touch);
+  Stardew Valley's and Terraria's hotbar (the number keys and the scroll wheel switch without opening anything, the
+  inventory a grid with the hotbar along its foot, drag to the bar); Project Zomboid's equip slots (what you wear and hold
+  by slot round the body, each with its own way off) and its item details beside the grid.
+- The Guide: "Your Inventory" rewritten, new "Quick bar and weapon wheel" and "Playing an instrument" (controls by name:
+  [[bag]], [[invtab]], [[quick]], [[nextw]], [[wpnwheel]], [[use]], [[pads]], [[chord]], [[back]] - shared/controls.js
+  gains `quick` and `invtab`; the keyboard's `wpnwheel` is HOLD TAB). README's controls rows updated.
+- Tests: wardrobe.test.js (clothes off, all off, a piece of yours on, a saved look's clothes, a top over a dress; refused
+  while wanted in the street and the heat unchanged), invlayout.test.js (the Inventory measured in headless Chrome at
+  1920x1080, 1280x720, the owner's 1896x1927 window, 844x390, 740x360, 390x844, 360x740, 1024x768 and with a pad:
+  nothing off the screen, nothing cut off, no button on another), music (the pad strip's taps; the drums' pose on the
+  player's ped), hub / uiscreens / uitokens / guide / gamepad / arms updated.
 ## 2026-11-15 - The district craft pass, first wave: the Neon Strip and the Pink Mile
 The owner (11-14 20:28): "Big open spaces (like in the Neon Strip) are way too big and open and the lights don't act like
 lanterns, they just look like random lights strung around. We should be looking at every area and going back through
@@ -26483,3 +26550,93 @@ basalt mass (11-21) stood over the cove's fire ring (world3-coast.js), and the g
 left open, under drawn rock. Now the ring moves, with its seats, driftwood and lantern, to the nearest open sand at
 least 3 tiles clear of the rock (within 8 tiles: it stays the cove's - test/world3coast), and every tile of the rock is
 solid (shared/world3-caves.js). cliffs, world3caves, world3coast, caveexit, cavelight, natcave pass.
+## 2026-11-23 · The quick bar: a keyboard's only, no hold-key label
+
+The owner (11-23, a phone upright): "the quick bar is covered by other buttons and we don't need the text next to the
+quick bar". The bar was meant for a desktop (11-22 N7: touch and a pad keep the quick wheel) but showed on every device,
+and its "HOLD <key>" label read "HOLD HOLD BAG" on touch (the key's own name is "hold BAG"). client/hud.js quickBar now
+draws nothing unless the device is a keyboard, and the label is gone everywhere (the slots' tooltips name the items).
+test/quickbar.test.js checks both. The first step of the 11-23 UI pass.
+
+## 2026-11-23 · UI pass, batch 1: the ellipsis, the touch ammo, the quick bar in the layout test
+
+The owner (11-23): "a proper UI pass to make sure everything looks right across all devices". The HUD shot at every size
+(test/hudpage.js through Playwright at exact viewports) and looked at, the misses turned into checks:
+- **The cut-off mark read as "_"**: the pixel font's bold widens every stroke a pixel, and the ellipsis' three dots one
+  apart ran into a bar - on every line cut short (the job line, the prompt). The dots now two apart, the quotes too (" was
+  a block); tools/build-pixelfont.py, the fonts rebuilt; test/pixelfont.test.js keeps the dot marks apart in bold.
+- **The touch weapon button's ammo** ("30 | 120") ran past both sides on a phone upright: on touch the count is written
+  without its spaces ("30|120", "RELOAD") and a size smaller when it's long (client/hud.js, style.css `#w-ammo.long`).
+  test/hudpage.js now checks words that must fit inside their button (`cut`), the ammo first.
+- **The quick bar in the layout test**: the HUD test page never drew it, so nothing measured it (how it sat under BAG on a
+  phone went unseen). It's drawn there now for a keyboard, and it found one more: at 844x390 the fishing panel ran into it -
+  on a window that short the bar hides (the 5-8 keys still use the slots).
+
+## 2026-11-23 · The Inventory brought up to date; underwear, socks and towels
+
+The 11-16 Inventory (branch `inventory`) merged with a week of `main`: main's bag changes carried into it (the item and
+weapon pictures, the Inventory getting out of the way when you take out an instrument, a board, a rod or fireworks -
+`leavesBag`, a tile's tag and count in a footer of its own, the EQUIP line), the HUD's quick bar a keyboard's only.
+- **Underwear and socks slots** (main's 11-20 characters pass added the slots): UNDIES on the left, SOCKS on the right,
+  five a side - the slots a little shorter so the figure still fills its stand (test/invlayout: 70%+). JEWELRY for the
+  accessory slot (ACCESSORY was cut off).
+- **REMOVE ALL** (the owner, 11-23: "let's not say take it all off that sounds suggestive") leaves the underwear on. The
+  underwear's own X, swapping it, or a towel in its place happen only where you can change - at home, at a bathhouse,
+  under a shower (`server/systems/looks.js` `changingSpot`; elsewhere a note says where). Two towels everyone owns, worn
+  in the underwear's place: a bath towel wrapped chest to knee and one round the hips (`shared/lookcore.js`, the
+  renderer's towel shapes; shown in the Clothes tab). test/wardrobe.test.js.
+- **Smaller fixes seen in the shots**: a held gun's tile shows its slot number on a cream tag (IN HAND and 12|36 didn't
+  fit a phone's tile together), the quick bar's filled slots without the cut-off names (the tooltip has them), the keys
+  line wraps, "Food & Meds" wraps in the side rail rather than being cut.
+
+## 2026-11-23 · The stash in the Inventory
+
+The owner (11-23): "store items in my home or safe lockers around the world ... and you can access the same pool of
+items/inventory/weapons". One pool per character (profile.stash: the home safe's, the gun counters' and the fridge's, as
+before) now opens in the Inventory: **Open your stash** inside your home, at a gun or pawn shop's counter (its stash
+menu) or at your hideout's office (yours or your crew's) - server/systems/stash.js: `p.stashAt` the door it was opened
+at, closed once you walk off (STASH.reach), leave the home, die or are held; `{ t: 'stash', a: 'put' | 'take', k, id,
+n? }` moves an item (any number) or a weapon with its rounds (arms.js toStash / fromStash: its class full, one swaps back
+in). The page (client/bag.js): a CARRIED | STASH switch over the tabs (the stash first), the same tabs and tiles; a
+stashed thing's details TAKE ALL / TAKE ONE, a carried one's TO STASH / ONE TO STASH; with a mouse drag a tile onto the
+other side's button. Clothes stay in the wardrobe (always yours). The Guide's "Your stash", the README's row.
+test/stash.test.js (doors, moves, closing, the same pool at another door); test/invlayout.test.js measures the stash
+open at every size (on a phone on its side the switch got a row of its own over the rail). The side-by-side screen waits
+for the owner's concept (UIC-21, prompt in the project: claude/stash-concept-prompt-2026-11-23.md).
+
+## 2026-11-23 · Press and drag in the Inventory, on every device
+
+The owner (11-23): "I want to be able to click/press and drag things into slots (or also just when you select an item it
+has an equip or use button still)". One drag for a mouse and a finger (client/bag.js dragStart - the HTML drag and drop
+went: it never worked on touch): a mouse drags once it moves, a finger once it has held still a moment (HOLD_MS - before
+that the grid scrolls as ever; a finger moving first is a scroll). The tile follows the pointer; where it can go lights
+up; let go over a quick bar slot 5-8 (a thing you can use: pinned), a weapon slot 1-4 (that weapon in your hand), a
+clothing slot round your character (a piece for it: worn) or CARRIED / STASH (moved there). Every drop keeps its button in
+the details; a pad picks and presses. Found on the way: CARRIED didn't switch the stash's view (the Inventory redraws only
+when what it shows changes, and the side shown wasn't in that) - now it is. test/invdrag.test.js (test/invpage.js
+?drag=1: a mouse, a finger held, a finger scrolling, onto STASH).
+
+## 2026-11-23 · The Inventory's tiles and slots, from the owner's notes
+
+The owner (11-23, on a screenshot): the names cover the art; the ✕ buttons are too big, cut off at the sides or under
+other buttons; "UNDIES" - UNDERWEAR in smaller text; names cut off ("Compone...") - whole if possible.
+- **A tile**: its picture in a box of its own height (48 px: the 24-px art at 2x ran 12 px under the name), the name under
+  it in a smaller size on up to two lines - whole ("Perfect Mountain Goat Hide", "Component Scrap"), never "...". Tiles a
+  little taller (100 px; 96 on a phone upright, 78 on a phone on its side).
+- **The ✕**: a 14-px box on the slot's top corner, inside its column (a 22-px finger's reach round it, invisible); the
+  touch sizes that made it 28 px went.
+- **The slots' labels** a size smaller, their line as tall as before (the figure's stand, sized by the slots, unchanged):
+  UNDERWEAR whole.
+test/invpage.js counts a name cut on its two lines as cut off (the layout test, every size); a long-named hide in the
+test player's kit.
+## 2026-11-23 · A vehicle's trunk
+
+The owner (11-23) took Claude's suggestion: a trunk is its own small storage, not a door to the stash (a car that opened
+the stash would bank what you carry mid-run and undo the extraction stakes). server/systems/trunk.js: kept on the
+vehicle's entry (profile.vehicles[i].trunk), so it stays while the vehicle is parked, through a logoff and a restart, and
+waits with an impounded one; TRUNK.slots by kind (a car 6, a motorbike 2, a truck 10, a boat 6 - a slot a stack of a
+thing or a weapon; more of a kind already in always fits). At the back of a vehicle of yours standing still the action
+button says "Open the trunk (n/6)" and the Inventory shows CARRIED | TRUNK (stash.js serves both: the door says where
+things go - arms.js toStash / fromStash take the pool). Wrecked (insurance.js wrecked): what was in it spills where it is,
+a bag anyone can take. Cargo crates never go in - they ride in the open (cargo.js), so who carries something worth taking
+shows. The Guide's "Your trunk", the README's row; test/trunk.test.js.

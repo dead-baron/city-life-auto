@@ -138,9 +138,9 @@ function open(world, V) {
     const cash = Math.round(HEIST.cash * (ROB_TILL_TIER[V.tier] ?? 1)), each = Math.floor(cash / there.length);
     for (const q of there) {
       hot.add(world, q, each, V.x, V.y);
-      if (q !== p) { q.profile.criminalExp = (q.profile.criminalExp || 0) + Math.round(HEIST.xp / 2); world.notify(q, `The vault's open! Your cut of the drawers: $${each.toLocaleString('en-US')} in your bag (hot money). Get the crates out.`, 'good'); q.meDirty = true; }
+      if (q !== p) { q.profile.criminalExp = (q.profile.criminalExp || 0) + Math.round(HEIST.xp / 2); world.notify(q, `The vault's open! Your cut of the drawers: $${each.toLocaleString('en-US')} in your inventory (hot money). Get the crates out.`, 'good'); q.meDirty = true; }
     }
-    world.notify(p, `The vault door swings open! $${each.toLocaleString('en-US')} from the drawers in your bag (hot money${there.length > 1 ? `, your cut - split ${there.length} ways` : ''}), and ${n} crate${n === 1 ? '' : 's'} on the floor - carry them out to something with an open back and get them to a fence.`, 'good');
+    world.notify(p, `The vault door swings open! $${each.toLocaleString('en-US')} from the drawers in your inventory (hot money${there.length > 1 ? `, your cut - split ${there.length} ways` : ''}), and ${n} crate${n === 1 ? '' : 's'} on the floor - carry them out to something with an open back and get them to a fence.`, 'good');
   } else world.notify(p, `${V.label}'s vault is open - the crates are on the floor for whoever gets there first.`, 'warn');
   p.meDirty = true;
   store.touch();

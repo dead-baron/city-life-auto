@@ -31,7 +31,7 @@
 // A step (a mission): { id, rank (the career rank it waits for, 0-based), t (title), sub (what to do), say (the
 // contact's one line, texted when it's offered), call (what they say when you call), ev (what counts - careers.js note's
 // events, and 'visit' (be at their place), 'handover' (a stolen car driven round to their place), 'have' (an item in
-// your bag: item), 'stakeout' (at the dock shipment's quay while it's on)), n (how many; money: n is $), filt (the
+// your inventory: item), 'stakeout' (at the dock shipment's quay while it's on)), n (how many; money: n is $), filt (the
 // event's data must match: crate (a crate fenced), tier (a crate of this tier or better), src (where the crate came
 // from: 'dock', 'armored', 'vault', 'port'), gentle (an arrest without force)), need ('cop': on duty), place (kinds of
 // place the card points to; 'home': theirs; 'dock': the dock shipment's quay; 'armored': the armored truck run's van),

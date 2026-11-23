@@ -424,7 +424,7 @@ function menuOf(world, p, h, what) {
   } else if (what === 'fridge') {
     title = 'The fridge';
     const food = Object.entries(st.items || {}).filter(([id, n]) => n > 0 && ITEMS[id] && ITEMS[id].food);
-    sub = food.length ? `Health ${Math.round(ped.hp)}/${ped.maxHp}. Something to eat?` : 'Empty. Put food from your bag in here and it keeps.';
+    sub = food.length ? `Health ${Math.round(ped.hp)}/${ped.maxHp}. Something to eat?` : 'Empty. Put food from your inventory in here and it keeps.';
     for (const [id, n] of food) opts.push({ id: `hi:eat:${id}`, label: `Eat ${ITEMS[id].name}`, note: `+${ITEMS[id].heal} health · ${n} in the fridge` });
     // cooking (the owner, 10-06: "home life: cooking"): three things from the fridge into a meal at the stove
     if (!ped.home.guest && !ped.home.tour) {

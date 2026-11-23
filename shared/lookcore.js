@@ -555,6 +555,11 @@ add('bag', 'Surfboard', 'mf', 'beach athletic', 150, 'beach', { carry: 'purse', 
 add('set', 'Crochet cover-up', 'f', 'beach festival', 40, 'beach', { k: 'tee', bk: 'skirt', mesh: 1, crochet: 1, pp: 1 }, 'cream');
 add('shoes', 'Roller skates', 'mf', 'retro athletic festival', 95, 'sports', { k: 'boot', skate: 1, sole: 1, pp: 1 }, 'white', 'pink');
 add('hat', 'Party wig', 'mf', 'festival nightclub disguise', 30, 'costume', { k: 'wig', pp: 1 }, 'pink');
+// (the owner, 11-23: "an option to use a towel as underwear ... at showers or bathhouses") everyone's, free: worn in the
+// underwear's place - a bath towel wrapped chest to knee, or one round the hips - put on where you can change (looks.js
+// changingSpot: home, a bathhouse, a shower); the people renderer's towel shapes (client/art2/people.js T.towel, bk towel)
+add('under', 'Bath towel', 'mf', 'lounge beach', 0, 'clothing', { k: 'towel', bk: 'towel', bath: 1 }, 'white', 'sky');
+add('under', 'Towel round the hips', 'mf', 'lounge beach', 0, 'clothing', { bk: 'towel', bath: 1 }, 'white', 'sky');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;

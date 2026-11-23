@@ -18,6 +18,7 @@ import * as vehicles from './vehicles.js';
 import * as carhits from './carhits.js';
 import * as combat from './combat.js';
 import * as tank from './tank.js';   // (H58)
+import * as trunk from './trunk.js';
 import * as cargo from './cargo.js';
 import * as skate from './skate.js';   // (riding a skateboard: the owner, 2026-10-17)
 import * as armor from './armor.js';   // (a heavy vest: a slower run - armor.js)
@@ -778,7 +779,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (ped.rollT > 0 && (p.badge || p.hunter) && !ped.board) tackle(world, ped);   // (an ollie isn't a tackle)
   const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || tennis.input(world, p, ped, inp, pressed) || bowling.input(world, p, ped, inp, pressed, dt) || firefighter.hose(world, p, ped, inp, pressed, dt);   // (the hose by your fire engine: firefighter.js) (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
   const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && !ped.board && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
-  if ((pressed & IN.FIRE) && !kicked && !swung && ped.held && !ped.board) world.notify(p, `Your hands are full - put the ${ped.held.k === 'surf' ? 'surfboard' : 'skateboard'} in your bag first (the action button).`, 'warn');   // (a board in your hand: gear.js)
+  if ((pressed & IN.FIRE) && !kicked && !swung && ped.held && !ped.board) world.notify(p, `Your hands are full - put the ${ped.held.k === 'surf' ? 'surfboard' : 'skateboard'} in your inventory first (the action button).`, 'warn');   // (a board in your hand: gear.js)
   if ((inp.bits & IN.FIRE) && !kicked && !swung && !ped.board && !ped.held) {   // (on a board: step off to fight)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
     else if (!ped.fishing) {
@@ -936,6 +937,10 @@ export function findInteraction(world, p) {
     if (target) return { label: `Detain ${target.player.name} (collect the bounty)`, run: () => bounties.detain(world, ped, target) };
   }
 
+  {   // at the back of a vehicle of yours, standing still: its trunk (trunk.js)
+    const tr = trunk.interaction(world, p);
+    if (tr) return tr;
+  }
   const bag = cargo.nearestBag(world, ped, true);
   if (bag) return { label: cargo.bagLabel(bag, p), run: () => cargo.lootBag(world, p, bag) };
 

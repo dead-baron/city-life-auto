@@ -6,7 +6,7 @@
 // the hardware store); at a growing one: water it (the rain waters them all). A watering lasts GARDEN.waterDays in-game
 // days; a plant grows only while it's wet, ripe after its crop's days of wet growing (shared/rules.js GARDEN_CROPS); dry
 // GARDEN.wiltDays it wilts (water perks it up - its prize is lost), dry GARDEN.dieDays it dies (clear it and sow again).
-// A ripe one picked: its crop's yield in your bag (eat one: it heals; the grocery and the co-op buy them) - and now and
+// A ripe one picked: its crop's yield in your inventory (eat one: it heals; the grocery and the co-op buy them) - and now and
 // then a prize one, worth GARDEN.prizeX times as much. The plots live with the home in the profile (prof.garden[homeId])
 // and grow while you're away (stepped with the server; what passed while it was down caught up from the wall clock).
 // The page only draws them: the 'garden' message lists the plots near you, anyone's (render/farmart.js).
@@ -331,6 +331,6 @@ export function devGarden(world, p, msg, buy) {
   for (const c of CROP_IDS) prof.inventory[`seed_${c}`] = (prof.inventory[`seed_${c}`] || 0) + 2;
   ped.x = spots[0].x; ped.y = spots[0].y + 30; world.place(ped); moved(ped);
   p.gardenSig = null;
-  world.notify(p, `[dev] ${h.name}'s garden: ${spots.length} plots, planted at every stage, and seeds in your bag.`, 'info');
+  world.notify(p, `[dev] ${h.name}'s garden: ${spots.length} plots, planted at every stage, and seeds in your inventory.`, 'info');
   return null;
 }
