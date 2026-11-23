@@ -349,7 +349,62 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     for (const [id, n] of Object.entries(so.items || {})) if (n > 0 && ITEMS[id]) out.push({ k: 's:i:' + id, kind: 'i', id, name: ITEMS[id].name, n, cat: itemCat(id), inStash: 1, value: (ITEMS[id].sell || 0) * n });
     return out.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'w' ? -1 : 1));
   }
-  const DRAG = 'application/x-cla-inv';
+  // ---- press and drag (the owner, 11-23: "click/press and drag things into slots"): a mouse drags once it moves, a finger
+  // once it has held still a moment (HOLD_MS: before that the grid scrolls as ever); let go over
+  //   a quick bar slot 5-8 - a thing you can use, pinned there; a weapon slot 1-4 - that weapon in your hand;
+  //   a clothing slot round your character - a piece for it, worn; CARRIED / STASH (the stash open) - moved there.
+  // A pad keeps pick-then-press; every drop has its button in the details too.
+  const HOLD_MS = 320, MOVE_PX = 8;
+  let drag = null, swallow = false;
+  const fits = (doll, slot) => doll === slot || (doll === 'top' && slot === 'set');
+  function dropFor(t, at) {
+    if (!at) return null;
+    const q = at.closest('[data-slot]'), w = at.closest('.iv-w[data-q]'), d = at.closest('.iv-slot[data-s]'), v = at.closest('[data-view]');
+    if (q && t.kind === 'i' && !t.inStash && usable(t.id)) return [q, () => send({ t: 'inv', a: 'slot', i: Number(q.dataset.slot), id: t.id })];
+    if (w && t.kind === 'w' && !t.inStash) return [w, () => send({ t: 'weapon', id: t.id })];
+    if (d && t.kind === 'p' && PIECES[t.id] && fits(d.dataset.s, PIECES[t.id].slot)) return [d, () => send({ t: 'look', a: 'wear', id: t.id })];
+    if (v && sOpen() && (v.dataset.view === 'stash') !== !!t.inStash && (t.inStash || stashable(t))) return [v, () => moveTo(t, v.dataset.view === 'stash', false)];
+    return null;
+  }
+  function dragStart(e, t, b) {
+    if (e.button > 0 || drag) return;
+    drag = { t, b, x0: e.clientX, y0: e.clientY, id: e.pointerId, on: false, touch: e.pointerType !== 'mouse', over: null };
+    if (drag.touch) drag.timer = setTimeout(() => { if (drag && !drag.on) lift(drag.x0, drag.y0); }, HOLD_MS);
+    addEventListener('pointermove', dragMove); addEventListener('pointerup', dragEnd); addEventListener('pointercancel', dragEnd);
+  }
+  function lift(x, y) {
+    drag.on = true;
+    const g = document.createElement('div'); g.className = 'iv-ghost'; g.innerHTML = drag.b.querySelector('.bc-ic').innerHTML;
+    document.body.appendChild(g); drag.g = g; el.classList.add('iv-dragging');
+    if (drag.touch && navigator.vibrate) try { navigator.vibrate(12); } catch { /* not allowed */ }
+    place(x, y);
+  }
+  function place(x, y) {
+    drag.g.style.transform = `translate(${Math.round(x - 24)}px, ${Math.round(y - 24)}px)`;
+    const hit = dropFor(drag.t, document.elementFromPoint(x, y)), on = hit && hit[0];
+    if (drag.over !== on) { if (drag.over) drag.over.classList.remove('drop'); if (on) on.classList.add('drop'); drag.over = on; }
+  }
+  function dragMove(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const far = Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > MOVE_PX;
+    if (!drag.on) { if (!far) return; if (drag.touch) { dragEnd(e, true); return; } lift(e.clientX, e.clientY); }   // (a finger moving first: a scroll)
+    e.preventDefault();
+    place(e.clientX, e.clientY);
+  }
+  function dragEnd(e, cancel = false) {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    clearTimeout(drag.timer);
+    removeEventListener('pointermove', dragMove); removeEventListener('pointerup', dragEnd); removeEventListener('pointercancel', dragEnd);
+    const d = drag; drag = null;
+    if (!d.on) return;
+    swallow = true; setTimeout(() => { swallow = false; }, 0);   // (the click a drag ends with isn't a pick)
+    d.g.remove(); el.classList.remove('iv-dragging'); if (d.over) d.over.classList.remove('drop');
+    const hit = !cancel && e && e.type === 'pointerup' ? dropFor(d.t, document.elementFromPoint(e.clientX, e.clientY)) : null;
+    if (hit) hit[1]();
+  }
+  // (a finger held on a tile: no scrolling once it lifts the tile)
+  el.addEventListener('touchmove', (e) => { if (drag && drag.on) e.preventDefault(); }, { passive: false });
+  el.addEventListener('click', (e) => { if (swallow) { e.stopPropagation(); e.preventDefault(); } }, true);
   function cell(t, m) {
     const pin = t.kind === 'i' && !t.inStash ? (m.quick || []).indexOf(t.id) : -1, on = t.kind === 'w' && m.weapon === t.id, ws = t.kind === 'w' ? slotOfWeapon(m, t.id) : -1;
     const b = document.createElement('button');
@@ -366,9 +421,8 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     if (t.kind === 'w') b.querySelector('.bc-ic').appendChild(wIcon(t.id, 64, 32));
     b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; showLooks = false; render(); };
     // (a mouse: drag a thing you can use onto the quick bar's 5-8 - UIC-19)
-    if (t.kind === 'i' && usable(t.id) && !t.inStash) { b.draggable = true; b.ondragstart = (e) => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed = 'move'; if (sOpen()) e.dataTransfer.setData(DRAG, t.k); }; }
-    // (the stash open: drag a tile between what you carry and the stash - 11-23)
-    else if (sOpen() && (t.inStash || stashable(t))) { b.draggable = true; b.ondragstart = (e) => { e.dataTransfer.setData(DRAG, t.k); e.dataTransfer.effectAllowed = 'move'; }; }
+    b.addEventListener('pointerdown', (e) => dragStart(e, t, b));   // (press and drag it into a slot: dragStart)
+    b.oncontextmenu = (e) => e.preventDefault();   // (a finger's long press is a drag, not the browser's menu)
     if (t.inStash) b.classList.add('in-stash');
     return b;
   }
@@ -481,11 +535,6 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     qb.querySelectorAll('.iv-w[data-q]').forEach((b, i) => { if (lo[i]) b.querySelector('.bq-gl').appendChild(wIcon(lo[i], 40, 20)); });
     for (const b of qb.querySelectorAll('[data-q]')) {
       b.onclick = () => { const k = b.dataset.q; if (k.length > 2 && things(m).some((t) => t.k === k)) { sel = k; armDrop = ''; render(); } };
-      if (b.dataset.slot !== undefined) {
-        b.ondragover = (e) => { e.preventDefault(); b.classList.add('drop'); };
-        b.ondragleave = () => b.classList.remove('drop');
-        b.ondrop = (e) => { e.preventDefault(); b.classList.remove('drop'); const id = e.dataTransfer.getData('text/plain'); if (id && ITEMS[id]) send({ t: 'inv', a: 'slot', i: Number(b.dataset.slot), id }); };
-      }
     }
     $q('.iv-keys').textContent = input.device === 'touch' ? 'Tap the weapon button: next weapon - hold it for the wheel.' : input.device === 'gamepad' ? `${keyName('nextw')}: next weapon - hold it for the wheel. Hold ${keyName('use')}: the quick wheel.` : `Keys 1-8 in play · mouse wheel or ${keyName('nextw')}: next weapon · hold ${keyName('nextw')}: the wheel`;
   }
@@ -512,7 +561,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     // the server's 'me' comes many times a second: rebuild only when something shown changed (a button swapped under
     // the pointer between press and release loses the click), else just the bars
     const st0 = looks();
-    const sig = JSON.stringify([stash(), m.weapons, m.weapon, m.inv, m.quick, m.cash, m.crew && m.crew.ids, m.blade, m.light, m.creel, st0 && st0.cur, st0 && st0.own, st0 && st0.saved, look(), pp(), tab, sort, sel, armDrop, showLooks, input.device, portrait()]);
+    const sig = JSON.stringify([view, stash(), m.weapons, m.weapon, m.inv, m.quick, m.cash, m.crew && m.crew.ids, m.blade, m.light, m.creel, st0 && st0.cur, st0 && st0.own, st0 && st0.saved, look(), pp(), tab, sort, sel, armDrop, showLooks, input.device, portrait()]);
     if (sig === lastSig && force !== true) { stats(m); return; }
     lastSig = sig;
     if (DEBUG) { window.__invSig = sig; window.__invRenders = (window.__invRenders || 0) + 1; }   // (the capture scripts: what a rebuild was for)
@@ -542,11 +591,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
       seg.innerHTML = [['carried', 'CARRIED', nOf(all.filter(stashable))], ['stash', 'STASH', nOf(sAll)]].map(([v, n, c]) => `<button class="chip${view === v ? ' on' : ''}" role="tab" aria-selected="${view === v}" data-view="${v}">${n}<small>${c}</small></button>`).join('')
         + `<button class="btn bag-shx" type="button" data-sx="1" title="Close the stash (${esc(so.where || 'your stash')})" aria-label="Close the stash">CLOSE</button>`;
       for (const b of seg.querySelectorAll('[data-view]')) {
-        const put = b.dataset.view === 'stash';
         b.onclick = () => { view = b.dataset.view; sel = null; render(); };
-        b.ondragover = (e) => { if ([...e.dataTransfer.types].includes(DRAG)) { e.preventDefault(); b.classList.add('drop'); } };
-        b.ondragleave = () => b.classList.remove('drop');
-        b.ondrop = (e) => { e.preventDefault(); b.classList.remove('drop'); const k = e.dataTransfer.getData(DRAG), t = [...all, ...sAll].find((q) => q.k === k); if (t && !!t.inStash !== put) moveTo(t, put, false); };
       }
       seg.querySelector('[data-sx]').onclick = () => send({ t: 'stash', a: 'close' });
       if (view === 'stash') {

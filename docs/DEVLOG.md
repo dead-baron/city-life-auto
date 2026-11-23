@@ -26265,3 +26265,15 @@ other side's button. Clothes stay in the wardrobe (always yours). The Guide's "Y
 test/stash.test.js (doors, moves, closing, the same pool at another door); test/invlayout.test.js measures the stash
 open at every size (on a phone on its side the switch got a row of its own over the rail). The side-by-side screen waits
 for the owner's concept (UIC-21, prompt in the project: claude/stash-concept-prompt-2026-11-23.md).
+
+## 2026-11-23 · Press and drag in the Inventory, on every device
+
+The owner (11-23): "I want to be able to click/press and drag things into slots (or also just when you select an item it
+has an equip or use button still)". One drag for a mouse and a finger (client/bag.js dragStart - the HTML drag and drop
+went: it never worked on touch): a mouse drags once it moves, a finger once it has held still a moment (HOLD_MS - before
+that the grid scrolls as ever; a finger moving first is a scroll). The tile follows the pointer; where it can go lights
+up; let go over a quick bar slot 5-8 (a thing you can use: pinned), a weapon slot 1-4 (that weapon in your hand), a
+clothing slot round your character (a piece for it: worn) or CARRIED / STASH (moved there). Every drop keeps its button in
+the details; a pad picks and presses. Found on the way: CARRIED didn't switch the stash's view (the Inventory redraws only
+when what it shows changes, and the side shown wasn't in that) - now it is. test/invdrag.test.js (test/invpage.js
+?drag=1: a mouse, a finger held, a finger scrolling, onto STASH).

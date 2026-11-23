@@ -1819,6 +1819,11 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag-where { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--dim); font: 600 var(--fs-2) var(--ui); }
 .bag-shx { flex: none; margin-left: auto; min-height: 32px; padding: 0 var(--s2); font-size: var(--fs-1); }
 .bag-cell.in-stash { background: var(--navy); border-style: dashed; }
+/* press and drag (client/bag.js dragStart): the tile follows the pointer; where it can go lights up */
+.bag-cell { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.iv-ghost { position: fixed; left: 0; top: 0; z-index: 9999; display: grid; place-items: center; width: 48px; height: 48px; border: 2px solid var(--gold); border-radius: var(--r2); background: var(--navy2); box-shadow: 0 4px 12px rgba(0, 0, 0, .5); pointer-events: none; opacity: .92; }
+.iv-ghost canvas, .iv-ghost img, .iv-ghost svg { max-width: 36px; max-height: 36px; image-rendering: pixelated; }
+.iv-dragging .bag-slot.drop, .iv-dragging .iv-slot.drop .iv-sb, .iv-dragging .bag-seg .chip.drop { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), inset 0 0 0 1px var(--gold); }
 .bd-stash { display: flex; gap: var(--s1); margin-bottom: var(--s2); } .bd-stash .btn { flex: 1; min-width: 0; }
 .bag-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 86px; min-width: 0; padding: var(--s2) 4px 4px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy); color: var(--cream); font: 600 var(--fs-1) var(--ui); cursor: pointer; touch-action: manipulation; transition: border-color var(--t1) var(--ease); }
 .bag-cell:hover { border-color: var(--gold-a); }
