@@ -565,6 +565,8 @@ const KITS = { ac: [30, 22, 16], acs: [18, 14, 11], hvac: [44, 30, 22], vent: [1
   // a roof garden's (gardenKit): 'bed|w|d|h|box|plant|v' a raised bed of any size (its height here: the tallest planting's top), 'tree|kind|box|v'
   bed: [48, 20, 44], tree: [24, 24, 78], perg: [44, 34, 36], bench: [32, 10, 14], shed: [30, 24, 40], butt: [12, 12, 17], comp: [18, 16, 13], lant: [6, 6, 16], dome: [190, 190, 174], gdome: [100, 100, 102], cdome: [94, 94, 97] };
 // 'neon|TEXT|c' is a lit sign standing at the roof's front edge (c: its NEONC colour)
+// a place's name short enough for a roof sign: 'the' and its trade's word dropped, whole words up to 14 letters
+const doorName = (n) => { const w = String(n || 'OPEN').toUpperCase().replace(/[|]/g, ' ').replace(/\b(THE|CASINO|RESORT)\b/g, ' ').split(/\s+/).filter(Boolean); let o = ''; for (const x of w) { if ((o ? o.length + 1 : 0) + x.length > 14) break; o = o ? o + ' ' + x : x; } return o || (w[0] || 'OPEN').slice(0, 14); };
 const kitBase = (k) => k.replace(/@$/, '').split('|')[0];
 function kitModel(k) {
   switch (k) {
@@ -1512,6 +1514,15 @@ function specOf(c, b, A, s, D) {
     if (up && (capped || upBlocks(c, b, s, roofDeckZ(spec) + buildingH(up.spec)))) up = null;   // (lowered over the street, or its setback storeys would cover it: none on top - streetCap)
     const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null, b.kind === 'roof' && !b.art && !b.hero && !(b.signs && b.signs.length));   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
+    // (a walk-in that opens on its north side, the side this camera doesn't see - the Strip's resorts south of the
+    // boulevard, Old Downtown's casinos on the south of the covered street: a lit sign with its name at the roof's north
+    // edge over its doorway, so the way in reads from the street it faces - the owner, 11-23: "Keep, make doors read")
+    if (b.walkIn && !b.walkIn.south && s.row === 0) for (const u of b.walkIn.units || []) {
+      if (!u.door || u.door.tx < s.tx || u.door.tx >= s.tx + s.tw) continue;
+      const q = c.M.pois && c.M.pois[u.poi], x = Math.max(62, Math.min(w - 62, (u.door.tx - s.tx + (u.door.w || 2) / 2) * TILE));
+      kit = kit.filter(([k, kx, ky]) => !(Math.abs(kx - x) < 90 && ky < 40));
+      kit.push([`neon|${doorName(q ? q.label : u.kind)}|${(b.id + u.poi) % 7}`, Math.round(x), 8]);
+    }
     if (up) { const KU = kitFor(A, up.spec.w, up.spec.d, rnd, tier, up.spec); up.kit = KU.kit; if (KU.pads.length) up.spec.pads = KU.pads; }
     // the lit kit lights its roof: festoons, neon signs, skylights
     const zD = roofDeckZ(spec), kl = (list, ox, oy, z) => { for (const [k, rx, ry] of list) { const b = kitBase(k), X = ox + rx, Y = oy + ry - d;

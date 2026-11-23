@@ -184,7 +184,8 @@ test('World v3: the park block - the station\'s board, Park West Motors and its 
   for (const name of ['Lane Mart', 'Park West Coffee', 'Greenfield Flowers']) {
     const q = M.pois.find((o) => o.label === name);
     assert.ok(q && M.buildings[q.b] && M.buildings[q.b].art.shop.sign, `${name}: its shopfront`);
-    assert.deepEqual(over(q.x, q.y - 8, 60, 60), [], `${name}'s front`);
+    const f = q.outside || q;   // (a walk-in's place is at its counter inside since 11-23 - its front is outside the door)
+    assert.deepEqual(over(f.x, f.y - 8, 60, 60), [], `${name}'s front`);
   }
   // no road in it - the lane and the alley are paving, so no traffic routes in - and no road edge into it
   const [X0, X1] = [PARK_WEST.x0, PARK_WEST.x1], Y0 = PARK_WEST.lot[1], Y1 = PARK_WEST.walk;

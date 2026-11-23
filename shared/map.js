@@ -427,7 +427,7 @@ function buildCity(seed, opts = null, frame = null) {
   if (hosp || !(OPTS?.island || fb)) m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 }; else if (fb) m.spawns.hospital = fb;
   if (pd || !(OPTS?.island || fb)) m.spawns.police = { x: pd.x, y: pd.y + 44 }; else if (fb) m.spawns.police = fb;
   m.spawns.default = m.spawns.hospital;
-  if (OPTS?.done) OPTS.done(m, { removeProps, addProp });   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js; the main line's dressing cleared)
+  if (OPTS?.done) OPTS.done(m, { removeProps, addProp, walkInRoom, WALK_IN });   // (walkInRoom: a hand-built block laid late gets its rooms - Greenfield Park's shops, 11-23)   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js; the main line's dressing cleared)
   naturalFinds(m);   // (Nature-D1: the wilds' finds - shared/foraging.js)
   buildLoadingBays(m);   // (the forklift yards' pallet rows and their marked loading bays across the yard - shared/loadbays.js: data only, no tile or prop)
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)

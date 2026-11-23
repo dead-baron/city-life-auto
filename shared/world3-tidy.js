@@ -231,6 +231,36 @@ export function binBags3(m, H3) {
   }
   return n;
 }
+// A walk-in that opens on its north side (the side the camera doesn't see - its roof covers the step) gets an A-board out
+// in front of it, in line with its doorway, as far out as its roof hides (NORTH_BOARD.out tiles, nearer if the paving
+// ends): the way in reads from the street it faces. With the lit sign on its roof's north edge (art: statics.js) - the
+// owner, 11-23: "Keep, make doors read". On paving only (a pavement, a plaza, a lot), clear of other things.
+export const NORTH_BOARD = { out: 6, min: 3, clear: 20 };
+const BOARD_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.LOT]);
+export function northDoorBoards3(m, H3) {
+  if (!H3 || !H3.addProp || !Array.isArray(m.props)) return 0;
+  let n = 0;
+  for (const id of m.walkIns || []) {
+    const b = m.buildings[id];
+    if (!b || !b.walkIn || b.walkIn.south || b.gone) continue;
+    for (const u of b.walkIn.units || []) {
+      if (!u.door) continue;
+      const x = (u.door.tx + (u.door.w || 2) / 2) * TILE;
+      let at = -1;
+      for (let k = 1; k <= NORTH_BOARD.out; k++) {
+        const tx = Math.floor(x / TILE), ty = u.door.ty - k;
+        if (!m.inside(tx, ty) || !BOARD_GROUND.has(m.tiles[m.idx(tx, ty)])) break;
+        if (k >= NORTH_BOARD.min) at = ty;
+      }
+      if (at < 0) continue;
+      const y = (at + 0.5) * TILE;
+      if (m.props.some((q) => q && Math.abs(q.x - x) < NORTH_BOARD.clear && Math.abs(q.y - y) < NORTH_BOARD.clear)) continue;
+      H3.addProp(m, 'aboard', Math.round(x), Math.round(y), 0);
+      n++;
+    }
+  }
+  return n;
+}
 export function strayBags3(m) {
   if (!Array.isArray(m.props)) return 0;
   const gone = new Set(strayBags(m));

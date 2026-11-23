@@ -118,7 +118,7 @@ export const LINT_ALLOW = {
   // the places you'd walk into still served at the wall: a building too shallow for a room (Pelican Key Charters, a few
   // of World v3's added shop rows), a row shared with a place that isn't a shop (Egret Marsh Outfitters' and the Marsh
   // Bait & Tackle's), a lot building with a home or a bay behind the same front, the hand-built Greenfield Park shops
-  wallOnly: 12,   // (11-22 night: a walk-in may share its row with a counter at the wall - map.js WALL_POIS)
+  wallOnly: 10,   // (11-22 night: a walk-in may share its row with a counter at the wall - map.js WALL_POIS; 11-23: Greenfield Park's two shops)
   // (the owner's 11-17 notes, tools/audit/worldrows.mjs - what each row means is there)
   plantOnWalk: 0,           // trees (not a street tree in its grate, nor a boulevard median's), shrubs, bushes, hedges on a sidewalk, road, lot (a plaza outside the paved districts) - 2,914 at the audit; 0 since shared/world3-walks.js (11-22)
   planterOnWalk: 0,         // planters and pots on a sidewalk, a road or a lot, not set against a wall - 422 at the audit; 0 since 11-22

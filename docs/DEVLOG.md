@@ -26426,3 +26426,23 @@ consider topographical levels". Both withdrawn. What stands:
   Southside 71 of 207 bins, The Yards 3 of 10 (its bins are mostly trash piles already). Seen in pictures (Southside: a
   bag beside the can on the pavement). `test/binbags.test.js` (+1). DECISIONS: the three calls of 11-23 07:09 (rooms for
   Lane Mart and Park West Coffee, these bags, casinos facing the street).
+
+## 2026-11-23 - World batch: Greenfield Park's shops get rooms; doors that open north made to read
+- The owner (11-23 07:09): "I think they should get rooms yes". Lane Mart and Park West Coffee (the city arrival's
+  shops, Greenfield Park) are walk-ins now: the park block is built in a late pass, after the city's rooms were laid,
+  so the done hook gets the room helper (`shared/map.js`: walkInRoom, WALK_IN) and `world3-firstcars.js` parkWest3 lays
+  them (the florist stays a delivery front). Seen in pictures from inside: the mart's shelves and checkout, the cafe's
+  counter and tables (foodrooms.js lays the tables from the room). wallOnly 12 -> 10. `test/world3arrivals.test.js`:
+  a shop's front is now the spot outside its door (`outside`) - its place is at the counter inside.
+- The casinos (the owner's pick of three, 11-23: "Keep, make doors read"): the Strip's resorts south of the boulevard
+  and Old Downtown's casinos on the south of the covered street front their street on the north side, the side this
+  camera doesn't see - kept, and every walk-in that opens north is made to read: a lit sign with its name on its roof's
+  north edge over the doorway (art: `client/art2/game/statics.js`, the roof kit's neon - doorName), and an A-board out on
+  the paving in line with the door as far out as the roof hides it (`shared/world3-tidy.js` northDoorBoards3: 3-6 tiles,
+  paving only, clear of other things; none where the north side is lawn - the Arts District's cafes face the park).
+  Seen in pictures: Wagon Wheel, Silver Mule, Rattlesnake lit over the covered street; Starfall Tower and Prism over
+  their drop-off loops. The art change goes into the batch's one re-bake. Not done here: Old Downtown's back row
+  (Horseshoe Motor Inn, Nail & Gear Hardware, Club Neon Cactus) drawn over the casinos' south ends - interiorOverlap,
+  next.
+- world3arrivals, world3shops, firstcar, ftue, foodrooms, interiorload, walkinrooms, activities, art2, art2teleport,
+  signs, binbags, perf, placementlint 42/42.
