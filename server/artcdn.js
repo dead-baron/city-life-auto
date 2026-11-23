@@ -118,7 +118,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
       const job = slot.job; slot.job = null;
       if (job) S.inflight.delete(job.key);
       if (m.thumb && S.low) { S.low.put(m.cx, m.cy, m.thumb); S.stats.thumbs = (S.stats.thumbs || 0) + 1; }
-      if (m.ok && m.thumbOnly) { /* (a thumbnail from a chunk on disk: nothing baked) */ } else if (m.ok) { S.stats.baked++; S.stats.bakeMs += m.ms; if (job) { S.done.add(job.key); if (job.focus) S.stats.focusBaked++; if (m.same && slot.art === S.art && S.sameFile) { S.same.add(job.key); S.stats.same = (S.stats.same || 0) + 1; try { appendFileSync(S.sameFile, job.key + '\n'); } catch { /* best effort */ } } } } else { S.stats.errors++; if (S.stats.errors < 20) log(`[art] bake failed ${m.q}/${m.ap}/${m.cx},${m.cy}: ${m.error}`); }
+      if (m.ok && m.thumbOnly) { /* (a thumbnail from a chunk on disk: nothing baked) */ } else if (m.ok) { S.stats.baked++; S.stats.bakeMs += m.ms; S.stats.lastAt = Date.now(); if (job) { S.done.add(job.key); if (job.focus) S.stats.focusBaked++; if (m.same && slot.art === S.art && S.sameFile) { S.same.add(job.key); S.stats.same = (S.stats.same || 0) + 1; try { appendFileSync(S.sameFile, job.key + '\n'); } catch { /* best effort */ } } } } else { S.stats.errors++; if (S.stats.errors < 20) log(`[art] bake failed ${m.q}/${m.ap}/${m.cx},${m.cy}: ${m.error}`); }
       if (slot.art === S.art && !S.stopped) { S.idle.push(slot); pump(); }
     });
     w.on('error', (e) => { log(`[art] bake thread failed: ${e && e.message}`); S.idle = S.idle.filter((s) => s !== slot); S.workers = S.workers.filter((s) => s !== slot); if (slot.job) S.inflight.delete(slot.job.key); });
@@ -297,7 +297,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     const s = S.stats;
     let have = 0;
     try { for (const q of prewarm) have += readdirSync(join(S.dir, `q${q}a2`)).filter((f) => f.endsWith('.bin')).length; } catch { /* none yet */ }
-    return { art: S.art, prev: S.prev, threads: S.workers.length, thumbs: s.thumbs || 0, thumbsLeft: S.thumbQ.length, lowServed: s.lowServed || 0, baked: s.baked, avgBakeMs: s.baked ? Math.round(s.bakeMs / s.baked) : 0, have, of: CX * CY * prewarm.length, served: s.served, servedMB: +(s.servedBytes / 1e6).toFixed(1), missed: s.missed, stale: s.stale, asked: S.asked.length, focus: S.focus.length, focusBaked: s.focusBaked, qualities: [...S.qSeen.keys()], errors: s.errors };
+    return { art: S.art, prev: S.prev, threads: S.workers.length, thumbs: s.thumbs || 0, thumbsLeft: S.thumbQ.length, lowServed: s.lowServed || 0, baked: s.baked, avgBakeMs: s.baked ? Math.round(s.bakeMs / s.baked) : 0, have, of: CX * CY * prewarm.length, served: s.served, servedMB: +(s.servedBytes / 1e6).toFixed(1), missed: s.missed, stale: s.stale, asked: S.asked.length, focus: S.focus.length, focusBaked: s.focusBaked, qualities: [...S.qSeen.keys()], errors: s.errors, lastAt: s.lastAt || 0 };
   }
   function stop() { if (S.low) S.low.flush(); if (lowFlush) clearInterval(lowFlush); S.stopped = true; for (const s of S.workers) { try { s.w.terminate(); } catch { /* gone */ } } S.workers = []; }
 
