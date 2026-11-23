@@ -60,7 +60,7 @@ import { tidyProps3, clearHomePaths3, strayBags3 } from './world3-tidy.js';
 import { boatsAfloat3 } from './world3-boats.js';
 import { railTrim3 } from './world3-railtrim.js';
 import { badBays3 } from './parkcheck.js';
-import { cropScraps3 } from './world3-croptidy.js';
+import { cropScraps3, farmsOffBeach3 } from './world3-croptidy.js';
 import { doorPaths3 } from './world3-doorpaths.js';
 import { clearWalks3 } from './world3-walks.js';   // (walkways clear of plants - the owner, 11-17)   // (a path to every door - the owner, 11-16)
 import { sunkenWrecks3 } from './world3-wrecks.js';
@@ -357,6 +357,7 @@ export function worldOpts(asked) {
       m.world3.boatsAfloat = boatsAfloat3(m);   // (every canoe and rowboat a real boat in the water beside where it lay - the owner, 11-17, the audit's deadBoat: world3-boats.js)
       m.world3.railTrim = railTrim3(m);   // (no railing or fence out over open water - the audit's railOverWater: world3-railtrim.js)
       m.world3.badBays = badBays3(m);   // (no parking space whose car would stand on a pavement, a lawn or a pier - the audit's parked: parkcheck.js)
+      m.world3.farmsOffBeach = farmsOffBeach3(m);   // (the farms back from the beach - the owner, 11-22 16:45: world3-croptidy.js)
       m.world3.cropScraps = cropScraps3(m);   // (no stray crop scrap in a town or by a beach - the audit's cropInTown: world3-croptidy.js)
       m.world3.pumps = pumpProps3(m);   // (last: every filling station's pump a prop - its solid its own - at the end of the list: they go up, server props.js)   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)
     },

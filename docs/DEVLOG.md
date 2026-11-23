@@ -26171,3 +26171,11 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   26 patches, 150 tiles. 49 -> 23 (`LINT_ALLOW` 23). Left on purpose: Gull Harbor's farms inside its district's line
   (2,000-3,300 tiles each - whole farms, the owner's call) and five orchards near a beach.
 - Tests: placementlint 42/42, farming, harvestart.
+
+## 2026-11-22 - World batch: the farms back from the beach (branch `prebeta-world2`; not live)
+- The owner, 16:45: "We should get the farm away from the beach". `shared/world3-croptidy.js` farmsOffBeach3 (the done
+  hook, before the scraps): every crop field tile within CROP_BEACH (6) tiles of a beach's sand to grass - 292 tiles;
+  the two fields they belonged to shrink to what's left, their fence runs clipped with them; 4 orchards by a beach go;
+  the crop strips and vine rows on the new grass go. cropWhy: a beach town's district may hold farms back from the
+  sand (only the sand counts there). cropInTown 49 -> 0 (`LINT_ALLOW` 0). DECISIONS: the farms, and the ATM booths.
+- Tests: placementlint 42/42, farming, harvestart, fences.

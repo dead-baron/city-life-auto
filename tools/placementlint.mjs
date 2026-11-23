@@ -131,7 +131,7 @@ export const LINT_ALLOW = {
   railOverWaterArt: 18,     // a railway span over water without real bridge art (piers, abutments)
   portalOnFlat: 16,         // a tunnel mouth with no hill over the bore
   festoonDensity: 9,        // more than FESTOON_CAP runs of lights within FESTOON_R
-  cropInTown: 23,           // a crop field, strip or orchard in a town or by a beach (11-22: the scraps cleared - world3-croptidy.js; left: Gull Harbor's farms inside its line, orchards by the beach - the owner's call)
+  cropInTown: 0,            // a crop field, strip or orchard in a town or by a beach (11-22: the farms back from the beach, the scraps cleared - world3-croptidy.js)
   heliOffPad: 10,           // a hospital with no ground helipad, a helipad on a sidewalk or a road
   deadBoat: 3,              // a boat prop you can reach that isn't a vehicle and isn't stored (11-22: every one a real boat - world3-boats.js; left: 3 with no water near)
   bigEmptyPlaza: 14,        // an empty stretch of paving 19+ tiles across
