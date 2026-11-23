@@ -26383,3 +26383,13 @@ consider topographical levels". Both withdrawn. What stands:
   the two spaces off the map. Gravel now holds a parked car (not the valet's strict rule). A dirt yard instead was
   tried and backed out: it lost the gravel look and grew flowers (the pictures). redrock, placementlint 42/42, mycar,
   parkducks, trafficbox, trafficwalls.
+
+## 2026-11-23 (night) - No tree's crown over a door or a sign, after the walks are cleared
+- The suite on the branch: `test/visaudit.test.js` "no tree's crown over a door, a sign, a chess table, an ATM or a bus
+  stop" - 10 on the branch (2 on main): the world batch's walk-clearing (clearWalks3) runs after the last sightlines pass
+  and moved plants off the walks to beside doors and signs. `shared/world3-world.js`: sightlines3 once more at the end
+  (after the plazas are planted). 10 -> 0. walks, placementlint 42/42.
+- Still over the allowance in the same test, logged: two hidden doors more than main (Northshore Beaches' Sure Aim Gun
+  Shop and Speedy Stop - now one walk-in opening north; the audit says a tree, none of the trees by them lines up - a try
+  at counting north doorways in the sightlines was made and backed out), one campfire more (the merged sea cave's
+  cove). Main is over too (picnic, vending, three doors).

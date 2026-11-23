@@ -367,6 +367,7 @@ export function worldOpts(asked) {
       m.world3.festoonThin = festoonThin3(m);   // (no curtain of hanging lights - the audit's festoonDensity: world3-festoons.js)
       m.world3.deckRoots = deckRoots3(m);   // (a pier's root on dry land, no sliver of sea on the grass - the audit's beachWater: world3-deckroots.js)
       m.world3.plazaFill = plazaFill3(m, H3);   // (no oversized empty plazas - the audit's bigEmptyPlaza: world3-plazafill.js)
+      if (city) m.world3.sightlinesLast = sightlines3(m);   // (and last, after the walks were cleared and the plazas planted: a tree moved off a walk may stand over a door - the visibility audit, test/visaudit.test.js)
       m.world3.pumps = pumpProps3(m);   // (last: every filling station's pump a prop - its solid its own - at the end of the list: they go up, server props.js)   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)
