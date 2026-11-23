@@ -17,6 +17,7 @@
 // engine - shared/dmath.js).
 import { TILE, T } from './constants.js';
 import { FESTOON, festoonSpan, festoonSag, festoonLow, festoonClear, festoonEnds } from './festoon.js';
+import { dropProps } from './world3-tidy.js';
 export { FESTOON, festoonSpan, festoonSag, festoonLow, festoonClear, festoonEnds };
 
 // the things a line can be made fast to, by prop type -> the end's name (tall enough to hold a line over people's heads:
@@ -143,4 +144,32 @@ export function hangLights3(m, H) {
     else m.props = m.props.filter((q) => !g.has(q));
   }
   return out;
+}
+
+// Hanging lights not crowded into a curtain (the audit's festoonDensity, 9 on 11-22: "the Neon alley's curtain of bistro
+// lights"): no more than FESTOON_CAP runs of lights or lanterns within FESTOON_R of any one of them. The runs taken in
+// order down the map (north to south, west to east); a run is kept only while it and every kept run near it stay within
+// the cap - the rest are taken down. The lint counts by the same numbers (tools/audit/worldrows.mjs).
+// For the whole-world build's done hook (shared/world3-world.js), after the lights are hung (hangLights3).
+//   festoonThin3(m) -> how many runs taken down
+export const FESTOON_R = 8 * TILE, FESTOON_CAP = 8;   // (the lint's: tools/audit/worldrows.mjs)
+
+export function festoonThin3(m) {
+  if (!Array.isArray(m.props)) return 0;
+  const fs = m.props.filter((p) => p && p.t === 'festoon').map((p) => ({ p, x: p.x + (p.tx || 0) / 2, y: p.y + (p.ty || 0) / 2, n: 0 }));
+  fs.sort((a, b) => a.y - b.y || a.x - b.x);
+  const kept = [], gone = new Set(), C = FESTOON_R, grid = new Map();
+  const key = (x, y) => Math.floor(y / C) * 100000 + Math.floor(x / C);
+  const nearKept = (f) => { const out = [], cx = Math.floor(f.x / C), cy = Math.floor(f.y / C); for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const g of grid.get((cy + j) * 100000 + cx + i) || []) if (Math.hypot(g.x - f.x, g.y - f.y) < FESTOON_R) out.push(g); return out; };
+  for (const f of fs) {
+    const near = nearKept(f);
+    // (counted as the lint counts: itself and every run within the radius)
+    if (near.length + 1 > FESTOON_CAP || near.some((g) => g.n + 2 > FESTOON_CAP)) { gone.add(f.p); continue; }
+    for (const g of near) g.n++;
+    f.n = near.length;
+    kept.push(f);
+    const k = key(f.x, f.y); let l = grid.get(k); if (!l) grid.set(k, (l = [])); l.push(f);
+  }
+  if (gone.size) dropProps(m, gone);
+  return gone.size;
 }

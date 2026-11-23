@@ -33,14 +33,20 @@
 //   binBags        black bin bags away from any bin, outside the rough districts ("only a few, near cans or in rough
 //                  alleys", 10-10)
 //   drinkSign      a sign line pairing drink with riding or driving ("RIDE DRINK REPEAT", the owner 11-17)
+import { emptySpots, EMPTY_R } from '../../shared/world3-plazafill.js';
 import { TILE, T } from '../../shared/constants.js';
-import { TIDY3 } from '../../shared/world3-tidy.js';
+import { TIDY3, strayBags } from '../../shared/world3-tidy.js';
+import { railWetRun } from '../../shared/world3-railtrim.js';
+import { cropWhy } from '../../shared/world3-croptidy.js';
+import { signWrong } from '../../shared/world3-signfix.js';
+import { plantKind, plantWalkHit } from '../../shared/world3-walks.js';
 import { airfields } from '../../shared/flight.js';
 import { FLY } from '../../shared/flight.js';
 import { staticIndex } from '../../client/art2/game/statics.js';
 import { buildingH } from '../../client/art2/buildings.js';
 
-export const FESTOON_R = 8 * TILE, FESTOON_CAP = 8, EMPTY_R = 10, CROP_BEACH = 6;
+export const FESTOON_R = 8 * TILE, FESTOON_CAP = 8, CROP_BEACH = 6;
+export { EMPTY_R };
 // whether the page draws railway spans over water as a bridge (client/render/trains.js, client/art2: no rail bridge art
 // yet - the owner, 11-17 "it's the ground track drawn over the sea with brown curved girder stripes")
 export const RAIL_BRIDGE_ART = false;
@@ -77,24 +83,15 @@ export function auditRows(M, rows, seen) {
   const bizOf = (bi) => (placesOf.get(bi) || []).filter((p) => !NOT_PLACES.has(p.kind) || p.casino);
 
   // ---- plantOnWalk ----
+  // (the same test the world's own pass clears with: shared/world3-walks.js plantWalkHit - a boulevard median's palms, a
+  // street tree in its grate and a pot set against a wall are kept, as decided 11-19)
   seen.plants = 0;
   for (const p of M.props) {
-    if (!p) continue;
-    const tree = TREES.test(p.t) || TIDY3.PLANT.test(p.t) && !BUSHES.test(p.t), bush = BUSHES.test(p.t), hedge = p.t === 'hedgerun' || p.t === 'hedgebox', pl = PLANTERS.test(p.t);
-    if (!tree && !bush && !hedge && !pl) continue;
+    const kind = plantKind(p);
+    if (!kind) continue;
     seen.plants++;
-    const pts = [];
-    if (p.t === 'hedgerun') { const n = Math.max(1, Math.ceil(Math.hypot(p.tx, p.ty) / 12)); for (let i = 0; i <= n; i++) pts.push([p.x + p.tx * i / n, p.y + p.ty * i / n]); }
-    else if (p.t === 'hedgebox') { for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) pts.push([p.x + p.w * i / 4, p.y + p.d * j / 4]); }
-    else if (tree) pts.push([p.x, p.y]);   // (a trunk's foot: a crown over a pavement is a street tree's)
-    else { const r = pl ? 8 : 9; for (const [dx, dy] of [[0, 0], [r, 0], [-r, 0], [0, r * 0.5], [0, -r * 0.5]]) pts.push([p.x + dx, p.y + dy]); }
-    // (a plaza: a hedge or a bush on it only where the district's own ground isn't paving - Midtown's, the Strip's blocks
-    // are plaza underfoot, their yards' hedges in them; a tree or a planter on a plaza is the plaza's furniture; a street
-    // tree in its grate on a sidewalk is the street's)
-    const D = M.districtAt(p.x, p.y), plazaOk = tree || pl || (D && D.ground === T.PLAZA);
-    const bad = pts.map(([x, y]) => tileAt(x, y)).find((t) => WALK_T.has(t) && !(t === T.PLAZA && plazaOk));
-    if (bad === undefined) continue;
-    if (tree && p.grate && bad === T.SIDEWALK) continue;
+    const bad = plantWalkHit(M, p, kind), pl = kind === 'planter';
+    if (bad < 0) continue;
     add(pl ? 'planterOnWalk' : 'plantOnWalk', { what: `a ${p.t}${p.sp ? ` (${p.sp})` : ''}`, x: p.x, y: p.y, why: `on ${TN[bad]}` });
   }
 
@@ -151,16 +148,12 @@ export function auditRows(M, rows, seen) {
     if (!texts.length) continue;
     const biz = bizOf(b.id), homes = (placesOf.get(b.id) || []).filter((p) => p.kind === 'home');
     if (shopSign) seen.shopFronts++;
-    if (biz.length) {
-      const names = new Set([...biz.flatMap((p) => sig(p.label)), ...sig(b.name)]);
-      const kinds = new Set(biz.map((p) => (p.casino ? 'casino' : p.kind)));
+    if (biz.length) {   // (shared/world3-signfix.js signWrong: the build renames a wrong shop sign by the same rule)
       for (const t of new Set(texts.map(up))) {
-        const ws = t.split(' ');
-        const trade = ws.filter((w) => TRADE[w]);
-        const wrongTrade = trade.filter((w) => !TRADE[w].split(' ').some((k) => kinds.has(k)));
-        const named = sig(t).some((w) => names.has(w));
-        if (wrongTrade.length && !named) add('frontNames', { what: `"${t}" over ${biz.map((p) => `${p.label} (${p.kind})`).join(', ')}`, x: (b.tx + b.tw / 2) * TILE, y: (b.ty + b.th) * TILE, why: `${wrongTrade.join(', ')} on the sign` });
-        else if (!named && !trade.length && sig(t).length && t === up(shopSign)) add('frontNames', { what: `"${t}" over ${biz.map((p) => `${p.label} (${p.kind})`).join(', ')}`, x: (b.tx + b.tw / 2) * TILE, y: (b.ty + b.th) * TILE, why: 'the sign names none of its places' });
+        const w = signWrong(t, biz, b, t === up(shopSign));
+        if (!w) continue;
+        const kinds = new Set(biz.map((p) => (p.casino ? 'casino' : p.kind))), wrongTrade = t.split(' ').filter((x) => TRADE[x] && !TRADE[x].split(' ').some((k) => kinds.has(k)));
+        add('frontNames', { what: `"${t}" over ${biz.map((p) => `${p.label} (${p.kind})`).join(', ')}`, x: (b.tx + b.tw / 2) * TILE, y: (b.ty + b.th) * TILE, why: w === 'trade' ? `${wrongTrade.join(', ')} on the sign` : 'the sign names none of its places' });
       }
     }
     if (shopSign && homes.length) {
@@ -209,8 +202,7 @@ export function auditRows(M, rows, seen) {
     let dx = 0, dy = 0;
     if (p.t === 'yfence') { dx = p.x1 - p.x; dy = p.y1 - p.y; } else if (p.t === 'crail') { dx = p.len || 0; } else { dx = p.tx || 0; dy = p.ty || 0; }
     const L = Math.hypot(dx, dy), n = Math.max(1, Math.ceil(L / 8));
-    let run = 0, worst = 0;
-    for (let i = 0; i <= n; i++) { const t = tileAt(p.x + dx * i / n, p.y + dy * i / n); if (wetT(t)) { run++; worst = Math.max(worst, run); } else run = 0; }
+    const worst = railWetRun(M, p);   // (shared/world3-railtrim.js: water under it and either side - the build's rule too)
     if (worst >= 2) add('railOverWater', { what: `a ${p.t}${p.kind ? ` (${p.kind})` : ''} ${Math.round(L / TILE)} tiles`, x: p.x + dx / 2, y: p.y + dy / 2, why: `${worst * 8} px of it over open water` });
   }
 
@@ -288,13 +280,9 @@ export function auditRows(M, rows, seen) {
     }
   }
 
-  // ---- cropInTown ----
+  // ---- cropInTown ---- (shared/world3-croptidy.js cropWhy: the build clears the scraps by the same test)
   {
-    // (a beach: sand in a beach district - a lake's or a river's sandy bank in the farmland isn't one)
-    const sandNear = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let j = -CROP_BEACH; j <= CROP_BEACH; j += 2) for (let i = -CROP_BEACH; i <= CROP_BEACH; i += 2) if (tileT(tx + i, ty + j) === T.SAND) { const D = M.districtAt((tx + i) * TILE, (ty + j) * TILE); if (D && D.style === 'beach') return true; } return false; };
-    const why = (x, y) => { const D = M.districtAt(x, y); if (D && !FARM_STYLES.has(D.style)) return `in ${D.name} (${D.style})`; if (sandNear(x, y)) return 'by a beach'; return null; };
-    // the field tiles, in components
-    const lab = new Int32Array(0); void lab;
+    const why = (x, y) => cropWhy(M, x, y);
     const seenT = new Uint8Array(M.w * M.h);
     seen.fieldPatches = 0;
     for (let ty = M.y0; ty < M.y0 + M.h; ty++) for (let tx = M.x0; tx < M.x0 + M.w; tx++) {
@@ -337,39 +325,12 @@ export function auditRows(M, rows, seen) {
     add('deadBoat', { what: `a ${p.t} prop`, x: p.x, y: p.y, why: wetT(t) ? 'moored on the water, not a vehicle' : `on ${TN[t]} (beached), not a vehicle` });
   }
 
-  // ---- bigEmptyPlaza ----
-  {
-    const W = M.w, H = M.h, N = W * H, dist = new Uint8Array(N).fill(255);
-    const q = new Int32Array(N); let qh = 0, qt = 0;
-    const occ = new Uint8Array(N);
-    for (const p of M.props) { if (!p) continue; const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); if (M.inside(tx, ty)) occ[M.idx(tx, ty)] = 1; }
-    for (const [k] of M.solidProps) occ[k] = 1;
-    for (let i = 0; i < N; i++) if (M.tiles[i] !== T.PLAZA || occ[i]) { dist[i] = 0; q[qt++] = i; }
-    while (qh < qt) { const i = q[qh++], d = dist[i]; if (d >= EMPTY_R + 2) continue; const x = i % W, y = (i / W) | 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const j = ny * W + nx; if (dist[j] > d + 1) { dist[j] = d + 1; q[qt++] = j; } } }
-    const taken = [];
-    for (let i = 0; i < N; i++) {
-      if (dist[i] < EMPTY_R || dist[i] === 255) continue;
-      const x = i % W + M.x0, y = ((i / W) | 0) + M.y0;
-      if (taken.some(([a, b]) => Math.abs(a - x) < 30 && Math.abs(b - y) < 30)) continue;
-      taken.push([x, y]);
-      add('bigEmptyPlaza', { what: `an empty stretch of paving ${2 * dist[i] - 1}+ tiles across`, x: (x + 0.5) * TILE, y: (y + 0.5) * TILE, why: `nothing within ${dist[i] - 1} tiles` });
-    }
-  }
+  // ---- bigEmptyPlaza ---- (shared/world3-plazafill.js emptySpots: the rule the build fills them by)
+  for (const sp of emptySpots(M, EMPTY_R)) add('bigEmptyPlaza', { what: `an empty stretch of paving ${2 * sp.d - 1}+ tiles across`, x: (sp.tx + 0.5) * TILE, y: (sp.ty + 0.5) * TILE, why: `nothing within ${sp.d - 1} tiles` });
 
-  // ---- binBags ----
-  {
-    const bins = M.props.filter((p) => p && /^(trashcan|dump_[gbo]|trashpile|burnbarrel)$/.test(p.t));
-    const BC = 256, g = new Map();
-    for (const b of bins) { const k = Math.floor(b.y / BC) * 100000 + Math.floor(b.x / BC); let l = g.get(k); if (!l) g.set(k, (l = [])); l.push(b); }
-    for (const p of M.props) {
-      if (!p || p.t !== 'bags') continue;
-      const D = M.districtAt(p.x, p.y);
-      if (D && D.tier === 'rough') continue;
-      let ok = false;
-      for (let j = -1; j <= 1 && !ok; j++) for (let i = -1; i <= 1 && !ok; i++) for (const b of g.get((Math.floor(p.y / BC) + j) * 100000 + Math.floor(p.x / BC) + i) || []) if (Math.hypot(b.x - p.x, b.y - p.y) < 3 * TILE) { ok = true; break; }
-      if (!ok) add('binBags', { what: 'bin bags', x: p.x, y: p.y, why: `no bin within 3 tiles (${D ? D.tier : '?'} district)` });
-    }
-  }
+  // ---- binBags ---- (shared/world3-tidy.js strayBags: the same rule the build clears with)
+  for (const p of strayBags(M)) { const D = M.districtAt(p.x, p.y); add('binBags', { what: 'bin bags', x: p.x, y: p.y, why: `no bin within 3 tiles (${D ? D.tier : '?'} district)` }); }
+
 
   // ---- drinkSign ----
   {

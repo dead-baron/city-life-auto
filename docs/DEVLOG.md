@@ -26094,6 +26094,94 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
   or art change, and a place-by-place diff that lists what moved (`diff.py`, side-by-sides with the change in red). The
   other half - a guard column beside every note in the decisions register - is the triage table's "Guard" column for the
   11-22 notes; the older notes still to do.
+## 2026-11-16 - Egret Point: walk-in shops, paths to the doors, nothing over a sign (and the class, world-wide)
+
+The owner's three phone shots of Egret Point (11-16 16:54): "These places in Egret Point don't have interiors, they just
+have you interact at the wall. They also don't have sidewalks or walkways leading up to the buildings, they just sit on
+grass. The open sign on this building is covered by this ATM." - and in the shots, the Fish Market's name read
+"§GRET" (the cash machine's green cap over its first letter) and the Gaff Hook's rooftop BAR read "Uar".
+- **Egret Point** (shared/world3-west.js). The fish market, The Gaff Hook, the bait shop and the charter office are walked
+  into: a room behind the door, the counter inside, the service there (sell the catch, order, buy bait, book the charter).
+  They're built by hand with no lot of their own (`prefab: -1`), which buildInteriors skipped; a building flagged
+  `b.rooms` is walked into all the same (shared/map.js). Every front is on its south side as drawn (the south row's
+  doors had been on their backs, by the street), its door there (`b.door`), onto a paved forecourt that runs on to the
+  quay: the north row's down to Wharf Street, the south row's along the water side with a lane between the charter
+  office and the bait shop back up to the street. The Gaff Hook is a dockside tavern (a hand plan's walk-in bar: its
+  counter the bar, stools, the pool table - shared/shoprooms.js barPlan knows GAFF / HOOK), not a nightclub lot; the
+  charter office a new fit-out (`charterOffice`: charts and photos up the wall, a trophy fish over the desk, a skipper's
+  desk, rods, a cooler). The shacks keep their homes; each gets a gravel path from its step to the street, and the south
+  row's are drawn with their backs to the camera, as their doors are on the street side.
+- **Charter offices are walk-ins** everywhere (`charter` in WALK_IN, plan 'office' -> charterOffice).
+- **The class: three placement lint rows** (tools/placementlint.mjs):
+  `signCovered` (a cash machine, a prop or a place's badge over a sign's words or the window's OPEN, by the drawn
+  pixels), `doorOnGrass` (a business's or home's door step not on a path, or the path reaching no road within 400
+  steps - every one listed), `wallOnly` (a walk-in kind's place with no room behind its door).
+- **Fixed by class:** the wall cash machine is lower (props-kit.js atmWall: 44 tall, was 52), so its cap stays under
+  a shop's sign board (its foot 48 px up the front); the window's OPEN moves to the door's other side when a machine
+  is set in front of it, or is left off (statics.js frontAtms -> spec.shop.avoid, buildings.js storefront); a place
+  served at a building's wall hangs its badge under the lintel's height, not up in the sign (host.js badgeOf, which the
+  lint uses too); a neon board keeps a dark row between its lit rim and the words' halo (statics.js NEON_PAD). The shop
+  rows World v3 adds where a district lacks something, and the storefronts it takes over (shared/world3-shops.js), get
+  their rooms (map.js walkInRoom, as Southside's lots do); and every door on the lawn gets a paved path straight out to
+  the nearest pavement, plaza, lot, dock, track or road where the way is clear (shared/world3-doorpaths.js, the done
+  hook: a home's one tile wide, a shop's two; plants on it taken up).
+  Also: the window's OPEN sits below an awning's scallops (it was painted over, cut in half - the charter office's), and
+  the art's shopfront pots stand clear of it (buildings.js openSignX, shared with statics.js addFrontage).
+- **The lint, before and after** (World v3, seed 1337): signCovered 409 -> 159, doorOnGrass 1777 -> 372, wallOnly
+  111 -> 17; nameCovered 1 -> 0 (the self storage's ATM); plantOnPath 0 -> 2 (two trees whose feet reach a few px over
+  the edge of a new door path: West Hills House #2971's, Pine Hills House #3332's - allowed, to be taken up). The rest is the long tail, allowed in LINT_ALLOW at what's
+  left (bring it down, never up): signCovered - the street's furniture in front of a shop's words (shelter and stall
+  canopies, el piers, phone booths, porches, lamps, flag and power poles, a few planters and street trees, festoons);
+  doorOnGrass - mostly homes whose step can't take a straight path to the pavement (something solid, a field, more
+  than 14 tiles of lawn), or a courtyard's plaza closed in (Bayside Heights, Old Town, the Arts District); wallOnly -
+  Red Lantern Bagels, Kaiju Tacos, Ironside Hardware, Lakeside and Redwood Creek Tackle, Axe & Saw Hardware, Sandpiper
+  Surf Co. and Pier Tackle & Bait, The Copper Room Supper Club (lot buildings with something else behind the same
+  front), Pelican Key Charters (too shallow), four of the added shop rows (too shallow), Marsh Bait & Tackle (a row
+  shared with the outfitters), Lane Mart and Park West Coffee (Greenfield Park's arrival block, built after the rooms).
+- Tests: test/world3west.test.js (each Egret Point business walked into from Wharf Street to its counter and back out,
+  its door on the forecourt; every door in the village on a path to the street), test/placementlint.test.js (the three
+  rows; it logs every row's count), test/world3server.test.js (a new shop's door spot is outside, its place inside).
+- The world and the art are re-keyed (the village, the walk-ins, the paths; the ATM, the OPEN, the neon boards); the
+  chunk carry keeps the unchanged chunks. No budget changed.
+
+## 2026-11-22 - World batch, start (branch `prebeta-world`, not live)
+- **`egret` merged** (Egret Point's interiors, door paths, signs clear) with its lint rows; the clash in
+  `tools/placementlint.mjs` settled keeping both sides (egret's `badgeOf` from host.js, the audit's rows and `pxOver`).
+- **Walkways clear of plants** (the owner, 11-17: "still spawning over sidewalks"; the audit's plantOnWalk 2,914 and
+  planterOnWalk 422): `shared/world3-walks.js`, the last planting pass of the build, with the same test the lint counts by
+  (`plantWalkHit`, now imported by `tools/audit/worldrows.mjs` - the fix and the check can't drift apart). Kept as decided
+  (11-19): 514 palms and trees down boulevard medians, 659 street trees by a kerb or at the walkway's edge in their grate
+  (an oak or a maple named so becomes the street's own grated tree; the page's own street picks unchanged), 469 pots set
+  tight against a wall. Moved onto ground beside (grass, dirt; sand for palms and cacti), clear of the plants there, off
+  every house's path, off every door, and - a tree - out of every shop's sign (`world3-clutter.js doorTiles`,
+  `world3-greens.js signBlocker`): about 1,200. Taken up: 459 (shrubs in parking lots, loose pots in the middle of plazas and wide
+  pavements, hedge runs and boxes on walkways) and 6 whose crowns stood over a house's path.
+  Lint: plantOnWalk 2,914 -> 0, planterOnWalk 422 -> 0, plantOnPath 2 -> 0 (egret's two named ones among them),
+  signCovered 159 -> 158. `test/walks.test.js`.
+- Regression pictures (`tools/regress/`, 55 places, before = `prebeta-art`): 11 places changed, all under 2%, each the
+  plants coming off a pavement (Copper Gulch, Mesa Flats, Northshore Beaches, the stations' forecourts...).
+- Moved plants also keep off every door and, a tree, out of every shop's sign (`world3-clutter.js doorTiles`,
+  `world3-greens.js signBlocker`): `world3server` found the first try setting pots on doors.
+- **Egret Point's room under its neighbour** (interiorOverlap 26 against 25, from the egret merge): shops3 had built
+  Egret Point General Store with its back against Speedy Stop - Egret Coast's front - its doors walled in, the General
+  Store's front drawn over the Speedy Stop's room. Class fix in `world3-shops.js` lotOk: a new building never stands with
+  its back against a walk-in's front. interiorOverlap 25; northDoor 21 -> 19 and atmStray 53 -> 52 lowered to where they
+  stand.
+- Tests on this branch: `placementlint` 42/42, `world3server` 21/21, `world3west`, `world3shops`, `undergrowth`,
+  `walkinfront`, `signs`, `world3city`, `walks` pass; `visaudit` fails its two as on `main`. The other world3 suites are
+  not run yet - run them before this goes anywhere.
+- World change: a new world hash and art hash - every player fetches the city again and the art re-bakes. Goes live only
+  with the rest of the world batch, on the owner's word.
+
+## 2026-11-22 - World batch: bin bags by a bin (branch `prebeta-world2`, on top of `prebeta-world`; not live)
+- Black bin bags only by a bin or in the rough districts (DECISIONS, World 10-10). One rule, `strayBags` in
+  `shared/world3-tidy.js`, is what the lint counts (`tools/audit/worldrows.mjs` binBags) and what the build clears with
+  (`strayBags3`, after the walks pass): the audit's 44 lone bags are taken up. `LINT_ALLOW.binBags` 44 -> 0;
+  `test/binbags.test.js` guards the rule.
+- `test/world3arrivals.test.js` test 4 (failing on `main` too): the open blocks' pieces (`shared/world3-openblocks.js`,
+  `openOf`) are appended after the split towers' parts, like them split off older buildings - nothing renumbered. The
+  test now accepts both kinds of piece after the park block's buildings.
+- World change: rides with the rest of the world batch (one world hash change for all of it).
 
 ## 2026-11-22 - The plants lit by the game's sun alone (branch `prebeta-art`)
 - The owner picked between two sheets (oak, maple, birch, pine, rose, hydrangea at morning and afternoon): the
@@ -26110,6 +26198,131 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 - `server/systems/wildlife.js` edgeSpot: after its 30 random tries, rings outward from the water, nearest bank first. The
   staged "bear fishing" at Pine Lake said "no room" on the world batch (`test/world3scenes.test.js` test 1).
 
+## 2026-11-22 - World batch: a path to the doors on the lawn (branch `prebeta-world2`; not live)
+- `shared/world3-doorpaths.js` doorPaths3: where the straight path from a door can't be laid (no paving in its columns,
+  or something in the way), the way round - the fewest new tiles over open ground (out from the door first, then to the
+  sides) to a path that reaches a road, at most `PATH_ROUND` 22. A door on a plaza or yard that reaches no road (a pocket
+  of paving on a lawn) is joined to one that does the same way. Same rules as before: no building, water, rail or
+  reserved ground under it, nothing solid but plants (taken up).
+- The audit's doorOnGrass 372 -> 89 (124 routed round, 129 pockets joined; `LINT_ALLOW.doorOnGrass` 89). Left: doors
+  onto courtyards walled in by buildings, side-wall doors, a few blocked. Every other lint row unchanged.
+- `test/doorpaths.test.js` (3): round to the pavement, a pocket joined, nothing laid over water. placementlint 42/42,
+  world3doors, world3clutter, world3arrivals 8/8, perf 6/6.
+
+## 2026-11-22 - World batch: every canoe and rowboat a real boat (branch `prebeta-world2`; not live)
+- The owner, 11-17: "every boat that looks usable is usable - a beached canoe/rowboat is a real vehicle (get in, push
+  off, paddle)". `shared/world3-boats.js` boatsAfloat3 (the done hook, after the props are final): each canoe or rowboat
+  prop (not on stands) becomes a river kayak or a rowboat in the water beside where it lay - its whole hull on water and
+  off the rocks (the lint's ROCKS), bow out - through the marina's list (`m.marina`, `kind`, `beached: true`: parked
+  boats, anyone's to take - server/systems/traffic.js marinaModel). 45 made; 3 with no water within reach stay props.
+- The audit's deadBoat 103 -> 58 (`LINT_ALLOW.deadBoat` 58). Left: the moored sailboats (27), yachts (19) and fishing
+  boats (9) - scenery; making them marina vehicles, or keeping them out of swimming reach, is the owner's call (asked).
+- `test/boatsafloat.test.js` (2); placementlint 42/42, fleet, core.
+
+## 2026-11-22 - World batch: railings on the land, not out over the water (branch `prebeta-world2`; not live)
+- The audit's railOverWater (110: "the promenade's railings jutting out over the sea on a diagonal shore"). One rule for
+  the build and the lint (`shared/world3-railtrim.js` railWetAt, railWetRun; tools/audit/worldrows.mjs): a point of a
+  railing is out over the water when there's water under it and no footing either side of it (water, or a wall's foot)
+  - a railing along a seawall, a few px into the water tile, is on the shore.
+- `railTrim3` (the done hook): a run out over the water is first moved back onto the shore - the smallest shift across
+  it, up to 48 px either way, with none of it over the water and none on a building, a wall or a road (79, mostly the
+  Neon Strip's and the Arts District's promenade railings a tile out at sea); else cut back to its dry stretch (7); a
+  run with no dry stretch of a tile is taken up (23). Fences people collide with come from these props
+  (shared/fences.js), so they hold where they're drawn.
+- railOverWater 110 -> 0 (`LINT_ALLOW` 0). Not yet seen in pictures: before / after with `tools/regress/` before the
+  batch goes live. `test/railtrim.test.js` (2).
+- The moored ones too (the owner, 15:03: "Let's make them drivable"): sailboat -> Gull 26 Sailboat, yacht -> Seaview 32
+  Cruiser, fishing boat -> Fishing Trawler (BOAT_AS), parked in the marina's list like the rest. 100 boats in all;
+  deadBoat 103 -> 3 (`LINT_ALLOW` 3: no water near). DECISIONS, World and places.
+
+## 2026-11-22 - World batch: no parking space on a pavement (branch `prebeta-world2`; not live)
+- The audit's parked (124): spaces whose car would stand on a pavement, a promenade, a lawn, the sand, a pier or a
+  building. The server already left them empty (traffic.js badBay), but their wheel stops were still drawn and the lint
+  counted them. `shared/parkcheck.js` badBays3 (the done hook) takes them off `m.parking` by the same measure (parkWhy,
+  the spot's own model else a sedan); a driveway's, a golf cart's and the car lots' spaces are their own. 124 -> 0
+  (`LINT_ALLOW.parked` 0). Tests: placementlint 42/42, firstcar, starter, mycar, homes, trafficbox, world3arrivals.
+
+## 2026-11-22 - World batch: the stray crop scraps cleared (branch `prebeta-world2`; not live)
+- The audit's cropInTown (49; the owner's 16:15 shot). One rule for the build and the lint (`shared/world3-croptidy.js`
+  cropWhy: in a town's or city's district, or within CROP_BEACH tiles of a beach district's sand). `cropScraps3` (the
+  done hook): a crop patch of at most 40 tiles so placed goes back to grass, its crop strips and vine rows with it -
+  26 patches, 150 tiles. 49 -> 23 (`LINT_ALLOW` 23). Left on purpose: Gull Harbor's farms inside its district's line
+  (2,000-3,300 tiles each - whole farms, the owner's call) and five orchards near a beach.
+- Tests: placementlint 42/42, farming, harvestart.
+
+## 2026-11-22 - World batch: the farms back from the beach (branch `prebeta-world2`; not live)
+- The owner, 16:45: "We should get the farm away from the beach". `shared/world3-croptidy.js` farmsOffBeach3 (the done
+  hook, before the scraps): every crop field tile within CROP_BEACH (6) tiles of a beach's sand to grass - 292 tiles;
+  the two fields they belonged to shrink to what's left, their fence runs clipped with them; 4 orchards by a beach go;
+  the crop strips and vine rows on the new grass go. cropWhy: a beach town's district may hold farms back from the
+  sand (only the sand counts there). cropInTown 49 -> 0 (`LINT_ALLOW` 0). DECISIONS: the farms, and the ATM booths.
+- Tests: placementlint 42/42, farming, harvestart, fences.
+
+## 2026-11-22 - World batch: every shop sign names what's behind it (branch `prebeta-world2`; not live)
+- The audit's frontNames (7: "FRAME & MAT" over the Arts District Clinic, "LOBSTER POT" over Gull Harbor Clinic,
+  "HILLS ANIMAL CLINIC" over a donut shop, "QUICK MART 24 7" over a pawn shop and a barber...: old signs left when a
+  building's use changed). One rule for the build and the lint (`shared/world3-signfix.js` signWrong). `frontNames3`
+  (the done hook): a shop front's sign naming none of its places takes the name of the place nearest its middle; a
+  hanging sign with another trade's word (CLINIC, MART, TATTOO) the name of the place nearest it. An airport's own
+  signs stay. 7 -> 0 (`LINT_ALLOW` 0). `test/signfix.test.js`; placementlint 42/42, world3shops, signs.
+- Tried and reverted: facing every walk-in south whenever its south side reaches a road (northDoor 19 -> 10). The
+  pictures showed it wrong for the hand-made blocks whose street is to the north - the Strip's casinos' drop-off loops
+  and Old Downtown's casino row: their way in moved round to the back lots. Those blocks want re-planning (the street
+  to their south), the owner's call - logged.
+
+## 2026-11-22 - World batch: no curtain of hanging lights (branch `prebeta-world2`; not live)
+- The audit's festoonDensity (9: "the Neon alley's curtain of bistro lights"). `shared/world3-festoons.js` festoonThin3
+  (the done hook, after the lights are hung): the runs taken north to south; one is kept only while it and every kept run
+  near it stay within FESTOON_CAP (8) inside FESTOON_R (8 tiles) - the lint's numbers. 10 runs taken down; 9 -> 0
+  (`LINT_ALLOW` 0). `test/festoonthin.test.js`; placementlint 42/42, festoon, lights.
+
+## 2026-11-22 - World batch: hospital helipads on open ground (branch `prebeta-world2`; not live)
+- The audit's heliOffPad (10: a hospital's ground helipad on a sidewalk, or none). `shared/flight.js`: a hospital's yard
+  pad is looked for only on open ground (PAD_YARD: plaza, lot, grass, dirt, sand, field - not the pavement) and out to
+  HOSP_PAD_R (900 px); `findPadSpot` / `clearPad` take the tile set (the other pads keep PAD_OK). 10 -> 1 (`LINT_ALLOW`
+  1): the one left has no open ground near and keeps its roof pad. flight, aircraftart, policeair, rescue,
+  placementlint 42/42.
+
+## 2026-11-22 - World batch: the arrival tunnels go into a hill (branch `prebeta-world2`; not live)
+- The audit's portalOnFlat (16: every one an arrival line's bore - the cover's hill drawn over flat ground, so nothing
+  shaded it as a rise). `shared/world3-arrivals.js` moundOf, with each bore: MOUND.h (6 m) of the land's relief over the
+  bore, falling away steeply on the portal's side (3 tiles: the stretch to the platform stays flat), gently behind the
+  blind end (6) and to the sides (5); open ground and the bore's rock only. Only the art reads the relief this late
+  (the hillshade). 16 -> 0 (`LINT_ALLOW` 0). world3arrivals, ftue, dmath, mapwindow, placementlint 42/42.
+
+## 2026-11-22 - World batch: pier roots on dry land (branch `prebeta-world2`; not live)
+- The audit's beachWater (4: a plank tile standing in water beside dry grass with no water of its own - a grass hole in a
+  pier's foot, a one-tile neck of planks along the shore, the Egret Marsh boardwalk's foot - the art took the planks for
+  water and blurred a sliver of sea onto the grass). `shared/world3-deckroots.js`: sliverAt, the lint's rule moved there
+  (one rule for the build and the lint), and deckRoots3 (the done hook, after the festoons): planks laid over each such
+  dry tile, so the root stands on land (mapcore.js deckOnDry: ground to the art); a boardwalk leg's neighbour joins its
+  legs (m.walkways), plants on it go. 5 tiles; 4 -> 0 (`LINT_ALLOW` 0). `test/deckroots.test.js`.
+- `test/world3marsh.test.js`: the marsh's two canoes are looked for as boats (kayaks moored in m.marina, since the boats
+  became drivable this morning) - the test had still looked for the props.
+- Not done here: dockOverlap (5, the marsh boardwalk's bends: two legs' ends cross with no landing) wants a landing piece
+  (a small deck open on two sides) - a new model, on the Fable list.
+
+## 2026-11-22 - World batch: no oversized empty plazas (branch `prebeta-world2`; not live)
+- The audit's bigEmptyPlaza (14: a stretch of paving 19+ tiles across with nothing on it - the owner, 11-14: "no
+  oversized empty plazas or lots"). `shared/world3-plazafill.js`: emptySpots, the lint's rule moved there (one rule for
+  the build and the lint; EMPTY_R with it), and plazaFill3 (the done hook, after the pier roots): each empty stretch,
+  deepest first, gets an island at its middle - a fountain ringed by benches, trees in planters and lamps (the first in
+  a square, about every other island; never on the airport's forecourt or in a street of houses) or a grove (four trees
+  in planters, two benches, a lamp, a bin) - none within KEEP_CLEAR (6) tiles of a map point or a race's start.
+- A thing laid on the paving with a size (a court, a canopy, a skate pad) now counts with its whole footprint, not just
+  its middle tile: Prison Island's yard was flagged only because its basketball court is painted on the paving - the
+  first try put picnic tables and a third hoop on the court (seen in the pictures; fixed, the yard left as it was).
+- 15 islands (7 fountains, 8 groves): Downtown's tower squares, Midtown's square by the line, Old Downtown, the Stadium,
+  the Harbor, North Point, West Hills, the airport's forecourt. 14 -> 0 (`LINT_ALLOW` 0). `test/plazafill.test.js`.
+- `test/biz.test.js`: "each kind for sale, priced, with a place" now looks at the whole list - the app shows the nearest
+  30, so whether a farm out in the country made it turned on where the test's player spawned (it failed on some spawns,
+  on main too).
+
+## 2026-11-22 - Tests: the desert's walk-in places reached by car at their door (branch `prebeta-world2`)
+- `test/cliffs.test.js` (failing on main too, not from the world batch - its tiles checked: nothing the batch lays stops a
+  car): eight desert places (three hospitals, shops at Mesa Flats and Red Rock) have their map point on their walk-in
+  room's floor, a few tiles behind the door, where no car goes - one there now counts as reached when the ground within
+  4 tiles (its door) is. The known two (a convenience store and a roadhouse with no drivable way in) stay as they were.
 ## 2026-11-22 - Soundtrack: full songs and the alternates measured (branch `prebeta-art`; nothing in the game yet)
 - `tools/music/analyze.py` renders each take whole from the top too; the 31 alternates measured; review page v2
   (`tools/music/review-page.py`) on the owner's computer. All 25 primaries' loops and endings approved (11-22 10:12).
@@ -26190,6 +26403,124 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
   booking sends your legal guns to your stash (arms.js onBooked). The test now checks that: out empty-handed, the pistol
   in your stash.
 - Tests: hudlayout, hudinfo, hudlayers, uikit, uitokens, chatui, chatsafety, notes1122, prison, arms, custody.
+## 2026-11-21 - The sea cave in a rock of its own (branch `nature-world`, off `nature`)
+Two tries. The first (17:32-18:30) set Summit Tarn behind a rim of granite cliff and the sea cave in a bluff of cliff
+pieces; the owner, 19:18: "Both of these fixes do not work ... just added a line of cliffs that dont look good and dont
+consider topographical levels". Both withdrawn. What stands:
+- **Summit Tarn** is page-side now and lives on `nature`: it drains over a low sill into its stream. This branch's
+  `shared/world3-tarn.js` is `nature`'s again.
+- **The sea cave (`shared/world3-caves.js`).** The cove is flat: there is no cliff to set a mouth in, and none within
+  ninety tiles (checked over the built world). So the cave has a rock of its own, as the mine has: one mass of dark
+  basalt behind the cobble pocket (`'cliff'` with `st: 'basalt'`), its outline ragged and its top stepping back in
+  tiers, solid where it is drawn (`shared/cliffshape.js` `cliffSolid`), the way in a low black arch at its foot
+  (`water.js` `caveArch`). The world changes here (the `world3` hash moves).
+- Kept from the first try, unused for now: `cliffWall`'s granite stone and `join`, `caveMouth` deep.
+- Tests on this branch: world3caves (updated: one rock mass, no row of cliff pieces), world3coast, world3redwoods,
+  cliffs, placementlint pass. The first build of the rock cleared the cove's fire ring from the beach beside it
+  (world3coast caught it): the rock now clears only what stands on its own tiles, and never a fire ring. The whole
+  suite has not been run on this branch.
+
+## 2026-11-22 (night) - World batch: before / after pictures; the arrival tunnels' hill made smaller
+- `tools/regress/` on main (before) and `prebeta-world2` with main and `nature-world` merged in (after): 55 places, 14
+  changed by 0.5% or more. Looked at: the moored boats gone from the baked marina (they're boats you can take now, the
+  server's), trees and plants in a few districts the same but drawn as other kinds (the prop list's order moved: the art
+  picks a tree's look by it - two Copper Gulch trees moved a tile, no more), Northshore Station's car park island without
+  its bays (a car there stood on the pavement). And one fix: the arrival tunnels' new hill shaded a dark patch on the sand
+  well past the cover's hill by Northshore Station - MOUND now 4 m, falling over 4 tiles behind and 3 to the sides
+  (portalOnFlat still 0; world3arrivals).
+
+## 2026-11-22 (night) - World batch: walk-ins beside a counter at the wall (wallOnly 17 -> 12)
+- The audit's wallOnly (a place you'd walk into with no room behind its door). Five were in a building shared with a
+  place served at the wall - a butcher's or a lodge's counter, a snack stand, the gang's contact, a hunt camp's desk -
+  and `shared/map.js` buildInteriors left the whole building without rooms. WALL_POIS: those are a closed storefront in
+  the row, as a delivery front is, and the walk-ins beside them get their rooms - Timber Bend's Axe & Saw Hardware and
+  Redwood Creek Tackle, Sandpiper Bay's Surf Co. and Pier Tackle & Bait, Old Downtown's Copper Room Supper Club (seen
+  from inside in pictures: the counters there, the closed fronts as back rooms). doors, doorsbake, foodrooms,
+  interiorload, nightclubs, walkinfront, walkinrooms, world3doors, world3shops, placementlint 42/42.
+- Left (12), why: too small for a room (under 5 tiles inside: Midtown's and the Neon Strip's narrow hand-plan shops, the
+  shallow strips at Pine Hills, Southside, Lake District, Pelican Key's charter desk); hand-built with no room laid -
+  Egret Coast's Marsh Bait & Tackle, and Greenfield Park's Lane Mart and Park West Coffee (the city arrival's own shops:
+  the block is built in a late World v3 pass, after the rooms are laid - a room there means laying it late with its
+  café tables; not done overnight on the first thing a new player sees - logged for the owner).
+
+## 2026-11-23 (night) - The Red Rock trailhead's 4x4s parked on its gravel
+- The suite on the branch caught it (`test/redrock.test.js` "the 4x4s in the lot"): the trailhead's lot is gravel - sand
+  with reserve bit 128, the ground bake's shingle - and `shared/parkcheck.js` parkWhy took sand for a beach, so the
+  server had never parked the jeep and the rescue 4x4 there (traffic.js badBay) and the world batch's badBays3 then took
+  the two spaces off the map. Gravel now holds a parked car (not the valet's strict rule). A dirt yard instead was
+  tried and backed out: it lost the gravel look and grew flowers (the pictures). redrock, placementlint 42/42, mycar,
+  parkducks, trafficbox, trafficwalls.
+
+## 2026-11-23 (night) - No tree's crown over a door or a sign, after the walks are cleared
+- The suite on the branch: `test/visaudit.test.js` "no tree's crown over a door, a sign, a chess table, an ATM or a bus
+  stop" - 10 on the branch (2 on main): the world batch's walk-clearing (clearWalks3) runs after the last sightlines pass
+  and moved plants off the walks to beside doors and signs. `shared/world3-world.js`: sightlines3 once more at the end
+  (after the plazas are planted). 10 -> 0. walks, placementlint 42/42.
+- Still over the allowance in the same test, logged: two hidden doors more than main (Northshore Beaches' Sure Aim Gun
+  Shop and Speedy Stop - now one walk-in opening north; the audit says a tree, none of the trees by them lines up - a try
+  at counting north doorways in the sightlines was made and backed out), one campfire more (the merged sea cave's
+  cove). Main is over too (picnic, vending, three doors).
+
+## 2026-11-23 (night) - The MX park's pit trucks parked again; the desert lake's rowboat a boat
+- The suite on the branch: `test/world3dirt.test.js` "5 bikes, 0 trucks" - the MX park's pits stand on the open ground
+  by design (its own test says so), but the parking rule takes sand and grass for a beach and a lawn: the server had never
+  parked the pit trucks (traffic.js badBay, on main too) and the batch's badBays3 took their spaces off. `shared/parkcheck.js`
+  parkExempt: a driveway's, a golf cart's and the pits' spaces - one answer for the build, the lint and the server.
+- `test/world3desert.test.js` "its rowboat by the jetty": Mirage Lake's rowboat looked for as a moored boat (m.marina).
+- world3dirt, world3desert, placementlint 42/42, trafficbox, mycar, parkducks.
+
+## 2026-11-23 (night) - A shrunk field squares at its district's edge; the tarn's rowboat a boat
+- The suite on the branch: `test/world3kestrel.test.js` "no field runs out of the valley (1)" - the farms-off-the-beach
+  pass (world3-croptidy.js farmsOffBeach3) shrank a field that straddled Willow Valley's east edge to the box round its
+  field tiles left: its middle came into the valley, its box still over the next district's land. A shrunk field now
+  keeps to the district most of it is in, and its box is trimmed an edge at a time while another district's land is
+  inside it (the edge isn't straight). world3kestrel, farming, placementlint 42/42.
+- `test/world3peaks.test.js` "a rowboat pulled up on it": Summit Tarn's rowboat looked for as a moored boat (m.marina).
+
+## 2026-11-23 (night) - No fountain on the Waves Arena's pitch
+- The suite on the branch: `test/world3server.test.js` "nothing solid on the pitch" - the Stadium District's "empty
+  plaza" the fill planted was the Waves Arena's pitch (car soccer). `shared/world3-plazafill.js`: a pitch or a court for
+  a game (m.venues) and an arena (m.arenas) count as taken - played on, not empty paving - for the build and the lint
+  alike. plazafill, world3server, placementlint 42/42 (bigEmptyPlaza still 0).
+- `test/world3woods.test.js` "a canoe by it" (the islet camp): its canoe looked for as a kayak in the water beside it
+  (m.marina), as the other suites' boats now are.
+
+## 2026-11-23 - World batch: a few bags beside some bins in the rough districts
+- The owner (11-23 07:09): "a few bags but not too many, just some bins have some bags piled next to it in rough
+  neighborhoods". `shared/world3-tidy.js` binBags3 (the done hook, after the stray bags go): in a rough district
+  (The Yards, Southside, Smuggler's Rock, Prison Island) a quarter of the trash cans and dumpsters that had none get a bag
+  or two at their side - the same ground, never the road, a door's step or another thing. With the bags the alleys had:
+  Southside 71 of 207 bins, The Yards 3 of 10 (its bins are mostly trash piles already). Seen in pictures (Southside: a
+  bag beside the can on the pavement). `test/binbags.test.js` (+1). DECISIONS: the three calls of 11-23 07:09 (rooms for
+  Lane Mart and Park West Coffee, these bags, casinos facing the street).
+
+## 2026-11-23 - World batch: Greenfield Park's shops get rooms; doors that open north made to read
+- The owner (11-23 07:09): "I think they should get rooms yes". Lane Mart and Park West Coffee (the city arrival's
+  shops, Greenfield Park) are walk-ins now: the park block is built in a late pass, after the city's rooms were laid,
+  so the done hook gets the room helper (`shared/map.js`: walkInRoom, WALK_IN) and `world3-firstcars.js` parkWest3 lays
+  them (the florist stays a delivery front). Seen in pictures from inside: the mart's shelves and checkout, the cafe's
+  counter and tables (foodrooms.js lays the tables from the room). wallOnly 12 -> 10. `test/world3arrivals.test.js`:
+  a shop's front is now the spot outside its door (`outside`) - its place is at the counter inside.
+- The casinos (the owner's pick of three, 11-23: "Keep, make doors read"): the Strip's resorts south of the boulevard
+  and Old Downtown's casinos on the south of the covered street front their street on the north side, the side this
+  camera doesn't see - kept, and every walk-in that opens north is made to read: a lit sign with its name on its roof's
+  north edge over the doorway (art: `client/art2/game/statics.js`, the roof kit's neon - doorName), and an A-board out on
+  the paving in line with the door as far out as the roof hides it (`shared/world3-tidy.js` northDoorBoards3: 3-6 tiles,
+  paving only, clear of other things; none where the north side is lawn - the Arts District's cafes face the park).
+  Seen in pictures: Wagon Wheel, Silver Mule, Rattlesnake lit over the covered street; Starfall Tower and Prism over
+  their drop-off loops. The art change goes into the batch's one re-bake. Not done here: Old Downtown's back row
+  (Horseshoe Motor Inn, Nail & Gear Hardware, Club Neon Cactus) drawn over the casinos' south ends - interiorOverlap,
+  next.
+- world3arrivals, world3shops, firstcar, ftue, foodrooms, interiorload, walkinrooms, activities, art2, art2teleport,
+  signs, binbags, perf, placementlint 42/42.
+- Old Downtown's back row off the casino floors: `shared/world3-tidy.js` lowBeforeCasinos3 - a building standing right
+  in front (within 3 tiles) of a north-opening casino's south wall is drawn low (`b.low`, one storey under a shallow
+  roof, as the buildings before a platform are): the Horseshoe Motor Inn, Nail & Gear Hardware and Club Neon Cactus.
+  Wagon Wheel's floor clear (12 x 6 tiles covered before), Rattlesnake Ruby's down to its last row (13 x 3 -> 13 x 1);
+  interiorOverlap 25 -> 24. Seen from inside both. The motor inn's set-back upper storeys stay (b.low lowers a
+  building's own storeys, not its upper block) - they reach the very south edge of Wagon Wheel's floor. A lower
+  building, not a moved one: the block keeps its plan (the owner's pick named moving them - said so to him).
+  casino, casinofloor, placementlint 42/42.
 
 ## 2026-11-23 - The console's Status tab: the server's health at a glance, the art redraw's progress
 - The owner (11-23 07:09): "Can we make the status easier to read and more organized? It would be good to be able to see
@@ -26212,6 +26543,13 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 - Seen before shipping: the page served with made-up facts (a redraw, then trouble) and shot on a desktop and a phone.
   `test/status.test.js`; admin-console, perf.
 
+## 2026-11-23 · The sea cave's rock solid all through (the cove's fire ring moved out of it)
+
+The final run before the world batch: test/cliffs found 12 walkable tiles under a hand-placed face's rock - the sea cave's
+basalt mass (11-21) stood over the cove's fire ring (world3-coast.js), and the ground within 3 tiles of the fire had been
+left open, under drawn rock. Now the ring moves, with its seats, driftwood and lantern, to the nearest open sand at
+least 3 tiles clear of the rock (within 8 tiles: it stays the cove's - test/world3coast), and every tile of the rock is
+solid (shared/world3-caves.js). cliffs, world3caves, world3coast, caveexit, cavelight, natcave pass.
 ## 2026-11-23 · The quick bar: a keyboard's only, no hold-key label
 
 The owner (11-23, a phone upright): "the quick bar is covered by other buttons and we don't need the text next to the
@@ -26302,3 +26640,9 @@ button says "Open the trunk (n/6)" and the Inventory shows CARRIED | TRUNK (stas
 things go - arms.js toStash / fromStash take the pool). Wrecked (insurance.js wrecked): what was in it spills where it is,
 a bag anyone can take. Cargo crates never go in - they ride in the open (cargo.js), so who carries something worth taking
 shows. The Guide's "Your trunk", the README's row; test/trunk.test.js.
+
+## 2026-11-23 · No merge markers, ever (test/nomarkers.test.js)
+
+A script merged main into a branch, hit a conflict and committed on through it: PR #23 took conflict markers into
+docs/DEVLOG.md on main (version.json, restamped, was fine). Fixed the same day; the class of it now fails a test - no
+`<<<<<<<` or `>>>>>>>` line in any text file of the checkout.

@@ -404,6 +404,15 @@ const SHOP_NEAR = 150, SHOP_FAR = 260, SHOP_SKIP = new Set(['home', 'atm', 'stat
 // the wall's foot is half a tile below. test/storeicons.test.js checks it against a baked front.
 export const BADGE = { doorH: 50, drop: 13, size: 19 };   // (19: a little bigger again, still under the lintel - the owner, 11-14)
 export function badgeAt(doorX, doorY) { const foot = doorY + TILE / 2; return { x: doorX, y: foot - BADGE.doorH + BADGE.drop, size: BADGE.size }; }
+// A place's badge: a walk-in's under its door's lintel (door: its doorway's middle); a place at a building's front wall -
+// served at the wall - under the lintel's height on that wall too, never up in the sign board over it (the owner, 11-16:
+// a place's badge over a shop's name - the placement lint's signCovered); anything else 64 px over where you stand at it
+export function badgeOf(m, p, door) {
+  if (door) return badgeAt(door.x, door.y);
+  const b = p.b !== undefined && p.b !== null && m.buildings ? m.buildings[p.b] : null;
+  if (b && b.tw !== undefined) { const foot = (b.ty + b.th) * TILE; if (p.y >= foot - 4 && p.y <= foot + 1.5 * TILE && p.x >= b.tx * TILE && p.x <= (b.tx + b.tw) * TILE) return badgeAt(p.x, foot - TILE / 2); }
+  return { x: p.x, y: p.y - 64, size: 24 };
+}
 // a hospital's badge is the red H on white, a clinic's the white cross on green (the owner, 2026-10-18: never the red
 // cross); the names decide which, as the signs' do (client/art2/signfont.js tradeOf)
 const glyphOf = (p, kinds) => (p.kind === 'hospital' && /HOSPITAL|MEDICAL CENTER/i.test(p.label || '') ? 'hosp' : kinds[p.kind]);
@@ -1033,13 +1042,13 @@ export class World2 {
       for (const p of list) {
         if (!p || !kinds[p.kind] || SHOP_SKIP.has(p.kind)) continue;
         const at = doors.get(p.id) || p;
-        if (Math.abs(at.x - sp.x) < SHOP_FAR && Math.abs(at.y - sp.y) < SHOP_FAR) near.list.push({ x: at.x, y: at.y, kind: p.kind, glyph: glyphOf(p, kinds), door: at !== p });
+        if (Math.abs(at.x - sp.x) < SHOP_FAR && Math.abs(at.y - sp.y) < SHOP_FAR) near.list.push({ x: at.x, y: at.y, kind: p.kind, glyph: glyphOf(p, kinds), door: at !== p, B: badgeOf(m, p, at !== p ? at : null) });
       }
     }
     for (const p of near.list) {
       const d = Math.hypot(p.x - sp.x, p.y - sp.y), k = d < SHOP_NEAR ? 1 : Math.max(0, 1 - (d - SHOP_NEAR) / (SHOP_FAR - SHOP_NEAR));
       if (k <= 0.02) continue;
-      const B = p.door ? badgeAt(p.x, p.y) : { x: p.x, y: p.y - 64, size: 24 }, y = B.y + Math.sin(F.now * 2.2 + p.x * 0.013) * (p.door ? 0.5 : 1.5);
+      const B = p.B, y = B.y + Math.sin(F.now * 2.2 + p.x * 0.013) * (B.size < 24 ? 0.5 : 1.5);
       g.save();
       g.globalAlpha = k;
       icon(g, p.glyph, B.x, y, B.size);   // (the round gold-rimmed badge: client/storeicons.js)

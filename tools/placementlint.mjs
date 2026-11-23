@@ -63,22 +63,20 @@
 // spotWhy(M, e, def, want) is the same look for something put down while the game runs (a scene's vehicles and people)
 // lint(M) -> { rows: { kind: [{ what, x, y, why }] }, seen: { boats, signs, props } }
 //   node tools/placementlint.mjs   builds World v3 and prints the rows (the heavy lock)
+import { sliverAt } from '../shared/world3-deckroots.js';
 import { TILE, T } from '../shared/constants.js';
 import { wildAt, TIDY3, homePaths3 } from '../shared/world3-tidy.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
-import { parkWhy } from '../shared/parkcheck.js';
+import { parkWhy, parkExempt } from '../shared/parkcheck.js';
 import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
 import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf } from '../client/art2/game/statics.js';
 import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
 import { textAudit } from './textaudit.mjs';
 import { WALK_IN } from '../shared/map.js';
 import { auditRows } from './audit/worldrows.mjs';
-import { badgeAt } from '../client/art2/game/host.js';
-// where a place's badge floats, as host.js shopMarks draws it: a walk-in's under its door's lintel, any other's 64 px over
-// where you stand at it (the audit, 11-19: branch egret moves the wall places' badges and exports this from host.js)
-const badgeOf = (M, p, door) => (door ? badgeAt(door.x, door.y) : { x: p.x, y: p.y - 64, size: 24 });
+import { badgeOf } from '../client/art2/game/host.js';
 
 // what the test lets by, each explained (else what the lint found is fixed in the data)
 // how many world px of a sprite G (its top left at ox, oy in the world) lie in the box X0, Y0 .. X1, Y1. A sprite made at the
@@ -92,46 +90,53 @@ const pxOver = (G, ox, oy, X0, Y0, X1, Y1) => {
 export const LINT_ALLOW = {
   // four lake jetties whose roots sit on the bank a tile back from the water (a kink in the planks at the shoreline):
   // what shows there is the lake's own shore rounding off by the jetty, not a band along planks over a beach
-  beachWater: 4,
+  beachWater: 0,   // (11-22: the roots planked over - shared/world3-deckroots.js)
   // the spaces laid over a pavement or a plaza when this check came in (2026-11-14): a few districts' kerb bays and car
   // parks drawn a tile off (Pine Hills' street, the airport motel's, the trades row's). (A golf cart's stand on its cart
   // path is its place: not counted.) Left empty at run time (traffic.js badBay); fix them in the data and bring this down - never up.
-  parked: 124,
+  parked: 0,                // (11-22: taken off the list at the build - parkcheck.js badBays3)
   // the ATMs with no front wall in reach - the kiosks of the districts that are all houses or open ground (West Hills'
   // and Pine Hills' streets of houses, Gull Harbor's and Egret Point's greens, the beaches, a park), left at the back of
   // the pavement as their district's cash of its own, or where a move would leave a street out of the cash's reach
   // (shared/world3-shops.js seatAtms3; world3server.test.js): a shop front there takes one in - bring this down, never up
-  atmStray: 53,
-  // a cash machine set in a one-storey self storage's front, its top a few px over the foot of the board above it
-  nameCovered: 1,
-  // ---- the audit's rows (2026-11-19, docs/audit/REPORT.md - every hit listed in docs/audit/hits.json): each at the count
-  // the audit found, before the fix pass. Bring them down, never up.
-  // (branch egret's three rows - the owner's Egret Point shots, 11-16 - here before egret's class fixes; egret ships them
-  // at signCovered 159, doorOnGrass 372, wallOnly 17)
-  // something over a front's sign: a prop standing in front of its words, a place's badge over them
-  signCovered: 312,
-  // a business's or a home's door with no path to it
-  doorOnGrass: 1777,
-  // a place you'd walk into served at the wall (no room behind its door)
-  wallOnly: 111,
+  atmStray: 52,
+  // (11-22, the world batch: shared/world3-walks.js takes up any plant whose crown stands over a house's path - egret's two
+  // included)
+  plantOnPath: 0,
+  // (11-16: the cash machine is lower now - props-kit.js atmWall - and the self storage's board clear of it)
+  nameCovered: 0,
+  // (the rows that came in 11-16 - the owner's Egret Point shots - each at what's left after the class fixes: bring them
+  // down, never up)
+  // the street's furniture standing in front of a shop's words - an el's piers, a shelter's or a stall's canopy, a phone
+  // booth, a porch's posts, a lamp, a flag or power pole, a run of lights (shared/festoon.js's lint is its own) - and the
+  // badge of a place at a wall over its window's OPEN
+  signCovered: 158,   // (11-22: egret's 159, one fewer with the walkways cleared)
+  // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
+  // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
+  // the most part (West Hills', Southside's, Old Town's lots)
+  doorOnGrass: 89,
+  // the places you'd walk into still served at the wall: a building too shallow for a room (Pelican Key Charters, a few
+  // of World v3's added shop rows), a row shared with a place that isn't a shop (Egret Marsh Outfitters' and the Marsh
+  // Bait & Tackle's), a lot building with a home or a bay behind the same front, the hand-built Greenfield Park shops
+  wallOnly: 10,   // (11-22 night: a walk-in may share its row with a counter at the wall - map.js WALL_POIS; 11-23: Greenfield Park's two shops)
   // (the owner's 11-17 notes, tools/audit/worldrows.mjs - what each row means is there)
-  plantOnWalk: 2914,        // trees (not a street tree in its grate), shrubs, bushes, hedges on a sidewalk, road, lot (a plaza outside the paved districts)
-  planterOnWalk: 422,       // planters and pots on a sidewalk, a road or a lot
-  northDoor: 21,            // a business's entrance on its north wall
-  interiorOverlap: 25,      // a walk-in's room under another building's footprint or its drawn front
-  frontNames: 7,            // a shop's sign naming none of its places, or another trade
+  plantOnWalk: 0,           // trees (not a street tree in its grate, nor a boulevard median's), shrubs, bushes, hedges on a sidewalk, road, lot (a plaza outside the paved districts) - 2,914 at the audit; 0 since shared/world3-walks.js (11-22)
+  planterOnWalk: 0,         // planters and pots on a sidewalk, a road or a lot, not set against a wall - 422 at the audit; 0 since 11-22
+  northDoor: 19,            // (21 at the audit; 19 with egret, 11-22) a business's entrance on its north wall
+  interiorOverlap: 24,      // a walk-in's room under another building's footprint or its drawn front (11-23: Old Downtown's fronts before the casinos drawn low - world3-tidy.js lowBeforeCasinos3)
+  frontNames: 0,            // a shop's sign naming none of its places, or another trade (11-22: renamed at the build - world3-signfix.js)
   lobbyDoor: 161,           // an apartment's lobby door at a shop front
   rampCrossesRoad: 9,       // a ramp below deck height over a street that isn't its junction
-  railOverWater: 110,       // a railing or fence run out over open water
+  railOverWater: 0,       // a railing or fence run out over open water (11-22: moved back onto the shore or cut back - world3-railtrim.js; the rule: water under it and either side)
   dockOverlap: 5,           // boardwalks or piers over each other (the Egret Marsh boardwalk's bends)
   railOverWaterArt: 18,     // a railway span over water without real bridge art (piers, abutments)
-  portalOnFlat: 16,         // a tunnel mouth with no hill over the bore
-  festoonDensity: 9,        // more than FESTOON_CAP runs of lights within FESTOON_R
-  cropInTown: 49,           // a crop field, strip or orchard in a town or by a beach
-  heliOffPad: 10,           // a hospital with no ground helipad, a helipad on a sidewalk or a road
-  deadBoat: 103,            // a boat prop you can reach that isn't a vehicle and isn't stored
-  bigEmptyPlaza: 14,        // an empty stretch of paving 19+ tiles across
-  binBags: 44,              // bin bags away from any bin outside the rough districts
+  portalOnFlat: 0,        // a tunnel mouth with no hill over the bore (11-22: the arrival bores got their hill in the relief - world3-arrivals.js moundOf)
+  festoonDensity: 0,        // more than FESTOON_CAP runs of lights within FESTOON_R (11-22: thinned at the build - world3-festoons.js festoonThin3)
+  cropInTown: 0,            // a crop field, strip or orchard in a town or by a beach (11-22: the farms back from the beach, the scraps cleared - world3-croptidy.js)
+  heliOffPad: 1,           // a hospital with no ground helipad, a helipad on a sidewalk or a road (11-22: the yard pads off the pavement, looked for further out - shared/flight.js PAD_YARD; left: one with no open ground near)
+  deadBoat: 3,              // a boat prop you can reach that isn't a vehicle and isn't stored (11-22: every one a real boat - world3-boats.js; left: 3 with no water near)
+  bigEmptyPlaza: 0,       // an empty stretch of paving 19+ tiles across (11-22: islands laid - shared/world3-plazafill.js)
+  binBags: 0,               // bin bags away from any bin outside the rough districts (cleared by the build: world3-tidy.js strayBags3)
 };
 export const CANOPY_MAX = [4 * TILE, 2 * TILE], ALLEY_GAP = 26;
 const CANOPIES = new Set(['porte', 'canopy', 'pergola']);
@@ -247,32 +252,20 @@ export function lint(M) {
   for (const race of M.races || []) for (const c of crafts) if (Math.hypot(c.x - race.start.x, c.y - race.start.y) < START_R) { rows.startOnCraft.push({ what: `${race.name}'s start`, x: race.start.x, y: race.start.y }); break; }
   // planks the art takes for standing in water, beside dry ground with no water by it (a sliver of sea along them)
   {
-    const DRY = new Set([T.SAND, T.GRASS, T.DIRT]), wetT = (t) => t === T.WATER || t === T.DEEP;
-    const deckWet = (tx, ty) => M.tiles[M.idx(tx, ty)] === T.DOCK && !deckOnDry(M, tx, ty);   // (a bridge's ends over its banks are drawn over its water by design)
-    let old = false;   // (old: every plank taken for water, as before deckOnDry - seen.beachWaterOld, the lint's own check that it sees the class)
-    const twAt = (x, y) => { if (!M.inside(x, y)) return 1; const t = M.tiles[M.idx(x, y)]; return wetT(t) || t === T.BRIDGE || (t === T.DOCK && (old || !deckOnDry(M, x, y))) ? 1 : 0; };
-    const tfAt = (x, y) => twAt(x, y) * 0.5 + (twAt(x - 1, y) + twAt(x + 1, y) + twAt(x, y - 1) + twAt(x, y + 1)) * 0.1 + (twAt(x - 1, y - 1) + twAt(x + 1, y - 1) + twAt(x - 1, y + 1) + twAt(x + 1, y + 1)) * 0.025;
-    const seenAt = new Set();
-    for (const pass of [true, false]) for (let ty = M.y0 + 1; ty < M.y0 + M.h - 1; ty++) for (let tx = M.x0 + 1; tx < M.x0 + M.w - 1; tx++) {
-      if (old !== pass) { old = pass; seenAt.clear(); }
-      const t = M.tiles[M.idx(tx, ty)];
-      if (t !== T.DOCK) continue;
-      if (!old) seen.decks = (seen.decks || 0) + 1;
-      if (!old && !deckWet(tx, ty)) continue;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {   // (side by side: a corner's touch is too little wet for the sea to show)
-        const x = tx + dx, y = ty + dy;
-        if (!M.inside(x, y) || !DRY.has(M.tiles[M.idx(x, y)])) continue;
-        let water = false;
-        for (let j = -1; j <= 1 && !water; j++) for (let i = -1; i <= 1; i++) if (M.inside(x + i, y + j) && wetT(M.tiles[M.idx(x + i, y + j)])) { water = true; break; }
-        if (water) continue;
-        // (the bake's own sum: the two tiles' blurred wetness, met halfway - groundbake.js tf; a jetty's root by the shore
-        // gives a speck or two at most, a run of planks over the sand a band of sea)
-        if ((tfAt(x, y) + tfAt(tx, ty)) / 2 < 0.47) continue;
+    // (shared/world3-deckroots.js sliverAt: the rule the build lays planks over the dry tile by)
+    for (const old of [true, false]) {
+      const seenAt = new Set();
+      for (let ty = M.y0 + 1; ty < M.y0 + M.h - 1; ty++) for (let tx = M.x0 + 1; tx < M.x0 + M.w - 1; tx++) {
+        const t = M.tiles[M.idx(tx, ty)];
+        if (t !== T.DOCK) continue;
+        if (!old) seen.decks = (seen.decks || 0) + 1;
+        const d = sliverAt(M, tx, ty, old);
+        if (!d) continue;
         const key = `${tx >> 3},${ty >> 3}`;   // (one row a stretch of 8 tiles)
         if (seenAt.has(key)) continue;
         seenAt.add(key);
         if (old) seen.beachWaterOld = (seen.beachWaterOld || 0) + 1;
-        else rows.beachWater.push({ what: `a ${TN[t]} tile taken for water beside dry ${TN[M.tiles[M.idx(x, y)]]}`, x: tx * TILE + 16, y: ty * TILE + 16 });
+        else rows.beachWater.push({ what: `a ${TN[t]} tile taken for water beside dry ${TN[M.tiles[M.idx(d[0], d[1])]]}`, x: tx * TILE + 16, y: ty * TILE + 16 });
       }
     }
   }
@@ -291,7 +284,7 @@ export function lint(M) {
   }
   // the parking spaces: their car off the pavements, the promenades, the lawns
   const space = (what, sp, model) => { const V = VEHICLES[model] || VEHICLES.sedan, why = parkWhy(M, sp.x, sp.y, sp.a || 0, V.L, V.W); seen.spaces = (seen.spaces || 0) + 1; if (why) rows.parked.push({ what, x: sp.x, y: sp.y, why }); };
-  for (const sp of M.parking || []) if (!sp.drive && sp.model !== 'golfcart') space(`a parked ${sp.model || 'car'}${sp.kerb ? ' (kerb bay)' : ''}`, sp, sp.model);
+  for (const sp of M.parking || []) if (!parkExempt(sp)) space(`a parked ${sp.model || 'car'}${sp.kerb ? ' (kerb bay)' : ''}`, sp, sp.model);
   for (const L of M.dealerLots || []) for (const sp of L.slots || []) space('a car on a lot', sp, 'sedan');
   // the canopies over the doors: none over CANOPY_MAX (a filling station's over its pumps is its own)
   {

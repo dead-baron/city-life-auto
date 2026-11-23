@@ -70,17 +70,18 @@ export function cableSpool() {
   for (const a of [0.5, 2.1, 3.7, 5.3]) m.box(12 + Math.cos(a) * 8, 17, 12 + Math.sin(a) * 8, 13 + Math.cos(a) * 8, 18, 13 + Math.sin(a) * 8, bolt);
   return m;
 }
-// a cash machine set into a short brick wall with a stone surround and a lit screen
+// a cash machine set into a short brick wall with a stone surround and a lit screen - low enough to stand under a shop's
+// sign board (its foot 48 px up the front: the owner, 11-16 - an ATM's cap over the Fish Market's first letter)
 export function atmWall(on = 1) {
-  const m = new Vox(36, 12, 52);
+  const m = new Vox(36, 12, 44);
   const brick = m.mat({ ramp: MAT.brick, k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 || (Math.round(x + (Math.floor(z / 4) % 2) * 3) % 7 === 0) ? -1 : 0) });
   const stone = m.mat({ ramp: R('#b8b0a2'), k: 3 }), steel = m.mat({ ramp: R('#9aa0a8'), k: 3 }), dark = m.mat({ ramp: MAT.metalDark, k: 2 });
   const scr = glowMat(m, '#6ac8f0', on ? [120, 210, 255, 230] : [60, 120, 160, 60]), keys = m.mat({ ramp: R('#d8d8d0'), k: 3 }), cap = m.mat({ ramp: R('#2f6a4e'), k: 3 });
-  m.box(0, 0, 0, 36, 10, 50, brick); m.box(0, 0, 48, 36, 12, 52, stone); m.box(0, 0, 0, 36, 12, 4, stone);
-  m.box(7, 9, 6, 29, 12, 44, stone); m.box(9, 10, 8, 27, 12, 40, steel); m.box(9, 10, 40, 27, 12, 44, cap);
-  m.box(12, 11, 28, 24, 12, 37, scr); m.box(12, 11, 18, 24, 12, 25, dark);
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) m.box(13 + c * 3, 11, 19 + r * 2, 15 + c * 3, 12, 20 + r * 2, keys);
-  m.box(13, 11, 12, 23, 12, 14, dark);
+  m.box(0, 0, 0, 36, 10, 42, brick); m.box(0, 0, 40, 36, 12, 44, stone); m.box(0, 0, 0, 36, 12, 4, stone);
+  m.box(7, 9, 5, 29, 12, 38, stone); m.box(9, 10, 7, 27, 12, 34, steel); m.box(9, 10, 34, 27, 12, 38, cap);
+  m.box(12, 11, 24, 24, 12, 32, scr); m.box(12, 11, 15, 24, 12, 22, dark);
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) m.box(13 + c * 3, 11, 16 + r * 2, 15 + c * 3, 12, 17 + r * 2, keys);
+  m.box(13, 11, 10, 23, 12, 12, dark);
   return m;
 }
 // a single parking meter on a post
