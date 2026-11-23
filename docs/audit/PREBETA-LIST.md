@@ -31,6 +31,27 @@ rooms lit at night, the console's Status tab (live 11-23).
 6. **World craft** (B) - waves 2-6, district by district (wave 1 done).
 7. **The walkthrough** (G), then **the launch steps** (H).
 
+## 2026-11-23 afternoon - done today, and the owner's new notes
+
+**Live today:** the world batch (PR #25, re-bake follows); the Inventory (#19: character, clothes, underwear and socks, towels,
+REMOVE ALL); the stash in the Inventory (#20); press and drag on every device (#21); the trunk (#22); tiles and slots
+polish (#23); the quick bar a keyboard's only, the ellipsis, the touch ammo (#17, #18).
+
+**The owner's notes still open (11-23):**
+1. **Building transition** - going in or out darkens the whole screen for a moment. Wanted: the building's exterior and
+   interior art cross-fade, nothing else on screen dims (not the old pop either). Pre-beta. (client/art2/game/host.js -
+   the walk-in / roof fade.)
+2. **Mouths (Fable 5.2, the art pass)** - the line reads too dark, and in the run cycle it jumps about the face or doesn't
+   draw whole. Options: a softer, thinner line; a mouth only in the close-up; or none. Wanted: a check that a face's
+   features hold their place across every frame of every cycle (a lint over the people renderer's frames), then decide.
+3. **The stash's side-by-side screen** - waits for the UIC-21 concept (prompt: project claude/stash-concept-prompt-2026-11-23.md).
+4. **The UI pass, every screen** - next: a harness that shoots the real game's screens (pause, settings, map, phone,
+   shops, death) at four sizes, as the HUD and the Inventory were.
+
+**Follow-ups found today:** two north-facing doors at Northshore Beaches under trees (visaudit; main's own picnic and cola
+counts too); the street race's start (streetlife.js laneSpot: 60 random tries among ~9 streets on the Strip) fails now
+and then - world3scenes flakes on main.
+
 ## How we work through it
 - **Every fix is a class fix**: fixed everywhere it occurs, with a lint row or test that runs over the WHOLE World v3
   map in `npm test`, so it can't come back. A note fixed in one spot only is not done.
