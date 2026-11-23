@@ -9,6 +9,9 @@ import { TILE, T } from './constants.js';
 import { VEHICLES } from './vehicles.js';
 
 const PARK_ON = new Set([T.ROAD, T.LOT, T.BRIDGE, T.DIRT]);
+// gravel (sand with reserve bit 128, the ground bake's shingle - the Red Rock trailhead's lot): ground a car may stand on
+// (11-23: its two 4x4s were never parked - sand counted as a beach)
+const GRAVEL = 128;
 export const PARK_NEVER = new Set([T.SIDEWALK, T.PLAZA, T.GRASS, T.SAND, T.DOCK, T.BUILDING, T.FLOOR, T.COUNTER, T.WATER, T.DEEP]);
 const TN = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k.toLowerCase()]));
 // null when (x, y, a) holds a vehicle L x W on proper ground, else what's under it ('on sidewalk', 'on plaza'...).
@@ -20,7 +23,8 @@ export function parkWhy(m, x, y, a, L, W, strict = false) {
     const px = x + ca * s - sa * w, py = y + sa * s + ca * w;
     const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE);
     if (!m.inside(tx, ty)) return 'off the map';
-    const t = m.tiles[m.idx(tx, ty)];
+    const i = m.idx(tx, ty), t = m.tiles[i];
+    if (!strict && t === T.SAND && m.reserve && (m.reserve[i] & GRAVEL)) continue;   // (gravel: a trailhead's lot - the sand's shingle look)
     if (strict ? !PARK_ON.has(t) : PARK_NEVER.has(t)) return `on ${TN[t] || 'nothing'}`;
   }
   return null;

@@ -26375,3 +26375,11 @@ consider topographical levels". Both withdrawn. What stands:
   Egret Coast's Marsh Bait & Tackle, and Greenfield Park's Lane Mart and Park West Coffee (the city arrival's own shops:
   the block is built in a late World v3 pass, after the rooms are laid - a room there means laying it late with its
   café tables; not done overnight on the first thing a new player sees - logged for the owner).
+
+## 2026-11-23 (night) - The Red Rock trailhead's 4x4s parked on its gravel
+- The suite on the branch caught it (`test/redrock.test.js` "the 4x4s in the lot"): the trailhead's lot is gravel - sand
+  with reserve bit 128, the ground bake's shingle - and `shared/parkcheck.js` parkWhy took sand for a beach, so the
+  server had never parked the jeep and the rescue 4x4 there (traffic.js badBay) and the world batch's badBays3 then took
+  the two spaces off the map. Gravel now holds a parked car (not the valet's strict rule). A dirt yard instead was
+  tried and backed out: it lost the gravel look and grew flowers (the pictures). redrock, placementlint 42/42, mycar,
+  parkducks, trafficbox, trafficwalls.
