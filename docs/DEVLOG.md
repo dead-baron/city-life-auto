@@ -26446,3 +26446,11 @@ consider topographical levels". Both withdrawn. What stands:
   next.
 - world3arrivals, world3shops, firstcar, ftue, foodrooms, interiorload, walkinrooms, activities, art2, art2teleport,
   signs, binbags, perf, placementlint 42/42.
+- Old Downtown's back row off the casino floors: `shared/world3-tidy.js` lowBeforeCasinos3 - a building standing right
+  in front (within 3 tiles) of a north-opening casino's south wall is drawn low (`b.low`, one storey under a shallow
+  roof, as the buildings before a platform are): the Horseshoe Motor Inn, Nail & Gear Hardware and Club Neon Cactus.
+  Wagon Wheel's floor clear (12 x 6 tiles covered before), Rattlesnake Ruby's down to its last row (13 x 3 -> 13 x 1);
+  interiorOverlap 25 -> 24. Seen from inside both. The motor inn's set-back upper storeys stay (b.low lowers a
+  building's own storeys, not its upper block) - they reach the very south edge of Wagon Wheel's floor. A lower
+  building, not a moved one: the block keeps its plan (the owner's pick named moving them - said so to him).
+  casino, casinofloor, placementlint 42/42.

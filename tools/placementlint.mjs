@@ -123,7 +123,7 @@ export const LINT_ALLOW = {
   plantOnWalk: 0,           // trees (not a street tree in its grate, nor a boulevard median's), shrubs, bushes, hedges on a sidewalk, road, lot (a plaza outside the paved districts) - 2,914 at the audit; 0 since shared/world3-walks.js (11-22)
   planterOnWalk: 0,         // planters and pots on a sidewalk, a road or a lot, not set against a wall - 422 at the audit; 0 since 11-22
   northDoor: 19,            // (21 at the audit; 19 with egret, 11-22) a business's entrance on its north wall
-  interiorOverlap: 25,      // a walk-in's room under another building's footprint or its drawn front
+  interiorOverlap: 24,      // a walk-in's room under another building's footprint or its drawn front (11-23: Old Downtown's fronts before the casinos drawn low - world3-tidy.js lowBeforeCasinos3)
   frontNames: 0,            // a shop's sign naming none of its places, or another trade (11-22: renamed at the build - world3-signfix.js)
   lobbyDoor: 161,           // an apartment's lobby door at a shop front
   rampCrossesRoad: 9,       // a ramp below deck height over a street that isn't its junction

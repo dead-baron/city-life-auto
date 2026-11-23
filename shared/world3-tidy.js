@@ -261,6 +261,25 @@ export function northDoorBoards3(m, H3) {
   }
   return n;
 }
+// A casino that opens north (Old Downtown's on the south of the covered street) has its gaming floor reaching back to its
+// south wall - and a building standing right in front of that wall, drawn up the screen with its storeys, covered the
+// floor (the owner, 11-17 21:07: "looks really weird"; the audit's interiorOverlap). That building is drawn low - one
+// storey under a shallow roof (art: statics.js b.low, as the buildings in front of a platform are - world3-rail.js):
+// Old Downtown's Horseshoe Motor Inn and Club Neon Cactus. (The owner, 11-23: "Keep, make doors read".)
+export function lowBeforeCasinos3(m) {
+  let n = 0;
+  for (const id of m.walkIns || []) {
+    const b = m.buildings[id], W = b && b.walkIn;
+    if (!W || W.south || b.gone || !(W.units || []).some((u) => { const p = m.pois[u.poi]; return p && p.casino; })) continue;
+    const foot = b.ty + b.th, x0 = b.tx, x1 = b.tx + b.tw;
+    for (const o of m.buildings) {
+      if (!o || o.gone || o.id === id || o.low) continue;
+      if (o.ty < foot - 1 || o.ty > foot + 3 || o.tx + o.tw <= x0 || o.tx >= x1) continue;   // (right in front of its south wall: within 3 tiles - a lane between)
+      o.low = 1; n++;
+    }
+  }
+  return n;
+}
 export function strayBags3(m) {
   if (!Array.isArray(m.props)) return 0;
   const gone = new Set(strayBags(m));
