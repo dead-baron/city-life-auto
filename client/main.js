@@ -489,6 +489,7 @@ function onText(m) {
       if (!S.playing) requestPlayers();   // (who's online, on the title)
       break;
     case 'sp': for (const d of m.e) { const e = ent(d.id, d.k); if (d.app && d.app.lk && d.app.t === undefined) lookApp(d); e.d = d; } break;
+    case 'stash': S.stash = m; bag.refresh(); if (m.open && S.playing) { if (S.hud && S.hud.menuOpen) S.hud.closeMenu(); if (topOverlay() !== 'inv') openHub('bag'); } break;   // (your stash, opened at one of its doors: server/systems/stash.js - the Inventory shows it)
     case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); bag.refresh(); if (m.open) openCreator(m.open); else if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first; the home's wardrobe opens the wheel or the mirror)
     case 'ds': for (const id of m.ids) S.ents.delete(id); break;
     case 'ev': for (const ev of m.l) onEvent(ev); break;
@@ -1837,7 +1838,7 @@ function deathPad() {
 let bagMod = null, bagP = null;
 const bag = {
   show() {
-    (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); }, leave: () => { if (topOverlay() === 'inv') closeHub(); },
+    (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); }, stash: () => S.stash, leave: () => { if (topOverlay() === 'inv') closeHub(); },
       looks: () => S.looks, look: () => { const e = S.me && S.ents.get(S.me.pedId); return (e && e.d && e.d.app && e.d.app.lk) || (S.looks && S.looks.cur) || null; },
       pp: () => { const e = S.me && S.ents.get(S.me.pedId); return (e && e.d && e.d.pp) || null; },
       stamina: () => (S.pred && S.pred.kind === 'ped' ? [S.pred.s.stamina, (S.pred.mods && S.pred.mods.staminaMax) || 100] : null),

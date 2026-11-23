@@ -343,7 +343,7 @@ export const PACK_BLINK_S = 30;               // ...and blinks for its last seco
 // +1 throwable - profile.carryUp; not built yet). Your stash (one per
 // character): opened at your home's safe, and at any gun shop or pawn shop; a gun bought "to stash" goes straight into
 // it. giveR: hand a weapon to a crewmate this close (px). Police issue is the department's: never at risk, never a slot.
-export { ARMS } from './rules-arms.js';   // (its own file: the page's quick keys read the carry classes - shared/loadout.js)
+export { ARMS, STASH } from './rules-arms.js';   // (its own file: the page's quick keys read the carry classes - shared/loadout.js)
 export { GUN_PRICES } from './rules-base.js';   // (the basic pistol's prices: kept low now a carried gun can be lost - shared/rules-base.js)
 // Your car (the owner, 2026-11-14: "map + valet delivery, no teleport"; server/systems/mycar.js): the car you last took
 // out stays where you left it (through a logout, and a restart: profile.carAt) and shows on your map. The phone's "Have it

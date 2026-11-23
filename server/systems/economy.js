@@ -55,6 +55,7 @@ import * as rep from './reputation.js';
 import * as bathhouse from './bathhouse.js';
 import * as contacts from './contacts.js';   // (the lock-up a contact gave you)
 import * as arms from './arms.js';   // (your weapons: the stash, the slots, buying to the stash - arms.js)
+import * as stash from './stash.js';   // (the stash opened in the Inventory)
 import * as extract from './extract.js';   // (the valuable crates in your home's stash: taken out at the door)
 import { PIECES as DECOR_PIECES, SHOP_KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
@@ -209,6 +210,7 @@ const carryLine = (prof = {}) => { const n = (c) => arms.carryOf(prof, c); retur
 // Your stash at a gun shop's or a pawn shop's counter (arms.js: the same stash as your home's safe)
 function stashMenu(p, poi) {
   const prof = p.profile, opts = arms.stashRows(p), n = arms.stashed(prof).length;
+  opts.unshift({ id: 'stopen', label: 'Open your stash', note: 'in your Inventory: items and weapons' });   // (stash.js)
   opts.push({ id: 'stback', label: 'Back to the counter' }, { id: 'close', label: 'Close' });
   return { t: 'menu', poi: poi.id, title: 'Your stash', sub: `${n ? `${n} weapon${n === 1 ? '' : 's'} in your stash.` : 'Your stash is empty.'} The same stash as your home's safe. What you carry can be lost if you go down - ${carryLine(prof)} at most.`, opts, cash: prof.cash, bank: prof.bank };
 }
@@ -426,6 +428,7 @@ function menuOf(world, p, poi) {
           opts.push({ id: 'hmirror', label: 'The mirror', note: p.badge ? 'off duty only' : 'change anything about your look', dis: p.badge });
           for (const [id, n] of Object.entries(prof.inventory)) if (n > 0 && ITEMS[id] && !ITEMS[id].ride) opts.push({ id: `hst:${id}`, label: `Stash ${ITEMS[id].name} x${n}` });   // (not a ride: yours goes home by itself - gear.js)
           for (const [id, n] of Object.entries(st.items || {})) if (n > 0 && ITEMS[id]) opts.push({ id: `htk:${id}`, label: `Take ${ITEMS[id].name} x${n}`, note: 'stash' });
+          opts.push({ id: 'stopen', label: 'Open your stash', note: 'in your Inventory: items and weapons' });   // (stash.js)
           opts.push(...arms.stashRows(p));   // (the guns in and out: arms.js - the same stash a gun shop's counter opens)
         }
         opts.push({ id: 'hspawn', label: prof.spawnHome === h.id ? 'Respawn point: HERE' : 'Make this my respawn point', dis: prof.spawnHome === h.id });
@@ -680,6 +683,11 @@ function execute(world, p, poi, opt) {
     }
     case 'stash': { p.stashShop = poi.id; const over = arms.fit(p); if (over.length) world.notify(p, `You carry ${carryLine()} at most: the ${over.join(' and the ')} went into your stash.`, 'info'); return null; }   // (your stash at the counter; a loadout from before the limit trimmed to it - arms.js)
     case 'stback': p.stashShop = null; return null;
+    case 'stopen': {   // (your stash in the Inventory: stash.js - inside your home, at a gun or pawn counter, at your hideout's office)
+      const ped = p.ped, h = ped && ped.home && !ped.home.guest ? ped.home : null;
+      const door = h ? { k: 'home', label: 'Your home', home: h.id } : { k: ARMS.stashKinds.includes(poi.kind) ? 'counter' : 'hideout', label: poi.label || 'Your stash', x: poi.x, y: poi.y };
+      return stash.open(world, p, door);
+    }
     case 'i': {
       const id = parts[1], price = Number(parts[2]), qty = Number(parts[3]);
       const it = ITEMS[id];

@@ -13,7 +13,7 @@ import { SIZES, measureAll, problems } from './invpage.js';
 
 test('the Inventory fits every screen: nothing off it, nothing cut off, no button on another', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
   const bad = [], list = [];
-  for (const [w, h, dev] of SIZES) for (const extra of ['', '&sel=w:pistol', '&tab=clothes&looks=1']) list.push([w, h, dev, extra]);
+  for (const [w, h, dev] of SIZES) for (const extra of ['', '&sel=w:pistol', '&tab=clothes&looks=1', '&stash=1', '&stash=1&sel=s:i:medkit']) list.push([w, h, dev, extra]);
   for (const r of await measureAll(list)) {
     const { w, h, extra } = r;
     bad.push(...problems(r));

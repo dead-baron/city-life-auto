@@ -26250,3 +26250,18 @@ weapon pictures, the Inventory getting out of the way when you take out an instr
 - **Smaller fixes seen in the shots**: a held gun's tile shows its slot number on a cream tag (IN HAND and 12|36 didn't
   fit a phone's tile together), the quick bar's filled slots without the cut-off names (the tooltip has them), the keys
   line wraps, "Food & Meds" wraps in the side rail rather than being cut.
+
+## 2026-11-23 · The stash in the Inventory
+
+The owner (11-23): "store items in my home or safe lockers around the world ... and you can access the same pool of
+items/inventory/weapons". One pool per character (profile.stash: the home safe's, the gun counters' and the fridge's, as
+before) now opens in the Inventory: **Open your stash** inside your home, at a gun or pawn shop's counter (its stash
+menu) or at your hideout's office (yours or your crew's) - server/systems/stash.js: `p.stashAt` the door it was opened
+at, closed once you walk off (STASH.reach), leave the home, die or are held; `{ t: 'stash', a: 'put' | 'take', k, id,
+n? }` moves an item (any number) or a weapon with its rounds (arms.js toStash / fromStash: its class full, one swaps back
+in). The page (client/bag.js): a CARRIED | STASH switch over the tabs (the stash first), the same tabs and tiles; a
+stashed thing's details TAKE ALL / TAKE ONE, a carried one's TO STASH / ONE TO STASH; with a mouse drag a tile onto the
+other side's button. Clothes stay in the wardrobe (always yours). The Guide's "Your stash", the README's row.
+test/stash.test.js (doors, moves, closing, the same pool at another door); test/invlayout.test.js measures the stash
+open at every size (on a phone on its side the switch got a row of its own over the rail). The side-by-side screen waits
+for the owner's concept (UIC-21, prompt in the project: claude/stash-concept-prompt-2026-11-23.md).

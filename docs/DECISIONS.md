@@ -351,8 +351,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Weapons at risk: guns, bows, launchers, grenades, illegal items and dear blades drop on death as pickups anyone can take (a minute); fists, police issue and cheap legal tools stay. (11-14; decisions-11-14*, DEVLOG 11-14) - SUPERSEDES "a weapon you buy is yours forever; death drops cargo, never weapons" (11-03).
 - Arrest: illegal guns confiscated for good; legal guns go to your stash. (11-14; DEVLOG 11-14) - conflicts with launch-plan's impound lot (fee to get a seized gun back): OPEN if the impound idea is still wanted.
 - One stash per character: your home's safe and every gun / pawn shop counter. (11-14; decisions-11-14*)
-- The stash holds everything - items, weapons, clothing - one pool reached from many doors: your home's safe, gun and pawn
-  counters, your gang's hideout locker (members), later bank boxes. Nothing in the stash is ever lost; what you carry is at
+- The stash holds what you own and don't carry - items and weapons - one pool reached from many doors: inside your home,
+  gun and pawn counters, your (or your crew's) hideout office, later bank boxes. Clothes stay in your wardrobe: always
+  yours, never at risk, so there's nothing to stash (Claude's call, 11-23). Nothing in the stash is ever lost; what you carry is at
   risk; carrying is limited by your backpack. The Inventory is a real inventory: your character with its loadout and
   clothes, drag items into slots or select and EQUIP / USE, and at a stash door carried and stash side by side. (11-23)
 - The Inventory's clear-the-outfit button says REMOVE ALL - "take it all off" read as suggestive (the owner, 11-23).
