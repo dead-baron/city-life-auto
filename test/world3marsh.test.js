@@ -40,9 +40,11 @@ test('World v3: the Egret Marsh Boardwalk - out over the marsh, the hide, the pl
   assert.ok(deck, 'the viewing platform at the end');
   assert.ok(near('scope', deck.x, deck.y, 120).length && near('pbench', deck.x, deck.y, 120).length, 'the telescope and the bench on it');
   assert.ok(!m.land[m.idx(Math.floor(deck.x / TILE), Math.floor(deck.y / TILE))], 'the platform out over the water');
-  assert.equal(near('canoe', P[0][0], P[0][1], 900).length, 2);
+  // (the two canoes are boats you can take since 11-22 - shared/world3-boats.js boatsAfloat3: kayaks moored in m.marina)
+  const canoes = (m.marina || []).filter((s) => s.kind === 'kayak' && Math.hypot(s.x - P[0][0], s.y - P[0][1]) < 900);
+  assert.equal(canoes.length, 2);
   // the canoe hire at the dock: kayaks waiting on the open water by the canoes, handed back there
-  const R = m.rentals.find((q) => q.name === MARSH.hire), cn = near('canoe', P[0][0], P[0][1], 900)[0];
+  const R = m.rentals.find((q) => q.name === MARSH.hire), cn = canoes[0];
   assert.ok(R && B.hire >= 1 && R.models.includes('kayak') && m.pois.some((q) => q.id === R.poi && q.kind === 'rental'), `the canoe hire (${B.hire})`);
   // the Egret Marsh Paddle: from the kayaks out through the channels and back to the dock, gates on the open water
   const race = m.races.find((r) => r.name === MARSH.race.name);

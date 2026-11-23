@@ -63,6 +63,7 @@
 // spotWhy(M, e, def, want) is the same look for something put down while the game runs (a scene's vehicles and people)
 // lint(M) -> { rows: { kind: [{ what, x, y, why }] }, seen: { boats, signs, props } }
 //   node tools/placementlint.mjs   builds World v3 and prints the rows (the heavy lock)
+import { sliverAt } from '../shared/world3-deckroots.js';
 import { TILE, T } from '../shared/constants.js';
 import { wildAt, TIDY3, homePaths3 } from '../shared/world3-tidy.js';
 import { VEHICLES } from '../shared/vehicles.js';
@@ -89,7 +90,7 @@ const pxOver = (G, ox, oy, X0, Y0, X1, Y1) => {
 export const LINT_ALLOW = {
   // four lake jetties whose roots sit on the bank a tile back from the water (a kink in the planks at the shoreline):
   // what shows there is the lake's own shore rounding off by the jetty, not a band along planks over a beach
-  beachWater: 4,
+  beachWater: 0,   // (11-22: the roots planked over - shared/world3-deckroots.js)
   // the spaces laid over a pavement or a plaza when this check came in (2026-11-14): a few districts' kerb bays and car
   // parks drawn a tile off (Pine Hills' street, the airport motel's, the trades row's). (A golf cart's stand on its cart
   // path is its place: not counted.) Left empty at run time (traffic.js badBay); fix them in the data and bring this down - never up.
@@ -251,32 +252,20 @@ export function lint(M) {
   for (const race of M.races || []) for (const c of crafts) if (Math.hypot(c.x - race.start.x, c.y - race.start.y) < START_R) { rows.startOnCraft.push({ what: `${race.name}'s start`, x: race.start.x, y: race.start.y }); break; }
   // planks the art takes for standing in water, beside dry ground with no water by it (a sliver of sea along them)
   {
-    const DRY = new Set([T.SAND, T.GRASS, T.DIRT]), wetT = (t) => t === T.WATER || t === T.DEEP;
-    const deckWet = (tx, ty) => M.tiles[M.idx(tx, ty)] === T.DOCK && !deckOnDry(M, tx, ty);   // (a bridge's ends over its banks are drawn over its water by design)
-    let old = false;   // (old: every plank taken for water, as before deckOnDry - seen.beachWaterOld, the lint's own check that it sees the class)
-    const twAt = (x, y) => { if (!M.inside(x, y)) return 1; const t = M.tiles[M.idx(x, y)]; return wetT(t) || t === T.BRIDGE || (t === T.DOCK && (old || !deckOnDry(M, x, y))) ? 1 : 0; };
-    const tfAt = (x, y) => twAt(x, y) * 0.5 + (twAt(x - 1, y) + twAt(x + 1, y) + twAt(x, y - 1) + twAt(x, y + 1)) * 0.1 + (twAt(x - 1, y - 1) + twAt(x + 1, y - 1) + twAt(x - 1, y + 1) + twAt(x + 1, y + 1)) * 0.025;
-    const seenAt = new Set();
-    for (const pass of [true, false]) for (let ty = M.y0 + 1; ty < M.y0 + M.h - 1; ty++) for (let tx = M.x0 + 1; tx < M.x0 + M.w - 1; tx++) {
-      if (old !== pass) { old = pass; seenAt.clear(); }
-      const t = M.tiles[M.idx(tx, ty)];
-      if (t !== T.DOCK) continue;
-      if (!old) seen.decks = (seen.decks || 0) + 1;
-      if (!old && !deckWet(tx, ty)) continue;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {   // (side by side: a corner's touch is too little wet for the sea to show)
-        const x = tx + dx, y = ty + dy;
-        if (!M.inside(x, y) || !DRY.has(M.tiles[M.idx(x, y)])) continue;
-        let water = false;
-        for (let j = -1; j <= 1 && !water; j++) for (let i = -1; i <= 1; i++) if (M.inside(x + i, y + j) && wetT(M.tiles[M.idx(x + i, y + j)])) { water = true; break; }
-        if (water) continue;
-        // (the bake's own sum: the two tiles' blurred wetness, met halfway - groundbake.js tf; a jetty's root by the shore
-        // gives a speck or two at most, a run of planks over the sand a band of sea)
-        if ((tfAt(x, y) + tfAt(tx, ty)) / 2 < 0.47) continue;
+    // (shared/world3-deckroots.js sliverAt: the rule the build lays planks over the dry tile by)
+    for (const old of [true, false]) {
+      const seenAt = new Set();
+      for (let ty = M.y0 + 1; ty < M.y0 + M.h - 1; ty++) for (let tx = M.x0 + 1; tx < M.x0 + M.w - 1; tx++) {
+        const t = M.tiles[M.idx(tx, ty)];
+        if (t !== T.DOCK) continue;
+        if (!old) seen.decks = (seen.decks || 0) + 1;
+        const d = sliverAt(M, tx, ty, old);
+        if (!d) continue;
         const key = `${tx >> 3},${ty >> 3}`;   // (one row a stretch of 8 tiles)
         if (seenAt.has(key)) continue;
         seenAt.add(key);
         if (old) seen.beachWaterOld = (seen.beachWaterOld || 0) + 1;
-        else rows.beachWater.push({ what: `a ${TN[t]} tile taken for water beside dry ${TN[M.tiles[M.idx(x, y)]]}`, x: tx * TILE + 16, y: ty * TILE + 16 });
+        else rows.beachWater.push({ what: `a ${TN[t]} tile taken for water beside dry ${TN[M.tiles[M.idx(d[0], d[1])]]}`, x: tx * TILE + 16, y: ty * TILE + 16 });
       }
     }
   }

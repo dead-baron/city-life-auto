@@ -26211,3 +26211,15 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   bore, falling away steeply on the portal's side (3 tiles: the stretch to the platform stays flat), gently behind the
   blind end (6) and to the sides (5); open ground and the bore's rock only. Only the art reads the relief this late
   (the hillshade). 16 -> 0 (`LINT_ALLOW` 0). world3arrivals, ftue, dmath, mapwindow, placementlint 42/42.
+
+## 2026-11-22 - World batch: pier roots on dry land (branch `prebeta-world2`; not live)
+- The audit's beachWater (4: a plank tile standing in water beside dry grass with no water of its own - a grass hole in a
+  pier's foot, a one-tile neck of planks along the shore, the Egret Marsh boardwalk's foot - the art took the planks for
+  water and blurred a sliver of sea onto the grass). `shared/world3-deckroots.js`: sliverAt, the lint's rule moved there
+  (one rule for the build and the lint), and deckRoots3 (the done hook, after the festoons): planks laid over each such
+  dry tile, so the root stands on land (mapcore.js deckOnDry: ground to the art); a boardwalk leg's neighbour joins its
+  legs (m.walkways), plants on it go. 5 tiles; 4 -> 0 (`LINT_ALLOW` 0). `test/deckroots.test.js`.
+- `test/world3marsh.test.js`: the marsh's two canoes are looked for as boats (kayaks moored in m.marina, since the boats
+  became drivable this morning) - the test had still looked for the props.
+- Not done here: dockOverlap (5, the marsh boardwalk's bends: two legs' ends cross with no landing) wants a landing piece
+  (a small deck open on two sides) - a new model, on the Fable list.
