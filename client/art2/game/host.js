@@ -886,6 +886,9 @@ export class World2 {
     if (this.pc) for (const jk of this.pc.out) jobs.add(jk);   // (and a walk-in's cut-away ahead: _precut)
     if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && !jobs.has(jk));
     for (const jk of this.results.keys()) if (!jobs.has(jk)) this.results.delete(jk); // landed too late to matter
+    // the view's own chunks always have slots (engine.js reserveChunks: a view needing more than the quality's count -
+    // zoomed out, a cinematic, an aircraft - took one on screen for another, and the art came and went, 11-23)
+    if (E.reserveChunks) E.reserveChunks(need.size + 2, 'city');
     // the road ahead already resident (not on screen yet) is kept like what is drawn: the chunks left behind go first
     if (E.keepChunk) for (const k of bake.keys()) if (!need.has(k)) E.keepChunk(k % 1000, Math.floor(k / 1000));
     // uploads, nearest first: what is needed now; the rest into the slots not taken by what is wanted (a slot whose
