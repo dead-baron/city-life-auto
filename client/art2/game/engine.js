@@ -89,6 +89,7 @@ const Z4 = new Float32Array(4), ONE = new Float32Array([1]), CLR = new Float32Ar
 const CAM_OCT = octEncode(0, 0.55, 0.835);           // an upright card facing the camera
 // (layer: 0 the city's chunks, 1 the subway's tunnel - art2/game/tunnel.js: the two kept apart, the city's resident under
 // the tunnel while you ride, drawn whichever this frame's layer is)
+export const CHUNK_HARD = 40;   // the most chunk slots ever held (the view's own reserved past the quality's count: _slot)
 export const XF_MS = 320;   // a walk-in's swap: its pixel dissolve (uploadChunk xf, STATIC_FS uX)
 const ckey = (cx, cy, layer = 0) => layer * 4294967296 + (cy + 32768) * 65536 + (cx + 32768);
 const clampQ = (q) => Math.max(0, Math.min(3, Math.round(+q || 0)));
@@ -562,7 +563,8 @@ export class Art2Engine {
     return v;
   }
   _chunksCap() { const c = this.lowMem ? Math.min(10, QUALITY[this.q].chunks) : Math.min(32, QUALITY[this.q].chunks + this.more); return Math.max(c, this.chunkMin || 0); }
-  reserveChunks(n) { this.chunkMin = Math.max(0, Math.min(32, n | 0)); }
+  // (the view's own chunks, each frame: host.js - the city's and the tunnel's each under its own name, added up)
+  reserveChunks(n, who = 'tun') { const R = this.reserves || (this.reserves = {}); R[who] = Math.max(0, n | 0); let t = 0; for (const k in R) t += R[k]; this.chunkMin = Math.min(CHUNK_HARD, t); }
   chunkCap() { return this._chunksCap(); }
   _pagesCap() { return this.lowMem ? Math.min(4, QUALITY[this.q].pages) : QUALITY[this.q].pages; }
   _allocAtlas() {
@@ -679,7 +681,17 @@ export class Art2Engine {
       s = { t: [glTex(gl, T, T), glTex(gl, T, T), glTex(gl, T, T)], key: -1, cx: 0, cy: 0, real: false, src: null, used: 0 };
       this.slots.push(s);
     }
-    if (!s) { for (const x of this.slots) if (!s || x.used < s.used) s = x; this.chunks.delete(s.key); }
+    // (never a chunk drawn this frame or the last: the owner, 11-23 - "the art loads at first but then disappears ... while
+    // you're in it". A view needing more chunks than the slots took one still on screen, which took another back. The
+    // view's own are reserved (reserveChunks); past that a slot is added, up to CHUNK_HARD, before one in view goes)
+    if (!s) { for (const x of this.slots) if (x.used < this.frameNo - 1 && (!s || x.used < s.used)) s = x; }
+    if (!s && this.slots.length < CHUNK_HARD) {
+      const gl = this.gl, T = this.ctx;
+      s = { t: [glTex(gl, T, T), glTex(gl, T, T), glTex(gl, T, T)], key: -1, cx: 0, cy: 0, real: false, src: null, used: 0 };
+      this.slots.push(s);
+    }
+    if (!s) { for (const x of this.slots) if (!s || x.used < s.used) s = x; }
+    if (s.key >= 0) this.chunks.delete(s.key);
     s.key = k; s.cx = cx; s.cy = cy; s.layer = layer; s.real = false; s.src = null; s.used = this.frameNo - 1; s.xf = 0;   // (a slot taken over: no dissolve of another chunk's picture)
     this.chunks.set(k, s);
     return s;

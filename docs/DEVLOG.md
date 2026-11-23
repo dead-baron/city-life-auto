@@ -26659,3 +26659,15 @@ handles swapped with a spare three, nothing copied; freed with the slot), STATIC
 frame's time - one step for every chunk in a frame), host.js starts all of a building's chunks from one time.
 test/xfade-gl.test.js on the GPU (headless Chromium, software GL): half way old and new pixels and nothing else, done
 only the new, a plain swap at once; test/notes1122 N16 rewritten. Not yet seen in a running game - the tests only.
+
+## 2026-11-23 · The art in view is never given up (P1 of the 11-23 notes)
+
+The owner (11-23): "areas ... where the art loads at first but then disappears either partially or entirely ... sometimes
+the art chunk will be loaded already but then disappear entirely while you're in it", in cinematics, from an aircraft,
+on a desktop. The engine held a quality's count of chunk slots (16 Low ... 32 Ultra); a view needing more (zoomed out, a
+cinematic's wide shot, an aircraft, a big window) took the least recently drawn slot for each new chunk - one still on
+screen - which then took another back: the art came and went. Now the host reserves the view's own chunks every frame
+(engine.js reserveChunks - the city's and the tunnel's each under its own name, added up), and a slot drawn this frame or
+the last is never taken: past the reserve one is added, up to CHUNK_HARD (40), before anything in view goes.
+test/chunkslots-gl.test.js on the GPU (a low-memory engine's ten slots, twelve chunks in view: all held; the road ahead
+took none of them) - it fails on the engine before this.
