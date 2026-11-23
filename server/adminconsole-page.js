@@ -11,7 +11,7 @@
   const ago = (t) => { const s = Math.max(0, Math.round((Date.now() - t) / 1000)); return s < 60 ? `${s} s ago` : s < 3600 ? `${Math.floor(s / 60)} min ago` : s < 86400 ? `${Math.floor(s / 3600)} h ago` : `${Math.floor(s / 86400)} d ago`; };
   const flag = (c) => (c && /^[A-Z]{2}$/.test(c) ? String.fromCodePoint(...[...c].map((x) => 0x1f1a5 + x.charCodeAt(0))) : '');
   const WINS = [['1h', 'Last hour'], ['6h', '6 hours'], ['24h', '24 hours'], ['3d', '3 days'], ['7d', '7 days']];
-  const UI = { tab: 'now', win: '24h', last: 0, more: 0, data: null, fail: 0 };
+  const UI = { tab: 'status', win: '24h', last: 0, more: 0, data: null, fail: 0 };
   try { const s = JSON.parse(localStorage.getItem('cla.console') || '{}'); if (s.tab) UI.tab = s.tab; if (s.win) UI.win = s.win; } catch { /* storage blocked */ }
   const keep = () => { try { localStorage.setItem('cla.console', JSON.stringify({ tab: UI.tab, win: UI.win })); } catch { /* storage blocked */ } };
 
@@ -106,6 +106,43 @@ ${cmpRow('Players', (q) => q.uniq)}${cmpRow('Peak online', (q) => q.peak)}${cmpR
 ${bg ? `<div class="card"><h2>Bug reports <small><a href="/admin/bugs?open=1">open ones</a></small></h2>${bg.latest.length ? `<ul class="list">${bg.latest.map((r) => `<li>${esc(r.t || '(' + r.kind + ')')}<br><small>${esc(r.n)}${r.gu ? ' (guest)' : ''} · ${esc(r.where)}${r.shot ? ' · screenshot' : ''} · ${ago(r.at)}</small></li>`).join('')}</ul>` : '<div class="empty">No open reports.</div>'}</div>` : ''}
 ${M.log ? `<div class="card"><h2>Recent admin actions <small><a href="/admin/log">the log</a></small></h2><ul class="list">${M.log.length ? '' : '<li class="empty">Nothing yet.</li>'}${M.log.map((e) => `<li><b>${esc(e.what)}</b>${e.t ? ` → ${esc(e.t)}` : ''} <span class="${e.ok ? 'ok' : 'bad'}">${e.ok ? '' : 'refused'}</span><br><small>${esc(e.who)}${e.note ? ' · ' + esc(e.note) : ''} · ${ago(e.at)}</small></li>`).join('')}</ul></div>` : ''}</div>`;
   }
+  // ---- the Status tab: one answer first, then the art redraw, then the cards (server/status.js works it out) ----
+  const LEVEL = { ok: ['All good', 'Nothing needs you right now.'], warn: ['Worth a look', 'Something isn\'t right, but the game is up.'], bad: ['Needs attention', 'Something is wrong - see below.'] };
+  const KIND = { restart: ['Updated, restarted', 'ok'], update: ['Updated, no restart', 'ok'], rollback: ['Rolled back', 'bad'], down: ['Down after an update', 'bad'], wait: ['Waiting for Pages', 'warn'], skip: ['Skipped', 'warn'] };
+  const meter = (pct, cls = '') => `<div class="meter ${cls}"><i style="width:${Math.max(0, Math.min(100, pct))}%"></i></div>`;
+  const lvlOf = (v, warn, bad) => (v >= bad ? 'bad' : v >= warn ? 'warn' : '');
+  function drawStatus(d) {
+    const S = d.server || {}, H = S.status;
+    if (!H) { $('status').innerHTML = '<div class="empty">This server doesn\'t report its status yet.</div>'; return; }
+    const [title, sub] = LEVEL[H.level] || LEVEL.warn;
+    const icon = { bad: '●', warn: '▲', info: 'ℹ' };
+    const flags = H.flags.length ? `<ul class="flags">${H.flags.map((f) => `<li class="${f.lvl}"><span>${icon[f.lvl] || '•'}</span>${esc(f.text)}</li>`).join('')}</ul>` : '';
+    const A = H.art || { state: 'off' };
+    let art;
+    if (A.state === 'off') art = '<div class="empty">This server doesn\'t build the art.</div>';
+    else if (A.state === 'done') art = `<div class="big ok">Up to date</div><div class="sub">All ${num(A.of)} chunks drawn · art ${esc(A.art)}${A.threads ? ` · ${A.threads} bake thread${A.threads === 1 ? '' : 's'} idle` : ''}</div>`;
+    else art = `<div class="big ${A.state === 'stalled' ? 'bad' : 'gold'}">${A.state === 'stalled' ? 'Stopped' : 'Redrawing'} · ${A.pct}%</div>${meter(A.pct, A.state === 'stalled' ? 'bad' : 'gold')}
+<div class="tiles">${tile(num(A.have) + '<small> / ' + num(A.of) + '</small>', 'chunks drawn')}${tile(A.leftText || '-', 'left, about')}${tile(A.threads || 0, 'bake threads')}${tile(A.avgBakeMs ? (A.avgBakeMs / 1000).toFixed(1) + ' s' : '-', 'a chunk takes')}</div>
+<div class="note">Art ${esc(A.art)}. Meanwhile players see the art from before (kept where nothing changed) or a low-detail picture; the chunks round players online are drawn first.${A.errors ? ` ${num(A.errors)} chunks failed.` : ''}</div>`;
+    const T = H.tick || {}, M = H.machine || {}, D = H.disk;
+    const tickPct = T.budget ? (T.avg / T.budget) * 100 : 0, loadPer = M.cores && M.load && M.load.length ? M.load[1] / M.cores : 0;
+    const deploys = (H.deploys || []).map((e) => { const [l, c] = KIND[e.kind] || [e.kind, '']; return `<li><span class="badge ${c}">${esc(l)}</span> <small>${ago(e.t)}</small><br><small>${esc(e.text)}</small></li>`; }).join('');
+    const B = H.backup;
+    $('status').innerHTML = `<div class="banner ${H.level}"><b>${esc(title)}</b><span>${esc(sub)}</span>${flags}</div>
+<div class="grid"><div class="card wide"><h2>The art <small>the world's pictures, drawn on the server</small></h2>${art}</div>
+<div class="card"><h2>Game server</h2><div class="tiles">${tile(esc(S.build || '?'), 'version', 'ver')}${tile(dur((S.up || 0) * 1000), 'up for')}${tile(num(d.now ? d.now.online : 0), 'online now')}</div>
+<div class="row"><span>Speed <small>a tick: ${T.avg} ms of ${T.budget} ms · slowest lately ${T.max} ms</small></span>${meter(tickPct, lvlOf(tickPct, 50, 80))}</div>
+<div class="note">${T.errors ? `<span class="bad">${num(T.errors)} errors in the game loop since the start.</span>` : 'No errors in the game loop since the start.'}</div></div>
+<div class="card"><h2>The machine</h2>
+<div class="row"><span>Memory <small>${M.memPct}% in use · the game ${num(M.rssMB)} MB of ${num(Math.round((M.totalMB || 0) / 1024))} GB</small></span>${meter(M.memPct, lvlOf(M.memPct, 88, 95))}</div>
+<div class="row"><span>CPU <small>${M.cores} cores · load ${(M.load || []).join(' / ')} (1, 5, 15 min)</small></span>${meter(loadPer * 100, '')}</div>
+${D ? `<div class="row"><span>Disk <small>${D.freeGB} GB free of ${D.totalGB} GB</small></span>${meter((1 - D.free) * 100, lvlOf((1 - D.free) * 100, 85, 95))}</div>` : ''}
+<div class="note">The CPU runs high while the art is redrawn - that's the bake threads using what the game leaves; it matters only if the speed bar turns amber.</div></div>
+<div class="card"><h2>Updates <small>pushes to main, pulled every 2 min</small></h2>${deploys ? `<ul class="list">${deploys}</ul>` : '<div class="empty">None recorded yet (the server starts recording with this version).</div>'}${H.pages ? `<div class="note">Waiting for GitHub Pages to publish ${esc(H.pages.commit)} since ${ago(H.pages.since)}.</div>` : ''}</div>
+<div class="card"><h2>Backup <small>nightly, 03:30 server time</small></h2>${B ? `<div class="big ${Date.now() - B.t > 36 * 3600000 ? 'warn' : 'ok'}">${ago(B.t)}</div><div class="sub">${esc(B.size)}${B.kept ? ` · ${B.kept} kept` : ''}</div>` : '<div class="empty">None recorded yet (recording starts with this version).</div>'}</div>
+<div class="card"><h2>Errors and reports</h2><div class="tiles">${tile(num(H.pageErrHour), 'page errors, last hour', H.pageErrHour >= 25 ? 'bad' : '')}${tile(num(S.errors24 || 0), 'errors, 24 h')}${d.moderation && d.moderation.bugs ? tile(num(d.moderation.bugs.open), 'open bug reports') : ''}</div>
+<div class="note"><a href="/admin/clienterrors">Page errors</a> · <a href="/admin/bugs?open=1">Bug reports</a> · <a href="/admin/perf">Devices</a></div></div></div>`;
+  }
   function drawServer(d) {
     const S = d.server;
     $('server').innerHTML = `<div class="grid"><div class="card wide"><div class="tiles">${tile(dur(S.up * 1000), 'up for')}${tile((S.tickMsAvg ?? '?') + ' ms', 'tick, average')}${tile((S.tickMsMax ?? '?') + ' ms', 'tick, slowest lately')}${tile(S.rss + ' MB', 'memory (process)')}${tile(S.heap + ' / ' + S.heapMax + ' MB', 'heap used / held')}${tile(num(S.ents), 'things in the world')}${tile(num(S.profiles), 'accounts')}${S.line ? tile(num(S.line.waiting) + ' / ' + num(S.line.max), 'in line / the cap', S.line.waiting ? 'bad' : '') + tile((S.line.avgWaitS || 0) + ' s', 'waited, average (' + num(S.line.admitted) + ' let in)') : ''}${tile(num(S.errors24), 'page errors, 24 h', S.errors24 ? 'bad' : '')}</div></div>
@@ -121,7 +158,8 @@ ${M.log ? `<div class="card"><h2>Recent admin actions <small><a href="/admin/log
     const d = UI.data;
     if (!d) return;
     drawKpis(d);
-    if (UI.tab === 'now') drawNow(d);
+    if (UI.tab === 'status') drawStatus(d);
+    else if (UI.tab === 'now') drawNow(d);
     else if (UI.tab === 'trends') drawTrends(d);
     else if (UI.tab === 'where') drawWhere(d);
     else if (UI.tab === 'mod') drawMod(d);
@@ -129,6 +167,8 @@ ${M.log ? `<div class="card"><h2>Recent admin actions <small><a href="/admin/log
     else drawTools(d);
     const n = d.moderation ? d.moderation.reviews.open + (d.moderation.bugs ? d.moderation.bugs.open : 0) : 0, mb = $('tabs').querySelector('[data-t="mod"]');
     mb.innerHTML = `Moderation${n ? `<span class="n">${n}</span>` : ''}`;
+    const H = d.server && d.server.status, sb = $('tabs').querySelector('[data-t="status"]');
+    if (sb) sb.innerHTML = `<i class="lv ${H ? H.level : ''}"></i>Status`;
   }
 
   // ---- polling ----
@@ -157,7 +197,7 @@ ${M.log ? `<div class="card"><h2>Recent admin actions <small><a href="/admin/log
     for (const x of $('tabs').querySelectorAll('button')) x.classList.toggle('on', x === b);
     for (const s of document.querySelectorAll('main section')) s.classList.toggle('on', s.id === UI.tab);
     draw();
-    if (UI.tab !== 'now' && UI.tab !== 'server') poll(true);
+    if (UI.tab !== 'now' && UI.tab !== 'server' && UI.tab !== 'status') poll(true);
   };
   for (const x of $('tabs').querySelectorAll('button')) x.classList.toggle('on', x.dataset.t === UI.tab);
   for (const s of document.querySelectorAll('main section')) s.classList.toggle('on', s.id === UI.tab);

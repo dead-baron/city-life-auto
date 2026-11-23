@@ -24,7 +24,7 @@ const LINK_TTL_MS = 60e3, SESSION_TTL_MS = 3600e3;
 // texts: { perf() -> string, errors() -> string } - the devices' reports and the pages' errors (server/perfreports.js),
 // read at /admin/perf and /admin/clienterrors by admins and the owner (the owner's call, 11-04: not public any more)
 // world, store, act(actor, msg) -> the staff command's reply, said(p) -> their recent chat lines: the players page (none: off)
-export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, news = null, mailAddress = '', publicUrl, ip, now = Date.now, stats = null, texts = null, world = null, store = null, act = null, said = null, geo = null }) {
+export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, news = null, mailAddress = '', publicUrl, ip, now = Date.now, stats = null, texts = null, world = null, store = null, act = null, said = null, geo = null, status = null }) {
   const links = new Map(), sessions = new Map();
   const rl = createRateLimiter(now);
   const secure = publicUrl.startsWith('https://');
@@ -210,9 +210,11 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
     if (allowed(w.role, 'adminlog')) out.log = log.tail(12).map((e) => ({ at: e.at, who: e.who ? e.who.n : '', what: e.what, t: e.target ? e.target.n || '' : '', note: String(e.note || '').slice(0, 80), ok: e.ok !== false }));
     return out;
   }
+  // the Status tab's answer (server/status.js) - a fault in it mustn't take the console down with it
+  function safeStatus() { try { return status(); } catch (e) { return { level: 'warn', flags: [{ lvl: 'warn', text: `The status check itself failed: ${String((e && e.message) || e).slice(0, 120)}` }], art: { state: 'off' } }; } }
   function apiServer() {
     const st = stats ? stats() : {}, m = process.memoryUsage(), day = analytics.trends ? analytics.trends('24h') : null;
-    return { ...st, up: Math.round(process.uptime()), rss: Math.round(m.rss / 1048576), heap: Math.round(m.heapUsed / 1048576), heapMax: Math.round(m.heapTotal / 1048576), errors24: day ? day.er : 0, geo: geo ? { table: geo.table, credit: geo.credit } : null };
+    return { ...st, up: Math.round(process.uptime()), rss: Math.round(m.rss / 1048576), heap: Math.round(m.heapUsed / 1048576), heapMax: Math.round(m.heapTotal / 1048576), errors24: day ? day.er : 0, geo: geo ? { table: geo.table, credit: geo.credit } : null, status: status ? safeStatus() : null };
   }
   function api(w, url) {
     const win = WINDOWS[url.searchParams.get('win')] ? url.searchParams.get('win') : '24h';
