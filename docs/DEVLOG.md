@@ -26640,3 +26640,9 @@ button says "Open the trunk (n/6)" and the Inventory shows CARRIED | TRUNK (stas
 things go - arms.js toStash / fromStash take the pool). Wrecked (insurance.js wrecked): what was in it spills where it is,
 a bag anyone can take. Cargo crates never go in - they ride in the open (cargo.js), so who carries something worth taking
 shows. The Guide's "Your trunk", the README's row; test/trunk.test.js.
+
+## 2026-11-23 · No merge markers, ever (test/nomarkers.test.js)
+
+A script merged main into a branch, hit a conflict and committed on through it: PR #23 took conflict markers into
+docs/DEVLOG.md on main (version.json, restamped, was fine). Fixed the same day; the class of it now fails a test - no
+`<<<<<<<` or `>>>>>>>` line in any text file of the checkout.
