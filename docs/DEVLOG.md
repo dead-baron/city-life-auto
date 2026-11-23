@@ -26415,3 +26415,5 @@ consider topographical levels". Both withdrawn. What stands:
   plaza" the fill planted was the Waves Arena's pitch (car soccer). `shared/world3-plazafill.js`: a pitch or a court for
   a game (m.venues) and an arena (m.arenas) count as taken - played on, not empty paving - for the build and the lint
   alike. plazafill, world3server, placementlint 42/42 (bigEmptyPlaza still 0).
+- `test/world3woods.test.js` "a canoe by it" (the islet camp): its canoe looked for as a kayak in the water beside it
+  (m.marina), as the other suites' boats now are.
