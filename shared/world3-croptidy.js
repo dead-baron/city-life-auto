@@ -53,12 +53,27 @@ export function farmsOffBeach3(m) {
       if (!f) continue;
       const tx0 = Math.floor(f.x / TILE), ty0 = Math.floor(f.y / TILE), tx1 = Math.ceil((f.x + f.w) / TILE) - 1, ty1 = Math.ceil((f.y + f.h) / TILE) - 1;
       let hit = false, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      const share = new Map();   // (what's left, by district: the field keeps to the one most of it is in - squared at its edge)
       for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
         if (cleared.has(tx * 65536 + ty)) hit = true;
-        if (m.inside(tx, ty) && m.tiles[m.idx(tx, ty)] === T.FIELD) { x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty); }
+        if (m.inside(tx, ty) && m.tiles[m.idx(tx, ty)] === T.FIELD) { const d = m.dist[m.idx(tx, ty)]; share.set(d, (share.get(d) || 0) + 1); }
       }
       if (!hit) { keep.push(f); continue; }
+      let main = -1, most = 0;
+      for (const [d, n] of share) if (n > most) { most = n; main = d; }
+      for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+        if (m.inside(tx, ty) && m.tiles[m.idx(tx, ty)] === T.FIELD && m.dist[m.idx(tx, ty)] === main) { x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty); }
+      }
       if (x0 === Infinity) { out.gone++; continue; }
+      // (and trimmed, an edge at a time - the one with the most of it - while another district's land is inside: the district
+      // edge isn't straight, and a field squares at it - test/world3kestrel.test.js)
+      const foreign = (ax0, ay0, ax1, ay1, side) => { let n = 0; const xs = side === 'w' ? [ax0, ax0] : side === 'e' ? [ax1, ax1] : [ax0, ax1], ys = side === 'n' ? [ay0, ay0] : side === 's' ? [ay1, ay1] : [ay0, ay1];
+        for (let ty = ys[0]; ty <= ys[1]; ty++) for (let tx = xs[0]; tx <= xs[1]; tx++) { if (!m.inside(tx, ty)) continue; const i = m.idx(tx, ty); if (m.land[i] && m.dist[i] !== main) n++; } return n; };
+      for (let k = 0; k < 400 && x0 <= x1 && y0 <= y1 && foreign(x0, y0, x1, y1, 'all') > 0; k++) {
+        const c = [['w', foreign(x0, y0, x1, y1, 'w')], ['e', foreign(x0, y0, x1, y1, 'e')], ['n', foreign(x0, y0, x1, y1, 'n')], ['s', foreign(x0, y0, x1, y1, 's')]].sort((a, b) => b[1] - a[1])[0][0];
+        if (c === 'w') x0++; else if (c === 'e') x1--; else if (c === 'n') y0++; else y1--;
+      }
+      if (x0 > x1 || y0 > y1) { out.gone++; continue; }
       const nx = Math.max(f.x, x0 * TILE), ny = Math.max(f.y, y0 * TILE), nx1 = Math.min(f.x + f.w, (x1 + 1) * TILE), ny1 = Math.min(f.y + f.h, (y1 + 1) * TILE);
       f.x = nx; f.y = ny; f.w = nx1 - nx; f.h = ny1 - ny;
       if (Array.isArray(f.fence)) f.fence = f.fence.map(([a, b]) => [Math.max(a, nx - 10), Math.min(b, nx1 + 10)]).filter(([a, b]) => b - a >= 48);

@@ -87,7 +87,8 @@ test('World v3: Granite Peaks\' alpine meadows, the stone hut and its spring, th
   const tarn = m.natureSites.find((s) => s.kind === 'tarn');
   let shingle = 0; for (let dy = -20; dy <= 20; dy++) for (let dx = -20; dx <= 20; dx++) { const i = at(tarn.x + dx * TILE, tarn.y + dy * TILE); if (m.tiles[i] === T.SAND && (m.reserve[i] & 128)) shingle++; }
   assert.ok(shingle >= 20, `the pebble beach (${shingle})`);
-  assert.ok(near('rowboat', tarn.x, tarn.y, 16 * TILE).length >= 1, 'a rowboat pulled up on it');
+  // (a real boat since 11-22 - shared/world3-boats.js boatsAfloat3: moored in m.marina, by where it lay)
+  assert.ok((m.marina || []).some((q) => q.kind === 'rowboat' && Math.hypot(q.x - tarn.x, q.y - tarn.y) < 16 * TILE), 'a rowboat on it');
   const crag = m.natureSites.find((s) => s.kind === 'crag' && s.name === TARN3.crag.name);
   assert.ok(crag, 'Eagle Crag');
   assert.ok(near('crashpad', crag.x, crag.y, 3 * TILE).length === 2 && near('ropecoil', crag.x, crag.y, 3 * TILE).length === 1, 'its crash pads and rope');

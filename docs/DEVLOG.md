@@ -26401,3 +26401,11 @@ consider topographical levels". Both withdrawn. What stands:
   parkExempt: a driveway's, a golf cart's and the pits' spaces - one answer for the build, the lint and the server.
 - `test/world3desert.test.js` "its rowboat by the jetty": Mirage Lake's rowboat looked for as a moored boat (m.marina).
 - world3dirt, world3desert, placementlint 42/42, trafficbox, mycar, parkducks.
+
+## 2026-11-23 (night) - A shrunk field squares at its district's edge; the tarn's rowboat a boat
+- The suite on the branch: `test/world3kestrel.test.js` "no field runs out of the valley (1)" - the farms-off-the-beach
+  pass (world3-croptidy.js farmsOffBeach3) shrank a field that straddled Willow Valley's east edge to the box round its
+  field tiles left: its middle came into the valley, its box still over the next district's land. A shrunk field now
+  keeps to the district most of it is in, and its box is trimmed an edge at a time while another district's land is
+  inside it (the edge isn't straight). world3kestrel, farming, placementlint 42/42.
+- `test/world3peaks.test.js` "a rowboat pulled up on it": Summit Tarn's rowboat looked for as a moored boat (m.marina).
