@@ -26219,3 +26219,17 @@ quick bar". The bar was meant for a desktop (11-22 N7: touch and a pad keep the 
 and its "HOLD <key>" label read "HOLD HOLD BAG" on touch (the key's own name is "hold BAG"). client/hud.js quickBar now
 draws nothing unless the device is a keyboard, and the label is gone everywhere (the slots' tooltips name the items).
 test/quickbar.test.js checks both. The first step of the 11-23 UI pass.
+
+## 2026-11-23 · UI pass, batch 1: the ellipsis, the touch ammo, the quick bar in the layout test
+
+The owner (11-23): "a proper UI pass to make sure everything looks right across all devices". The HUD shot at every size
+(test/hudpage.js through Playwright at exact viewports) and looked at, the misses turned into checks:
+- **The cut-off mark read as "_"**: the pixel font's bold widens every stroke a pixel, and the ellipsis' three dots one
+  apart ran into a bar - on every line cut short (the job line, the prompt). The dots now two apart, the quotes too (" was
+  a block); tools/build-pixelfont.py, the fonts rebuilt; test/pixelfont.test.js keeps the dot marks apart in bold.
+- **The touch weapon button's ammo** ("30 | 120") ran past both sides on a phone upright: on touch the count is written
+  without its spaces ("30|120", "RELOAD") and a size smaller when it's long (client/hud.js, style.css `#w-ammo.long`).
+  test/hudpage.js now checks words that must fit inside their button (`cut`), the ammo first.
+- **The quick bar in the layout test**: the HUD test page never drew it, so nothing measured it (how it sat under BAG on a
+  phone went unseen). It's drawn there now for a keyboard, and it found one more: at 844x390 the fishing panel ran into it -
+  on a window that short the bar hides (the 5-8 keys still use the slots).
