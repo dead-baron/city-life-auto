@@ -115,8 +115,10 @@ if (sc.st === 'custody') { $('trainbar').classList.remove('hidden'); $('trainbar
 if (sc.st === 'fish') { $('fishspot').classList.add('on'); $('fishbar').innerHTML = 'STRIKE! ' + glyph; $('fishbar').classList.remove('hidden'); }
 if (sc.st === 'police') { $('cruiser-hint').textContent = T.cruiser; $('cruiser-hint').classList.remove('hidden'); }
 $('w-icon').innerHTML = '<canvas width="96" height="48"></canvas>';
-$('w-name').textContent = 'Assault rifle'; $('w-ammo').textContent = '30 | 120';
+$('w-name').textContent = 'Assault rifle'; $('w-ammo').textContent = sc.dev === 'touch' ? '30|120' : '30 | 120'; $('w-ammo').classList.toggle('long', sc.dev === 'touch');   // (as client/hud.js writes it)
 if (sc.dev !== 'touch') $('w-quick').innerHTML = ['Knife', 'Bat', 'Shotgun'].map((n, i) => '<button type="button" class="wq" aria-label="' + n + '"><canvas width="48" height="24"></canvas><span class="kchip kbm-only">' + (i + 2) + '</span></button>').join('');
+// the quick bar over the weapon plate, as client/hud.js quickBar draws it (a keyboard's only: 11-23 - on a phone it sat under BAG)
+if (sc.dev === 'kbm') $('qbar').innerHTML = [0, 1, 2, 3].map((i) => '<button type="button" class="qb' + (i === 3 ? ' empty' : '') + '"><span class="ic">•</span>' + (i < 3 ? '<small>x' + (i + 2) + '</small>' : '') + '</button>').join('');
 $('cash').textContent = '$248,500'; $('bank-n').textContent = '$1,250,000';
 $('stars').innerHTML = [1, 2, 3, 4, 5].map((i) => '<span' + (i <= 2 ? ' class="on">' + icon('star') : '>' + icon('starx')) + '</span>').join(''); $('stars').classList.add('wanted');
 $('clock').textContent = '13:24 · RAIN';
@@ -139,6 +141,7 @@ function measure() {
   // you: the camera keeps you in the middle of the screen (on foot; your character about 24x32 px on a phone)
   keep.push({ name: 'you', x0: Math.round(sc.w / 2 - 12), y0: Math.round(sc.h / 2 - 20), x1: Math.round(sc.w / 2 + 12), y1: Math.round(sc.h / 2 + 12) });
   for (const id of ['vitals', 'status', 'rclock']) if (shown($(id))) keep.push(box($(id), id));
+  if (shown($('qbar'))) { const w = $('weapon'); $('qbar').style.bottom = (w.offsetHeight + (parseFloat(getComputedStyle(w).bottom) || 0) + 4) + 'px'; keep.push(box($('qbar'), 'qbar')); }
   for (const id of ['weapon', 'money', 'bank', 'vchip', 'stars', 'clock']) if (shown($(id)) && !(id === 'weapon' && sc.dev === 'touch')) keep.push(box($(id), id));
   // (on touch the weapon plate is a slot, the weapon button: UI-6)
   if (sc.dev === 'touch' && shown($('weapon'))) keep.push({ ...box($('weapon'), 'tb.nextw'), slot: $('weapon').dataset.slot, label: $('weapon').dataset.lbl });
@@ -153,7 +156,10 @@ function measure() {
   // (the words on the touch buttons apart: Direction A's, stepped down to fit their discs - minBtn)
   let minFont = 99, minAt = '', minBtn = 99, minBtnAt = '';
   for (const el of document.querySelectorAll('#hud *, #touch *')) { if (!shown(el) || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue; const f = parseFloat(getComputedStyle(el).fontSize), at = (el.id || el.className || el.tagName) + ' "' + el.textContent.trim().slice(0, 20) + '"'; if (el.matches('#tbtns .w')) { if (f < minBtn) { minBtn = f; minBtnAt = at; } continue; } if (f < minFont) { minFont = f; minAt = at; } }
-  parent.postMessage({ sc, read, keep, state: slots && slots.state, minFont, minAt, minBtn, minBtnAt }, '*');
+  // (words inside a button that must fit it: the touch weapon button's ammo - "30 | 120" ran past its sides, 11-23)
+  const cut = [];
+  for (const [id, inId] of [['w-ammo', 'weapon']]) { const e = $(id), o = $(inId); if (shown(e) && shown(o)) { const a = e.getBoundingClientRect(), b = o.getBoundingClientRect(); if (a.left < b.left - 0.5 || a.right > b.right + 0.5) cut.push(id); } }
+  parent.postMessage({ sc, read, keep, cut, state: slots && slots.state, minFont, minAt, minBtn, minBtnAt }, '*');
 }
 document.fonts.ready.then(() => setTimeout(() => { if (sc.dev === 'touch') fitPrompt(pr); measure(); }, 100));
 `;
@@ -251,6 +257,7 @@ export function serve(port = 0) {
 export function problems(r, { you = false } = {}) {
   const out = [], { sc } = r, tag = `${sc.w}x${sc.h} ${sc.dev} ${sc.st}`;
   const over = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  for (const id of r.cut || []) out.push(`${tag}: ${id} cut off (wider than its button)`);
   for (const [i, a] of r.read.entries()) {
     if (a.x0 < 0 || a.y0 < 0 || a.x1 > sc.w || a.y1 > sc.h) out.push(`${tag}: ${a.name} off the screen ${JSON.stringify(a)}`);
     if (a.clip) out.push(`${tag}: ${a.name} cut off (wider than its box)`);

@@ -497,6 +497,7 @@ body.portrait.touch #purse { flex-direction: row; justify-content: space-between
 #qbar { position: absolute; right: var(--sr); display: flex; gap: 2px; align-items: stretch; pointer-events: auto; opacity: 0.5; transition: opacity 0.25s; }
 #qbar:hover, #qbar.on { opacity: 1; }
 #qbar:empty { display: none; }
+@media (max-height: 430px) { #qbar { display: none; } }   /* (a short window: the fishing panel and the weapon plate need the room - 5-8 still use the slots; test/hudlayout) */
 #qbar .qb { position: relative; width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border: 2px solid var(--pad-ink); background: var(--pad-navy); color: var(--pad-cream); cursor: pointer; box-shadow: var(--pn-rim); }
 #qbar .qb.empty { opacity: 0.35; cursor: default; }
 #qbar .qb canvas, #qbar .qb img { width: 28px; height: 28px; image-rendering: pixelated; }
@@ -523,6 +524,7 @@ body:not(.touch) #weapon.compact { display: none; }   /* (the owner's minimal HU
 .touch #weapon:active { transform: scale(.94); }
 .touch #w-quick { display: none; }
 .touch #w-ammo { font: 700 var(--fs-2) var(--pixel); letter-spacing: 0; color: var(--pad-cream); white-space: nowrap; }
+.touch #w-ammo.long { font-size: var(--fs-1); }
 .touch #w-info { text-align: center; white-space: nowrap; }
 body.touch.multi-wpn #w-swap { display: grid; position: absolute; top: 50%; right: 1px; transform: translateY(-50%); --ic: 12px; color: var(--pad-gold); }   /* (more than one to switch to: a small chevron) */
 @media (max-height: 430px) { body:not(.touch) #w-quick { display: none; } body:not(.touch) #weapon { min-height: 0; padding: 2px var(--s2); } body:not(.touch) #w-icon canvas { width: 48px; height: 24px; } body:not(.touch) #w-ammo { font-size: var(--fs-3); } }
