@@ -6,6 +6,31 @@ unshipped on branches. The owner (11-17 21:36): "it feels like every system has 
 notes I've given previously weren't applied across the world or weren't implemented yet" - so this is the beta's
 gate, not an after-launch list. The big pass starts after the weekly reset (Friday 11-20).
 
+## Where it stands (2026-11-23 morning) - the short version
+Status from the DEVLOG and the branches; the sections below hold each item's detail. Done since 11-17 and not repeated
+here: the pre-beta art and UI and batch 1 of the 11-22 notes (live 11-22), the new people, your music, the quick bar,
+rooms lit at night, the console's Status tab (live 11-23).
+1. **The world batch** (section A, `prebeta-world2`) - ready apart from the Old Downtown casino fronts (in hand); then
+   your word to put it live (one re-bake, ~5 h - watch it on the Status tab). For Fable after it: lobbyDoor,
+   signCovered, the ATM booths, roof billboards cut off, ATMs under awnings, the boardwalk bends, a taller neighbour drawn
+   over a room you're in (the renderer), rail bridges.
+2. **Server and loading** (F) - the art kept across restarts (check on the Status tab at the next restart: it should
+   stay "Up to date"); phones drawing missing art themselves during a redraw (the stutter); a "Server updating"
+   message on the title during a restart.
+3. **Finish or hide** (D) - your call per item: the casino table games, car soccer, the raceway, tennis, kayak racing,
+   the cinema.
+4. **Systems** (C) - NPCs (off furniture and fountains, dancers spaced, no looping lean, animals out of step, bar
+   fights), car headlights at night on the Neon Strip (the light cap), the kayak's paddling, the skateboard (carry it,
+   hop on, one board), the Rusty Spur's pool table, car soccer's boost flame and art, racing markers and grids,
+   traffic jams at busy junctions (the gridlock test), the character creator's "My looks" strip, desktop panels with
+   CSS zoom, living city events, the portrait phone layout round the thumb map, phone wires that end at nothing, NPC
+   drivers shown in open vehicles.
+5. **Branches to ship or drop** (E) - `neon2` (the Neon Strip's bigger rework), `inventory` (the inventory screen, the
+   SNES font in menus), `ads` (the Employment Center), `director` (the Camera's clean screen), `fsrow` (Fullscreen
+   at the top of Settings > Graphics), `founderpack` (held by you), the founder look mockups.
+6. **World craft** (B) - waves 2-6, district by district (wave 1 done).
+7. **The walkthrough** (G), then **the launch steps** (H).
+
 ## How we work through it
 - **Every fix is a class fix**: fixed everywhere it occurs, with a lint row or test that runs over the WHOLE World v3
   map in `npm test`, so it can't come back. A note fixed in one spot only is not done.
