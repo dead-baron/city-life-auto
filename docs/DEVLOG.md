@@ -26116,6 +26116,17 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   test now accepts both kinds of piece after the park block's buildings.
 - World change: rides with the rest of the world batch (one world hash change for all of it).
 
+## 2026-11-22 - The plants lit by the game's sun alone (branch `prebeta-art`)
+- The owner picked between two sheets (oak, maple, birch, pine, rose, hydrangea at morning and afternoon): the
+  plants' painted left-right light is gone (`client/art2/flora.js` `SIDE` 1 -> 0), so the lit side follows the
+  game's sun like everything else. "I think the light should work with the game." DECISIONS, Art direction.
+- An art change: rides in PR #1's re-bake.
+
+## 2026-11-22 - The soundtrack's loops and endings, measured (branch `prebeta-art`; nothing in the game yet)
+- `tools/music/analyze.py`: for each of the owner's 25 primary takes, the beats, bar lines, a seamless loop and a clean
+  ending, measured from the recording (details and results: docs/tasks/MUSIC-HANDOVER.md, `docs/audio/loops-2026-11-22`).
+- A listening page for the owner on his computer (each loop played three times, each ending), his ear to approve.
+
 ## 2026-11-22 - A fisher always finds the bank
 - `server/systems/wildlife.js` edgeSpot: after its 30 random tries, rings outward from the water, nearest bank first. The
   staged "bear fishing" at Pine Lake said "no room" on the world batch (`test/world3scenes.test.js` test 1).
@@ -26245,3 +26256,83 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   car): eight desert places (three hospitals, shops at Mesa Flats and Red Rock) have their map point on their walk-in
   room's floor, a few tiles behind the door, where no car goes - one there now counts as reached when the ground within
   4 tiles (its door) is. The known two (a convenience store and a roadhouse with no drivable way in) stay as they were.
+## 2026-11-22 - Soundtrack: full songs and the alternates measured (branch `prebeta-art`; nothing in the game yet)
+- `tools/music/analyze.py` renders each take whole from the top too; the 31 alternates measured; review page v2
+  (`tools/music/review-page.py`) on the owner's computer. All 25 primaries' loops and endings approved (11-22 10:12).
+
+## 2026-11-22 - The owner's songs in the game, staged (branch `music`)
+- **The files** (`tools/music/make-songs.py`): the 56 approved takes (25 primaries, 31 alternates), each as its loop (the
+  title track's seam: aligned to the sample, an equal-power blend, wrap-around margins; decoded seams -17 to -32 dB) and
+  as the full song from the top to its ending (its own, or the new one), Opus (56/80 kbps) and MP3 (80/112 kbps), mono
+  where the channels are alike: `assets/music/songs/` (80 MB Opus, 102 MB MP3; a player fetches one). Files:
+  `client/sound/songs.js` (lazily); timing: `shared/songtimes.js` (3 KB: what the server and page agree on).
+- **Which take** (`shared/music.js` `takeOf`): a pure function of the song and the play - the primary 70%, the
+  alternates the rest. The stations (`stationAt`) and tapes (`tapeAt`) play runs of 8 rounds, each play its take, so
+  where a station is at any moment is a sum - the same on every page, nothing on the wire. Five new tracks for the
+  places' own songs (cues 21-25: Neon Current, Mirrorball Traffic, Dust on the Dial, House Odds, Brass Ticket), at the
+  end of the list (no tape index moves).
+- **Playing them**: radios, tapes, car radios (`client/sound/stage.js` `playTake`): the full song streamed through an
+  `<audio>` element into the source's chain (distance, muffle, pan), re-synced when it drifts over 0.35 s - never decoded
+  whole (a phone's memory). The places (`client/sound/music.js` `rec`): the loop decoded and looped margin to margin into
+  the same chain as before - the shops Aisle Bossa, the lobbies Visiting Hours through the ceiling-speaker band, the
+  drive-in Starlite Slow Dance, the night club Neon Current or Mirrorball Traffic a day each; let go 4 s after it's no
+  longer heard. Level: the title's (-15 LUFS target, `track.js` trackGain). The mat's rhythm game keeps its score (its
+  chart is the score's beats) - the recordings there come with the gig work.
+- **Staged**: off for players; the debug menu's *🎵 Recorded music* turns them on in one browser (`cla.recmusic`).
+- Not yet heard in a running game (Claude can't hear; the owner will). Not yet placed: Dust on the Dial (bars), House
+  Odds and Brass Ticket (the casino) - their tracks exist, their places don't play them yet.
+- Tests: `test/music.test.js` (12: the rotation's shares, every station's song recorded, the files on disk, stations
+  round and round by take), sound, track, drivein, nightclubs, perf, the dev menu's.
+## 2026-11-22 - The new people on for everyone (branch `chars-on`)
+- The owner, 12:41: "I think the human/player art is ready to turn on to go live". The character polish pass
+  (`client/art2/peoplepolish.js`, staged behind `cla.polish` since 11-19) is now on unless switched off: `main.js`,
+  `game/host.js`, `creator.js` read `cla.polish !== '0'`; the debug menu's *Character polish* turns it off on one screen
+  (the old people, still drawn by `people.js` without the pass). Blocked storage: off, as before.
+- Kept safe: the branch `people-before-polish` (the live version just before this change).
+- Cost: the page now loads `peoplepolish.js` at start (lazily, beside `people.js`); `test/perf.test.js` 6/6 (budgets
+  unchanged). No art re-bake: the world's baked chunks draw no people.
+- Tests: characters2-5, npcpeople, peoplelook, peoplepolish (the switch test now expects "on unless '0'"),
+  peoplepolish-wardrobe, wardrobe, portrait, menupolish, perf - all pass. The page loads with the pass and no console
+  errors (headless, title screen); the people themselves were seen in play by the owner with the switch on.
+
+## 2026-11-22 - The recordings on for everyone
+- The owner, 13:12: "I don't think I need to wait for me to check the music you can go for it". `recOn` (client/sound/stage.js)
+  and the places' `rec` (client/sound/music.js) now on unless `cla.recmusic` is '0'; the debug menu's *Recorded music*
+  turns them off on one screen (the synth's tunes, as before). DECISIONS: the soundtrack, and merging to main (Process).
+
+## 2026-11-22 - Music: the casino and the roadhouse, and each source its own speaker
+- A casino's floor (a walk-in with `casino`: shared/casinorooms.js) plays House Odds or Brass Ticket (a day each, the
+  take by the hour); the roadhouse plays Dust on the Dial - their loops through the places' chain (client/sound/music.js
+  REC, places.js). The city's neon bars are storefronts with no room inside: no music there yet.
+- Each source sounds like its speaker (client/sound/stage.js SPEAKER, a high-pass added to every source's chain): a pocket
+  radio thin (380 Hz - 4.2 kHz), a boombox full, a car's own speakers inside, only its bass through the body outside.
+- Tests: sound, music, nightclubs, drivein, casino, casinofloor. Page-only: no restart, no re-bake.
+
+## 2026-11-22 - N7: the quick bar in play, on a keyboard (branch `quickbar`)
+- The owner's note N7 ("how to reach the quick bar in play, desktop and phone"): the quick wheel was there (hold X, hold
+  View, hold BAG) but nothing on screen said so. Now on a keyboard the four pinned things sit in a small strip over the
+  weapon plate (`#qbar`, client/hud.js quickBar): each its picture and count, "HOLD X" beside them, a click uses one (the
+  wheel's `{ t: 'inv', a: 'use' }`). Dim till the pointer is on it or a count changed (UI-9's minimal HUD); hidden with
+  nothing pinned; measured onto the plate twice a second, not every frame. Number keys stay the weapons'.
+- Touch and pad keep the wheel (hold BAG, hold View): the owner's call was a strip only where it costs no screen.
+- Guide (the bag entry) and README's controls updated. Tests: guide, uitokens, uiscreens, uikit, touchslots, lazypage,
+  perf pass; hudlayout fails as on main (pre-existing, logged).
+
+## 2026-11-22 - Lit inside at night (N14)
+- The owner's note (11-22, N14): "the hospital's inside is dark at night". Walk-in rooms were lit by the hour outside,
+  so after dark every room went as dark as the street. `client/art2/game/host.js` `_preset`: inside a walk-in, the light
+  eases (INDOOR_EASE, a quarter second) most of the way (INDOOR_NIGHT 0.75, times how dark it is) to lightgame.js's
+  `indoor` light - a warm fill with the room's lamps - and back out as you leave; by day nothing changes. Client only:
+  not in the art hash, no re-bake. lights, daylight, cavelight, perf, mapwindow, dmath.
+
+## 2026-11-22 - Two tests failing on main put right: the HUD on small sideways phones, the prison
+- `test/hudlayout.test.js` (failing on main since before the pre-beta batch): on a small phone held sideways (844 x 390,
+  740 x 360) a second note - two lines, since notes wrap rather than cut (11-16) - ran down onto the status line under
+  the map and the fishing bar. `client/style.css`: a short touch screen on its side shows one note at a time, as an
+  upright phone already does (the next shows when it fades; all of them are in the Log). Touch only - the desktop's
+  measurements don't move (the one-rule try of 11-22 had changed them). The fix let the test reach a later check it had
+  never got to: "a note more than one line", stale since the 11-16 decision - now two lines at most.
+- `test/prison.test.js` (failing on main): "the weapon back in your hand when you're out" predates 11-14's one stash -
+  booking sends your legal guns to your stash (arms.js onBooked). The test now checks that: out empty-handed, the pistol
+  in your stash.
+- Tests: hudlayout, hudinfo, hudlayers, uikit, uitokens, chatui, chatsafety, notes1122, prison, arms, custody.

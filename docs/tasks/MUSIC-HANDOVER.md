@@ -98,3 +98,48 @@ How to build that (Claude's plan, nothing built):
 - The instrument game's look is poor (blurred arrows with shadows); it should read like an SNES rhythm game.
 - Its songs are random beats; he wants to play along to real songs.
 - Using an instrument from the bag leaves the bag open, so the player can't see the character play.
+
+## 11-22 morning: loops and endings measured (the owner: "I don't think they end right on some of them or loop right")
+- Folder access granted: `Desktop\City Life Auto\_audio\_DONE`. The 25 primaries' `MASTER.flac` and `SCORE.txt` read.
+- The owner on rebuild vs recordings: unsure; asked for the songs to be "looked at and edited" like the title track.
+  Done that way: the recordings are cut and joined, not rebuilt (the 11-12 decision stands).
+- `tools/music/analyze.py` (numpy/scipy, no beat library - installs are blocked here): beats by dynamic programming,
+  the score's written tempo (`Q:`) only to pick between the recording's own tempo readings; downbeats by kick + chord
+  change; a loop of 8-32 bars, 20-75 s, on a phrase line, whose next bar sounds like its first and whose last bar like
+  the one before its start; the title's seam method (aligned to the sample, 90 ms blend). Checked on the title loop:
+  92.57 BPM against 92.7, 16 bars. All 25 measured tempos within 1-3 BPM of the written ones.
+- Endings: a take ending quietly (last 0.5 s under -30 dB, or 20 dB under the body) keeps its own (7 songs); the other
+  18 end on the downbeat after their last full 4-bar phrase, that beat ringing, faded over two beats.
+- Results: `docs/audio/loops-2026-11-22/*.json`. Seams: none sharper than 0.31 of the music's own sharpest sample
+  steps (no clicks by measure). Flagged for the ear: A12 Grease Fire (+12 dB at the join), T05 Waiting Room Disco
+  (-15 dB), T03 Sunburnt Tape (-8 dB); A09 First Sprouts and A16 Jester's Parade the weakest matches.
+- The owner's review page: `...\City Life Auto Music and Instruments\Claude-Loop-Review\index.html` on his computer
+  (each loop three times, each ending; "sounds right / redo" and a Copy my notes button). Nothing in the game yet:
+  after his notes, the approved ones go through `make-loop.py` (loops) and an ending cut into `assets/music/`.
+
+## 11-22 10:12: the owner's answers
+- All 25 primaries' loops and endings approved ("sounds pretty good"; every one "good").
+- "Were these recreated?" No: his recordings, cut and joined. He asked for **the songs from the top too** (a boombox, or
+  anything that starts a song fresh): every take now also has a full version, its intro and all, to its ending (its own,
+  or the new one) - `analyze.py` renders `ID-full.opus`. In the game: the full song for a source starting a song, the
+  loop for a bed, a synced radio joins the full song part way through.
+- **The alternates in rotation**: the 31 core alternates measured the same way (all within 4% of their written tempo):
+  `docs/audio/loops-2026-11-22/_alternates.json` and their JSON. Rotation as the brief: the song first, then its take,
+  about 70% primary / 30% its alternates together. The 20 optional takes (no primary) stay parked until he places them.
+- Review page v2 on his computer (`tools/music/review-page.py`): the alternates and the full songs, the approved marked.
+  Next: his notes on v2, then the approved files into `assets/music/` (loops through `make-loop.py`, full songs with the
+  new ending), streamed when a player comes near a speaker, never at start-up.
+
+## 11-22 11:13: review v2 approved
+- The owner marked every clip of v2 "good": the full songs of all 56 takes, and the alternates' loops and endings -
+  except two loops left unmarked (C10, A01: neither approved nor sent back - ask). D02's ending was approved in v1.
+- Next (package 4): encode the approved takes into `assets/music/` (each take: the loop via `make-loop.py`'s seam
+  method, and the full song to its ending; mono where the channels are alike), then the world's music per his 11-22
+  03:07 direction (sources in the world, synced across players, rotation 70/30, sound by source, muffled from outside).
+
+## 11-22 afternoon: in the game, staged (branch `music`; DEVLOG "The owner's songs in the game, staged")
+- Built: the files, the take rotation (shared), radios / tapes / car radios streaming the full songs, the shops / lobbies /
+  drive-in / club playing loops. Behind the debug menu's *Recorded music* (off for players).
+- Next: the owner listens in the game -> on for everyone; the casino and the bars get their songs (House Odds, Brass
+  Ticket, Dust on the Dial: no place plays them yet); each source's sound (a tinny pocket radio, the car's body, the
+  club's door) tuned; the gigs and the mat to the recordings (charts from the measured beats - N9, N15).

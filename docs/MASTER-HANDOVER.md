@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-22 (end of the Fable art session). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-22 afternoon (the pre-beta chat, Opus 5.5). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -44,9 +44,10 @@ Nothing important should exist only in a chat. If it was decided or noticed, it 
 If two of these disagree, `docs/DECISIONS.md` wins, and the newer dated line wins inside it. Fix the other one.
 
 ## 3. How the owner wants work done (the ones that have cost time when missed)
-- **Nothing goes to `main` without his go-ahead.** Pushing `main` deploys live. Feature branches only. He does not
-  want to be a blocker for small safe fixes (11-22 03:07): a rule for what may go without asking is PROPOSED in
-  DECISIONS, Process. It is not in force until he says yes to it; ask him in the first reply.
+- **Merging to `main`** (11-22 13:12): Claude merges its own pull requests when their tests pass and tells him after
+  in a line (`gh api -X PUT repos/dead-baron/city-life-auto/pulls/<n>/merge` - a plain push to `main` stays refused by
+  the session's guard). Still his word first: the world batch, anything touching saved progress, prices, accounts,
+  privacy, payments or legal text, a raised performance budget, launching the beta. DECISIONS, Process.
 - **Every fix is a class fix:** fixed everywhere it occurs, with a test or lint row over the whole world so it can't
   come back. A note fixed in one spot is not done. Every note gets a check, or is marked "eyes only".
 - **Check before eyes:** look at the result yourself (render it, beside its concept and its surroundings) before
@@ -95,30 +96,24 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 
 | # | Package | Starts from | Read first | State |
 |---|---|---|---|---|
-| 1 | Merge and go-live of the finished art and UI | branch `prebeta-art` | `docs/tasks/PREBETA-HANDOVER.md` | Ready. 25 test files not yet run; four UI checks from quick wins to settle; a clean full run owed. |
-| 2 | The world batch (the audit's placement fixes, `egret`, the nature pass's solid pieces) | `prebeta-art` after 1, plus `nature-world` | `docs/audit/REPORT.md`, `claude/prebeta-list.md` section A, the handover's "what comes next" | Not started. One world rebuild. |
-| 3 | Systems and UI fixes, by area (NPCs, vehicles, minigames, menus) | `main` after 1 | `claude/prebeta-list.md` sections C-D, `docs/audit/REPORT2.md`, the owner's new notes | Not started. One chat per area; merge each before the next. |
-| 4 | Music and the instrument sound pack | `main` after 1 | `claude/music-briefs.md`, DECISIONS "Music and sound" | The owner's kit arrived 11-22 (25 songs, backups, an instrument kit; on his computer - ask for the folder). Read `docs/tasks/MUSIC-HANDOVER.md` first: Claude advises playing the recordings (his decision of 11-12), not rebuilding them as ChatGPT's brief says; his answer is still to come. |
-| 5 | Checks that stop regressions (a guard per note; a fixed set of places re-rendered before and after any world or art change) | `main` after 1 | the handover's "Two checks worth building first" | Not started. Worth doing early: it saves his usage. |
-| 6 | Art, continued (water at sunset and in rain, then buildings and districts, then vehicles) | branch `nature` | `claude/nature-status-2026-11-21.md` | Paused until he returns to the art model. |
-| 7 | Launch steps | `main` | `claude/prebeta-list.md` section H, `claude/launch-plan-2026-11-03.md` | On his word "launch the beta". |
+| 1 | Merge and go-live of the finished art and UI | `main` | `docs/tasks/PREBETA-HANDOVER.md` | **Done 11-22:** PR #1 merged (the art re-bakes once, ~5 h), PR #2 the new people on for everyone (the old kept on branch `people-before-polish`). Claude now merges its own PRs when tests pass (DECISIONS, Process, 11-22 13:12); the world batch and the beta launch still need his word. |
+| 2 | The world batch (the audit's placement fixes, `egret`, the nature pass's solid pieces, the 11-22 rows) | branch **`prebeta-world2`** (on `prebeta-world`; merge `main` into it before it goes), plus `nature-world` | `docs/audit/REPORT.md`, `docs/audit/PREBETA-LIST.md` (A and the 11-22 section), the DEVLOG's "World batch" entries on that branch | **Under way (11-22):** egret merged; walkways clear of plants (plantOnWalk 2,914 -> 0, planterOnWalk 422 -> 0, plantOnPath -> 0); bin bags by a bin (44 -> 0); door paths round to the pavement (doorOnGrass 372 -> 89); every boat drivable (deadBoat 103 -> 3 - his call 15:03); railings back on the shore (railOverWater 110 -> 0); no parking space on a pavement (parked 124 -> 0); the farms back from the beach and the stray scraps to grass (cropInTown 49 -> 0 - his call 16:45); the staged bear finds its bank. Lint 42/42. **For Fable (art):** lobbyDoor 161 (mixed-use buildings painted as a shop with only an apartment inside - recommendation: the apartment its own lobby door beside the shop front), signCovered 158 (hotel and fuel canopies over their own signs). **Decided 16:45:** atmStray 52 - a booth of its own for each kiosk that is a street's only cash (art, for Fable). **Asked 16:48:** more bin bags outside the bins in the rough districts? (the 44 removed were lone bags in nice districts; rough districts keep theirs). Next rows, no art: wallOnly 17, northDoor 19, interiorOverlap 25, portalOnFlat 16, bigEmptyPlaza 14, heliOffPad 10, festoonDensity 9, rampCrossesRoad 9, frontNames 7, dockOverlap 5, beachWater 4; the 11-22 rows (roofSignCut N23, atmUnderAwning N18, darkInterior N14); then the world3 suites again, before / after pictures (`tools/regress/`), and his word to go live. |
+| 3 | Systems and UI fixes, by area (NPCs, vehicles, minigames, menus) | `main` | `docs/audit/PREBETA-LIST.md` sections C-D and the 11-22 section, `docs/audit/REPORT2.md` | Batch 1 live (PR #1); N7 the quick bar live (PR #5: a strip over the weapon plate on a keyboard; touch and pad keep the wheel). Open: N13 the hospital "robbers" (confirm in play), N14 the hospital dark inside at night (started: how walk-in rooms get their light), the HUD's second note on small sideways phones (`hudlayout`, failing on main too), the prison gun test. |
+| 4 | Music and the instrument sound pack | `main` | `docs/tasks/MUSIC-HANDOVER.md` (the 11-22 sections), DECISIONS "Music and sound" | **Live 11-22 (PRs #3, #4):** all 56 approved takes as files (loop + full song, Opus + MP3); radios, tapes, car radios stream the full songs, takes rotating 70/30 in sync; shops, lobbies, drive-in, night club, casino, roadhouse loop theirs; each source its speaker sound. The debug menu's *Recorded music* turns them off on one screen. Next: the gigs and the mat to the recordings (charts from the measured beats - N9, N15, N10 tips), the city's neon bars (storefronts with no room: no music yet), the 20 optional takes when he places them. |
+| 5 | Checks that stop regressions | `main` after 1 | `tools/regress/README.md` | Half built 11-22: 55 fixed places, shots and a diff (`tools/regress/`); a guard column for the 11-22 notes (their triage table). Still: a guard column for the older notes in the register. |
+| 6 | Art, continued (water at sunset and in rain, then buildings and districts, then vehicles) - and from the 11-22 notes: item icons toward the concepts + a UI/UX polish on every device (N2), the hospitals' and storefronts' design (N20), the playing animations on the beat (N15) | branch `nature` | `claude/nature-status-2026-11-21.md`, the 11-22 section of the pre-beta list | For Fable. |
+| 7 | Launch steps | `main` | `docs/audit/PREBETA-LIST.md` section H, `claude/launch-plan-2026-11-03.md` | On his word "launch the beta". |
 
 Chats that can run side by side: 4 with any other; nothing else safely.
 
-## 6. Where things stand (2026-11-22)
-- `main` (live): unchanged since 2026-11-19 (the security fixes).
-- `prebeta-art`: characters, animals, item pictures, quick wins, the fullscreen row, the audit reports and all
-  page-side nature and water work, merged and stamped. Not live. The owner has seen sheets and area pictures, not the
-  running game.
-- `nature-world`: the sea cave's rock hill (a world change). A placeholder by his word; goes with the world batch.
+## 6. Where things stand (2026-11-22, afternoon)
+- `main` (live): PRs #1-#5 merged 11-22 - the pre-beta art and UI with batch 1 of the 11-22 notes, the new people, the
+  owner's music in the world, the quick bar. The art re-bake from PR #1 runs about five hours from 11:45.
+- `prebeta-world2` (on `prebeta-world`): the world batch so far (section 5, row 2). Not live; his word before it goes.
+- `nature-world`: the sea cave's rock hill - goes with the world batch.
+- The 11-22 notes: triaged (`docs/tasks/PREBETA-NOTES-2026-11-22.md`), in `docs/audit/PREBETA-LIST.md`.
 - Placeholders he wants fixed later: Summit Tarn's low sill, the sea cave's rock hill.
-- Open picks waiting on him: the plants' painted light; whether the calmer water sparkle is too flat; go-live;
-  music as recordings or rebuilt; the proposed push rule (DECISIONS, Process).
-- **His new pre-beta notes (11-22 02:48), not yet triaged:** `docs/tasks/PREBETA-NOTES-2026-11-22.md` (project copy
-  `claude/prebeta-notes-2026-11-22.md`) holds the words of his 15-page PDF; its 14 pictures are NOT in it - ask him
-  to attach the PDF again and read it with the pictures. First job: run the ripple check on each note, sort them into
-  the packages, add them to `claude/prebeta-list.md`. Nobody has read it through yet.
-- His music and instrument kit: `docs/tasks/MUSIC-HANDOVER.md`.
+- Open picks waiting on him: whether the calmer water sparkle is too flat (in play now); the balance proposals 1, 3, 4.
 
 ## 7. How a chat ends (do all of it, in this order)
 1. Tests for what changed pass; say which were not run.

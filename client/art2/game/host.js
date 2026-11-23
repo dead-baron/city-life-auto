@@ -299,6 +299,7 @@ const RW_OUTLINE = {
 // the time-of-day keys of the presets (minutes after midnight), blended in between: a long dark night (20:26-05:05,
 // lit by the lamps, windows and headlights), first light, sunrise, the day, golden hour, sunset and blue hour
 // (v1's sky, render/atmos.js KEYS, keeps to the same times; the night part of the loop runs at 0.6 s a minute)
+const INDOOR_NIGHT = 0.75, INDOOR_EASE = 4;   // (inside a walk-in at night: how far to the indoor light; how fast it eases, per second)
 const SKY_KEYS = [[0, 'night'], [305, 'night'], [338, 'predawn'], [372, 'dawn'], [400, 'dawn'], [470, 'morning'], [600, 'noon'], [900, 'noon'], [1000, 'afternoon'],
   [1085, 'golden'], [1140, 'golden'], [1172, 'sunset'], [1198, 'dusk'], [1226, 'night'], [1440, 'night']];
 // how far the light comes from the sun's own place (v1's sky) rather than the night preset's moon: eased over in
@@ -498,7 +499,7 @@ export class World2 {
       const t = performance.now();
       const [A, Pd] = await Promise.all([import('./actors.js').catch(() => null), import('./peds.js').catch(() => null)]);
       this.A = A; this.Pd = Pd;
-      try { if (Pd && localStorage.getItem('cla.polish') === '1') { await Pd.loadPolish(new URL('../peoplepolish.js', import.meta.url).href); Pd.usePolish(true); } } catch { /* off */ }
+      try { if (Pd && localStorage.getItem('cla.polish') !== '0') { await Pd.loadPolish(new URL('../peoplepolish.js', import.meta.url).href); Pd.usePolish(true); } } catch { /* off */ }
       if (A && A.artFrom) A.artFrom({ fleet: () => import('../fleet.js'), horse: () => import('../horse.js') });   // (the batch-4 fleet's models, the horse: when first needed - actors.js)
       this._loadMark('artmods', performance.now() - t);
     } catch { /* providers optional */ }
@@ -1562,6 +1563,13 @@ export class World2 {
       d[0] = x / n; d[1] = y / n; d[2] = zz / n;
       if (this.L.sunKeep) this.L.sunKeep(p, pz, s, up);
     }
+    // inside a walk-in after dark: its own lights on - the light eases most of the way to the indoor one (a warm fill, the
+    // room's lamps) as you go in, and back out as you leave (11-22, N14: "the hospital's inside is dark at night")
+    const inW = F.insideB && F.insideB.walkIn ? 1 : 0, at = this.inAt ?? F.now;
+    this.inK = (this.inK ?? inW) + (inW - (this.inK ?? inW)) * Math.min(1, Math.max(0, F.now - at) * INDOOR_EASE);
+    this.inAt = F.now;
+    const ik = this.inK * dark * INDOOR_NIGHT;
+    if (ik > 0.01 && P.indoor) p = blend(p, P.indoor, ik, this.presetF || (this.presetF = {}));
     p.lampsOn = Math.max(p.lampsOn || 0, sky.night);
     p.rain = Math.max(p.rain || 0, rk);
     p.motes = this._nature(F);

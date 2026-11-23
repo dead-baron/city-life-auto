@@ -112,7 +112,7 @@ setTimeout(preloadAudio, 1500);
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
 // (the character polish pass, staged - the debug menu's switch: the title's portrait and the creator draw with it too; docs/characters/NOTES.md)
-try { if (localStorage.getItem('cla.polish') === '1') window.CLA_POLISH = Promise.all([import('./art2/people.js'), import('./art2/peoplepolish.js')]).then(([p, m]) => p.setPolish(m.POLISH)).catch(() => {}); } catch { /* blocked */ }
+try { if (localStorage.getItem('cla.polish') !== '0') window.CLA_POLISH = Promise.all([import('./art2/people.js'), import('./art2/peoplepolish.js')]).then(([p, m]) => p.setPolish(m.POLISH)).catch(() => {}); } catch { /* blocked */ }
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
 const afloat = (e) => e.swim || (e.kind === K.VEH && !!e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).kind === 'boat');
 S.fx.water = (x, y) => { const t = S.map ? S.map.tileAtPx(x, y) : -1; return WATER_T[t] === 1 ? 1 : t === T.BRIDGE && afloatUnder(S.ents.values(), x, y, afloat) ? 2 : 0; };   // (render/fx.js: 2 under a deck)
@@ -2816,6 +2816,7 @@ $('radar').onclick = () => { if (S.playing) toggleMap(true); };
 // on touch the weapon box is a button too: a tap takes out the next weapon, holding it opens the picker
 { const wb = $('weapon'); const tap = () => { if (S.playing) virtualTap('nextw'); }; tapHold(wb, tap, () => { if (S.playing) openWeaponPick(); }); }
 // the weapon plate's quick weapons (UI-9, the HUD concepts UIC-11/12): a click takes that one out (its number key does too)
+{ const q = $('qbar'); if (q) q.addEventListener('pointerup', (e) => { const b = e.target.closest('.qb[data-i]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const id = S.me && S.me.quick && S.me.quick[+b.dataset.i]; if (S.playing && id && (S.me.inv[id] || 0) > 0) send({ t: 'inv', a: 'use', id }); }); }   // (N7: the quick bar - client/hud.js quickBar)
 { const q = $('w-quick'); const pick = (e) => { const b = e.target.closest('.wq'); if (!b) return; e.preventDefault(); e.stopPropagation(); if (S.playing && S.me) send({ t: 'weapon', id: b.dataset.w }); };
   q.addEventListener('mousedown', pick); q.addEventListener('touchstart', pick, { passive: false }); q.addEventListener('mouseup', (e) => e.stopPropagation()); q.addEventListener('touchend', (e) => e.stopPropagation()); }
 $('radar').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.playing) toggleMap(true); }, { passive: false });

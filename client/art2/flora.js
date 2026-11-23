@@ -77,7 +77,7 @@ let CAN = false;
 // amt: how far either way); bu: 0..1 from the seed, or -1 with VARY off. The owner, 2026-11-21: "a lot of variety
 // throughout the world in nature" - more shapes of one build (the same height, the same lean) didn't read as variety.
 let VARY = false, TINT = 0;
-const SIDE = 1;   // (how much of the painted light comes from the upper left, 0..1 - the art's convention; tried lower 11-21: the owner's to judge)
+const SIDE = 0;   // (how much of the painted light comes from the upper left, 0..1: none - the side light is the game's sun alone, the owner 11-22; DECISIONS, Art direction)
 // tc: the colour of a plant's flowers or berries - the first of the list for a maker called on its own, else the one the
 // stand it grows in has (floraArt's tint: statics.js gives a drift of flowers one colour, with a few strays). All of
 // them the palette's own reds, oranges, yellows, pinks, purples, blues and whites.

@@ -1,0 +1,227 @@
+[
+{
+"id": "T03",
+"cue": "01",
+"title": "Sunburnt Tape",
+"cap": 195.0,
+"bpm": 97.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "C03",
+"cue": "02",
+"title": "Sugar Haze",
+"cap": 135.0,
+"bpm": 85.0,
+"meter": "M:2/4",
+"bpb": 4
+},
+{
+"id": "T05",
+"cue": "03",
+"title": "Waiting Room Disco",
+"cap": 180.0,
+"bpm": 112.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T02",
+"cue": "04",
+"title": "Clockwork Kitty",
+"cap": 195.0,
+"bpm": 135.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "C09",
+"cue": "05",
+"title": "Smash and Grab",
+"cap": 135.0,
+"bpm": 134.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A11",
+"cue": "06",
+"title": "Getaway Job",
+"cap": 135.0,
+"bpm": 130.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A06",
+"cue": "07",
+"title": "Badge and Brass",
+"cap": 120.0,
+"bpm": 106.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A16",
+"cue": "08",
+"title": "Jester's Parade",
+"cap": 165.0,
+"bpm": 163.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A12",
+"cue": "09",
+"title": "Grease Fire",
+"cap": 150.0,
+"bpm": 89.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T08",
+"cue": "10",
+"title": "Double Scoop",
+"cap": 180.0,
+"bpm": 63.0,
+"meter": "M:2/4",
+"bpb": 4
+},
+{
+"id": "A18",
+"cue": "11",
+"title": "Kickflip",
+"cap": 105.0,
+"bpm": 190.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "B17",
+"cue": "12",
+"title": "Rescue Run",
+"cap": 285.0,
+"bpm": 188.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "C08",
+"cue": "13",
+"title": "Wide Awake City",
+"cap": 135.0,
+"bpm": 115.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A09",
+"cue": "14",
+"title": "First Sprouts",
+"cap": 120.0,
+"bpm": 109.0,
+"meter": "M:2/4",
+"bpb": 4
+},
+{
+"id": "C06",
+"cue": "15",
+"title": "Tomatoes in the Morning",
+"cap": 120.0,
+"bpm": 100.0,
+"meter": "M:2/4",
+"bpb": 4
+},
+{
+"id": "B16",
+"cue": "16",
+"title": "Porch Light",
+"cap": 120.0,
+"bpm": 79.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T12",
+"cue": "17",
+"title": "Aisle Bossa",
+"cap": 210.0,
+"bpm": 65.0,
+"meter": "M:2/4",
+"bpb": 4
+},
+{
+"id": "T29",
+"cue": "18",
+"title": "Visiting Hours",
+"cap": 90.0,
+"bpm": 129.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "C11",
+"cue": "19",
+"title": "Starlite Slow Dance",
+"cap": 90.0,
+"bpm": 95.0,
+"meter": "M:6/8",
+"bpb": 3
+},
+{
+"id": "C02",
+"cue": "20",
+"title": "Street Beat",
+"cap": 60.0,
+"bpm": 123.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T22",
+"cue": "21",
+"title": "Neon Current",
+"cap": 195.0,
+"bpm": 130.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T17",
+"cue": "22",
+"title": "Mirrorball Traffic",
+"cap": 165.0,
+"bpm": 120.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "D02",
+"cue": "23",
+"title": "Dust on the Dial",
+"cap": 150.0,
+"bpm": 101.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A15",
+"cue": "24",
+"title": "House Odds",
+"cap": 120.0,
+"bpm": 95.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A07",
+"cue": "25",
+"title": "Brass Ticket",
+"cap": 90.0,
+"bpm": 123.0,
+"meter": "M:4/4",
+"bpb": 4
+}
+]

@@ -63,7 +63,11 @@ export class Places {
     // ---- the song for the room you're in ----
     let song = null;
     if (kind && SONG_FOR[kind] && !(QUIET_SOME.has(kind) && hash(at.u.poi + 7) < 0.35)) song = SONG_FOR[kind];
+    if (at && at.u.casino) song = 'casino';   // (a casino's floor: shared/casinorooms.js - its music, the owner's House Odds or Brass Ticket)
+    else if (kind === 'roadhouse') song = 'bar';   // (the roadhouse's bar: Dust on the Dial)
     M.set('shop', song === 'shop' && scene === 'game' ? 0.5 : 0, 5200);
+    M.set('casino', song === 'casino' && scene === 'game' ? 0.55 : 0, 9000);
+    M.set('bar', song === 'bar' && scene === 'game' ? 0.45 : 0, 7000);
     M.set('lobby', song === 'lobby' && scene === 'game' ? 0.5 : 0, 6000);
     // ---- the drive-in's score on its speakers (client/drivein.js: how loud and where) ----
     const dn = S.dinSound;
