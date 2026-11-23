@@ -23,7 +23,7 @@ import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bak
 // most (else half its length + 34 px), round another player
 export const FADE_IN = 0.35, FADE_OUT = 0.5, CLR_FOOT = 64, CLR_VEH_MAX = 130, CLR_OTHER = 48;
 const AWN_MIN = 6;   // a building's picture this far south of its foot is an overhang you can stand under (_fades)
-export const DIP_MS = 260;   // a walk-in's door: the screen dips this long, the cut-away swapped at its middle (main.js dipTick)
+const XF_MS = 320;   // a walk-in's swap: its pixel dissolve (engine.js XF_MS - the same; the engine loads lazily)
 const TURRET_TOP = 47;   // (_turret)
 // a bush a vehicle goes through (_bushes): knocked aside for KNOCK_S s, a burst of leaves once per BURST_GAP s; the
 // props that are bushes (never a tree), bucketed BUSH_CELL px; the leaves' colours (green, the desert's grey-green)
@@ -910,19 +910,21 @@ export class World2 {
           if (st && !st.preview && st.ver === res.ver && E.hasChunk(res.cx, res.cy)) { this.results.delete(res.jk); continue; }
         }
         // (walking in or out of a walk-in: its chunks swap between the street's picture and the cut-away one. The owner,
-        // 11-22: "the inside view pops up ... Is it possible to have a slightly smoother transition here?" - a chunk on
-        // screen that changes its cut waits for a short dip of the screen (DIP_MS; main.js dipTick draws it) and swaps
-        // at its darkest, all of the building's chunks together)
+        // 11-22: "the inside view pops up"; 11-23: not the whole screen dimming either - "the interior/exterior art just
+        // faded from one to the other". A chunk on screen that changes its cut swaps at once and dissolves from the old
+        // picture to the new, pixel by pixel over XF_MS (engine.js uploadChunk xf), all of the building's chunks from one
+        // start; nothing else on screen changes)
         const st0 = this.chunkState.get(res.key);
-        if (st0 && !res.preview && st0.mode !== res.mode && (st0.mode >= 0 || res.mode >= 0) && E.hasChunk(res.cx, res.cy) && (res.cx + 1) * CHUNK > this.vx0 && res.cx * CHUNK < this.vx1 && (res.cy + 1) * CHUNK > this.vy0 && res.cy * CHUNK < this.vy1) {
+        let xf = 0;
+        if ((st0 && !res.preview && st0.mode !== res.mode && (st0.mode >= 0 || res.mode >= 0) && E.hasChunk(res.cx, res.cy) && (res.cx + 1) * CHUNK > this.vx0 && res.cx * CHUNK < this.vx1 && (res.cy + 1) * CHUNK > this.vy0 && res.cy * CHUNK < this.vy1)) {
           const now = performance.now();
-          if (!this.dipAt || now - this.dipAt > DIP_MS) this.dipAt = now;
-          if (now - this.dipAt < DIP_MS / 2) continue;   // (not yet: it swaps at the dip's darkest)
+          if (!this.xfAt || now - this.xfAt > XF_MS) this.xfAt = now;
+          xf = this.xfAt;
         }
         n--;
         const t = performance.now();
         let ok = false;
-        try { const g = res.r.g; if (res.r.under) g.under = res.r.under; g.blds = res.r.blds || null; ok = E.uploadChunk(res.cx, res.cy, g) !== false; } catch (e) { console.error('[art2] uploadChunk', e); }
+        try { const g = res.r.g; if (res.r.under) g.under = res.r.under; g.blds = res.r.blds || null; ok = E.uploadChunk(res.cx, res.cy, g, 0, xf) !== false; } catch (e) { console.error('[art2] uploadChunk', e); }
         this.results.delete(res.jk);
         if (!ok) continue;
         this.t.upChunkMs = performance.now() - t; this._upDone('chunk', this.t.upChunkMs);
