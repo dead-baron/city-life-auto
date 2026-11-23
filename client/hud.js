@@ -347,7 +347,10 @@ export class HUD {
       requestAnimationFrame(tick);
     } else if (!me.reloading && this.rlAt) { this.rlAt = 0; fb?.classList.remove('cooling'); }
     const ow = me.weapons.find((x) => x.id === me.weapon);
-    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : '';   // (UI-9: no standing "TAB to switch" - the first-time hints and the README say it)
+    // (on touch the plate is a round button: the count without its spaces, and smaller when it's long - "30 | 120" ran
+    // past its sides on a phone upright, 11-23; test/hudlayout's cut check)
+    const tAm = input.device === 'touch', amT = w.mag ? (me.reloading ? (tAm ? 'RELOAD' : 'RELOADING') : `${ow ? ow.mag : 0}${tAm ? '|' : ' | '}${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : '';
+    $('w-ammo').textContent = amT; $('w-ammo').classList.toggle('long', tAm && amT.length > 5);   // (UI-9: no standing "TAB to switch" - the first-time hints and the README say it)
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
     const wg = $('w-glyph'), gk = glyphOfWeapon(me.weapon, w.type);   // (on touch the button shows what you hold as a one-color silhouette - the owner, 11-03)
