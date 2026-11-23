@@ -26104,3 +26104,10 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
 - Touch and pad keep the wheel (hold BAG, hold View): the owner's call was a strip only where it costs no screen.
 - Guide (the bag entry) and README's controls updated. Tests: guide, uitokens, uiscreens, uikit, touchslots, lazypage,
   perf pass; hudlayout fails as on main (pre-existing, logged).
+
+## 2026-11-22 - Lit inside at night (N14)
+- The owner's note (11-22, N14): "the hospital's inside is dark at night". Walk-in rooms were lit by the hour outside,
+  so after dark every room went as dark as the street. `client/art2/game/host.js` `_preset`: inside a walk-in, the light
+  eases (INDOOR_EASE, a quarter second) most of the way (INDOOR_NIGHT 0.75, times how dark it is) to lightgame.js's
+  `indoor` light - a warm fill with the room's lamps - and back out as you leave; by day nothing changes. Client only:
+  not in the art hash, no re-bake. lights, daylight, cavelight, perf, mapwindow, dmath.
