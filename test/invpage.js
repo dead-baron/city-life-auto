@@ -48,7 +48,8 @@ document.getElementById('hub-title').textContent = 'INVENTORY';
 for (const el of hub.querySelectorAll('.hubtab')) el.classList.add('hidden');
 const inv = document.getElementById('inv'); inv.classList.remove('hidden');
 try { localStorage.setItem('cla.bag.tab', q.get('tab') || 'all'); } catch {}
-const B = (await import('/client/bag.js')).createBag({ el: inv, send: () => {}, me: () => ME, looks: () => LOOKS, look: () => LOOKS.cur, stamina: () => [64, 100], refocus: () => {} });
+const STASH = q.get('stash') ? { t: 'stash', open: true, where: 'Your home', items: { medkit: 6, scrap: 30, ironOre: 4, geode: 2, goldFlakes: 9 }, weapons: { rifle: 90, knife: 0, smg: 120 } } : null;   // (?stash=1: the stash open - stash.js)
+const B = (await import('/client/bag.js')).createBag({ el: inv, send: () => {}, me: () => ME, looks: () => LOOKS, look: () => LOOKS.cur, stamina: () => [64, 100], refocus: () => {}, stash: () => STASH });
 B.show();
 if (q.get('sel')) inv.querySelector('[data-k="' + q.get('sel') + '"]')?.click();
 if (q.get('looks')) inv.querySelector('[data-a="looks"]').click();

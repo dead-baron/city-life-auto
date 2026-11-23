@@ -1809,6 +1809,17 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bc-ic .gl { width: 30px; height: 30px; color: var(--cream); } .bd-ic .gl { width: 44px; height: 44px; color: var(--cream); } .bq-gl .gl { width: 20px; height: 20px; }   /* (the bag's line icons, client/bag.js itemGlyph: one size per place) */
 .bag-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); align-content: start; gap: var(--s2); padding: 2px; }
 .bag-h { grid-column: 1 / -1; margin: 4px 0 0; font: 700 var(--fs-1) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+/* the stash, open (client/bag.js, server/systems/stash.js): CARRIED | STASH over the tabs, where it was opened, CLOSE */
+.bag-seg { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s1) var(--s2); margin-bottom: var(--s2); }
+.bag-seg[hidden] { display: none; }
+.bag-seg .chip { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border: 2px solid var(--gold-a); background: var(--navy2); color: var(--cream); font: 700 var(--fs-2) var(--pixel); cursor: pointer; }
+.bag-seg .chip small { font: 700 var(--fs-1) var(--pixel); color: var(--dim); }
+.bag-seg .chip.on { background: var(--gold); border-color: var(--gold); color: var(--ink); } .bag-seg .chip.on small { color: var(--ink); }
+.bag-seg .chip.drop { outline: 2px dashed var(--gold); outline-offset: 2px; }
+.bag-where { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--dim); font: 600 var(--fs-2) var(--ui); }
+.bag-shx { flex: none; margin-left: auto; min-height: 32px; padding: 0 var(--s2); font-size: var(--fs-1); }
+.bag-cell.in-stash { background: var(--navy); border-style: dashed; }
+.bd-stash { display: flex; gap: var(--s1); margin-bottom: var(--s2); } .bd-stash .btn { flex: 1; min-width: 0; }
 .bag-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 86px; min-width: 0; padding: var(--s2) 4px 4px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy); color: var(--cream); font: 600 var(--fs-1) var(--ui); cursor: pointer; touch-action: manipulation; transition: border-color var(--t1) var(--ease); }
 .bag-cell:hover { border-color: var(--gold-a); }
 .bag-cell.sel, .bag-cell.pfocus { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 2px var(--gold-a); }

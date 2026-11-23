@@ -37,6 +37,7 @@ import * as homes from './homes.js';
 import * as homeinside from './homeinside.js';
 import * as grime from './grime.js';
 import * as showers from './showers.js';
+import * as stash from './stash.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 import { poiAt } from '../pois.js';   // (the place you're at, through a grid: World v3's thousands of places)
 
@@ -420,6 +421,7 @@ const G0 = (h) => geoOf(hallLayout(h));
 export function update(world, dt) {
   grime.update(world, dt);
   showers.update(world);   // (the outdoor showers: showers.js)
+  stash.update(world);   // (an open stash closed once you walk off: stash.js)
   const now = world.time;
   // the floors someone's on: their bathers along the routine, a soak's health and its buff
   if (world.bathHalls) for (const h of world.bathHalls.values()) {

@@ -286,14 +286,14 @@ export function leavesBag(id) {
   const it = ITEMS[id];
   return !!it && !it.light && !!(it.tool || it.music || it.ride || it.fun);
 }
-export function createBag({ el, send, me, refocus, leave, looks = () => null, look = () => null, pp = () => null, stamina = () => null, close = () => {} }) {
-  let open = false, tab = loadPref('tab', 'all'), sort = loadPref('sort', 'kind'), sel = null, armDrop = '', dir = 0, fr = 0, timer = 0, showLooks = false, trig = [0, 0];
+export function createBag({ el, send, me, refocus, leave, stash = () => null, looks = () => null, look = () => null, pp = () => null, stamina = () => null, close = () => {} }) {
+  let view = 'stash', open = false, tab = loadPref('tab', 'all'), sort = loadPref('sort', 'kind'), sel = null, armDrop = '', dir = 0, fr = 0, timer = 0, showLooks = false, trig = [0, 0];
   if (!TABS.some((t) => t[0] === tab)) tab = 'all';
   el.innerHTML = '<div class="bag">'
     + '<section class="iv-me bag-eq" aria-label="Your character"><h3>CHARACTER</h3><div class="iv-doll"><div class="iv-col"></div>'
     + '<div class="iv-fig"><canvas class="iv-cv" aria-label="Your character - turn them with the arrows"></canvas><div class="iv-turn"><button class="btn" data-turn="1" aria-label="Turn left">‹</button><button class="btn" data-turn="-1" aria-label="Turn right">›</button></div></div>'
     + '<div class="iv-col"></div></div><div class="iv-dacts"><button class="btn" data-a="strip">REMOVE ALL</button><button class="btn" data-a="looks">SAVED LOOKS</button></div><div class="iv-stats"></div></section>'
-    + '<section class="iv-items"><div class="bag-tools"><div class="bag-cats" role="tablist" aria-label="Show"></div>'
+    + '<section class="iv-items"><div class="bag-seg" role="tablist" aria-label="Carried or stash" hidden></div><div class="bag-tools"><div class="bag-cats" role="tablist" aria-label="Show"></div>'
     + `<label class="bag-sort"><span>Sort</span><select aria-label="Sort">${SORTS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label><span class="bag-cash"></span></div>`
     + '<div class="bag-grid" role="list"></div><div class="bag-wheel"></div><p class="iv-keys"></p></section>'
     + '<aside class="bag-detail" aria-live="polite"></aside>'
@@ -339,6 +339,17 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
   function iconOf(t, px) { return t.kind === 'p' ? pieceTile(O_ITEM(t), px) : t.kind === 'i' ? pic(t.id, px) : ''; }
   // a piece as worn (its colors) or as it comes
   let O_ITEM = (t) => { const O = outfitOf(), it = O && O[t.slot]; return it && it.id === t.id ? it : { id: t.id, c: PIECES[t.id].c, t: PIECES[t.id].t }; };
+  // the stash, open (server/systems/stash.js: inside your home, at a gun or pawn counter, at your hideout): what's in it as
+  // tiles of their own (k 's:i:<id>' / 's:w:<id>'), under what you carry; clothes stay in your wardrobe
+  const sOpen = () => { const so = stash(); return so && so.open ? so : null; };
+  const stashable = (t) => !t.inStash && (t.kind === 'i' ? !ITEMS[t.id].ride : t.kind === 'w' && t.id !== 'fists');
+  function stashThings(so) {
+    const out = [];
+    for (const [id, n] of Object.entries(so.weapons || {})) if (WEAPONS[id]) out.push({ k: 's:w:' + id, kind: 'w', id, name: WEAPONS[id].name, n: 1, rounds: n, cat: 'weapons', inStash: 1, w: { mag: 0, ammo: n }, i: WEAPONS[id].i });
+    for (const [id, n] of Object.entries(so.items || {})) if (n > 0 && ITEMS[id]) out.push({ k: 's:i:' + id, kind: 'i', id, name: ITEMS[id].name, n, cat: itemCat(id), inStash: 1, value: (ITEMS[id].sell || 0) * n });
+    return out.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'w' ? -1 : 1));
+  }
+  const DRAG = 'application/x-cla-inv';
   function cell(t, m) {
     const pin = t.kind === 'i' ? (m.quick || []).indexOf(t.id) : -1, on = t.kind === 'w' && m.weapon === t.id, ws = t.kind === 'w' ? slotOfWeapon(m, t.id) : -1;
     const b = document.createElement('button');
@@ -350,12 +361,15 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
     // (a gun in hand with its count: its slot number on the gold tag - the tile's own highlight says it's the one in hand;
     // "IN HAND" and "12|36" didn't fit a phone's tile together, 11-23)
     const tag = on ? `<span class="bc-tag bc-held" title="In your hand">${t.kind === 'w' && WEAPONS[t.id].mag && ws >= 0 ? ws + 1 : 'IN HAND'}</span>` : t.worn ? '<span class="bc-tag">WORN</span>' : ws >= 0 ? `<span class="bc-tag">${ws + 1}</span>` : pin >= 0 ? `<span class="bc-tag">${pin + 5}</span>` : '';
-    const cnt = t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n" title="in the gun | spare">${t.w.mag}<i>|</i>${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '';
+    const cnt = t.inStash ? (t.kind === 'w' ? (WEAPONS[t.id].mag ? `<span class="bc-n" title="rounds">${t.rounds}</span>` : '') : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '') : t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n" title="in the gun | spare">${t.w.mag}<i>|</i>${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '';
     b.innerHTML = `<span class="bc-ic">${iconOf(t, 30)}</span><span class="bc-nm">${esc(t.name)}</span><span class="bc-ft">${tag}${cnt}</span>`;
     if (t.kind === 'w') b.querySelector('.bc-ic').appendChild(wIcon(t.id, 64, 32));
     b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; showLooks = false; render(); };
     // (a mouse: drag a thing you can use onto the quick bar's 5-8 - UIC-19)
-    if (t.kind === 'i' && usable(t.id)) { b.draggable = true; b.ondragstart = (e) => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed = 'move'; }; }
+    if (t.kind === 'i' && usable(t.id) && !t.inStash) { b.draggable = true; b.ondragstart = (e) => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed = 'move'; if (sOpen()) e.dataTransfer.setData(DRAG, t.k); }; }
+    // (the stash open: drag a tile between what you carry and the stash - 11-23)
+    else if (sOpen() && (t.inStash || stashable(t))) { b.draggable = true; b.ondragstart = (e) => { e.dataTransfer.setData(DRAG, t.k); e.dataTransfer.effectAllowed = 'move'; }; }
+    if (t.inStash) b.classList.add('in-stash');
     return b;
   }
   // upright on a phone or in a narrow window: stacked, the details a sheet (a tall desktop window keeps three columns)
@@ -389,6 +403,7 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
     const it = t.kind === 'i' ? ITEMS[t.id] : null, def = t.kind === 'w' ? WEAPONS[t.id] : null, P = t.kind === 'p' ? PIECES[t.id] : null;
     const what = t.kind === 'w' ? weaponLine(def) : t.kind === 'p' ? pieceLine(P, t) : describe(t.id);
     const ws = t.kind === 'w' ? slotOfWeapon(m, t.id) : -1;
+    if (t.inStash) return stashDetail(d, t);
     const count = t.kind === 'w' ? [def.mag ? `${t.w.mag} in the gun · ${Math.max(0, t.w.ammo - t.w.mag)} spare` : '', ws >= 0 ? `Quick key ${ws + 1} (${SLOT_NAMES[ws].toLowerCase()})` : ''].filter(Boolean).join(' · ')
       : t.kind === 'p' ? (t.worn ? 'You have it on.' : 'In your wardrobe.') : `${t.n} carried${it.sell ? ` · sells for about $${it.sell} each` : ''}`;
     // (UIC-19: USE, DROP and EQUIP always in the same three places, the ones that don't apply greyed)
@@ -401,6 +416,7 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
     function thirdBtn() { return t.kind === 'p' ? `<button class="btn btn-1" data-a="${t.worn ? 'takeoff' : 'wear'}">${t.worn ? 'TAKE OFF' : 'WEAR'}</button>`
       : held ? `<button class="btn" data-a="holster">PUT AWAY</button>` : `<button class="btn${t.kind === 'w' ? ' btn-1' : ''}" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`; }
 
+    if (sOpen() && stashable(t)) acts = `<div class="bd-stash"><button class="btn btn-1" data-a="tostash">${t.n > 1 ? `ALL ${t.n} TO STASH` : 'TO STASH'}</button>${t.n > 1 ? '<button class="btn" data-a="tostash1">ONE TO STASH</button>' : ''}</div>` + acts;
     if (t.kind === 'w' && m.crew && m.crew.ids && m.crew.ids.length) acts += '<button class="btn btn-x bd-all" data-a="give">Hand to a crewmate close by</button>';   // (server arms.js handTo)
     if (t.n > 1) acts += `<button class="btn btn-x bd-all" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>`;
     if (t.id === 'plasma') acts += `<div class="bag-blade"><small>Blade color</small>${BLADE_COLORS.map((bc, i) => `<button class="sw${i === (m.blade | 0) ? ' on' : ''}" data-blade="${i}" aria-label="${esc(bc.name)}" style="--sw:${esc(bc.c)};--swc:${esc(bc.core)}"></button>`).join('')}</div>`;
@@ -415,8 +431,19 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
     for (const b of d.querySelectorAll('[data-pin]')) b.onclick = () => { const i = Number(b.dataset.pin); send({ t: 'inv', a: 'slot', i, id: quick[i] === t.id ? null : t.id }); };
     for (const b of d.querySelectorAll('[data-blade]')) b.onclick = () => send({ t: 'look', a: 'blade', c: Number(b.dataset.blade) });
   }
+  function stashDetail(d, t) {
+    const so = sOpen(), what = t.kind === 'w' ? weaponLine(WEAPONS[t.id]) : describe(t.id);
+    d.innerHTML = `<div class="bd-head"><span class="bd-ic">${iconOf(t, 44)}</span><div><h3>${esc(t.name)}</h3><small>In your stash</small></div>`
+      + '<button class="x bd-x" data-a="close" aria-label="Back to the inventory">✕</button></div>'
+      + `<p class="bd-what">${esc(what)}</p><p class="bd-n">${t.kind === 'w' ? (WEAPONS[t.id].mag ? `${t.rounds} rounds with it` : 'In your stash') : `${t.n} in your stash`}${so && so.where ? ` · ${esc(so.where)}` : ''}</p>`
+      + `<div class="bd-acts"><div class="bd-stash"><button class="btn btn-1" data-a="take">${t.n > 1 ? `TAKE ALL ${t.n}` : 'TAKE'}</button>${t.n > 1 ? '<button class="btn" data-a="take1">TAKE ONE</button>' : ''}</div></div>`;
+    if (t.kind === 'w') d.querySelector('.bd-ic').appendChild(wIcon(t.id, 96, 48));
+    for (const b of d.querySelectorAll('[data-a]')) b.onclick = () => act(b.dataset.a, t);
+  }
+  const moveTo = (t, put, one) => send({ t: 'stash', a: put ? 'put' : 'take', k: t.kind, id: t.id, ...(one ? { n: 1 } : {}) });
   function act(a, t) {
     if (!t) return;
+    if (a === 'tostash' || a === 'tostash1' || a === 'take' || a === 'take1') { moveTo(t, a.startsWith('to'), a.endsWith('1')); if (!(a.endsWith('1') && t.n > 1)) sel = null; render(); return; }
     if (a === 'close') { sel = null; armDrop = ''; render(); return; }
     if (a === 'equip') { if (t.kind === 'w') send({ t: 'weapon', id: t.id }); else if (t.kind === 'p') send({ t: 'look', a: 'wear', id: t.id }); }
     else if (a === 'holster') send({ t: 'weapon', id: 'fists' });
@@ -485,7 +512,7 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
     // the server's 'me' comes many times a second: rebuild only when something shown changed (a button swapped under
     // the pointer between press and release loses the click), else just the bars
     const st0 = looks();
-    const sig = JSON.stringify([m.weapons, m.weapon, m.inv, m.quick, m.cash, m.crew && m.crew.ids, m.blade, m.light, m.creel, st0 && st0.cur, st0 && st0.own, st0 && st0.saved, look(), pp(), tab, sort, sel, armDrop, showLooks, input.device, portrait()]);
+    const sig = JSON.stringify([stash(), m.weapons, m.weapon, m.inv, m.quick, m.cash, m.crew && m.crew.ids, m.blade, m.light, m.creel, st0 && st0.cur, st0 && st0.own, st0 && st0.saved, look(), pp(), tab, sort, sel, armDrop, showLooks, input.device, portrait()]);
     if (sig === lastSig && force !== true) { stats(m); return; }
     lastSig = sig;
     if (DEBUG) { window.__invSig = sig; window.__invRenders = (window.__invRenders || 0) + 1; }   // (the capture scripts: what a rebuild was for)
@@ -506,8 +533,32 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
       grid.appendChild(cell(t, m));
     }
     if (!shown.length && !(showLooks && tab === 'clothes')) grid.insertAdjacentHTML('beforeend', `<p class="bag-hint">${tab === 'clothes' ? 'The clothes you own show here. Clothes stores sell more; the fitting room puts them in your wardrobe.' : tab === 'weapons' ? 'No weapons on you. Gun shops and pawn shops sell them; your stash keeps the rest.' : 'Nothing here yet. Pharmacies sell med kits and bandages; coffee shops and corner stores sell drinks.'}</p>`);
-    if (sel && !all.some((t) => t.k === sel)) sel = null;
-    detail(all.find((t) => t.k === sel) || null, m);
+    // the stash, open: CARRIED | STASH over the tabs (the grid shows one side, the same tabs); drop a tile on the other
+    // side's button to move it there - or pick it and TO STASH / TAKE
+    const so = sOpen(), seg = $q('.bag-seg');
+    seg.hidden = !so;
+    if (so) {
+      const sAll = stashThings(so), nOf = (L) => L.reduce((a, t) => a + (t.kind === 'w' ? 1 : t.n), 0);
+      seg.innerHTML = [['carried', 'CARRIED', nOf(all.filter(stashable))], ['stash', 'STASH', nOf(sAll)]].map(([v, n, c]) => `<button class="chip${view === v ? ' on' : ''}" role="tab" aria-selected="${view === v}" data-view="${v}">${n}<small>${c}</small></button>`).join('')
+        + `<span class="bag-where">${esc(so.where || '')}</span><button class="btn bag-shx" type="button" data-sx="1">CLOSE STASH</button>`;
+      for (const b of seg.querySelectorAll('[data-view]')) {
+        const put = b.dataset.view === 'stash';
+        b.onclick = () => { view = b.dataset.view; sel = null; render(); };
+        b.ondragover = (e) => { if ([...e.dataTransfer.types].includes(DRAG)) { e.preventDefault(); b.classList.add('drop'); } };
+        b.ondragleave = () => b.classList.remove('drop');
+        b.ondrop = (e) => { e.preventDefault(); b.classList.remove('drop'); const k = e.dataTransfer.getData(DRAG), t = [...all, ...sAll].find((q) => q.k === k); if (t && !!t.inStash !== put) moveTo(t, put, false); };
+      }
+      seg.querySelector('[data-sx]').onclick = () => send({ t: 'stash', a: 'close' });
+      if (view === 'stash') {
+        grid.innerHTML = '';
+        const inSt = sAll.filter((t) => tab === 'all' || tabOf(t.cat) === tab);
+        for (const t of inSt) grid.appendChild(cell(t, m));
+        if (!inSt.length) grid.innerHTML = `<p class="bag-hint">${tab === 'clothes' ? 'Your clothes stay in your wardrobe - wear them from CARRIED.' : 'Nothing here yet. In CARRIED pick something and press TO STASH - or drag it onto STASH.'}</p>`;
+      }
+    } else view = 'stash';   // (the next time it opens: the stash first)
+    const every = so ? [...all, ...stashThings(so)] : all;
+    if (sel && !every.some((t) => t.k === sel)) sel = null;
+    detail(every.find((t) => t.k === sel) || null, m);
     paint();
     cue(grid);
     refocus?.();
@@ -521,7 +572,7 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
       clearInterval(timer);
       timer = setInterval(() => { if (!open) return; fr = (fr + 1) % 4; paint(); }, 420);   // (the idle: breathing, an instrument played)
     },
-    hide() { open = false; sel = null; armDrop = ''; showLooks = false; clearInterval(timer); timer = 0; },
+    hide() { if (sOpen()) send({ t: 'stash', a: 'close' }); open = false; sel = null; armDrop = ''; showLooks = false; clearInterval(timer); timer = 0; },
     refresh: () => render(),
     // the pad's B with something picked: back to the grid first
     back() { if (sel || showLooks) { sel = null; armDrop = ''; showLooks = false; render(); return true; } return false; },
