@@ -48,12 +48,41 @@ document.getElementById('hub-title').textContent = 'INVENTORY';
 for (const el of hub.querySelectorAll('.hubtab')) el.classList.add('hidden');
 const inv = document.getElementById('inv'); inv.classList.remove('hidden');
 try { localStorage.setItem('cla.bag.tab', q.get('tab') || 'all'); } catch {}
+const SENT = [];   // (what the Inventory would send the server)
 const STASH = q.get('stash') ? { t: 'stash', open: true, where: 'Your home', items: { medkit: 6, scrap: 30, ironOre: 4, geode: 2, goldFlakes: 9 }, weapons: { rifle: 90, knife: 0, smg: 120 } } : null;   // (?stash=1: the stash open - stash.js)
-const B = (await import('/client/bag.js')).createBag({ el: inv, send: () => {}, me: () => ME, looks: () => LOOKS, look: () => LOOKS.cur, stamina: () => [64, 100], refocus: () => {}, stash: () => STASH });
+const B = (await import('/client/bag.js')).createBag({ el: inv, send: (o) => SENT.push(o), me: () => ME, looks: () => LOOKS, look: () => LOOKS.cur, stamina: () => [64, 100], refocus: () => {}, stash: () => STASH });
 B.show();
 if (q.get('sel')) inv.querySelector('[data-k="' + q.get('sel') + '"]')?.click();
 if (q.get('looks')) inv.querySelector('[data-a="looks"]').click();
 await new Promise((r) => setTimeout(r, 400));
+// ?drag=1 (test/invdrag.test.js): press and drag, a mouse at once, a finger after holding - a medkit onto quick bar slot 8,
+// a gun onto weapon slot 2, a worn-able piece onto its clothing slot; then (?stash=1) a tile onto STASH
+if (q.get('drag')) {
+  const mid = (e) => { const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  const pe = (type, x, y, touch) => window.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: touch ? 7 : 1, pointerType: touch ? 'touch' : 'mouse', button: 0 }));
+  async function dragTo(fromSel, toSel, touch) {
+    const a = inv.querySelector(fromSel), b = inv.querySelector(toSel);
+    if (!a || !b) return 'missing ' + (a ? toSel : fromSel);
+    const [x0, y0] = mid(a), [x1, y1] = mid(b), n = SENT.length;
+    a.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x0, clientY: y0, pointerId: touch ? 7 : 1, pointerType: touch ? 'touch' : 'mouse', button: 0 }));
+    if (touch) await wait(420);
+    pe('pointermove', (x0 + x1) / 2, (y0 + y1) / 2, touch); pe('pointermove', x1, y1, touch);
+    const lit = b.classList.contains('drop') || !!b.querySelector('.drop') || !!b.closest('.drop');
+    pe('pointerup', x1, y1, touch);
+    return { lit, sent: SENT.slice(n) };
+  }
+  const out = {};
+  if (STASH) { inv.querySelector('[data-view="carried"]').click(); await wait(50); }   // (the stash opens on its own side)
+  out.mouseQuick = await dragTo('[data-k="i:flashlight"]', '[data-slot="3"]', false);
+  out.touchQuick = await dragTo('[data-k="i:medkit"]', '[data-slot="3"]', true);
+  out.mouseWeapon = await dragTo('[data-k="w:shotgun"]', '.iv-w[data-q]:nth-child(2)', false);
+  out.scroll = await (async () => { const a = inv.querySelector('[data-k="i:medkit"]'); if (!a) return 'missing'; const [x, y] = mid(a), n = SENT.length;   // (a finger that moves first: a scroll, no drag)
+    a.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x, clientY: y, pointerId: 7, pointerType: 'touch', button: 0 })); pe('pointermove', x, y + 40, true); await wait(420); pe('pointerup', x, y + 40, true);
+    return { sent: SENT.slice(n), ghost: !!document.querySelector('.iv-ghost') }; })();
+  if (STASH) { out.toStash = await dragTo('[data-k="i:scrap"]', '[data-view="stash"]', true); }
+  document.getElementById('out').textContent = JSON.stringify(out);
+} else {
 // the boxes: everything to press or read
 const boxes = [];
 for (const el of inv.querySelectorAll('button, select, .bc-n, .bc-tag, .bc-nm, .bag-slot > small, .iv-slot > small, h3, h4, .bag-hint, .iv-stat, .bag-cash, .iv-keys, canvas.iv-cv')) {
@@ -72,6 +101,7 @@ const cvf = inv.querySelector('canvas.iv-cv'), fig = cvf && cvf.dataset.fig ? cv
 const res = { fig: fig && { s: fig[0], head: fig[1], feet: fig[2], h: cvf.height, w: cvf.width }, w: W, h: H, dev, extra: q.get('x') || '', frame: [fr.left, fr.top, fr.right, fr.bottom].map(Math.round), boxes };
 if (parent !== window) parent.postMessage(res, '*');
 document.getElementById('out').textContent = JSON.stringify(res);
+}
 </script></body></html>`;
 }
 const TYPES = { '.css': 'text/css', '.woff': 'font/woff', '.woff2': 'font/woff2', '.png': 'image/png', '.webp': 'image/webp', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.json': 'application/json' };
