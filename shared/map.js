@@ -3151,6 +3151,10 @@ function forecourts(m) {
 export const WALK_IN = new Set(['club', 'convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle',
   'barber', 'roadhouse', 'charter']);   // (roadhouse: the Rusty Spur, countryside.js - task #366; charter: a charter office's desk, 11-16)
 const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
+// places served at the wall that may share a row with walk-ins (a butcher's or a lodge's counter at the front, a snack
+// stand, the gang's contact, a hunt camp's desk): a closed storefront in the row, as a delivery front is - the walk-ins
+// beside them get their rooms (11-22: the audit's wallOnly - Timber Bend's and Sandpiper Bay's strips, the Copper Room)
+const WALL_POIS = new Set(['butcher', 'lodge', 'snack', 'gang', 'huntcamp']);
 // How deep a walk-in's room is (rows, the counter and the stock room behind it included): about as deep as the shop is
 // wide - roughly square to a modest rectangle - however deep the building is. A narrow shop thirty tiles deep (World v3's
 // hand plans: Midtown's long block) was one long empty corridor to a counter at the far end (the owner's 2026-10-17
@@ -3185,8 +3189,8 @@ function buildInteriors(m) {
     if (!b || b.gone || (b.prefab < 0 && !b.rooms && !list.some((p) => p.casino)) || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
     // (p.walk: a hand plan's shop you can walk into - its counter by its trade, p.store; b.hand: a flat over the shop
     // has its own door beside it - shared/world3-hand.js)
-    const main = list.filter((p) => isWalk(p) || p.kind === 'delivery');
-    if (!main.some(isWalk) || list.some((p) => !isWalk(p) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery' && !(b.hand && p.kind === 'home'))) continue;
+    const main = list.filter((p) => isWalk(p) || p.kind === 'delivery' || WALL_POIS.has(p.kind));
+    if (!main.some(isWalk) || list.some((p) => !isWalk(p) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery' && !WALL_POIS.has(p.kind) && !(b.hand && p.kind === 'home'))) continue;
     walkInRoom(m, b, list, main, walkInSouth(m, b, b.tx + 1, b.tx + b.tw - 2));
   }
 }

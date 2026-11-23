@@ -26361,3 +26361,17 @@ consider topographical levels". Both withdrawn. What stands:
   its bays (a car there stood on the pavement). And one fix: the arrival tunnels' new hill shaded a dark patch on the sand
   well past the cover's hill by Northshore Station - MOUND now 4 m, falling over 4 tiles behind and 3 to the sides
   (portalOnFlat still 0; world3arrivals).
+
+## 2026-11-22 (night) - World batch: walk-ins beside a counter at the wall (wallOnly 17 -> 12)
+- The audit's wallOnly (a place you'd walk into with no room behind its door). Five were in a building shared with a
+  place served at the wall - a butcher's or a lodge's counter, a snack stand, the gang's contact, a hunt camp's desk -
+  and `shared/map.js` buildInteriors left the whole building without rooms. WALL_POIS: those are a closed storefront in
+  the row, as a delivery front is, and the walk-ins beside them get their rooms - Timber Bend's Axe & Saw Hardware and
+  Redwood Creek Tackle, Sandpiper Bay's Surf Co. and Pier Tackle & Bait, Old Downtown's Copper Room Supper Club (seen
+  from inside in pictures: the counters there, the closed fronts as back rooms). doors, doorsbake, foodrooms,
+  interiorload, nightclubs, walkinfront, walkinrooms, world3doors, world3shops, placementlint 42/42.
+- Left (12), why: too small for a room (under 5 tiles inside: Midtown's and the Neon Strip's narrow hand-plan shops, the
+  shallow strips at Pine Hills, Southside, Lake District, Pelican Key's charter desk); hand-built with no room laid -
+  Egret Coast's Marsh Bait & Tackle, and Greenfield Park's Lane Mart and Park West Coffee (the city arrival's own shops:
+  the block is built in a late World v3 pass, after the rooms are laid - a room there means laying it late with its
+  café tables; not done overnight on the first thing a new player sees - logged for the owner).
