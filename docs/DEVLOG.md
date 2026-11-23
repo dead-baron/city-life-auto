@@ -26646,3 +26646,16 @@ shows. The Guide's "Your trunk", the README's row; test/trunk.test.js.
 A script merged main into a branch, hit a conflict and committed on through it: PR #23 took conflict markers into
 docs/DEVLOG.md on main (version.json, restamped, was fine). Fixed the same day; the class of it now fails a test - no
 `<<<<<<<` or `>>>>>>>` line in any text file of the checkout.
+
+## 2026-11-23 · Walking in and out: the building's picture dissolves, nothing else dims
+
+The owner (11-23): "The transition going in and out of a building does a transition on the full screen not just the
+artwork on the building ... It would be best if the interior/exterior art just faded from one to the other ... not a pop
+... But it shouldn't be a full screen transition". The 11-22 dip (the whole screen darkened for 260 ms, the cut-away
+swapped at its darkest) is gone (main.js dipTick, #dip). Now a walk-in's chunks swap at once and **dissolve** from the
+street's picture to the cut-away, art pixel by art pixel in a 4x4 dither over XF_MS (320 ms) - the classic 16-bit fade,
+on the building's chunks alone: engine.js uploadChunk(cx, cy, g, layer, xf) keeps the old picture's three textures (their
+handles swapped with a spare three, nothing copied; freed with the slot), STATIC_FS picks old or new per texel (uX, the
+frame's time - one step for every chunk in a frame), host.js starts all of a building's chunks from one time.
+test/xfade-gl.test.js on the GPU (headless Chromium, software GL): half way old and new pixels and nothing else, done
+only the new, a plain swap at once; test/notes1122 N16 rewritten. Not yet seen in a running game - the tests only.

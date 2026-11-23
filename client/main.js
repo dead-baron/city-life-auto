@@ -3302,7 +3302,6 @@ function render(dt) {
   else if (v1Draws(F)) drawWorldV1(F);
   else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, canvas.width, canvas.height); }
   veilTick(S, v2);   // (a teleport or a respawn: dark until what's on screen is baked - client/warmup.js)
-  dipTick(v2);   // (in or out of a walk-in: a short dip of the screen over the swap - art2/game/host.js DIP_MS)
   if (S.art2 && S.art2.exitHint) S.art2.exitHint(F, v2);   // (the way out of a walk-in while its inside is on its way: art2/game/host.js exitHint)
   if (F.spec) { // spectating close in: the new renderer's picture, the spectator's names / grid / players on top
     S.spec.overlay(g, W, H, DPR);
@@ -4212,17 +4211,6 @@ function walkInAt(x, y) {
 }
 // The walk-in you're standing in (riding the subway under a shop doesn't open it), easing every
 // walk-in's roof fade; `art` gets the ones whose floor plan shows this frame.
-// The door's dip (the owner, 11-22: a smoother way in and out than the inside popping up): while the art host holds a
-// walk-in's cut-away for the dip's middle (host.js dipAt), the screen darkens to DIP_A and back over DIP_MS - the swap
-// lands at the darkest. A div over the canvas, under the HUD; nothing at all when no swap is under way.
-const DIP_A = 0.55, DIP_MS_PAGE = 260;
-let dipEl = null;
-function dipTick(on) {
-  const h = S.art2, t = on && h && h.dipAt ? performance.now() - h.dipAt : 1e9;
-  const a = t < DIP_MS_PAGE ? DIP_A * Math.sin(Math.PI * t / DIP_MS_PAGE) : 0;
-  if (!dipEl) { if (!a) return; dipEl = document.createElement('div'); dipEl.id = 'dip'; const v = $('view'); if (v) v.after(dipEl); else document.body.appendChild(dipEl); }
-  dipEl.style.opacity = a ? a.toFixed(3) : '0';
-}
 function interiorTick(sp, art) {
   // (a balloon over a shop doesn't open it, nor a train under it; cuffed - custody.js walks you - it does)
   const cuffed = S.ctrlKind === CTRL.RIDER && !!S.ents.get(S.myPedId)?.d?.cf;

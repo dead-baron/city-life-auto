@@ -47,11 +47,14 @@ test('N5 / N19 / N11 / N12: overhead labels and the event highlight - test/overh
   assert.ok(read('test/overhead.test.js').includes('the event highlight stays on its person'));
 });
 
-test('N16: in and out of a walk-in, the cut-away swaps inside a short dip, not with a pop', () => {
-  const host = read('client/art2/game/host.js'), main = read('client/main.js');
-  assert.match(host, /export const DIP_MS = \d+;/);
-  assert.match(host, /if \(now - this\.dipAt < DIP_MS \/ 2\) continue;/, 'the swap waits for the dip\'s middle');
-  assert.match(main, /dipTick\(v2\);/, 'the page draws the dip');
+test('N16: in and out of a walk-in, the building\'s picture dissolves from the street\'s to the cut-away - no pop, no screen dimming (11-23)', async () => {
+  const host = read('client/art2/game/host.js'), main = read('client/main.js'), eng = read('client/art2/game/engine.js');
+  const xf = (s) => Number((/const XF_MS = (\d+);/.exec(s) || [])[1]);
+  assert.ok(xf(host) > 0 && xf(host) === xf(eng), 'one dissolve length, the host\'s and the engine\'s');
+  assert.match(host, /ok = E\.uploadChunk\(res\.cx, res\.cy, g, 0, xf\) !== false;/, 'the swap dissolves');
+  assert.doesNotMatch(host, /dipAt|DIP_MS/, 'no waiting for a dip');
+  assert.doesNotMatch(main, /dipTick|DIP_A/, 'nothing dims the screen');
+  assert.match(eng, /XO = uX >= 0\.0 && bayer4\(t\) \+ 0\.5 >= uX;/, 'old or new per art texel, by the dither');
 });
 
 test('N17: an awning over a door goes see-through while you stand under it', () => {
