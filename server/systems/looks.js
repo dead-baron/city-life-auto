@@ -20,6 +20,7 @@ import { BLADE_COLORS } from '../../shared/items.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import { applyDisguise, payFrom } from './economy.js';
+import { showerNear } from './showers.js';
 
 export const SAVED_LOOKS = 12;
 const NAME_MAX = 20;
@@ -86,6 +87,11 @@ export function changeBlocked(world, p) {
 }
 // inside your own home, having opened the wardrobe there (economy.js 'hlooks' / 'hmirror') in the last ten minutes:
 // nobody sees you change, so the new look is a disguise (like the home's "Change outfit")
+// where you can change down to nothing (the owner, 11-23): at home, in a bathhouse (its floor: bathhouse.js ped.home.bath),
+// under or beside a shower - the underwear's slot (off, swapped, a towel on) changes only here; elsewhere REMOVE ALL
+// leaves it on and its X says where
+export const changingSpot = (world, p) => !!p.ped && (atHome(world, p) || !!(p.ped.home && p.ped.home.bath) || !!showerNear(world, p.ped.x, p.ped.y));
+export const UNDER_WHERE = 'Change your underwear at home, at a bathhouse or under a shower.';
 export const atHome = (world, p) => !!(p.ped && p.ped.hidden && p.lookHomeAt !== undefined && world.time - p.lookHomeAt < 600);
 // put a look on (code already checked): the profile, the ped, everyone's view of them (give: its pieces become yours)
 export function wear(world, p, code, give = false) {
@@ -276,9 +282,9 @@ function put(world, p, L, title = false) {
 export function lookOff(prof, s) {
   const L = decodeLook(prof.look);
   if (!L) return null;
-  // (everything but the underwear: undressing further waits for the places it belongs - the creator's 'Nothing on', home)
+  // (everything but the underwear: REMOVE ALL leaves it on; its own X takes it off where you can change - handle)
   if (s === 'all') { for (const k of SLOTS) if (k !== 'under') L.outfit[k] = null; return L; }
-  if (!SLOTS.includes(s) || s === 'under') return null;
+  if (!SLOTS.includes(s)) return null;
   if ((s === 'top' || s === 'bottoms') && L.outfit.set) L.outfit.set = null;
   L.outfit[s] = null;
   return L;
@@ -322,7 +328,10 @@ export function handle(world, p, msg) {
   // the Inventory's clothes (client/bag.js): a slot off, everything off, a piece you own on, a saved look's clothes on -
   // each a new look for put(), the same checks as the creator's 'set' (no disguise outside your home: changeBlocked)
   if (a === 'off' || a === 'wear' || a === 'outfit') {
+    const may = changingSpot(world, p), P = a === 'wear' && PIECES[Number(msg.id)];
+    if (!may && ((a === 'off' && msg.s === 'under') || (P && P.slot === 'under'))) { world.notify(p, UNDER_WHERE, 'info'); return stateMsg(p, world); }
     const L = a === 'off' ? lookOff(prof, msg.s) : a === 'wear' ? lookWith(prof, msg) : lookOutfit(prof, msg.i);
+    if (L && a === 'outfit' && !may) L.outfit.under = (decodeLook(prof.look) || L).outfit.under;   // (a saved look's underwear waits for a place to change)
     if (!L) return stateMsg(p, world);
     return put(world, p, L);
   }

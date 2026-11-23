@@ -4,7 +4,7 @@
 // the character on top, the grid under it, the details a sheet from the bottom.
 //   - Your character: the game's own sprite of your look (client/art2/people.js, as the city draws you - never the close-up
 //     renderer), turnable (U15: the arrows, a drag); holding the instrument you play or have picked. The slots round it -
-//     Hat, Top, Jacket, Bottoms | Glasses, Accessory, Bag, Shoes - each with an X to take it off, "Take it all off", and
+//     Hat, Top, Jacket, Bottoms | Glasses, Accessory, Bag, Shoes - each with an X to take it off, "Remove all", and
 //     your saved looks. Health, armor, stamina and cash under it.
 //   - The grid: tabs All, Clothes, Weapons, Tools, Food & Meds, Materials, Valuables (they wrap, never cut off); the
 //     clothes you own are in it as things you can wear. The quick bar under it: 1-4 your weapon slots (Gun 1, Gun 2, Melee,
@@ -292,7 +292,7 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
   el.innerHTML = '<div class="bag">'
     + '<section class="iv-me bag-eq" aria-label="Your character"><h3>CHARACTER</h3><div class="iv-doll"><div class="iv-col"></div>'
     + '<div class="iv-fig"><canvas class="iv-cv" aria-label="Your character - turn them with the arrows"></canvas><div class="iv-turn"><button class="btn" data-turn="1" aria-label="Turn left">‹</button><button class="btn" data-turn="-1" aria-label="Turn right">›</button></div></div>'
-    + '<div class="iv-col"></div></div><div class="iv-dacts"><button class="btn" data-a="strip">TAKE IT ALL OFF</button><button class="btn" data-a="looks">SAVED LOOKS</button></div><div class="iv-stats"></div></section>'
+    + '<div class="iv-col"></div></div><div class="iv-dacts"><button class="btn" data-a="strip">REMOVE ALL</button><button class="btn" data-a="looks">SAVED LOOKS</button></div><div class="iv-stats"></div></section>'
     + '<section class="iv-items"><div class="bag-tools"><div class="bag-cats" role="tablist" aria-label="Show"></div>'
     + `<label class="bag-sort"><span>Sort</span><select aria-label="Sort">${SORTS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label><span class="bag-cash"></span></div>`
     + '<div class="bag-grid" role="list"></div><div class="bag-wheel"></div><p class="iv-keys"></p></section>'
@@ -324,7 +324,8 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
     for (const [id, n] of Object.entries(m.inv || {})) if (n > 0 && ITEMS[id]) out.push({ k: 'i:' + id, kind: 'i', id, name: ITEMS[id].name, n, cat: itemCat(id), value: (ITEMS[id].sell || 0) * n });
     const st = looks();
     const own = new Set([...((st && st.own) || []), ...worn]);
-    for (const pid of own) { const P = PIECES[pid]; if (P && !freePiece(P) || (P && worn.has(pid))) out.push({ k: 'p:' + pid, kind: 'p', id: pid, name: P.name, n: 1, cat: 'clothes', value: P.price || 0, worn: worn.has(pid), slot: P.slot }); }
+    for (const P of PIECES) if (P && P.d.bath) own.add(P.i);   // (the towels: everyone's, worn where you can change - looks.js)
+    for (const pid of own) { const P = PIECES[pid]; if (P && (!freePiece(P) || P.d.bath) || (P && worn.has(pid))) out.push({ k: 'p:' + pid, kind: 'p', id: pid, name: P.name, n: 1, cat: 'clothes', value: P.price || 0, worn: worn.has(pid), slot: P.slot }); }
     const order = new Map(BAG_CATS.map(([c], i) => [c, i]));
     const by = {
       kind: (a, b) => order.get(a.cat) - order.get(b.cat) || (a.kind === 'w' && b.kind === 'w' ? (WEAPONS[a.id].i - WEAPONS[b.id].i) : (b.worn ? 1 : 0) - (a.worn ? 1 : 0) || a.name.localeCompare(b.name)),
@@ -368,7 +369,7 @@ export function createBag({ el, send, me, refocus, leave, looks = () => null, lo
       cols[ci].innerHTML = col.map(([s, label]) => {
         const it = O && (s === 'top' && O.set ? O.set : O[s]), P = it && PIECES[it.id], under = s === 'bottoms' && O && O.set;
         return `<div class="iv-slot${it ? '' : ' empty'}${it && sel === 'p:' + it.id ? ' sel' : ''}" data-s="${s}"><small>${s === 'top' && O && O.set ? 'OUTFIT' : label}</small>`
-          + (it ? `<button class="iv-sb" data-k="p:${it.id}" title="${esc(P.name)}" aria-label="${esc(P.name)}">${pieceTile(it, 26)}</button>${s === 'under' ? '' : `<button class="iv-off" data-off="${O.set && s === 'top' ? 'set' : s}" aria-label="Take off the ${esc(P.name)}">✕</button>`}`
+          + (it ? `<button class="iv-sb" data-k="p:${it.id}" title="${esc(P.name)}" aria-label="${esc(P.name)}">${pieceTile(it, 26)}</button><button class="iv-off" data-off="${O.set && s === 'top' ? 'set' : s}" aria-label="Take off the ${esc(P.name)}"${s === 'under' ? ' title="At home, a bathhouse or a shower"' : ''}>✕</button>`
             : `<button class="iv-sb" data-k="" disabled aria-label="${label}: nothing">${under ? '<em>with the outfit</em>' : glyph(SLOT_GLYPH[s], 22)}</button>`) + '</div>';
       }).join('');
     });

@@ -26233,3 +26233,20 @@ The owner (11-23): "a proper UI pass to make sure everything looks right across 
 - **The quick bar in the layout test**: the HUD test page never drew it, so nothing measured it (how it sat under BAG on a
   phone went unseen). It's drawn there now for a keyboard, and it found one more: at 844x390 the fishing panel ran into it -
   on a window that short the bar hides (the 5-8 keys still use the slots).
+
+## 2026-11-23 · The Inventory brought up to date; underwear, socks and towels
+
+The 11-16 Inventory (branch `inventory`) merged with a week of `main`: main's bag changes carried into it (the item and
+weapon pictures, the Inventory getting out of the way when you take out an instrument, a board, a rod or fireworks -
+`leavesBag`, a tile's tag and count in a footer of its own, the EQUIP line), the HUD's quick bar a keyboard's only.
+- **Underwear and socks slots** (main's 11-20 characters pass added the slots): UNDIES on the left, SOCKS on the right,
+  five a side - the slots a little shorter so the figure still fills its stand (test/invlayout: 70%+). JEWELRY for the
+  accessory slot (ACCESSORY was cut off).
+- **REMOVE ALL** (the owner, 11-23: "let's not say take it all off that sounds suggestive") leaves the underwear on. The
+  underwear's own X, swapping it, or a towel in its place happen only where you can change - at home, at a bathhouse,
+  under a shower (`server/systems/looks.js` `changingSpot`; elsewhere a note says where). Two towels everyone owns, worn
+  in the underwear's place: a bath towel wrapped chest to knee and one round the hips (`shared/lookcore.js`, the
+  renderer's towel shapes; shown in the Clothes tab). test/wardrobe.test.js.
+- **Smaller fixes seen in the shots**: a held gun's tile shows its slot number on a cream tag (IN HAND and 12|36 didn't
+  fit a phone's tile together), the quick bar's filled slots without the cut-off names (the tooltip has them), the keys
+  line wraps, "Food & Meds" wraps in the side rail rather than being cut.

@@ -316,7 +316,15 @@ test('the Inventory\'s clothes: a piece off, all off, a piece you own on, a save
   looks.handle(w, a.p, { t: 'look', a: 'off', s: 'all' });
   for (const s of LK.SLOTS) if (s !== 'under') assert.equal(cur().outfit[s], null, s);
   assert.deepEqual(cur().outfit.under, before.outfit.under, 'the underwear stays on');
-  const kept = a.prof.look; looks.handle(w, a.p, { t: 'look', a: 'off', s: 'under' }); assert.equal(a.prof.look, kept, 'and never off from here');
+  // the underwear's own X: not out in the street (11-23) - at a bathhouse (or home, a shower) it comes off, and a towel goes on
+  const kept = a.prof.look; looks.handle(w, a.p, { t: 'look', a: 'off', s: 'under' }); assert.equal(a.prof.look, kept, 'not in the street');
+  const towel = LK.PIECE_IDS['Bath towel'];
+  looks.handle(w, a.p, { t: 'look', a: 'wear', id: towel }); assert.equal(a.prof.look, kept, 'no towel in the street either');
+  a.p.ped.home = { bath: 1 };
+  run(w, 1.1); looks.handle(w, a.p, { t: 'look', a: 'off', s: 'under' }); assert.equal(cur().outfit.under, null, 'off at the bathhouse');
+  run(w, 1.1); a.p.ped.home = { bath: 1 }; looks.handle(w, a.p, { t: 'look', a: 'wear', id: towel }); assert.equal(cur().outfit.under.id, towel, 'a towel on (everyone has one)');
+  a.p.ped.home = null;
+  run(w, 1.1);
   assert.deepEqual(cur().hair, before.hair); assert.deepEqual(cur().body, before.body);
   run(w, 1.1);
   // a piece you don't own: refused, nothing changes

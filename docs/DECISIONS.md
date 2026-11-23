@@ -351,6 +351,13 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Weapons at risk: guns, bows, launchers, grenades, illegal items and dear blades drop on death as pickups anyone can take (a minute); fists, police issue and cheap legal tools stay. (11-14; decisions-11-14*, DEVLOG 11-14) - SUPERSEDES "a weapon you buy is yours forever; death drops cargo, never weapons" (11-03).
 - Arrest: illegal guns confiscated for good; legal guns go to your stash. (11-14; DEVLOG 11-14) - conflicts with launch-plan's impound lot (fee to get a seized gun back): OPEN if the impound idea is still wanted.
 - One stash per character: your home's safe and every gun / pawn shop counter. (11-14; decisions-11-14*)
+- The stash holds everything - items, weapons, clothing - one pool reached from many doors: your home's safe, gun and pawn
+  counters, your gang's hideout locker (members), later bank boxes. Nothing in the stash is ever lost; what you carry is at
+  risk; carrying is limited by your backpack. The Inventory is a real inventory: your character with its loadout and
+  clothes, drag items into slots or select and EQUIP / USE, and at a stash door carried and stash side by side. (11-23)
+- The Inventory's clear-the-outfit button says REMOVE ALL - "take it all off" read as suggestive (the owner, 11-23).
+- REMOVE ALL leaves the underwear on. The underwear's own X, swapping it, or a towel in its place (a bath towel or one
+  round the hips - everyone has both) only where you can change: at home, at a bathhouse, under a shower. (11-23)
 - Buy straight to the stash (bulk), drop weapons, hand one to a crewmate nearby. (11-14; queue)
 - Phone "Find my weapons": a waypoint to the nearest stash. (11-14; DEVLOG 11-14)
 - No weapon blueprints or crafting. (11-03; launch-plan 11-03)
@@ -360,6 +367,11 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - A SAM launcher to fight helicopters, without making them weak. (10-16; DEVLOG 10-22)
 
 ## Vehicles and the car
+- A vehicle's trunk is its own small inventory, not a door to the stash (about 6 slots in a car, 2 on a motorbike): it stays
+  in a parked car, waits at the impound lot with an impounded one, and spills as pickups when the vehicle is destroyed -
+  the owner took Claude's suggestion over a trunk that shares the stash (it would let anyone bank loot mid-run). (11-23)
+- Cargo crates always show: on a car's roof, in a truck's bed, on a bike's rack, a boat's deck or in your hands - never in
+  a trunk or the inventory, so other players can see who carries something worth taking. (11-23)
 - The first car is earned by your FTUE path: Honest = cash to buy a beater at the station's used lot; Hustle = steal one in the alley; Outdoors = a cheap pickup; Roam = cash + the dealer marked. (11-06; queue, DEVLOG 11-06) - SUPERSEDES the free starter car (11-03).
 - The free starter car stays only with players who already had one. (11-06; CLAUDE.md)
 - Hustle path gets pocket money ($200: food, ammo, bail - not enough for a lot car). (11-07; DEVLOG 11-07)

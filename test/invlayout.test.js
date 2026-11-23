@@ -39,7 +39,7 @@ test('the Inventory\'s parts: the slots round the figure, the X on each, the tab
   assert.deepEqual(TABS.map((t) => t[1]), ['All', 'Clothes', 'Weapons', 'Tools', 'Food & Meds', 'Materials', 'Valuables'], 'U14\'s tabs');
   for (const [c] of BAG_CATS) assert.ok(TABS.some((t) => t[0] === tabOf(c)), `${c} has a tab`);
   const bag = readFileSync(new URL('../client/bag.js', import.meta.url), 'utf8');
-  assert.match(bag, /send\(\{ t: 'look', a: 'off', s: 'all' \}\)/, 'Take it all off');
+  assert.match(bag, /send\(\{ t: 'look', a: 'off', s: 'all' \}\)/, 'Remove all');
   assert.match(bag, /send\(\{ t: 'look', a: 'off', s: b\.dataset\.off === 'set' \? 'top' : b\.dataset\.off \}\)/, 'an X takes a slot off');
   assert.match(bag, /send\(\{ t: 'look', a: 'wear', id: t\.id \}\)/, 'wear a piece of yours');
   assert.match(bag, /send\(\{ t: 'look', a: 'outfit', i \}\)/, 'a saved look');

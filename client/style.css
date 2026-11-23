@@ -1871,7 +1871,8 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag-slot.sel, .bag-slot.pfocus, .bag-slot.drop { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
 .bag-slot.empty { border-style: dashed; cursor: default; }
 .bag-slot.none .bq-gl { opacity: .4; }
-.iv-keys { margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--dim); font: 600 var(--fs-1) var(--ui); }
+.iv-keys { margin: 0; color: var(--dim); font: 600 var(--fs-1) var(--ui); line-height: 1.3; }   /* (wraps: it was cut off, 11-23) */
+.iv-qb .bag-slot:not(.empty) > small { display: none; }   /* (the number and the picture say it; the name is the slot's tooltip - "GU..." cut, 11-23) */
 .bd-eq { display: block; width: 100%; margin-top: var(--s1); color: var(--dim); font: 400 var(--fs-1) var(--pixel); line-height: 1.3; }
 .bag-craft { grid-area: craft; }   /* (crafting's place, for later) */
 .cue-down { -webkit-mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); }
