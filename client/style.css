@@ -352,6 +352,7 @@ body.dead #job { display: none !important; }
 #hud:has(#hud-msg > :not(.hidden)) #toasts .toast:nth-child(n+2), #hud:has(#job.big) #toasts .toast:nth-child(n+2) { display: none; }
 .touch #hud:has(#hud-msg > :not(.hidden)) #toasts, .touch #hud:has(#job.big) #toasts { display: none; }
 body.portrait.touch #toasts .toast:nth-child(n+2) { display: none; }   /* (upright one at a time: the column under the band stays short) */
+@media (max-height: 430px) { body.touch:not(.portrait) #toasts .toast:nth-child(n+2) { display: none; } }   /* (a small phone on its side too: a second two-line note ran down onto the status line and the fishing bar) */
 @media (max-height: 430px) { body:not(.touch) #hud:has(#hud-msg > :not(.hidden)) #toasts, body:not(.touch) #hud:has(#job.big) #toasts { display: none; } }
 
 /* ---- top right: you ---- */

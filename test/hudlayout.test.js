@@ -172,11 +172,12 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
       if (jb.form === 'chip' && (jh > (touch ? 48 : 40) || (touch && jh < 44))) info.push(`${tag}: the job chip ${jh} px tall`);
       if (jb.form === 'big' && jh > 132) info.push(`${tag}: the job card ${jh} px tall`);
     }
-    // the notes: two at most, one line each, never in the middle third
+    // the notes: two at most, two lines each at most (since 11-16 a note's words wrap to a second line rather than being
+    // cut mid-word - the owner's "new to yo_"; past two lines the rest is in the Log), never in the middle third
     const notes = r.read.filter((b) => b.name.startsWith('note'));
     if (notes.length > 2) info.push(`${tag}: ${notes.length} notes`);
     for (const n of notes) {
-      if (n.y1 - n.y0 > 34) info.push(`${tag}: ${n.name} more than a line (${n.y1 - n.y0} px)`);
+      if (n.y1 - n.y0 > 54) info.push(`${tag}: ${n.name} more than two lines (${n.y1 - n.y0} px)`);
       if (on(n, third)) info.push(`${tag}: ${n.name} in the middle third (${n.x0},${n.y0}-${n.x1},${n.y1})`);
     }
     // the hint strip clear of the middle too (it comes and goes over the bottom)

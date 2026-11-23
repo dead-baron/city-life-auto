@@ -18,6 +18,7 @@ import * as unstuck from '../server/systems/unstuck.js';
 import * as gates from '../server/systems/gates.js';
 import { IN } from '../shared/input.js';
 import * as law from '../server/systems/law.js';
+import * as arms from '../server/systems/arms.js';
 import { spawnNpc } from '../server/systems/npc.js';
 // an officer right by them (no unit: a car is sent for them)
 const spawnCop = (w, p) => spawnNpc(w, 'cop', p.ped.x + 20, p.ped.y, 'cop');
@@ -71,7 +72,10 @@ test('booked at five stars with a long record: inside the walls, weapons away, n
   run(w, 0.5);
   assert.ok(!p.prison, 'out');
   assert.ok(!inside(p.ped.x, p.ped.y) && Math.hypot(p.ped.x - M.prison.x, p.ped.y - M.prison.y) > 3000, 'back on the mainland');
-  assert.equal(p.ped.weapon, 'pistol', 'the weapon back');
+  // (the legal guns go to your stash when you're booked - arms.js onBooked, since 11-14: picked up at home, a gun shop or
+  // a pawn shop - so you walk out empty-handed, the pistol waiting there)
+  assert.equal(p.ped.weapon, 'fists', 'out empty-handed');
+  assert.ok(arms.stashed(p.profile).includes('pistol'), 'the pistol in your stash');
 });
 
 test('over the wall: climb the outer wall and you\'re out - three stars', () => {
