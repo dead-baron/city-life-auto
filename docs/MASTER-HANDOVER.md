@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-22 afternoon (the pre-beta chat, Opus 5.5). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-23 early morning (the pre-beta chat, Opus 5.5, overnight). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
