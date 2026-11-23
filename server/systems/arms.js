@@ -80,11 +80,12 @@ function addCarried(p, id, n) {
 
 // ---- the stash ----------------------------------------------------------------------------------------------------------
 // out of your hands and into the stash, its rounds with it
-export function toStash(p, id) {
+// (pool: the weapons of where it goes - your stash's by default, a vehicle's trunk's: trunk.js)
+export function toStash(p, id, pool = null) {
   const prof = p.profile, ped = p.ped;
   if (prof.weapons[id] === undefined || !stashable(id)) return 'You do not have that.';
-  const st = stashOf(prof);
-  st.weapons[id] = (st.weapons[id] || 0) + (prof.weapons[id] || 0);
+  const W = pool || stashOf(prof).weapons;
+  W[id] = (W[id] || 0) + (prof.weapons[id] || 0);
   delete prof.weapons[id];
   if (ped && ped.mag) delete ped.mag[id];
   if (ped && ped.weapon === id) ped.weapon = 'fists';
@@ -93,11 +94,11 @@ export function toStash(p, id) {
   return null;
 }
 // out of the stash and into your hands (the slots allowing)
-export function fromStash(p, id) {
-  const prof = p.profile, st = stashOf(prof);
-  if (st.weapons[id] === undefined || !WEAPONS[id]) return 'Not in your stash.';
-  const n = st.weapons[id];
-  delete st.weapons[id];
+export function fromStash(p, id, pool = null) {
+  const prof = p.profile, W = pool || stashOf(prof).weapons;
+  if (W[id] === undefined || !WEAPONS[id]) return pool ? 'Not in there.' : 'Not in your stash.';
+  const n = W[id];
+  delete W[id];
   const room = makeRoom(p, id);
   addCarried(p, id, n);
   p.lastRoom = room;   // (the menu's line says it: economy.js htw)

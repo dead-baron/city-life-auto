@@ -18,6 +18,7 @@ import * as vehicles from './vehicles.js';
 import * as carhits from './carhits.js';
 import * as combat from './combat.js';
 import * as tank from './tank.js';   // (H58)
+import * as trunk from './trunk.js';
 import * as cargo from './cargo.js';
 import * as skate from './skate.js';   // (riding a skateboard: the owner, 2026-10-17)
 import * as armor from './armor.js';   // (a heavy vest: a slower run - armor.js)
@@ -936,6 +937,10 @@ export function findInteraction(world, p) {
     if (target) return { label: `Detain ${target.player.name} (collect the bounty)`, run: () => bounties.detain(world, ped, target) };
   }
 
+  {   // at the back of a vehicle of yours, standing still: its trunk (trunk.js)
+    const tr = trunk.interaction(world, p);
+    if (tr) return tr;
+  }
   const bag = cargo.nearestBag(world, ped, true);
   if (bag) return { label: cargo.bagLabel(bag, p), run: () => cargo.lootBag(world, p, bag) };
 

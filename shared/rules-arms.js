@@ -6,3 +6,8 @@ export const ARMS = { carry: { gun: 2, melee: 1, throw: 1 }, carryMax: { gun: 4,
 // (clothes stay in your wardrobe, never at risk) - opened from its doors: your home (inside it), a gun or pawn shop's
 // counter, your (or your crew's) hideout's office. reach: px from the door it was opened at before it closes.
 export const STASH = { reach: 160 };
+// A vehicle's trunk (the owner, 11-23, Claude's suggestion: its own small storage, not a door to the stash; server/systems/
+// trunk.js): slots - stacks of a thing or a weapon each - by the vehicle's kind; reach: px from its back you open it from.
+// It stays in a parked vehicle, waits with an impounded one, spills where it is wrecked. Cargo crates never go in (they ride
+// in the open: cargo.js).
+export const TRUNK = { slots: { car: 6, bike: 2, boat: 6, truck: 10 }, reach: 40 };
