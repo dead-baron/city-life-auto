@@ -26277,3 +26277,15 @@ clothing slot round your character (a piece for it: worn) or CARRIED / STASH (mo
 the details; a pad picks and presses. Found on the way: CARRIED didn't switch the stash's view (the Inventory redraws only
 when what it shows changes, and the side shown wasn't in that) - now it is. test/invdrag.test.js (test/invpage.js
 ?drag=1: a mouse, a finger held, a finger scrolling, onto STASH).
+
+## 2026-11-23 · A vehicle's trunk
+
+The owner (11-23) took Claude's suggestion: a trunk is its own small storage, not a door to the stash (a car that opened
+the stash would bank what you carry mid-run and undo the extraction stakes). server/systems/trunk.js: kept on the
+vehicle's entry (profile.vehicles[i].trunk), so it stays while the vehicle is parked, through a logoff and a restart, and
+waits with an impounded one; TRUNK.slots by kind (a car 6, a motorbike 2, a truck 10, a boat 6 - a slot a stack of a
+thing or a weapon; more of a kind already in always fits). At the back of a vehicle of yours standing still the action
+button says "Open the trunk (n/6)" and the Inventory shows CARRIED | TRUNK (stash.js serves both: the door says where
+things go - arms.js toStash / fromStash take the pool). Wrecked (insurance.js wrecked): what was in it spills where it is,
+a bag anyone can take. Cargo crates never go in - they ride in the open (cargo.js), so who carries something worth taking
+shows. The Guide's "Your trunk", the README's row; test/trunk.test.js.

@@ -342,6 +342,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
   // the stash, open (server/systems/stash.js: inside your home, at a gun or pawn counter, at your hideout): what's in it as
   // tiles of their own (k 's:i:<id>' / 's:w:<id>'), under what you carry; clothes stay in your wardrobe
   const sOpen = () => { const so = stash(); return so && so.open ? so : null; };
+  const NM = () => (sOpen() && sOpen().name) || 'STASH', nm = () => (NM() === 'TRUNK' ? 'the trunk' : 'your stash');   // (a vehicle's trunk opens the same way: server/systems/trunk.js)
   const stashable = (t) => !t.inStash && (t.kind === 'i' ? !ITEMS[t.id].ride : t.kind === 'w' && t.id !== 'fists');
   function stashThings(so) {
     const out = [];
@@ -470,7 +471,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     function thirdBtn() { return t.kind === 'p' ? `<button class="btn btn-1" data-a="${t.worn ? 'takeoff' : 'wear'}">${t.worn ? 'TAKE OFF' : 'WEAR'}</button>`
       : held ? `<button class="btn" data-a="holster">PUT AWAY</button>` : `<button class="btn${t.kind === 'w' ? ' btn-1' : ''}" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`; }
 
-    if (sOpen() && stashable(t)) acts = `<div class="bd-stash"><button class="btn btn-1" data-a="tostash">${t.n > 1 ? `ALL ${t.n} TO STASH` : 'TO STASH'}</button>${t.n > 1 ? '<button class="btn" data-a="tostash1">ONE TO STASH</button>' : ''}</div>` + acts;
+    if (sOpen() && stashable(t)) acts = `<div class="bd-stash"><button class="btn btn-1" data-a="tostash">${t.n > 1 ? `ALL ${t.n} TO ${NM()}` : `TO ${NM()}`}</button>${t.n > 1 ? `<button class="btn" data-a="tostash1">ONE TO ${NM()}</button>` : ''}</div>` + acts;
     if (t.kind === 'w' && m.crew && m.crew.ids && m.crew.ids.length) acts += '<button class="btn btn-x bd-all" data-a="give">Hand to a crewmate close by</button>';   // (server arms.js handTo)
     if (t.n > 1) acts += `<button class="btn btn-x bd-all" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>`;
     if (t.id === 'plasma') acts += `<div class="bag-blade"><small>Blade color</small>${BLADE_COLORS.map((bc, i) => `<button class="sw${i === (m.blade | 0) ? ' on' : ''}" data-blade="${i}" aria-label="${esc(bc.name)}" style="--sw:${esc(bc.c)};--swc:${esc(bc.core)}"></button>`).join('')}</div>`;
@@ -487,9 +488,9 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
   }
   function stashDetail(d, t) {
     const so = sOpen(), what = t.kind === 'w' ? weaponLine(WEAPONS[t.id]) : describe(t.id);
-    d.innerHTML = `<div class="bd-head"><span class="bd-ic">${iconOf(t, 44)}</span><div><h3>${esc(t.name)}</h3><small>In your stash</small></div>`
+    d.innerHTML = `<div class="bd-head"><span class="bd-ic">${iconOf(t, 44)}</span><div><h3>${esc(t.name)}</h3><small>In ${nm()}</small></div>`
       + '<button class="x bd-x" data-a="close" aria-label="Back to the inventory">✕</button></div>'
-      + `<p class="bd-what">${esc(what)}</p><p class="bd-n">${t.kind === 'w' ? (WEAPONS[t.id].mag ? `${t.rounds} rounds with it` : 'In your stash') : `${t.n} in your stash`}${so && so.where ? ` · ${esc(so.where)}` : ''}</p>`
+      + `<p class="bd-what">${esc(what)}</p><p class="bd-n">${t.kind === 'w' ? (WEAPONS[t.id].mag ? `${t.rounds} rounds with it` : `In ${nm()}`) : `${t.n} in ${nm()}`}${so && so.where ? ` · ${esc(so.where)}` : ''}</p>`
       + `<div class="bd-acts"><div class="bd-stash"><button class="btn btn-1" data-a="take">${t.n > 1 ? `TAKE ALL ${t.n}` : 'TAKE'}</button>${t.n > 1 ? '<button class="btn" data-a="take1">TAKE ONE</button>' : ''}</div></div>`;
     if (t.kind === 'w') d.querySelector('.bd-ic').appendChild(wIcon(t.id, 96, 48));
     for (const b of d.querySelectorAll('[data-a]')) b.onclick = () => act(b.dataset.a, t);
@@ -588,7 +589,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     seg.hidden = !so;
     if (so) {
       const sAll = stashThings(so), nOf = (L) => L.reduce((a, t) => a + (t.kind === 'w' ? 1 : t.n), 0);
-      seg.innerHTML = [['carried', 'CARRIED', nOf(all.filter(stashable))], ['stash', 'STASH', nOf(sAll)]].map(([v, n, c]) => `<button class="chip${view === v ? ' on' : ''}" role="tab" aria-selected="${view === v}" data-view="${v}">${n}<small>${c}</small></button>`).join('')
+      seg.innerHTML = [['carried', 'CARRIED', nOf(all.filter(stashable))], ['stash', NM(), so.cap ? `${sAll.length}/${so.cap}` : nOf(sAll)]].map(([v, n, c]) => `<button class="chip${view === v ? ' on' : ''}" role="tab" aria-selected="${view === v}" data-view="${v}">${n}<small>${c}</small></button>`).join('')
         + `<button class="btn bag-shx" type="button" data-sx="1" title="Close the stash (${esc(so.where || 'your stash')})" aria-label="Close the stash">CLOSE</button>`;
       for (const b of seg.querySelectorAll('[data-view]')) {
         b.onclick = () => { view = b.dataset.view; sel = null; render(); };
@@ -598,7 +599,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
         grid.innerHTML = '';
         const inSt = sAll.filter((t) => tab === 'all' || tabOf(t.cat) === tab);
         for (const t of inSt) grid.appendChild(cell(t, m));
-        if (!inSt.length) grid.innerHTML = `<p class="bag-hint">${tab === 'clothes' ? 'Your clothes stay in your wardrobe - wear them from CARRIED.' : 'Nothing here yet. In CARRIED pick something and press TO STASH - or drag it onto STASH.'}</p>`;
+        if (!inSt.length) grid.innerHTML = `<p class="bag-hint">${tab === 'clothes' ? 'Your clothes stay in your wardrobe - wear them from CARRIED.' : `Nothing here yet. In CARRIED pick something and press TO ${NM()} - or drag it onto ${NM()}.`}</p>`;
       }
     } else view = 'stash';   // (the next time it opens: the stash first)
     const every = so ? [...all, ...stashThings(so)] : all;
