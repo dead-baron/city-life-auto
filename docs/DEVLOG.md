@@ -26671,3 +26671,18 @@ screen - which then took another back: the art came and went. Now the host reser
 the last is never taken: past the reserve one is added, up to CHUNK_HARD (40), before anything in view goes.
 test/chunkslots-gl.test.js on the GPU (a low-memory engine's ten slots, twelve chunks in view: all held; the road ahead
 took none of them) - it fails on the engine before this.
+
+## 2026-11-23 · Cinematics: a clean start, the page quiet, marks on the unreviewed shots (C1-C3 of the 11-23 notes)
+
+- **A clean picture** (the owner: "can we have these disappear by the time the scene loads ... so we can get a clean
+  shot"): the tap that starts a shot woke the X and the bar for 3.5 s, and a short black outlasted it - now they're put
+  away the moment the black lifts (client/director.js). The black holds at least 2 s (HOLD_MIN, was 0.5): the traffic,
+  the people and the wildlife round the camera are in before it shows (the server spawns round a scene's camera already -
+  view.js cineEyes in traffic, npc, wildlife, activities, boats).
+- **Quiet** ("the sound is still playing that is around my character ... phone notifications"): while a shot plays the
+  page's own unplaced sounds - notes' pings, the phone, the menus - are silent (client/sound/index.js); the scene's are
+  placed and heard from the camera.
+- **Marks** ("a way to check off things in the review list ... or save it as a bug"): an unreviewed shot playing shows
+  Keep / Cut / Bug in its bar (a tap brings the bar back); the More (unreviewed) list shows each mark, Copy marks puts them
+  on the clipboard to send, a cut shot leaves the reel (and can be put back). Kept in this browser.
+test/notes1123.test.js; test/directorcam's hold now moves its clock past the 2 s.

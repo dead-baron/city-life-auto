@@ -53,11 +53,17 @@ const nearZoom = (z) => ZOOMS.reduce((b, q, k) => (Math.abs(q - z) < Math.abs(ZO
 const TIMES = [['Live', null], ['Dawn', 390], ['Morning', 540], ['Noon', 720], ['Afternoon', 930], ['Golden hour', 1125], ['Dusk', 1205], ['Night', 1380], ['Small hours', 180]];
 const WXS = [['Live', null], ['Clear', 'clear'], ['Rain', 'rain'], ['Fog', 'fog'], ['Mist', 'mist']];
 const BOXES = [['Off', 0], ['2.39:1', 2.39], ['1.85:1', 1.85]];
-const HOLD_MAX = 9500, HOLD_MIN = 500, END_FADE = 600;   // ms: a shot's hold for the art at most / at least, the fade out at its end
+const HOLD_MAX = 9500, HOLD_MIN = 2000, END_FADE = 600;   // (HOLD_MIN 2 s: the people and the traffic round the shot in before it shows - 11-23)   // ms: a shot's hold for the art at most / at least, the fade out at its end
 // the shot list's sections and their shots, in order (shared/scenes/: each scene's g) - the kept ones (shared/scenes KEPT:
 // they pass the sanity check); moreOf: the rest, under "More (unreviewed)"
 export const shotsOf = (sec) => DSCENE_LIST.filter((q) => isKept(q.id) && (sec ? q.g === sec : SECTIONS.some((g) => g[0] === q.g))).map((q) => q.id);
-export const moreOf = () => DSCENE_LIST.filter((q) => !isKept(q.id)).map((q) => q.id);
+// the owner's marks on the unreviewed shots (11-23: "a way to check off things in the review list ... or save it as a bug
+// to review later"): keep / cut / bug, kept in this browser (cla.cine.review); Copy marks puts them on the clipboard to
+// send; a cut one leaves the reel
+const REV_KEY = 'cla.cine.review', REV_WORD = { keep: '✓ Keep', cut: '✕ Cut', bug: '⚑ Bug' };
+export const reviews = () => { try { return JSON.parse(localStorage.getItem(REV_KEY) || '{}') || {}; } catch { return {}; } };
+export function markShot(id, m) { const R = reviews(); if (!m || R[id] === m) delete R[id]; else R[id] = m; try { localStorage.setItem(REV_KEY, JSON.stringify(R)); } catch { /* storage blocked */ } return R[id] || ''; }
+export const moreOf = () => { const R = reviews(); return DSCENE_LIST.filter((q) => !isKept(q.id) && R[q.id] !== 'cut').map((q) => q.id); };
 const MORE = 'more';   // (the reel of the unreviewed ones: its sec)
 // does this key hand the camera back from a shot? (not the screen's own keys, the zoom, Next or the panel's)
 const KEEP_KEYS = new Set(['F2', 'F4', 'F8', 'KeyQ', 'KeyE', 'Minus', 'Equal', 'Digit0', 'KeyN', 'Tab', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight']);
@@ -663,11 +669,13 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     document.body.classList.toggle('cine-bar', on0);   // (on a phone the bar takes the action buttons' corner: they do nothing while the camera has the controls)
     if (!on0) { if (bar) bar.style.display = 'none'; return; }
     if (!bar) { bar = document.createElement('div'); bar.id = 'cine-ctl'; bar.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); wake(); }); document.body.appendChild(bar); }
-    const key = shotOn ? `p${shotName()}|${!!reel}` : D.mode === 'drift' ? `d${dr.si}` : `s${fs ? `${fs.k}|${fs.n}|${fs.tour}|${fs.none || 0}` : '-'}|${near}`;
+    const key = shotOn ? `p${shotName()}|${!!reel}|${sct ? reviews()[sct.sc.id] || '' : ''}` : D.mode === 'drift' ? `d${dr.si}` : `s${fs ? `${fs.k}|${fs.n}|${fs.tour}|${fs.none || 0}` : '-'}|${near}`;
     if (key !== barKey) {
       barKey = key; bar.textContent = ''; bar.dial = null;
       const who = (t) => Object.assign(document.createElement('span'), { className: 'who', textContent: t });
-      if (shotOn) bar.append(...(reel && reel.ids.length > 1 ? [btn('⏮', false, () => D.next(-1))] : []), who(shotName() || 'Setting up the shot...'), ...(reel && reel.ids.length > 1 ? [btn('Next ⏭', false, () => D.next(1))] : []), btn('⏹ Stop', false, () => stopReel(true)), ...zoomRow());
+      const cur = sct && !isKept(sct.sc.id) && DSCENES[sct.sc.id] ? sct.sc.id : '', mk = cur ? reviews()[cur] || '' : '';
+      const marks = cur ? ['keep', 'cut', 'bug'].map((m) => btn(REV_WORD[m], mk === m, () => { markShot(cur, m); barKey = ''; barShow(); })) : [];   // (an unreviewed shot: mark it while it plays)
+      if (shotOn) bar.append(...(reel && reel.ids.length > 1 ? [btn('⏮', false, () => D.next(-1))] : []), who(shotName() || 'Setting up the shot...'), ...marks, ...(reel && reel.ids.length > 1 ? [btn('Next ⏭', false, () => D.next(1))] : []), btn('⏹ Stop', false, () => stopReel(true)), ...zoomRow());
       else if (D.mode === 'drift') { const dl = dial(); bar.dial = dl; bar.append(dl, ...speedRow(), ...zoomRow(), btn('✕', false, () => setMode('follow'))); }
       else bar.append(btn('◀', false, () => stepKind(-1)), who(fs ? (fs.none ? `Looking for: ${fs.n}` : fs.n) : 'Finding a scene...'), btn('▶', false, () => stepKind(1)), btn('Next', false, () => followKind('next')), btn('Tour', !!(fs && fs.tour), () => followKind('tour')), ...zoomRow(), btn('✕', false, () => setMode('follow')));
     } else if (bar.dial) bar.dial.show();
@@ -716,9 +724,15 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       panel.append(mr);
       if (mo) for (const id of more) {
         const q = DSCENES[id], b = btn('', !!((want && want.id === id) || (sct && sct.sc.id === id)), () => D.shot(id), 'sc');
-        b.innerHTML = `${q.n}${q.note ? ` <small>- ${q.note}</small>` : ''}`;
+        const mk = reviews()[id];
+        b.innerHTML = `${mk ? `<b>${REV_WORD[mk]}</b> ` : ''}${q.n}${q.note ? ` <small>- ${q.note}</small>` : ''}`;
         b.style.paddingLeft = '14px';
         panel.append(b);
+      }
+      if (mo) {   // (the marks: copied out to send, a cut one back in)
+        const R = reviews(), n = Object.keys(R).length, cut = DSCENE_LIST.filter((q) => R[q.id] === 'cut');
+        panel.append(row(btn(`Copy marks (${n})`, false, () => { const t = DSCENE_LIST.filter((q) => R[q.id]).map((q) => `${REV_WORD[R[q.id]]}\t${q.n}\t${q.id}`).join('\n'); try { navigator.clipboard.writeText(t || '(no marks)'); api.toast('The marks are on the clipboard.', 'good'); } catch { api.toast('Copy didn\'t work here.', 'warn'); } }),
+          ...(cut.length ? [btn(`Cut: ${cut.length} - put back`, false, () => { for (const q of cut) markShot(q.id, ''); render(); })] : [])));
       }
       panel.append(tip(`One tap plays a shot: its place, time, weather, cast and camera move. ${say({ kbm: 'Any key hands you the camera where it is; Esc back to you.', pad: 'Any button hands you the camera where it is; B back to you.', touch: 'A touch hands you the camera where it is; the ✕ at the top back to you.' })}`));
       viewsPanel(panel, row, h, tip);
@@ -947,7 +961,9 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       if (m.tick0 !== undefined) sct.tick0 = m.tick0;   // (held at its first moment, then let go)
       if (m.cast) sct.cast = m.cast;
       if (m.anchors) sct.anchors = anchorsOf(m.anchors);
-      if (m.held === 0 && sct.held) { sct.held = false; fadeTo(0); }
+      // (the picture comes up clean: the X and the bar put away as it does, whatever woke them while it was black - the
+      // owner, 11-23: "can we have these disappear by the time the scene loads ... so we can get a clean shot")
+      if (m.held === 0 && sct.held) { sct.held = false; wokeAt = -1e9; fadeTo(0); }
       return;
     }
     const sc = m.view ? viewScene(m.view) : m.id && DSCENES[m.id];   // (m.view: a saved view played as a shot)

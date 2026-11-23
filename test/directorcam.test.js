@@ -81,7 +81,9 @@ test('a shot waits in black for the art at its place, then tells the server to g
   assert.equal(D.mode, 'script');
   assert.ok(Math.abs(S.cam.x - 5000) < 700 && Math.abs(S.cam.y - 3000) < 700, `the camera on the shot's place (${S.cam.x}, ${S.cam.y})`);
   setWarm({ ok: true, scrHave: 9, scr: 9 });
-  frame(1 / 30, 2);
+  const now0 = performance.now.bind(performance);
+  performance.now = () => now0() + 2500;   // (past the hold's least - HOLD_MIN, 2 s since 11-23: the people round it in first)
+  try { frame(1 / 30, 2); } finally { performance.now = now0; }
   assert.deepEqual(sent.filter((m) => m.k === 'go'), [{ t: 'dev', c: 'scene', k: 'go', seq: 7 }]);
   assert.ok(Math.abs(D.lt - loopOf(sc.time)) < 1e-6, 'the shot\'s time of day');
   assert.equal(D.wx, 'clear');
