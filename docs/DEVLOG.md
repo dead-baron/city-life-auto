@@ -26191,3 +26191,9 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   pictures showed it wrong for the hand-made blocks whose street is to the north - the Strip's casinos' drop-off loops
   and Old Downtown's casino row: their way in moved round to the back lots. Those blocks want re-planning (the street
   to their south), the owner's call - logged.
+
+## 2026-11-22 - World batch: no curtain of hanging lights (branch `prebeta-world2`; not live)
+- The audit's festoonDensity (9: "the Neon alley's curtain of bistro lights"). `shared/world3-festoons.js` festoonThin3
+  (the done hook, after the lights are hung): the runs taken north to south; one is kept only while it and every kept run
+  near it stay within FESTOON_CAP (8) inside FESTOON_R (8 tiles) - the lint's numbers. 10 runs taken down; 9 -> 0
+  (`LINT_ALLOW` 0). `test/festoonthin.test.js`; placementlint 42/42, festoon, lights.

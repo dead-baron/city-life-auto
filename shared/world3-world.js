@@ -62,6 +62,7 @@ import { railTrim3 } from './world3-railtrim.js';
 import { badBays3 } from './parkcheck.js';
 import { cropScraps3, farmsOffBeach3 } from './world3-croptidy.js';
 import { frontNames3 } from './world3-signfix.js';
+import { festoonThin3 } from './world3-festoons.js';
 import { doorPaths3 } from './world3-doorpaths.js';
 import { clearWalks3 } from './world3-walks.js';   // (walkways clear of plants - the owner, 11-17)   // (a path to every door - the owner, 11-16)
 import { sunkenWrecks3 } from './world3-wrecks.js';
@@ -361,6 +362,7 @@ export function worldOpts(asked) {
       m.world3.farmsOffBeach = farmsOffBeach3(m);   // (the farms back from the beach - the owner, 11-22 16:45: world3-croptidy.js)
       m.world3.cropScraps = cropScraps3(m);   // (no stray crop scrap in a town or by a beach - the audit's cropInTown: world3-croptidy.js)
       m.world3.frontNames = frontNames3(m);   // (a shop's sign names what's behind it - the audit's frontNames: world3-signfix.js)
+      m.world3.festoonThin = festoonThin3(m);   // (no curtain of hanging lights - the audit's festoonDensity: world3-festoons.js)
       m.world3.pumps = pumpProps3(m);   // (last: every filling station's pump a prop - its solid its own - at the end of the list: they go up, server props.js)   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)

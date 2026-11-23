@@ -130,7 +130,7 @@ export const LINT_ALLOW = {
   dockOverlap: 5,           // boardwalks or piers over each other (the Egret Marsh boardwalk's bends)
   railOverWaterArt: 18,     // a railway span over water without real bridge art (piers, abutments)
   portalOnFlat: 16,         // a tunnel mouth with no hill over the bore
-  festoonDensity: 9,        // more than FESTOON_CAP runs of lights within FESTOON_R
+  festoonDensity: 0,        // more than FESTOON_CAP runs of lights within FESTOON_R (11-22: thinned at the build - world3-festoons.js festoonThin3)
   cropInTown: 0,            // a crop field, strip or orchard in a town or by a beach (11-22: the farms back from the beach, the scraps cleared - world3-croptidy.js)
   heliOffPad: 10,           // a hospital with no ground helipad, a helipad on a sidewalk or a road
   deadBoat: 3,              // a boat prop you can reach that isn't a vehicle and isn't stored (11-22: every one a real boat - world3-boats.js; left: 3 with no water near)
