@@ -26,3 +26,5 @@ chmod 600 "$TMP"; mv -f "$TMP" "$OUT/$NAME"
 ls -1t "$OUT"/cla-*.tar.gz 2>/dev/null | tail -n +"$((KEEP + 1))" | xargs -r rm -f --
 find "$OUT" -maxdepth 1 -name 'profiles-*.json' -mtime +14 -delete 2>/dev/null || true
 echo "backup: $OUT/$NAME ($(du -h "$OUT/$NAME" | cut -f1)); $(ls -1 "$OUT"/cla-*.tar.gz | wc -l) kept"
+# (for the owner's console, its Status tab: server/status.js readBackup - "epoch<TAB>size<TAB>kept")
+printf '%s\t%s\t%s\n' "$(date +%s)" "$(du -h "$OUT/$NAME" | cut -f1)" "$(ls -1 "$OUT"/cla-*.tar.gz | wc -l)" > "$DATA/backup-last" 2>/dev/null || true

@@ -7,6 +7,15 @@
 set -euo pipefail
 cd "${CLA_APP_DIR:-/home/ubuntu/city-life-auto}"
 
+# A short record for the owner's console (its Status tab: server/status.js readDeployLog): one line per thing that
+# happened - "epoch<TAB>kind<TAB>text", the last 60 kept - beside the journal (the game can't read the journal). Never fails.
+DLOG="${CLA_DATA_DIR:-/home/ubuntu/cla-data}/deploy-log.txt"
+note() {   # note <kind> <text...>: say it (the journal) and record it
+  local k="$1"; shift
+  echo "auto-update: $*"
+  { printf '%s\t%s\t%s\n' "$(date +%s)" "$k" "$*" >> "$DLOG" && tail -n 60 "$DLOG" > "$DLOG.tmp" && mv "$DLOG.tmp" "$DLOG"; } 2>/dev/null || true
+}
+
 # The nightly backup's units (deploy/cla-backup.*, 2026-11-15): installed, or brought up to date, by the first run after
 # the pull that brought them (each run checks; nothing to do costs two file compares) - a server set up before them
 # needs no setup run. The old profiles-only cron line goes with it.
@@ -44,19 +53,19 @@ if [ -n "$WANT" ] && [ -n "$LIVE" ] && [ "$LIVE" != "$WANT" ]; then
     echo "auto-update: ${NEW:0:7} is on GitHub; waiting for Pages to publish build $WANT (it serves $LIVE; ${WAITED}s so far)"
     exit 0
   fi
-  echo "auto-update: Pages still serves $LIVE after an hour - updating to ${NEW:0:7} anyway (push again to republish the page)"
+  note wait "Pages still serves $LIVE after an hour - updating to ${NEW:0:7} anyway (push again to republish the page)"
 fi
 rm -f "$WAIT_FILE"
 
 if ! git merge -q --ff-only origin/main; then
-  echo "auto-update: local edits on the server block the update - skipping (run: git status)"
+  note skip "local edits on the server block the update - skipping (run: git status)"
   exit 1
 fi
 CHANGED=$(git diff --name-only "$OLD" "$NEW")
 
 
 if ! echo "$CHANGED" | grep -qE '^(server/|shared/|package\.json)'; then
-  echo "auto-update: ${OLD:0:7} -> ${NEW:0:7} (no server code changed, no restart)"
+  note update "${OLD:0:7} -> ${NEW:0:7} (no server code changed, no restart)"
   exit 0
 fi
 
@@ -80,13 +89,13 @@ if [ "${ONLINE:-0}" -gt 0 ]; then
 fi
 sudo systemctl restart city-life-auto
 if healthy; then
-  echo "auto-update: ${OLD:0:7} -> ${NEW:0:7}, server restarted OK"
+  note restart "${OLD:0:7} -> ${NEW:0:7}, server restarted OK"
 else
-  echo "auto-update: ${NEW:0:7} did not start - rolling back to ${OLD:0:7} (it won't be retried; the next push will)"
+  note rollback "${NEW:0:7} did not start - rolled back to ${OLD:0:7} (it won't be retried; the next push will)"
   echo "$NEW" > "$BAD_FILE"
   git reset -q --hard "$OLD"
   sudo systemctl restart city-life-auto
-  healthy && echo "auto-update: rolled back, server OK on ${OLD:0:7}" || echo "auto-update: server still down after rollback - check: journalctl -u city-life-auto"
+  healthy && echo "auto-update: rolled back, server OK on ${OLD:0:7}" || note down "server still down after rollback to ${OLD:0:7} - check: journalctl -u city-life-auto"
 fi
 if echo "$CHANGED" | grep -qE '^deploy/'; then
   echo "auto-update: deploy files changed - run 'bash deploy/setup-oracle.sh' to apply them"

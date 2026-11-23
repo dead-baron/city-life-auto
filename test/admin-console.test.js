@@ -65,7 +65,7 @@ test('the console: one page for the staff, its own script, live JSON with no ids
   assert.match(page.headers['content-security-policy'], /script-src 'self'/);
   assert.match(page.body, /<script src="\/admin\/console.js"><\/script>/);
   assert.ok(!/<script>/.test(page.body), 'no inline script');
-  for (const t of ['Now', 'Trends', 'Where from', 'Moderation', 'Server', 'Tools']) assert.ok(page.body.includes(`>${t}</button>`), t);
+  for (const t of ['Status', 'Now', 'Trends', 'Where from', 'Moderation', 'Server', 'Tools']) assert.ok(page.body.includes(`>${t}</button>`), t);
   assert.equal((await T.get(ck, '/admin')).status, 200, '/admin as well');
   const js = await T.get(ck, '/admin/console.js');
   assert.equal(js.status, 200); assert.match(js.headers['content-type'], /javascript/);

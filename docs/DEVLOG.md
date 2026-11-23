@@ -26123,3 +26123,24 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
   booking sends your legal guns to your stash (arms.js onBooked). The test now checks that: out empty-handed, the pistol
   in your stash.
 - Tests: hudlayout, hudinfo, hudlayers, uikit, uitokens, chatui, chatsafety, notes1122, prison, arms, custody.
+
+## 2026-11-23 - The console's Status tab: the server's health at a glance, the art redraw's progress
+- The owner (11-23 07:09): "Can we make the status easier to read and more organized? It would be good to be able to see
+  info more clearly and flag any issues the server may be having. Would be good to see if the art is being redrawn and
+  how far that is into it." The console (/admin/) opens on a new **Status** tab (its tab carries a green / amber / red dot
+  seen from any tab): one answer on top - All good / Worth a look / Needs attention - with each problem as a plain line,
+  worst first; then the art (Redrawing 40% - 18,432 of 45,864 chunks, about 5 h 58 min left, bake threads, a chunk's
+  time - or Up to date, or Stopped), the game server (version, up for, online, the tick against its budget, loop
+  errors), the machine (memory, CPU load, disk), updates (each pull: restarted / no restart / rolled back / down /
+  waiting for Pages), the nightly backup, errors and reports. Phone: one column.
+- `server/status.js` health(): the facts -> the level and the lines, thresholds named (STATUS): a tick over half its
+  budget, a slow hitch, memory, disk, an update rolled back or down in the last day, a wait on Pages, no backup in 36 h,
+  page errors in the last hour, an art redraw with nothing baked for 20 min, failed chunks, the world files. Clock times
+  are said as "x ago" (the server keeps UTC). `server/index.js` statusFacts (the tick now counts its errors),
+  `artcdn.js` keeps when a chunk was last baked; the console's API carries it (`adminhttp.js`, a fault in the check
+  can't take the console down).
+- The deploy scripts leave two small records the game can read (it can't read the journal): `deploy/auto-update.sh`
+  appends each pull's outcome to the data dir's `deploy-log.txt` (60 kept), `deploy/backup.sh` writes `backup-last`.
+  Both start with this version; until the first of each, their cards say so.
+- Seen before shipping: the page served with made-up facts (a redraw, then trouble) and shot on a desktop and a phone.
+  `test/status.test.js`; admin-console, perf.
