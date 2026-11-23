@@ -26197,3 +26197,10 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   (the done hook, after the lights are hung): the runs taken north to south; one is kept only while it and every kept run
   near it stay within FESTOON_CAP (8) inside FESTOON_R (8 tiles) - the lint's numbers. 10 runs taken down; 9 -> 0
   (`LINT_ALLOW` 0). `test/festoonthin.test.js`; placementlint 42/42, festoon, lights.
+
+## 2026-11-22 - World batch: hospital helipads on open ground (branch `prebeta-world2`; not live)
+- The audit's heliOffPad (10: a hospital's ground helipad on a sidewalk, or none). `shared/flight.js`: a hospital's yard
+  pad is looked for only on open ground (PAD_YARD: plaza, lot, grass, dirt, sand, field - not the pavement) and out to
+  HOSP_PAD_R (900 px); `findPadSpot` / `clearPad` take the tile set (the other pads keep PAD_OK). 10 -> 1 (`LINT_ALLOW`
+  1): the one left has no open ground near and keeps its roof pad. flight, aircraftart, policeair, rescue,
+  placementlint 42/42.

@@ -132,7 +132,7 @@ export const LINT_ALLOW = {
   portalOnFlat: 16,         // a tunnel mouth with no hill over the bore
   festoonDensity: 0,        // more than FESTOON_CAP runs of lights within FESTOON_R (11-22: thinned at the build - world3-festoons.js festoonThin3)
   cropInTown: 0,            // a crop field, strip or orchard in a town or by a beach (11-22: the farms back from the beach, the scraps cleared - world3-croptidy.js)
-  heliOffPad: 10,           // a hospital with no ground helipad, a helipad on a sidewalk or a road
+  heliOffPad: 1,           // a hospital with no ground helipad, a helipad on a sidewalk or a road (11-22: the yard pads off the pavement, looked for further out - shared/flight.js PAD_YARD; left: one with no open ground near)
   deadBoat: 3,              // a boat prop you can reach that isn't a vehicle and isn't stored (11-22: every one a real boat - world3-boats.js; left: 3 with no water near)
   bigEmptyPlaza: 14,        // an empty stretch of paving 19+ tiles across
   binBags: 0,               // bin bags away from any bin outside the rough districts (cleared by the build: world3-tidy.js strayBags3)
