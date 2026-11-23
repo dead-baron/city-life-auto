@@ -26111,3 +26111,15 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
   eases (INDOOR_EASE, a quarter second) most of the way (INDOOR_NIGHT 0.75, times how dark it is) to lightgame.js's
   `indoor` light - a warm fill with the room's lamps - and back out as you leave; by day nothing changes. Client only:
   not in the art hash, no re-bake. lights, daylight, cavelight, perf, mapwindow, dmath.
+
+## 2026-11-22 - Two tests failing on main put right: the HUD on small sideways phones, the prison
+- `test/hudlayout.test.js` (failing on main since before the pre-beta batch): on a small phone held sideways (844 x 390,
+  740 x 360) a second note - two lines, since notes wrap rather than cut (11-16) - ran down onto the status line under
+  the map and the fishing bar. `client/style.css`: a short touch screen on its side shows one note at a time, as an
+  upright phone already does (the next shows when it fades; all of them are in the Log). Touch only - the desktop's
+  measurements don't move (the one-rule try of 11-22 had changed them). The fix let the test reach a later check it had
+  never got to: "a note more than one line", stale since the 11-16 decision - now two lines at most.
+- `test/prison.test.js` (failing on main): "the weapon back in your hand when you're out" predates 11-14's one stash -
+  booking sends your legal guns to your stash (arms.js onBooked). The test now checks that: out empty-handed, the pistol
+  in your stash.
+- Tests: hudlayout, hudinfo, hudlayers, uikit, uitokens, chatui, chatsafety, notes1122, prison, arms, custody.
