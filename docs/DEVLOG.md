@@ -26409,3 +26409,9 @@ consider topographical levels". Both withdrawn. What stands:
   keeps to the district most of it is in, and its box is trimmed an edge at a time while another district's land is
   inside it (the edge isn't straight). world3kestrel, farming, placementlint 42/42.
 - `test/world3peaks.test.js` "a rowboat pulled up on it": Summit Tarn's rowboat looked for as a moored boat (m.marina).
+
+## 2026-11-23 (night) - No fountain on the Waves Arena's pitch
+- The suite on the branch: `test/world3server.test.js` "nothing solid on the pitch" - the Stadium District's "empty
+  plaza" the fill planted was the Waves Arena's pitch (car soccer). `shared/world3-plazafill.js`: a pitch or a court for
+  a game (m.venues) and an arena (m.arenas) count as taken - played on, not empty paving - for the build and the lint
+  alike. plazafill, world3server, placementlint 42/42 (bigEmptyPlaza still 0).

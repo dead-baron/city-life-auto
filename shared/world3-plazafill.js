@@ -16,7 +16,7 @@ export const MAX_ISLANDS = 120, KEEP_CLEAR = 6;
 const YARDS = new Set(['Prison Island']);
 const NO_FOUNTAIN = new Set(['airport', 'houses']);   // (a forecourt, a street of houses: trees and benches, no fountain)
 
-// the occupied tiles: anything not paving, every prop's tile (a sized one's footprint), every solid
+// the occupied tiles: anything not paving, every prop's tile (a sized one's footprint), every solid, the pitches and arenas
 function occupied(M) {
   const N = M.w * M.h, occ = new Uint8Array(N);
   for (let i = 0; i < N; i++) if (M.tiles[i] !== T.PLAZA) occ[i] = 1;
@@ -33,6 +33,11 @@ function occupied(M) {
     }
   }
   if (M.solidProps) for (const [k] of M.solidProps) occ[k] = 1;
+  // a pitch or a court for a game (m.venues - a soccer field, a volleyball court) and an arena (m.arenas - the Waves Arena
+  // by the stadium: 11-23, the first fill put a fountain on its pitch): played on, not empty paving
+  const box = (x0, y0, x1, y1) => { for (let ty = Math.floor(y0 / TILE); ty <= Math.floor((y1 - 1) / TILE); ty++) for (let tx = Math.floor(x0 / TILE); tx <= Math.floor((x1 - 1) / TILE); tx++) if (M.inside(tx, ty)) occ[M.idx(tx, ty)] = 1; };
+  for (const v of M.venues || []) if (v && v.rect) box(v.rect.x, v.rect.y, v.rect.x + v.rect.w, v.rect.y + v.rect.h);
+  for (const a of M.arenas || []) if (a) box(a.tx * TILE, a.ty * TILE, (a.tx + a.tw) * TILE, (a.ty + a.th) * TILE);
   return occ;
 }
 // the distance (8-way steps) from each tile to the nearest occupied one, up to `cap`
