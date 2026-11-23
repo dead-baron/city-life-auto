@@ -42,7 +42,10 @@ test('the businesses: every kind laid out, in the real-estate app, bought at its
   // the app's Businesses list
   const r = phone.handle(w, p, { a: 'homes', kind: 'biz' });
   assert.ok(r.biz && r.biz.sale.length >= 5, 'businesses listed for sale');
-  assert.ok(['farm', 'club', 'hideout', 'shop'].every((t) => r.biz.sale.some((q) => q.t === t && q.p > 0 && Number.isFinite(q.x))), 'each kind, priced, with a place');
+  // (the app lists the nearest 30: whether a farm, out in the country, is among them turns on where the player spawned -
+  // every kind, priced, with a place, in the whole list)
+  const all = biz.listings(w, p, Infinity).sale;
+  assert.ok(['farm', 'club', 'hideout', 'shop'].every((t) => all.some((q) => q.t === t && q.p > 0 && Number.isFinite(q.x))), 'each kind, priced, with a place');
   for (const t of ['farm', 'club', 'hideout']) {
     const s = siteOf(w, t);
     at(w, p, s);

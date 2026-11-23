@@ -33,6 +33,7 @@
 //   binBags        black bin bags away from any bin, outside the rough districts ("only a few, near cans or in rough
 //                  alleys", 10-10)
 //   drinkSign      a sign line pairing drink with riding or driving ("RIDE DRINK REPEAT", the owner 11-17)
+import { emptySpots, EMPTY_R } from '../../shared/world3-plazafill.js';
 import { TILE, T } from '../../shared/constants.js';
 import { TIDY3, strayBags } from '../../shared/world3-tidy.js';
 import { railWetRun } from '../../shared/world3-railtrim.js';
@@ -44,7 +45,8 @@ import { FLY } from '../../shared/flight.js';
 import { staticIndex } from '../../client/art2/game/statics.js';
 import { buildingH } from '../../client/art2/buildings.js';
 
-export const FESTOON_R = 8 * TILE, FESTOON_CAP = 8, EMPTY_R = 10, CROP_BEACH = 6;
+export const FESTOON_R = 8 * TILE, FESTOON_CAP = 8, CROP_BEACH = 6;
+export { EMPTY_R };
 // whether the page draws railway spans over water as a bridge (client/render/trains.js, client/art2: no rail bridge art
 // yet - the owner, 11-17 "it's the ground track drawn over the sea with brown curved girder stripes")
 export const RAIL_BRIDGE_ART = false;
@@ -323,24 +325,8 @@ export function auditRows(M, rows, seen) {
     add('deadBoat', { what: `a ${p.t} prop`, x: p.x, y: p.y, why: wetT(t) ? 'moored on the water, not a vehicle' : `on ${TN[t]} (beached), not a vehicle` });
   }
 
-  // ---- bigEmptyPlaza ----
-  {
-    const W = M.w, H = M.h, N = W * H, dist = new Uint8Array(N).fill(255);
-    const q = new Int32Array(N); let qh = 0, qt = 0;
-    const occ = new Uint8Array(N);
-    for (const p of M.props) { if (!p) continue; const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); if (M.inside(tx, ty)) occ[M.idx(tx, ty)] = 1; }
-    for (const [k] of M.solidProps) occ[k] = 1;
-    for (let i = 0; i < N; i++) if (M.tiles[i] !== T.PLAZA || occ[i]) { dist[i] = 0; q[qt++] = i; }
-    while (qh < qt) { const i = q[qh++], d = dist[i]; if (d >= EMPTY_R + 2) continue; const x = i % W, y = (i / W) | 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const j = ny * W + nx; if (dist[j] > d + 1) { dist[j] = d + 1; q[qt++] = j; } } }
-    const taken = [];
-    for (let i = 0; i < N; i++) {
-      if (dist[i] < EMPTY_R || dist[i] === 255) continue;
-      const x = i % W + M.x0, y = ((i / W) | 0) + M.y0;
-      if (taken.some(([a, b]) => Math.abs(a - x) < 30 && Math.abs(b - y) < 30)) continue;
-      taken.push([x, y]);
-      add('bigEmptyPlaza', { what: `an empty stretch of paving ${2 * dist[i] - 1}+ tiles across`, x: (x + 0.5) * TILE, y: (y + 0.5) * TILE, why: `nothing within ${dist[i] - 1} tiles` });
-    }
-  }
+  // ---- bigEmptyPlaza ---- (shared/world3-plazafill.js emptySpots: the rule the build fills them by)
+  for (const sp of emptySpots(M, EMPTY_R)) add('bigEmptyPlaza', { what: `an empty stretch of paving ${2 * sp.d - 1}+ tiles across`, x: (sp.tx + 0.5) * TILE, y: (sp.ty + 0.5) * TILE, why: `nothing within ${sp.d - 1} tiles` });
 
   // ---- binBags ---- (shared/world3-tidy.js strayBags: the same rule the build clears with)
   for (const p of strayBags(M)) { const D = M.districtAt(p.x, p.y); add('binBags', { what: 'bin bags', x: p.x, y: p.y, why: `no bin within 3 tiles (${D ? D.tier : '?'} district)` }); }

@@ -26223,3 +26223,19 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   became drivable this morning) - the test had still looked for the props.
 - Not done here: dockOverlap (5, the marsh boardwalk's bends: two legs' ends cross with no landing) wants a landing piece
   (a small deck open on two sides) - a new model, on the Fable list.
+
+## 2026-11-22 - World batch: no oversized empty plazas (branch `prebeta-world2`; not live)
+- The audit's bigEmptyPlaza (14: a stretch of paving 19+ tiles across with nothing on it - the owner, 11-14: "no
+  oversized empty plazas or lots"). `shared/world3-plazafill.js`: emptySpots, the lint's rule moved there (one rule for
+  the build and the lint; EMPTY_R with it), and plazaFill3 (the done hook, after the pier roots): each empty stretch,
+  deepest first, gets an island at its middle - a fountain ringed by benches, trees in planters and lamps (the first in
+  a square, about every other island; never on the airport's forecourt or in a street of houses) or a grove (four trees
+  in planters, two benches, a lamp, a bin) - none within KEEP_CLEAR (6) tiles of a map point or a race's start.
+- A thing laid on the paving with a size (a court, a canopy, a skate pad) now counts with its whole footprint, not just
+  its middle tile: Prison Island's yard was flagged only because its basketball court is painted on the paving - the
+  first try put picnic tables and a third hoop on the court (seen in the pictures; fixed, the yard left as it was).
+- 15 islands (7 fountains, 8 groves): Downtown's tower squares, Midtown's square by the line, Old Downtown, the Stadium,
+  the Harbor, North Point, West Hills, the airport's forecourt. 14 -> 0 (`LINT_ALLOW` 0). `test/plazafill.test.js`.
+- `test/biz.test.js`: "each kind for sale, priced, with a place" now looks at the whole list - the app shows the nearest
+  30, so whether a farm out in the country made it turned on where the test's player spawned (it failed on some spawns,
+  on main too).
