@@ -25,7 +25,23 @@ export const CHAT = {
   inboxMax: 30, contactsMax: 100, logMax: 60,
   strikesToMute: 3, muteH: 24, filterStrikeGapS: 600,
   reportsToStrike: 3, reportWindowH: 24, reportGapS: 30,
+  // friends (the owner, 11-15: crews are only 4 - a way to keep a specific person easy to find): asked from a contact's row
+  // or thread, or a tapped name; a star, first in the contacts, never pushed out by contactsMax
+  friendsMax: 100,
+  friendReqS: 3 * 86400,      // a friend request waits this long for an answer, then lapses
+  friendReqMax: 20,           // requests waiting for one player at most
+  friendAgainS: 86400,        // the same person asked again (declined or lapsed) only after this long
+  friendRate: { n: 6, s: 600 },   // requests a player sends, a window
+  // safety (the owner, 11-15 - the beta is 13+): contact details masked in every line; a line fishing for personal info
+  // goes to the staff's Review list (server/chatfilter.js fishing), a player's at most once this often
+  safetyGapS: 60,
+  safetyTipS: 1800,           // the "never share personal info" tip to whoever such a line reached, this often at most
+  maskToldS: 600,             // "contact details are hidden in chat" to the sender, this often at most
+  undoS: 6,                   // the page's Undo after a block stays this long
 };
+// Who can text me (the owner, 11-15): everyone you've met (the default), or only friends and crew - kept with the
+// account (server/chat.js, the phone channel and the inbox)
+export const WHO_TEXT = { met: 'Everyone I\'ve met', friends: 'Friends and crew only' };
 // The emotes (the owner, 2026-11-13: apart from chat, a button of their own; round 2, 11-13: "emotes are body animations
 // first"). Every one plays on the body (server/systems/emote.js: the descriptor's gt 'emote' and em, its id -
 // client/art2/dances.js and poses.js pose it) for s seconds (CHAT.emoteS when not given), or - hold - until you move.

@@ -1,0 +1,312 @@
+[
+{
+"id": "T04",
+"cue": "01",
+"title": "Sunburnt Tape",
+"role": "backup",
+"cap": 195.0,
+"bpm": 97.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "C04",
+"cue": "02",
+"title": "Sugar Haze",
+"role": "backup",
+"cap": 135.0,
+"bpm": 85.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T06",
+"cue": "03",
+"title": "Waiting Room Disco",
+"role": "backup",
+"cap": 180.0,
+"bpm": 112.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "C10",
+"cue": "05",
+"title": "Smash and Grab",
+"role": "backup",
+"cap": 135.0,
+"bpm": 120.0,
+"meter": "M:2/4",
+"bpb": 4
+},
+{
+"id": "A05",
+"cue": "07",
+"title": "Badge and Brass",
+"role": "backup",
+"cap": 120.0,
+"bpm": 108.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A17",
+"cue": "08",
+"title": "Jester's Parade",
+"role": "backup",
+"cap": 90.0,
+"bpm": 120.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T10",
+"cue": "08",
+"title": "Jester's Parade",
+"role": "backup",
+"cap": 165.0,
+"bpm": 163.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T11",
+"cue": "08",
+"title": "Jester's Parade",
+"role": "backup",
+"cap": 165.0,
+"bpm": 163.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T07",
+"cue": "10",
+"title": "Double Scoop",
+"role": "backup",
+"cap": 180.0,
+"bpm": 63.0,
+"meter": "M:2/4",
+"bpb": 4
+},
+{
+"id": "A01",
+"cue": "11",
+"title": "Kickflip",
+"role": "backup",
+"cap": 105.0,
+"bpm": 184.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "B02",
+"cue": "12",
+"title": "Rescue Run",
+"role": "backup",
+"cap": 135.0,
+"bpm": 95.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "B01",
+"cue": "12",
+"title": "Rescue Run",
+"role": "backup",
+"cap": 135.0,
+"bpm": 120.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "C07",
+"cue": "13",
+"title": "Wide Awake City",
+"role": "backup",
+"cap": 285.0,
+"bpm": 188.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A08",
+"cue": "14",
+"title": "First Sprouts",
+"role": "backup",
+"cap": 300.0,
+"bpm": 119.0,
+"meter": "M:3/4",
+"bpb": 4
+},
+{
+"id": "T27",
+"cue": "17",
+"title": "Aisle Bossa",
+"role": "backup",
+"cap": 120.0,
+"bpm": 120.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T01",
+"cue": "18",
+"title": "Visiting Hours",
+"role": "backup",
+"cap": 120.0,
+"bpm": 128.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T20",
+"cue": "18",
+"title": "Visiting Hours",
+"role": "backup",
+"cap": 90.0,
+"bpm": 108.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T28",
+"cue": "18",
+"title": "Visiting Hours",
+"role": "backup",
+"cap": 120.0,
+"bpm": 120.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "A14",
+"cue": "18",
+"title": "Visiting Hours",
+"role": "backup",
+"cap": 120.0,
+"bpm": 126.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "C01",
+"cue": "19",
+"title": "Starlite Slow Dance",
+"role": "backup",
+"cap": 90.0,
+"bpm": 65.0,
+"meter": "M:2/4",
+"bpb": 4
+},
+{
+"id": "B14",
+"cue": "21",
+"title": "Neon Current",
+"role": "backup",
+"cap": 150.0,
+"bpm": 125.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T24",
+"cue": "21",
+"title": "Neon Current",
+"role": "backup",
+"cap": 105.0,
+"bpm": 150.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T25",
+"cue": "21",
+"title": "Neon Current",
+"role": "backup",
+"cap": 105.0,
+"bpm": 150.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T26",
+"cue": "21",
+"title": "Neon Current",
+"role": "backup",
+"cap": 105.0,
+"bpm": 150.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "B10",
+"cue": "21",
+"title": "Neon Current",
+"role": "backup",
+"cap": 195.0,
+"bpm": 130.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "B11",
+"cue": "21",
+"title": "Neon Current",
+"role": "backup",
+"cap": 195.0,
+"bpm": 130.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "B12",
+"cue": "21",
+"title": "Neon Current",
+"role": "backup",
+"cap": 150.0,
+"bpm": 124.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "B13",
+"cue": "21",
+"title": "Neon Current",
+"role": "backup",
+"cap": 150.0,
+"bpm": 126.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "T16",
+"cue": "22",
+"title": "Mirrorball Traffic",
+"role": "backup",
+"cap": 165.0,
+"bpm": 120.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "D03",
+"cue": "23",
+"title": "Dust on the Dial",
+"role": "backup",
+"cap": 150.0,
+"bpm": 103.0,
+"meter": "M:4/4",
+"bpb": 4
+},
+{
+"id": "D01",
+"cue": "23",
+"title": "Dust on the Dial",
+"role": "backup",
+"cap": 150.0,
+"bpm": 102.0,
+"meter": "M:4/4",
+"bpb": 4
+}
+]

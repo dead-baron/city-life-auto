@@ -91,3 +91,29 @@ test('two faces, both shipped: CLA Pixel and Barlow Condensed - no Rubik, Anton,
   for (const m of read('client/render/homeview.js').matchAll(/\.font = ([`'][^`']*[`'])/g)) if (/system-ui|Rubik|Anton/.test(m[1])) bad.push(`homeview.js: ${m[1]}`);
   assert.deepEqual(bad, [], bad.join('\n'));
 });
+
+test('menus in the pixel font: the body face is CLA Pixel (Regular under 700, Bold from it); the gate and the account panel on UI v2 classes, no inline styles (pre-beta quick wins)', () => {
+  assert.match(CSS, /--ui: "CLA Pixel", "Barlow Condensed", sans-serif;/, 'the page default and every menu');
+  assert.match(CSS, /CLAPixel-Regular\.woff"\) format\("woff"\); font-weight: 100 600;/);
+  assert.match(CSS, /CLAPixel-Bold\.woff"\) format\("woff"\); font-weight: 700 900;/);
+  assert.doesNotMatch(read('index.html'), /preload" href="assets\/fonts\/Barlow/, 'Barlow only a fallback: not preloaded');
+  const acc = read('client/account.js');
+  assert.deepEqual([...acc.matchAll(/style="([^"]*)"/g)].map((m) => m[1]), ['flex:none'], 'only the Google mark\'s own');
+  assert.doesNotMatch(acc, /system-ui|#3a7bd5|#1b1e24/, 'no app look');
+  for (const c of ['.acc-ov', '.acc-box', '.acc-btn', '.acc-go', '.acc-inp', '.acc-tab']) assert.ok(CSS.includes(c + ' '), c);
+  assert.match(CSS, /\.acc-ov \.acc-box \{ max-height: calc\(100dvh/, 'scrolls inside a phone on its side, never cut');
+});
+
+test('the starting looks point at a screen that exists, and no white browser scrollbar (pre-beta quick wins)', () => {
+  const cr = read('client/creator.js');
+  assert.doesNotMatch(cr, /Appearance\)/, 'no "menu (Appearance)" - there is none');
+  assert.match(cr, /CHARACTER on the title screen/);
+  assert.match(CSS, /\* \{ scrollbar-width: thin; scrollbar-color: var\(--gold-a\) var\(--pad-ink\); \}/);
+  assert.match(CSS, /::-webkit-scrollbar \{[^}]*background: var\(--pad-ink\)/);
+});
+
+test('touch: 44 px targets for chat, the emote tabs and What\'s next; chat and the emotes over the move stick on a 360-px phone upright (pre-beta quick wins)', () => {
+  assert.match(CSS, /\.touch :is\(\.cht-tab, \.cht-chip, \.emo-tab, \.cs-list \.srow \.btn, \.cm-rqb \.btn, \.cht-undo \.btn, \.wn-goal button, \.wn-ssn button\) \{ min-height: var\(--tap\); \}/);
+  assert.match(CSS, /\.touch \.wn-card \.skip \{[^}]*width: var\(--tap\); height: var\(--tap\); \}/);
+  assert.match(CSS, /@media \(max-width: 379px\) \{\s*body\.portrait\.touch #b-talk, body\.portrait\.touch #b-emote \{ bottom: calc\(max\(84px, calc\(env\(safe-area-inset-bottom\) \+ 66px\)\) \+ 70px\); \}/);
+});

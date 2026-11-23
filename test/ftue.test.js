@@ -362,13 +362,24 @@ test('the first-time moments fire once each, ever: wanted, knocked down, a shop,
   teleport(w, other.p.ped, p.ped.x + 64, p.ped.y); gap();
   assert.ok(tips().includes('chat'), 'someone near: the chat moment');
   players.leave(w, other.p);
+  // by the water with a rod in the bag, not in hand: no "Fish here" - the rod's moment, once (players.js fishHere; the
+  // owner, 11-16: "You should have your fishing pole equipped before it prompts you to fish")
+  { const b = fishing.bankNear(w, p.ped.x, p.ped.y, 600, (h) => h && h.spot !== 'lily', null);
+    assert.ok(b, 'a bank');
+    prof.inventory.caneRod = 1; p.ped.weapon = 'fists';
+    teleport(w, p.ped, b.x, b.y); p.ped.a = b.a; gap();
+    assert.ok(!/Fish/.test((players.findInteraction(w, p) || {}).label || ''), 'no prompt with the rod in the bag');
+    assert.ok(tips().includes('rod'), 'the rod\'s moment');
+    p.ped.weapon = 'rod';
+    assert.ok(/Fish here/.test((players.findInteraction(w, p) || {}).label || ''), 'the rod out: the prompt');
+    p.ped.weapon = 'fists'; }
   // knocked down
   combat.damage(w, p.ped, 9999, null, 'test');
   assert.ok(p.ped.dead);
   p.ftueTipAt = -1e9; run(w, 0.6);   // (no clock jump: that would wake them before the moment's look)
   assert.ok(tips().includes('down'));
   const all = tips();
-  assert.deepEqual([...all].sort(), Object.keys(MOMENTS).sort(), 'all seven, once each');
+  assert.deepEqual([...all].sort(), Object.keys(MOMENTS).sort(), 'every one, once each');
   // each line names its Guide section, and the profile remembers them
   for (const m of sent(conn, (x) => x.t === 'ftue' && x.a === 'tip')) assert.ok(['around', 'earn', 'law', 'places', 'activities', 'property', 'items'].includes(m.sec), m.id);
   assert.deepEqual(Object.keys(prof.ftue.m).sort(), Object.keys(MOMENTS).sort());
@@ -650,4 +661,9 @@ test('the tip\'s Guide link: each moment names a Guide section; a tap on the tip
   assert.ok(z(/#ftue-line\.tip \{[^}]*z-index: (\d+)/) > z(/#touch \{[^}]*z-index: (\d+)/), 'the tip over #touch');
   assert.match(css, /#ftue-line\.faded \{[^}]*pointer-events: none/, 'faded: back to the sticks');
   assert.match(html, /id="s-tips"/, 'Settings: First-time tips');
+});
+
+test('the arrival letterbox never cuts the HUD: the HUD is away while the bars are in (pre-beta quick wins)', () => {
+  const css = readFileSync(new URL('../client/style.css', import.meta.url), 'utf8');
+  assert.match(css, /body:has\(#arrival:not\(\.hidden\):not\(\.leaving\)\) #hud \{ visibility: hidden; \}/);
 });

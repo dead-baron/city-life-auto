@@ -38,6 +38,7 @@ import * as homeinside from './homeinside.js';
 import * as grime from './grime.js';
 import * as showers from './showers.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
+import { poiAt } from '../pois.js';   // (the place you're at, through a grid: World v3's thousands of places)
 
 export const BATH0 = 6000000;   // (a bathhouse's floor's id: clear of the arcades' - arcade.js ARC0)
 const PLAN = 'bath', TIER = 2;
@@ -81,7 +82,7 @@ const playersIn = (world, h) => [...world.players.values()].filter((q) => q.ped 
 export function doorInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.entering || ped.ug || ped.carrying) return null;
-  const poi = world.map.poiNear(ped.x, ped.y);
+  const poi = poiAt(world.map, ped.x, ped.y);
   if (!isBath(world, poi)) return null;
   if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }   // (the floor's drawing loaded ahead: homeview.js)
   return { label: `Into ${poi.label} - the bathhouse ($${feeOf(hallOf(world, poi))} at the desk)`, run: () => goIn(world, p, poi) };

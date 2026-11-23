@@ -193,15 +193,26 @@ function remove(world, pet) {
   world.remove(pet);
 }
 
+// every ped with a pet's record, looked for once a tick (or again when something's been made or taken away since): every
+// player's prompt asks after the lost pets several times a second, and a look through every entity each time was a
+// good share of the server's per-player time (11-17)
+function petEnts(world) {
+  const C = (world.petEnts ||= { tick: -1, id: -1, n: -1, list: [] });
+  if (C.tick !== world.tick || C.id !== world.nextId || C.n !== world.entities.size) {
+    C.tick = world.tick; C.id = world.nextId; C.n = world.entities.size; C.list.length = 0;
+    for (const e of world.entities.values()) if (e.kind === K.PED && e.pet) C.list.push(e);
+  }
+  return C.list;
+}
 export function lostPets(world) {
   const out = [];
-  for (const e of world.entities.values()) if (e.kind === K.PED && e.pet && e.pet.house && !e.pet.home && !e.removed) out.push(e);   // (a dog walker's (personas.js), a police dog (k9.js): no house - not lost)
+  for (const e of petEnts(world)) if (e.pet && e.pet.house && !e.pet.home && !e.removed) out.push(e);   // (a dog walker's (personas.js), a police dog (k9.js): no house - not lost)
   return out;
 }
 // the pets back with their owners
 export function homePets(world) {
   const out = [];
-  for (const e of world.entities.values()) if (e.kind === K.PED && e.pet && e.pet.home && !e.removed) out.push(e);
+  for (const e of petEnts(world)) if (e.pet && e.pet.home && !e.removed) out.push(e);
   return out;
 }
 // what bringing it home pays: more the further it was from its door when you found it

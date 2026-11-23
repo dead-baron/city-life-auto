@@ -12,7 +12,9 @@
 //   - a car's paint in the color you pick, at a Fresh Coat garage (economy.js 'cpaint': paintMenu / paintPick).
 //   - the beta gift (SEASON.beta - Season 0, the public beta): every account that plays during it gets the Founding
 //     Citizen jacket (shared/lookcore.js: a gift piece - never sold, the varsity jacket's art in black and gold) and the
-//     gold Beta plate, on its first session (update).
+//     Beta plate, on its first session (update). The plate is a card plate (COSMETICS.plates card: 1): on the player's own
+//     card and Skills badges only, never over their name (the owner, 11-16: "we don't need to have the 'beta' tag on every
+//     player"); worn before that, it comes off on the next session (update).
 // Kept outside the progress-epoch reset (server/store.js resetProfile keeps prof.cosm and the wardrobe), so all of it
 // survives a season's wipe; the tokens themselves are a season's (profile.goals).
 //   - a season's: a badge for each season played (sb - noted on a session's first tick; seasons.js at a season's end)
@@ -72,13 +74,15 @@ export function hasPlate(prof, id) {
   if (P.gift) return !!C.gifts[P.gift];
   return C.pl.includes(id);
 }
+// a card plate (the beta's): yours, shown on your own card - never by your name over your head
+export const cardPlate = (id) => !!(PLATE[id] && PLATE[id].card);
 export const hasColor = (prof, id) => cosmOf(prof).c.includes(id);
 
 // what the nameplate shows: { c (name color, hex), t (plate text), g (gold plate), k (a founded crew's tag: crews.js) } or null
 export function plateOf(prof) {
   const C = cosmOf(prof), out = {};
   if (C.nc && COLOR[C.nc] && hasColor(prof, C.nc)) out.c = COLOR[C.nc].hex;
-  if (C.tp && hasPlate(prof, C.tp)) { out.t = plateText(C.tp, prof); if ((PLATE[C.tp] && PLATE[C.tp].gold) || boardPlate(C.tp) || isTopPlate(C.tp)) out.g = 1; }   // (gold: a gift's, a season board's, the top of a ladder)
+  if (C.tp && hasPlate(prof, C.tp) && !cardPlate(C.tp)) { out.t = plateText(C.tp, prof); if ((PLATE[C.tp] && PLATE[C.tp].gold) || boardPlate(C.tp) || isTopPlate(C.tp)) out.g = 1; }   // (gold: a gift's, a season board's, the top of a ladder)
   const k = prof.pid ? tagOf(prof.pid) : null;
   if (k) out.k = k;
   return out.c || out.t || out.k ? out : null;
@@ -102,9 +106,8 @@ export function grantBeta(world, p) {
   looks.ensureLook(prof);
   const jk = PIECE_IDS[COSMETICS.beta.jacket];
   if (jk && Array.isArray(prof.wardrobe) && !prof.wardrobe.includes(jk)) prof.wardrobe.push(jk);
-  if (!C.tp) C.tp = COSMETICS.beta.plate;
   store.touch();
-  if (world) world.notify(p, `Thanks for playing the beta! The ${COSMETICS.beta.jacket} is in your wardrobe and a gold Beta plate is by your name - both yours for good, through the wipe at launch.`, 'good');
+  if (world) world.notify(p, `Thanks for playing the beta! The ${COSMETICS.beta.jacket} is in your wardrobe and the Season ${COSMETICS.beta.season} badge is on your card - both yours for good, through the wipe at launch.`, 'good');
   return true;
 }
 
@@ -135,7 +138,7 @@ export function update(world) {
   const slow = world.tick % 200 === 9;
   for (const p of world.players.values()) {
     if (!p.profile || !p.ped) continue;
-    if (!p.cosmOk) { p.cosmOk = 1; grantBeta(world, p); noteSeason(p.profile); noteTops(p.profile); refresh(p); continue; }
+    if (!p.cosmOk) { p.cosmOk = 1; const C = cosmOf(p.profile); if (C.tp && cardPlate(C.tp)) { C.tp = null; store.touch(); } grantBeta(world, p); noteSeason(p.profile); noteTops(p.profile); refresh(p); continue; }
     if (slow) { noteTops(p.profile); refresh(p); }   // (a rank lost: its plate comes off)
     else if (p.npDirty) { p.npDirty = false; noteTops(p.profile); refresh(p); }   // (a crew's tag on or off: crews.js; a rank-up: careers.js)
   }
@@ -154,7 +157,7 @@ export function menu(world, p, poi) {
   const plates = [];
   for (const c of CAREER_KEYS) for (let r = COSMETICS.rankPlatesFrom; r <= TOP(c); r++) if (hasPlate(prof, `r:${c}:${r}`)) plates.push({ id: `r:${c}:${r}`, own: 1, note: `${CAREERS[c].name} rank${r === TOP(c) ? ' - the top: yours for good' : ''}` });
   for (const q of C.bp) plates.push({ id: boardPlateId(q.s, q.c), own: 1, note: `Season ${q.s}'s ${CAREERS[q.c].name} board: number ${q.i} - yours for good` });
-  for (const q of COSMETICS.plates) { const own = hasPlate(prof, q.id); if (q.gift && !own) continue; plates.push({ id: q.id, own, q }); }
+  for (const q of COSMETICS.plates) { const own = hasPlate(prof, q.id); if ((q.gift && !own) || q.card) continue; plates.push({ id: q.id, own, q }); }
   for (const x of plates) {
     const on = C.tp === x.id, q = x.q;
     opts.push({ id: `cosp:${x.id}`, label: `Title plate: ${plateText(x.id, prof)}${on ? ' (wearing)' : ''}`, ...(x.own || !q || !q.cash ? {} : { price: q.cash }), dis: on || (!x.own && q && q.tok && tokens(prof) < q.tok), note: x.own ? (on ? '' : x.note || 'yours - wear it') : priceNote(q, prof) });
@@ -184,6 +187,7 @@ export function pick(world, p, kind, id, pay) {
     else {
       const q = PLATE[id];
       if (!plateText(id, prof)) return 'No such plate.';
+      if (cardPlate(id)) return 'That one\'s for your card, not over your name.';
       if (!hasPlate(prof, id)) {
         if (rankPlate(id)) return 'Reach that rank first.';
         if (!q || q.gift) return 'That one\'s a gift - it can\'t be bought.';

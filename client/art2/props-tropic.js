@@ -45,7 +45,13 @@ export function thatchBar(on = 0.5) {
   for (let k = 0; k < 5; k++) { const sx = x0 + 14 + k * 18; m.box(sx, y1 - 6, 0, sx + 2, y1 - 4, 11, bam); m.ell(sx + 1, y1 - 5, 12, 4, 4, 1.4, plank); }   // the stools
   thatchRoof(m, th, x0, y0, x1, y1, H, 0.5, 10, 11);
   m.box(x0 + 6, y0 + d / 2 - 2, H + 18, x1 - 6, y0 + d / 2 + 2, H + 22, ridge);              // the ridge's bound bundle
-  for (let x = x0 - 6; x <= x1 + 6; x += 6) m.box(x, y1 + 6, H - 3 - ((x / 6) & 1), x + 2, y1 + 8, H - 1 - ((x / 6) & 1), bulb);   // string lights along the front eave
+  // bistro lights along the front eave: a line slung from the eave's edge over each post, with some slack, larger bulbs along it
+  const wire = m.mat({ ramp: R('#2a2622'), k: 1 }), posts = [x0 + 2, x0 + w / 2, x1 - 2];
+  for (let s = 0; s + 1 < posts.length; s++) {
+    const a = posts[s], c = posts[s + 1], L = c - a, sag = Math.round(L * 0.1), zAt = (x) => { const t = (x - a) / L; return H - 2 - sag * 4 * t * (1 - t); };
+    for (let x = a; x < c; x++) { const z = Math.round(zAt(x)); m.box(x, y1 + 6, z, x + 1, y1 + 7, z + 1, wire); }
+    for (let i = 1; i < 4; i++) { const x = Math.round(a + L * i / 4), z = Math.round(zAt(x)); m.box(x - 1, y1 + 5, z - 4, x + 2, y1 + 8, z - 1, bulb); }
+  }
   // the surfboard leant on the east end, the menu board on its easel by the west
   m.fill((x, y, z) => (Math.abs(x - (x1 + 6) - (z - 20) * 0.12) < 1.5 && Math.abs(y - (y0 + 18)) < 4 - Math.abs(z - 20) * 0.08 && z < 40 ? bot[2] : -1), x1 + 1, y0 + 12, 0, x1 + 12, y0 + 25, 41);
   m.box(x0 - 9, y1 - 2, 0, x0 - 8, y1, 22, dark); m.box(x0 - 3, y1 - 2, 0, x0 - 2, y1, 22, dark); m.box(x0 - 10, y1, 8, x0 - 1, y1 + 1, 22, m.mat({ ramp: R('#2a302c'), k: 2 }));

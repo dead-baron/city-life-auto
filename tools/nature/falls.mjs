@@ -1,0 +1,10 @@
+const R = process.env.ROOT || new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
+const { buildWorld3 } = await import(R + '/server/world3.js');
+const { TILE } = await import(R + '/shared/constants.js');
+const { map: M } = await buildWorld3(1337, { log: () => {} });
+const out = [];
+const walk = (o, path, site) => { if (!o || typeof o !== 'object') return; if (!Array.isArray(o) && typeof o.x === 'number' && typeof o.y === 'number' && (typeof o.drop === 'number' || (typeof o.d === 'number' && typeof o.w === 'number' && path.includes('segs')))) out.push({ kind: site.kind, name: site.name || '', path, x: Math.round(o.x), y: Math.round(o.y), w: o.w, drop: o.drop ?? o.d }); for (const k of Object.keys(o)) if (typeof o[k] === 'object') walk(o[k], path + '.' + k, site); };
+for (const s of M.natureSites || []) walk(s, s.kind, s);
+for (const p of M.props) if (p && (p.t === 'coastfall' || /fall/.test(p.t))) out.push({ kind: 'prop:' + p.t, name: '', path: '', x: p.x, y: p.y, w: p.w, drop: p.drop });
+const kinds = {}; for (const s of M.natureSites || []) kinds[s.kind] = (kinds[s.kind] || 0) + 1; console.log(JSON.stringify(kinds));
+for (const f of out) console.log(`${f.kind}|${f.name}|${f.path}|${Math.floor(f.x / TILE)},${Math.floor(f.y / TILE)}|w${f.w} drop${f.drop}`);

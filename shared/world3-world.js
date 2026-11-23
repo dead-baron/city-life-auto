@@ -88,6 +88,7 @@ import { openBlocks3 } from './world3-openblocks.js';   // (the big plain footpr
 import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
 import { kerbStreets3, kerbBays3 } from './world3-kerbs.js';   // (notes 2: street parking in some neighbourhoods)
 import { streetGreens3, sightlines3 } from './world3-greens.js';   // (notes 2: trees off the signs, more than palms)
+import { hangLights3 } from './world3-festoons.js';   // (the hanging lights' anchors and slack - the owner, 11-16)
 import { squareCrossings3, planStations3, stampStations3, underpassLeft } from './world3-stations.js';   // (2026-10-15: the level crossings square on, the stations' streets and car parks)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
@@ -341,6 +342,7 @@ export function worldOpts(asked) {
       if (H3 && city) m.world3.firstCars = firstCars3(m, H3);   // (and by the other three: a small used lot and a back alley each - world3-firstcars.js)
       if (city) { m.world3.towers = towers3(m); Object.defineProperty(m.world3, 'open', { value: openBlocks3(m, H3), enumerable: false }); if (H3) m.world3.towers.greens = streetGreens3(m, H3); }   // (then the big plain footprints opened up: buildings of their own with walkable alleys, lanes and courtyards between - their new buildings after the towers' parts: world3-openblocks.js)   // (the very last building: the big plain towers split into a tower, wings, podiums of shops, a back block - their new parts at the end of the list, so no other building's number moves: world3-towers.js; then the street trees kept off the slimmer towers' and the new shops' signs again - world3-greens.js)
       if (city) m.world3.sightlinesLate = sightlines3(m);   // (and again, for what came after the first pass: the park block's and the used lots' trees and boards, the split towers' new parts and their shops' street trees - nothing earlier moves again, as it hides nothing now)
+      m.world3.festoons = hangLights3(m, H3);   // (last of the lights: every run of bistro bulbs or lanterns made fast at both ends, slack, over people's heads - the owner, 11-16: shared/festoon.js)
       m.world3.lowByPlatforms = lowByPlatforms(m);
       if (city) m.world3.atmsSeated = seatAtms3(m, H3);   // (last: every ATM set into a front wall or inside, none left standing on its own - the owner, 11-14: world3-shops.js)
       m.world3.pumps = pumpProps3(m);   // (last: every filling station's pump a prop - its solid its own - at the end of the list: they go up, server props.js)   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)

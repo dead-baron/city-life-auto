@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { GLYPHS, STORE_ICON, CROSS_D, TILE_D, H_D } from '../client/storeicons.js';
 import { TRADES, ICONS, rgbOf } from '../client/art2/signfont.js';
 import { makeBuilding, buildingH } from '../client/art2/buildings.js';
@@ -42,10 +43,18 @@ test('no red cross anywhere: the clinic\'s badge a white cross on green, the hos
   // and in the code: nothing paints a cross with the red of the palettes (a coarse guard over the client's sources)
   const files = [];
   const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) walk(p); else if (f.endsWith('.js')) files.push(p); } };
-  walk(new URL('../client', import.meta.url).pathname);
+  walk(fileURLToPath(new URL('../client', import.meta.url)));
   for (const f of files) {
     const src = readFileSync(f, 'utf8');
     for (const m of src.matchAll(/\bcross\w*\s*[:=]\s*[^\n]{0,80}/g)) assert.ok(!/C\.red\b|'#ff5a4e'|'#d8342a'|\[2[0-5]\d,\s*[0-6]\d,\s*[0-6]\d\]/.test(m[0]), `${f}: ${m[0].slice(0, 90)}`);
+    // a plus painted as two bars (fillRect(x - a, y - b, 2a, 2b) then the same turned) in a red: the knocked-out map's
+    // ambulance was one (pre-beta quick wins) - a red named (danger, red, fire, hp) or a red literal
+    for (const m of src.matchAll(/fillStyle = ([^;]+);\s*\w+\.fillRect\(([^)]*)\);\s*\w+\.fillRect\(([^)]*)\)/g)) {
+      const a = m[2].split(',').map((q) => q.trim()), b = m[3].split(',').map((q) => q.trim());
+      const plus = a.length === 4 && b.length === 4 && a[2] === b[3] && a[3] === b[2] && a[2] !== a[3];
+      const red = /danger|\bred\b|fire|--pad-hp|C\.red|#(?:f|e|d|c)[0-9a-f](?:[0-5][0-9a-f]){2}\b|rgba?\(\s*2[0-5]\d,\s*[0-8]?\d,\s*[0-8]?\d/i.test(m[1]);
+      assert.ok(!(plus && red), `${f}: a red cross painted - ${m[0].slice(0, 120)}`);
+    }
   }
 });
 

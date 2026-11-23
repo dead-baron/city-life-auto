@@ -8,7 +8,7 @@
 //   devCart(world, p, msg)    msg.k: 'pair' (a cart, you at the handle, a friend in the basket), 'headon' (two loaded carts
 //                             meeting head on just ahead, setting off CART_DELAY_S after - update), 'tipped' / 'crushed'
 //                             (a cart over on its side / buckled)
-//   devFish(world, p, msg)    msg.k: 'kit' (every rod, a stack of every bait), 'go' (msg.w a water, msg.spot a legendary's
+//   devFish(world, p, msg)    msg.k: 'kit' (every rod, a stack of every bait), 'log' (half the kinds in your Fish log), 'go' (msg.w a water, msg.spot a legendary's
 //                             place: the nearest bank of it, facing it), 'cave' (the cave's still pool), 'boat' (out at sea in
 //                             a boat sitting still), 'bite' (msg.f: 'now' - the next bite at once; 'rare', 'legend' or a
 //                             fish's id - the next fish), 'easy' (toggle: every fight a bluegill's), 'cooler' (ten fish in
@@ -238,7 +238,7 @@ const WATER_LABEL = { lily: 'a park\'s lily pond (the Golden Koi)', drop: 'a lak
 export function devFish(world, p, msg) {
   const ped = p.ped, prof = p.profile, k = String(msg.k || 'kit');
   if (!ped) return '[dev] No character.';
-  const kit = () => { if (prof.weapons.rod === undefined) prof.weapons.rod = 0; for (const id of FS.ROD_IDS) if (id !== 'rod') prof.inventory[id] = Math.max(1, prof.inventory[id] || 0); p.meDirty = true; };
+  const kit = () => { if (prof.weapons.rod === undefined) prof.weapons.rod = 0; for (const id of FS.ROD_IDS) if (id !== 'rod') prof.inventory[id] = Math.max(1, prof.inventory[id] || 0); if (ped && !ped.dead) ped.weapon = 'rod'; p.meDirty = true; };   // (the rod in hand: you fish with it out)
   switch (k) {
     case 'kit': {
       kit();
@@ -307,6 +307,13 @@ export function devFish(world, p, msg) {
       for (let i = 0; i < 10 && creel.length < 30; i++) { const f = pool[Math.floor(world.rand() * pool.length)]; creel.push([f.id, FS.weighFish(f, world.rand)]); }
       p.meDirty = true; store.touch();
       world.notify(p, `[dev] Fish in your cooler (${creel.length}): sell them at a fish market or a bait shop.`, 'info');
+      return null;
+    }
+    case 'log': {   // (the phone's Fish log with something in it: half the kinds caught, a few each, their bests)
+      const log = (prof.fishLog ||= {});
+      FS.FISH.forEach((f, i) => { if (i % 2 === 0 || (f.rare === 5 && i % 4 === 1)) log[f.id] = [1 + Math.floor(world.rand() * 4), FS.weighFish(f, world.rand)]; });
+      p.meDirty = true; store.touch();
+      world.notify(p, `[dev] Your fish log: ${Object.keys(log).length} of ${FS.FISH.length} kinds (the phone's Fish log).`, 'info');
       return null;
     }
     case 'clear': prof.fishLog = {}; prof.creel = []; p.meDirty = true; store.touch(); world.notify(p, '[dev] Your fishing log and your cooler, emptied.', 'info'); return null;

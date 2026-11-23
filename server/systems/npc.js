@@ -9,7 +9,7 @@ import { isTurf, PED_BLOCK, isSwimming, nearestLand } from '../../shared/map.js'
 import { mulberry32 } from '../../shared/rng.js';
 import { arenaAt } from '../../shared/carsoccer.js';
 import { circleVsObb } from '../../shared/math.js';
-import { ARCHETYPES, makeAppearance, BUILDS, rollBuild } from '../entities.js';
+import { ARCHETYPES, makeAppearance, BUILDS, rollBuild, SKINS, HAIR as HAIR_COLS } from '../entities.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
 import * as law from './law.js';
@@ -55,6 +55,21 @@ const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const CRAWL_SPEED = 0.17; // dragging themselves along on the stomach: this fraction of walking pace
 let rng = mulberry32(99);
 
+const TWIN_PX = 260;
+// two of a uniform look alike when their skins are a step apart or less and their hair the same colour (under a cap the
+// skin is most of what tells them apart)
+const twins = (a, b) => a.t === b.t && a.tc === b.tc && Math.abs((a.s | 0) - (b.s | 0)) <= 1 && a.hc === b.hc;
+export function unTwin(world, app, archetype, x, y) {
+  if (!world.query) return app;
+  const near = [];
+  for (const e of world.query(x, y, TWIN_PX, K.PED)) if (e.archetype === archetype && e.app && !e.app.lk && e.app !== app) near.push(e.app);
+  for (let k = 0; k < SKINS.length && near.some((o) => twins(o, app)); k++) {   // (two skins on, another hair colour and cut, until it's nobody's here)
+    app.s = (app.s + 2) % SKINS.length;
+    app.h = (app.h + 1) % 6;
+    app.hc = HAIR_COLS[(Math.max(0, HAIR_COLS.indexOf(app.hc)) + 3) % HAIR_COLS.length];
+  }
+  return app;
+}
 export function spawnNpc(world, archetype, x, y, role = 'civ') {
   const a = ARCHETYPES[archetype] || ARCHETYPES.casual;
   // dressed from the wardrobe (npclooks.js: a look for this kind of person in this district, its code on the wire); the
@@ -63,6 +78,10 @@ export function spawnNpc(world, archetype, x, y, role = 'civ') {
   const bi = dressed ? dressed.bi : rollBuild(rng, archetype);
   const b = BUILDS[bi];
   const app = dressed ? dressed.app : makeAppearance(rng, archetype);
+  // (a uniform's people - an ambulance's two medics, a SWAT team, a rescue crew - all wear the same thing: the owner, 11-22,
+  // "two identical NPCs next to each other outside the hospital". Nobody in one near you shares a face: another skin,
+  // hair and build than the same uniform beside them)
+  if (!dressed) unTwin(world, app, archetype, x, y);
   app.bd = bi;
   const hp = Math.round(a.hp * b.hp * (0.9 + rng() * 0.2));
   const ped = world.spawnPed(x, y, { hp, app, archetype, a: rng() * Math.PI * 2 });
@@ -143,13 +162,69 @@ export function sidestep(world, ped, inp, dt) {
 const DOOR_ALIGN = 10;   // px off the door's middle that still goes through square (a body is wider than a ray)
 export function footWay(world, e, x, y) {
   const m = world.map;
-  if (m.los(e.x, e.y, x, y)) return { x, y };
-  const from = walkInAt(m, e.x, e.y), to = walkInAt(m, x, y);
+  const from = walkInAt(m, e.x, e.y);
+  // (inside a walk-in a counter blocks people but not sight - the los below would send them straight into it: the
+  // owner, 11-15, "cops couldn't get around the counter to catch me": roomWay walks them round it)
+  if (m.los(e.x, e.y, x, y)) return (from && roomWay(m, e, x, y)) || { x, y };
+  const to = walkInAt(m, x, y);
+  let w = { x, y };
   // out: square up to the door on the inside, then straight out
-  if (from && (!to || to.u !== from.u)) return { x: from.x, y: Math.abs(e.x - from.x) < DOOR_ALIGN ? from.outY : from.inY };
+  if (from && (!to || to.u !== from.u)) w = { x: from.x, y: Math.abs(e.x - from.x) < DOOR_ALIGN ? from.outY : from.inY };
   // in: square up to the door on the outside, then straight in
-  if (to && (!from || from.u !== to.u)) return { x: to.x, y: Math.abs(e.x - to.x) < DOOR_ALIGN && Math.abs(e.y - to.outY) < DOOR_OFF ? to.inY : to.outY };
-  return { x, y };
+  else if (to && (!from || from.u !== to.u)) return { x: to.x, y: Math.abs(e.x - to.x) < DOOR_ALIGN && Math.abs(e.y - to.outY) < DOOR_OFF ? to.inY : to.outY };
+  return (from && roomWay(m, e, w.x, w.y)) || w;
+}
+// Inside a walk-in, the way to (x, y) round what stands in it - the counter, a solid piece of furniture: null when the
+// straight walk is clear, else the furthest point along the shortest way over the room's tiles (a breadth-first search
+// over its floor, the doorway row included) that can be walked to in a straight line. Nothing found: null (straight on).
+const ROOM_BODY = 7;   // px either side of the line a body needs clear
+const ROOM_AHEAD = 8;  // tiles along the way looked at for the furthest one in a straight line
+function roomBlocked(m, tx, ty) {
+  if (PED_BLOCK[m.tileAt(tx, ty)]) return true;
+  const sp = m.solidProps && m.solidProps.size ? m.solidProps.get(m.idx(tx, ty)) : null;
+  return !!(sp && sp.some((q) => q.r >= TILE * 0.3 && Math.floor(q.x / TILE) === tx && Math.floor(q.y / TILE) === ty));   // (a solid piece standing on the tile, not a small one at its edge)
+}
+export function clearWalk(m, x1, y1, x2, y2) {
+  const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.ceil(d / 6));
+  const nx = d ? (-(y2 - y1) / d) * ROOM_BODY : 0, ny = d ? ((x2 - x1) / d) * ROOM_BODY : 0;
+  for (let i = 1; i <= n; i++) {
+    const t = i / n, px = x1 + (x2 - x1) * t, py = y1 + (y2 - y1) * t;
+    for (const s of [-1, 0, 1]) if (PED_BLOCK[m.tileAtPx(px + nx * s, py + ny * s)]) return false;
+  }
+  return true;
+}
+export function roomWay(m, e, x, y) {
+  if (clearWalk(m, e.x, e.y, x, y)) return null;
+  const tx = Math.floor(e.x / TILE), ty = Math.floor(e.y / TILE);
+  const b = m.bld ? m.buildings[m.bld[m.idx(tx, ty)]] : null, wi = b && b.walkIn;
+  if (!wi) return null;
+  const X0 = wi.x0, X1 = wi.x1, Y0 = wi.y0 - 1, Y1 = wi.y1 + 1, W = X1 - X0 + 1, H = Y1 - Y0 + 1;
+  const cl = (v, a, c) => Math.max(a, Math.min(c, v));
+  const gx = cl(Math.floor(x / TILE), X0, X1), gy = cl(Math.floor(y / TILE), Y0, Y1), sx = cl(tx, X0, X1), sy = cl(ty, Y0, Y1);
+  const at = (i) => [X0 + (i % W), Y0 + Math.floor(i / W)];
+  const prev = new Int32Array(W * H).fill(-1), start = (sy - Y0) * W + (sx - X0), goal = (gy - Y0) * W + (gx - X0);
+  const q = [start];
+  prev[start] = start;
+  for (let h = 0; h < q.length && prev[goal] < 0; h++) {
+    const [cx, cy] = at(q[h]);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = cx + dx, ny = cy + dy;
+      if (nx < X0 || nx > X1 || ny < Y0 || ny > Y1) continue;
+      const j = (ny - Y0) * W + (nx - X0);
+      if (prev[j] >= 0 || (j !== goal && roomBlocked(m, nx, ny))) continue;
+      prev[j] = q[h]; q.push(j);
+    }
+  }
+  if (prev[goal] < 0) return null;
+  const path = [];
+  for (let j = goal; j !== start; j = prev[j]) path.push(j);
+  path.reverse();
+  if (!path.length) return null;
+  let pick = path[0];
+  for (let k = 1; k < Math.min(path.length, ROOM_AHEAD); k++) { const [cx, cy] = at(path[k]); if (clearWalk(m, e.x, e.y, (cx + 0.5) * TILE, (cy + 0.5) * TILE)) pick = path[k]; else break; }
+  if (pick === goal && clearWalk(m, e.x, e.y, x, y)) return { x, y };
+  const [px, py] = at(pick);
+  return { x: (px + 0.5) * TILE, y: (py + 0.5) * TILE };
 }
 
 function walkMods(world, ped, factor) {

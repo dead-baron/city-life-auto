@@ -79,6 +79,8 @@ Caddy already proxies everything on `play.deadbaron.com` to the server, includin
 | `CLA_PUBLIC_URL` | The server's public address. The OAuth redirect URIs and the emails' links point here. | `https://play.deadbaron.com` |
 | `CLA_PAGE_ORIGINS` | The pages that may sign in (comma-separated origins). | `https://deadbaron.com,https://www.deadbaron.com,https://dead-baron.github.io` |
 | `CLA_DEV_OPEN` | `1`: anyone can open Dev Debug Mode (testing). `0`: **launch**, only admins and the owner. | `1` |
+| `CLA_MAX_PLAYERS` | Players in the city at once. Past it a newcomer waits in line on the title ("The city's full - you're #3 in line", Cancel) and goes in when a place opens, first come first served. Staff (helper and up) never wait; nor does a player who dropped out less than 2 minutes ago, or who was on when the server restarted. `/stats` and the console's Server tab show the line (`line`: waiting now, average and longest wait). | `100` |
+| `CLA_LINE_MAX` | How many may wait in that line; past it, "try again in a few minutes". | `200` |
 | `CLA_OWNER_ID` | The owner's account id (Settings → Account shows it). If unset, see "The owner's account". | unset |
 | `CLA_REQUIRE_AGE` | `1`: the server refuses a page that hasn't confirmed the 17+ gate. | `0` |
 | `CLA_GUESTS_PER_HOUR` | New guest characters an hour from one address (0 = no limit). Schools and phone networks share one address between many players, so set it high if at all (200+). | `0` |

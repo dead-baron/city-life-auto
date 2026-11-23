@@ -122,6 +122,7 @@ function stepFires(world, st) {
         if (Math.hypot(nx - f.ox, ny - f.oy) <= G.maxR) light(world, nx, ny, 0, f.call, f);
       }
     } else {
+      if (!(world.fireCalls && world.fireCalls.has(f.call))) { putOut(world, f, false); continue; }   // (a spot fire is its call's: no call, no fire - outWith)
       f.h = Math.min(f.h0 * S.max, f.h + S.grow * f.h0 * st);   // (left alone it grows)
       if (f.h >= f.h0 * S.spreadAt && world.rand() < 0.3 * st) {
         const a = world.rand() * Math.PI * 2;
@@ -314,8 +315,17 @@ export function callAt(world, p, k, site) {
   p.meDirty = true;
   return c;
 }
+// A call over, whoever answered it or not: its dumpster or kitchen fire goes out with it (a spot fire never burns out by
+// itself - left from a call timed out or a shift given up, one burned on for good on a shop's floor in front of its
+// counter, lighting whoever crossed it: the owner's 11-15 "caught on fire" in a corner store). A grass fire burns out.
+function outWith(world, c) {
+  const F = world.tfire;
+  if (!F) return;
+  for (const f of [...F.on.values()]) if (f.call === c.id && f.k !== 0) putOut(world, f, false);
+}
 function letGo(world, c) {   // the call's car and the one alight: no longer the call's
   if (world.fireCalls) world.fireCalls.delete(c.id);
+  outWith(world, c);
   if (c.victim) { const q = world.get(c.victim); if (q && !q.removed && q.npc) { if (!c.lit) despawnNpc(world, q); else { q.npc.sar = 0; q.npc.keep = false; q.npc.state = 'wander'; } } }
   if (c.veh) { const v = world.get(c.veh); if (v && !v.removed) { v.despawnable = true; v.fireCall = 0; } }
 }
@@ -324,6 +334,7 @@ function endCall(world, p, ok, msg) {
   if (!c) return;
   const now = world.time;
   if (world.fireCalls) world.fireCalls.delete(c.id);
+  outWith(world, c);
   if (c.victim) {
     const q = world.get(c.victim);
     if (q && !q.removed) { if (q.npc) { q.npc.sar = 0; q.npc.keep = false; q.npc.state = 'wander'; } if (!q.dead && burning.burning(q)) { /* (still burning: their own now) */ } }

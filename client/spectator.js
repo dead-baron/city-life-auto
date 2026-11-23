@@ -190,7 +190,7 @@ export function createSpectator({ map, players, mobile }) {
     }
     // tile coordinates along the edges, so a drawing can be matched back to the map
     const lab = step * 10;
-    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '600 12px "Barlow Condensed", sans-serif'; g.textBaseline = 'top'; g.textAlign = 'left';
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '600 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textBaseline = 'top'; g.textAlign = 'left';
     for (let tx = Math.ceil(view.x0 / TILE / lab) * lab; tx * TILE < view.x1; tx += lab) g.fillText(String(tx), Math.round(ox + tx * TILE * z) + 3, 3);
     for (let ty = Math.ceil(view.y0 / TILE / lab) * lab; ty * TILE < view.y1; ty += lab) g.fillText(String(ty), 3, Math.round(oy + ty * TILE * z) + 3);
     g.restore();
@@ -219,7 +219,7 @@ export function createSpectator({ map, players, mobile }) {
         }
       }
       const fs = Math.max(9, Math.min(16, 40 * z));
-      g.font = `600 ${fs}px "Barlow Condensed", sans-serif`;
+      g.font = `600 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
       for (const s of streets) {
         if (s.x < view.x0 || s.x > view.x1 || s.y < view.y0 || s.y > view.y1) continue;
         g.save(); g.translate(ox + s.x * z, oy + s.y * z); g.rotate(s.a);
@@ -229,7 +229,7 @@ export function createSpectator({ map, players, mobile }) {
     }
     // business names on their buildings when close enough to read
     if (z >= 0.3) {
-      g.font = '600 12px "Barlow Condensed", sans-serif';
+      g.font = '600 12px "CLA Pixel", "Barlow Condensed", sans-serif';
       for (const b of map.buildings) {
         if (!b || !b.business || b.gone) continue;
         const x = (b.tx + b.tw / 2) * TILE, y = (b.ty + b.th / 2) * TILE;
@@ -250,7 +250,7 @@ export function createSpectator({ map, players, mobile }) {
   function drawPlayers(g, z, ox, oy) {
     const list = players() || [];
     g.save();
-    g.font = '700 12px "Barlow Condensed", sans-serif'; g.textAlign = 'center';
+    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center';
     for (const q of list) {
       if (q.x === undefined) continue;
       const x = ox + q.x * z, y = oy + q.y * z;

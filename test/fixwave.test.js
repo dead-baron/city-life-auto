@@ -92,7 +92,34 @@ test('one name on a front: a hand plan\'s sign drops the trade\'s plaque that sa
   assert.ok(!sameName('EMERGENCY', 'OLD TOWN INFIRMARY'));
   assert.ok(!sameName('BAR', 'BARBER SHOP'));
   const src = readFileSync(ROOT + 'client/art2/game/statics.js', 'utf8');
-  assert.ok(/spec\.plaques = spec\.plaques\.filter\(\(pq\) => !sameName\(pq\.text, spec\.shop\.sign\.text\)\)/.test(src));
+  assert.ok(/\n  oneName\(spec\);/.test(src), 'every front through oneName');
+});
+
+test('one name on a front, every board (the owner, 11-15: Canvas Savings Bank - CANVAS SAVINGS in the portico and a CANVAS SAVINGS BANK board under it)', async () => {
+  const { oneName, frontNames } = await import('../client/art2/game/statics.js');
+  const texts = (sp) => frontNames(sp).map((q) => `${q.k}:${q.t}`);
+  // the bank: the hand plan's portico lettering keeps the name, the archetype's plaque goes
+  assert.deepEqual(texts(oneName({ w: 360, portico: { x: 40, w: 280, cols: 6, text: 'CANVAS SAVINGS' }, plaques: [{ text: 'CANVAS SAVINGS BANK', x: 6, v: 70 }] })), ['portico:CANVAS SAVINGS']);
+  // a portico too narrow for its words draws none: the plaque stays the name
+  assert.deepEqual(texts(oneName({ w: 200, portico: { x: 40, w: 60, cols: 4, text: 'CANVAS SAVINGS' }, plaques: [{ text: 'CANVAS SAVINGS BANK', x: 6, v: 70 }] })), ['plaque:CANVAS SAVINGS BANK']);
+  // BANK in the stone over the FIRST PIXEL BANK board (the owner, 11-15: "it is also the duplicate"): a word of the name
+  // is the name again - the board keeps it, the portico its columns
+  assert.deepEqual(texts(oneName({ w: 300, portico: { x: 70, w: 140, cols: 4, text: 'BANK' }, plaques: [{ text: 'FIRST PIXEL BANK', x: 6, v: 70 }] })), ['plaque:FIRST PIXEL BANK']);
+  assert.deepEqual(texts(oneName({ w: 300, portico: { x: 70, w: 140, cols: 4, text: 'COURTHOUSE' }, plaques: [{ text: 'EMERGENCY', x: 6, v: 70 }] })), ['portico:COURTHOUSE', 'plaque:EMERGENCY'], 'another word stays');
+  // a portico running off its front's edge: no letters (they'd be cut)
+  assert.deepEqual(texts(oneName({ w: 300, portico: { x: 200, w: 160, cols: 4, text: 'MUSEUM' } })), []);
+  // the shop's sign first; a plaque, a neon name, a second plaque saying it again go; EMERGENCY stays
+  const sp = oneName({ w: 300, shop: { sign: { text: 'Old Town Infirmary' } }, plaques: [{ text: 'OLD TOWN INFIRMARY', cx: 150, v: 66 }, { text: 'EMERGENCY', cx: 150, v: 58 }, { text: 'TOPAZ', face: 'neon', v: 72 }, { text: 'TOPAZ', v: 90 }] });
+  assert.deepEqual(texts(sp), ['sign:Old Town Infirmary', 'plaque:EMERGENCY', 'plaque:TOPAZ']);
+  // a portico that says the shop sign's name loses its lettering, not its columns
+  const pc = oneName({ w: 360, shop: { sign: { text: 'MUSEUM' } }, portico: { x: 40, w: 280, cols: 6, text: 'MUSEUM' } });
+  assert.ok(pc.portico && !pc.portico.text, 'the columns stay, the words go');
+  // a long front drawn in sections, each given the building's sign (FreshHub Grocery three times): the middle one keeps it
+  const { oneNameAcross } = await import('../client/art2/game/statics.js');
+  const sec = (tx, mid, text) => ({ s: { tx, ty: 10, th: 8, mid }, spec: { w: 224, shop: { kind: 'grocery', sign: { text } } }, lights: [[0, 0, 0, 0, [1, 1, 1], 1, 'sign']] });
+  const L = oneNameAcross([sec(0, false, 'FRESHHUB GROCERY'), sec(7, true, 'FRESHHUB GROCERY'), sec(14, false, 'FreshHub Grocery'), sec(21, false, 'CORNER DELI')]);
+  assert.deepEqual(L.map((e) => e.spec.shop.sign ? e.spec.shop.sign.text : null), [null, 'FRESHHUB GROCERY', null, 'CORNER DELI'], 'one FRESHHUB GROCERY, on the middle section; another business keeps its own');
+  assert.equal(L[0].lights.length, 0, 'the dropped sign\'s glow goes with it');
 });
 
 test('a player\'s name tag rides on the vehicle they\'re in - an aircraft drawn up by its height carries it up there', () => {
@@ -131,4 +158,17 @@ test('the cinematic Showcase: 25-40 hand-crafted places, each with a camera spot
   const dir = readFileSync(ROOT + 'client/director.js', 'utf8');
   assert.ok(dir.includes("from './showcase.js'") && dir.includes("import('./devtp.js')"));
   assert.ok(dir.includes('function showcaseGo('), 'the Showcase\'s places can be gone to from the panel (the shot list replaced the old "Showcase only" tour)');
+});
+
+test('a sign\'s words whole on its front (the owner, 11-15: First Pixel Bank\'s portico read BAN, then ANK): the stone over a lit window, the boards over a cross or a cup, a plaque lifted clear of the shop\'s sign', async () => {
+  const { textAudit } = await import('../tools/textaudit.mjs');
+  for (let seed = 1; seed <= 8; seed++) {
+    const bank = { w: 512, d: 160, floors: 3, style: 'stone', parapet: 8, seed, night: 1, portico: { x: 176, w: 160, cols: 4, text: 'BANK' }, windows: [40, 80, 420] };
+    assert.deepEqual(textAudit(bank), [], `no glow through the portico's letters (seed ${seed})`);
+  }
+  for (const v of [40, 58, 66]) {
+    const clinic = { w: 300, d: 120, floors: 3, style: 'concrete', parapet: 6, seed: 4, night: 1, cross: { x: 14, v: 80, s: 22, k: 'clinic' }, shop: { kind: 'lobby', sign: { text: 'OLD TOWN INFIRMARY' } }, plaques: [{ text: 'EMERGENCY', cx: 150, v, bg: '#c8343a', fg: [250, 246, 240], lit: true, face: 'civic' }] };
+    assert.deepEqual(textAudit(clinic), [], `the name and EMERGENCY both whole (EMERGENCY at ${v})`);
+  }
+  assert.equal(textAudit({ w: 300, d: 120, floors: 3, style: 'stone', parapet: 8, seed: 2, night: 1, portico: { x: 200, w: 160, cols: 4, text: 'BANK' } })[0].why, 'off the edge of its front', 'and the check sees a cut one');
 });

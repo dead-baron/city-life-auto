@@ -37,7 +37,7 @@ export const TOUCH = {
 };
 // (UI-3, the hub: the HUD's row is MENU · PHONE · MAP and a tap of ITEMS opens the Inventory, held the quick wheel - set here
 // rather than in the lines above, which the touch controls' own work keeps)
-Object.assign(TOUCH, { use: 'HOLD ITEMS', bag: 'ITEMS', phone: 'PHONE', pause: 'MENU', dance: 'PHONE · DANCE', aim: 'AIM STICK' });   // (the aim stick: back, by the owner's call)
+Object.assign(TOUCH, { use: 'HOLD BAG', bag: 'BAG', phone: 'PHONE', pause: 'MENU', dance: 'PHONE · DANCE', aim: 'AIM STICK' });   // (the aim stick: back, by the owner's call)
 // (Direction A, 11-12: the vehicle button is a symbol - an arrow into a door, out of it aboard - named by how you mount
 // what's there: GET IN a car, GET ON a bike or a horse; EXIT / OFF aboard - shared/touchcontrols.js mountOf)
 TOUCH.vehicle = 'GET IN / ON';

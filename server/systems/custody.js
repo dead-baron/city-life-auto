@@ -52,6 +52,7 @@ import * as prison from './prison.js';
 import { seek, footWay, walkInAt, sidestep, spawnNpc } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
+import { poisKind } from '../pois.js';
 
 const PICKUP_PX = 200;   // a car this close to the prisoner is walked to (further off, it drives over first)
 const DROP_PX = 170;     // at the station: this close to the kerb outside the front door
@@ -65,7 +66,7 @@ const floored = (world, e) => world.time < e.downUntil || world.time < e.stunUnt
 const wrecked = (v) => !v || v.removed || v.wreckAt || v.dead || v.sinkAt;
 
 // ---- the stations ---------------------------------------------------------------------------------------------------------
-const stations = (world) => world.map.pois.filter((q) => q.kind === 'police');
+const stations = (world) => poisKind(world.map, 'police');
 export function nearestStation(world, x, y) {
   let best = null, bd = Infinity;
   for (const st of stations(world)) { const d = Math.hypot(st.x - x, st.y - y); if (d < bd) { bd = d; best = st; } }
@@ -394,7 +395,7 @@ function seat(world, p, v, esc) {
   const st = reachableStation(world, v.x, v.y);
   Object.assign(c, { stage: 'ride', since: now, until: now + RIDE_MAX_S, holder: 0, station: st ? st.id : -1, blastSeen: v.blastAt || 0, hitSeen: v.hardHitAt || 0, best: undefined, brk: false, tries: 0, tryAt: now + BREAK_RETRY_S });
   if (!st) { fadeIn(world, p, 'There\'s no road to a police station from here - you\'re taken to the nearest cells.'); return; }
-  world.notify(p, `In the back of the police car - on the way to ${st.label}.`, 'bad');
+  world.notify(p, `In the back of the police car to ${st.label} - when it slows, press E to make a break for it.`, 'bad');   // (the one line, fading: no bar over the screen - client/hud.js)
   p.meDirty = true;
 }
 // The ride can't be finished (no station on these roads, stuck for good, off the road network, the sea ahead): the screen
@@ -448,6 +449,7 @@ function rideStep(world, p) {
   // stuck, or going round in circles: it backs up and plans again (runCar), after a while they can make a break for it,
   // and in the end the screen fades and they're booked (the owner, 11-07: "they always get stuck somewhere ... and then
   // after a while I end up in prison" - never stuck for ever in the back of a police car)
+  slowWatch(world, c, v);   // (the car crawling: the chance to kick the door open, held a moment - carTry)
   const stuck = progress(c, d, now);
   if (stuck > CUSTODY_SKIP_S) { fadeIn(world, p, 'The police car is going nowhere - you\'re taken in.'); return; }
   if (stuck > CUSTODY_STUCK_S) offerBreak(world, p);
@@ -473,10 +475,17 @@ const loose = (c) => c.stage === 'held' || c.stage === 'fetch' || c.stage === 'e
 const starsOf = (c) => Math.max(1, Math.min(5, c.stars | 0));
 // in the back of an NPC unit's car while it crawls or stands (at the lights, in a jam; round a corner at 1-2 stars): a
 // kick at the door (BREAK_CAR). slowOK false: the car's speed aside (breakable: the action button's there all the ride)
+// The chance stays open BREAK_CAR.windowS after the car was last that slow (slowWatch, every tick of the ride): a
+// slow-down lasts a moment, and a thumb on a phone - the press a round trip to the server - came after it had gone (the
+// owner, 11-15: "trying to run when the car slows down doesn't ever seem to work")
 function carTry(world, p, slowOK = true) {
   const c = p.custody, v = live(world, c.car);
-  return c.stage === 'ride' && !c.driver && !!v && p.ped.vehId === v.id && (!slowOK || Math.hypot(v.vx, v.vy) < BREAK_CAR.speed[starsOf(c)])
+  return c.stage === 'ride' && !c.driver && !!v && p.ped.vehId === v.id && (!slowOK || slowNow(world, c, v))
     && police.crewOf(world, v).every((q) => q.vehId === v.id);   // (the crew all aboard: off on the way, not still climbing in)
+}
+const slowNow = (world, c, v) => Math.hypot(v.vx, v.vy) < BREAK_CAR.speed[starsOf(c)] || world.time < (c.slowTill || 0);
+function slowWatch(world, c, v) {
+  if (Math.hypot(v.vx, v.vy) < BREAK_CAR.speed[starsOf(c)] && police.crewOf(world, v).every((q) => q.vehId === v.id)) c.slowTill = world.time + BREAK_CAR.windowS;
 }
 function canTry(world, p) {
   const c = p.custody, h = live(world, c.holder);

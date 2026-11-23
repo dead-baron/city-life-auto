@@ -232,14 +232,17 @@ test('the beta gift: the Founding Citizen jacket and the gold Beta plate, once, 
   assert.ok(prof.wardrobe.includes(jk), 'in the wardrobe');
   assert.equal(W.free(jk), false, 'a gift: nobody else owns it');
   assert.equal(W.sellerOf(jk), null, 'never sold');
-  assert.deepEqual(cosmetics.plateOf(prof), { t: 'Beta', g: 1 }, 'the gold Beta plate, worn');
+  assert.equal(cosmetics.plateOf(prof), null, 'the Beta plate stays on the card: nothing by the name (the owner, 11-16)');
+  assert.equal(cosmetics.hasPlate(prof, 'beta'), true, 'but it is theirs');
+  cosmetics.cosmOf(prof).tp = 'beta';   // (worn from before 11-16: still never over the name)
+  assert.equal(cosmetics.plateOf(prof), null);
   assert.equal(cosmetics.grantBeta(w, p), false, 'once');
   prof.epoch = PROGRESS_EPOCH - 1;
   resetProfile(prof);
   assert.equal(prof.epoch, PROGRESS_EPOCH);
   assert.ok(prof.wardrobe.includes(jk), 'the jacket survives the wipe');
   assert.ok(prof.cosm.gifts.beta, 'the gift is on the account');
-  assert.deepEqual(cosmetics.plateOf(prof), { t: 'Beta', g: 1 });
+  assert.equal(cosmetics.plateOf(prof), null);
   assert.equal(cosmetics.grantBeta(w, { profile: prof }), false, 'not given twice');
   void store;
 });

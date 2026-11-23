@@ -13,6 +13,7 @@ import { SONGS } from '../shared/music-songs.js';
 import {
   TRACKS, TRACK, STATIONS, TAPES, RECORD_STORE, INSTRUMENTS, BEAT_TRACK, stationAt, tapePos, trackSecs, chart, judge, tally, newTally, accuracy,
   crowdSize, mood, jamNotes, freestyleRating, jamRating, tapeId, KINDS,
+  takesOf, scoreSecs, takeOf, tapeAt, takeById, stationLoopSecs, TAKE_PRIMARY,
 } from '../shared/music.js';
 import { RHYTHM, CROWD, MUSIC_GEAR, MUSIC_PRICES } from '../shared/rules-music.js';
 import { MUSIC_KEYS } from '../shared/controls.js';
@@ -49,8 +50,11 @@ const clearPeds = (w) => { for (const e of [...w.entities.values()]) if (e.kind 
 
 test('the track list, the songbook and the stations agree; every station plays the same song for everyone at a moment', () => {
   for (const t of TRACKS) {
-    assert.ok(SONGS[t.id], `${t.id}: in shared/music-songs.js`);
-    assert.ok(existsSync(new URL(`../client/sound/songbook/${t.id}.json`, import.meta.url)), `${t.id}: its score for the synth`);
+    // (a place's own song with the owner's recording and no tape - cues 21-25, 11-22 - needs no score: nothing plays it on the synth)
+    if (!(takesOf(t.id) && !t.tape)) {
+      assert.ok(SONGS[t.id], `${t.id}: in shared/music-songs.js`);
+      assert.ok(existsSync(new URL(`../client/sound/songbook/${t.id}.json`, import.meta.url)), `${t.id}: its score for the synth`);
+    }
     assert.ok('file' in t && 'secs' in t, `${t.id}: room for the owner's own recording`);
     if (t.tape) assert.ok(ITEMS[tapeId(t.id)] && ITEMS[tapeId(t.id)].music === 'tape', `${t.id}: a tape`);
   }
@@ -68,8 +72,14 @@ test('the track list, the songbook and the stations agree; every station plays t
     const S = STATIONS[i];
     assert.ok(S.tracks.length >= 2 && S.tracks.every((id) => TRACK[id]), S.name);
     const heard = new Set();
-    const total = S.tracks.reduce((a, id) => a + trackSecs(id), 0);
-    for (let t = 0; t < total; t += 7) { const a = stationAt(i, t); heard.add(a.track); assert.ok(a.pos >= 0 && a.pos < trackSecs(a.track)); const b2 = stationAt(i, t + total); assert.ok(b2.track === a.track && Math.abs(b2.pos - a.pos) < 1e-6, 'round and round'); }
+    // (each take its own length: a station comes round to the same take of the same song after its run - stationLoopSecs)
+    const total = stationLoopSecs(i);
+    for (let t = 0; t < total; t += 7) {
+      const a = stationAt(i, t); heard.add(a.track);
+      const len = a.take ? takeById(a.track, a.take)[1] : trackSecs(a.track);
+      assert.ok(a.pos >= 0 && a.pos < len + 1e-9, `${S.name} at ${t}: inside its take`);
+      const b2 = stationAt(i, t + total); assert.ok(b2.track === a.track && b2.take === a.take && Math.abs(b2.pos - a.pos) < 1e-6, 'round and round');
+    }
     assert.equal(heard.size, S.tracks.length, `${S.name}: plays all its songs`);
   }
   assert.notEqual(stationAt(0, 100).track + stationAt(0, 100).pos, stationAt(1, 100).track + stationAt(1, 100).pos);
@@ -88,7 +98,7 @@ test('the rhythm game: a chart from the song\'s beats (the same from the same se
   for (const n of a) { const half = n.t / (beat / 2); assert.ok(Math.abs(half - Math.round(half)) < 0.02, 'on the beat or the half'); assert.ok(n.lane >= 0 && n.lane < 4); }
   assert.ok(a[0].t >= beat * 4 - 2e-3, 'a bar to count in');
   assert.ok(a.filter((n) => n.t > RHYTHM.setS * 2 / 3).length > a.filter((n) => n.t < RHYTHM.setS / 3).length, 'busier as it goes');
-  assert.ok(chart('club', 5).at(-1).t > trackSecs('club'), 'a short loop goes round for the whole set');
+  assert.ok(chart('club', 5).at(-1).t > scoreSecs('club'), 'a short loop goes round for the whole set');
   const fast = chart('kickflip', 3);
   for (let k = 1; k < fast.length; k++) assert.ok(fast[k].t - fast[k - 1].t >= 0.22 - 2e-3, 'a fast song on its half-time');
   assert.deepEqual([0, 49, -60, 99, 120, -150, 151, 400].map(judge), [0, 0, 1, 1, 2, 2, 3, 3]);
@@ -414,7 +424,7 @@ test('an instrument from the Inventory: held and played in the city for everyone
   for (let i = 0; i < 8; i++) assert.equal(padAt(PAD_ROW.x0 + i * PAD_ROW.w + PAD_ROW.w / 2, PAD_ROW.y0 + PAD_ROW.h / 2), i);
   assert.equal(padAt(200, 4), -1, 'the strip\'s head is CHORD and GIG, not a pad');
   const bag = readFileSync(new URL('../client/bag.js', import.meta.url), 'utf8'), main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
-  assert.match(bag, /if \(ITEMS\[t\.id\] && ITEMS\[t\.id\]\.music === 'inst'\) \{ close\(\); return; \}/, 'PLAY puts the Inventory away');
+  assert.match(bag, /if \(leavesBag\(t\.id\)\) \{ sel = null; armDrop = ''; \(leave \|\| close\)\(\); return; \}/, 'PLAY puts the Inventory away');
   assert.match(main, /if \(\(m\.game === 'jam' \|\| m\.game === 'rhythm'\) && inHub\(\)\) closeHub\(\);/, 'and the music game never opens over it');
 });
 
@@ -439,4 +449,35 @@ test('playing an instrument puts what you held away (both hands on it - the city
   assert.equal(p.ped.weapon, 'fists'); assert.equal(p.ped.pp, 'violin');
   music.stopPerf(w, p);
   assert.equal(p.ped.weapon, 'pistol', 'back in your hands');
+});
+
+// The owner's recordings (11-22): which take plays is the same for everyone (a pure function of the song and the play), the
+// primary most of the time, every alternate now and then; a tape goes from take to take as it comes round.
+test('the recordings: the primary most of the time, every alternate now and then, the same everywhere', () => {
+  for (const t of TRACKS) {
+    const T = takesOf(t.id);
+    if (!T) continue;
+    const n = {}; for (let k = 0; k < 4000; k++) { const tk = takeOf(t.id, k); n[tk[0]] = (n[tk[0]] || 0) + 1; }
+    assert.equal(takeOf(t.id, 1234)[0], takeOf(t.id, 1234)[0]);
+    if (T.length === 1) { assert.equal(n[T[0][0]], 4000); continue; }
+    assert.ok(Math.abs(n[T[0][0]] / 4000 - TAKE_PRIMARY) < 0.04, `${t.id}: the primary ${n[T[0][0]]}`);
+    for (const q of T.slice(1)) assert.ok(n[q[0]] > 4000 * (1 - TAKE_PRIMARY) / (T.length - 1) * 0.6, `${t.id}: ${q[0]} comes up (${n[q[0]]})`);
+  }
+  // every station's songs and every take on them have a recording; the places' own songs (21-25) too
+  for (const S of STATIONS) for (const id of S.tracks) assert.ok(takesOf(id), `${id}: recorded`);
+  for (const id of ['shop', 'lobby', 'drivein', 'club', 'neon-current', 'mirrorball', 'dust-dial', 'house-odds', 'brass-ticket']) assert.ok(takesOf(id), `${id}: recorded`);
+  // a tape from the top: the same take for everyone who hears it, and round it goes
+  const a = tapeAt('jester-parade', 500, 510), b = tapeAt('jester-parade', 500, 510);
+  assert.deepEqual(a, b); assert.ok(Math.abs(a.pos - 10) < 1e-6, 'from the top');
+});
+
+test('the recordings\' files are all there, and every take in the timing table has them', async () => {
+  const { SONGS: FILES } = await import('../client/sound/songs.js');
+  const { SONG_TAKES } = await import('../shared/songtimes.js');
+  for (const [cue, rows] of Object.entries(SONG_TAKES)) for (const [take, secs, loop] of rows) {
+    const T = FILES.takes[take];
+    assert.ok(T, `${cue} ${take}: in client/sound/songs.js`);
+    for (const f of [T.full.opus, T.full.mp3, T.loop.opus, T.loop.mp3]) assert.ok(existsSync(new URL(`../${f}`, import.meta.url)), f);
+    assert.ok(Math.abs(T.full.seconds - secs) < 1e-6 && Math.abs(T.loop.loop - loop) < 1e-6, `${take}: the same lengths both sides`);
+  }
 });

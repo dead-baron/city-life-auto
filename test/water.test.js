@@ -90,7 +90,7 @@ test('poaching run: net the haul from a cargo boat, bring it to the Den for cash
 test('deep-sea charter: fish over the side far from land, land the catch for the bonus', () => {
   const w = makeWorld();
   const { p, prof } = joinPlayer(w, { bank: 0 });
-  prof.weapons.rod = 0;
+  prof.weapons.rod = 0; p.ped.weapon = 'rod';   // (the rod in hand: you fish with it out)
   const desk = poiOf(w, 'charter');
   teleport(w, p.ped, desk.x, desk.y);
   economy.handleMenu(w, p, desk.id, 'deepsea');

@@ -375,7 +375,15 @@ function lanes(K, m) {
     for (let k = 0; k < n; k++) {
       const u = (k + 0.5) / n, x = ax + (bx - ax) * u, y = ay + (by - ay) * u;
       const r = rnd(Math.round(x), Math.round(y), 91);
-      if (r < 0.3) prop('festoon', x - 2.5, y, 0, { tx: 5 * TILE, ty: 0, h: 44 });
+      // (across the lane, not along it: kerb to kerb at a right angle to its line, made fast to the walls or posts either
+      // side - shared/festoon.js; the owner, 11-16)
+      if (r < 0.3) {
+        const L = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / L, ny = (bx - ax) / L;
+        // (out from the lane's line each way to the first ground off the road: the pavement's edge, or a building's face)
+        const out = (sg) => { for (let d = 1; d <= 7; d += 0.5) { const t = m.tileAtPx((x + nx * d * sg) * TILE, (y + ny * d * sg) * TILE); if (t !== T.ROAD && t !== T.BRIDGE) return d + 0.6; } return 0; };
+        const d0 = out(-1), d1 = out(1);
+        if (d0 && d1) prop('festoon', x - nx * d0, y - ny * d0, 0, { tx: Math.round(nx * (d0 + d1) * TILE), ty: Math.round(ny * (d0 + d1) * TILE), h: 54 });
+      }
       else if (r < 0.55) prop(pick(['potted', 'planter_g', 'flowers_a'], rnd(x, y, 92)), x + 3.2, y + 0.5, 6);
     }
   }

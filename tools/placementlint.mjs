@@ -34,12 +34,32 @@
 //   nameCovered  a building's own name on its front - a plaque, its shop sign, a blade sign - half hidden: under another
 //                board on the same front (the owner, 11-14: Westside Clinic's name behind its EMERGENCY sign), or behind
 //                something standing in front of it (a canopy, a shelter, a sign on posts: its drawn pixels over the board)
+//   nameTwice    a building's name said twice on its fronts: two of its boards - its shop's sign, the portico's lettering,
+//                a plaque, a neon name - saying the same name, on one front or on two sections of it (the owner, 11-15:
+//                Canvas Savings Bank's portico CANVAS SAVINGS with a CANVAS SAVINGS BANK board under it). One name, one
+//                board: statics.js oneName keeps the first
+//   textClipped  a sign's words not whole on its front as the bake draws it at night: run off the facade's edge, painted
+//                over by something drawn after it, or a glow showing through stone lettering (the owner, 11-15: First
+//                Pixel Bank's portico BANK read BAN, then ANK - a lit window behind it). A sign whose words don't fit isn't
+//                drawn at all (buildings.js portico; statics.js oneName: a portico off its front's edge loses its words)
 //   bladeBiz     a blade sign naming another business than the building's (the owner, 11-14: HOTEL over a paint shop):
 //                its words from the shop's sign, the building's names, or the trade of its places (BLADE_WORDS)
 //   plantOnPath  a plant (a yard's bed, the ground cover, a map prop) over a house's path or driveway - the paved strip
 //                across its lawn - or its door step (the owner, 11-14: shrubs and tall grass over a front path)
 //   atmStray     an ATM not set into a building's wall nor inside one (the owner, 11-14: "never standing alone
 //                mid-sidewalk")
+//   festoons     a run of hanging lights (bistro bulbs, paper lanterns) with an end made fast to nothing, a post in the
+//                road, a bracket with no wall, too straight or too slack, low over people's heads or one long span (the
+//                owner, 11-16: "okay when they had something to hang from ... some slack": shared/festoon.js)
+//   signCovered something over a front's sign - its name board's words or the OPEN in its window: a cash machine set in
+//                the wall, a prop standing in front, a place's badge floating over it (the owner, 11-16: Egret Point Fish
+//                Market's OPEN behind its ATM, its first letter under the machine's cap)
+//   doorOnGrass  a business's or a home's door with no path to it: its step not on a pavement, a plaza, a lot, a dock,
+//                a gravel or dirt track or the road, or that path not reaching a road (the owner, 11-16: "they just sit on
+//                grass" - lists them all)
+//   wallOnly     a business you'd walk into (a walk-in kind - shared/map.js WALK_IN - a charter office, a hand plan's
+//                walk-in shop) used only at its wall: no room inside behind the door (the owner, 11-16: "they just have you
+//                interact at the wall")
 // spotWhy(M, e, def, want) is the same look for something put down while the game runs (a scene's vehicles and people)
 // lint(M) -> { rows: { kind: [{ what, x, y, why }] }, seen: { boats, signs, props } }
 //   node tools/placementlint.mjs   builds World v3 and prints the rows (the heavy lock)
@@ -49,10 +69,26 @@ import { VEHICLES } from '../shared/vehicles.js';
 import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy } from '../shared/parkcheck.js';
-import { staticIndex, staticItems, makeStatic, STATIC_CHUNK } from '../client/art2/game/statics.js';
+import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
+import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf } from '../client/art2/game/statics.js';
 import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
+import { textAudit } from './textaudit.mjs';
+import { WALK_IN } from '../shared/map.js';
+import { auditRows } from './audit/worldrows.mjs';
+import { badgeAt } from '../client/art2/game/host.js';
+// where a place's badge floats, as host.js shopMarks draws it: a walk-in's under its door's lintel, any other's 64 px over
+// where you stand at it (the audit, 11-19: branch egret moves the wall places' badges and exports this from host.js)
+const badgeOf = (M, p, door) => (door ? badgeAt(door.x, door.y) : { x: p.x, y: p.y - 64, size: 24 });
 
 // what the test lets by, each explained (else what the lint found is fixed in the data)
+// how many world px of a sprite G (its top left at ox, oy in the world) lie in the box X0, Y0 .. X1, Y1. A sprite made at the
+// art pixel (G.ap2 = 2: the nature kit's plants and rocks, 11-21) covers 2 x 2 world px with each of its own.
+const pxOver = (G, ox, oy, X0, Y0, X1, Y1) => {
+  const ap = G.ap2 || 1;
+  let n = 0;
+  for (let y = Math.max(0, Math.ceil((Y0 - oy) / ap)); y < Math.min(G.h, Math.floor((Y1 - oy) / ap)); y++) for (let x = Math.max(0, Math.ceil((X0 - ox) / ap)); x < Math.min(G.w, Math.floor((X1 - ox) / ap)); x++) if (G.col[(y * G.w + x) * 4 + 3] > 128) n += ap * ap;
+  return n;
+};
 export const LINT_ALLOW = {
   // four lake jetties whose roots sit on the bank a tile back from the water (a kink in the planks at the shoreline):
   // what shows there is the lake's own shore rounding off by the jetty, not a band along planks over a beach
@@ -68,6 +104,34 @@ export const LINT_ALLOW = {
   atmStray: 53,
   // a cash machine set in a one-storey self storage's front, its top a few px over the foot of the board above it
   nameCovered: 1,
+  // ---- the audit's rows (2026-11-19, docs/audit/REPORT.md - every hit listed in docs/audit/hits.json): each at the count
+  // the audit found, before the fix pass. Bring them down, never up.
+  // (branch egret's three rows - the owner's Egret Point shots, 11-16 - here before egret's class fixes; egret ships them
+  // at signCovered 159, doorOnGrass 372, wallOnly 17)
+  // something over a front's sign: a prop standing in front of its words, a place's badge over them
+  signCovered: 312,
+  // a business's or a home's door with no path to it
+  doorOnGrass: 1777,
+  // a place you'd walk into served at the wall (no room behind its door)
+  wallOnly: 111,
+  // (the owner's 11-17 notes, tools/audit/worldrows.mjs - what each row means is there)
+  plantOnWalk: 2914,        // trees (not a street tree in its grate), shrubs, bushes, hedges on a sidewalk, road, lot (a plaza outside the paved districts)
+  planterOnWalk: 422,       // planters and pots on a sidewalk, a road or a lot
+  northDoor: 21,            // a business's entrance on its north wall
+  interiorOverlap: 25,      // a walk-in's room under another building's footprint or its drawn front
+  frontNames: 7,            // a shop's sign naming none of its places, or another trade
+  lobbyDoor: 161,           // an apartment's lobby door at a shop front
+  rampCrossesRoad: 9,       // a ramp below deck height over a street that isn't its junction
+  railOverWater: 110,       // a railing or fence run out over open water
+  dockOverlap: 5,           // boardwalks or piers over each other (the Egret Marsh boardwalk's bends)
+  railOverWaterArt: 18,     // a railway span over water without real bridge art (piers, abutments)
+  portalOnFlat: 16,         // a tunnel mouth with no hill over the bore
+  festoonDensity: 9,        // more than FESTOON_CAP runs of lights within FESTOON_R
+  cropInTown: 49,           // a crop field, strip or orchard in a town or by a beach
+  heliOffPad: 10,           // a hospital with no ground helipad, a helipad on a sidewalk or a road
+  deadBoat: 103,            // a boat prop you can reach that isn't a vehicle and isn't stored
+  bigEmptyPlaza: 14,        // an empty stretch of paving 19+ tiles across
+  binBags: 44,              // bin bags away from any bin outside the rough districts
 };
 export const CANOPY_MAX = [4 * TILE, 2 * TILE], ALLEY_GAP = 26;
 const CANOPIES = new Set(['porte', 'canopy', 'pergola']);
@@ -92,7 +156,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [] };
+  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [], signCovered: [], doorOnGrass: [], wallOnly: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -273,6 +337,17 @@ export function lint(M) {
   }
   artRows(M, rows, seen);
   atmRows(M, rows, seen);
+  doorRows(M, rows, seen);
+  auditRows(M, rows, seen);   // (the whole-game audit's rows, 11-19: tools/audit/worldrows.mjs)
+  // the hanging lights: each run made fast at both ends, slack, over people's heads (shared/festoon.js)
+  const FW = festoonWorld(M);
+  seen.festoons = 0;
+  for (const f of M.props) {
+    if (!f || f.t !== 'festoon') continue;
+    seen.festoons++;
+    const why = festoonWhy(FW, f);
+    if (why) rows.festoons.push({ what: `${f.k === 'lantern' ? 'lanterns' : f.k === 'cable' ? 'a cable' : 'lights'} strung ${Math.round(Math.hypot(f.tx || 0, f.ty || 0) / TILE)} tiles`, x: f.x, y: f.y, why });
+  }
   return { rows, seen };
 }
 
@@ -287,6 +362,7 @@ export const BLADE_WORDS = {
   cinema: 'CINEMA THEATER SHOWS', grandstand: 'GO', fishmarket: 'FISH', market: 'FISH', fence: 'CLUB', sports: 'SHOP',
 };
 const NOT_PLACES = new Set(['home', 'atm', 'vending', 'reception', 'evidence', 'delivery']);
+const BADGELESS = new Set(['home', 'atm', 'station', 'ride', 'race', 'farm', 'sar', 'vending', 'reception', 'evidence', 'delivery']);   // (host.js SHOP_SKIP, and what has no badge)
 function artRows(M, rows, seen) {
   const I = staticIndex(M);
   const hit2 = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
@@ -298,14 +374,24 @@ function artRows(M, rows, seen) {
   seen.fronts = 0;
   for (const [bi, items] of I.byB) {
     const b = M.buildings[bi];
+    const named = [];   // (the names its fronts' boards say, each with its section: nameTwice)
     for (const it of items) {
       const sp = it.recipe && it.recipe.t === 'b' && it.recipe.spec;
       if (!sp || !sp.w) continue;
+      for (const q of frontNames(sp)) {
+        const twin = named.find((o) => sameName(o.t, q.t) && (o.it === it || Math.abs(o.it.y - it.y) < 8));   // (one front: the same section, or another along the same face)
+        if (twin) rows.nameTwice.push({ what: `${b.name || b.kind}: its ${twin.k} "${twin.t}" and its ${q.k} "${q.t}"`, x: it.x + sp.w / 2, y: it.y });
+        else named.push({ ...q, it });
+      }
+      if ((sp.portico && sp.portico.text) || (sp.plaques && sp.plaques.length) || (sp.shop && sp.shop.sign && sp.shop.sign.text)) {
+        seen.texts = (seen.texts || 0) + 1;
+        for (const q of textAudit({ ...sp, night: 1 })) rows.textClipped.push({ what: `${b.name || b.kind}'s ${q.k} "${q.t}"`, x: it.x + sp.w / 2, y: it.y, why: q.why });
+      }
       const H = buildingH(sp), bx = [], at = (r) => [it.x + r[0], it.y - r[3], it.x + r[2], it.y - r[1]];
       for (const p of sp.plaques || []) if (p && p.text && p.v !== undefined) bx.push({ t: p.text, r: at(plaqueBox(p, sp.w)) });
       for (const q of sp.blades || []) { const r = bladeBox(q, H); if (r) bx.push({ t: q.text, r: at(r), blade: true }); }
       const sgn = sp.shop && sp.shop.sign && sp.shop.sign.text && !sp.shop.sign.moved ? sp.shop.sign : null;   // (a sign moved up onto what stands in front - a false front, a porte-cochere: statics.js)
-      if (!bx.length && !sgn) continue;
+      if (!bx.length && !sgn && !(sp.shop && sp.shop.openSign)) continue;
       seen.fronts++;
       for (let i = 0; i < bx.length; i++) for (let j = i + 1; j < bx.length; j++) if (hit2(bx[i].r, bx[j].r)) rows.nameCovered.push({ what: `"${bx[i].t}" and "${bx[j].t}" over each other on ${b.name || b.kind || 'a front'}`, x: it.x + sp.w / 2, y: it.y });
       faces.push({ it, b, bi, sp, bx, sgn });
@@ -323,6 +409,40 @@ function artRows(M, rows, seen) {
   // the things standing in front of a front: their drawn pixels over its boards (the shop's sign found by drawing the front)
   const SKIP = new Set(['b', 'f', 'flat']), THIN = new Set(['wire']);   // (an overhead wire across a sign: a line, not a cover)
   const sprites = new Map(), spr = (it) => { let G = sprites.get(it.key); if (G === undefined) { try { G = makeStatic(it.recipe); } catch { G = null; } sprites.set(it.key, G); } return G; };
+  // a front's sign as drawn (makeBuilding: the board, a frame's width in - its words' panel - and the window's OPEN), world px
+  const coversOf = (f) => {
+    if (f.covers) return f.covers;
+    const { it, sp } = f, out = [];
+    if (sp.shop && ((sp.shop.sign && sp.shop.sign.text) || sp.shop.openSign)) {
+      let G = null;
+      try { G = makeBuilding(sp); } catch { G = null; }
+      const at = (q, k) => [it.x - G.ax + q.x + k, it.y - G.ay + q.y + k, it.x - G.ax + q.x + q.w - k, it.y - G.ay + q.y + q.h - k];
+      if (G && G.signBox && sp.shop.sign) {
+        // (the words: as paintBoard centres them, after the trade's icon - not the board's empty ends)
+        const B = G.signBox, L = B.lay, ix = L && L.icon ? 2 + 9 + 2 : 2, lx = L ? ix + Math.floor((L.w - 2 - ix - L.cw) / 2) : 1;
+        const words = L ? { x: B.x + lx * 2, y: B.y, w: L.cw * 2, h: B.h } : B;
+        out.push({ k: 'sign', t: sp.shop.sign.text, r: at(words, 2) });
+      }
+      if (G && G.openBox) out.push({ k: 'window sign', t: 'OPEN', r: at(G.openBox, 0) });
+    }
+    return (f.covers = out);
+  };
+  // the places' badges floating by the doors (client/art2/game/host.js shopMarks: a walk-in's under its door's lintel, any
+  // other's 64 px over where you stand at it) over a front's sign
+  {
+    const doorOf = new Map();
+    for (const id of M.walkIns || []) { const b = M.buildings[id]; for (const u of (b && b.walkIn && b.walkIn.units) || []) doorOf.set(u.poi, [(u.door.tx + u.door.w / 2) * TILE, (u.door.ty + 0.5) * TILE]); }
+    for (const f of faces) {
+      const pl = (placesOf.get(f.bi) || []).filter((p) => !BADGELESS.has(p.kind));
+      if (!pl.length) continue;
+      const cov = coversOf(f);
+      for (const p of pl) {
+        const d = doorOf.get(p.id), B = badgeOf(M, p, d ? { x: d[0], y: d[1] } : null), h = B.size / 2;
+        const r = [B.x - h, B.y - h - 2, B.x + h, B.y + h + 2];   // (and its bob)
+        for (const q of cov) if (hit2(q.r, r) && Math.min(r[2], q.r[2]) - Math.max(r[0], q.r[0]) >= 3 && Math.min(r[3], q.r[3]) - Math.max(r[1], q.r[1]) >= 3) rows.signCovered.push({ what: `${p.label || p.kind}'s badge over ${f.b.name || f.b.kind}'s ${q.k} "${q.t}"`, x: B.x, y: B.y });
+      }
+    }
+  }
   const chunks = new Map();
   for (const f of faces) {
     const { it, sp } = f;
@@ -332,12 +452,30 @@ function artRows(M, rows, seen) {
   for (const [k, fl] of chunks) {
     const cx = k % 4096, cy = Math.floor(k / 4096);
     for (const o of staticItems(M, cx, cy, { noCover: true })) {
-      if (!o.recipe || SKIP.has(o.recipe.t) || THIN.has(o.recipe.m || o.recipe.t) || o.b !== undefined) continue;
+      // (a plant: only for signCovered - a planter stood against the front, a tree before it: sightlines3 keeps the crowns
+      // off the boards, nameCovered never counted them)
+      const flora = !!o.recipe && o.recipe.t === 'f';
+      if (!o.recipe || (SKIP.has(o.recipe.t) && !flora) || THIN.has(o.recipe.m || o.recipe.t) || o.b !== undefined) continue;
       for (const f of fl) {
         const { it, sp, b } = f;
         if (o.y <= it.y || o.y > it.y + 260 || o.x + o.ext[2] < it.x || o.x - o.ext[0] > it.x + sp.w) continue;
         const box = [o.x - o.ext[0], o.y - (o.z0 || 0) - o.ext[1], o.x + o.ext[2], o.y - (o.z0 || 0) + o.ext[3]];
         let bx = f.bx.filter((q) => hit2(q.r, box));
+        // (signCovered: anything of it over the sign's words or the window's OPEN, however little - its drawn pixels)
+        const cov = coversOf(f).filter((q) => hit2(q.r, box));
+        if (cov.length) {
+          const G = spr(o);
+          if (G) {
+            const ox = o.x - (G.ax || 0), oy = o.y - (o.z0 || 0) - (G.ay || 0);
+            for (const q of cov) {
+              const [X0, Y0, X1, Y1] = q.r;
+              const n = pxOver(G, ox, oy, X0, Y0, X1, Y1);   // (art-pixel sprites too: pxOver)
+              const id = `c|${f.bi}|${q.t}|${o.key}|${Math.round(o.x)}`;
+              if (n >= 6 && !hitOnce.has(id)) { hitOnce.add(id); rows.signCovered.push({ what: `${o.recipe.m || o.recipe.sp || o.recipe.t} in front of ${b.name || b.kind}'s ${q.k} "${q.t}"`, x: o.x, y: o.y, why: `${n} px over it` }); }
+            }
+          }
+        }
+        if (flora) continue;
         if (f.sgn && box[1] < it.y - 30) {
           if (f.sign === undefined) { let sb = null; try { const G = makeBuilding(sp); if (G.signBox) sb = [it.x - G.ax + G.signBox.x, it.y - G.ay + G.signBox.y, it.x - G.ax + G.signBox.x + G.signBox.w, it.y - G.ay + G.signBox.y + G.signBox.h]; } catch { sb = null; } f.sign = sb; }
           if (f.sign && hit2(f.sign, box)) bx = bx.concat([{ t: f.sgn.text, r: f.sign }]);
@@ -349,7 +487,7 @@ function artRows(M, rows, seen) {
         for (const q of bx) {
           const [X0, Y0, X1, Y1] = q.r, area = (X1 - X0) * (Y1 - Y0);
           let n = 0;
-          for (let y = Math.max(0, Math.ceil(Y0 - oy)); y < Math.min(G.h, Math.floor(Y1 - oy)); y++) for (let x = Math.max(0, Math.ceil(X0 - ox)); x < Math.min(G.w, Math.floor(X1 - ox)); x++) if (G.col[(y * G.w + x) * 4 + 3] > 128) n++;
+          n = pxOver(G, ox, oy, X0, Y0, X1, Y1);
           const id = `${f.bi}|${q.t}|${o.key}`;
           if (n >= Math.max(12, area * 0.1) && !hitOnce.has(id)) { hitOnce.add(id); rows.nameCovered.push({ what: `${o.recipe.m || o.recipe.t} "${o.key}" in front of ${b.name || b.kind}'s "${q.t}"`, x: o.x, y: o.y, why: `${Math.round(100 * n / area)}% of it` }); }
         }
@@ -373,12 +511,76 @@ function plantRows(M, I, rows, seen) {
         const id = `${o.key}@${o.x},${o.y}`;
         if (seenAt.has(id)) continue;
         seenAt.add(id);
-        const h = over(o.x, o.y, Math.max(4, (o.ext[0] - 10) * 0.5));
+        const h = over(o.x, o.y, Math.max(4, floraHalf(o.recipe.sp, o.recipe.k || 1) * 0.5));   // (half the plant's own half-width - not its item's room, which the nature kit made a size roomier, 11-21)
         if (h) rows.plantOnPath.push({ what: `a ${o.recipe.sp} on ${h.name}'s path`, x: o.x, y: o.y });
       }
     }
   }
   for (const p of M.props) if (p && TIDY3.PLANT.test(p.t)) { const h = over(p.x, p.y, 14); if (h) rows.plantOnPath.push({ what: `a ${p.t} (the map's) on ${h.name}'s path`, x: p.x, y: p.y }); }
+}
+
+// The doors: a path to every business's and home's door; a room behind the door of every place you'd walk into
+//   doorOnGrass  its step (the tile outside the door) not on what a path is made of, or that path not reaching a road
+//                within DOOR_REACH steps
+//   wallOnly     a walk-in kind's place (WALK_IN, a charter office, a hand plan's walk-in shop) with no walk-in room
+export const PATH_T = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK, T.ROAD, T.BRIDGE, T.DIRT, T.FLOOR]);
+export const ENTER_KINDS = new Set([...WALK_IN, 'charter']);
+const DOOR_KINDS = new Set([...ENTER_KINDS, 'home', 'diner', 'snack', 'market', 'cinema', 'bowling', 'arcade', 'casino', 'bathhouse', 'smuggler', 'gang', 'usedlot', 'dealer', 'garage', 'marina', 'winery', 'lodge', 'butcher', 'trapper', 'assay', 'huntcamp', 'clubhouse', 'farmstand', 'fruitstand', 'salvage', 'warehouse']);
+const DOOR_REACH = 400;
+function doorRows(M, rows, seen) {
+  const TN = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
+  const tileOf = (tx, ty) => (M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1);
+  const unitOf = new Map();
+  for (const id of M.walkIns || []) { const b = M.buildings[id]; for (const u of (b && b.walkIn && b.walkIn.units) || []) unitOf.set(u.poi, { b, u }); }
+  // from the step's tiles over path tiles to a road (cached per tile: a whole plaza is walked once)
+  const reach = new Map();
+  const toRoad = (starts) => {
+    const seenT = new Map(), q = [];
+    for (const [x, y] of starts) { const i = M.idx(x, y); if (reach.has(i)) return reach.get(i); seenT.set(i, 0); q.push(x, y); }
+    let ok = false;
+    for (let h = 0; h < q.length && !ok; h += 2) {
+      const x = q[h], y = q[h + 1], i = M.idx(x, y), d = seenT.get(i), t = M.tiles[i];
+      if (t === T.ROAD || t === T.BRIDGE || reach.get(i) === true) { ok = true; break; }
+      if (d >= DOOR_REACH) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (!M.inside(nx, ny)) continue;
+        const j = M.idx(nx, ny);
+        if (seenT.has(j) || !PATH_T.has(M.tiles[j]) || (M.tiles[j] === T.FLOOR)) continue;
+        seenT.set(j, d + 1); q.push(nx, ny);
+      }
+    }
+    if (ok) for (const i of seenT.keys()) reach.set(i, true);
+    return ok;
+  };
+  seen.doors = 0; seen.enter = 0;
+  const done = new Set();
+  for (const p of M.pois) {
+    if (!p || p.b === undefined || p.b === null || !(DOOR_KINDS.has(p.kind) || p.walk)) continue;
+    const b = M.buildings[p.b];
+    if (!b || b.gone || b.tw === undefined) continue;
+    const U = unitOf.get(p.id);
+    // wallOnly: a place you'd walk into, with no room behind its door
+    if (ENTER_KINDS.has(p.kind) || p.walk) { seen.enter++; if (!U) rows.wallOnly.push({ what: `${p.label || p.kind} (${p.kind}${p.walk ? `, ${p.store || 'walk'}` : ''})`, x: p.x, y: p.y, why: `${b.prefab < 0 ? 'a hand-built' : 'a lot'} building, no walk-in room` }); }
+    // the door's step: a walk-in unit's doorway's row outside; a building's own door; else the place's spot (stepped out
+    // of the wall when it's on it)
+    let steps;
+    if (U) { const fy = U.u.door.ty + (U.b.walkIn.south ? 1 : -1); steps = []; for (let k = 0; k < (U.u.door.w || 2); k++) steps.push([U.u.door.tx + k, fy]); }
+    else {
+      const at = p.outside || p;
+      let tx = Math.floor(at.x / TILE), ty = Math.floor(at.y / TILE);
+      if (tileOf(tx, ty) === T.BUILDING || tileOf(tx, ty) === T.WALL) ty += at.y >= (b.ty + b.th / 2) * TILE ? 1 : -1;
+      steps = [[tx, ty]];
+    }
+    const key = `${steps[0][0]},${steps[0][1]}`;
+    if (done.has(key)) continue;
+    done.add(key);
+    seen.doors++;
+    const on = steps.map(([x, y]) => tileOf(x, y)), paved = steps.filter((q, k) => PATH_T.has(on[k]) && on[k] !== T.FLOOR);
+    const what = `${p.label || b.name || p.kind}'s door (${p.kind})`, x = (steps[0][0] + 0.5) * TILE, y = (steps[0][1] + 0.5) * TILE;
+    if (!paved.length) rows.doorOnGrass.push({ what, x, y, why: `its step on ${TN[on[0]] || 'nothing'}` });
+    else if (!toRoad(paved)) rows.doorOnGrass.push({ what, x, y, why: `its path (${TN[on[0]]}) reaches no road within ${DOOR_REACH} steps` });
+  }
 }
 
 // every ATM against a building's wall (its machine's back on the building) or inside one

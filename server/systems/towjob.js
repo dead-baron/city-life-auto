@@ -20,8 +20,9 @@ import { towReason, tailGap, carry } from './tow.js';
 import { sitesOf } from './firefighter.js';
 import { kerbFor } from './kerbdrive.js';
 import * as jobs from './jobs.js';
+import { poisKind } from '../pois.js';
 
-export const yardsOf = (m) => m.pois.filter((q) => q.kind === 'police').map((q) => ({ x: q.x, y: q.y, name: `the impound at ${q.label}` }));
+export const yardsOf = (m) => poisKind(m, 'police').map((q) => ({ x: q.x, y: q.y, name: `the impound at ${q.label}` }));
 export function yardFor(world, x, y) {
   const L = yardsOf(world.map);
   return L.length ? L.reduce((a, b) => (Math.hypot(b.x - x, b.y - y) < Math.hypot(a.x - x, a.y - y) ? b : a)) : null;

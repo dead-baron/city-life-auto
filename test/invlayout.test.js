@@ -35,7 +35,7 @@ test('the Inventory fits every screen: nothing off it, nothing cut off, no butto
 
 test('the Inventory\'s parts: the slots round the figure, the X on each, the tabs, the quick bar, the three actions', async () => {
   const { DOLL, TABS, tabOf, BAG_CATS } = await import('../client/bag.js');
-  assert.deepEqual(DOLL.flat().map((d) => d[0]), ['hat', 'top', 'jacket', 'bottoms', 'glasses', 'jewel', 'bag', 'shoes'], 'U6\'s slots');
+  assert.deepEqual(DOLL.flat().map((d) => d[0]), ['hat', 'top', 'jacket', 'bottoms', 'under', 'glasses', 'jewel', 'bag', 'shoes', 'socks'], 'U6\'s slots, and underwear and socks (11-23)');
   assert.deepEqual(TABS.map((t) => t[1]), ['All', 'Clothes', 'Weapons', 'Tools', 'Food & Meds', 'Materials', 'Valuables'], 'U14\'s tabs');
   for (const [c] of BAG_CATS) assert.ok(TABS.some((t) => t[0] === tabOf(c)), `${c} has a tab`);
   const bag = readFileSync(new URL('../client/bag.js', import.meta.url), 'utf8');

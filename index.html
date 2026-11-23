@@ -23,7 +23,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="City Life Auto">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preload" href="assets/fonts/BarlowCondensed-SemiBold.woff" as="font" type="font/woff" crossorigin>
+<link rel="preload" href="assets/fonts/CLAPixel-Regular.woff" as="font" type="font/woff" crossorigin>
 <link rel="preload" href="assets/fonts/CLAPixel-Bold.woff" as="font" type="font/woff" crossorigin>
 <link rel="stylesheet" href="client/style.css">
 </head>
@@ -55,7 +55,7 @@
       <div id="toasts"></div>
     </div>
     <div id="hud-tr">
-      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-gl="smartphone"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-gl="map"></i><span class="kchip kbm-only">M</span></button><button id="b-chat" class="rbtn" type="button" aria-label="Chat" title="Chat (T)"><i class="ic" data-gl="message-circle-more"></i><span class="kchip kbm-only">T</span></button><button id="b-emo" class="rbtn" type="button" aria-label="Emotes" title="Emotes (B)"><i class="ic" data-gl="smile"></i><span class="kchip kbm-only">B</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-gl="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
+      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-gl="smartphone"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-gl="map"></i><span class="kchip kbm-only">M</span></button><button id="b-chat" class="rbtn" type="button" aria-label="Chat" title="Chat (T)"><i class="ic" data-gl="message-circle-more"></i><span class="kchip kbm-only">T</span></button><button id="b-emo" class="rbtn" type="button" aria-label="Emotes" title="Emotes (B)"><i class="ic" data-gl="smile"></i><span class="kchip kbm-only">B</span></button><button id="b-bag" class="rbtn" type="button" aria-label="Bag" title="Bag (I)"><i class="ic" data-gl="backpack"></i><span class="kchip kbm-only">I</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-gl="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
       <div id="hud-stat">
         <div id="vitals">
           <div class="vrow hp"><i class="ic" data-ic="heart"></i><span class="vl">Health</span><div class="vbar"><div id="hp-lag" class="lag"></div><div id="hp-fill" class="fill hp"></div></div><b id="hp-n">100</b></div>
@@ -72,6 +72,7 @@
       <div id="clock"></div>
     </div>
     <div id="weapon"><i id="w-swap" class="ic touch-only" data-gl="chevron-right"></i><div id="w-icon"></div><i id="w-glyph" class="ic" aria-hidden="true"></i><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div><div id="w-quick"></div></div>
+    <div id="qbar" class="kbm-only" aria-label="Quick bar"></div>
     <div id="hud-low"><div id="cruiser-hint" class="hidden"></div><div id="ftue-line" class="off" aria-live="polite"></div><div id="helpbox" class="off" aria-live="polite"></div><div id="rob" class="hidden"><b>ROBBERY</b><div class="rob-bar"><i id="rob-fill"></i></div><span id="rob-take"></span></div></div>
     <div id="hints" class="off"></div>
     <div id="edgewarn" class="hidden"></div>
@@ -146,7 +147,7 @@
     <div id="t-row2"><button id="t-char" class="btn" disabled><i class="t-cav ic" data-ic="user"></i>CHARACTER</button><button id="t-settings" class="btn"><i class="ic" data-ic="settings"></i>SETTINGS</button></div>
     <div id="t-gfx"><span class="t-gl">Graphics</span><div id="t-gfxseg" role="radiogroup" aria-label="Graphics"></div><small id="t-gfxwhy"></small></div>
     <div id="t-practice">Practice runs a private city on this device. Nothing is saved and your online account is untouched. Cheats panel: <span class="kbm-only">press `</span><span class="pad-only">Start → Debug / cheats</span><span class="touch-only">the DEV button</span>.</div>
-    <div id="t-tools"><button id="t-install" class="btn hidden">INSTALL APP</button><button id="t-fs" class="btn">FULLSCREEN</button><button id="t-discord" class="btn hidden" title="The player Discord: news, help and bug reports">DISCORD</button></div>
+    <div id="t-tools"><button id="t-install" class="btn hidden">INSTALL APP</button><button id="t-fs" class="btn">FULLSCREEN</button><button id="t-discord" class="btn hidden" title="The player Discord: news, help and bug reports">DISCORD</button><button id="t-support" class="btn hidden" title="Support the game on Ko-fi: it keeps the servers running"><i class="ic" data-ic="heart"></i><span>SUPPORT</span></button></div>
     <div id="t-foot">
       <div id="t-card" class="hidden"><i class="t-av ic" data-ic="user"></i><div class="t-who"><b id="t-name"></b><small id="t-xp"></small><small id="t-sam"></small></div><button id="t-signin" class="t-sign" type="button">SIGN IN</button></div>
       <div id="t-online" class="hidden"><i></i><span></span></div>
@@ -234,11 +235,11 @@
       </section>
       <section data-sec="sound" hidden><h2>SOUND</h2><div id="s-soundbox"></div></section>
       <section data-sec="graphics"><h2>GRAPHICS</h2>
+        <label class="srow"><span>Fullscreen</span><input type="checkbox" id="s-fsnow"></label>
         <div id="s-gfxbox" class="gfxbox"></div>
         <label class="srow"><span>Keep it smooth (ease off the sharpness when the frame rate drops)</span><input type="checkbox" id="s-smooth"></label>
         <label class="srow"><span>Fullscreen when playing on a phone</span><input type="checkbox" id="s-autofs"></label>
         <label class="srow"><span>Performance overlay (for bug reports)</span><input type="checkbox" id="s-diag"></label>
-        <button id="s-fs" class="sbtn">Fullscreen on or off</button>
       </section>
       <section data-sec="account" hidden><h2>ACCOUNT</h2>
         <div class="sacct">
@@ -269,12 +270,13 @@
           <button class="opt" data-h="fullscreen"><span class="t">Fullscreen</span></button>
           <button class="opt play-only" data-h="bug"><span class="t">Report a bug</span><span class="note">what happened, with a screenshot</span></button>
           <button class="opt hidden" id="s-discord"><span class="t">Join our Discord</span><span class="note">news, help and bug reports</span></button>
+          <button class="opt hidden" id="s-support"><span class="t">Support the game</span><span class="note">on Ko-fi - it keeps the servers running</span></button>
         </div>
         <button id="s-install" class="sbtn">⬇ Install the app / install help</button>
         <button id="s-repair" class="sbtn">↻ Repair install (clear offline data)</button>
         <div class="m-opts">
           <button class="opt quiet" data-h="devmode" id="h-devmode"><span class="t">Leave Dev Debug Mode (keep my progress)</span></button>
-          <button class="opt quiet play-only" data-h="dev"><span class="t">Debug menu</span></button>
+          <button class="opt quiet play-only" data-h="dev" id="h-dev"><span class="t">Debug menu</span></button>
         </div>
       </section>
       <section data-sec="legal" hidden><h2>LEGAL</h2>

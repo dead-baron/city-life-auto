@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { guideSections, searchGuide } from '../shared/guide.js';
-import { STARTER, MAILJOB, BOAT_RENTAL_PRICE, FTUE, MORTGAGE, LENIENCY, COP_LEVEL, JAIL_S, PRISON, BREAK_HEADSTART, ESCAPE_LOW_MAX } from '../shared/rules.js';
+import { STARTER, MAILJOB, BOAT_RENTAL_PRICE, FTUE, MORTGAGE, LENIENCY, COP_LEVEL, JAIL_S, PRISON, BREAK_HEADSTART, ESCAPE_LOW_MAX, BREAK_CAR } from '../shared/rules.js';
 import { SHOPS, ITEMS } from '../shared/items.js';
 import { ACTIONS } from '../shared/controls.js';
 import { closure } from '../tools/perf.mjs';
@@ -86,6 +86,7 @@ test('the law follows the rules: the warning before the first star, the police b
   assert.match(law('busted'), /\[\[fire\]\].*\[\[action\]\] makes a break for it/, 'the controls by name');
   assert.match(law('busted'), new RegExp(`no tackle lands on you for ${BREAK_HEADSTART.grace[1]} seconds.*never past ${ESCAPE_LOW_MAX}`), 'BREAK_HEADSTART, ESCAPE_LOW_MAX');
   assert.match(law('busted'), new RegExp(`cell at the station for ${JAIL_S} seconds`), 'JAIL_S');
+  assert.match(law('busted'), new RegExp(`turns red the moment you have the chance and stays red about ${BREAK_CAR.windowS} seconds`), 'BREAK_CAR.windowS (11-15)');
   assert.match(law('prison'), new RegExp(`booked at ${PRISON.stars} stars with a long record \\(${PRISON.record} bookings`), 'PRISON');
   const was = LENIENCY.star;
   try { LENIENCY.star = 33; assert.match(entry(guideSections(), 'law', 'stars').b, /first star \(33 heat/); } finally { LENIENCY.star = was; }

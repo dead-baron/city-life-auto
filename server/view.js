@@ -24,12 +24,16 @@ export function setView(p, hw, hh) {
 }
 
 // The thing the camera follows: your vehicle, else you (a train rider moves with the car) - or, in the cinematic mode's
-// follow scenes, whoever it's following (server/systems/cinefollow.js: p.cineF.fid).
+// follow scenes, whoever it's following (server/systems/cinefollow.js: p.cineF.fid); an admin watching a player, that player.
 export function focusOf(world, p) {
   const ped = p.ped;
   if (!ped) return null;
   const c = p.cineF;
   if (c && c.fid) { const e = world.get(c.fid); if (e && !e.removed) return e; }
+  if (p.watch) {   // (an admin watching a player - server/admin.js watch: the window and what's sent go with them)
+    const q = world.players.get(p.watch.pid), qp = q && q.conn ? q.ped : null;
+    if (qp && !qp.removed) { const v = qp.vehId ? world.get(qp.vehId) : null; return v || qp; }
+  }
   const veh = ped.vehId ? world.get(ped.vehId) : null;
   return veh || ped;
 }

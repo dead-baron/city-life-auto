@@ -11,10 +11,12 @@ import { buildWorld3 } from '../server/world3.js';
 import { World } from '../server/world.js';
 import { joinPlayer, teleport } from './helpers.js';
 import { TILE, T } from '../shared/constants.js';
-import { NEON, NEON_PICS } from '../shared/world3-neon.js';
+import { NEON, NEON_PICS, NY } from '../shared/world3-neon.js';
 import { NP } from '../client/art2/neonpics.js';
 import * as arcade from '../server/systems/arcade.js';
 import * as players from '../server/systems/players.js';
+import { spotsOf, fill } from '../server/systems/activities.js';
+import { PINKMILE } from '../shared/world3-pinkmile.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const [X0, Y0, X1, Y1] = NEON.rect;
@@ -22,7 +24,7 @@ const inRect = (x, y) => x >= X0 * TILE && x < X1 * TILE && y >= Y0 * TILE && y 
 const bldNear = (x, y, r) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (M.inside(tx + dx, ty + dy) && M.bld[M.idx(tx + dx, ty + dy)] >= 0) return true; return false; };
 const propNear = (re, x, y, d) => M.props.some((q) => re.test(q.t) && Math.hypot(q.x - x, q.y - y) < d);
 
-test('every string of lights in the Neon Strip is made fast at both ends: a post of its own, a building\'s wall, a palm, a lamp', () => {
+test('every string of lights in the Neon Strip is made fast at both ends: a post of its own, a building\'s wall, a lamp - no longer than a real one', () => {
   const fests = M.props.filter((p) => p.t === 'festoon' && inRect(p.x, p.y));
   assert.ok(fests.length >= 150, `the strings (${fests.length})`);
   const bad = [], kinds = {};
@@ -36,7 +38,15 @@ test('every string of lights in the Neon Strip is made fast at both ends: a post
     });
   }
   assert.deepEqual(bad, [], 'an end hanging in the air');
-  assert.ok(kinds.wall >= 60 && kinds.pole >= 20 && kinds.palm >= 40, `made fast to walls, posts and palms (${JSON.stringify(kinds)})`);
+  assert.ok(kinds.wall >= 60 && kinds.pole >= 80, `made fast to walls and posts (${JSON.stringify(kinds)})`);
+  // (the craft pass, 11-14: no more strings looped palm to palm down the boulevard - the palms' own fairy lights wound
+  // up their trunks: the art's 'palmlights', p.lit)
+  const lit = M.props.filter((p) => p.t === 'palm_a' && p.lit && inRect(p.x, p.y));
+  assert.ok(lit.length >= 40, `palms lit up their trunks (${lit.length})`);
+  assert.equal(fests.filter((f) => (f.ends || []).includes('palm')).length, 0, 'no string looped palm to palm');
+  // and no string longer than a real one hangs: a long run is cut into spans on posts (shared/world3-craft.js canopy)
+  const long = fests.filter((f) => Math.hypot(f.tx || 0, f.ty || 0) > 12 * TILE).map((f) => `${Math.round(f.x / TILE)},${Math.round(f.y / TILE)}`);
+  assert.deepEqual(long, [], 'a string longer than twelve tiles');
   // the lanterns: red paper lanterns strung wall to wall over the alleys, the walkways and the passages
   const lanterns = fests.filter((f) => f.k === 'lantern');
   assert.ok(lanterns.length >= 60, `the lantern strings (${lanterns.length})`);
@@ -132,14 +142,15 @@ test('the flagship arcade: the Neon Strip\'s Pixel Arcade - its door onto the bi
   assert.ok((b.art.kit || []).some(([k]) => k === 'npic|gamezone'), 'GAME ZONE on its roof');
 });
 
-test('still playable: no solid prop on the Strip\'s streets (the boulevard\'s median palms and the alleys\' bins aside), every front\'s door onto the street', () => {
+test('still playable: no solid prop on the Strip\'s streets (the boulevard\'s median - its palms, its fountain and lamps - and the alleys\' bins aside), every front\'s door onto the street', () => {
   const trees = new Set(M.props.filter((q) => /^(palm|tree)/.test(q.t)).map((q) => Math.round(q.x) + ',' + Math.round(q.y)));
   const bad = [];
   for (let ty = Y0; ty < Y1; ty++) for (let tx = X0; tx < X1; tx++) {
     if (!M.inside(tx, ty)) continue;
     const i = M.idx(tx, ty), t = M.tiles[i];
     if (t !== T.ROAD || (M.roadRank && M.roadRank[i] === 1)) continue;   // (an alley's asphalt has its bins and crates along its walls: map.js dressAlleys)
-    for (const e of M.solidProps.get(i) || []) if (e.r > 4 && !trees.has(Math.round(e.x) + ',' + Math.round(e.y))) bad.push(`${tx},${ty} r ${e.r}`);
+    const median = Math.abs(ty + 0.5 - (NY.blvd + 0.5)) < 1.6;   // (the boulevard's planted median: its set pieces stand on it - the craft pass's fountain and its lamps, WC238)
+    for (const e of M.solidProps.get(i) || []) if (e.r > 4 && !median && !trees.has(Math.round(e.x) + ',' + Math.round(e.y))) bad.push(`${tx},${ty} r ${e.r}`);
   }
   assert.deepEqual(bad.slice(0, 10), [], 'solid props on the roads');
   let doors = 0;
@@ -150,4 +161,40 @@ test('still playable: no solid prop on the Strip\'s streets (the boulevard\'s me
     assert.ok(t === T.SIDEWALK || t === T.PLAZA || t === T.LOT || t === T.ROAD || t === T.GRASS, `${b.name}: its door onto the street (tile ${t})`);
   }
   assert.ok(doors >= 150, `the doors (${doors})`);
+});
+
+// The district craft pass (the owner, 11-14: "Big open spaces ... way too big and open and the lights don't act like
+// lanterns ... alive with interesting things and details and NPCs"): the open spaces given a purpose and edges, their
+// people (shared/world3-craft.js: terraces, knots on the corners, stallholders - server/systems/activities.js)
+test('the craft pass: Lantern Lane four rows of stalls, Harbor Lights laid out, the terraces, corners and stalls peopled - the Strip and the Pink Mile', () => {
+  const inR = (r, x, y) => x >= r[0] * TILE && x < r[2] * TILE && y >= r[1] * TILE && y < r[3] * TILE;
+  const PM = PINKMILE.rect, count = (list, r) => (list || []).filter((q) => inR(r, q.x, q.y)).length;
+  // Lantern Lane: no longer a 20-tile plaza with stalls along its edges - four rows, the lanterns over two aisles
+  const lane = M.props.filter((p) => p.t === 'mstall' && p.x > 2983 * TILE && p.x < 3154 * TILE && p.y > 2141 * TILE && p.y < 2160 * TILE);
+  const rows = new Set(lane.map((p) => Math.round(p.y / 8)));
+  assert.ok(lane.length >= 60 && rows.size === 4, `the night market's stalls (${lane.length}) in four rows (${rows.size})`);
+  // Harbor Lights: the stage's crowd, the market street, the food trucks' tables, the wheel, the car park
+  const HL = [3478, 2214, 3640, 2296];
+  for (const [t, n] of [['mstall', 20], ['picnic', 6], ['foodcart', 3], ['ferris', 1], ['gazebo', 1], ['dscreen', 1]]) assert.ok(M.props.filter((p) => p.t === t && inR(HL, p.x, p.y)).length >= n, `Harbor Lights: ${t}`);
+  assert.ok((M.partySpots || []).some((q) => inR(HL, q.x, q.y) && M.tileAtPx(q.x, q.y) === T.PLAZA), 'the crowd at the stage stands on its forecourt');
+  // the people's places, in both districts
+  for (const [name, r, t, h, v] of [['the Neon Strip', NEON.rect, 40, 40, 60], ['the Pink Mile', PM, 20, 15, 0]]) {
+    assert.ok(count(M.terraceSpots, r) >= t, `${name}: terrace tables (${count(M.terraceSpots, r)})`);
+    assert.ok(count(M.hangSpots, r) >= h, `${name}: knots of people (${count(M.hangSpots, r)})`);
+    assert.ok(count(M.vendorSpots, r) >= v, `${name}: stallholders (${count(M.vendorSpots, r)})`);
+    assert.ok(M.props.filter((p) => p.t === 'palm_a' && p.lit && inR(r, p.x, p.y)).length >= 20, `${name}: the palms lit up their trunks`);
+    assert.equal(M.props.filter((p) => p.t === 'festoon' && inR(r, p.x, p.y) && !(p.ends && p.ends.length === 2)).length, 0, `${name}: every string made fast at both ends`);
+  }
+  // the activities find them and fill them: two sat at a table, a knot stood talking, a stallholder facing the aisle
+  const S = spotsOf(M), w = new World(M, { npcBudget: 400, throwErrors: true });
+  for (const k of ['terrace', 'hang', 'vendor']) {
+    const near = S.list.filter((q) => q.k === k && inR(NEON.rect, q.x, q.y));
+    assert.ok(near.length >= 10, `${k} spots on the Strip (${near.length})`);
+    const g = near.map((q) => fill(w, q, { seen: true })).find(Boolean);
+    assert.ok(g && g.ids.length >= 1, `a ${k} spot fills`);
+    const ped = w.get(g.ids[0]);
+    assert.equal(ped.npc.act.k, k);
+    if (k === 'terrace') assert.equal(ped.gt, 'sit', 'sat at the table');
+    if (k === 'hang') assert.ok(g.ids.length >= 2 && ped.npc.act.chat, 'friends talking');
+  }
 });

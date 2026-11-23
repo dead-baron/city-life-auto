@@ -1032,6 +1032,7 @@ export function useItem(world, p, id) {
   if (it.fun === 'camp') { campfires.build(world, p); return; }   // (a campfire of your own: campfires.js)
   if (it.music) { music.use(world, p, id); return; }   // (a boombox, a radio, a tape, the mat, an instrument: music.js)   // (a light: chosen and switched on; a flare or a glow stick lit and dropped)
   if (it.ride) { gear.useFromBag(world, p, id); p.meDirty = true; return; }   // (a board into your hand, rollerblades on at a bench: gear.js)
+  if (it.rod) { fishing.takeOut(world, p); return; }   // (a rod: in your hand - fishing.js)
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {
     if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding) && !(it.hearty && !(ped.buffs.hearty > world.time + HEARTY_S * 0.5))) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }

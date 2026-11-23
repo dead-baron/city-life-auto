@@ -195,7 +195,9 @@ export const DELIVER_BONUS = 0.5;      // an officer who drives the prisoner in 
 // and the third in a while a star (the second in front of an officer); a carjacking a warning, the second a star. Felonies
 // (murder, hitting or killing an officer, a robbery, an escape) and assaults are stars at once, as ever; small crimes
 // (a punch, a bike lifted) have their own count (SUSPICION_*).
-export const LENIENCY = { star: 24, cop: 2, holdS: 45, fade: 0.4 };
+// (the owner, 11-22: "You get wanted levels too easily still": 24 -> 36 - a car stolen is a warning twice and a star the
+// fourth time in a while (the second in front of an officer), a hit and run the third, a carjacking the second)
+export const LENIENCY = { star: 36, cop: 2, holdS: 45, fade: 0.4 };
 // The police by your stars (police.js, struggle.js, custody.js, law.js): sharp at 4-5 as they've always been, worse at
 // 1-3. drive: their top speed in a chase (x 720 px/s after a car, 520 on the roads); react: how stale (s) the spot they
 // steer for is - they turn late and wide; ram: they lean on your car to spin it (a PIT) - only at 4-5; foot / drain:
@@ -234,7 +236,11 @@ export const BREAK_HEADSTART = { grace: [0, 4.5, 4.5, 2.5, 2.5, 2.5], startle: [
 // going nowhere, it always works. Pressed while it's too fast, you brace for it: the kick comes the moment it slows
 // (custody.js arm). (11-14: at 1-2 stars it was 50% / 35% under 60 px/s, the button there only then - with the siren on
 // the traffic pulls over, the car was that slow about 3% of the ride, and the owner never got out.)
-export const BREAK_CAR = { speed: [0, 190, 180, 60, 60, 60], chance: [0, 0.85, 0.7, 0.12, 0.03, 0.01] };
+// (11-15, the owner: "trying to run when the car slows down doesn't ever seem to work": a slow-down was over before a
+// phone's press reached the server - now the chance stays open windowS seconds after the car was last that slow, the
+// action button red and saying ESCAPE all that time (client/hud.js); and 3 stars, among the easier police since 11-07,
+// gets a car slow often enough and a fair kick)
+export const BREAK_CAR = { speed: [0, 190, 180, 150, 60, 60], chance: [0, 0.85, 0.7, 0.4, 0.05, 0.01], windowS: 2 };
 // How hard the police come at you, by stars (server/systems/police.js; design notes 2026-10-08): 1-2 they chase you
 // down and tackle you; 3 tasers, a few officers with pistols (and all of them once you shoot at the police); 4 they open
 // fire, still diving at you up close; 5 the FBI, SWAT and now and then the army.
@@ -531,7 +537,7 @@ export const SAW_NOTE_S = 600;           // "you saw a crime" pops up at most th
 export const REPORT_SEARCH_S = 45;       // the unit looks round the caller this long
 export const REPORT_SPOT_PX = 360;       // ...and knows the suspect when it has them in sight this close
 // Small crimes seen add up (law.js): this many is a star (one an officer sees: at once); each fades after a quiet while
-export const SUSPICION_STAR = 4;
+export const SUSPICION_STAR = 5;   // (4 -> 5, the owner 11-22: too easily wanted - a fifth punch or bump people see in a while, not a fourth)
 export const SUSPICION_HOLD_S = 30;
 export const SUSPICION_FADE_S = 40;
 // That star: an officer for a word (stops.js). A word ends [warn, fine, arrest]; ran first: STOP_RAN of the warning
@@ -792,7 +798,14 @@ export const BIKE_THIEF_RESPECT = 6;       // ...and the Samaritan points
 // (shared/look.js PIECES) at its prices times this, times the store's own markup (the uptown boutique asks more,
 // thrift and vintage less, the fence a lot more)
 export const CLOTHES_PRICE_K = 1;
-export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];   // what every player owns from the start (with the starting look's pieces)
+export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];
+// the starter wardrobe: everyday pieces everyone can wear from day one, on top of what they own (the owner, 11-17: plenty
+// to make a look you like at the start; the stand-out pieces are what you work toward - shared/wardrobe.js owns)
+export const STARTER_WARDROBE = ['Plain tee', 'Graphic tee', 'Long-sleeve tee', 'Tank top', 'Hoodie', 'Flannel shirt', 'Blouse', 'Crop top',
+  'Jeans', 'Black jeans', 'Chinos', 'Joggers', 'Shorts', 'Skirt', 'Leggings', 'Sundress',
+  'Sneakers', 'Skate shoes', 'Slip-ons', 'Sandals', 'Ballet flats',
+  'Zip hoodie', 'Denim jacket', 'Baseball cap', 'Beanie', 'Sunglasses',
+  'Boxers', 'Briefs', 'Boxer briefs', 'Undershirt and boxers', 'Tank and briefs', 'Bra and briefs', 'Sports bra and shorts', 'Crew socks'];   // (the underwear basics: the owner, 11-19; a pair of socks)   // what every player owns from the start (with the starting look's pieces)
 // the barbershop and the hair salon (ST3): what each change costs; the salon charges SALON_K times as much
 export const BARBER_PRICES = { cut: 15, colour: 25, beard: 12, moustache: 8 };
 export const SALON_K = 2;
@@ -1121,7 +1134,8 @@ export const INSURANCE = { premium: 0.06, minPremium: 60, fee: 0.1, minFee: 50, 
 // colors: { id, name, hex, cash | tok }; plates: { id, t (the text), cash | tok | gift }, plus each career's ranks (a rank's
 // title on your plate while you hold it; the top rank's for good, with its season); paint: a color of your choice at a Fresh
 // Coat garage (shared/vehicles.js PAINTS) for cash or a token. beta: the gift of Season 0 (SEASON.beta) to every account
-// that plays during it - the Founding Citizen jacket (shared/lookcore.js, a gift piece: never sold) and the gold Beta plate.
+// that plays during it - the Founding Citizen jacket (shared/lookcore.js, a gift piece: never sold) and the gold Beta plate
+// (card: 1 - on the player's own card only, never over their name: the owner, 11-16).
 export const COSMETICS = {
   colors: [
     { id: 'sky', name: 'Sky blue', hex: '#8fd3ff', cash: 2500 },
@@ -1143,12 +1157,16 @@ export const COSMETICS = {
     { id: 'grinder', t: 'Grinder', tok: 1 },
     { id: 'regular', t: 'Regular', tok: 2 },
     { id: 'legend', t: 'Legend', tok: 4 },
-    { id: 'beta', t: 'Beta', gift: 'beta', gold: 1 },
+    { id: 'beta', t: 'Beta', gift: 'beta', gold: 1, card: 1 },
   ],
   rankPlatesFrom: 1,   // a career's ranks from this one up are plates (rank 0 - Corner Kid, Recruit, Vendor - isn't)
   paint: { cash: 600, tok: 1 },
   beta: { season: 0, jacket: 'Founding Citizen jacket', plate: 'beta' },
 };
+// The admin panel's gifts (server/admin.js gift; the owner, 11-16: "gift things to people"): money into the bank (the
+// panel's quick amounts; maxMoney at most a gift), items and weapons (maxItems at most: of an item, or magazines of a gun),
+// and the bought cosmetics (never a season's gift). Every one in the admin log.
+export const GIFT = { money: [500, 2500, 10000, 50000], maxMoney: 1000000, maxItems: 50 };
 // Existing fees scale gently with rank (your highest rank in any career, 0-7): bail, the arrest fine, felony fines, the
 // hospital and the ambulance cost x this. (The fence's cut already moves with rank the other way - the crime ladder's
 // smaller cut: careers.js fenceCut - so it's left alone.)

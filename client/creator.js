@@ -143,7 +143,7 @@ export function open(m = 'edit', st = null) {
   if (mode === 'start') { startPick = 0; look = clone(LK.STARTERS[0].look); }
   if (mode === 'wheel') { wheelSel = Math.max(0, (state.saved || []).findIndex((s) => s.c === state.cur)); const s = (state.saved || [])[wheelSel]; if (s) look = LK.decodeLook(s.c) || look; }
   tab = 'body'; outBase = null; doneWarnAt = 0;
-  outView = state.free || devWear ? 'all' : 'owned';
+  outView = 'all';   // (everything shown, what isn't yours padlocked with its store - the owner, 11-17)
   if (mode === 'shop' || mode === 'barber') { shop = state.shop || shop; if (!shop) { mode = 'edit'; } }
   if (mode === 'shop') { shopSel = 0; const t = shopTabs(); shopTab = t.length ? t[0][0] : 'outfits'; }
   if (mode === 'barber') hairTab = 'cut';
@@ -165,27 +165,65 @@ export function onState(st) {
   } else if (mode === 'shop' || mode === 'barber') render();
   else if (mode === 'edit' && !(document.activeElement && document.activeElement.tagName === 'INPUT' && root.contains(document.activeElement))) renderPage();   // (what you own, whether you're at home)
 }
+// why Done didn't put the look on, said in the creator itself (on the title screen there's no HUD for a toast - the owner,
+// 11-17: "character still doesn't change when you press done in the main menu")
+function sayWhy(t) {
+  const foot = root && root.querySelector('.cc-foot');
+  if (!foot) return;
+  let el = root.querySelector('.cc-why');
+  if (!el) { el = document.createElement('div'); el.className = 'cc-why'; el.setAttribute('role', 'alert'); foot.parentNode.insertBefore(el, foot); }
+  el.textContent = t;
+  el.style.cssText = 'padding:var(--s2) var(--s3);margin:0 var(--s3);background:var(--panel-bg);color:var(--gold-hi);border:2px solid var(--gold);text-align:center';
+}
 function close(apply) {
+  { const w = root && root.querySelector('.cc-why'); if (w) w.remove(); }
   if (mode === 'wheel' || mode === 'shop' || mode === 'barber') apply = false;   // (the wheel puts a look on with Apply; a store sells it)
   if (apply && look && devWear) devSend({});
   else if (apply && look) {
+    // Done with locked pieces in the look (previewed from All - the owner, 11-17: "it should change things that you have
+    // unlocked; stuff you haven't unlocked lets you preview, but it should be clear you can't go into the game with it"):
+    // what's yours goes on, each locked piece is left off (the slot back to what you wore, if it's yours and fits, else
+    // a basic), and the creator says which and where they're sold - Done again closes
+    if (!state.free && !devWear) {
+      const no = WD.unowned(state.own || [], look);
+      if (no.length) {
+        const cur = state.cur && LK.decodeLook(state.cur), base = look.body.base, L = clone(look);
+        const keep = (it) => it && it.id && owned(it.id) && LK.PIECES[it.id] && LK.fits(LK.PIECES[it.id], base) ? it : null;
+        const basic = (slot) => { const P = WD.BASICS.map((id) => LK.PIECES[id]).find((q) => q && q.slot === slot && LK.fits(q, base)); return P ? { id: P.i, c: P.c, t: P.t, p: P.d.p || 0 } : null; };
+        for (const sl of LK.SLOTS) { const it = L.outfit[sl]; if (it && it.id && no.includes(it.id)) L.outfit[sl] = keep(cur && cur.outfit[sl]) || basic(sl); }
+        if (L.outfit.set && !no.includes(L.outfit.set.id)) { /* (a set covers top and bottoms: kept as is) */ }
+        else if (!L.outfit.top && !L.outfit.set) L.outfit.top = basic('top');
+        if (!L.outfit.bottoms && !L.outfit.set) L.outfit.bottoms = basic('bottoms');
+        look = L;
+        const names = no.map((id) => LK.PIECES[id] && LK.PIECES[id].name).filter(Boolean), S0 = WD.STORES[WD.sellerOf(no[0])];
+        if (!problem(look)) C.send({ t: 'look', a: 'set', c: code(), title: onTitle() ? 1 : 0 });
+        render();
+        sayWhy(`🔒 Not yours yet, left off: ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` and ${names.length - 3} more` : ''}${S0 ? ` - ${S0.name} sells ${names.length > 1 ? 'them' : 'it'}` : ''}. Everything else is on.`);
+        doneWarnAt = performance.now();
+        return;
+      }
+    }
     const why = problem(look);
     if (!why) {
-      C.send({ t: 'look', a: 'set', c: code() });
+      C.send({ t: 'look', a: 'set', c: code(), title: onTitle() ? 1 : 0 });
       // (Done wears it - nothing else to save; the owner, 11-15: a player could think "Add to Saved" was needed first)
       if (state.cur && code() !== state.cur && C.toast) C.toast('New look on. (Add to Saved keeps a copy to switch back to.)', 'good');
     }
-    else if (performance.now() - doneWarnAt > 4000) { doneWarnAt = performance.now(); if (C.toast) C.toast(`${why} (Done again: leave as you were.)`, 'warn'); return; }
+    else if (performance.now() - doneWarnAt > 4000) { doneWarnAt = performance.now(); sayWhy(`${why} Done again: leave as you were.`); if (C.toast && !onTitle()) C.toast(`${why} (Done again: leave as you were.)`, 'warn'); return; }
   }
   cancelAnimationFrame(raf); raf = 0;
   if (C.topOverlay() === 'creator') C.closeOverlay('creator');
 }
 // why the look being edited can't be worn now (the server says the same: looks.js refusal); null: it can
 const owned = (id) => !!state.free || devWear || WD.owns(state.own || [], id);
+// the title screen's CHARACTER: the character creator - body, face and hair change freely there (the owner, 11-17: "customize
+// your character and have it commit in the main menu"); clothes still from your wardrobe
+const onTitle = () => { const t = document.getElementById('title'); return !!t && !t.classList.contains('hidden'); };
 function problem(L) {
   const cur = !state.free && !devWear && state.cur && LK.decodeLook(state.cur);
   if (!cur) return null;
   const c = WD.changes(cur, L);
+  if (onTitle()) { c.body = false; c.hair = false; }
   if (c.body && !state.home) return 'Your body, face, makeup and tattoos change at the mirror at home.';
   if (c.hair && !(state.home && cur.body.base !== L.body.base)) return 'Hair and facial hair change at a barbershop or a hair salon.';
   const no = WD.unowned(state.own || [], L);
@@ -480,7 +518,7 @@ function renderPage() {
   const L = look, B = L.body;
   // (outside the first session: the body, face and extras change at the mirror at home, the hair at a barber)
   const here = (what) => `<p class="cc-note cc-info">${what}</p>`;
-  const lockedHere = mode === 'edit' && !state.free && !devWear && ((tab === 'hair') || (!state.home && (tab === 'body' || tab === 'face' || tab === 'extras')));
+  const lockedHere = mode === 'edit' && !state.free && !devWear && !onTitle() && ((tab === 'hair') || (!state.home && (tab === 'body' || tab === 'face' || tab === 'extras')));
   if (mode === 'shop') {
     const S = WD.STORES[shop.store] || {}, own = state.own || [];
     h = `<p class="cc-note">${esc(S.line || '')}. Everything you buy goes to your wardrobe.</p>` + layerRow();
@@ -499,22 +537,23 @@ function renderPage() {
       const P = LK.PIECES[shopSel], it = P && look.outfit[P.slot];
       if (it && it.id === shopSel) {
         h += row(`Color: ${esc(P.name)}`, chip('ctarget', 'c', 'Main', ctarget === 'c') + chip('ctarget', 't', 'Trim', ctarget === 't')) + `<div class="cc-opts sw">${LK.CLOTH.map(([hx, n], i) => sw('sh-colour', i, hx, it[ctarget] === i, n)).join('')}</div>`;
-        if (PATTERNED.has(P.slot)) h += row('Pattern', LK.PATTERNS.map((pp, i) => chip('sh-pattern', i, pp === 'tiedye' ? 'Tie-dye' : pp[0].toUpperCase() + pp.slice(1), it.p === i)).join(''));
+        if (PATTERNED.has(P.slot)) h += row('Pattern', LK.PATTERNS.map((pp, i) => (i < LK.PASS_PATTERNS || passOn() ? chip('sh-pattern', i, pp === 'tiedye' ? 'Tie-dye' : pp[0].toUpperCase() + pp.slice(1), it.p === i) : '')).join(''));
+        if (LK.canZip(P) && passOn()) h += row('Front', chip('sh-zip', 0, 'Open', !LK.isZipped(it)) + chip('sh-zip', 1, LK.canZip(P) === 2 ? 'Buttoned' : 'Zipped', !!LK.isZipped(it)));   // (a jacket open or done up: lookcore.js canZip)
       }
     }
   } else if (mode === 'barber') {
     const cur = LK.decodeLook(state.cur) || look, k = shop.kind;
     const price = (what, same) => `<span class="cc-price">${same ? 'yours' : '$' + WD.hairPrice(k, what)}</span>`;
     const heads = (list, what) => `<div class="cc-grid">${list.map(([n, i, fn, on, same]) => `<button class="cc-card hd ${on ? 'on' : ''}" data-act="${what}" data-v="${i}">${th(variant(fn), 'head')}<span>${esc(n)}</span>${price(hairTab, same)}</button>`).join('')}</div>`;
-    if (hairTab === 'cut') h = heads(LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base)).map(([s, i]) => [s[0], i, (V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }, L.hair.style === i, cur.hair.style === i]), 'hb-style');
+    if (hairTab === 'cut') h = heads(LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base) && hairShown(s)).map(([s, i]) => [s[0], i, (V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }, L.hair.style === i, cur.hair.style === i]), 'hb-style');
     else if (hairTab === 'colour') h = row(`Color <b>${WD.hairPrice(k, 'colour') ? '$' + WD.hairPrice(k, 'colour') : ''}</b>`, LK.HAIR_COLORS.map(([hx, n], i) => sw('hb-col', i, hx, L.hair.color === i, n)).join(''));
-    else h = heads((hairTab === 'beard' ? WD.BEARDS : WD.MOUSTACHES).map((i) => [i ? LK.FACIAL_HAIR[i][0] : 'Clean shaven', i, (V) => { V.hair.facial = i; V.outfit.glasses = null; }, L.hair.facial === i, cur.hair.facial === i]), 'hb-fac');
+    else h = heads((hairTab === 'beard' ? WD.BEARDS : WD.MOUSTACHES).filter((i) => !i || !passOn() || L.hair.facial === i || !LK.FACIAL_RETIRED.includes(LK.FACIAL_HAIR[i][1])).map((i) => [i ? LK.FACIAL_HAIR[i][0] : 'Clean shaven', i, (V) => { V.hair.facial = i; V.outfit.glasses = null; }, L.hair.facial === i, cur.hair.facial === i]), 'hb-fac');
     h = `<p class="cc-note">${k === 'salon' ? 'Cuts and color' : 'Cuts, color, beards and mustaches'}: see it on you, then Confirm to pay.</p>` + h;
   } else if (mode === 'start') {
     // (U18: the looks standing on round stages side by side, the picked one under a spotlight with its name on a plate,
     // "+ New character" at the end of the row; under it "Play as <name>" and "Customize this character")
     const n = LK.STARTERS.length, rnd = startPick === n, nm = rnd ? 'this one' : esc(LK.STARTERS[startPick].name);
-    h = `<p class="cc-note"><b class="cc-count">${n} LOOKS + RANDOM</b> Pick who you'll be. You can change everything later from the menu (Appearance).</p><div class="cc-stages">`
+    h = `<p class="cc-note"><b class="cc-count">${n} LOOKS + RANDOM</b> Pick who you'll be. You can change it later: CHARACTER on the title screen, or in the city the mirror at home.</p><div class="cc-stages">`
       + LK.STARTERS.map((s, i) => `<button class="cc-stage ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look, i === startPick ? 'stageon' : 'stage')}<span class="cc-plate">${esc(s.name)}</span><small class="cc-sub">${esc(s.sub || '')}</small></button>`).join('')
       + `<button class="cc-stage ${rnd ? 'on' : ''}" data-act="start" data-v="random">${rnd ? th(look, 'stageon') : '<span class="cc-q">?</span>'}<span class="cc-plate">Random</span><small class="cc-sub">Surprise me</small></button>`
       + `<button class="cc-stage cc-new" data-act="new-char"><b>+</b><span>New character</span></button></div>`
@@ -529,10 +568,13 @@ function renderPage() {
     h += `<p class="cc-note cc-info">A fresh look at home lowers your public wanted level.</p>`;
   } else if (tab === 'body') {
     h = row('Base', chip('base', 'm', 'Men', B.base === 'm') + chip('base', 'f', 'Women', B.base === 'f'))
-      + row('Build', `<div class="cc-grid">${LK.BUILDS.map((b, i) => `<button class="cc-card sm ${B.build === i ? 'on' : ''}" data-act="build" data-v="${i}">${th(variant((V) => { V.body.build = i; }))}<span>${b.name}</span></button>`).join('')}</div>`)
+      + row('Build', `<div class="cc-grid">${LK.BUILDS.map((b, i) => (b.pp && !passOn() && B.build !== i) || (b.b && b.b !== B.base) ? '' : `<button class="cc-card sm ${B.build === i ? 'on' : ''}" data-act="build" data-v="${i}">${th(variant((V) => { V.body.build = i; }))}<span>${b.name}</span></button>`).join('')}</div>`)
       + row(`Height <b>${LK.HEIGHT_NAMES[B.height]}</b>`, `<input class="cc-range" type="range" min="0" max="${LK.HEIGHTS.length - 1}" step="1" value="${B.height}" data-act="height" aria-label="Height">`)
       + row('Skin tone', LK.SKIN_ORDER.map((i) => sw('skin', i, LK.SKIN_TONES[i], B.skin === i, `Skin tone ${i + 1}`)).join(''))
-      + row('Age', LK.AGES.map((a, i) => chip('age', i, a, B.age === i)).join(''));
+      + row('Age', LK.AGES.map((a, i) => chip('age', i, a, B.age === i)).join(''))
+      + (passOn() ? row('Posture', chip('stoop', 0, 'Upright', !B.stoop) + chip('stoop', 1, 'Stooped', !!B.stoop)) : '')
+      // (pass 3: body freckles, vitiligo, a prosthetic arm or leg - the polish pass draws them: offered while it is on)
+      + (passOn() ? row('Skin marks', chip('bmark', 1, 'Body freckles', B.marks & 1) + chip('bmark', 2, 'Vitiligo', B.marks & 2)) + row('Prosthetic', LK.LIMBS.map((n, i) => chip('limb', i, n, (B.limb | 0) === i)).join('')) : '');
   } else if (tab === 'face') {
     const F = L.face, o = LK.FACE_OPTS;
     // each option a close-up of your own face wearing it (CC8)
@@ -545,19 +587,21 @@ function renderPage() {
   } else if (tab === 'hair') {
     const LEN = { bald: 's', buzz: 's', short: 's', slick: 's', spiky: 's', curly: 's', undercut: 's', fade: 's', cornrows: 's', pixie: 's', curtains: 's', mohawk: 's', sides: 's', sidepart: 's', quiff: 's' };
     const lenOf = (st) => LEN[st] ? 'short' : ['long', 'wavy', 'braids', 'dreads', 'boxbraids', 'curlylong', 'braid', 'halfup'].includes(st) ? 'long' : 'medium';
-    const styles = LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base) && (hairLen === 'all' || lenOf(s[2]) === hairLen));
+    const styles = LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base) && hairShown(s) && (hairLen === 'all' || lenOf(s[2]) === hairLen));
     h = row('Hair length', ['all', 'short', 'medium', 'long'].map((k) => chip('hlen', k, k[0].toUpperCase() + k.slice(1), hairLen === k)).join(''))
       + row('Hairstyle', `<div class="cc-grid">${styles.map(([s, i]) => `<button class="cc-card hd ${L.hair.style === i ? 'on' : ''}" data-act="hair" data-v="${i}">${th(variant((V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }), 'head')}<span>${esc(s[0])}</span></button>`).join('')}</div>`)
       + row('Hair color', LK.HAIR_COLORS.map(([hx, n], i) => sw('hcol', i, hx, L.hair.color === i, n)).join(''))
-      + (B.base === 'm' ? row('Facial hair', `<div class="cc-grid">${LK.FACIAL_HAIR.map(([n], i) => `<button class="cc-card hd ${L.hair.facial === i ? 'on' : ''}" data-act="facial" data-v="${i}">${th(variant((V) => { V.hair.facial = i; V.outfit.glasses = null; }), 'head')}<span>${n}</span></button>`).join('')}</div>`) : '');
+      + (passOn() ? row('Dyed tips', chip('htip', 0, 'None', !L.hair.tip) + LK.HAIR_COLORS.map(([hx, n], i) => sw('htip', i + 1, hx, L.hair.tip === i + 1, n)).join('')) : '')
+      + (B.base === 'm' ? row('Facial hair', `<div class="cc-grid">${LK.FACIAL_HAIR.map(([n, k], i) => passOn() && L.hair.facial !== i && LK.FACIAL_RETIRED.includes(k) ? '' : `<button class="cc-card hd ${L.hair.facial === i ? 'on' : ''}" data-act="facial" data-v="${i}">${th(variant((V) => { V.hair.facial = i; V.outfit.glasses = null; }), 'head')}<span>${n}</span></button>`).join('')}</div>`) : '')
+      + (B.base === 'm' && passOn() && L.hair.facial ? row('Beard color', chip('bcol', 0, 'Same as hair', !L.hair.bcol) + LK.HAIR_COLORS.map(([hx, n], i) => sw('bcol', i + 1, hx, L.hair.bcol === i + 1, n)).join('')) : '');
   } else if (tab === 'outfit') {
     const base = outBase || B.base;
     const slotItem = L.outfit[outSlot];
-    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (devWear || !p.d.issued) && (!p.d.gift || devWear || owned(p.i)) && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)) && (outView === 'all' || owned(p.i)));
+    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (devWear || !p.d.issued) && (!p.d.pp || passOn()) && (!p.d.gift || devWear || owned(p.i)) && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)) && (outView === 'all' || owned(p.i)));
     // each tile: you wearing it (a top or a set without the jacket over it; hats, glasses and masks as a close-up)
     const crop = outSlot === 'hat' || outSlot === 'glasses' ? 'head' : 'full';
-    const dress = (V, id) => { V.outfit[outSlot] = id; if (outSlot === 'set' && id) { V.outfit.top = null; V.outfit.bottoms = null; } if ((outSlot === 'top' || outSlot === 'set') && id) V.outfit.jacket = null; if (outSlot === 'hair' || crop === 'head') V.outfit.glasses = outSlot === 'glasses' ? id : V.outfit.glasses; };
-    const none = outSlot !== 'shoes' ? `<button class="cc-card sm ${!slotItem ? 'on' : ''}" data-act="piece" data-v="0">${th(variant((V) => dress(V, null)), crop)}<span>None</span></button>` : '';
+    const dress = (V, id) => { V.outfit[outSlot] = id; if (outSlot === 'set' && id) { V.outfit.top = null; V.outfit.bottoms = null; } if ((outSlot === 'top' || outSlot === 'set') && id) V.outfit.jacket = null; if (outSlot === 'socks' || outSlot === 'under') { V.outfit.set = V.outfit.bottoms = null; if (outSlot === 'under') V.outfit.top = V.outfit.jacket = null; } if (outSlot === 'hair' || crop === 'head') V.outfit.glasses = outSlot === 'glasses' ? id : V.outfit.glasses; };
+    const none = outSlot !== 'shoes' ? `<button class="cc-card sm ${!slotItem ? 'on' : ''}" data-act="piece" data-v="0">${th(variant((V) => dress(V, null)), crop)}<span>${outSlot === 'under' ? 'Basic' : 'None'}</span></button>` : '';   // (underwear: no piece picked is the plain basics; 'Nothing on' is a piece)
     const tiles = pieces.map((p) => { const mine = slotItem && slotItem.id === p.i, lk = owned(p.i) ? '' : lockTag(p.i); return `<button class="cc-card sm ${mine ? 'on' : ''} ${lk ? 'locked' : ''}" data-act="piece" data-v="${p.i}">${th(variant((V) => dress(V, { id: p.i, c: mine ? slotItem.c : p.c, t: mine ? slotItem.t : p.t, p: mine ? slotItem.p : p.d.p || 0 })), crop)}<span>${esc(p.name)}</span>${lk}</button>`; }).join('');
     const strip = completeLooks().map((V, i) => `<button class="cc-card sm" data-act="complete" data-v="${i}">${th(V)}</button>`).join('');
     // Owned / All (CC1): what's in your wardrobe, or the whole catalogue - the rest padlocked, with the store that sells it
@@ -571,7 +615,8 @@ function renderPage() {
       + `<div class="cc-grid">${none}${tiles || '<p class="cc-note">Nothing in this style for this slot.</p>'}</div>`
       + (slotItem ? row('Color', chip('ctarget', 'c', 'Main', ctarget === 'c') + chip('ctarget', 't', 'Trim', ctarget === 't'))
         + `<div class="cc-opts sw">${LK.CLOTH.map(([hx, n], i) => sw('colour', i, hx, slotItem[ctarget] === i, n)).join('')}</div>`
-        + row('Pattern', LK.PATTERNS.map((p, i) => chip('pattern', i, p === 'tiedye' ? 'Tie-dye' : p[0].toUpperCase() + p.slice(1), slotItem.p === i)).join('')) : '')
+        + row('Pattern', LK.PATTERNS.map((p, i) => (i < LK.PASS_PATTERNS || passOn() ? chip('pattern', i, p === 'tiedye' ? 'Tie-dye' : p[0].toUpperCase() + p.slice(1), slotItem.p === i) : '')).join(''))
+        + (LK.canZip(LK.PIECES[slotItem.id]) && passOn() ? row('Front', chip('zip', 0, 'Open', !LK.isZipped(slotItem)) + chip('zip', 1, LK.canZip(LK.PIECES[slotItem.id]) === 2 ? 'Buttoned' : 'Zipped', !!LK.isZipped(slotItem))) : '') : '')
       + row(`Complete looks${outStyle ? ': ' + LK.STYLES.find((s) => s[0] === outStyle)[1] : ''}`, `<div class="cc-grid">${strip}</div>`);
   } else if (tab === 'extras') {
     const E = L.extras;
@@ -604,12 +649,37 @@ function renderPage() {
   if (renaming >= 0) { const inp = pg.querySelector('.cc-sv input'); if (inp) inp.focus(); }
   refocus();
 }
+// a random outfit made only of what you can wear (the owner, 11-17: "don't show complete outfits the player doesn't own
+// the things for"): each locked piece of the random one swapped for an owned piece of the same slot that fits - in its
+// style if one is - an optional slot left empty if there's none; free players and the dev's wear: anything
+// the polish pass's hairstyles (lookcore.js HAIR_STYLES' fourth field) are offered only while the pass is switched on:
+// off, each would draw as the style it's built on
+const passOn = () => { try { return localStorage.getItem('cla.polish') !== '0'; } catch { return false; } };   // (on unless switched off - the owner, 11-22; storage blocked: off, as main.js line 115)   // (pieces only the pass draws - d.pp - likewise)
+function hairShown(s) { try { return !s[3] || localStorage.getItem('cla.polish') !== '0'; } catch { return !s[3]; } }
+function wearable(R, base, seed) {
+  if (state.free || devWear) return R.outfit;
+  const O = { ...R.outfit };
+  let r = (seed >>> 0) || 1;
+  const rnd = () => { r = (r * 1103515245 + 12345) >>> 0; return r / 4294967296; };
+  for (const sl of LK.SLOTS) {
+    const it = O[sl];
+    if (!it || !it.id || owned(it.id)) continue;
+    const P0 = LK.PIECES[it.id], pool = LK.PIECES.filter((q) => q && q.slot === sl && owned(q.i) && !q.d.issued && LK.fits(q, base));
+    const same = pool.filter((q) => P0 && q.tags.some((t) => P0.tags.includes(t))), L = same.length ? same : pool;
+    const Q = L.length ? L[Math.floor(rnd() * L.length) % L.length] : null;
+    O[sl] = Q ? { id: Q.i, c: Q.c, t: Q.t, p: Q.d.p || 0 } : null;
+  }
+  if (!O.set && !O.top) { const Q = LK.PIECES.find((q) => q && q.slot === 'top' && owned(q.i) && LK.fits(q, base)); O.top = Q ? { id: Q.i, c: Q.c, t: Q.t, p: 0 } : null; }
+  if (!O.set && !O.bottoms) { const Q = LK.PIECES.find((q) => q && q.slot === 'bottoms' && owned(q.i) && LK.fits(q, base)); O.bottoms = Q ? { id: Q.i, c: Q.c, t: Q.t, p: 0 } : null; }
+  return O;
+}
 function completeLooks() {
   const base = look.body.base, st = outStyle || null, out = [];
   let h = 7; for (const ch of String(outStyle || 'all')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   for (let i = 0; i < 6; i++) {
     const R = LK.randomLook(h + i * 977, base, st || LK.STYLES[(h + i) % LK.STYLES.length][0]);
-    out.push(variant((V) => { V.outfit = R.outfit; }));
+    const O = wearable(R, base, h + i * 977);
+    out.push(variant((V) => { V.outfit = O; }));
   }
   return out;
 }
@@ -651,12 +721,12 @@ function act(a, v, el) {
     case 'undo': if (hist.length) { look = LK.decodeLook(hist.pop()); drawPreview(); render(); } return;
     case 'random': {   // (each tab randomises its own part: the body, the face, the hair, the outfit, the extras)
       const s = newSeed();
-      if (tab === 'outfit') { const R = LK.randomLook(s, look.body.base, outStyle || null); setL((L) => { L.outfit = R.outfit; }); }
+      if (tab === 'outfit') { const R = LK.randomLook(s, look.body.base, outStyle || null), O = wearable(R, look.body.base, s); setL((L) => { L.outfit = O; }); }
       else if (tab === 'body') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.body = { ...R.body, base: L.body.base }; }); }
       else if (tab === 'face') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.face = R.face; }); }
       else if (tab === 'hair') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.hair = R.hair; if (L.body.base === 'f') L.hair.facial = 0; }); }
       else if (tab === 'extras') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.extras = R.extras; }); }
-      else { const R = LK.randomLook(s, look.body.base); setL((L) => { Object.assign(L, R); }); }
+      else { const R = LK.randomLook(s, look.body.base); R.outfit = wearable(R, look.body.base, s); setL((L) => { Object.assign(L, R); }); }
       render(); return;
     }
     case 'save': tab = 'saved'; render(); { const i = root.querySelector('.cc-name'); if (i) i.focus(); } return;
@@ -664,12 +734,17 @@ function act(a, v, el) {
     case 'build': setL((L) => { L.body.build = Number(v); }); return;
     case 'skin': setL((L) => { L.body.skin = Number(v); }); return;
     case 'age': setL((L) => { L.body.age = Number(v); }); return;
+    case 'bmark': setL((L) => { L.body.marks ^= Number(v); }); return;
+    case 'limb': setL((L) => { L.body.limb = Number(v); }); return;
     case 'face': { const [k, n] = v.split(':'); setL((L) => { L.face[k] = Number(n); }); return; }
     case 'ftog': setL((L) => { L.face[v] = L.face[v] ? 0 : 1; }); return;
     case 'rface': { const R = LK.randomLook(newSeed(), look.body.base); setL((L) => { L.face = R.face; }); return; }
     case 'hlen': hairLen = v; renderPage(); return;
     case 'hair': setL((L) => { L.hair.style = Number(v); }); return;
     case 'hcol': setL((L) => { L.hair.color = Number(v); }); return;
+    case 'htip': setL((L) => { L.hair.tip = Number(v); }); return;
+    case 'bcol': setL((L) => { L.hair.bcol = Number(v); }); return;
+    case 'stoop': setL((L) => { L.body.stoop = Number(v); }); return;
     case 'facial': setL((L) => { L.hair.facial = Number(v); }); return;
     case 'makeup': setL((L) => { L.extras.makeup = Number(v); }); return;
     case 'mcol': setL((L) => { L.extras.makeupColor = Number(v); }); return;
@@ -701,8 +776,9 @@ function act(a, v, el) {
       setL((L) => {
         const cur = L.outfit[outSlot];
         if (!P) { L.outfit[outSlot] = null; return; }
-        L.outfit[outSlot] = { id, c: cur ? cur.c : P.c, t: cur ? cur.t : P.t, p: cur && cur.p ? cur.p : P.d.p || 0 };
-        if (!cur) { L.outfit[outSlot].c = P.c; L.outfit[outSlot].t = P.t; }
+        // (the colors its tile shows - the piece's own; the owner, 11-17: "you see a red shirt, choose it and a white shirt is
+        // equipped". The same piece picked again keeps the colors you gave it)
+        L.outfit[outSlot] = cur && cur.id === id ? { ...cur } : { id, c: P.c, t: P.t, p: P.d.p || 0 };
         if (outSlot === 'set') { L.outfit.top = null; L.outfit.bottoms = null; }
         if ((outSlot === 'top' || outSlot === 'bottoms') && L.outfit.set) { const S2 = L.outfit.set; L.outfit.set = null; if (outSlot === 'top' && !L.outfit.bottoms) L.outfit.bottoms = LK.item('Jeans'); if (outSlot === 'bottoms' && !L.outfit.top) L.outfit.top = { ...LK.item('Plain tee'), c: S2.c }; }
       });
@@ -710,6 +786,8 @@ function act(a, v, el) {
     }
     case 'colour': setL((L) => { const it = L.outfit[outSlot]; if (it) it[ctarget] = Number(v); }); return;
     case 'pattern': setL((L) => { const it = L.outfit[outSlot]; if (it) it.p = Number(v); }); return;
+    case 'zip': setL((L) => { LK.setZipped(L.outfit[outSlot], Number(v)); }); return;
+    case 'sh-zip': setL((L2) => { const P = LK.PIECES[shopSel], it = P && L2.outfit[P.slot]; if (it && it.id === shopSel) LK.setZipped(it, Number(v)); }); return;
     case 'complete': { const V = completeLooks()[Number(v)]; if (V) setL((L) => { L.outfit = V.outfit; }); return; }
     case 'sv-name': { const i = root.querySelector('.cc-name'); if (i) { i.value = v; i.focus(); } return; }
     case 'sv-save': {

@@ -34,10 +34,12 @@ const water = (world, x, y) => !BOAT_BLOCK[world.map.tileAtPx(x, y)];
 const BOATERS_WATER = 2500;   // tiles: the boaters' and the patrol boats' water (about 50 x 50 at the least)
 const ANGLERS_WATER = 300;    // tiles: an angler's lake (the smallest World v3 has, a tarn in Granite Peaks, is 368)
 const OPEN_T = new Uint8Array(16); OPEN_T[T.WATER] = 1; OPEN_T[T.DEEP] = 1;
-export function waterSize(m, x, y, cap) {
+// (out: given, out.seen is the tiles the fill reached - all of them the same body of water)
+export function waterSize(m, x, y, cap, out = null) {
   let tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   if (!m.inside(tx, ty) || BOAT_BLOCK[m.tiles[m.idx(tx, ty)]]) return 0;
   const seen = new Set([m.idx(tx, ty)]), stack = [tx, ty];
+  if (out) out.seen = seen;
   let n = 0;
   while (stack.length && n < cap) {
     ty = stack.pop(); tx = stack.pop();
@@ -53,11 +55,26 @@ export function waterSize(m, x, y, cap) {
   }
   return n;
 }
-// a sea point a boat may use (each point's answer kept: the points round the players are asked again and again)
-const BIG = new WeakMap();
+// a sea point a boat may use (each point's answer kept: the points round the players are asked again and again). Big
+// or not is the whole body of water's answer (the fill comes out the same from any tile of it: it reaches the cap of
+// open water, or past three times it of tiles, or it runs out of water), so every tile a fill reached is marked with it
+// (WATER_MARK: 1 big, 2 not) - World v3's 190,000 sea points cost a fill per body of water, not one each (11-17: the
+// fills had been 5-7 ms of every tick)
+const BIG = new WeakMap(), WATER_MARK = new WeakMap();
 export function bigWater(world, p) {
   let ok = BIG.get(p);
-  if (ok === undefined) { ok = waterSize(world.map, p.x, p.y, BOATERS_WATER) >= BOATERS_WATER; BIG.set(p, ok); }
+  if (ok !== undefined) return ok;
+  const m = world.map, tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+  let M = WATER_MARK.get(m);
+  if (!M) WATER_MARK.set(m, (M = new Uint8Array(m.w * m.h)));
+  const at = m.inside(tx, ty) ? M[m.idx(tx, ty)] : 0;
+  if (at) ok = at === 1;
+  else {
+    const out = {};
+    ok = waterSize(m, p.x, p.y, BOATERS_WATER, out) >= BOATERS_WATER;
+    if (out.seen) { const v = ok ? 1 : 2; for (const i of out.seen) M[i] = v; }
+  }
+  BIG.set(p, ok);
   return ok;
 }
 function clearLine(world, x1, y1, x2, y2) {

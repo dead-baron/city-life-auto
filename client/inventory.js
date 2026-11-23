@@ -26,6 +26,10 @@ export const ITEM_ICON = {
   seed_corn: '🌱', seed_strawberry: '🌱', seed_sunflower: '🌱', corn: '🌽', strawberry: '🍓', sunflower: '🌻', prize_corn: '🌽', prize_strawberry: '🍓', prize_sunflower: '🌻',   // (H78)
 };
 const SLOTS = 4;
+// each thing's own pixel picture (client/itemart.js), loaded the first time the wheel is drawn - off the page's first
+// load; until it is in, and for a thing it has none of, the old mark
+let ART = null, artP = null;
+const pic = (id) => (ART && ART.itemIcon(id)) || ITEM_ICON[id] || '•';
 
 // ---- the quick wheel ------------------------------------------------------------------------------
 // Four slots round a centre; pick(angle) gives the slot a direction points at (up, right, down, left).
@@ -42,13 +46,14 @@ export function createWheel({ el, send, me }) {
   function render() {
     const m = me();
     if (!m) return;
+    if (!ART) artP ||= import('./itemart.js').then((a) => { ART = a; if (open) render(); }).catch(() => {});
     const quick = m.quick || [];
     el.innerHTML = '';
     for (let i = 0; i < SLOTS; i++) {
       const id = quick[i], n = id ? (m.inv[id] || 0) : 0;
       const b = document.createElement('button');
       b.className = `wheel-slot s${i}` + (i === sel ? ' on' : '') + (!id || !n ? ' empty' : '');
-      b.innerHTML = id ? `<span class="ic">${ITEM_ICON[id] || '•'}</span><span>${ITEMS[id].name}</span><small>${!n ? 'none' : ITEMS[id].light ? (m.light ? 'on' : 'off') : 'x' + n}</small>` : '<span class="ic">·</span><span>empty</span><small>put one here in your Inventory</small>';
+      b.innerHTML = id ? `<span class="ic">${pic(id)}</span><span>${ITEMS[id].name}</span><small>${!n ? 'none' : ITEMS[id].light ? (m.light ? 'on' : 'off') : 'x' + n}</small>` : '<span class="ic">·</span><span>empty</span><small>pin one in the bag</small>';
       b.onpointerup = (e) => { e.stopPropagation(); sel = i; use(); };
       el.appendChild(b);
     }

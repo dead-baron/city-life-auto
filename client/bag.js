@@ -24,17 +24,19 @@ import { loadout, SLOT_NAMES } from '../shared/loadout.js';
 import { INSTRUMENTS } from '../shared/music.js';
 import { person } from './art2/people.js';
 import { packGBuf, downsample2 } from './art2/gbuf.js';
+import { itemIcon, weaponIcon } from './itemart.js';
 
 // a weapon's picture in a tile: its class's line icon (pistol, rifle, knife, bat...: the touch buttons' family,
 // client/touchicons.js) - the top-down sprites are thin bars or blocks at this size and read as broken art (11-04 review)
 function wIcon(id, w, h) {
   const s = document.createElement('span');
   s.className = 'bc-gl';
-  s.innerHTML = glyph(glyphOfWeapon(id, (WEAPONS[id] || {}).type), Math.round(h * 1.15));
+  s.innerHTML = weaponIcon(id) || glyph(glyphOfWeapon(id, (WEAPONS[id] || {}).type), Math.round(h * 1.15));   // (its own pixel picture - client/itemart.js; the class's line icon for one without)
   return s;
 }
-// a thing's picture: its line icon too (the owner, 11-05: the bag's icons "don't look very good" - the emoji went), by the
-// first pattern its id matches, else by what it is
+// a thing's picture: its own pixel picture (client/itemart.js - the owner, 11-21: "Items are looking good"), and for a
+// thing without one its family's line icon (11-05: the emoji went), by the first pattern its id matches, else by what it is
+const pic = (id, px) => itemIcon(id) || glyph(itemGlyph(id), px);
 const ITEM_GLYPH = [
   [/^legend_|^prize_|goldStar/, 'trophy'], [/^seed_/, 'sprout'], [/^medkit/, 'briefcase-medical'], [/bandage/, 'bandage'], [/revivekit/, 'heart-pulse'],
   [/Gloves|moccasins|furHat|Jacket|Coat|camo/, 'shirt'],
@@ -198,8 +200,8 @@ export const TABS = [['all', 'All'], ['clothes', 'Clothes'], ['weapons', 'Weapon
 const TAB_OF = { weapons: 'weapons', clothes: 'clothes', healing: 'food', food: 'food', tools: 'tools', music: 'tools', fishing: 'tools', outdoors: 'tools', materials: 'materials', hunting: 'materials', garden: 'materials', valuables: 'valuables', other: 'valuables' };
 export const tabOf = (cat) => TAB_OF[cat] || 'valuables';
 // the paper doll's slots round the figure (U6): [look slot, label] - the left column, then the right
-export const DOLL = [[['hat', 'HAT'], ['top', 'TOP'], ['jacket', 'JACKET'], ['bottoms', 'BOTTOMS']], [['glasses', 'GLASSES'], ['jewel', 'ACCESSORY'], ['bag', 'BAG'], ['shoes', 'SHOES']]];
-const SLOT_WORD = { top: 'Top', jacket: 'Jacket', bottoms: 'Bottoms', set: 'Dress or set', shoes: 'Shoes', hat: 'Hat', glasses: 'Glasses or mask', jewel: 'Accessory', bag: 'Bag' };
+export const DOLL = [[['hat', 'HAT'], ['top', 'TOP'], ['jacket', 'JACKET'], ['bottoms', 'BOTTOMS'], ['under', 'UNDIES']], [['glasses', 'GLASSES'], ['jewel', 'JEWELRY'], ['bag', 'BAG'], ['shoes', 'SHOES'], ['socks', 'SOCKS']]];
+const SLOT_WORD = { top: 'Top', jacket: 'Jacket', bottoms: 'Bottoms', set: 'Dress or set', shoes: 'Shoes', hat: 'Hat', glasses: 'Glasses or mask', jewel: 'Accessory', bag: 'Bag', under: 'Underwear', socks: 'Socks' };
 // a clothing piece's line icon by its slot (the touch family; the shapes Lucide has no icon for drawn in its manner)
 addGlyphs({
   pants: 'M6 2h12l1 20h-5l-2-12-2 12H5zM6 6h12',
@@ -208,7 +210,7 @@ addGlyphs({
   glasses: 'M2 15a4 4 0 1 0 8 0a4 4 0 1 0-8 0M14 15a4 4 0 1 0 8 0a4 4 0 1 0-8 0M10 15a2 2 0 0 1 4 0M2.5 13 5 7c.7-1.3 1.4-2 3-2M21.5 13 19 7c-.7-1.3-1.5-2-3-2',
   jacket: 'M8 3 4 6v15h5V9M16 3l4 3v15h-5V9M8 3l4 4 4-4M12 7v14',
 });
-const SLOT_GLYPH = { top: 'shirt', jacket: 'jacket', bottoms: 'pants', set: 'dress', shoes: 'footprints', hat: 'cap', glasses: 'glasses', jewel: 'gem', bag: 'backpack' };
+const SLOT_GLYPH = { top: 'shirt', jacket: 'jacket', bottoms: 'pants', set: 'dress', shoes: 'footprints', hat: 'cap', glasses: 'glasses', jewel: 'gem', bag: 'backpack', under: 'shirt', socks: 'footprints' };
 const freePiece = (P) => !!P && P.price === 0 && !P.d.issued && !P.d.gift;   // (shared/wardrobe.js free: everyone's)
 const hexOf = (c) => (CLOTH[c] || CLOTH[0])[0];
 const pieceTile = (it, px) => `${glyph(SLOT_GLYPH[PIECES[it.id].slot] || 'shirt', px)}<i class="iv-dot" style="--c:${hexOf(it.c)};--t:${hexOf(it.t)}"></i>`;
@@ -277,7 +279,14 @@ const savePref = (k, v) => { try { localStorage.setItem('cla.bag.' + k, v); } ca
 // el: the #inv tab; send(msg); me() the self record; refocus() after a render (the pad's focus); looks() the looks state
 // (server looks.js stateMsg: cur, own, saved); look() the code your ped wears (a vest over it shows); pp() the prop in your
 // hands (an instrument you play); stamina() [now, full]; close() puts the Inventory away
-export function createBag({ el, send, me, refocus, looks = () => null, look = () => null, pp = () => null, stamina = () => null, close = () => {} }) {
+const CARRY_NAME = { gun: 'GUN', melee: 'MELEE', throw: 'THROWN' };
+// Use on these takes the thing out into the world (the Inventory closes behind it): the tools you hold or set down - an
+// instrument, the boombox, a board, a rod, fireworks - but not a light (switched on and off from here) or a consumable
+export function leavesBag(id) {
+  const it = ITEMS[id];
+  return !!it && !it.light && !!(it.tool || it.music || it.ride || it.fun);
+}
+export function createBag({ el, send, me, refocus, leave, looks = () => null, look = () => null, pp = () => null, stamina = () => null, close = () => {} }) {
   let open = false, tab = loadPref('tab', 'all'), sort = loadPref('sort', 'kind'), sel = null, armDrop = '', dir = 0, fr = 0, timer = 0, showLooks = false, trig = [0, 0];
   if (!TABS.some((t) => t[0] === tab)) tab = 'all';
   el.innerHTML = '<div class="bag">'
@@ -326,7 +335,7 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
     return out.sort(by[sort] || by.kind);
   }
   const slotOfWeapon = (m, id) => loadout((m.weapons || []).map((w) => w.id)).indexOf(id);
-  function iconOf(t, px) { return t.kind === 'p' ? pieceTile(O_ITEM(t), px) : t.kind === 'i' ? glyph(itemGlyph(t.id), px) : ''; }
+  function iconOf(t, px) { return t.kind === 'p' ? pieceTile(O_ITEM(t), px) : t.kind === 'i' ? pic(t.id, px) : ''; }
   // a piece as worn (its colors) or as it comes
   let O_ITEM = (t) => { const O = outfitOf(), it = O && O[t.slot]; return it && it.id === t.id ? it : { id: t.id, c: PIECES[t.id].c, t: PIECES[t.id].t }; };
   function cell(t, m) {
@@ -335,9 +344,13 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
     b.className = 'bag-cell' + (t.k === sel ? ' sel' : '') + (on || t.worn ? ' on' : '');
     b.dataset.k = t.k; b.setAttribute('role', 'listitem');
     b.title = t.name;
-    b.innerHTML = `<span class="bc-ic">${iconOf(t, 30)}</span><span class="bc-nm">${esc(t.name)}</span>`
-      + (t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n">${t.w.mag}|${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '')
-      + (on ? '<span class="bc-tag">IN HAND</span>' : t.worn ? '<span class="bc-tag">WORN</span>' : ws >= 0 ? `<span class="bc-tag">${ws + 1}</span>` : pin >= 0 ? `<span class="bc-tag">${pin + 5}</span>` : '');
+    // (the owner, 11-22: the IN HAND chip hung off the tile's corner, the ammo count crowded the name - both in a footer
+    // row of the tile's own: the tag at its left, the count at its right)
+    // (a gun in hand with its count: its slot number on the gold tag - the tile's own highlight says it's the one in hand;
+    // "IN HAND" and "12|36" didn't fit a phone's tile together, 11-23)
+    const tag = on ? `<span class="bc-tag bc-held" title="In your hand">${t.kind === 'w' && WEAPONS[t.id].mag && ws >= 0 ? ws + 1 : 'IN HAND'}</span>` : t.worn ? '<span class="bc-tag">WORN</span>' : ws >= 0 ? `<span class="bc-tag">${ws + 1}</span>` : pin >= 0 ? `<span class="bc-tag">${pin + 5}</span>` : '';
+    const cnt = t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n" title="in the gun | spare">${t.w.mag}<i>|</i>${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '';
+    b.innerHTML = `<span class="bc-ic">${iconOf(t, 30)}</span><span class="bc-nm">${esc(t.name)}</span><span class="bc-ft">${tag}${cnt}</span>`;
     if (t.kind === 'w') b.querySelector('.bc-ic').appendChild(wIcon(t.id, 64, 32));
     b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; showLooks = false; render(); };
     // (a mouse: drag a thing you can use onto the quick bar's 5-8 - UIC-19)
@@ -355,7 +368,7 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
       cols[ci].innerHTML = col.map(([s, label]) => {
         const it = O && (s === 'top' && O.set ? O.set : O[s]), P = it && PIECES[it.id], under = s === 'bottoms' && O && O.set;
         return `<div class="iv-slot${it ? '' : ' empty'}${it && sel === 'p:' + it.id ? ' sel' : ''}" data-s="${s}"><small>${s === 'top' && O && O.set ? 'OUTFIT' : label}</small>`
-          + (it ? `<button class="iv-sb" data-k="p:${it.id}" title="${esc(P.name)}" aria-label="${esc(P.name)}">${pieceTile(it, 26)}</button><button class="iv-off" data-off="${O.set && s === 'top' ? 'set' : s}" aria-label="Take off the ${esc(P.name)}">✕</button>`
+          + (it ? `<button class="iv-sb" data-k="p:${it.id}" title="${esc(P.name)}" aria-label="${esc(P.name)}">${pieceTile(it, 26)}</button>${s === 'under' ? '' : `<button class="iv-off" data-off="${O.set && s === 'top' ? 'set' : s}" aria-label="Take off the ${esc(P.name)}">✕</button>`}`
             : `<button class="iv-sb" data-k="" disabled aria-label="${label}: nothing">${under ? '<em>with the outfit</em>' : glyph(SLOT_GLYPH[s], 22)}</button>`) + '</div>';
       }).join('');
     });
@@ -382,7 +395,8 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
     let acts = '<div class="bd-three">'
       + `<button class="btn btn-1" data-a="use"${canUse ? '' : ' disabled'}>${!canUse ? 'USE' : it.music === 'inst' ? 'PLAY' : it.light ? (m.light ? 'TURN OFF' : 'TURN ON') : it.ride === 'blades' ? 'PUT ON' : it.ride ? 'TAKE IN HAND' : 'USE'}</button>`
       + `<button class="btn btn-d" data-a="drop"${t.kind === 'p' ? ' disabled' : ''}>${armDrop === t.k ? 'AGAIN TO DROP' : t.n > 1 ? 'DROP ONE' : 'DROP'}</button>`
-      + thirdBtn() + '</div>';
+      + thirdBtn() + '</div>'
+      + (t.kind === 'w' && carryKind(t.id) && !held ? `<small class="bd-eq">EQUIP takes it in hand and puts it in your ${CARRY_NAME[carryKind(t.id)]} slot.</small>` : '');
     function thirdBtn() { return t.kind === 'p' ? `<button class="btn btn-1" data-a="${t.worn ? 'takeoff' : 'wear'}">${t.worn ? 'TAKE OFF' : 'WEAR'}</button>`
       : held ? `<button class="btn" data-a="holster">PUT AWAY</button>` : `<button class="btn${t.kind === 'w' ? ' btn-1' : ''}" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`; }
 
@@ -409,8 +423,9 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
     else if (a === 'takeoff') send({ t: 'look', a: 'off', s: t.slot === 'set' ? 'top' : t.slot });
     else if (a === 'use') {
       send({ t: 'inv', a: 'use', id: t.id });
-      // an instrument: out of your hands into the city - the Inventory goes so the pad and your character are in view
-      if (ITEMS[t.id] && ITEMS[t.id].music === 'inst') { close(); return; }
+      // something you take out into the world - an instrument, the boombox, a board, a rod, fireworks: the Inventory gets
+      // out of the way so the pad and your character are in view (the owner, 11-22); a light or something eaten keeps it
+      if (leavesBag(t.id)) { sel = null; armDrop = ''; (leave || close)(); return; }
     } else if (a === 'give') send({ t: 'inv', a: 'give', id: t.id });
     else if (a === 'drop' || a === 'dropall') {
       if (t.kind === 'p') return;
@@ -426,7 +441,7 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
   const weaponLine = (d) => (d.type === 'melee' ? 'A melee weapon: up close.' : d.type === 'tool' ? 'A tool you hold.' : d.type === 'throw' || d.type === 'grenade' ? 'Thrown: aim and let go.' : `${d.mag ? `A ${d.mag}-round magazine. ` : ''}Aim and fire; ${keyName('reload')} reloads.`);
   const pieceLine = (P, t) => `${SLOT_WORD[P.slot]}${P.tags && P.tags[0] ? ` - ${P.tags[0]}` : ''}. ${t.worn ? 'Take it off here, or put on something else of yours for the slot.' : 'Put it on from here - only where you could change: not while the police are after you, unless you are home.'}`;
   const keysHint = () => (input.device === 'gamepad' ? `Tap ${keyName('nextw')} for the next weapon, hold it for the weapon wheel; hold ${keyName('use')} for the quick wheel.`
-    : input.device === 'touch' ? 'Tap the weapon button for the next weapon, hold it for all of them; hold ITEMS for the quick wheel.'
+    : input.device === 'touch' ? 'Tap the weapon button for the next weapon, hold it for all of them; hold BAG for the quick wheel.'
       : `In play: 1-4 take out your weapons, 5-8 use the quick bar, the mouse wheel or ${keyName('nextw')} steps through, hold ${keyName('nextw')} for the weapon wheel.`);
 
   // the quick bar (UIC-19, U14): 1-4 your weapon slots, 5-8 the things to use (a tap picks it; drop a thing on 5-8)

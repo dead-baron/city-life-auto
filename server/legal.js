@@ -35,16 +35,18 @@ export function privacyPage(L, { ga = false } = {}) {
 <h2>Chat and safety</h2>
 <ul>
 <li>Chat lines are checked by a word filter. Recent lines are held in the server's memory for moderators; messages to an offline contact wait in their inbox.</li>
+<li>Your contacts, friends, friend requests and your "Who can text me" choice are kept with your account. Contact details in chat lines are hidden before anyone sees them. A line that asks someone for personal information (age, home, school, real name, photos, another app) is kept, as it was shown, in the moderators' review list.</li>
 <li>We keep moderation records on accounts: reports from players, filter hits, strikes, mutes, kicks and bans, and anti-cheat flags, with notes from the staff. Staff actions are written to an audit log.</li>
 <li>An account keeps a short log of its own recent events (money in and out, purchases, deaths, crimes, jobs, sign-ins) so staff can help - refund a purchase, rescue a stuck character.</li>
 </ul>
 <h2>Analytics</h2>
 <ul>
 <li>The server counts how the game is played, in totals by day (sessions, jobs, money sources, deaths, devices and frame rates), plus a few counters on each account (first and last day played). This stays on our server.</li>
+<li>Your approximate location - the country (and, from your device's time zone, the region) - is worked out on the server when you connect, from your connection's address (using DB-IP's free IP-to-country data, db-ip.com, CC BY 4.0) or your device's time zone, and counted with everyone else's (how many players from each country). The address itself isn't stored.</li>
 <li><b>Google Analytics 4</b> ${ga ? 'is switched on' : 'is not switched on at the moment; if it is,'}: it loads only if you choose <b>Accept</b> on the first screen (Essential only keeps it off), with ad features off. Google gets a hashed account id, never your name or email. You can change your choice in Settings.</li>
 </ul>
 <h2>What we don't keep</h2>
-<ul><li>We don't keep IP addresses. The server sees your address while you're connected and uses it in memory to limit abuse (too many tries); it isn't written down.</li><li>We don't sell anything about you, and there are no ads.</li></ul>
+<ul><li>We don't keep IP addresses. The server sees your address while you're connected and uses it in memory to limit abuse (too many tries) and to look up your country; it isn't written down.</li><li>We don't sell anything about you, and there are no ads.</li></ul>
 <h2>How long</h2>
 <p>Your account and character are kept while the game runs, so you can come back. Season resets wipe progress but keep the account. The server's analytics totals are kept for ${Math.round(DAYS_KEPT / 365)} years; Google Analytics keeps its data for 14 months.</p>
 <h2>Deleting your account, unsubscribing</h2>
@@ -66,6 +68,8 @@ export function termsPage(L) {
 <ul><li>You can play as a guest, or sign in to keep your character on any device. Keep your password to yourself; you're responsible for what's done with your account.</li><li>A guest character lives in one browser: clearing it can lose the character unless you've signed in or made a transfer code.</li><li>Your name must not be hateful, sexual, or pretend to be staff or someone else. Names held by signed-in players are theirs; a guest's name can be given to a member who picks it.</li></ul>
 <h2>Playing fair</h2>
 <ul><li>No cheating, bots, exploits on purpose, or attacking the servers.</li><li>No harassment, hate, sexual content or threats in chat or names, and never share anyone's personal information.</li><li>Staff can mute, strike, kick, send to the game's prison or ban an account that breaks these rules, and remove names.</li></ul>
+<h2>Chat, friends and messages</h2>
+<ul><li>Phone numbers, email addresses, links, street addresses and social media handles are hidden in chat automatically. Don't try to get around it, and don't ask anyone for theirs.</li><li>Lines that ask someone's age, where they live or go to school, their real name, for photos, or to move to another app are sent to our moderators to look at. Staff can mute or ban an account that does this.</li><li>You choose who can text you: everyone you've met, or only your friends and crew (Settings, Chat). Block anyone at any time - tap their name - and report anything that worries you.</li></ul>
 <h2>The game and its money</h2>
 <ul><li>In-game money, items, homes and cars have no real-world value and can't be sold or exchanged for real money.</li><li>It's a beta: things change, break and get reset. Seasons end with a reset of progress (your account stays).</li><li>We may change or end the game or these terms; we'll say so in the game.</li></ul>
 <h2>No warranty</h2>

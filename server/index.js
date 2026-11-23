@@ -5,11 +5,13 @@
 import { CAPTURE, captureHttp } from './capture.js';
 import { createServer } from 'node:http';
 import { reportsText, errorsText } from './perfreports.js';
+import { health, readDeployLog, readBackup, readPagesWait, readDisk, pageErrorsLastHour } from './status.js';
 import { readFile, stat } from 'node:fs/promises';
 import { readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { cpus, loadavg, freemem, totalmem } from 'node:os';
 import { join, normalize, extname } from 'node:path';
 import { config } from './config.js';
+import { createLine } from './line.js';
 import { attachWebSocketServer, wsStats } from './ws.js';
 import { createLimits, clientIp } from './limits.js';
 import { createLaunch } from './launch.js';
@@ -84,7 +86,7 @@ watchBuild(BUILD_FILE, 20000, (b) => {
 }, bootBuild && bootBuild.v);
 const startedAt = Date.now();
 // the launch foundation: accounts and sign-ins, roles and the admin log, chat, anti-cheat, analytics (server/launch.js)
-const launch = createLaunch({ config, store, world, ip: (req) => clientIp(req, config.trustProxy), extraOrigins: config.allowedOrigins.filter((o) => o !== '*'), texts: { perf: () => reportsText(world), errors: () => errorsText(world) } });
+const launch = createLaunch({ config, store, world, ip: (req) => clientIp(req, config.trustProxy), extraOrigins: config.allowedOrigins.filter((o) => o !== '*'), texts: { perf: () => reportsText(world), errors: () => errorsText(world) }, status: () => health(statusFacts()) });
 launch.start();
 // always on for metering; each limit only acts when configured (see config.js)
 const limits = createLimits({ dataDir: config.dataDir, monthlyGB: config.monthlyGB, maxPerIp: config.maxPerIp, connPerMinute: config.connPerMinute, httpPerMinute: config.httpPerMinute });
@@ -92,8 +94,9 @@ const limits = createLimits({ dataDir: config.dataDir, monthlyGB: config.monthly
 const QUOTA_MSG = 'The city is closed for the rest of the month (monthly data limit reached). It reopens on the 1st!';
 
 const server = createServer(async (req, res) => {
-  const url = new URL(req.url, 'http://x');
-  let path = decodeURIComponent(url.pathname);
+  // (a bad % in the path - GET /%FF - threw here and took the whole server down: the security audit, 11-19)
+  let url, path;
+  try { url = new URL(req.url, 'http://x'); path = decodeURIComponent(url.pathname); } catch { res.writeHead(400); res.end(); return; }
   // (baked chunks: many small requests a second while moving - counted in the monthly data, not the per-address rate)
   if (worldCdn && path.startsWith('/world/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (worldCdn.handle(path + (url.search || ''), req, res)) return; }
   if (artCdn && path.startsWith('/art/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (artCdn.handle(path + (url.search || ''), req, res)) return; }
@@ -139,6 +142,13 @@ function originAllowed(origin) {
   return !origin || config.allowedOrigins.includes(origin);
 }
 
+// the line at the door (server/line.js): config.maxPlayers in the city at once, the rest wait their turn; the players on
+// at the last stop let straight back in
+const line = createLine({ max: config.maxPlayers, lineMax: config.lineMax, online: () => { let n = 0; for (const p of world.players.values()) if (p.conn) n++; return n; }, peek: (token) => launch.peek(token), file: join(config.dataDir, 'line-held.json') });
+world.line = line;
+{ const held = line.load(); if (held) console.log(`[line] ${held} players from before the restart get their places back`); }
+setInterval(() => line.pump(), 1000).unref();
+
 attachWebSocketServer(server, {
   path: '/ws',
   allowOrigin: originAllowed,
@@ -154,9 +164,16 @@ attachWebSocketServer(server, {
       seed: config.seed, dev: config.dev, world: WORLD3 ? 'v3' : undefined, maxPlayers: config.maxPlayers, label: 'City Life Auto 0.8',
       closedReason: () => (limits && limits.state() !== 'ok' ? QUOTA_MSG : null),
       login: (token, hello) => launch.login(token, hello, ip),   // (bans, kicks, new guests, the age gate: server/launch.js)
-      hooks: launch.hooks,
+      hooks: launch.hooks, line,
     });
-    conn.on('message', (data, isBinary) => session.onMessage(data, isBinary));
+    // (one bad message must never stop the city: a guest's {"t":{"toString":1}} threw out of here and the process exited -
+    // the security audit, 11-19. Logged once per connection, the connection dropped)
+    conn.on('message', (data, isBinary) => {
+      try { session.onMessage(data, isBinary); } catch (e) {
+        if (!conn.badMsgLogged) { conn.badMsgLogged = true; console.warn('[net] a message threw:', String((e && e.message) || e).slice(0, 200)); }
+        try { conn.close(); } catch { /* already gone */ }
+      }
+    });
     conn.on('close', () => session.onClose());
   },
 });
@@ -175,6 +192,7 @@ function statsSnapshot() {
     kbOutPerSec: +((world.stats.bytesOut / Math.max(1, (Date.now() - startedAt) / 1000)) / 1024).toFixed(1),
     weather: world.weather, clock: Math.round(world.clock.minutes), droppedSnapshots: world.stats.dropped || 0,
     systemMs: world.profile(),
+    line: line.summary(),   // (the line at the door: how many wait, how long people waited - server/line.js)
     traffic: limits ? limits.summary() : null,
     ga: launch.ga.stats, flags: launch.ac.flags.length, reviews: launch.mod.openReviews(500).length,
     art: artCdn ? artCdn.summary() : null,
@@ -182,6 +200,16 @@ function statsSnapshot() {
     // the machine: its cores, load and memory (the owner moved the server to 2 OCPUs / 12 GB on 2026-10-15 - the art's bake
     // threads take what the tick leaves; this is where to see they leave enough)
     host: hostSnapshot(),
+  };
+}
+// what the console's Status tab is worked out from (server/status.js health; the owner, 11-23)
+function statusFacts() {
+  const now = Date.now(), art = artCdn ? artCdn.summary() : null, dir = config.dataDir;
+  return {
+    now, tickBudgetMs: TICK_MS, tickMsAvg: world.stats.tickMs, tickMsMax: world.stats.tickMax || 0,
+    tickErrors: world.stats.tickErrors || 0, tickErrorsHour: world.stats.tickErrAt ? now - world.stats.tickErrAt < 3600000 : false, lastTickError: world.stats.tickErr || '',
+    host: hostSnapshot(), disk: readDisk(dir), art, lastBakeAt: art ? art.lastAt || 0 : 0, world: worldCdn ? worldCdn.summary() : null,
+    deploys: readDeployLog(dir), backup: readBackup(dir), pages: readPagesWait(dir), pageErrHour: pageErrorsLastHour(world.clientErrors, now),
   };
 }
 function hostSnapshot() {
@@ -195,7 +223,7 @@ function loop() {
   const now = performance.now();
   let steps = 0;
   while (now >= next && steps < 3) {
-    try { world.step(); } catch (e) { console.error('[tick] error', e); }
+    try { world.step(); } catch (e) { console.error('[tick] error', e); world.stats.tickErrors = (world.stats.tickErrors || 0) + 1; world.stats.tickErrAt = Date.now(); world.stats.tickErr = String((e && e.message) || e).slice(0, 160); }
     next += TICK_MS;
     steps++;
   }
@@ -264,6 +292,7 @@ function shutdown(sig) {
     if (p.ped && !p.ped.dead) players.savePos(p, p.ped);
     if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Server restarting - your progress is saved. Reconnecting...' }); } catch { /* closed */ } }
   }
+  line.save([...world.players.values()].filter((p) => p.conn).map((p) => p.pid));   // (their places held for the restart: line.js)
   try { launch.stop(); } catch (e) { console.error('[server] saving the analytics failed', e); }
   try { store.flushSync(); } catch (e) { console.error('[server] final save failed', e); }
   if (limits) { limits.addBytes(wsStats.bytesOut - lastWs); limits.save(); }

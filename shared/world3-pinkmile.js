@@ -27,6 +27,7 @@
 // handNeon); the motels' galleries: client/art2/buildings.js (spec.motel); their signs: the 'motelsign' prop.
 import { TILE, T } from './constants.js';
 import { towerKit } from './world3-downtown.js';
+import { canopy, terrace, hang, vendor, fest, frontLife } from './world3-craft.js';
 
 const D = 17;   // the Pink Mile's district id (shared/mapcore.js DISTRICTS)
 // the street lines (tiles): the city's avenues round it - Gallery Avenue, Westside Avenue, Greenfield Avenue - and its own
@@ -97,6 +98,7 @@ function build(m, api, K) {
   const { rnd, pick, prop } = K;
   const poi0 = m.pois.length;
   const out = { homes: 0, shops: 0, clubs: 0, motels: 0, pools: 0 };
+  const b0 = m.buildings.length;   // (this plan's buildings: frontLife, the craft pass)
   const used = new Set();
   let lastWin = null, ci = 0;
   const biz = (list, x, y, k) => { for (let t = 0; t < 30; t++) { const q = list[Math.floor(rnd(x + t, y, k) * list.length) % list.length]; if (!used.has(q[0])) { used.add(q[0]); return q; } } return null; };
@@ -143,7 +145,10 @@ function build(m, api, K) {
     if (w >= 6 && rnd(x, y, 52) < 0.7) kit.push([`neon|${pick(words, rnd(x, y, 53))}|${Math.floor(rnd(x, y, 54) * 7)}`, Math.round(w * TILE / 2), 12]);
     kit.push(['ac', Math.round(w * TILE * 0.3), 80], ['vent', Math.round(w * TILE * 0.7), 120], ['acs', Math.round(w * TILE * 0.5), 160]);
     if (rnd(x, y, 55) < 0.4) kit.push(['dish', Math.round(w * TILE * 0.8), 60]);
-    return { arch: 'nightrow', art: { spec: { floors, ...f, win: pick(WINS, rnd(x, y, 56)), parapet: 8, grime: o.look === 'rough' ? 0.5 : 0.3, roofMat: 'tar', lip: 10, rimW: 4, blades: [], ...(o.look === 'rough' ? { graffiti: 1 } : {}) }, noShop: true, kit }, name: o.name || null, home: rnd(x, y, 57) < 0.5 ? { kind: 'apartment' } : null, whole: true };
+    // (a two-storey back now and then painted edge to edge - MU1's murals: the craft pass, blank walls; not the rough
+    // street's, tagged instead)
+    const mural = o.look !== 'rough' && floors >= 2 && w >= 7 && rnd(x, y, 47) < 0.3 ? { mural: { x: 8, w: w * TILE - 16, h: 82, kind: pick(['flowers', 'koi', 'sunset', 'waves', 'tiger', 'geo'], rnd(x, y, 46)) } } : {};
+    return { arch: 'nightrow', art: { spec: { floors, ...f, win: pick(WINS, rnd(x, y, 56)), parapet: 8, grime: o.look === 'rough' ? 0.5 : 0.3, roofMat: 'tar', lip: 10, rimW: 4, blades: [], ...(o.look === 'rough' ? { graffiti: 1 } : {}), ...mural }, noShop: true, kit }, name: o.name || null, home: rnd(x, y, 57) < 0.5 ? { kind: 'apartment' } : null, whole: true };
   };
   // a row of lit fronts facing south along [x0, x1) in the band [y0, y1]: `list` first, then the mix of `cats`
   const litRow = (x0, x1, y0, y1, list = [], o = {}) => {
@@ -337,9 +342,11 @@ function build(m, api, K) {
       const { x, y, w, h } = sq, cx = x + w / 2, yy = y + h - 1;
       prop('tree_a', cx, y + Math.max(2, h - 9), 10, { sp: 'cherry', k: 1.25 });
       prop('statue', cx, yy - 2.5, 20);
-      prop('festoon', x + 0.6, y + 1, 0, { tx: Math.round((w - 1.2) * TILE), ty: Math.round((h - 3) * TILE), h: 60 });
-      prop('festoon', x + w - 0.6, y + 1, 0, { tx: Math.round(-(w - 1.2) * TILE), ty: Math.round((h - 3) * TILE), h: 60 });
+      // (the craft pass, 11-14: two strings crossed corner to corner over it, made fast to nothing - now rows of lights
+      // strung across it wall to wall, the buildings either side their anchors, every three tiles from the back)
+      for (let ry = y + 2; ry < yy - 3; ry += 3) fest(K, x, ry, w, 0, 58, 'wall', 'wall');
       prop('bench_m', x + 1.5, yy - 1, 0); prop('bench_m', x + w - 1.5, yy - 1, 0);
+      hang(K, cx - 1.6, yy - 5, 3); hang(K, cx + 1.4, y + 4, 2);
       (out.places ||= []).push({ name: 'Siren Square', x0: x, y0: y, x1: x + w, y1: yy + 1 });
     }
   }
@@ -453,8 +460,26 @@ function build(m, api, K) {
     prop('statue', cx, shoreAt(Math.round(cx)) + 4 + PROM + 1.5, 20);
     for (const [dx, dy] of [[-9, -6], [9, -6], [-9, 7], [9, 7]]) prop('pbench', cx + dx, cy + dy, 0);
     for (const [dx, dy] of [[-12, -3], [12, -3], [-12, 9], [12, 9]]) prop('palm_a', cx + dx, cy + dy, 10, { sp: 'royal', k: 1.15 });
-    for (const [fx, fy] of [[x0 + 1, shoreAt(x0 + 1) + 4 + PROM + 1], [x1 - 1, shoreAt(x1 - 1) + 4 + PROM + 1], [x0 + 1, yS - 1], [x1 - 1, yS - 1]]) { prop('lamp', fx, fy, 0); prop('festoon', fx, fy - 0.4, 0, { tx: Math.round((cx - fx) * 0.75 * TILE), ty: Math.round((cy - fy) * 0.75 * TILE), h: 66 }); }
-    for (let k = 0; k < 6; k++) { const tx = x0 + 2.5 + (k % 3) * 3.4, ty = yS - 3.5 - Math.floor(k / 3) * 3.4; prop('cafetable', tx, ty, 0); prop(k % 2 ? 'umbrella_r' : 'umbrella_b', tx, ty - 0.1, 0); }
+    // (the craft pass: the strings ran from the corner lamps three quarters of the way to the basin and stopped in the
+    // air - now the lamps light the corners, and the cafe's terrace in the south-west corner has its lights strung
+    // over its tables on posts)
+    for (const [fx, fy] of [[x0 + 1, shoreAt(x0 + 1) + 4 + PROM + 1], [x1 - 1, shoreAt(x1 - 1) + 4 + PROM + 1], [x0 + 1, yS - 1], [x1 - 1, yS - 1]]) prop('lamp', fx, fy, 0);
+    for (let r = 0; r < 2; r++) terrace(K, x0 + 2.5, yS - 3.5 - r * 3.4, 3, { step: 3.4, planters: false, menu: r === 0 });
+    canopy(K, x0 + 1, yS - 8.2, x0 + 11.4, yS - 2.4, { gap: 3, span: 6, h: 52 });
+    for (const [dx, dy] of [[-10.5, 0.5], [10.5, 0.5], [0, -7.4], [0, 8.2]]) prop('lamp', cx + dx, cy + dy, 0);   // (the basin's walks lit where they meet its ring)
+    // (round two - the plaza still read open by day): a second terrace on the east side under its canopy, a flower market of four stalls between the basin and the promenade with their sellers, potted
+    // palms in pairs along the walks
+    terrace(K, x1 - 13.5, yS - 7, 3, { step: 3.4, planters: false });
+    canopy(K, x1 - 15.2, yS - 8.2, x1 - 5.6, yS - 6.4, { gap: 1.8, span: 5, h: 52 });
+    for (let k = 0; k < 4; k++) { const sx = cx - 7.5 + k * 5; prop('mstall', sx, cy - 10.5, 0, { v: (k + 1) % 4, c: (k + 2) % 4, a: 0 }); vendor(K, sx, cy - 11.25, Math.PI / 2); }
+    hang(K, cx - 5, cy - 8.6, 3); hang(K, cx + 5, cy - 8.6, 2);
+    for (const [dx, dy] of [[-4.2, -3.4], [4.2, -3.4], [-4.2, 4.6], [4.2, 4.6], [-13.5, 2], [13.5, 2]]) prop('potted', cx + dx, cy + dy, 0);
+    // a bed of roses in the plaza's south half between the two terraces, a cherry at its heart
+    for (let y = yS - 8; y < yS - 3; y++) for (let x = Math.round(cx - 5); x < Math.round(cx + 5); x++) if (m.tiles[y * m.w + x] === T.PLAZA && m.bld[y * m.w + x] < 0) m.tiles[y * m.w + x] = T.GRASS;
+    prop('tree_a', cx, yS - 5.5, 10, { sp: 'cherry', k: 1.2 });
+    for (const dx of [-3.4, 3.4]) { prop('flowers_big', cx + dx, yS - 6.6, 0); prop('flowers_big', cx + dx, yS - 4.2, 0); }
+    // the people: friends round the basin's rim, couples on the benches, a knot by the flower seller
+    for (const [dx, dy, q] of [[0, -6.4, 4], [-9, -5, 2], [9, -5, 2], [-9, 8, 2], [9, 8, 2], [5.5, 6.5, 3]]) hang(K, cx + dx, cy + dy, q);
     prop('foodcart', x0 + 3, cy - 4, 14);
     prop('mstall', x1 - 4, yS - 3, 0, { v: 2, c: 0, a: 0 }); prop('flowers_big', x1 - 6.5, yS - 2.2, 0); prop('flowers_big', x1 - 1.6, yS - 2.2, 0);   // (the flower seller's)
     prop('textsign', cx, yS - 0.6, 0, { text: 'ROSE PLAZA', bg: '#3a1e2e', fg: [255, 150, 190], z: 30, sx: 2 });
@@ -568,8 +593,11 @@ function build(m, api, K) {
     if (K.allFree(fx0, fy0, 26, 14)) {
       K.fill(fx0, fy0, 26, 14, T.PLAZA); K.take(fx0, fy0, 26, 14);
       for (let k = 0; k < 3; k++) prop('foodcart', fx0 + 4 + k * 8, fy0 + 3, 14);
-      for (let k = 0; k < 6; k++) { prop('cafetable', fx0 + 3 + k * 4, fy0 + 8, 0); if (k % 2 === 0) prop(k % 4 ? 'umbrella_y' : 'umbrella_r', fx0 + 3 + k * 4, fy0 + 7.9, 0); }
-      prop('festoon', fx0 + 1, fy0 + 6, 0, { tx: Math.round(24 * TILE), ty: 0, h: 52 }); prop('festoon', fx0 + 1, fy0 + 10, 0, { tx: Math.round(24 * TILE), ty: 0, h: 52 });
+      // (the craft pass: its two strings ran 24 tiles each, made fast to nothing - now the tables in two rows under a
+      // canopy of short spans on posts, the people at them and round the carts)
+      for (let r = 0; r < 2; r++) terrace(K, fx0 + 3, fy0 + 7 + r * 3.2, 6, { step: 4, planters: false });
+      canopy(K, fx0 + 1, fy0 + 5.6, fx0 + 25, fy0 + 11, { gap: 2.7, span: 6, h: 54 });
+      for (const [dx, q] of [[4, 3], [12, 4], [20, 3]]) hang(K, fx0 + dx, fy0 + 4.8, q);
       prop('textsign', fx0 + 13, fy0 + 0.8, 0, { text: 'UNDER THE LOOP EATS', bg: '#1a1420', fg: [255, 200, 80], z: 40, sx: 2 });
       prop('trashcan', fx0 + 1, fy0 + 12, 0); prop('trashcan', fx0 + 24, fy0 + 12, 0);
       (m.partySpots ||= []).push({ x: Math.round((fx0 + 13) * TILE), y: Math.round((fy0 + 8) * TILE), name: 'Under the Loop' });
@@ -649,22 +677,21 @@ function build(m, api, K) {
   // ===========================================================================================================
   // The street dressing: royal palms down the Mile's median and Neon Boulevard's with lights strung between them, clear
   // of the junctions; vending machines by the marts; tables out by the diners
+  // (the craft pass, 11-14 - SC4-B: fairy lights wound up the median palms' trunks, not looped palm to palm)
   const junctions = [PX.gallery, PX.bridge, 2735, PX.westside];
-  let last = null;
   for (let x = PX.gallery + 12; x < PX.westside - 10; x += 9) {
-    if (junctions.some((c) => Math.abs(x - c) < 13)) { last = null; continue; }
-    const y = mileY(x + 0.5);
-    prop('palm_a', x + 0.5, y + 0.5, 10, { sp: 'royal', k: 1.2 });
-    if (last) prop('festoon', last[0] + 0.5, last[1] - 0.1, 0, { tx: Math.round((x - last[0]) * TILE), ty: Math.round((y - last[1]) * TILE), h: 70 });
-    last = [x, y];
+    if (junctions.some((c) => Math.abs(x - c) < 13)) continue;
+    prop('palm_a', x + 0.5, mileY(x + 0.5) + 0.5, 10, { sp: 'royal', k: 1.2, lit: 1 });
   }
-  last = null;
   for (let x = PX.bridge + 14; x < PX.westside - 10; x += 9) {
-    if (Math.abs(x - 2781) < 14) { last = null; continue; }
-    const y = neonY(x + 0.5);
-    prop('palm_a', x + 0.5, y + 0.5, 10, { sp: 'royal', k: 1.2 });
-    if (last) prop('festoon', last[0] + 0.5, last[1] - 0.1, 0, { tx: Math.round((x - last[0]) * TILE), ty: Math.round((y - last[1]) * TILE), h: 70 });
-    last = [x, y];
+    if (Math.abs(x - 2781) < 14) continue;
+    prop('palm_a', x + 0.5, neonY(x + 0.5) + 0.5, 10, { sp: 'royal', k: 1.2, lit: 1 });
+  }
+  // twin lamps at a steady rhythm along the Mile's pavements, where there's none within five tiles (the craft pass)
+  const walkAt = (x, y) => m.tiles[Math.floor(y) * m.w + Math.floor(x)] === T.SIDEWALK;
+  for (let x = PX.gallery + 10; x < PX.westside - 8; x += 8) {
+    if (junctions.some((c) => Math.abs(x - c) < 10)) continue;
+    for (const y of [mileY(x + 0.5) - EXT.blvd + 1.2, mileY(x + 0.5) + EXT.blvd - 1.2]) if (walkAt(x + 0.5, y) && !m.lamps.some((l) => Math.abs(l.x - (x + 0.5) * TILE) < 5 * TILE && Math.abs(l.y - y * TILE) < 2 * TILE)) prop('lamp', x + 0.5, y, 0);
   }
   const onWalk = (x, y) => m.tiles[Math.floor(y) * m.w + Math.floor(x)] === T.SIDEWALK;
   for (let i = poi0; i < m.pois.length; i++) {
@@ -672,9 +699,35 @@ function build(m, api, K) {
     if (p.kind !== 'convenience' && p.kind !== 'coffee') continue;
     const x = p.x / TILE, y = p.y / TILE;
     if (p.kind === 'convenience' && onWalk(x + 1.8, y + 0.3)) { prop('vend_cola', x + 1.8, y + 0.3, 8); m.pois.push({ id: m.pois.length, kind: 'vending', label: 'Vending Machine', x: (x + 1.8) * TILE, y: (y + 0.9) * TILE, r: 32 }); }
-    else if (p.kind === 'coffee' && onWalk(x + 2, y + 0.6) && rnd(x, y, 106) < 0.6) { prop('cafetable', x + 2, y + 0.9, 0); prop('umbrella_r', x + 2, y + 0.8, 0); }
+    else if (p.kind === 'coffee' && onWalk(x + 2, y + 0.6) && rnd(x, y, 106) < 0.6) { prop('cafetable', x + 2, y + 0.9, 0); prop('umbrella_r', x + 2, y + 0.8, 0); (m.terraceSpots ||= []).push({ x: Math.round((x + 2) * TILE), y: Math.round((y + 0.9) * TILE) }); }
   }
 
+  out.frontLife = frontLife(K, b0);
+  // Mile Beach's lawns behind the motels (the craft pass, 11-14: a big open lawn with trees dropped on it anyhow): a
+  // palm grove in rows - two rows of coconut palms behind the promenade, picnic tables behind them with people at
+  // them by day and by night, blankets out on the lawn; a bonfire on the sand with friends round it after dark
+  {
+    let g = 0;
+    for (let x = wx0 + 2; x < RP0 - 2; x++) {
+      const s0 = shoreAt(x) + SAND + PROM;
+      let deep = 0;
+      while (deep < 30 && K.lawn(x, s0 + deep)) deep++;
+      if (deep < 12) continue;
+      // (the grove's band, twelve rows behind the promenade: a palm row, a second row offset, the tables between; taken,
+      // so the lawn's own planting keeps to the rest)
+      K.take(x, s0, 1, 12);
+      if (x % 8 === 0) prop('palm_a', x + 0.5, s0 + 1.5, 10, { sp: 'coconut', k: 1.2 + rnd(x, s0, 98) * 0.15 });
+      if (x % 8 === 4) prop('palm_a', x + 0.5, s0 + 6.5, 10, { sp: 'coconut', k: 1.2 + rnd(x, s0 + 6, 98) * 0.15 });
+      if (x % 16 === 10) prop('lamp', x + 0.5, s0 + 2.8, 0);
+      if (x % 16 === 2) { prop('picnic', x + 0.5, s0 + 9, 0); (m.terraceSpots ||= []).push({ x: Math.round((x + 0.5) * TILE), y: Math.round((s0 + 9) * TILE), seat: 16 }); g++; }
+      if (x % 16 === 10) prop('blanket', x + 0.5, s0 + 10, 0, { v: x % 2 });
+    }
+    const fx = 2612, fy = shoreAt(fx) + 5;
+    prop('campfire', fx, fy, 10, { lit: 1 });
+    for (const dx of [-2.4, 2.4]) prop('log', fx + dx, fy + 0.6, 0);   // (logs to sit on either side, clear of the fire on screen: test/visaudit)
+    hang(K, fx, fy + 0.2, 5);
+    out.grove = g;
+  }
   // what the plan left open: lawn with palms and flowering trees (else the kit's seal paves it)
   K.landscape({ bare: 0.35, tree: (x, y, r) => r < 0.6 ? ['palm_a', pick(['royal', 'coconut', 'coconut'], rnd(x, y, 830)), 1.15 + rnd(x, y, 831) * 0.2] : r < 0.85 ? ['tree_a', pick(['cherry', 'magnolia'], rnd(x, y, 832)), 1.1] : [pick(['shrub_a', 'bush_c', 'flowers_big'], rnd(x, y, 833)), null, 1] });
   out.named = used.size;

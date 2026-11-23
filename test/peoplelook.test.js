@@ -66,9 +66,10 @@ test('every hairstyle, face option, mark, makeup, facial hair, build and piece d
 test('the close renders are the game\'s figure, finer: the same shape, R times the size', () => {
   for (let i = 0; i < 12; i++) {
     const A = LK.lookArt(LK.STARTERS[i].look), g = person(A, 1, 'idle', 0, { tight: true }), c = person(A, 1, 'idle', 0, { tight: true, res: 4 });
-    // (the game's figure has its 1 px outline and samples whole px: up to 2.5 world px more, 10 px at 4)
-    assert.ok(Math.abs(c.h - g.h * 4) <= 10 && Math.abs(c.w - g.w * 4) <= 10, `${LK.STARTERS[i].name}: ${g.w}x${g.h} at 1, ${c.w}x${c.h} at 4`);
-    assert.ok(Math.abs(c.ay - g.ay * 4) <= 6, 'the feet stay the anchor');
+    // (the game's figure has its outline and samples whole px: 1 px of it, up to 2.5 world px more, 10 px at 4 - or the
+    // polish pass's, a whole art pixel each side: up to 6 world px more, 24 at 4)
+    assert.ok(Math.abs(c.h - g.h * 4) <= 24 && Math.abs(c.w - g.w * 4) <= 24, `${LK.STARTERS[i].name}: ${g.w}x${g.h} at 1, ${c.w}x${c.h} at 4`);
+    assert.ok(Math.abs(c.ay - g.ay * 4) <= 12, 'the feet stay the anchor');
   }
   // the face close up is client/art2/peopleclose.js's (the game never loads it): given it, eyes, brows and a mouth
   const A = LK.lookArt(LK.STARTERS[0].look), key = (G) => Buffer.from(G.col).toString('base64');
@@ -91,7 +92,7 @@ test('no two hairstyles are drawn alike (CB3: each its own shape)', () => {
     const base = variant(LK.starterFor(b === 'm' ? 0 : 1), (V) => { V.body.base = b; V.outfit.hat = null; V.outfit.glasses = null; V.hair.facial = 0; });
     const seen = new Map();
     LK.HAIR_STYLES.forEach((s, i) => {
-      if (!s[1].includes(b)) return;
+      if (!s[1].includes(b) || (s[3] && !globalThis.CLA_TEST_POLISH)) return;   // (the polish pass's styles have their shapes only with the pass on: peoplepolish-wardrobe.test.js)
       const G = person(LK.lookArt(variant(base, (V) => { V.hair.style = i; })), 1, 'idle', 0, { tight: true, res: 2 });
       const key = `${G.w}x${G.h}:` + Buffer.from(G.col).toString('base64');
       assert.ok(!seen.has(key), `${s[0]} is drawn just like ${seen.get(key)}`);
@@ -117,8 +118,8 @@ test('the eye colour shows at the game\'s size: the eye\'s pixel takes the colou
   const head = (eye) => {
     const L = JSON.parse(JSON.stringify(base)); L.face.eyeColor = eye;
     const D = downsample2(packGBuf(person(LK.lookArt(L, {}), 0, 'idle', 0, { tight: true }))), out = [];
-    for (let y = 0; y < Math.floor(D.h / 3); y++) for (let x = 0; x < D.w; x++) { const i = (y * D.w + x) * 4; if (D.p0[i + 3]) out.push([D.p0[i], D.p0[i + 1], D.p0[i + 2]]); }
-    return out;   // (the top third, the head: its art pixels' colours)
+    for (let y = 0; y < Math.floor(D.h * 0.42); y++) for (let x = 0; x < D.w; x++) { const i = (y * D.w + x) * 4; if (D.p0[i + 3]) out.push([D.p0[i], D.p0[i + 1], D.p0[i + 2]]); }
+    return out;   // (the top two fifths, the head: its art pixels' colours - a third stopped a row over the eyes on the polish pass's chunky build, 11-20)
   };
   const idx = (name) => LK.EYE_COLORS.findIndex((c) => c[1] === name);
   const blue = (c) => c[2] > c[0] + 60 && c[2] > c[1] + 30, green = (c) => c[1] > c[0] + 25 && c[1] > c[2] + 25;
@@ -137,17 +138,22 @@ test('the eye colour shows at the game\'s size: the eye\'s pixel takes the colou
 test('at the game\'s size every pair of glasses and every face option shows', async () => {
   const { packGBuf, downsample2 } = await import('../client/art2/gbuf.js');
   const img = (L) => downsample2(packGBuf(person(LK.lookArt(L), 0, 'idle', 0, { tight: true, region: 'head' })));
-  const strong = (a, b) => { assert.equal(a.w * a.h, b.w * b.h); let n = 0; for (let o = 0; o < a.w * a.h * 4; o += 4) if (Math.hypot(a.p0[o] - b.p0[o], a.p0[o + 1] - b.p0[o + 1], a.p0[o + 2] - b.p0[o + 2]) > 40) n++; return n; };
+  const strong = (a, b, min = 40) => { assert.equal(a.w * a.h, b.w * b.h); let n = 0; for (let o = 0; o < a.w * a.h * 4; o += 4) if (Math.hypot(a.p0[o] - b.p0[o], a.p0[o + 1] - b.p0[o + 1], a.p0[o + 2] - b.p0[o + 2]) > min) n++; return n; };
+  // (with the polish pass on - peoplepolish-wardrobe.test.js - the hair is clean tones, no speckle that changes with the
+  // look's seed: an option's own pixels are all that differ, a brow against a lash a small step; and the mouth is off
+  // there - the lip shapes are checked in characters3.test.js with it on)
+  // (and the glasses' own pixels are counted alone: 6 or more - a monocle is one lens and its cord)
+  const POL = !!globalThis.CLA_TEST_POLISH;
   for (const b of ['m', 'f']) {
     const base = LK.emptyLook(b); base.hair.style = b === 'm' ? 2 : 21; base.outfit.top = LK.item('Plain tee');
     const none = img(base);
     for (const P of LK.PIECES.filter((p) => p && p.slot === 'glasses' && !p.d.issued && !p.d.nostreet && !['balaclava', 'skimask', 'bandana', 'gaiter'].includes(p.d.k))) {
       const n = strong(img(variant(base, (V) => { V.outfit.glasses = LK.item(P.name); })), none);
-      assert.ok(n >= 10, `${P.name} (${b}): ${n} art pixels of it at the game's size`);
+      assert.ok(n >= (POL ? 6 : 10), `${P.name} (${b}): ${n} art pixels of it at the game's size`);
     }
-    for (const k of ['eyes', 'nose', 'lips']) {
+    for (const k of POL ? ['eyes', 'nose'] : ['eyes', 'nose', 'lips']) {
       const I = LK.FACE_OPTS[k].map((_, i) => img(variant(base, (V) => { V.face[k] = i; })));
-      for (let i = 0; i < I.length; i++) for (let j = i + 1; j < I.length; j++) assert.ok(strong(I[i], I[j]) >= 1, `${k}: ${LK.FACE_OPTS[k][i]} and ${LK.FACE_OPTS[k][j]} (${b}) drawn alike`);
+      for (let i = 0; i < I.length; i++) for (let j = i + 1; j < I.length; j++) assert.ok(strong(I[i], I[j], POL ? 6 : 40) >= 1, `${k}: ${LK.FACE_OPTS[k][i]} and ${LK.FACE_OPTS[k][j]} (${b}) drawn alike`);
     }
   }
 });

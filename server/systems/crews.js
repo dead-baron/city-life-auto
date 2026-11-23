@@ -20,6 +20,7 @@
 // the crews' holdings; the members and the name stay - seasons.js).
 //   store.kept.crews: id -> { lead (pid), members [pid], names { pid: name }, f? { name, tag, at } (founded), bank? ($),
 //                     up? { d (the day billed to), owed, n (days unpaid in a row) } }; p.crewAsk: { from (pid), at }
+import { K } from '../../shared/constants.js';
 import { CREW } from '../../shared/rules.js';
 import { cleanName, nameKey } from '../../shared/names.js';
 import { store } from '../store.js';
@@ -91,8 +92,9 @@ export function askPrompt(world, p) {
   const mine = crewOf(p.pid);
   if (mine && mine.members.length >= CREW.max) return null;
   let best = null, bd = CREW.reach;
-  for (const q of world.players.values()) {
-    if (q === p || !fit(q)) continue;
+  for (const e of world.query(ped.x, ped.y, CREW.reach, K.PED)) {   // (the players beside you, through the spatial grid: not every player)
+    const q = e.player;
+    if (!q || q === p || q.ped !== e || !fit(q)) continue;
     const d = Math.hypot(q.ped.x - ped.x, q.ped.y - ped.y);
     if (d < bd && !crewOf(q.pid)) { bd = d; best = q; }
   }

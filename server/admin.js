@@ -15,8 +15,20 @@
 //   prison { id, mins, why }                   -> sent to Prison Island for mins (0: let out), no bail, no way over the wall (admin)
 //   reviews · resolve { rid, note }                                                     (admin)
 //   role { id, role: 'admin' | 'helper' | null }                                        (owner)
-//   pagelink { page: 'log' | 'dashboard' | 'reviews' | 'perf' | 'clienterrors' | 'players' | 'news' | 'bugs' } -> a one-time link to the
+//   pagelink { page: 'console' | 'log' | 'dashboard' | 'reviews' | 'perf' | 'clienterrors' | 'players' | 'news' | 'bugs' } -> a one-time link to the
 //                                                 protected pages (helper and up: each page its own power)
+//   The in-game admin panel's (client/adminpanel.js; the owner, 11-16: "fix things, observe, test, gift things to people,
+//   TP people around for fun, interact and help with the players") - admin and up, each one in the admin log:
+//   roster                                     -> who's online for the panel: name, guest, role, district, what they're doing,
+//                                                 down, wanted, their ped's id (to watch), session length
+//   watch { id | null }                        -> observe a player: the camera (and what the server sends) on them, you
+//                                                 invincible where you stand; null: back to yourself
+//   tpto { id } · bring { id }                 -> you to them · them to you
+//   send { id, place }                         -> them to a named place (World v3's places, a district, a landmark)
+//   heal { id } · revive { id }                -> full health · back on their feet (a downed player)
+//   endjob { id }                              -> a stuck job or activity ended for them (its own quit)
+//   gift { id, kind: 'money' | 'item' | 'weapon' | 'color' | 'plate', what, n } -> into their bank, bag or style counter
+//   founder { on }                             -> the owner's founder look on or off, this session only (owner; server/founder.js)
 //   season                                     -> the season now, its days left and each board's top (owner)
 //   season { end: 1, confirm: <the season's n> } -> the season over and the next begun: the top-10 plates, everyone online
 //                                                 out to the title, every profile reset (systems/seasons.js endSeason; owner)
@@ -30,7 +42,14 @@ import { chatData } from './moderation.js';
 import * as devmode from './devmode.js';
 import { moved } from './movemark.js';
 import * as seasons from './systems/seasons.js';
-import { SEASON } from '../shared/rules.js';
+import { SEASON, COSMETICS, GIFT } from '../shared/rules.js';
+import { TILE } from '../shared/constants.js';
+import { revive as revivePed, isDowned } from './systems/revive.js';
+import { failJob } from './systems/jobs.js';
+import * as actquit from './systems/activityquit.js';
+import { placeNamed, tpSpot } from './dev.js';
+import { cosmOf, refresh as refreshPlate } from './systems/cosmetics.js';
+import { founderSync } from './founder.js';
 
 const PLOG_MAX = 60, BUYS_MAX = 20, REFUND_DAYS = 30;
 const CLAIM_TRIES = 5, CLAIM_WINDOW_MS = 10 * 60e3, REFUSAL_LOG_MS = 60e3;
@@ -68,6 +87,14 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
     return { pid, p: q || null, prof, acct: accounts.get(pid), name: q ? q.name : prof.name };
   }
   const tgt = (t) => (t ? { id: t.pid, n: t.name } : null);
+  // what the panel's Gift offers: the cosmetics that are bought (not a season's gift), the items and weapons by name
+  let GC = null;
+  const giftCatalog = () => (GC ||= {
+    colors: COSMETICS.colors.map((c) => [c.id, c.name]), plates: COSMETICS.plates.filter((q) => !q.gift && !q.card).map((q) => [q.id, q.t]),
+    items: Object.entries(ITEMS).map(([id, it]) => [id, it.name]).sort((x, y) => x[1].localeCompare(y[1])),
+    weapons: Object.entries(WEAPONS).filter(([id]) => id !== 'fists').map(([id, w]) => [id, w.name]).sort((x, y) => x[1].localeCompare(y[1])),
+    money: GIFT.money, maxMoney: GIFT.maxMoney,
+  });
   // may the actor act on the target? (nobody on the owner but the owner; never on someone of your own rank or above,
   // except yourself where that makes sense)
   const over = (actor, t) => t.pid === actor.pid || rankOf(accounts.role(actor.pid)) > rankOf(accounts.role(t.pid));
@@ -94,17 +121,18 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
       }
       if (err) return reply(a, false, { err });
       p.meDirty = true;
+      founderSync(p, true);   // (the founder's crown from now on: server/founder.js)
       return reply(a, true, { data: { role: 'owner' } });
     }
-    const power = a === 'pagelink' ? 'plog' : a;
+    const power = a === 'pagelink' ? 'plog' : a === 'roster' ? 'watch' : a;
     if (!POWERS[power]) return reply(a, false, { err: 'No such action.' });
     if (!allowed(role, power)) {
       const t = lastRefusalLog.get(p) || 0;
       if (now() - t > REFUSAL_LOG_MS) { lastRefusalLog.set(p, now()); log.append({ who: me(p), what: a, target: msg.id ? { id: String(msg.id).slice(0, 32) } : null, ok: false, note: 'refused: no such power' }); }
       return reply(a, false, { err: 'You don\'t have that power.' });
     }
-    const t = msg.id !== undefined ? resolve(world, msg.id) : null;
-    const need = !['players', 'reviews', 'resolve', 'pagelink', 'season'].includes(a);
+    const t = msg.id !== undefined && msg.id !== null ? resolve(world, msg.id) : null;
+    const need = !['players', 'roster', 'reviews', 'resolve', 'pagelink', 'season', 'founder', 'watch'].includes(a);
     if (need && !t) return reply(a, false, { err: 'No such player.' });
     if ((a === 'refund' || a === 'restore') && t && t.pid === p.pid && role !== 'owner') return reply(a, false, { err: 'Not on your own account - ask another helper.' });
     const done = (x) => { log.append({ who: me(p), target: tgt(t), ...x }); if (t && t.acct && x.ok !== false) note(t.acct, 'staff', `${a} by ${p.name}${x.note ? ': ' + x.note : ''}`); store.touch(); };
@@ -250,10 +278,115 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
         const r = seasons.endSeason(world);
         return reply(a, true, { data: { was: r.was, n: r.n, reset: r.reset, plates: r.plates.length } });
       }
+      case 'roster': {
+        const l = [];
+        for (const q of world.players.values()) {
+          if (!q.conn) continue;
+          const ped = q.ped, act = actquit.current(world, q);
+          l.push({ id: q.pid, n: q.name, me: q === p ? 1 : 0, gu: accounts.isGuest(q.pid) ? 1 : 0, role: accounts.role(q.pid) || '', fo: q.founder ? 1 : 0, d: ped && !ped.hidden ? world.map.districtAt(ped.x, ped.y).name : '', w: q.wanted || 0, down: ped && (ped.dead || isDowned(ped)) ? 1 : 0, hp: ped && ped.maxHp ? Math.round((ped.hp / ped.maxHp) * 100) : 0, job: q.job ? String(q.job.type || 'job') : act ? act.n : '', cust: q.custody || q.prison ? 1 : 0, eid: ped ? ped.id : 0, sess: q.anStart ? Math.round((now() - q.anStart) / 60e3) : 0, muted: !!(q.acct && chatData(q.acct).muteUntil > now()) });
+        }
+        l.sort((x, y) => y.me - x.me || x.n.localeCompare(y.n));
+        return reply(a, true, { data: { l, watch: p.watch ? p.watch.pid : null, founder: role === 'owner' ? { on: !!p.founderOn, look: !!p.founderLook } : null, gifts: giftCatalog() } });
+      }
+      case 'watch': {
+        if (!t) {   // (back to yourself)
+          if (p.watch) { p.watch = null; p.invincible = !!p.watchGod; p.meDirty = true; done({ what: 'watch', note: 'stopped' }); }
+          return reply(a, true, { data: { eid: 0 } });
+        }
+        const q = t.p;
+        if (!q || !q.ped || !q.conn) return reply(a, false, { err: 'They aren\'t in the city right now.' });
+        if (q === p) return reply(a, false, { err: 'That\'s you.' });
+        if (!p.watch) p.watchGod = !!p.invincible;
+        p.watch = { pid: q.pid }; p.invincible = true; p.meDirty = true;
+        done({ what: 'watch', note: 'started' });
+        return reply(a, true, { data: { eid: q.ped.id, n: q.name } });
+      }
+      case 'tpto': case 'bring': {
+        const q = t.p;
+        if (!q || !q.ped || q.ped.dead || !p.ped || p.ped.dead || q === p) return reply(a, false, { err: 'Can\'t reach them right now.' });
+        if (a === 'bring' && !over(p, t)) return reply(a, false, { err: 'Not on someone of your rank or above.' });
+        const who = a === 'tpto' ? p.ped : q.ped, before = { x: Math.round(who.x), y: Math.round(who.y) };
+        if (a === 'tpto') devmode.goTo(world, p, q.pid); else devmode.bring(world, p, q.pid);
+        if (p.watch && a === 'tpto') { p.watch = null; p.invincible = !!p.watchGod; }
+        done({ what: a, before, after: { x: Math.round(who.x), y: Math.round(who.y) } });
+        return reply(a, true);
+      }
+      case 'send': {
+        const q = t.p, ped = q && q.ped;
+        if (!ped || ped.dead) return reply(a, false, { err: 'They aren\'t in the world right now.' });
+        if (q !== p && !over(p, t)) return reply(a, false, { err: 'Not on someone of your rank or above.' });
+        const nm = String(msg.place || '').slice(0, 60), x = Number(msg.x), y = Number(msg.y), f = world.map.frame;   // (the panel's place: its spot on the page's own map, else by its name)
+        const at = Number.isFinite(x) && Number.isFinite(y) && (!f || (x >= 0 && y >= 0 && x <= f.w * TILE && y <= f.h * TILE)) ? { x, y, name: nm || 'there' } : placeNamed(world, nm);
+        if (!at) return reply(a, false, { err: 'No such place.' });
+        const before = { x: Math.round(ped.x), y: Math.round(ped.y) }, spot = tpSpot(world.map, at.x, at.y);
+        if (ped.vehId) ejectPed(world, ped, true);
+        ped.x = spot.x; ped.y = spot.y; ped.vx = 0; ped.vy = 0; ped.ug = 0; ped.lz = 0; ped.sub = false; ped.interior = null; ped.hidden = false;
+        world.place(ped); moved(ped); q.teleportAt = world.time; q.meDirty = true;
+        if (q !== p) world.notify(q, `${p.name} (admin) sent you to ${at.name}.`, 'info');
+        done({ what: 'send', before, after: { x: Math.round(spot.x), y: Math.round(spot.y) }, note: at.name });
+        return reply(a, true, { data: { place: at.name } });
+      }
+      case 'heal': case 'revive': {
+        const q = t.p, ped = q && q.ped;
+        if (!ped) return reply(a, false, { err: 'They aren\'t in the world right now.' });
+        if (a === 'revive') {
+          if (!isDowned(ped)) return reply(a, false, { err: 'They aren\'t down.' });
+          revivePed(world, ped, { kit: true });
+        } else {
+          if (ped.dead || isDowned(ped)) return reply(a, false, { err: 'They\'re down - revive them.' });
+          ped.hp = ped.maxHp; ped.bleeding = false; ped.limpUntil = 0;
+          world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
+        }
+        q.meDirty = true;
+        if (q !== p) world.notify(q, a === 'revive' ? `${p.name} (admin) got you back on your feet.` : `${p.name} (admin) patched you up.`, 'good');
+        done({ what: a });
+        return reply(a, true);
+      }
+      case 'endjob': {
+        const q = t.p;
+        if (!q) return reply(a, false, { err: 'They aren\'t in the city right now.' });
+        const was = q.job ? q.job.type : (actquit.current(world, q) || {}).k || null;
+        if (q.job) failJob(world, q, `${p.name} (admin) ended your job - you can start another.`);
+        else { const err = actquit.quit(world, q); if (err) return reply(a, false, { err: 'They aren\'t on a job or an activity.' }); }
+        done({ what: 'endjob', before: was, after: null });
+        return reply(a, true);
+      }
+      case 'gift': {
+        const q = t.p, prof = t.prof, kind = String(msg.kind || ''), what = String(msg.what || '').slice(0, 40);
+        let label = '', before = null, after = null;
+        if (kind === 'money') {
+          const n = Math.max(1, Math.min(GIFT.maxMoney, Math.floor(Number(msg.n)) || 0));
+          before = prof.bank; prof.bank += n; after = prof.bank; label = `$${n.toLocaleString('en-US')} into your bank`;
+        } else if (kind === 'item' || kind === 'weapon') {
+          const D = kind === 'item' ? ITEMS : WEAPONS;
+          if (!Object.hasOwn(D, what) || what === 'fists') return reply(a, false, { err: 'No such thing.' });
+          const n = Math.max(1, Math.min(GIFT.maxItems, Math.floor(Number(msg.n)) || 1));
+          if (kind === 'weapon') { const w = WEAPONS[what]; before = prof.weapons[what] ?? null; prof.weapons[what] = (prof.weapons[what] || 0) + (w.mag ? w.mag * n : 0); after = prof.weapons[what]; label = w.mag ? `a ${w.name} with ${n} mag${n > 1 ? 's' : ''}` : `a ${w.name}`; }
+          else { before = prof.inventory[what] || 0; prof.inventory[what] = ITEMS[what].tool ? Math.max(1, before) : before + n; after = prof.inventory[what]; label = ITEMS[what].tool ? `a ${ITEMS[what].name}` : `${n}x ${ITEMS[what].name}`; }
+        } else if (kind === 'color' || kind === 'plate') {
+          const C = cosmOf(prof), L = kind === 'color' ? COSMETICS.colors : COSMETICS.plates, x = L.find((c) => c.id === what);
+          if (!x || x.gift || x.card) return reply(a, false, { err: 'No such cosmetic (gifts like the beta\'s aren\'t handed out).' });
+          const own = kind === 'color' ? C.c : C.pl;
+          if (own.includes(what)) return reply(a, false, { err: 'They have it already.' });
+          own.push(what); label = kind === 'color' ? `the ${x.name} name color (wear it at a style counter)` : `the "${x.t}" title plate (wear it at a style counter)`;
+          before = false; after = true;
+          if (q) refreshPlate(q);
+        } else return reply(a, false, { err: 'Gift what? (money, item, weapon, color, plate)' });
+        if (q) { q.meDirty = true; world.notify(q, `${p.name} sent you a gift: ${label}.`, 'good'); }
+        done({ what: 'gift', before, after, note: `${kind} ${what || ''} ${label}`.trim() });
+        return reply(a, true, { data: { label } });
+      }
+      case 'founder': {
+        const on = !!msg.on;
+        p.founderOn = on;   // (this session only: off again at the next login - server/founder.js)
+        founderSync(p, true);
+        done({ what: 'founder', before: !on, after: on });
+        return reply(a, true, { data: { on, look: !!p.founderLook } });
+      }
       case 'pagelink': {
         if (!pageLink) return reply(a, false, { err: 'Not available here.' });
-        const page = ['log', 'dashboard', 'reviews', 'perf', 'clienterrors', 'players', 'news', 'bugs'].includes(msg.page) ? msg.page : 'reviews';
-        const pw = page === 'log' ? 'adminlog' : page === 'dashboard' ? 'dashboard' : page === 'players' ? 'players' : page === 'news' ? 'news' : 'reviews';
+        const page = ['console', 'log', 'dashboard', 'reviews', 'perf', 'clienterrors', 'players', 'news', 'bugs'].includes(msg.page) ? msg.page : 'reviews';
+        const pw = page === 'console' ? 'console' : page === 'log' ? 'adminlog' : page === 'dashboard' ? 'dashboard' : page === 'players' ? 'players' : page === 'news' ? 'news' : 'reviews';
         if (!allowed(role, pw)) return reply(a, false, { err: 'You don\'t have that power.' });
         log.append({ who: me(p), what: 'pagelink', note: page, ok: true });
         return reply(a, true, { data: { url: pageLink(p.pid, page) } });

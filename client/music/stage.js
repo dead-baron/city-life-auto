@@ -8,7 +8,7 @@
 //     plays and from anyone playing an instrument ('jamn');
 //   - the music games (client/music/play.js: the rhythm game, the jam): the server's word on a set (res, go) goes there.
 // It also puts the music items in the bag (shared/music.js registers them into shared/items.js ITEMS; their icons here).
-import { TRACKS, KINDS, stationAt, tapePos, trackSecs, songOf, beatAt } from '../../shared/music.js';
+import { TRACKS, KINDS, stationAt, tapeAt, scoreSecs, songOf, beatAt, takeById, takeBeat } from '../../shared/music.js';
 import { MUSIC_GEAR } from '../../shared/rules-music.js';
 import { DT } from '../../shared/constants.js';
 import { ITEM_ICON } from '../inventory.js';
@@ -72,12 +72,20 @@ export class Stage {
     for (const r of this.recs.values()) {
       if (!r.on || r.kind === 'hat') continue;
       if (r.br && t - r.brAt > MUSIC_GEAR.windS) continue;
-      let track = null, pos = 0;
-      if (r.st >= 0) { const a = stationAt(r.st, now); track = a.track; pos = a.pos; }
-      else if (r.tr >= 0 && TRACKS[r.tr]) { track = TRACKS[r.tr].id; pos = now < r.t0 ? now - r.t0 : tapePos(track, r.t0, now); }
+      let track = null, pos = 0, take = null;
+      if (r.st >= 0) { const a = stationAt(r.st, now); track = a.track; pos = a.pos; take = a.take; }
+      else if (r.tr >= 0 && TRACKS[r.tr]) {
+        track = TRACKS[r.tr].id;
+        if (now < r.t0) pos = now - r.t0;
+        else if (r.kind === 'mat') pos = (now - r.t0) % scoreSecs(track);   // (the mat plays the score: see below)
+        else { const a = tapeAt(track, r.t0, now); pos = a.pos; take = a.take; }
+      }
       if (!track) continue;
+      // (the mat's rhythm game is charted from the score, so it keeps the score: the recordings there come with the gigs'
+      // own work - shared/music.js chart; MUSIC-HANDOVER)
+      if (r.kind === 'mat') take = null;
       const p = this.at(r);
-      out.push({ id: r.id, kind: r.kind, x: p.x, y: p.y, att: r.a, track, pos, brAt: r.br ? r.brAt : null });
+      out.push({ id: r.id, kind: r.kind, x: p.x, y: p.y, att: r.a, track, take, pos, brAt: r.br ? r.brAt : null });
     }
     return out;
   }
@@ -85,7 +93,9 @@ export class Stage {
   beat(r) {
     const s = this.sources().find((q) => q.id === r.id);
     if (!s || s.pos < 0) return 0;
-    const b = beatAt(songOf(s.track), s.pos % trackSecs(s.track));
+    const tk = s.take ? takeById(s.track, s.take) : null;
+    const b = tk ? takeBeat(tk, s.pos) : beatAt(songOf(s.track), s.pos % scoreSecs(s.track));
+    if (b < 0) return 0;
     return Math.max(0, 1 - (b % 1) * 2.5);
   }
   // anyone standing on the mat: their legs shown through it (the overlay's above the art v2 world - the mat cut away

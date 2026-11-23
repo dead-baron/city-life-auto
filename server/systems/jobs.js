@@ -18,6 +18,7 @@ import * as trains from './trains.js';
 import { pointGrid } from '../pointgrid.js';
 import * as vehicles from './vehicles.js';
 import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
+import { poisKind } from '../pois.js';
 
 const rng = mulberry32(5150);
 
@@ -283,7 +284,7 @@ export function setExtractZone(fn) { setExtractZone.fn = fn; }
 export function deliveryZoneFor(world, p, crate) {
   if (!crate) return null;
   const ped = p.ped;
-  const near = (kind, r = 70) => world.map.pois.find((q) => q.kind === kind && Math.hypot(q.x - ped.x, q.y - ped.y) < r);
+  const near = (kind, r = 70) => poisKind(world.map, kind).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < r);
   if (crate.extract && setExtractZone.fn) return setExtractZone.fn(world, p, crate);   // (a valuable crate: paid on delivery - a fence, a bank, the police, your stash: extract.js)
   if (crate.job && crate.job.type === 'courier' && crate.job.pid === p.pid) {
     const dest = world.map.pois[crate.job.dest];

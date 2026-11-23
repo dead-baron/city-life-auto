@@ -6,7 +6,7 @@
 // grows back (rules.js FORAGE_REGROW_S, by kind). Everyone sees which spots are bare: a pick and a regrowth are
 // broadcast ({ e: 'forage', i, up }), and the welcome carries the bare ones (gone()). Ghostglass is contraband: only
 // the Back-Alley Exchange buys it (items.js), and an arrest takes it (law.js).
-import { FORAGE_REACH, FORAGE_REGROW_S } from '../../shared/rules.js';
+import { FORAGE_REACH, FORAGE_REGROW_S, FORAGE_FENCE_GHOSTGLASS } from '../../shared/rules.js';
 import { FORAGE_KINDS, FIND_TOOLS } from '../../shared/foraging.js';
 import { ITEMS } from '../../shared/items.js';
 import { mulberry32 } from '../../shared/rng.js';
@@ -80,7 +80,7 @@ export function pick(world, p, i) {
   world.broadcast({ e: 'forage', i, up: 0 });
   ped.a = Math.atan2(f.y - ped.y, f.x - ped.x);
   const name = ITEMS[item] ? ITEMS[item].name : item, xn = extra && ITEMS[extra] ? ITEMS[extra].name : extra;
-  world.notify(p, `${rare ? `${name}!` : n > 1 ? `${n} ${name}` : name}${xn ? ` - and a ${xn}!` : ''} in your inventory. ${K.tip}`, f.k === 'ghostglass' || f.k === 'redcap' ? 'warn' : 'good');
+  world.notify(p, `${rare ? `${name}!` : n > 1 ? `${n} ${name}` : name}${xn ? ` - and a ${xn}!` : ''} in your inventory. ${K.tip}${f.k === 'ghostglass' ? ` They pay $${FORAGE_FENCE_GHOSTGLASS} a cap.` : ''}`, f.k === 'ghostglass' || f.k === 'redcap' ? 'warn' : 'good');   // (the price: the owner, 11-22 - "illegal but worth a lot and where to sell it")
   p.meDirty = true;
   store.touch();
   return n;

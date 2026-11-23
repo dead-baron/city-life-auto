@@ -33,7 +33,7 @@ let recDv = new DataView(recBuf.buffer);
 export function descriptor(e) {
   switch (e.kind) {
     // fl: a player's flashlight is switched on; st: sitting by a campfire; bt: a bounty on their head (the golden skull:
-    // bounties.js); ph: their phone out (1: its menu open: phone.js phoneOut; 2: held up, filming: npc.js spectacle); cf:
+    // bounties.js); ph: their phone out (1: its menu open: phone.js phoneOut; 2: held up, filming: npc.js spectacle; 3: a selfie: personas.js); cf:
     // cuffed (custody.js: hands behind the back); sg: fighting off an officer who's on them (struggle.js); mb: carrying a robbery's takings, the money bag on the back (hotmoney.js); es: an officer
     // walking a prisoner, a hand on their arm (custody.js: 1 the prisoner on their right, 2 on their left); bc: a player's plasma blade colour
     // (looks.js setBlade; shared/items.js BLADE_COLORS, blue left out); sf: on a surfboard (surf.js: 1 paddling, 2 riding a wave, 3 an
@@ -43,7 +43,7 @@ export function descriptor(e) {
     // (app.lk: shared/look.js). pa: who's lying on a paramedic's stretcher (pp 'stretcherPt' - ems.js): their app as above and
     // their archetype, { app, ar }, so the page lays that very person on it. asPlayer: a scene's actor on the private capture
     // server only (server/systems/director.js - never in the live world): drawn as a player, its name tag over it.
-    case K.PED: return { id: e.id, k: K.PED, app: e.app && e.app.lk ? { lk: e.app.lk } : e.app, n: e.player ? e.player.name : e.asPlayer ? e.asPlayer.name : '', pl: !!(e.player || e.asPlayer), ar: e.archetype, v: e.appVer || 0, ...(e.surfSf ? { sf: e.surfSf } : null), ...(e.flashOn ? { fl: e.lightCode || 1 } : null), ...(e.hardhat ? { hh: 1 } : null), ...(e.chop ? { ch: CHOP_CODE[e.chop.tool] || 1 } : null), ...(e.sit ? { st: 1 } : null), ...(e.player && e.player.skull ? { bt: 1 } : null), ...(e.phoneOut ? { ph: e.filming || 1 } : null), ...(e.cuffed ? { cf: 1 } : null), ...(e.struggling ? { sg: 1 } : null), ...(e.moneyBag ? { mb: 1 } : null), ...(e.gt ? { gt: e.gt } : null), ...(e.board ? { bd: 1 } : null), ...(e.gt === 'dance' && e.dm !== undefined && e.dm !== null ? { dm: e.dm } : null),...(e.gt === 'emote' && e.em ? { em: e.em } : null),...(e.cv !== undefined && e.cv !== null ? { cv: e.cv } : null),...(e.pp ? { pp: e.pp } : null), ...(e.ppPt ? { pa: { app: e.ppPt.app && e.ppPt.app.lk ? { lk: e.ppPt.app.lk } : e.ppPt.app, ar: e.ppPt.ar } } : null), ...(e.sitBench ? { sb: e.seat2 ? 2 : 1 } : null), ...(e.holdBars ? { hb: 1 } : null), ...(e.escort ? { es: e.escort > 0 ? 1 : 2 } : null), ...(e.blade ? { bc: e.blade } : null), ...(e.player && e.player.np ? { np: e.player.np } : null), ...(e.player && e.player.guest ? { gu: 1 } : null) };   // (np: the nameplate's color and title plate - cosmetics.js; gu: a guest - their name drawn grey, server/launch.js)
+    case K.PED: return { id: e.id, k: K.PED, app: e.player && e.player.founderLook ? { ...(e.app && e.app.lk ? { lk: e.app.lk } : e.app), fd: 1 } : e.app && e.app.lk ? { lk: e.app.lk } : e.app, n: e.player ? e.player.name : e.asPlayer ? e.asPlayer.name : '', pl: !!(e.player || e.asPlayer), ar: e.archetype, v: e.appVer || 0, ...(e.surfSf ? { sf: e.surfSf } : null), ...(e.flashOn ? { fl: e.lightCode || 1 } : null), ...(e.hardhat ? { hh: 1 } : null), ...(e.chop ? { ch: CHOP_CODE[e.chop.tool] || 1 } : null), ...(e.sit ? { st: 1 } : null), ...(e.player && e.player.skull ? { bt: 1 } : null), ...(e.phoneOut ? { ph: e.filming || 1 } : null), ...(e.cuffed ? { cf: 1 } : null), ...(e.struggling ? { sg: 1 } : null), ...(e.moneyBag ? { mb: 1 } : null), ...(e.gt ? { gt: e.gt } : null), ...(e.board ? { bd: 1 } : null), ...(e.gt === 'dance' && e.dm !== undefined && e.dm !== null ? { dm: e.dm } : null),...(e.gt === 'emote' && e.em ? { em: e.em } : null),...(e.cv !== undefined && e.cv !== null ? { cv: e.cv } : null),...(e.pp ? { pp: e.pp } : null), ...(e.ppPt ? { pa: { app: e.ppPt.app && e.ppPt.app.lk ? { lk: e.ppPt.app.lk } : e.ppPt.app, ar: e.ppPt.ar } } : null), ...(e.sitBench ? { sb: e.seat2 ? 2 : 1 } : null), ...(e.holdBars ? { hb: 1 } : null), ...(e.escort ? { es: e.escort > 0 ? 1 : 2 } : null), ...(e.blade ? { bc: e.blade } : null), ...(e.player && e.player.np ? { np: e.player.np } : null), ...(e.player && e.player.guest ? { gu: 1 } : null), ...(e.player && e.player.founder ? { fo: 1 } : null) };   // (np: the nameplate's color and title plate - cosmetics.js; gu: a guest - their name drawn grey, server/launch.js; fo: the founder - the owner's account, a gold crown by the name; app.fd: the founder's own look, worn in admin mode - server/admin.js founder)
     case K.VEH: return { id: e.id, k: K.VEH, m: e.def.i, p: e.paint, vr: e.variant, tn: e.tint ?? -1, o: e.ownerName || '', v: e.descVer || 0, fs: e.forSale ? e.forSale.price : 0 };
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
     case K.BAG: return { id: e.id, k: K.BAG, t: bagWireTier(e), val: e.value };
@@ -131,6 +131,12 @@ export function send(world) {
     const veh = ped && ped.vehId ? world.get(ped.vehId) : null;
     const focus = veh || ped;
     if (!focus) continue;
+    if (conn.cork) { conn.cork(); try { sendTo(world, p, conn, ped, veh); } finally { conn.uncork(); } }   // (the tick's messages to this page in one write: ws.js)
+    else sendTo(world, p, conn, ped, veh);
+  }
+}
+function sendTo(world, p, conn, ped, veh) {
+  {
     const r = netRect(world, p, rect);
     const minX = r.x0, maxX = r.x1, minY = r.y0, maxY = r.y1;
     const kx0 = minX - NET_KEEP, kx1 = maxX + NET_KEEP, ky0 = minY - NET_KEEP, ky1 = maxY + NET_KEEP;
@@ -188,7 +194,14 @@ export function send(world) {
         k.sent = tick;
       }
     };
-    for (const e of world.inChunks(Math.floor(kx0 / CHUNK_PX), Math.floor(ky0 / CHUNK_PX), Math.floor(kx1 / CHUNK_PX), Math.floor(ky1 / CHUNK_PX))) visit(e, true);
+    {   // (world.inChunks' walk, written out: no generator)
+      const X = world.chunksX - 1, Y = world.chunksY - 1, cl = (v, M) => (v < 0 ? 0 : v > M ? M : v);
+      const cx0 = cl(Math.floor(kx0 / CHUNK_PX), X), cx1 = cl(Math.floor(kx1 / CHUNK_PX), X), cy0 = cl(Math.floor(ky0 / CHUNK_PX), Y), cy1 = cl(Math.floor(ky1 / CHUNK_PX), Y);
+      for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+        const set = world.chunks.get(cy * world.chunksX + cx);
+        if (set) for (const e of set) visit(e, true);
+      }
+    }
     if (ped) visit(ped, false);
     if (veh) visit(veh, false);
 

@@ -74,7 +74,10 @@ const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} '&.,!?-]/gu, '').
 // why the look can't change right now (null: it can)
 export function changeBlocked(world, p) {
   const ped = p.ped;
-  if (!ped) return 'Not right now.';
+  // (on the title screen there's no one in the world yet: the CHARACTER button's creator - the owner, 11-17: "when you change
+  // your appearance in the main menu and hit done it doesn't apply". Clothes from your wardrobe go on; body and hair keep
+  // their places (refusal), and a wanted or arrested character waits till they're in the city)
+  if (!ped) return p.wanted > 0 || p.custody ? 'Not right now.' : null;
   if (ped.dead) return 'Not while you\'re down.';
   if (ped.cuffed || p.custody) return 'Not in cuffs.';
   if (p.badge) return 'Hand in the uniform (go off duty) first.';
@@ -99,7 +102,7 @@ export function wear(world, p, code, give = false) {
 export function freshOutfit(prof, seed, ownedOnly = false) {
   ensureLook(prof);
   const cur = decodeLook(prof.look), r = randomLook(seed >>> 0, cur.body.base);
-  for (const s of SLOTS) cur.outfit[s] = r.outfit[s];
+  for (const s of SLOTS) if (s !== 'under' && s !== 'socks') cur.outfit[s] = r.outfit[s];   // (a random outfit has no underwear or socks: yours stay on)
   if (ownedOnly) {
     const rr = mulberry32((seed >>> 0) ^ 0x77a1);
     const pick = (s) => {
@@ -117,8 +120,11 @@ export function freshOutfit(prof, seed, ownedOnly = false) {
 
 // why a new look can't be worn (outside the first session; null: it can): the body, face and extras change at the
 // mirror at home, the hair at a barber or salon (a new body at home brings its own), and every piece must be yours
-function refusal(world, p, cur, L) {
+// (title: from the title screen's CHARACTER - the character creator, body, face and hair free; the owner, 11-17. The wanted,
+// the cuffed and the uniformed are still refused by changeBlocked, so it's no disguise)
+function refusal(world, p, cur, L, title = false) {
   const c = W.changes(cur, L), home = atHome(world, p);
+  if (title) { c.body = false; c.hair = false; }
   if (c.body && !home) return 'Your body, face, makeup and tattoos change at the mirror at home.';
   if (c.hair && !(home && cur.body.base !== L.body.base)) return 'Hair and facial hair change at a barbershop or a hair salon.';
   return unownedNote(p.profile.wardrobe, L);
@@ -253,11 +259,11 @@ export function devWardrobe(world, p, msg) {
 // put a new look on (the creator's 'set', the Inventory's clothes): refused while wanted outside your own home, in cuffs
 // or in uniform (changeBlocked), and with anything you don't own or a new body or hair (refusal); one change a second.
 // Changing at home counts as unseen (a disguise, as the home's "Change outfit"); anywhere else it doesn't touch your heat.
-function put(world, p, L) {
+function put(world, p, L, title = false) {
   const prof = p.profile;
   const code = encodeLook(L), first = prof.lookPicked === false;   // (the first session is free: whatever it ends in is yours)
   if (code === prof.look) { if (first) { prof.lookPicked = true; grant(prof, L); store.touch(); } return stateMsg(p, world); }
-  const why = changeBlocked(world, p) || (first ? null : refusal(world, p, decodeLook(prof.look), L));
+  const why = changeBlocked(world, p) || (first ? null : refusal(world, p, decodeLook(prof.look), L, title));
   if (why) { world.notify(p, why, 'warn'); return stateMsg(p, world); }
   if (p.lookSetAt !== undefined && world.time - p.lookSetAt < 1) return stateMsg(p, world);   // (one change a second: each one goes out to everyone near)
   p.lookSetAt = world.time;
@@ -270,8 +276,9 @@ function put(world, p, L) {
 export function lookOff(prof, s) {
   const L = decodeLook(prof.look);
   if (!L) return null;
-  if (s === 'all') { for (const k of SLOTS) L.outfit[k] = null; return L; }
-  if (!SLOTS.includes(s)) return null;
+  // (everything but the underwear: undressing further waits for the places it belongs - the creator's 'Nothing on', home)
+  if (s === 'all') { for (const k of SLOTS) if (k !== 'under') L.outfit[k] = null; return L; }
+  if (!SLOTS.includes(s) || s === 'under') return null;
   if ((s === 'top' || s === 'bottoms') && L.outfit.set) L.outfit.set = null;
   L.outfit[s] = null;
   return L;
@@ -310,7 +317,7 @@ export function handle(world, p, msg) {
   if (a === 'set') {
     const L = decodeLook(msg.c);
     if (!L) { world.notify(p, 'That look didn\'t come through.', 'warn'); return stateMsg(p, world); }
-    return put(world, p, L);
+    return put(world, p, L, !!msg.title);
   }
   // the Inventory's clothes (client/bag.js): a slot off, everything off, a piece you own on, a saved look's clothes on -
   // each a new look for put(), the same checks as the creator's 'set' (no disguise outside your home: changeBlocked)

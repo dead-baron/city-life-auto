@@ -106,11 +106,11 @@ for (const [i, n] of (sc.notes || T.notes).slice(-2).entries()) { const el = doc
 const JOBF = ['foot', 'air', 'rob', 'unarmed', 'board', 'swim', 'home'].includes(sc.st) ? 'big' : 'chip';
 $('job').className = JOBF; $('job').innerHTML = HI.jobHtml(T.job, { big: JOBF === 'big', dist: '640 M', time: sc.dev === 'touch' ? '9:58' : 'SHIFT 9:58' });
 // the vehicle chip in a vehicle; the hint strip for what you're doing
-const VST = { veh: 'drive', air: 'air', horse: 'horse', boat: 'boat', board: 'board', swim: 'swim' }[sc.st];
+const VST = { veh: 'drive', air: 'air', horse: 'horse', boat: 'boat', board: 'board' }[sc.st];
 if (FL.inVeh) { $('vchip').innerHTML = '<b>' + (sc.st === 'air' ? 'Skylark Helicopter' : 'Police Cruiser') + '</b>' + (sc.st === 'air' ? '<span class="vc-alt">ALT 31 M</span>' : '') + '<span class="vc-spd">88 KM/H</span>'; $('vchip').classList.remove('hidden'); }
 if (VST) { $('hints').innerHTML = HI.hintHtml(HI.hintStrip(VST, sc.dev)); $('hints').classList.remove('off'); }
 if (sc.st === 'rob') { $('rob').classList.remove('hidden'); $('rob-take').textContent = 'HOT $1,250 · till $800'; $('rob-fill').style.width = '40%'; }
-if (sc.st === 'custody') { $('trainbar').classList.remove('hidden'); $('trainbar').classList.add('custody'); $('tb-where').textContent = 'IN CUSTODY'; $('tb-next').textContent = 'Held on the ground - a patrol car is on its way'; }
+if (sc.st === 'custody') { $('trainbar').classList.remove('hidden'); $('trainbar').classList.add('custody', 'fight'); $('tb-where').textContent = 'FIGHT BACK!'; $('tb-next').textContent = 'Mash or hold FIRE to throw them off · harder!'; }   // (the struggle's meter: custody itself has no bar since 11-15 - client/hud.js)
 // fishing (UI-7): the fight's meter in its spot (client/fishing.js draws it in #fishspot's box) and the big cue
 if (sc.st === 'fish') { $('fishspot').classList.add('on'); $('fishbar').innerHTML = 'STRIKE! ' + glyph; $('fishbar').classList.remove('hidden'); }
 if (sc.st === 'police') { $('cruiser-hint').textContent = T.cruiser; $('cruiser-hint').classList.remove('hidden'); }
@@ -161,7 +161,7 @@ document.fonts.ready.then(() => setTimeout(() => { if (sc.dev === 'touch') fitPr
 export function framePage() {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="/client/style.css"><style>body { background: #4a5d48; } #game { background: repeating-linear-gradient(45deg, #4a5d48 0 40px, #55694f 40px 80px); }</style></head>
-<body><div id="game">${HUD}${TOUCH}</div><script type="module">${FRAME_JS}</script></body></html>`;
+<body class="dbg-ok"><div id="game">${HUD}${TOUCH}</div><script type="module">${FRAME_JS}</script></body></html>`;
 }
 
 // every scenario in an iframe of its size; the boxes collected into <pre id="out"> (read with chrome --dump-dom)

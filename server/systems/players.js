@@ -28,6 +28,7 @@ import * as bounties from './bounties.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as fishing from './fishing.js';   // (the rod, the bite, the fight: task #277)
+import { takeable } from '../../shared/fish.js';
 import * as picking from './picking.js';
 import * as foraging from './foraging.js';
 import * as hunting from './hunting.js';
@@ -134,6 +135,7 @@ import * as carsoccer from './carsoccer.js';
 import * as bathhouse from './bathhouse.js';
 import * as showers from './showers.js';
 import * as evhooks from './eventhooks.js';   // (the event calendar's offers: a gang war's sides - calevents.js)
+import { poiAt } from '../pois.js';   // (the place you're at, through a grid: World v3's thousands of places)
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -542,7 +544,7 @@ export function purgeAccount(world, prof) {
   for (const [id, owner] of [...(world.homeOwner || [])]) if (owner === pid) world.homeOwner.delete(id);
   for (const v of [...world.entities.values()]) if (v.kind === K.VEH && v.owner === pid) { if (!v.seats.some((s) => s)) world.remove(v); else { v.owner = null; v.ownerName = null; v.despawnable = true; v.descVer = (v.descVer || 0) + 1; } }
   starter.forget(world, pid);
-  for (const q of store.all()) { const c = q.acct && q.acct.chat; if (c && c.contacts && c.contacts[pid]) delete c.contacts[pid]; }
+  for (const q of store.all()) { const c = q.acct && q.acct.chat; if (c && c.contacts && c.contacts[pid]) delete c.contacts[pid]; if (c && c.freq && c.freq[pid]) delete c.freq[pid]; if (c && c.fsent) delete c.fsent[pid]; }
   store.remove(pid);
 }
 
@@ -648,7 +650,7 @@ function inputsOf(world, p, dt) {
     if (drivingV && !drivingV.wreckAt && !drivingV.scripted && !drivingV.onDeck) drivingV.ownStepTick = world.tick;
     for (let k = 0; k < n; k++) {
       let inp;
-      if (p.inputQ.length) { inp = p.inputQ.shift(); p.ack = inp.seq; p.lastInput = inp; p.starve = 0; }
+      if (p.inputQ.length) { inp = p.inputQ.shift(); p.ack = inp.seq; p.lastInput = inp; p.starve = 0; p.inSteps = (p.inSteps || 0) + 1; }   // (inSteps: the movement audit's clock - anticheat.js)
       else if (p.conn && (p.starve || 0) < HOLD_TICKS) { p.starve = (p.starve || 0) + 1; break; }
       else inp = p.conn ? p.lastInput : { seq: p.ack, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
       if (!ped || ped.dead || ped.removed) { p.prevBits = inp.bits; continue; }
@@ -855,18 +857,23 @@ function tackle(world, ped) {
 
 // ---------------------------------------------------------------------------
 // Context-sensitive interaction (GDD §13: E key manages context interactions)
-// with a rod, facing the water (or still in a boat): fish here - press and hold to charge the cast (fishing.js)
+// with a rod IN HAND, facing the water from the bank, a dock or a boat sitting still (never swimming): fish here - press
+// and hold to charge the cast (fishing.js). A rod in the bag only: no prompt - the first time by the water, the
+// first-time moment says to take it out (ftue.js MOMENTS.rod); the Guide has the rest (the owner, 11-16).
 function fishHere(world, p, ped) {
   if (!fishing.canFish(p) || ped.fishing) return null;
   const spot = fishing.spotFor(world, ped);
-  return spot ? { label: spot.boat ? 'Fish over the side (hold to cast)' : 'Fish here (hold to cast)', run: () => fishing.begin(world, p, spot) } : null;
+  if (!spot) return null;
+  if (!fishing.rodInHand(ped)) { ftue.moment(world, p, 'rod'); return null; }
+  return { label: spot.boat ? 'Fish over the side (hold to cast)' : 'Fish here (hold to cast)', run: () => fishing.begin(world, p, spot) };
 }
 export function findInteraction(world, p) {
   const ped = p.ped;
   if (p.struggle) return null;   // (fighting an officer off: the struggle bar says what to press - client/hud.js)
   // (the action button there the whole time a break can be had - now, or once the car slows or you've your breath back)
   const brk = ped && ped.cuffed && !ped.dead ? custody.breakable(world, p) : null;
-  if (brk) return { label: brk === 'now' ? 'Make a break for it!' : brk === 'slow' ? 'Make a break for it (when the car slows)' : 'Make a break for it (in a moment)', run: () => { if (custody.breakable(world, p) === 'now') custody.breakOut(world, p); } };
+  // (the words name what the button does: ESCAPE on a phone while the chance is there, WAIT till then - client/touchicons.js)
+  if (brk) return { label: brk === 'now' ? 'Escape - make a break for it!' : brk === 'slow' ? 'Not yet - make a break for it when the car slows' : 'Not yet - make a break for it in a moment', run: () => { if (custody.breakable(world, p) === 'now') custody.breakOut(world, p); } };
   if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.sky) return skydive.interaction(world, p);   // (up in the sky: the parachute)
@@ -994,7 +1001,7 @@ export function findInteraction(world, p) {
   if (hire) return hire;
   const table = casinofloor.interaction(world, p, economy.openMenu);   // a casino's table or slot machine, a bar's card table (casinofloor.js)
   if (table) return table;
-  const poi = world.map.poiNear(ped.x, ped.y);
+  const poi = poiAt(world.map, ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
     const label = economy.poiLabel(world, p, poi);
     if (label) return { label, run: () => economy.openMenu(world, p, poi) };
@@ -1192,7 +1199,7 @@ function armorBar(prof) { const A = armor.worn(prof); return A ? [Math.round(A.p
 export function buildMe(world, p) {
   const ped = p.ped;
   const prof = p.profile;
-  const weapons = Object.keys(prof.weapons).filter((id) => WEAPONS[id]).map((id) => ({
+  const weapons = takeable(prof).filter((id) => WEAPONS[id]).map((id) => ({   // (a rod in the bag: the rod's slot - shared/fish.js)
     id, ammo: prof.weapons[id] || 0, mag: ped ? (ped.mag[id] || 0) : 0,
   }));
   const inv = {};

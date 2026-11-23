@@ -22,6 +22,7 @@ import { store } from '../store.js';
 import { seaSites } from './coastguard.js';
 import { slotWorld } from './cargo.js';
 import * as jobs from './jobs.js';
+import { poisKind } from '../pois.js';
 
 const rng = mulberry32(8181);
 // what a net brings up: the shoaling fish of the coast and the open sea (common and uncommon, the market's price under $100)
@@ -50,9 +51,9 @@ function quayOf(world, mk) {
   Q.set(mk.id, best);
   return best;
 }
-const marketsOf = (m) => m.pois.filter((q) => q.kind === 'fishmarket');
+const marketsOf = (m) => poisKind(m, 'fishmarket');   // (the map's list, shared: copy it before sorting)
 export function marketFor(world, x, y) {
-  const L = marketsOf(world.map).sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
+  const L = [...marketsOf(world.map)].sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
   for (const mk of L.slice(0, 4)) { const q = quayOf(world, mk); if (q) return { mk, quay: q }; }
   return null;
 }

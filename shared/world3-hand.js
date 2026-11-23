@@ -286,6 +286,8 @@ function makeKit(m, api, P) {
       nb++;
       return handBuilding(m, { d: P.d, ...o });
     },
+    // (lawn the plan may dress: free, or the shore band's grass landscape() keeps as lawn - not taken yet)
+    lawn(x, y) { const k = at(x, y), i = y * W + x; return free(x, y) || (k >= 0 && !used[k] && m.tiles[i] === T.GRASS && (m.reserve[i] & 4) && m.land[i] && m.bld[i] < 0); },
     // the free extent of a column inside a band: [southmost free y, northmost free y] scanning north from yS (or null)
     column(x, y0, y1, mask = null) {
       const ok = mask ? (xx, yy) => free(xx, yy) && mask(xx, yy) : free;

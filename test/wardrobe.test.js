@@ -25,7 +25,7 @@ const storePoi = (w, id) => w.map.pois.find((p) => W.storeOf(p) === id && p.outs
 
 test('the catalogue is for sale: every piece sold somewhere, every store and store kind in the world as a walk-in', () => {
   const w = makeWorld();
-  for (const P of LK.PIECES) if (P && P.price > 0) assert.ok(W.sellerOf(P.i), `${P.name} is sold somewhere`);
+  for (const P of LK.PIECES) if (P && P.price > 0 && (W.PASS_SOLD || !P.d.pp)) assert.ok(W.sellerOf(P.i), `${P.name} is sold somewhere`);
   // every store has a place in the world (the hunting places sell outdoor clothes at their counters)
   for (const id of Object.keys(W.STORES)) assert.ok(w.map.pois.some((p) => W.storeOf(p) === id), `a place that is ${id}`);
   // every store kind of the catalogue is sold at a walk-in store
@@ -314,7 +314,9 @@ test('the Inventory\'s clothes: a piece off, all off, a piece you own on, a save
   // everything off: every slot empty - the body, face and hair kept
   const before = cur();
   looks.handle(w, a.p, { t: 'look', a: 'off', s: 'all' });
-  for (const s of LK.SLOTS) assert.equal(cur().outfit[s], null, s);
+  for (const s of LK.SLOTS) if (s !== 'under') assert.equal(cur().outfit[s], null, s);
+  assert.deepEqual(cur().outfit.under, before.outfit.under, 'the underwear stays on');
+  const kept = a.prof.look; looks.handle(w, a.p, { t: 'look', a: 'off', s: 'under' }); assert.equal(a.prof.look, kept, 'and never off from here');
   assert.deepEqual(cur().hair, before.hair); assert.deepEqual(cur().body, before.body);
   run(w, 1.1);
   // a piece you don't own: refused, nothing changes
@@ -343,4 +345,39 @@ test('the Inventory\'s clothes: a piece off, all off, a piece you own on, a save
   assert.equal(a.prof.look, hot, 'no change while wanted');
   assert.equal(a.p.wanted, 2, 'the heat stays');
   assert.ok(!a.p.disguised);
+});
+
+test('the title screen\'s CHARACTER: with no one in the world yet, Done puts owned clothes on (the owner, 11-17)', () => {
+  const w = makeWorld();
+  const a = picked(w);
+  const before = a.prof.look;
+  const L = LK.decodeLook(before);
+  const sw = W.BASICS.map((id) => LK.PIECES[id]).find((P) => P && P.slot && L.outfit[P.slot] && L.outfit[P.slot].id !== P.i);
+  assert.ok(sw, 'a basic piece to swap in');
+  L.outfit[sw.slot] = { id: sw.i, c: sw.c, t: sw.t, p: 0 };
+  const ped = a.p.ped; a.p.ped = null;   // (on the title: no one in the world)
+  set(a, L);
+  assert.notEqual(a.prof.look, before, 'the new look went on');
+  a.p.ped = ped;
+  // still refused on the title while wanted
+  run(w, 1.1);
+  const L2 = LK.decodeLook(a.prof.look); L2.outfit[sw.slot] = LK.decodeLook(before).outfit[sw.slot];
+  a.p.ped = null; a.p.wanted = 2;
+  const was = a.prof.look; set(a, L2);
+  assert.equal(a.prof.look, was, 'wanted: not on the title either');
+  a.p.ped = ped; a.p.wanted = 0;
+});
+
+test('the title screen\'s CHARACTER is the character creator: body, face and hair change there; in the city they wait for the mirror and the barber (the owner, 11-17)', () => {
+  const w = makeWorld();
+  const a = picked(w);
+  const before = a.prof.look;
+  const L = LK.decodeLook(before);
+  const H = LK.decodeLook(LK.encodeLook(LK.STARTERS[0].look)).hair;
+  L.hair = JSON.stringify(H) !== JSON.stringify(L.hair) ? H : LK.decodeLook(LK.encodeLook(LK.STARTERS[1].look)).hair;
+  set(a, L);
+  assert.equal(a.prof.look, before, 'in the city: hair at a barbershop');
+  run(w, 1.1);
+  looks.handle(a.w, a.p, { t: 'look', a: 'set', c: LK.encodeLook(L), title: 1 });
+  assert.notEqual(a.prof.look, before, 'from the title: the new hair is on');
 });

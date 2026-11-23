@@ -49,6 +49,7 @@ function optKind(o) {
 const KIND_NAME = { pistols: 'PISTOLS', rifles: 'RIFLES', melee: 'MELEE', throw: 'THROWABLES', ammo: 'AMMO', gear: 'GEAR' };
 const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', usedlot: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs' };
 const WEAPON_BY_ID = WEAPONS;
+let QB_ART = null, QB_P = null;   // (the item pictures for the quick bar: client/itemart.js, loaded when first wanted)
 export const WQ_MS = 4000;   // the quick weapons stay this long after a switch (UI-9)
 // a note's icon (UIK-00 6A/B): money in, a tick, a warning, an alarm, or the info mark
 const toastIcon = (tone, msg) => (/^\+\$|\bpaid\b|\+\$\d/i.test(msg) && tone !== 'bad' ? 'money' : tone === 'good' ? 'check' : tone === 'warn' ? 'warn' : tone === 'bad' ? 'alert' : 'info');
@@ -121,6 +122,36 @@ export class HUD {
   setInfoCtx(c) { this.infoCtx = c; this.info?.setCtx(c); }
   hint(k) { return !!this.info && this.info.hint(k); }
 
+  // N7 (the owner's notes 11-22): the quick wheel's four slots as a strip over the weapon plate, on a keyboard - the items
+  // pinned from the bag, a click uses one (as the wheel does: { t: 'inv', a: 'use' }), held the use key opens the wheel.
+  // Dim (UI-9's minimal HUD) till the pointer is on it or a slot's count changed; none pinned, none shown.
+  quickBar(me) {
+    const el = $('qbar');
+    if (!el) return;
+    // (a keyboard's: touch and a pad keep the quick wheel - the owner, 11-22 N7; on a phone the strip sat under BAG with
+    // "HOLD HOLD BAG" - the touch key's own name is "hold BAG" - 11-23)
+    const q = me.dead || input.device !== 'keyboard' ? [] : (me.quick || []), any = q.some(Boolean);
+    const key = any ? q.map((id) => (id ? `${id}:${me.inv[id] || 0}${ITEMS[id] && ITEMS[id].light ? (me.light ? '+' : '-') : ''}` : '')).join() + (QB_ART ? '|a' : '') : '';
+    const now = performance.now();
+    if (any && now - (this.qbAt || 0) > 500) {   // (sat on the weapon plate, whatever its height: measured twice a second, not every frame)
+      this.qbAt = now;
+      const w = $('weapon'), bottom = w ? w.offsetHeight + (parseFloat(getComputedStyle(w).bottom) || 0) + 4 : 64;
+      if (this.qbB !== bottom) { this.qbB = bottom; el.style.bottom = `${bottom}px`; }
+    }
+    if (el.dataset.q === key) return;
+    const was = el.dataset.q;
+    el.dataset.q = key;
+    if (!any) { el.innerHTML = ''; return; }
+    if (!QB_ART && !QB_P) QB_P = import('./itemart.js').then((a) => { QB_ART = a; el.dataset.q = ''; }).catch(() => {});
+    const pic = (id) => (QB_ART && QB_ART.itemIcon(id)) || '<span class="ic">•</span>';
+    el.innerHTML = Array.from({ length: 4 }, (_, i) => {
+      const id = q[i], n = id ? me.inv[id] || 0 : 0, I = id && ITEMS[id];
+      if (!I) return `<button type="button" class="qb empty" tabindex="-1" aria-label="Empty slot"></button>`;
+      const tag = I.light ? (me.light ? 'on' : 'off') : n > 1 ? `x${n}` : n ? '' : '0';
+      return `<button type="button" class="qb${n ? '' : ' empty'}" data-i="${i}" title="${esc(I.name)}" aria-label="${esc(I.name)}">${pic(id)}${tag ? `<small>${tag}</small>` : ''}</button>`;
+    }).join('');
+    if (was) { el.classList.add('on'); clearTimeout(this.qbT); this.qbT = setTimeout(() => el.classList.remove('on'), WQ_MS); }
+  }
   setMe(me) {
     const prev = this.me;
     this.me = me;
@@ -216,7 +247,13 @@ export class HUD {
     } else rb.classList.add('hidden');
     // riding a train: next stop, the tunnel, the strongbox
     const tb = $('trainbar'), tr = me.train, cu = me.custody, fg = me.fight && !me.dead ? me.fight : null;
-    tb.classList.toggle('custody', !!((cu && cu.s !== 'cell') || fg) && !me.dead);
+    tb.classList.toggle('custody', !!fg);
+    // arrested (server custody.js): no bar over the screen (the owner, 11-15: "we don't need that constant message covering
+    // the entire screen") - the BUSTED moment and one fading line a stage (the server's notes); the action button is the
+    // way out: while a break for it can be had right now (me.custody.brk 1) it turns red and pulses - ESCAPE on a phone,
+    // the prompt's card red on a keyboard or a pad (style.css .escape)
+    const esc1 = !!(cu && cu.s !== 'cell' && cu.brk === 1 && !me.dead);
+    if (esc1 !== !!this.escOn) { this.escOn = esc1; document.body.classList.toggle('escape', esc1); }
     tb.classList.toggle('fight', !!fg);
     if (!!fg !== !!this.fightOn) { this.fightOn = !!fg; document.querySelector('#tbtns [data-b="fire"]')?.classList.toggle('pulse', !!fg); }   // (the touch FIRE button pulses)
     if (fg) {
@@ -227,21 +264,6 @@ export class HUD {
       $('tb-fill').style.width = Math.round(Math.max(0, Math.min(1, fg.m)) * 100) + '%';
       // (mash it - or hold it down, a thumb on FIRE on a phone: server struggle.js STRUGGLE_HELD; up: the meter's rising)
       $('tb-next').innerHTML = `Mash or hold ${glyph('fire')} to throw them off${fg.up ? ' · you\'re winning - keep going!' : fg.n > 1 ? ' · two of them on you!' : fg.left < 1.5 ? ' · the cuffs are coming out!' : ' · harder!'}`;
-    } else if (cu && cu.s !== 'cell' && !me.dead) {
-      // arrested (server custody.js): held on the ground, a car coming, walked to it, the ride to the station
-      tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry'); tb.style.borderColor = '';
-      $('tb-where').textContent = 'IN CUSTODY';
-      // (the action button makes a break for it: on the ground or walked to the car, a try - custody.js breakOut; the car
-      // stuck or not coming, it always works - offerBreak, and the bar pulses)
-      // (the hint names the button by its glyph on every device: the touch buttons carry no words since UI-8)
-      // (brk 2: in a moment - the car too fast, or a breather before the next try)
-      const brk = cu.brk === 1 ? ` · make a break for it ${glyph('action')}` : cu.brk ? ` · ${glyph('action')} ${cu.slow ? 'when the car slows' : 'again in a moment'}` : '';
-      const esc = (t) => String(t).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
-      $('tb-next').innerHTML = esc(cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.stuck ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
-        : cu.s === 'escort' ? 'Being walked to the police car' : cu.s === 'walkin' ? `Walked into ${cu.at || 'the station'} - to the cells` : cu.s === 'fade' ? `Taken in to ${cu.at || 'the station'}`
-          : cu.stuck ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
-      tb.classList.toggle('brk', !!cu.stuck);
-      $('tb-crack').classList.add('hidden');
     } else if (me.wo && !me.dead) {
       // a set of push-ups or sit-ups (server workout.js): the reps, a press each, steady
       const w = me.wo;
@@ -344,6 +366,7 @@ export class HUD {
       $('w-quick').dataset.q = qs;
       $('w-quick').innerHTML = me.dead ? '' : qk.map(([x, n]) => { const d = WEAPON_BY_ID[x.id]; return d ? `<button type="button" class="wq" data-w="${esc(x.id)}" title="${esc(d.name)}${n < 9 ? ` (${n + 1})` : ''}" aria-label="${esc(d.name)}"><img alt="" src="${weaponThumb(d.i)}">${n < 9 ? `<span class="kchip kbm-only">${n + 1}</span>` : ''}</button>` : ''; }).join('');
     }
+    this.quickBar(me);
     // (UI-9, the owner's minimal HUD: the quick weapons show a few seconds after you take one out, and while the pointer is
     // on the plate - not all the time)
     if (this.wqW !== me.weapon) { const first = this.wqW === undefined; this.wqW = me.weapon; if (!first) { $('weapon').classList.add('wq-on'); clearTimeout(this.wqT); this.wqT = setTimeout(() => $('weapon').classList.remove('wq-on'), WQ_MS); } }
@@ -483,7 +506,7 @@ export class HUD {
     while (this.toastEls.length > 2) { const old = this.toastEls.shift(); clearTimeout(old._t); old.remove(); }
     const gone = () => { this.toastEls = this.toastEls.filter((x) => x !== el); el.classList.add('out'); setTimeout(() => el.remove(), 260); };   // (it fades out: style.css .out)
     el._t = setTimeout(gone, Math.min(6000, 2600 + shown.length * 40));
-    requestAnimationFrame(() => { const tx = el.lastChild; el.classList.toggle('more', line !== msg || tx.scrollWidth > tx.clientWidth + 1); });
+    requestAnimationFrame(() => { const tx = el.lastChild; el.classList.toggle('more', line !== msg || tx.scrollWidth > tx.clientWidth + 1 || tx.scrollHeight > tx.clientHeight + 1); });
   }
 
   // the money's count-up (the motion sheet UIC-20 02): the cash counts up (or down) to the new sum over 300 ms, the

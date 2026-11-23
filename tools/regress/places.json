@@ -1,0 +1,556 @@
+{
+ "seed": 1337,
+ "note": "frame-tile rects for tools/area-shot.mjs; keep stable - see places.mjs",
+ "places": [
+  {
+   "id": "district-pine-hills",
+   "why": "the middle of Pine Hills",
+   "rect": [
+    2740,
+    2995,
+    2800,
+    3035
+   ]
+  },
+  {
+   "id": "district-midtown",
+   "why": "the middle of Midtown",
+   "rect": [
+    3239,
+    1759,
+    3299,
+    1799
+   ]
+  },
+  {
+   "id": "district-northgate",
+   "why": "the middle of Northgate",
+   "rect": [
+    3159,
+    1529,
+    3219,
+    1569
+   ]
+  },
+  {
+   "id": "district-the-yards",
+   "why": "the middle of The Yards",
+   "rect": [
+    4090,
+    1748,
+    4150,
+    1788
+   ]
+  },
+  {
+   "id": "district-civic-center",
+   "why": "the middle of Civic Center",
+   "rect": [
+    3334,
+    2396,
+    3394,
+    2436
+   ]
+  },
+  {
+   "id": "district-southside",
+   "why": "the middle of Southside",
+   "rect": [
+    3728,
+    3064,
+    3788,
+    3104
+   ]
+  },
+  {
+   "id": "district-neon-strip",
+   "why": "the middle of Neon Strip",
+   "rect": [
+    3155,
+    2194,
+    3215,
+    2234
+   ]
+  },
+  {
+   "id": "district-harbor",
+   "why": "the middle of Harbor",
+   "rect": [
+    3375,
+    1959,
+    3435,
+    1999
+   ]
+  },
+  {
+   "id": "district-sunset-beach",
+   "why": "the middle of Sunset Beach",
+   "rect": [
+    2855,
+    3153,
+    2915,
+    3193
+   ]
+  },
+  {
+   "id": "district-pelican-key",
+   "why": "the middle of Pelican Key",
+   "rect": [
+    3635,
+    3296,
+    3695,
+    3336
+   ]
+  },
+  {
+   "id": "district-the-pink-mile",
+   "why": "the middle of The Pink Mile",
+   "rect": [
+    2693,
+    2277,
+    2753,
+    2317
+   ]
+  },
+  {
+   "id": "district-old-town",
+   "why": "the middle of Old Town",
+   "rect": [
+    2710,
+    1876,
+    2770,
+    1916
+   ]
+  },
+  {
+   "id": "district-westport-center",
+   "why": "the middle of Westport Center",
+   "rect": [
+    1859,
+    2124,
+    1919,
+    2164
+   ]
+  },
+  {
+   "id": "district-stadium-district",
+   "why": "the middle of Stadium District",
+   "rect": [
+    3769,
+    1647,
+    3829,
+    1687
+   ]
+  },
+  {
+   "id": "district-westport-international",
+   "why": "the middle of Westport International",
+   "rect": [
+    1728,
+    2713,
+    1788,
+    2753
+   ]
+  },
+  {
+   "id": "district-west-hills",
+   "why": "the middle of West Hills",
+   "rect": [
+    1543,
+    2396,
+    1603,
+    2436
+   ]
+  },
+  {
+   "id": "district-old-quarter",
+   "why": "the middle of Old Quarter",
+   "rect": [
+    2169,
+    1779,
+    2229,
+    1819
+   ]
+  },
+  {
+   "id": "district-northshore",
+   "why": "the middle of Northshore",
+   "rect": [
+    3140,
+    754,
+    3200,
+    794
+   ]
+  },
+  {
+   "id": "district-north-point",
+   "why": "the middle of North Point",
+   "rect": [
+    3481,
+    530,
+    3541,
+    570
+   ]
+  },
+  {
+   "id": "district-the-bluffs",
+   "why": "the middle of The Bluffs",
+   "rect": [
+    3680,
+    569,
+    3740,
+    609
+   ]
+  },
+  {
+   "id": "district-cedar-falls",
+   "why": "the middle of Cedar Falls",
+   "rect": [
+    4191,
+    2609,
+    4251,
+    2649
+   ]
+  },
+  {
+   "id": "district-falls-center",
+   "why": "the middle of Falls Center",
+   "rect": [
+    4056,
+    2356,
+    4116,
+    2396
+   ]
+  },
+  {
+   "id": "district-gull-harbor",
+   "why": "the middle of Gull Harbor",
+   "rect": [
+    1668,
+    3518,
+    1728,
+    3558
+   ]
+  },
+  {
+   "id": "district-coral-cay",
+   "why": "the middle of Coral Cay",
+   "rect": [
+    4240,
+    3414,
+    4300,
+    3454
+   ]
+  },
+  {
+   "id": "district-paradise-cay",
+   "why": "the middle of Paradise Cay",
+   "rect": [
+    463,
+    658,
+    523,
+    698
+   ]
+  },
+  {
+   "id": "district-arts-district",
+   "why": "the middle of Arts District",
+   "rect": [
+    2565,
+    2514,
+    2625,
+    2554
+   ]
+  },
+  {
+   "id": "district-highland-woods",
+   "why": "the middle of Highland Woods",
+   "rect": [
+    1519,
+    1157,
+    1579,
+    1197
+   ]
+  },
+  {
+   "id": "district-willow-valley",
+   "why": "the middle of Willow Valley",
+   "rect": [
+    3366,
+    1285,
+    3426,
+    1325
+   ]
+  },
+  {
+   "id": "district-red-rock-desert",
+   "why": "the middle of Red Rock Desert",
+   "rect": [
+    5265,
+    1416,
+    5325,
+    1456
+   ]
+  },
+  {
+   "id": "district-sandpiper-coast",
+   "why": "the middle of Sandpiper Coast",
+   "rect": [
+    4832,
+    2357,
+    4892,
+    2397
+   ]
+  },
+  {
+   "id": "district-egret-coast",
+   "why": "the middle of Egret Coast",
+   "rect": [
+    916,
+    2564,
+    976,
+    2604
+   ]
+  },
+  {
+   "id": "district-northshore-beaches",
+   "why": "the middle of Northshore Beaches",
+   "rect": [
+    2857,
+    680,
+    2917,
+    720
+   ]
+  },
+  {
+   "id": "district-prison-island",
+   "why": "the middle of Prison Island",
+   "rect": [
+    5736,
+    3605,
+    5796,
+    3645
+   ]
+  },
+  {
+   "id": "district-timber-bend",
+   "why": "the middle of Timber Bend",
+   "rect": [
+    1763,
+    1400,
+    1823,
+    1440
+   ]
+  },
+  {
+   "id": "district-willow-crossing",
+   "why": "the middle of Willow Crossing",
+   "rect": [
+    3718,
+    1007,
+    3778,
+    1047
+   ]
+  },
+  {
+   "id": "district-sandpiper-bay",
+   "why": "the middle of Sandpiper Bay",
+   "rect": [
+    5353,
+    2790,
+    5413,
+    2830
+   ]
+  },
+  {
+   "id": "district-the-strip",
+   "why": "the middle of The Strip",
+   "rect": [
+    5411,
+    593,
+    5471,
+    633
+   ]
+  },
+  {
+   "id": "district-old-downtown",
+   "why": "the middle of Old Downtown",
+   "rect": [
+    5255,
+    595,
+    5315,
+    635
+   ]
+  },
+  {
+   "id": "district-mesa-flats",
+   "why": "the middle of Mesa Flats",
+   "rect": [
+    5375,
+    517,
+    5435,
+    557
+   ]
+  },
+  {
+   "id": "district-copper-gulch",
+   "why": "the middle of Copper Gulch",
+   "rect": [
+    4761,
+    1606,
+    4821,
+    1646
+   ]
+  },
+  {
+   "id": "district-dusty-hollow",
+   "why": "the middle of Dusty Hollow",
+   "rect": [
+    5333,
+    1797,
+    5393,
+    1837
+   ]
+  },
+  {
+   "id": "hospital-st-neon-general",
+   "why": "hospital: St. Neon General",
+   "rect": [
+    3429,
+    2434,
+    3477,
+    2466
+   ]
+  },
+  {
+   "id": "hospital-northshore-medical-center",
+   "why": "hospital: Northshore Medical Center",
+   "rect": [
+    3134,
+    801,
+    3182,
+    833
+   ]
+  },
+  {
+   "id": "police-midtown-9th-precinct",
+   "why": "police: Midtown 9th Precinct",
+   "rect": [
+    3317,
+    1817,
+    3365,
+    1849
+   ]
+  },
+  {
+   "id": "bank-midtown-savings-bank",
+   "why": "bank: Midtown Savings Bank",
+   "rect": [
+    2978,
+    1721,
+    3026,
+    1753
+   ]
+  },
+  {
+   "id": "station-northshore-station",
+   "why": "station: Northshore Station",
+   "rect": [
+    2996,
+    710,
+    3044,
+    742
+   ]
+  },
+  {
+   "id": "marina-harbor-marina-boats-",
+   "why": "marina: Harbor Marina (boats)",
+   "rect": [
+    2887,
+    1974,
+    2935,
+    2006
+   ]
+  },
+  {
+   "id": "farm-willow-valley-farm-co-op",
+   "why": "farm: Willow Valley Farm Co-op",
+   "rect": [
+    3747,
+    996,
+    3795,
+    1028
+   ]
+  },
+  {
+   "id": "gasstation-gas-n-go-stadium-district",
+   "why": "gasstation: Gas 'n Go - Stadium District",
+   "rect": [
+    3791,
+    1820,
+    3839,
+    1852
+   ]
+  },
+  {
+   "id": "clothing-marlow-finch",
+   "why": "clothing: Marlow & Finch",
+   "rect": [
+    2987,
+    1768,
+    3035,
+    1800
+   ]
+  },
+  {
+   "id": "convenience-westside-bodega",
+   "why": "convenience: Westside Bodega",
+   "rect": [
+    2848,
+    1671,
+    2896,
+    1703
+   ]
+  },
+  {
+   "id": "cinema-the-grand-theater",
+   "why": "cinema: The Grand Theater",
+   "rect": [
+    3003,
+    2583,
+    3051,
+    2615
+   ]
+  },
+  {
+   "id": "bowling-pinwheel-lanes",
+   "why": "bowling: Pinwheel Lanes",
+   "rect": [
+    4060,
+    1873,
+    4108,
+    1905
+   ]
+  },
+  {
+   "id": "named-coral-cay-police",
+   "why": "named: Coral Cay Police",
+   "rect": [
+    4203,
+    3433,
+    4251,
+    3465
+   ]
+  },
+  {
+   "id": "named-greenfield-park",
+   "why": "named: Greenfield Park",
+   "rect": [
+    3063,
+    2550,
+    3111,
+    2582
+   ]
+  }
+ ]
+}
