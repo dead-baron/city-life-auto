@@ -51,10 +51,10 @@ const own = (base, name, d, pose = 'idle', f = 0, skin = 2, color = 'hot pink') 
   return { G: a, B: b, px };
 });
 const UNDER = LK.PIECES.filter((p) => p && p.slot === 'under' && p.name !== 'Nothing on');
-const CUT = UNDER.filter((p) => !['Union suit', 'Silk slip'].includes(p.name));   // (those two are shapes the renderer has)
+const CUT = UNDER.filter((p) => !['Union suit', 'Silk slip', 'Bath towel', 'Towel round the hips'].includes(p.name));   // (those are shapes the renderer has - the towels its towel wrap and waist towel, 11-23)
 
-test('underwear: 19 pieces and Nothing on; every piece shows on both bases from every side and in the walk', () => {
-  assert.equal(UNDER.length, 19);   // (16, and the three striped ones the owner asked for on 11-20)
+test('underwear: 21 pieces and Nothing on; every piece shows on both bases from every side and in the walk', () => {
+  assert.equal(UNDER.length, 21);   // (16, the three striped ones the owner asked for on 11-20, the two towels of 11-23)
   for (const p of UNDER) for (const base of p.b) {
     for (const d of [0, 1, 2, 4, 6]) { const n = own(base, p.name, d).px.length; assert.ok(n >= (d === 2 || d === 6 ? 3 : 6), `${p.name} on ${base}, facing ${d}: ${n} art pixels`); }
     for (const f of [1, 3, 4]) { const n = own(base, p.name, 0, 'walk0', f).px.length; assert.ok(n >= 6, `${p.name} on ${base}, walking, frame ${f}: ${n} art pixels`); }
