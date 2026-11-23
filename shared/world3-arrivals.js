@@ -258,7 +258,7 @@ function boreOf(m, F, u0, u1, open) {
 // MOUND.h metres over the bore, falling away along the line - steeply on the portal's side (MOUND.portal tiles: the
 // stretch to the platform stays flat), gently behind the blind end (MOUND.back) and to the sides (MOUND.side); open ground
 // and the bore's own rock only (a road, a building, water or the platform keep their height).
-export const MOUND = { h: 6, portal: 3, back: 6, side: 5 };
+export const MOUND = { h: 4, portal: 3, back: 4, side: 3 };   // (11-22 night: smaller - the shading spread past the cover's hill, a dark patch on the sand by Northshore Station)
 const MOUND_ON = new Set([T.GRASS, T.DIRT, T.SAND, T.FIELD, T.WALL]);
 function moundOf(m, F, u0, u1, open) {
   if (!m.relief) return;

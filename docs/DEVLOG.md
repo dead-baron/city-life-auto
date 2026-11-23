@@ -26352,3 +26352,12 @@ consider topographical levels". Both withdrawn. What stands:
   cliffs, placementlint pass. The first build of the rock cleared the cove's fire ring from the beach beside it
   (world3coast caught it): the rock now clears only what stands on its own tiles, and never a fire ring. The whole
   suite has not been run on this branch.
+
+## 2026-11-22 (night) - World batch: before / after pictures; the arrival tunnels' hill made smaller
+- `tools/regress/` on main (before) and `prebeta-world2` with main and `nature-world` merged in (after): 55 places, 14
+  changed by 0.5% or more. Looked at: the moored boats gone from the baked marina (they're boats you can take now, the
+  server's), trees and plants in a few districts the same but drawn as other kinds (the prop list's order moved: the art
+  picks a tree's look by it - two Copper Gulch trees moved a tile, no more), Northshore Station's car park island without
+  its bays (a car there stood on the pavement). And one fix: the arrival tunnels' new hill shaded a dark patch on the sand
+  well past the cover's hill by Northshore Station - MOUND now 4 m, falling over 4 tiles behind and 3 to the sides
+  (portalOnFlat still 0; world3arrivals).
