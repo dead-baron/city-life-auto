@@ -1900,13 +1900,14 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
   .iv-turn { display: none; }   /* (a drag turns the figure: the arrows would cover it here) */
   .iv-dacts .btn { min-height: 32px; font-size: var(--fs-1); letter-spacing: 0; }
   .iv-stat { grid-template-columns: 70px minmax(0, 1fr) 28px; }
-  .iv-items { display: grid; grid-template-columns: 92px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 6px; }
-  .bag-tools { grid-row: 1; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 6px; min-height: 0; overflow-y: auto; }
+  .iv-items { display: grid; grid-template-columns: 92px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 6px; }
+  .bag-seg { grid-column: 1 / -1; grid-row: 1; margin: 0; } .bag-seg .chip { height: 32px; padding: 0 10px; }   /* (the stash's switch: a row of its own over the rail and the grid) */
+  .bag-tools { grid-row: 2; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 6px; min-height: 0; overflow-y: auto; }
   .bag-cats { flex: none; flex-direction: column; flex-wrap: nowrap; gap: 3px; }
   .bag-cats .chip { min-height: 29px; height: auto; padding: 2px 6px; font-size: var(--fs-1); text-align: left; white-space: normal; line-height: 1.1; }   /* ("Food & Meds" on two lines rather than cut: 11-23) */
-  .bag-grid { grid-column: 2; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 6px; }
+  .bag-grid { grid-column: 2; grid-row: 2; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 6px; }
   .bag-cell { height: 68px; padding-top: 4px; } .bc-ic { height: 26px; } .bc-ic .gl { width: 24px; height: 24px; }
-  .bag-wheel { grid-column: 1 / -1; padding: 4px; } .iv-qb { gap: 4px; } .bag-slot { height: 40px; } .bag-slot > small { display: none; }
+  .bag-wheel { grid-column: 1 / -1; grid-row: 3; padding: 4px; } .iv-qb { gap: 4px; } .bag-slot { height: 40px; } .bag-slot > small { display: none; }
   .bc-ic .iti { width: 24px; height: 24px; } .bc-ic:has(.iti) { height: 28px; }
   .bag-detail { padding: var(--s2); }
   .bd-ic { width: 44px; height: 44px; } .bd-ic .gl { width: 28px; height: 28px; }

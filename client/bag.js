@@ -351,7 +351,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
   }
   const DRAG = 'application/x-cla-inv';
   function cell(t, m) {
-    const pin = t.kind === 'i' ? (m.quick || []).indexOf(t.id) : -1, on = t.kind === 'w' && m.weapon === t.id, ws = t.kind === 'w' ? slotOfWeapon(m, t.id) : -1;
+    const pin = t.kind === 'i' && !t.inStash ? (m.quick || []).indexOf(t.id) : -1, on = t.kind === 'w' && m.weapon === t.id, ws = t.kind === 'w' ? slotOfWeapon(m, t.id) : -1;
     const b = document.createElement('button');
     b.className = 'bag-cell' + (t.k === sel ? ' sel' : '') + (on || t.worn ? ' on' : '');
     b.dataset.k = t.k; b.setAttribute('role', 'listitem');
@@ -540,7 +540,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     if (so) {
       const sAll = stashThings(so), nOf = (L) => L.reduce((a, t) => a + (t.kind === 'w' ? 1 : t.n), 0);
       seg.innerHTML = [['carried', 'CARRIED', nOf(all.filter(stashable))], ['stash', 'STASH', nOf(sAll)]].map(([v, n, c]) => `<button class="chip${view === v ? ' on' : ''}" role="tab" aria-selected="${view === v}" data-view="${v}">${n}<small>${c}</small></button>`).join('')
-        + `<span class="bag-where">${esc(so.where || '')}</span><button class="btn bag-shx" type="button" data-sx="1">CLOSE STASH</button>`;
+        + `<button class="btn bag-shx" type="button" data-sx="1" title="Close the stash (${esc(so.where || 'your stash')})" aria-label="Close the stash">CLOSE</button>`;
       for (const b of seg.querySelectorAll('[data-view]')) {
         const put = b.dataset.view === 'stash';
         b.onclick = () => { view = b.dataset.view; sel = null; render(); };
