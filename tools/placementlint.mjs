@@ -69,7 +69,7 @@ import { wildAt, TIDY3, homePaths3 } from '../shared/world3-tidy.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
-import { parkWhy } from '../shared/parkcheck.js';
+import { parkWhy, parkExempt } from '../shared/parkcheck.js';
 import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
 import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf } from '../client/art2/game/statics.js';
 import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
@@ -284,7 +284,7 @@ export function lint(M) {
   }
   // the parking spaces: their car off the pavements, the promenades, the lawns
   const space = (what, sp, model) => { const V = VEHICLES[model] || VEHICLES.sedan, why = parkWhy(M, sp.x, sp.y, sp.a || 0, V.L, V.W); seen.spaces = (seen.spaces || 0) + 1; if (why) rows.parked.push({ what, x: sp.x, y: sp.y, why }); };
-  for (const sp of M.parking || []) if (!sp.drive && sp.model !== 'golfcart') space(`a parked ${sp.model || 'car'}${sp.kerb ? ' (kerb bay)' : ''}`, sp, sp.model);
+  for (const sp of M.parking || []) if (!parkExempt(sp)) space(`a parked ${sp.model || 'car'}${sp.kerb ? ' (kerb bay)' : ''}`, sp, sp.model);
   for (const L of M.dealerLots || []) for (const sp of L.slots || []) space('a car on a lot', sp, 'sedan');
   // the canopies over the doors: none over CANOPY_MAX (a filling station's over its pumps is its own)
   {

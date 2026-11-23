@@ -149,7 +149,8 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
   check(ML.belt >= 80 && ML.palms >= 4, `its green belt (${ML.belt} tiles, ${ML.palms} palms)`);
   check(ML.beach >= 80 && ML.jetty >= 6, `its white beach (${ML.beach}) and jetty (${ML.jetty})`);
   const mls = m.natureSites.find((s) => s.kind === 'lake' && s.name === 'Mirage Lake');
-  check(mls && m.props.some((p) => p && p.t === 'rowboat' && Math.hypot(p.x - mls.x, p.y - mls.y) < 30 * TILE), 'its rowboat by the jetty');
+  // (a real boat since 11-22 - shared/world3-boats.js boatsAfloat3: moored in m.marina)
+  check(mls && (m.marina || []).some((q) => q.kind === 'rowboat' && Math.hypot(q.x - mls.x, q.y - mls.y) < 30 * TILE), 'its rowboat by the jetty');
   check(mls && m.props.filter((p) => p && p.t === 'palm_a' && Math.hypot(p.x - mls.x, p.y - mls.y) < 30 * TILE).length >= 4, 'palms round it');
   // 9. the desert's roads by their furniture (shared/world3-roadside.js): white delineator posts along their shoulders -
   // on the sand or gravel by the asphalt, in the desert's districts only, never on a road, a designed place's ground,

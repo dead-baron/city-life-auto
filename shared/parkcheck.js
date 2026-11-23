@@ -36,10 +36,14 @@ export function parkWhy(m, x, y, a, L, W, strict = false) {
 // drawn (client/art2/game/statics.js) and the lint counted them (tools/placementlint.mjs parked). A driveway's, a golf
 // cart's and the car lots' spaces are their own. For the whole-world build's done hook (shared/world3-world.js).
 //   badBays3(m) -> how many taken off
+// The spaces the rule above doesn't apply to: a home's driveway, a golf cart's, and the MX park's pits (shared/world3-dirt.js
+// - its bikes and trucks stand on the open ground by design: test/world3dirt.test.js). One answer for the build, the lint
+// and the server (server/systems/traffic.js).
+export const parkExempt = (sp, model = sp && sp.model) => !!sp && (!!sp.drive || model === 'golfcart' || !!sp.mx);
 export function badBays3(m) {
   if (!Array.isArray(m.parking) || !m.tileAtPx) return 0;
   const before = m.parking.length;
   const dims = (sp) => { const V = (VEHICLES && VEHICLES[sp.model]) || VEHICLES.sedan; return [V.L, V.W]; };   // (as the lint measures: the spot's own model, else a sedan)
-  m.parking = m.parking.filter((sp) => !sp || sp.drive || sp.model === 'golfcart' || !parkWhy(m, sp.x, sp.y, sp.a || 0, ...dims(sp)));
+  m.parking = m.parking.filter((sp) => !sp || parkExempt(sp) || !parkWhy(m, sp.x, sp.y, sp.a || 0, ...dims(sp)));
   return before - m.parking.length;
 }

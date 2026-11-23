@@ -26393,3 +26393,11 @@ consider topographical levels". Both withdrawn. What stands:
   Shop and Speedy Stop - now one walk-in opening north; the audit says a tree, none of the trees by them lines up - a try
   at counting north doorways in the sightlines was made and backed out), one campfire more (the merged sea cave's
   cove). Main is over too (picnic, vending, three doors).
+
+## 2026-11-23 (night) - The MX park's pit trucks parked again; the desert lake's rowboat a boat
+- The suite on the branch: `test/world3dirt.test.js` "5 bikes, 0 trucks" - the MX park's pits stand on the open ground
+  by design (its own test says so), but the parking rule takes sand and grass for a beach and a lawn: the server had never
+  parked the pit trucks (traffic.js badBay, on main too) and the batch's badBays3 took their spaces off. `shared/parkcheck.js`
+  parkExempt: a driveway's, a golf cart's and the pits' spaces - one answer for the build, the lint and the server.
+- `test/world3desert.test.js` "its rowboat by the jetty": Mirage Lake's rowboat looked for as a moored boat (m.marina).
+- world3dirt, world3desert, placementlint 42/42, trafficbox, mycar, parkducks.
