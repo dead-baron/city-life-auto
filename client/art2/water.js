@@ -691,10 +691,10 @@ export function waterfallFrames(o = {}, n = 4) { const m = fallModel({ ...o, fra
 // moss and ferns on the ledges, roots hanging down the face, boulders at its foot; wet: the end by the falls (-1 the
 // left, 1 the right) dark and wet with spray. (The moss is the rock's crust: it holds still in the wind with the rock -
 // gbuf.js "What sways"; task #425)
-export function cliffWall(len = 120, h = 60, depth = 40, seed = 1, wet = 0) {
-  const m = new Vox(len, depth, h + 12), K = rockKit(m, seed, false), LV = [1, 0.72, 0.42];
+export function cliffWall(len = 120, h = 60, depth = 40, seed = 1, wet = 0, stone = 0, join = 0) {   // (stone 1: jointed granite; join: 1 its left end, 2 its right, 3 both run on into the next piece of the same face - no stepping down there, so a row of pieces is one wall and not a row of blocks)
+  const m = new Vox(len, depth, h + 12), gr = stone === 1, K = rockKit(m, seed, gr ? 'granite' : false), LV = gr ? [1, 0.8, 0.5] : [1, 0.72, 0.42];
   for (let x = 0; x < len; x++) {
-    const end = Math.min(x, len - 1 - x), fr = depth - 3 - vnoise(x, 1, 17, seed) * 10, tp = h - 6 + vnoise(x, 2, 29, seed + 1) * 8;
+    const end = Math.min(join & 1 ? 1e6 : x, join & 2 ? 1e6 : len - 1 - x), fr = depth - 3 - vnoise(x, 1, 17, seed) * 10, tp = h - 6 + vnoise(x, 2, 29, seed + 1) * 8;
     const taper = 0.3 + 0.7 * sstep(0, 26, end + (vnoise(x, 3, 7, seed) - 0.5) * 10), lvE = 0, wz = wet && (wet < 0 ? x : len - 1 - x) < 24 + vnoise(x, 4, 9, seed) * 16;
     const foot = vnoise(x, 7, 15, seed + 4) > 0.42;
     let yF = -1, HF = 0;
@@ -703,9 +703,9 @@ export function cliffWall(len = 120, h = 60, depth = 40, seed = 1, wet = 0) {
       if (b < 6 && !foot) continue;
       const H = Math.round(tp * LV[lv] * taper);
       if (lv === lvE) { yF = Math.max(yF, y); HF = H; }
-      rockCol(m, K, x, y, H, wz ? H : b < 6 ? 3 : 0, vnoise(x, y, 8, seed + 3) + 0.1, seed);
+      rockCol(m, K, x, y, H, wz ? H : b < 6 ? 3 : 0, vnoise(x, y, 8, seed + 3) + (gr ? -0.18 : 0.1), seed);   // (granite: lichen in patches, not a green cap)
     }
-    if (yF >= 0 && hash(x, 0, seed + 37) < 0.08) roots(m, K, x, yF + 1, HF - 1, 5 + Math.floor(hash(x, 1, seed + 37) * 14));
+    if (!gr && yF >= 0 && hash(x, 0, seed + 37) < 0.08) roots(m, K, x, yF + 1, HF - 1, 5 + Math.floor(hash(x, 1, seed + 37) * 14));
   }
   for (let i = 0, n = 2 + Math.floor(len / 50); i < n; i++) {
     const r = 3 + hash(i, 3, seed) * 5, bx = 8 + hash(i, 1, seed) * (len - 16), by = depth - 4 - hash(i, 2, seed) * 6;
@@ -714,11 +714,29 @@ export function cliffWall(len = 120, h = 60, depth = 40, seed = 1, wet = 0) {
   m.smooth = 1;
   return m;
 }
+// the way into a rock that is drawn by something else (a sea cave in its basalt hill - statics.js 'cliff'): only the
+// hole - a low black arch, a few dark stones round its rim, wet shingle and a glint of water on its floor
+export function caveArch(w = 84, h = 64) {
+  const m = new Vox(w, 10, h + 4), cx = w / 2, seed = 9;
+  const dark = m.mat({ ramp: R('#0c0a0e', 5, 1), k: 0, flag: F_NOCAST });
+  const rim = m.mat({ ramp: [[30, 30, 34], [44, 44, 48], [60, 60, 64], [78, 78, 80], [98, 98, 98]], k: 2, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 2.4 });
+  const glint = m.mat({ ramp: R('#1a2e38', 5, 2), k: 2, flag: F_WATER | F_NOCAST, shade: (x, y) => (hash(Math.round(x), Math.round(y), 9) - 0.5) * 1.2 - 0.4 });
+  const top = (x) => { const u = (x - cx) / (w / 2 - 3); return Math.abs(u) > 1 ? -1 : h * (0.5 + 0.5 * Math.sqrt(Math.max(0, 1 - u * u))) - Math.abs(u) * 4 + (vnoise(x, 1, 7, seed) - 0.5) * 6; };
+  for (let x = 0; x < w; x++) {
+    const t = top(x); if (t < 0) continue;
+    for (let z = 0; z < t; z++) for (let y = 0; y < 8; y++) m.set(x, y, z, z < 2 && y > 3 && Math.abs(x - cx) < w * 0.2 ? glint : dark);
+    const edge = top(x - 2) < 0 || top(x + 2) < 0;   // (stones standing proud round the rim, broken)
+    if (hash(Math.round(x / 3), 3, seed) > 0.35) for (let k = 0; k < 3; k++) m.set(x, 8, Math.round(t) + k - 1, rim);
+    if (edge) for (let z = 0; z < t + 2; z++) if (hash(x, Math.round(z / 3), seed + 2) > 0.3) m.set(x, 8, z, rim);
+  }
+  m.smooth = 0;
+  return m;
+}
 // a cave's mouth in a face of columnar basalt (Nature-B2): the rock w wide and h tall with a dark arch in its middle
 // running back into black; style 0 'moss' (a forest falls' - moss on the columns' tops, strands hanging over the arch,
 // ferns at its foot), 1 'sea' (a sea cave's - a dark wet band of barnacles along its foot, a glint of water inside)
-export function caveMouth(w = 96, h = 72, style = 0) {
-  const depth = 46, m = new Vox(w, depth, h + 8), sea = style === 1, seed = 7 + style;
+export function caveMouth(w = 96, h = 72, style = 0, deep = 0) {   // (deep: set in a bluff this deep - as deep and as tall as the cliff either side of it, its top level and mossed like theirs, no shoulders of its own)
+  const depth = deep || 46, m = new Vox(w, depth, h + 8), sea = style === 1, seed = 7 + style;
   const K = rockKit(m, seed, false), rock = K.rock, moss = K.moss;
   const wet = m.mat({ ramp: R('#3a3834', 6, 2), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2), 5) > 0.8 ? 1.2 : 0) + (hash(Math.round(x), Math.round(z), 6) - 0.5) * 0.8 });
   const dark = m.mat({ ramp: R('#0c0a0e', 5, 1), k: 0, flag: F_NOCAST });
@@ -727,16 +745,16 @@ export function caveMouth(w = 96, h = 72, style = 0) {
   const inArch = (x, z) => { const u = (x - cx) / (ow / 2); if (Math.abs(u) > 1) return false; const top = oh * 0.62 + oh * 0.38 * Math.sqrt(Math.max(0, 1 - u * u)); return z < top - Math.abs(u) * 3; };
   for (let y = 0; y < depth; y++) for (let x = 0; x < w; x++) {
     const nz = vnoise(x, y, 13, seed), shoulder = Math.abs(x - cx) / (w / 2);
-    const top = Math.round(h * (1 - shoulder * shoulder * 0.28) + (nz - 0.5) * 10 - (shoulder > 0.7 && y > depth * 0.55 ? 10 : 0));   // (its shoulders stepping down in a ledge)
-    const front = depth - 4 - vnoise(x, 2, 17, seed) * 10 - shoulder * 8;
+    const top = deep ? Math.round(h - 6 + vnoise(x, 2, 29, seed + 1) * 8) : Math.round(h * (1 - shoulder * shoulder * 0.28) + (nz - 0.5) * 10 - (shoulder > 0.7 && y > depth * 0.55 ? 10 : 0));   // (its shoulders stepping down in a ledge)
+    const front = deep ? depth - 3 - vnoise(x, 1, 17, seed) * 10 : depth - 4 - vnoise(x, 2, 17, seed) * 10 - shoulder * 8;
     if (y > front) continue;
     for (let z = 0; z < top; z++) {
       if (inArch(x, z)) {   // (the way in: hollow back to a black wall; its floor dark, a sea cave's wet)
-        if (y < depth * 0.2) m.box(x, y, z, x + 1, y + 1, z + 1, dark);
+        if (y < depth - 36) m.box(x, y, z, x + 1, y + 1, z + 1, dark);
         else if (z < 2) m.box(x, y, z, x + 1, y + 1, z + 1, sea ? (Math.abs(x - cx) < ow * 0.22 ? glint : wet) : dark);
         continue;
       }
-      const mat = sea && z < 10 ? wet : z >= top - 2 && !sea && hash(x, y, seed + 9) > 0.35 ? moss : rock;
+      const mat = sea && z < 10 ? wet : z >= top - 2 && (!sea || deep) && (deep ? vnoise(x, y, 8, seed + 3) + 0.1 > 0.45 : hash(x, y, seed + 9) > 0.35) ? moss : rock;
       m.box(x, y, z, x + 1, y + 1, z + 1, mat);
     }
   }

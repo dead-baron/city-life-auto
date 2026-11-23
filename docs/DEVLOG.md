@@ -26336,3 +26336,19 @@ grass. The open sign on this building is covered by this ATM." - and in the shot
   booking sends your legal guns to your stash (arms.js onBooked). The test now checks that: out empty-handed, the pistol
   in your stash.
 - Tests: hudlayout, hudinfo, hudlayers, uikit, uitokens, chatui, chatsafety, notes1122, prison, arms, custody.
+## 2026-11-21 - The sea cave in a rock of its own (branch `nature-world`, off `nature`)
+Two tries. The first (17:32-18:30) set Summit Tarn behind a rim of granite cliff and the sea cave in a bluff of cliff
+pieces; the owner, 19:18: "Both of these fixes do not work ... just added a line of cliffs that dont look good and dont
+consider topographical levels". Both withdrawn. What stands:
+- **Summit Tarn** is page-side now and lives on `nature`: it drains over a low sill into its stream. This branch's
+  `shared/world3-tarn.js` is `nature`'s again.
+- **The sea cave (`shared/world3-caves.js`).** The cove is flat: there is no cliff to set a mouth in, and none within
+  ninety tiles (checked over the built world). So the cave has a rock of its own, as the mine has: one mass of dark
+  basalt behind the cobble pocket (`'cliff'` with `st: 'basalt'`), its outline ragged and its top stepping back in
+  tiers, solid where it is drawn (`shared/cliffshape.js` `cliffSolid`), the way in a low black arch at its foot
+  (`water.js` `caveArch`). The world changes here (the `world3` hash moves).
+- Kept from the first try, unused for now: `cliffWall`'s granite stone and `join`, `caveMouth` deep.
+- Tests on this branch: world3caves (updated: one rock mass, no row of cliff pieces), world3coast, world3redwoods,
+  cliffs, placementlint pass. The first build of the rock cleared the cove's fire ring from the beach beside it
+  (world3coast caught it): the rock now clears only what stands on its own tiles, and never a fire ring. The whole
+  suite has not been run on this branch.

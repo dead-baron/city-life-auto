@@ -18,6 +18,7 @@
 // boats, its chests). For the whole-world build only (shared/world3-world.js calls buildCaves3 from its done hook).
 // Deterministic: authored shapes, integer hashes; Math's trig only inside generateCity (withDeterministicMath).
 import { TILE, T } from './constants.js';
+import { cliffSolid } from './cliffshape.js';   // (the sea cave's rock: solid where it is drawn)
 import { N3 } from './cavekit.js';
 
 const RES = 32;
@@ -135,12 +136,17 @@ export function buildCaves3(m, H3) {
     // the cliff along its north rim (its face to the south, columnar basalt), the mouth in it; a boulder spur on the east
     const rimY = (BY - R + 0.6) * TILE, x0 = (best.sea + 1) * TILE, x1 = (BX + R) * TILE;
     const MX = Math.round((BX - 1.5) * TILE), MY = Math.round(rimY + 16);
-    for (let x = x0, k = 0; x < x1; x += 150, k++) {
-      if (Math.abs(x + 75 - MX) < 70) continue;   // (where the mouth is: its own rock)
-      P('cliffwall', x + 75, rimY + (k % 2) * 6, 0, { len: 150, h: 132 + (k % 3) * 16, d: 84, s: 40 + k });
-      if (m.addSolidProp) for (let dx = -64; dx <= 64; dx += 20) m.addSolidProp(x + 75 + dx, rimY - 8, 12);
-    }
-    P('cavemouth', MX, MY, 0, { w: 136, h: 120, style: 'sea' });
+    // (the owner, 2026-11-21: 17:33 "it doesn't look like a cave going into a mountain or large rock structure it just
+    // looks like a standalone cave entrance"; 19:18, of a line of cliff pieces tried that afternoon, "dont consider
+    // topographical levels") The land here is flat: no cliff to set a mouth in. So the cave has its own rock, as the
+    // mine has (naturesites.js): one mass of dark basalt standing as a hill behind the pocket - its outline ragged, its
+    // top stepping back in tiers, solid where it is drawn (shared/cliffshape.js) - the way in a low arch at its foot.
+    const CW = 16 * TILE, CD = 7 * TILE, CH = 132, CS = 37, face = Math.round(rimY + 42);
+    for (const [qx, qy] of cliffSolid(MX, face, CW, CD, CH, CS)) { if (!inF(qx, qy)) continue; if (m.props.some((p) => p && p.t === 'campfire' && Math.hypot(p.x - (qx + 0.5) * TILE, p.y - (qy + 0.5) * TILE) < 3 * TILE)) continue; /* (open ground round a fire ring) */ const i = idx(qx, qy), t = m.tiles[i]; if (t === T.GRASS || t === T.DIRT || t === T.SAND) { m.tiles[i] = T.WALL; m.reserve[i] |= RES; } }
+    const rockT = cliffSolid(MX, face, CW, CD, CH, CS);
+    for (const [qx, qy] of rockT) if (inF(qx, qy)) dropNear((qx + 0.5) * TILE, (qy + 0.5) * TILE, 22, /^(campfire|logseat|pbench)$/);   // (what stood where the rock is - never the cove's fire ring: world3-coast.js)
+    P('cliff', MX, face, 0, { w: CW, d: CD, h: CH, s: CS, st: 'basalt' });
+    P('cavemouth', MX, face + 2, 0, { w: 84, h: 64, style: 'sea', arch: 1 });
     // the tall trees in front of it in this view (the camera looks north: a redwood south of it hides it) taken off
     const VEG = /^(tree_|redwood|shrub_|bush_|rwstump|rwlog|fern)/;
     for (const p of m.props) if (p && VEG.test(p.t) && Math.abs(p.x - MX) < 7 * TILE + Math.max(0, p.y - MY) * 0.25 && p.y > MY - 2 * TILE && p.y < MY + 26 * TILE) drop.add(p.x + ',' + p.y);
