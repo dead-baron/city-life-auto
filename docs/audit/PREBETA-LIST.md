@@ -52,6 +52,10 @@ polish (#23); the quick bar a keyboard's only, the ellipsis, the touch ammo (#17
 counts too); the street race's start (streetlife.js laneSpot: 60 random tries among ~9 streets on the Strip) fails now
 and then - world3scenes flakes on main.
 
+**The owner's 11-23 PDF (47 pages)** is triaged in `docs/tasks/PREBETA-NOTES-2026-11-23.md`: P1-P12 pre-beta fixes
+(chunks vanishing first), C1-C4 cheap cinematic infrastructure, the Fable art list, after-beta events. The stash concept
+UIC-21 is in (`docs/art-v2/targets/ui/UIC-21_stash.png`).
+
 ## How we work through it
 - **Every fix is a class fix**: fixed everywhere it occurs, with a lint row or test that runs over the WHOLE World v3
   map in `npm test`, so it can't come back. A note fixed in one spot only is not done.
