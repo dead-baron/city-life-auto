@@ -502,7 +502,6 @@ body.portrait.touch #purse { flex-direction: row; justify-content: space-between
 #qbar .qb canvas, #qbar .qb img { width: 28px; height: 28px; image-rendering: pixelated; }
 #qbar .qb .ic { font-size: var(--fs-4); line-height: 1; }
 #qbar .qb small { position: absolute; right: -2px; bottom: -2px; padding: 0 2px; font: 700 var(--fs-w1)/var(--fs-1) var(--pixel); color: var(--pad-cream); background: var(--pad-ink); }
-#qbar .qk { align-self: center; margin-right: 4px; font: 700 var(--fs-w1) var(--pixel); color: var(--pad-mute); text-shadow: 1px 1px 0 var(--pad-ink); white-space: nowrap; }
 #weapon:not(.wq-on):not(:hover) #w-quick { display: none; }   /* (UI-9: a few seconds after a switch, or under the pointer) */
 #w-quick .wq { position: relative; flex: 1; display: grid; place-items: center; min-width: 56px; height: 34px; padding: 0; border: 0; border-left: 2px solid var(--pad-ink); background: transparent; cursor: pointer; }
 #w-quick .wq:first-child { border-left: 0; }

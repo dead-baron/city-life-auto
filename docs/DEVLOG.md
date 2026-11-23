@@ -26144,3 +26144,11 @@ note's ripple check, package and guard). Fixed in this batch, page and server, n
   Both start with this version; until the first of each, their cards say so.
 - Seen before shipping: the page served with made-up facts (a redraw, then trouble) and shot on a desktop and a phone.
   `test/status.test.js`; admin-console, perf.
+
+## 2026-11-23 · The quick bar: a keyboard's only, no hold-key label
+
+The owner (11-23, a phone upright): "the quick bar is covered by other buttons and we don't need the text next to the
+quick bar". The bar was meant for a desktop (11-22 N7: touch and a pad keep the quick wheel) but showed on every device,
+and its "HOLD <key>" label read "HOLD HOLD BAG" on touch (the key's own name is "hold BAG"). client/hud.js quickBar now
+draws nothing unless the device is a keyboard, and the label is gone everywhere (the slots' tooltips name the items).
+test/quickbar.test.js checks both. The first step of the 11-23 UI pass.

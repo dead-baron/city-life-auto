@@ -127,8 +127,10 @@ export class HUD {
   quickBar(me) {
     const el = $('qbar');
     if (!el) return;
-    const q = me.dead ? [] : (me.quick || []), any = q.some(Boolean);
-    const key = any ? q.map((id) => (id ? `${id}:${me.inv[id] || 0}${ITEMS[id] && ITEMS[id].light ? (me.light ? '+' : '-') : ''}` : '')).join() + '|' + keyName('use') + (QB_ART ? 'a' : '') : '';
+    // (a keyboard's: touch and a pad keep the quick wheel - the owner, 11-22 N7; on a phone the strip sat under BAG with
+    // "HOLD HOLD BAG" - the touch key's own name is "hold BAG" - 11-23)
+    const q = me.dead || input.device !== 'keyboard' ? [] : (me.quick || []), any = q.some(Boolean);
+    const key = any ? q.map((id) => (id ? `${id}:${me.inv[id] || 0}${ITEMS[id] && ITEMS[id].light ? (me.light ? '+' : '-') : ''}` : '')).join() + (QB_ART ? '|a' : '') : '';
     const now = performance.now();
     if (any && now - (this.qbAt || 0) > 500) {   // (sat on the weapon plate, whatever its height: measured twice a second, not every frame)
       this.qbAt = now;
@@ -141,7 +143,7 @@ export class HUD {
     if (!any) { el.innerHTML = ''; return; }
     if (!QB_ART && !QB_P) QB_P = import('./itemart.js').then((a) => { QB_ART = a; el.dataset.q = ''; }).catch(() => {});
     const pic = (id) => (QB_ART && QB_ART.itemIcon(id)) || '<span class="ic">•</span>';
-    el.innerHTML = `<span class="qk">HOLD ${esc(keyName('use'))}</span>` + Array.from({ length: 4 }, (_, i) => {
+    el.innerHTML = Array.from({ length: 4 }, (_, i) => {
       const id = q[i], n = id ? me.inv[id] || 0 : 0, I = id && ITEMS[id];
       if (!I) return `<button type="button" class="qb empty" tabindex="-1" aria-label="Empty slot"></button>`;
       const tag = I.light ? (me.light ? 'on' : 'off') : n > 1 ? `x${n}` : n ? '' : '0';
