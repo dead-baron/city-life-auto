@@ -196,6 +196,10 @@ export function describe(id) {
 
 // ---- the Inventory ------------------------------------------------------------------------------------------------
 // the tabs (U14), each the categories it shows
+// the stash beside what you carry from this wide and tall (CSS px; not upright) - smaller, the CARRIED | STASH switch
+// the weapon slots' names where the quick bar is narrow (a 1440 desktop's: "GU...", "ME...", "T..." - uishots 11-24)
+const SLOT_SHORT = ['GUN', 'GUN', 'MEL', 'THR'];
+export const SIDE_W = 1600, SIDE_H = 1000;
 export const TABS = [['all', 'All'], ['clothes', 'Clothes'], ['weapons', 'Weapons'], ['tools', 'Tools'], ['food', 'Food & Meds'], ['materials', 'Materials'], ['valuables', 'Valuables']];
 const TAB_OF = { weapons: 'weapons', clothes: 'clothes', healing: 'food', food: 'food', tools: 'tools', music: 'tools', fishing: 'tools', outdoors: 'tools', materials: 'materials', hunting: 'materials', garden: 'materials', valuables: 'valuables', other: 'valuables' };
 export const tabOf = (cat) => TAB_OF[cat] || 'valuables';
@@ -287,18 +291,26 @@ export function leavesBag(id) {
   return !!it && !it.light && !!(it.tool || it.music || it.ride || it.fun);
 }
 export function createBag({ el, send, me, refocus, leave, stash = () => null, looks = () => null, look = () => null, pp = () => null, stamina = () => null, close = () => {} }) {
-  let view = 'stash', open = false, tab = loadPref('tab', 'all'), sort = loadPref('sort', 'kind'), sel = null, armDrop = '', dir = 0, fr = 0, timer = 0, showLooks = false, trig = [0, 0];
+  let view = 'stash', stab = 'all', find = '', open = false, tab = loadPref('tab', 'all'), sort = loadPref('sort', 'kind'), sel = null, armDrop = '', dir = 0, fr = 0, timer = 0, showLooks = false, trig = [0, 0];
   if (!TABS.some((t) => t[0] === tab)) tab = 'all';
   el.innerHTML = '<div class="bag">'
     + '<section class="iv-me bag-eq" aria-label="Your character"><h3>CHARACTER</h3><div class="iv-doll"><div class="iv-col"></div>'
     + '<div class="iv-fig"><canvas class="iv-cv" aria-label="Your character - turn them with the arrows"></canvas><div class="iv-turn"><button class="btn" data-turn="1" aria-label="Turn left">‹</button><button class="btn" data-turn="-1" aria-label="Turn right">›</button></div></div>'
     + '<div class="iv-col"></div></div><div class="iv-dacts"><button class="btn" data-a="strip">REMOVE ALL</button><button class="btn" data-a="looks">SAVED LOOKS</button></div><div class="iv-stats"></div></section>'
-    + '<section class="iv-items"><div class="bag-seg" role="tablist" aria-label="Carried or stash" hidden></div><div class="bag-tools"><div class="bag-cats" role="tablist" aria-label="Show"></div>'
+    + '<section class="iv-items"><h3 class="bag-ch" hidden></h3><div class="bag-seg" role="tablist" aria-label="Carried or stash" hidden></div><div class="bag-tools"><div class="bag-cats" role="tablist" aria-label="Show"></div>'
     + `<label class="bag-sort"><span>Sort</span><select aria-label="Sort">${SORTS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label><span class="bag-cash"></span></div>`
     + '<div class="bag-grid" role="list"></div><div class="bag-wheel"></div><p class="iv-keys"></p></section>'
+    // (a wide screen with the stash open: the stash beside what you carry, the moves between them - UIC-21)
+    + '<div class="bag-mv" hidden><button class="btn bag-mvb" type="button" data-mv="put" disabled><b>→</b>TO STASH</button><button class="btn bag-mvb" type="button" data-mv="take" disabled><b>←</b>TO CARRY</button></div>'
+    + '<section class="bag-st" data-view="stash" hidden aria-label="Stash"><div class="bag-sth"><h3></h3><button class="btn bag-shx" type="button" data-sx="2">CLOSE</button></div><div class="bag-cats st-cats" role="tablist" aria-label="Show in the stash"></div>'
+    + '<input class="bag-find" type="search" placeholder="Search the stash..." aria-label="Search the stash"><div class="bag-grid st-grid" role="list"></div></section>'
     + '<aside class="bag-detail" aria-live="polite"></aside>'
     + '<section class="bag-craft" hidden aria-label="Crafting"></section></div>';
-  const $q = (s) => el.querySelector(s), grid = $q('.bag-grid'), cv = $q('.iv-cv');
+  const $q = (s) => el.querySelector(s), grid = $q('.bag-grid'), sgrid = $q('.st-grid'), cv = $q('.iv-cv');
+  $q('.bag-find').oninput = (e) => { find = e.target.value.trim().toLowerCase(); render(); };
+  $q('[data-sx="2"]').onclick = () => send({ t: 'stash', a: 'close' });
+  for (const b of el.querySelectorAll('[data-mv]')) b.onclick = () => { const m = me(), so = sOpen(), t = m && so && [...things(m), ...stashThings(so)].find((q) => q.k === sel); if (t) { moveTo(t, b.dataset.mv === 'put', false); sel = null; render(); } };
+  sgrid.addEventListener('scroll', () => cue(sgrid), { passive: true });
   $q('.bag-sort select').value = sort;
   $q('.bag-sort select').onchange = (e) => { sort = e.target.value; savePref('sort', sort); render(); };
   grid.addEventListener('scroll', () => cue(grid), { passive: true });
@@ -531,7 +543,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
   function quickBar(m) {
     const lo = loadout((m.weapons || []).map((w) => w.id)), quick = m.quick || [];
     const qb = $q('.bag-wheel');
-    qb.innerHTML = '<small>QUICK BAR</small><div class="iv-qb">' + lo.map((id, i) => `<button class="bag-slot iv-w${id ? '' : ' empty'}${id && m.weapon === id ? ' on' : ''}${id && sel === 'w:' + id ? ' sel' : ''}" data-q="w:${id || ''}"${id ? '' : ' disabled'} title="${esc(id ? WEAPONS[id].name : SLOT_NAMES[i])}"><b>${i + 1}</b><span class="bq-gl"></span><small>${SLOT_NAMES[i]}</small></button>`).join('')
+    qb.innerHTML = '<small>QUICK BAR</small><div class="iv-qb">' + lo.map((id, i) => `<button class="bag-slot iv-w${id ? '' : ' empty'}${id && m.weapon === id ? ' on' : ''}${id && sel === 'w:' + id ? ' sel' : ''}" data-q="w:${id || ''}"${id ? '' : ' disabled'} title="${esc(id ? WEAPONS[id].name : SLOT_NAMES[i])}"><b>${i + 1}</b><span class="bq-gl"></span><small data-sh="${SLOT_SHORT[i]}">${SLOT_NAMES[i]}</small></button>`).join('')
       + Array.from({ length: SLOTS }, (_, i) => { const id = quick[i], n = id ? (m.inv || {})[id] || 0 : 0; return `<button class="bag-slot${id ? '' : ' empty'}${!n && id ? ' none' : ''}${id && sel === 'i:' + id ? ' sel' : ''}" data-q="i:${id || ''}" data-slot="${i}" title="${esc(id ? ITEMS[id].name : 'Empty')}"><b>${i + 5}</b><span class="bq-gl">${id ? glyph(itemGlyph(id), 20) : ''}</span>${n > 1 ? `<i class="bq-n">×${n}</i>` : ''}<small>${id ? esc(ITEMS[id].name) : 'empty'}</small></button>`; }).join('') + '</div>';
     qb.querySelectorAll('.iv-w[data-q]').forEach((b, i) => { if (lo[i]) b.querySelector('.bq-gl').appendChild(wIcon(lo[i], 40, 20)); });
     for (const b of qb.querySelectorAll('[data-q]')) {
@@ -562,7 +574,8 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     // the server's 'me' comes many times a second: rebuild only when something shown changed (a button swapped under
     // the pointer between press and release loses the click), else just the bars
     const st0 = looks();
-    const sig = JSON.stringify([view, stash(), m.weapons, m.weapon, m.inv, m.quick, m.cash, m.crew && m.crew.ids, m.blade, m.light, m.creel, st0 && st0.cur, st0 && st0.own, st0 && st0.saved, look(), pp(), tab, sort, sel, armDrop, showLooks, input.device, portrait()]);
+    const side = !!sOpen() && !portrait() && innerWidth >= SIDE_W && innerHeight >= SIDE_H;
+    const sig = JSON.stringify([side, stab, find, view, stash(), m.weapons, m.weapon, m.inv, m.quick, m.cash, m.crew && m.crew.ids, m.blade, m.light, m.creel, st0 && st0.cur, st0 && st0.own, st0 && st0.saved, look(), pp(), tab, sort, sel, armDrop, showLooks, input.device, portrait()]);
     if (sig === lastSig && force !== true) { stats(m); return; }
     lastSig = sig;
     if (DEBUG) { window.__invSig = sig; window.__invRenders = (window.__invRenders || 0) + 1; }   // (the capture scripts: what a rebuild was for)
@@ -586,8 +599,27 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     // the stash, open: CARRIED | STASH over the tabs (the grid shows one side, the same tabs); drop a tile on the other
     // side's button to move it there - or pick it and TO STASH / TAKE
     const so = sOpen(), seg = $q('.bag-seg');
-    seg.hidden = !so;
-    if (so) {
+    el.querySelector('.bag').classList.toggle('side', side);
+    for (const q of ['.bag-mv', '.bag-st', '.bag-ch']) $q(q).hidden = !side;
+    if (side) $q('.iv-items').dataset.view = 'carried'; else delete $q('.iv-items').dataset.view;   // (side by side: a stash tile dropped on what you carry is taken)
+    seg.hidden = !so || side;
+    if (side) {
+      // side by side (UIC-21): CARRIED n on the left as ever, the stash on the right with its own tabs and a search
+      const sAll = stashThings(so), nOf = (L) => L.reduce((a, t) => a + (t.kind === 'w' ? 1 : t.n), 0);
+      $q('.bag-ch').innerHTML = `CARRIED <small>${nOf(all.filter(stashable))}</small>`;
+      $q('.bag-sth h3').innerHTML = `${esc(NM())} <small>${so.cap ? `${sAll.length} / ${so.cap}` : nOf(sAll)}</small>`;
+      const sc = $q('.st-cats');
+      sc.innerHTML = TABS.filter(([c]) => c !== 'clothes').map(([c, n]) => `<button class="chip${c === stab ? ' on' : ''}" role="tab" aria-selected="${c === stab}" data-cat="${c}">${n}</button>`).join('');
+      for (const b of sc.querySelectorAll('[data-cat]')) b.onclick = () => { stab = b.dataset.cat; render(); };
+      const inSt = sAll.filter((t) => (stab === 'all' || tabOf(t.cat) === stab) && (!find || t.name.toLowerCase().includes(find)));
+      sgrid.innerHTML = '';
+      for (const t of inSt) sgrid.appendChild(cell(t, m));
+      if (!inSt.length) sgrid.innerHTML = `<p class="bag-hint">${find || stab !== 'all' ? 'Nothing like that in here.' : `Nothing here yet. Pick something you carry and press TO ${esc(NM())} - or drag it across.`}</p>`;
+      const cur = sel && [...all, ...sAll].find((t) => t.k === sel);
+      $q('[data-mv="put"]').disabled = !(cur && stashable(cur));
+      $q('[data-mv="take"]').disabled = !(cur && cur.inStash);
+      cue(sgrid);
+    } else if (so) {
       const sAll = stashThings(so), nOf = (L) => L.reduce((a, t) => a + (t.kind === 'w' ? 1 : t.n), 0);
       seg.innerHTML = [['carried', 'CARRIED', nOf(all.filter(stashable))], ['stash', NM(), so.cap ? `${sAll.length}/${so.cap}` : nOf(sAll)]].map(([v, n, c]) => `<button class="chip${view === v ? ' on' : ''}" role="tab" aria-selected="${view === v}" data-view="${v}">${n}<small>${c}</small></button>`).join('')
         + `<button class="btn bag-shx" type="button" data-sx="1" title="Close the stash (${esc(so.where || 'your stash')})" aria-label="Close the stash">CLOSE</button>`;
@@ -601,7 +633,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
         for (const t of inSt) grid.appendChild(cell(t, m));
         if (!inSt.length) grid.innerHTML = `<p class="bag-hint">${tab === 'clothes' ? 'Your clothes stay in your wardrobe - wear them from CARRIED.' : `Nothing here yet. In CARRIED pick something and press TO ${NM()} - or drag it onto ${NM()}.`}</p>`;
       }
-    } else view = 'stash';   // (the next time it opens: the stash first)
+    } else { view = 'stash'; stab = 'all'; }   // (the next time it opens: the stash first)
     const every = so ? [...all, ...stashThings(so)] : all;
     if (sel && !every.some((t) => t.k === sel)) sel = null;
     detail(every.find((t) => t.k === sel) || null, m);

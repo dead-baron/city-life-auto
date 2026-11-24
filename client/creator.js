@@ -71,6 +71,7 @@ const START_CSS = `#creator.cc-start .cc-left, #creator.cc-start .cc-foot, #crea
   #creator .cc-stage .cc-th { width: 90px; height: 138px; }
   #creator .cc-stage .cc-sub { display: none; }
   #creator .cc-stage.on .cc-plate { padding: 2px 5px; margin-top: -6px; }
+  #creator .cc-stage .cc-plate { max-width: 100%; font-size: var(--fs-1); white-space: normal; text-align: center; line-height: 1.05; }   /* (a phone on its side: "The Executive" cut to "he Executiv" - tools/uishots.py, 11-24) */
   #creator .cc-stage .cc-q, #creator .cc-new b { font-size: var(--fs-5); }
   #creator.cc-start .cc-note { display: none; }
   #creator .cc-pick { flex-direction: row; justify-content: center; }

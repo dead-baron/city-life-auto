@@ -21,6 +21,7 @@ Options
   --timeout 120           seconds to wait for the city
   --quiet                 only print errors and step output
   --ls KEY=VALUE          a localStorage item set before the page loads (repeatable): --ls cla.polish=1 is the people's polish pass
+                          (the first-launch gate - the age line and consent - is answered 'essential' unless set here: --ls cla.gate=null)
 Steps
   wait:MS                 let the game run
   shot:PATH               full-page screenshot (PNG)
@@ -111,7 +112,7 @@ def main():
         if a.xbox:
             ctx.add_init_script("""(() => { const mm = window.matchMedia.bind(window); const fake = (q, m) => ({ matches: m, media: q, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent() { return false; } });
               window.matchMedia = (q) => /any-pointer:\\s*fine/.test(q) ? fake(q, false) : /any-hover:\\s*hover/.test(q) ? fake(q, false) : /pointer:\\s*coarse/.test(q) ? fake(q, true) : /pointer:\\s*fine/.test(q) ? fake(q, false) : mm(q); })();""")
-        ctx.add_init_script("try { localStorage.setItem('cla.tutorial', '99'); const s = JSON.parse(localStorage.getItem('cla.settings') || '{}'); s.gfxPreset = %s; s.gfxOpts = null; s.autoFullscreen = false; localStorage.setItem('cla.settings', JSON.stringify(s)); } catch (e) {}" % json.dumps(a.preset))
+        ctx.add_init_script("try { if (!localStorage.getItem('cla.gate')) localStorage.setItem('cla.gate', JSON.stringify({ age17: true, consent: 'essential' })); const s = JSON.parse(localStorage.getItem('cla.settings') || '{}'); s.gfxPreset = %s; s.gfxOpts = null; s.autoFullscreen = false; localStorage.setItem('cla.settings', JSON.stringify(s)); } catch (e) {}" % json.dumps(a.preset))
         for kv in a.ls:
             k, _, v = kv.partition('=')
             ctx.add_init_script('try { localStorage.setItem(%s, %s); } catch (e) {}' % (json.dumps(k), json.dumps(v)))

@@ -667,3 +667,16 @@ test('the arrival letterbox never cuts the HUD: the HUD is away while the bars a
   const css = readFileSync(new URL('../client/style.css', import.meta.url), 'utf8');
   assert.match(css, /body:has\(#arrival:not\(\.hidden\):not\(\.leaving\)\) #hud \{ visibility: hidden; \}/);
 });
+
+// The arrival over, its screen comes off the stack wherever it is (11-24, tools/uishots.py): the server asks the question
+// itself when a page's scene stalls (ftueUntil), so the question's menu can open over the arrival; left under it, the
+// arrival was the top screen again once the menu closed - hidden, but every hub button (MENU, PHONE, MAP, the Inventory)
+// opened nothing (main.js openHub gives way to another screen on top).
+test('the arrival over: off the screens\' stack even with the question over it', () => {
+  const page = readFileSync(new URL('../client/ftue.js', import.meta.url), 'utf8');
+  const end = page.slice(page.indexOf('function end('), page.indexOf('export function closed'));
+  assert.match(end, /\n {2}C\.closeOverlay\('arrival'\);/, 'closed unconditionally');
+  assert.doesNotMatch(end, /topOverlay\(\) === 'arrival'\) C\.closeOverlay/, 'not only when it\'s on top');
+  const main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
+  assert.match(main, /function closeOverlay\(id = topOverlay\(\)\) \{\n {2}if \(!id\) return;\n {2}const i = overlays\.lastIndexOf\(id\);\n {2}if \(i >= 0\) overlays\.splice\(i, 1\);/, 'closeOverlay takes a screen out from under others');
+});

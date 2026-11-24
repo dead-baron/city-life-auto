@@ -5862,4 +5862,4 @@ if (ART2_WANTED) { connect(); if (!CAP) requestAnimationFrame(frame); }
 else ensureV1Art().finally(() => { connect(); if (!CAP) requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
-window.CLA = { S, send, WEAPONS, load: LOAD, setAccountUi, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };
+window.CLA = { S, send, WEAPONS, load: LOAD, setAccountUi, hub: openHub, unhub: closeHub, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };

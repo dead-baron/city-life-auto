@@ -26876,3 +26876,36 @@ median - it went over before; now it stops behind). The director's scenes measur
 3 samples in 2,834 on a median (9 before; 199 with a first version that kept every racer to its own side - one already
 across was steered back over the palms). Not done: the cinematics' scripted cars (director legs), taxis,
 unsticking in jams.
+
+## 2026-11-24 · The UI pass's pictures, and what they found (pre-beta item 7) - on branch `smash-1123`
+`tools/uishots.py` (new): the real game played headless (tools/playtest.py, a local dev server), the starting looks
+and the arrival passed, then every screen opened the way a player opens it (`window.CLA.hub` - the HUD's own
+function, now reachable for tools) and shot at four sizes - desk 1440x900, laptop 1280x720, a phone on its side
+844x390 and upright 390x844 - each with an audit beside it: what a player can press that's under 44 px (touch) / 24 px
+(desk), cut off, covered or off the screen, or over another. `tools/playtest.py` answers the first-launch gate
+(age line, consent: essential) - every playtest had stopped at it since it came in. Found and fixed:
+- **The hub's buttons opened nothing after a stalled arrival.** When a page's arrival scene runs long (a slow phone),
+  the server asks the question itself (ftue.js ftueUntil); its menu opened over the arrival, and the arrival stayed in
+  the screens' stack under it - once the question closed it was the top screen again, hidden, and MENU, PHONE, MAP and
+  the Inventory gave way to it. `client/ftue.js` end() now takes it off the stack wherever it is. Test: ftue.test.js.
+- The starting looks on a phone on its side: "The Beachgoer", "The Club-goer", "The Executive" cut to "he Beachgoe"
+  (the names a size down and allowed two lines there - client/creator.js).
+- A 1440 desktop's quick bar: the empty weapon slots read "GU...", "ME...", "T..." - where the bar is narrow they say
+  GUN / MEL / THR (a container query on .bag-wheel; bag.js SLOT_SHORT).
+- The Inventory on a phone on its side: HEALTH and STAMINA ran under their bars (the label column 70 -> 88 px).
+- The phone's Jobs cards: "$140-$330 a call" cut by 4 px on a desktop - "a call" goes under the amount when it must.
+Seen, not fixed (for the UI art pass or a call): the Inventory's character slots on a phone are 44x32 / 52x32 and
+their ✕ 22x22 (under 44: they were sized to fit, the layout test allows the ✕ on the corner); the Inventory shows its
+frame empty for a moment the first time it opens (bag.js loads then); the pause menu in a narrow desktop window (844 px
+wide, keyboard) cuts its second column ("SETT", "INVE"). The pictures are in /tmp/ui2 on the build machine (not kept).
+
+## 2026-11-24 · The stash beside what you carry on a big screen (UIC-21) - on branch `smash-1123`
+The owner's concept UIC-21 (docs/art-v2/targets/ui/UIC-21_stash.png, desktop 1920x1080): CHARACTER | CARRIED | the
+moves | STASH, the details a bar along the foot. With the stash open on a screen at least SIDE_W x SIDE_H (1600 x 1000
+CSS px, not upright - client/bag.js), the Inventory lays out that way: what you carry on the left as ever (its tabs, the
+quick bar), "→ TO STASH" and "← TO CARRY" between (for what's picked; greyed when it can't go), the stash on the right
+with its own tabs and a search ("Search the stash..."), its count against its room in its header and CLOSE; a tile
+dragged across moves (what you carry is a drop target now too); the details one row - what it is, what it does, its
+buttons (they scroll when a thing has many). Smaller screens keep the CARRIED | STASH switch (1440x900 and 1280x720
+tried side by side: the details didn't fit). Test: `test/invlayout.test.js` (side by side at the desktops at or over
+the size, the switch below it; nothing cut off or on another at every size). Not looked at with a pad.
