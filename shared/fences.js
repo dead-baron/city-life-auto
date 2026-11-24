@@ -14,7 +14,8 @@
 // (their paths keep to the streets, the pavements and the yards' paths, which the fences leave open: World v3's
 // gates and doors are kept clear by shared/world3-fencegaps.js); a tall one stops them.
 // shared/physics.js pedStep runs it (setFences: the server registers it in server/world.js, the page once it has the
-// city - client/main.js - so the page's first load doesn't carry it). Cars drive through them as before.
+// city - client/main.js - so the page's first load doesn't carry it). A vehicle is held off every fence like a wall
+// (the owner, 11-23: cars drove through the courts' chain-link - fenceVehicle, vehStep); a horse jumps a low one.
 // The segments are worked out from the map's own data (props, fields) once per map: nothing new in the world's data.
 import { TILE, PED_RADIUS, T } from './constants.js';
 import { PED_BLOCK, WATER_T } from './mapcore.js';
@@ -94,6 +95,9 @@ export function fencesOf(m) {
   CACHE.set(m, F);
   return F;
 }
+
+// forget a map's fences (its props changed: a build pass that asked before the props were final)
+export function fencesReset(m) { CACHE.delete(m); }
 
 // the fence segments within r of (x, y): ids (each once)
 export function fencesNear(m, x, y, r) {
@@ -228,4 +232,47 @@ export function hopLift(left) {
   if (left <= 0 || t < 0) return 0;
   return t < H.crouch ? 0 : Math.sin(Math.PI * (t - H.crouch) / (H.s - H.crouch)) * H.lift;
 }
-export const FENCES = { collide: fenceCollide, move: fenceHopMove };
+// A vehicle (an L x W box at s.x, s.y, heading s.a) against the fences near it: pushed out of each it overlaps and bounced
+// like a wall (shared/physics.js collideVehicleTiles); a horse (hoof) clears a low one. -> the impact speed (0: none)
+// (px, py: where it was a step ago - a fast bike's step is longer than it is wide: a middle that crossed a fence is put
+// back on its side first)
+export function fenceVehicle(s, def, m, hoof = false, px = s.x, py = s.y) {
+  const F = fencesOf(m);
+  if (!F.segs.length) return 0;
+  const hl = def.L / 2, hw = def.W / 2, r = FENCE_HALF;
+  const near = fencesNear(m, (s.x + px) / 2, (s.y + py) / 2, Math.hypot(hl, hw) + r + 2 + Math.hypot(s.x - px, s.y - py) / 2);
+  let impact = 0;
+  for (const id of near) {
+    const g = F.segs[id];
+    if (hoof && g.k === LOW) continue;
+    if ((px !== s.x || py !== s.y) && crosses(g, px, py, s.x, s.y)) {
+      const ex = g.x1 - g.x0, ey = g.y1 - g.y0, el = Math.hypot(ex, ey) || 1;
+      let nx = -ey / el, ny = ex / el;
+      if ((px - g.x0) * nx + (py - g.y0) * ny < 0) { nx = -nx; ny = -ny; }
+      s.x = px; s.y = py;
+      const vn = s.vx * nx + s.vy * ny;
+      if (vn < 0) { s.vx -= 1.25 * vn * nx; s.vy -= 1.25 * vn * ny; impact = Math.max(impact, -vn); s.av *= 0.5; }
+    }
+    const c = Math.cos(s.a), sn = Math.sin(s.a);
+    // the segment in the vehicle's own frame (u along it, v across)
+    const lu = (x, y) => (x - s.x) * c + (y - s.y) * sn, lv = (x, y) => -(x - s.x) * sn + (y - s.y) * c;
+    const a = [lu(g.x0, g.y0), lv(g.x0, g.y0)], b = [lu(g.x1, g.y1), lv(g.x1, g.y1)];
+    const ex = b[0] - a[0], ey = b[1] - a[1], el = Math.hypot(ex, ey) || 1, nx = -ey / el, ny = ex / el;
+    // separating axes: the box's two and the segment's normal; the least overlap is the way out
+    let best = null;
+    for (const [ax, ay, e] of [[1, 0, hl], [0, 1, hw], [nx, ny, hl * Math.abs(nx) + hw * Math.abs(ny)]]) {
+      const pa = a[0] * ax + a[1] * ay, pb = b[0] * ax + b[1] * ay, lo = Math.min(pa, pb) - r, hi = Math.max(pa, pb) + r;
+      const o = Math.min(e - lo, hi + e);
+      if (o <= 0) { best = null; break; }
+      if (!best || o < best.o) best = { o, ax, ay, side: (lo + hi) / 2 > 0 ? -1 : 1 };
+    }
+    if (!best) continue;
+    // back to the world: the push out, then the bounce off it
+    const wx = (best.ax * c - best.ay * sn) * best.side, wy = (best.ax * sn + best.ay * c) * best.side;
+    s.x += wx * (best.o + 0.01); s.y += wy * (best.o + 0.01);
+    const vn = s.vx * wx + s.vy * wy;
+    if (vn < 0) { s.vx -= 1.25 * vn * wx; s.vy -= 1.25 * vn * wy; impact = Math.max(impact, -vn); s.av *= 0.5; }
+  }
+  return impact;
+}
+export const FENCES = { collide: fenceCollide, move: fenceHopMove, vehicle: fenceVehicle };

@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport } from './helpers.js';
 import { TILE, T, DT } from '../shared/constants.js';
 import { IN } from '../shared/input.js';
-import { pedStep, newPedState } from '../shared/physics.js';
+import { pedStep, newPedState, vehStep, newVehState } from '../shared/physics.js';
+import { VEHICLES } from '../shared/vehicles.js';
 import { fencesOf, fenceSegments, FENCE_HOP, hopLift, fenceCrossed } from '../shared/fences.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import * as players from '../server/systems/players.js';
@@ -152,5 +153,37 @@ test('fences: the people walking about never head into a chain-link fence and st
   for (const e of ns) {
     assert.ok(e.removed || e.y < gy, 'still on their side');
     assert.ok((pressed.get(e) || 0) < 8, `not pinned against it (${(pressed.get(e) || 0).toFixed(1)} s of 30)`);
+  }
+});
+
+// the owner, 11-23: cars drove through the courts' chain-link and other fences - a vehicle is held off every fence (low or
+// tall, at any speed, square on or at an angle); a horse jumps a low one (fences.js fenceVehicle)
+test('fences: a car never drives through a fence, square on or at an angle; a horse jumps a low one', () => {
+  // (through it: its middle on the far side while still between the fence's ends - round an end is fair)
+  const run = (model, cx, fyy, a, secs = 3) => {
+    const def = VEHICLES[model], s = newVehState(cx, fyy - 70, a), x0 = cx - 6 * TILE + def.W, x1 = cx + 6 * TILE - def.W;
+    s.through = false;
+    for (let i = 0; i < Math.round(secs / DT); i++) {
+      const wasX = s.x, wasY = s.y;
+      vehStep(s, { throttle: 1, steer: 0, hb: false, slide: false, drv: true }, DT, m, def, { rain: false });
+      if (wasY < fyy && s.y >= fyy && Math.min(wasX, s.x) > x0 && Math.max(wasX, s.x) < x1) s.through = true;
+    }
+    return s;
+  };
+  for (const model of ['sedan', 'boxtruck', 'bike', 'roadbike']) {
+    if (!VEHICLES[model]) continue;
+    for (const a of [Math.PI / 2, Math.PI / 2 - 0.5, Math.PI / 2 + 0.4]) {
+      for (const [P, Y] of [[A, fy], [B, gy]]) {
+        const s = run(model, (P[0] + 6) * TILE, Y, a);
+        assert.ok(!s.through, `${model} at ${a.toFixed(2)} held by the ${Y === fy ? 'wooden' : 'chain-link'} fence`);
+      }
+    }
+  }
+  const horse = Object.keys(VEHICLES).find((k) => VEHICLES[k].horse);
+  if (horse) {
+    const h = run(horse, (A[0] + 6) * TILE, fy, Math.PI / 2);
+    assert.ok(h.through, `the ${horse} jumped the low fence`);
+    const t = run(horse, (B[0] + 6) * TILE, gy, Math.PI / 2);
+    assert.ok(!t.through, `the ${horse} held by the chain-link`);
   }
 });

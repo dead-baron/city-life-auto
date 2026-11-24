@@ -12,6 +12,7 @@
 import { TILE, T } from './constants.js';
 import { DISTRICTS } from './mapcore.js';
 import { hash2 } from './rng.js';
+import { fenceKindOf, fenceEnds } from './fences.js';
 
 // LAND: the prop types that need dry ground under them (plants by species: reeds and cattails grow in the water);
 // WET_SP: the plants that stand in water; FENCE: the fence kinds that stop at a road or the water; step: px along a run
@@ -90,6 +91,20 @@ export function tidyProps3(m) {
         if (ny - p.y <= 2.5 * TILE && ground(p.x, ny) && ground(p.x - hw * 0.8, ny) && ground(p.x + hw * 0.8, ny)) { p.y = ny; out.boardOut = (out.boardOut || 0) + 1; }
       }
     }
+  }
+  // a fence piece out in a roadway - road on both sides of it along most of its length: a yard's line that a later pass
+  // laid a road over (The Yards' boulevard) - goes (11-23: a vehicle is held by every fence now - shared/fences.js)
+  for (const p of m.props) {
+    if (!p || gone.has(p) || !fenceKindOf(p)) continue;
+    const [x0, y0, x1, y1] = fenceEnds(p), L = Math.hypot(x1 - x0, y1 - y0);
+    if (L < 2) continue;
+    const nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
+    let n = 0, k = 0;
+    for (let d = 4; d < L; d += 8) {
+      const x = x0 + (x1 - x0) * d / L, y = y0 + (y1 - y0) * d / L, road = (o) => { const t = tileAt(x + nx * o, y + ny * o); return t === T.ROAD || t === T.BRIDGE; };
+      k++; if (road(10) && road(-10)) n++;
+    }
+    if (k && n * 2 > k) { gone.add(p); out.fenceRoad = (out.fenceRoad || 0) + 1; }
   }
   if (gone.size) dropProps(m, gone);
   // a standing sign out in the wilds is a trail sign - planks on posts, its words cut in - not a lit panel (the owner,

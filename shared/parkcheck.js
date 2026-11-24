@@ -7,6 +7,7 @@
 // loads it.
 import { TILE, T } from './constants.js';
 import { VEHICLES } from './vehicles.js';
+import { fencesNear, fencesOf, fencesReset } from './fences.js';
 
 const PARK_ON = new Set([T.ROAD, T.LOT, T.BRIDGE, T.DIRT]);
 // gravel (sand with reserve bit 128, the ground bake's shingle - the Red Rock trailhead's lot): ground a car may stand on
@@ -27,6 +28,16 @@ export function parkWhy(m, x, y, a, L, W, strict = false) {
     if (!strict && t === T.SAND && m.reserve && (m.reserve[i] & GRAVEL)) continue;   // (gravel: a trailhead's lot - the sand's shingle look)
     if (strict ? !PARK_ON.has(t) : PARK_NEVER.has(t)) return `on ${TN[t] || 'nothing'}`;
   }
+  // nor across a fence (11-23: a vehicle is held by every fence now - shared/fences.js; a car park's row with a court's
+  // chain-link through it)
+  const F = fencesOf(m), L2 = L / 2 - 2, W2 = W / 2 - 2;
+  for (const id of fencesNear(m, x, y, Math.hypot(L2, W2) + 4)) {
+    const g = F.segs[id], n = Math.max(1, Math.ceil(Math.hypot(g.x1 - g.x0, g.y1 - g.y0) / 4));
+    for (let j = 0; j <= n; j++) {
+      const qx = g.x0 + (g.x1 - g.x0) * j / n - x, qy = g.y0 + (g.y1 - g.y0) * j / n - y;
+      if (Math.abs(qx * ca + qy * sa) < L2 && Math.abs(-qx * sa + qy * ca) < W2) return 'across a fence';
+    }
+  }
   return null;
 }
 
@@ -43,7 +54,9 @@ export const parkExempt = (sp, model = sp && sp.model) => !!sp && (!!sp.drive ||
 export function badBays3(m) {
   if (!Array.isArray(m.parking) || !m.tileAtPx) return 0;
   const before = m.parking.length;
+  fencesReset(m);   // (the fences as they stand now, at the build's end: fences.js keeps them per map)
   const dims = (sp) => { const V = (VEHICLES && VEHICLES[sp.model]) || VEHICLES.sedan; return [V.L, V.W]; };   // (as the lint measures: the spot's own model, else a sedan)
   m.parking = m.parking.filter((sp) => !sp || parkExempt(sp) || !parkWhy(m, sp.x, sp.y, sp.a || 0, ...dims(sp)));
+  fencesReset(m);
   return before - m.parking.length;
 }
