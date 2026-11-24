@@ -39,12 +39,14 @@ test('no undergrowth, drift or bed stands in a tile a fence runs through: pastur
   const spots = [];
   for (const s of M.natureSites || []) if (/pasture|farm|ranch|orchard|vineyard|camp/.test(s.k || '')) spots.push([s.x, s.y]);
   let n = 0;
-  for (const p of M.props) if (p && (p.t === 'fenceline' || p.t === 'yfence' || p.t === 'chainfence') && n++ % 40 === 0) spots.push([p.x, p.y]);
+  // (every 16th fence prop, all of them looked round: every 40th, the first 160 places, drew its sample by the order of
+  // the props and looked at 153 plants once a pass took some fences off a road - and missed plants it now finds, 11-24)
+  for (const p of M.props) if (p && (p.t === 'fenceline' || p.t === 'yfence' || p.t === 'chainfence') && n++ % 16 === 0) spots.push([p.x, p.y]);
   assert.ok(spots.length > 20, `places with fences to look at (${spots.length})`);
   const seen = new Set();
   let fences = 0, cover = 0;
   const bad = [];
-  for (const [sx, sy] of spots.slice(0, 160)) {
+  for (const [sx, sy] of spots) {
     const cx0 = Math.floor(sx / CH), cy0 = Math.floor(sy / CH);
     for (let cy = cy0 - 1; cy <= cy0 + 1; cy++) for (let cx = cx0 - 1; cx <= cx0 + 1; cx++) {
       const k = cx + ',' + cy;

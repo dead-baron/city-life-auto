@@ -4415,7 +4415,9 @@ function coverItems(c, I, cx, cy) {
     if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16) || rails.has(i) || steps.has(i)) continue;
     const tk = trk.get(i) || 0;
     if (tk === 2) continue;
-    const x = Math.round((tx + hash(tx, ty, 7005)) * TILE), y = Math.round((ty + hash(tx, ty, 7007)) * TILE); // (anywhere in its tile: no rows)
+    // (anywhere in its tile: no rows - and in it: rounded up to the next tile's edge, a plant stood in the tile beside,
+    // a pasture rail's: test/undergrowth.test.js, 11-24)
+    const x = Math.min(Math.round((tx + hash(tx, ty, 7005)) * TILE), (tx + 1) * TILE - 1), y = Math.min(Math.round((ty + hash(tx, ty, 7007)) * TILE), (ty + 1) * TILE - 1);
     let weed = tk === 1;
     if (orch.length) {
       const o = orch.find((q) => x >= q.x - 16 && x < q.x + q.w + 16 && y >= q.y - 16 && y < q.y + q.h + 16);

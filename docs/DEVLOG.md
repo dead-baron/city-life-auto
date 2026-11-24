@@ -26943,3 +26943,13 @@ allocation down about a quarter; the long-task counts vary too much run to run o
 running) to claim a change - the phone is the measure. Still the biggest: main.js collectLights (the classic
 renderer's light list, run with art v2 too for the lamps' levels) and render/weather.js drawRain - both page code, at
 its budget; the next step there is to skip what art v2 doesn't use. Tests: art2, waterlife, perf.
+
+## 2026-11-24 · A plant never rounds into the next tile (a pasture rail's) - on branch `smash-1123`
+The whole-suite run on the batch failed test/undergrowth.test.js's sanity floor ("plants looked at beside them": 153,
+needs 500): P6 took some fences off the roads, the props' order shifted, and the test's sample - every 40th fence prop,
+the first 160 places - happened onto far fewer plants (main: 1,273). Sampled wider (every 16th, every place: ~2,400
+plants) it found what the old sample missed, on main as on the batch: a few tufts and lupines standing in a pasture
+rail's tile. The wild undergrowth puts a plant anywhere in its own tile (statics.js coverItems) - Math.round could
+carry it to the next tile's edge, past the fence check made for its own. Now kept inside its tile; the test samples
+wider. (Only the rare plants on a tile's edge move: the chunks the server compares byte for byte stay as they were
+elsewhere.)
