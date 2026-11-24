@@ -377,6 +377,11 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - A SAM launcher to fight helicopters, without making them weak. (10-16; DEVLOG 10-22)
 
 ## Vehicles and the car
+- Things a vehicle hits react, for the pre-beta (11-23 20:10, "anything that a vehicle can knock over or drive through or
+  destroy should have a visible reaction not just disappear"): fences - chain-link, wooden, the rest - are knocked flat or
+  smashed through when hit hard enough (not just a wall); trees fall over; bus shelters, benches and the like are knocked
+  over or break apart; nothing just vanishes when hit. Someone sitting on a bench or at a bus stop that's hit is thrown
+  off as it breaks. (Supersedes the 11-23 P6 rule "a vehicle is held by every fence" at speed: slow, a fence still holds.)
 - A vehicle's trunk is its own small inventory, not a door to the stash (about 6 slots in a car, 2 on a motorbike): it stays
   in a parked car, waits at the impound lot with an impounded one, and spills as pickups when the vehicle is destroyed -
   the owner took Claude's suggestion over a trunk that shares the stash (it would let anyone bank loot mid-run). (11-23)
