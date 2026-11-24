@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-23 evening (the pre-beta chat, Opus 5.5). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-23 night (the pre-beta chat, Opus 5.5). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -117,7 +117,16 @@ the final art; then the beta's walkthrough, load test and launch. The order for 
    `heights-1123`, PR #35 - one batch, waiting for the owner's go** (P5 lowers 762 buildings; going live re-bakes the art
    ~5 h - after the 11-23 re-bake has finished; it also restarts the server once). P10 "the hoop arrow over the hoop":
    asked the owner which arrow (none found drawn at a hoop). Its DEVLOG entries say what was tested and what wasn't.
-6. P8 NPC driving (police transport first; lanes, medians, unsticking, re-routing).
+6. P8 NPC driving: **part 1 done on the batch branch** (routes from the street you're on, shortest by length; the police
+   ride gets there - DEVLOG). Part 2: racers, taxis, the cinematics' cars, medians, jams.
+6b. **P2, the Pixel 7 Pro (owner's readout 11-23 20:52):** 60 fps typical, 1 frame in 20 at 40-60 ms, a few ~70 ms long
+   tasks; blurry stand-ins at speed in the desert (the art ahead not there in time). Next after P8 part 1: the way ahead
+   fetched sooner at speed, the long tasks found.
+6c. The owner's notes of 11-23 evening (PREBETA-LIST, the last two sections; DECISIONS "Vehicles and the car"): vehicles
+   smash fences / fell trees / break benches and shelters with a visible reaction, sitters thrown (supersedes P6's
+   "fences hold" at speed); the gun up only while right click is held on mouse and keyboard (today: twin-stick - the
+   gun up whenever the mouse moved in the last 8 s, client/input.js; right click held unarmed = block); muzzle flash at
+   the barrel; the "!" above the head; the white boxes are phone boxes (art).
 7. The UI pass on every screen: a harness shooting the real game's screens (pause, settings, map, phone, shops, death) at
    four sizes; the stash's desktop side-by-side to the owner's UIC-21 concept (`docs/art-v2/targets/ui/UIC-21_stash.png`).
 8. The rest of `docs/audit/PREBETA-LIST.md` sections C-D (systems, finish-or-hide calls) and the balance proposals 1, 3, 4.
@@ -137,8 +146,9 @@ and towels change only at home, a bathhouse or a shower.
 **Known failing on main too:** scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
 picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz. Follow-ups: two
 north doors at Northshore Beaches under trees.
-**Waiting on the owner:** the balance proposals 1, 3, 4; the Pixel 7 Pro's debug line if loading is still slow; whether
-clothes should go in the stash after all.
+**Waiting on the owner:** his go on PR #35 (the batch: re-bake + one restart); P10 "the hoop arrow" - which arrow; the
+balance proposals 1, 3, 4; whether clothes should go in the stash after all. **Done 11-23 night:** the server's disk
+grown to 146 GB (105 GB free) - he did it, Oracle console + growpart.
 
 ## 7. How a chat ends (do all of it, in this order)
 1. Tests for what changed pass; say which were not run.
