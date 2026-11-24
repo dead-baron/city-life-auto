@@ -26853,3 +26853,12 @@ held, as before). Not done: field rail runs (the countryside's own, not props) s
 plays a crash sound or dust for a fence. The page is at its code budget (540.45 of 540 KB rounded): to fit, three
 old comments in main.js, mapcore.js and smash.js were shortened - the next page change needs a lazy load or the owner's
 word on the budget. Not looked at in a running game.
+
+## 2026-11-23 · Driving fast, the downloads go ahead first (P2 of the 11-23 notes, part 1) - on branch `smash-1123`
+The owner's Pixel 7 Pro, 11-23 20:52: blurry stand-ins at speed in the desert - the server's art there, not on the
+page in time. What the page downloads ahead (host.js `_prebakeList`, then `_fetchAhead`, a few at once) mixed the band
+ahead with the roads from here by their distance - the road behind you as soon as the road ahead at half the distance.
+Now, faster than 300 px/s, a road point more than a chunk behind waits BEHIND_S (4 s) worth of driving (a turn round),
+and above FAST_DRIVE (500 px/s) a phone downloads 6 at once, not 4 (lowres.js aheadPlan: a download waits on the
+network, not the phone). Test: `test/art2.test.js` (900 px/s east: none of the first 24 on the road behind - one was;
+slow, both ways). Not measured on a phone; the long tasks (~70 ms) are not looked at yet.

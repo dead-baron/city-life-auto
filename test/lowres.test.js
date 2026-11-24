@@ -15,7 +15,7 @@ test('the look-ahead scales with speed: longer the faster, 20 s of it flying, mo
   assert.ok(aheadPlan(5000, { air: true }).L <= 30000 && aheadPlan(5000, {}).L <= 14000, 'capped');
   assert.ok(heli.maxN >= Math.ceil(heli.L / 768), 'the list holds the whole line ahead');
   assert.ok(heli.maxN <= 160 * 0.8 + 1, 'no more than the browser keeps (most of it)');
-  assert.ok(heli.fetch > car.fetch, 'more downloads at once flying fast');
+  assert.ok(heli.fetch > slow.fetch && car.fetch > slow.fetch, 'more downloads at once flying or driving fast (P2, 11-23)');
 });
 
 test('high and fast in the air: the low-detail ground, with a margin either way', () => {

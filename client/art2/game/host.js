@@ -1162,6 +1162,8 @@ export class World2 {
     }
     // 2. along the roads from here, by the distance along them (the ground level: a deck's chunks are its ground's)
     const net = air || rail ? null : this.map.net;
+    // (fast, the roads behind you wait BEHIND_S s - a turn round - so the downloads go to the way ahead: P2, 11-23)
+    const bx = sp > 300 ? v.x / sp : 0, by = sp > 300 ? v.y / sp : 0, late = Math.min(sp, 1500) * (this.LR ? this.LR.BEHIND_S : 4);
     if (net && net.nodes && net.nodes.length) {
       const dist = new Map(), open = [];
       for (const nd of net.nodes) { const d = Math.hypot(nd.x - x0, nd.y - y0); if (d < 700) { dist.set(nd.id, d); open.push(nd.id); } }
@@ -1180,7 +1182,7 @@ export class World2 {
           for (let i = 0; i < e.pts.length; i++) {
             const pt = e.pts[back ? e.pts.length - 1 - i : i], nx = e.pts[back ? Math.max(0, e.pts.length - 2 - i) : Math.min(e.pts.length - 1, i + 1)];
             const seg = Math.hypot(nx.x - pt.x, nx.y - pt.y), steps = Math.max(1, Math.ceil(seg / 300));
-            for (let t = 0; t < steps; t++) { const f = t / steps, px = pt.x + (nx.x - pt.x) * f, py = pt.y + (nx.y - pt.y) * f; if (d0 + along + seg * f <= ROAD) add(Math.floor(px / CHUNK), Math.floor(py / CHUNK), d0 + along + seg * f); }
+            for (let t = 0; t < steps; t++) { const f = t / steps, px = pt.x + (nx.x - pt.x) * f, py = pt.y + (nx.y - pt.y) * f; if (d0 + along + seg * f <= ROAD) add(Math.floor(px / CHUNK), Math.floor(py / CHUNK), d0 + along + seg * f + ((px - x0) * bx + (py - y0) * by < -CHUNK ? late : 0)); }
             along += seg;
           }
           const nd2 = d0 + (e.len || along);
