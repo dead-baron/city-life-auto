@@ -23,10 +23,11 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
    whether the calmer sparkle reads flat.
    **Done 11-24 (first batch, DEVLOG "The water pass, 1"; on branch `fable-art-1124`, waiting for the nature re-bake):**
    the recorder at five looks; the shore wave; no long shadows on open water (the 11-23 rule had only reached the
-   falls); the evening's glitter; the sea's depth and look no longer cut in cells; seagrass and coral edges; koi live
+   falls); the evening's glitter; the ruled edges of the sea's depth and look made to wander (the blocks themselves are still there); seagrass and coral edges; koi live
    instead of standing on the water; small waters get a pond's fish (moon jellies were in the garden pond - the "white
    blotches"); hot springs and ground pools as still water, the onsen no longer a white shape after dark.
-   **Left in water:** the salmon's leap (tail, splash); water beside docks checked after the world batch; reflections,
+   **Left in water:** the sea's depth still steps where the nearest shore stops being sand (water.js depthOf by the
+   one nearest land tile: to be blended over a wide radius); the salmon's leap (tail, splash); water beside docks checked after the world batch; reflections,
    ripples and wakes against the concepts; a harbour place for the recorder ('marina' is a shop street); his eye on
    the evening glitter and on whether the calm sparkle reads flat.
 2. **The biomes, in the order approved 11-21 12:12** - pine/oak forest and meadow (started), redwood, mountain,

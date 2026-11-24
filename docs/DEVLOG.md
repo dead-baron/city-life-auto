@@ -27008,7 +27008,8 @@ showed, and what changed - nothing here is live: it rides the nature re-bake, on
 - **The sea cut into cells with ruled edges** (a dark rectangle and an azure block off the surf beach): depth and look
   come from the one nearest land tile. water.js waterPx reads the sea's far field at a point moved by slow noise (to
   about two tiles) and dithers the look wider; bedPx lets seagrass and coral begin at a wandering distance from shore,
-  thinning in ("underwater details with a hard edge near shore").
+  thinning in ("underwater details with a hard edge near shore"). The edges wander now; the blocks are still there -
+  the depth steps where the nearest shore stops being sand (depthOf by the one nearest tile). Left: blend it wide.
 - **Koi stood on the water** (the 'koi' prop was baked over it): no longer drawn (statics.js); a marked koi pond gets
   live koi (waterlife.js koiPond).
 - **Moon jellies in the botanical garden's lily pond** (the "white blotches" of the 11-21 list): 103 small waters the
