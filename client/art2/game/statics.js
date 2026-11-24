@@ -1549,7 +1549,20 @@ function specOf(c, b, A, s, D) {
 // at a time (to STREET_CAP.minFl at the least) while its wall covers more than `rows` rows of street, pavement, plaza or
 // car park north of it across its front (a street and its pavements: a mid-rise of four or five storeys still stands) and
 // more than `tiles` of them in all. tools/tallblocks.mjs surveys it (test/plainblocks.test.js).
-export const STREET_CAP = { rows: 10, tiles: 72, minFl: 2, on: true };
+export const STREET_CAP = { rows: 10, tiles: 72, minFl: 2, on: true, half: 0.5, lane: 5, laneFl: 1 };
+// and, the owner 11-23 ("buildings covering streets, sidewalks and alleys - again"): the wall reaches over at most
+// `half` of the street in front of it (streetDepth: its rows of street, pavement, plaza or car park north, the middle
+// column's) - the far half always shows; over a lane (`lane` rows or fewer) it comes down to `laneFl` storeys. An alley
+// (3 rows or fewer) is left to the see-through fade: any second storey covers it.
+export function streetDepth(c, tx, ty, tw) {
+  const D = [];
+  for (let x = tx; x < tx + tw; x++) { let d = 0; while (d < 40 && STREET_T.has(c.tile(x, ty - 1 - d))) d++; D.push(d); }
+  D.sort((a, b) => a - b);
+  return D[D.length >> 1];
+}
+// the rows a wall H px high may reach over a street D rows deep, and the storeys it may come down to there
+export const reachOK = (H, D) => D < 4 || Math.ceil(H / TILE) <= Math.max(D <= STREET_CAP.lane ? 2 : 4, Math.floor(STREET_CAP.half * D));
+export const floorsMin = (D) => (D >= 4 && D <= STREET_CAP.lane ? STREET_CAP.laneFl : STREET_CAP.minFl);
 export const STREET_T = new Set([T.ROAD, T.SIDEWALK, T.PLAZA, T.LOT]);
 // the street tiles a wall H px high over the section (tx, ty, tw) hides: the rows north of it its height reaches
 export function streetUnder(c, tx, ty, tw, H) {
@@ -1567,12 +1580,13 @@ export function purposeful(c) {
   return (c._purpose = P);
 }
 function streetCap(c, b, s, spec, pitched, lights) {
-  if (!STREET_CAP.on || pitched || s.frame || s.vox || purposeful(c).has(b.id)) return false;
-  const low = 64 + (STREET_CAP.minFl - 1) * FLOOR_PX, over = () => blocks(streetUnder(c, s.tx, s.ty, s.tw, buildingH(spec)), s.tw);
-  if (spec.height ? spec.height <= low : (spec.floors || 1) <= STREET_CAP.minFl) return false;
+  if (!STREET_CAP.on || s.frame || s.vox || purposeful(c).has(b.id)) return false;   // (a pitched roof: the reach rule only - 11-23)
+  const D = streetDepth(c, s.tx, s.ty, s.tw), minFl = floorsMin(D), low = 64 + (minFl - 1) * FLOOR_PX;
+  const over = () => { const H = buildingH(spec); return (!pitched && blocks(streetUnder(c, s.tx, s.ty, s.tw, H), s.tw)) || !reachOK(H, D); };
+  if (spec.height ? spec.height <= low : (spec.floors || 1) <= minFl) return false;
   if (!over()) return false;
-  if (spec.height) { while (spec.height - FLOOR_PX >= low && over()) { spec.height -= FLOOR_PX; if (spec.floors > STREET_CAP.minFl) spec.floors--; } }
-  else while (spec.floors > STREET_CAP.minFl && over()) spec.floors--;
+  if (spec.height) { while (spec.height - FLOOR_PX >= low && over()) { spec.height -= FLOOR_PX; if (spec.floors > minFl) spec.floors--; } }
+  else while (spec.floors > minFl && over()) spec.floors--;
   const H = buildingH(spec);
   for (let j = lights.length - 1; j >= 0; j--) if (lights[j][2] > H) lights.splice(j, 1);   // (the windows' light on the storeys gone)
   return true;
@@ -1581,7 +1595,7 @@ const FLOOR_PX = 56;
 // a setback's storeys on top (statics.js upperOf, a hand plan's art.up) that would take the wall's reach over the street
 // past the cap: left off
 function upBlocks(c, b, s, H) {
-  return STREET_CAP.on && !purposeful(c).has(b.id) && blocks(streetUnder(c, s.tx, s.ty, s.tw, H), s.tw);
+  return STREET_CAP.on && !purposeful(c).has(b.id) && (blocks(streetUnder(c, s.tx, s.ty, s.tw, H), s.tw) || !reachOK(H, streetDepth(c, s.tx, s.ty, s.tw)));
 }
 
 // ================================================================================================

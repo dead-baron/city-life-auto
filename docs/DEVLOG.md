@@ -26705,3 +26705,25 @@ filter hits, movement and economy flags) now has, on each open entry, **Resolved
 (moderation.js resolve's how), and **Open again** on a done one - a POST with the session's own token, as the bug
 reports', each in the admin log. The open ones come first. The page no longer shows players' account ids (the owner's
 rule: none on any dashboard). test/bugreports.test.js.
+
+## 2026-11-23 · Buildings no longer cover the far half of a street (P5 of the 11-23 notes) - branch, waiting for the owner's word
+The owner, 11-23 (and 11-12 before it): buildings covering streets, sidewalks and alleys - again. The 11-12 street cap
+(`client/art2/game/statics.js` STREET_CAP) let a plain building's wall reach 10 rows over the street north of it - most
+streets here are 9-13 rows deep, so a five-storey front could still cover a whole street. The cap now also measures the
+street in front (`streetDepth`: its rows of street, pavement, plaza or car park north, the middle column's) and lowers
+the wall until it reaches over at most half of it (`reachOK`, STREET_CAP.half 0.5); over a lane (5 rows or fewer) the
+building comes down to one storey (`floorsMin`). Pitched roofs (houses, terraces) are held to the half rule too; the
+old 10-row rule still applies to flat roofs only. Buildings with a reason to stand tall (landmark towers, walk-ins,
+trades, named places - `purposeful`) keep their height, as decided 11-12; the see-through fade still shows anyone
+behind them. Alleys (3 rows or fewer) are left to the fade: any second storey covers one.
+- Counted on the live world against main: 762 buildings (771 sections) come down, 1,957 storeys in all - Northgate 255,
+  Westport Center 213, Old Quarter 80, Arts District 43, Southside 36, Downtown 30, Midtown 29. Buildings hiding the
+  whole street in front: 245 -> 54 (the rest have a reason, or are hand-built frames). Street tiles hidden: 213,167 ->
+  191,027.
+- Lint: `test/plainblocks.test.js` tall blocks - no plain wall over half the street in front (lane: one storey), and the
+  street hidden by plain buildings at least 15% below the uncapped city. Passes.
+- Looked at: before / after of 8 regress places (`tools/regress/`): Northgate's corner block and Westport Center's front
+  lowered as meant, the street's far lane and centre line showing; nothing else moved. Not looked at: a pitched-roof
+  street lowered (none in the regress frames).
+- Art only (the bake): going live is a full re-bake (~5 h). Held on branch `heights-1123` until the 11-23 re-bake has
+  finished and the owner says go - it changes the skyline in 762 places.
