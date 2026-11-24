@@ -475,10 +475,11 @@ function rideStep(world, p) {
   // after a while I end up in prison" - never stuck for ever in the back of a police car)
   slowWatch(world, c, v);   // (the car crawling: the chance to kick the door open, held a moment - carTry)
   // (getting nearer along its route, not as the crow flies: a way that goes round first is still progress - the owner,
-  // 11-23: the screen faded on a car that was on its way; a new plan starts the count again)
-  const R = v.ai && v.ai.route;
-  if (R && v.ai.routeAt !== c.routeSeen) { c.routeSeen = v.ai.routeAt; c.best = undefined; }
-  const stuck = progress(c, R && R.length ? routeLeft(v, R) : d, now);
+  // 11-23: the screen faded on a car that was on its way. A new plan is measured from its own length on - the time since
+  // the car last got anywhere is kept: a car going nowhere that keeps planning again still fades in the end)
+  const R = v.ai && v.ai.route, left = R && R.length ? routeLeft(v, R) : d;
+  if (R && v.ai.routeAt !== c.routeSeen) { c.routeSeen = v.ai.routeAt; if (c.best !== undefined) c.best = left; }
+  const stuck = progress(c, left, now);
   if (stuck > CUSTODY_SKIP_S) { fadeIn(world, p, 'The police car is going nowhere - you\'re taken in.'); return; }
   if (stuck > CUSTODY_STUCK_S) offerBreak(world, p);
   if (c.armed && canBreak(p, world)) { c.armed = false; breakOut(world, p); }   // (braced for it: the kick as it slows - notYet)
@@ -990,7 +991,7 @@ function route(world, v, x, y, speed) {
   const lost = ai.route && ai.route.length && segDist(v.x, v.y, ai.routePrev || ai.route[0], ai.route[0]) > 300;
   let planned = false;
   if (!ai.route || !ai.route.length || ai.routeKey !== key || lost || now - ai.routeAt > 25) {
-    ai.route = trimBehind(planRoute(world, v.x, v.y, x, y, { inner: !!v.sirenOn }), v); ai.routeAt = now; ai.routeKey = key; ai.routePrev = { x: v.x, y: v.y }; planned = true;
+    ai.route = trimBehind(planRoute(world, v.x, v.y, x, y, { inner: !!v.sirenOn, heading: v.a }), v); ai.routeAt = now; ai.routeKey = key; ai.routePrev = { x: v.x, y: v.y }; planned = true;
   }
   // on to the next waypoint once this one's reached (the faster, the sooner), or driven past while still on the line
   // of the route (never cutting a corner across: onto a bridge it'd be straight into the water beside it)

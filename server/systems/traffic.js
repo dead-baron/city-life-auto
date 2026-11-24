@@ -559,13 +559,13 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
 // you in cut across pavements to a junction far down the street, and went the long way round; a breadth-first plan
 // counted junctions, not distance). Roads remembered as blocked (reroute.js) are avoided if there's another way.
 const ON_STREET = 140;   // px: this near a street's line, the vehicle starts along it (else from the nearest clear junction)
-// opts.inner: along the inside lane (a car on its siren: the traffic it's passing pulls over to the kerb - traffic.js
+// opts.heading: the vehicle's heading (the way back behind it costs a turn - UTURN_PX); opts.inner: along the inside lane (a car on its siren: the traffic it's passing pulls over to the kerb - traffic.js
 // sirenBehind - and the kerb lane is where it stops)
 export function planRoute(world, fromX, fromY, toX, toY, opts = null) {
   const m = world.map, net = m.net, inner = !!(opts && opts.inner), ln = (e) => (inner ? Math.max(0, (e.nl || 1) - 1) : 0);
   const goal = net && clearNode(m, toX, toY);
   if (!goal || !net) return [{ x: toX, y: toY, final: true }];
-  const starts = leadIns(net, fromX, fromY, ln);
+  const starts = leadIns(net, fromX, fromY, ln, opts && opts.heading);
   if (!starts.length) { const n0 = clearNode(m, fromX, fromY); if (!n0) return [{ x: toX, y: toY, final: true }]; starts.push({ id: n0.id, len: Math.hypot(n0.x - fromX, n0.y - fromY), pts: [] }); }
   let prev, dist;
   for (const avoid of world.blockedEdges && world.blockedEdges.size ? [true, false] : [false]) {   // (roads remembered as blocked: reroute.js)
@@ -580,7 +580,7 @@ export function planRoute(world, fromX, fromY, toX, toY, opts = null) {
       if (id === goal.id) break;
       for (const [eid, nid] of Object.entries(net.nodes[id].links)) {
         if (avoid && isBlocked(world, +eid)) continue;
-        const nd = d + (net.edges[+eid].len || 0);
+        const E = net.edges[+eid], nd = d + (E && E.len ? E.len : Math.hypot(net.nodes[nid].x - net.nodes[id].x, net.nodes[nid].y - net.nodes[id].y));
         if (!dist.has(nid) || nd < dist.get(nid)) { dist.set(nid, nd); prev.set(nid, { id, e: +eid }); push(nd, nid); }
       }
     }
@@ -605,7 +605,8 @@ export function planRoute(world, fromX, fromY, toX, toY, opts = null) {
 }
 // the ways onto the junctions from the street at (x, y): along its kerb lane, from the point beside the vehicle to each end
 // it may drive to -> [{ id (the junction), len, pts (the lane from here on) }]
-function leadIns(net, x, y, ln = () => 0) {
+const UTURN_PX = 900;   // (the way back behind a vehicle: counted this much longer - turning round in a street is slow, and a car turning across it can wedge)
+function leadIns(net, x, y, ln = () => 0, heading = undefined) {
   const ne = nearestEdge(net, x, y, (e) => e.lvl === 0);
   if (!ne || ne.d > ON_STREET) return [];
   const e = ne.e, out = [];
@@ -614,7 +615,9 @@ function leadIns(net, x, y, ln = () => 0) {
     const lp = lanePath(net, e, from, ln(e)), pr = project(lp, { x, y });
     if (!pr) continue;
     const L = lp[lp.length - 1].s, rest = lp.filter((q) => q.s > pr.s + 24);
-    out.push({ id: to, len: Math.max(0, L - pr.s), pts: rest.length ? rest : [lp[lp.length - 1]] });
+    let len = Math.max(0, L - pr.s);
+    if (heading !== undefined) { const t = pointAt(lp, pr.s); if (t.tx * Math.cos(heading) + t.ty * Math.sin(heading) < -0.2) len += UTURN_PX; }
+    out.push({ id: to, len, pts: rest.length ? rest : [lp[lp.length - 1]] });
   }
   return out;
 }

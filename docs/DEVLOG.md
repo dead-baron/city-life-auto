@@ -26802,4 +26802,9 @@ arrests on streets across World v3 with the city's traffic: 2 driven to a statio
 Measured after: with traffic 6-9 of 12 driven (it varies with the traffic), with none 11 of 12; time up on a pavement
 down, still some going round a car. Tests: `test/custodyride.test.js` (five arrests across the city driven to the
 station nearest by road, on the road, no fade; a route's first leg on the road for 155 routes - 9 started across a
-pavement or a block before). Not done (P8 part 2): racers, taxis and the cinematics' cars, medians, unsticking in jams.
+pavement or a block before). Found by the tests and fixed with it: a replan kept the stuck clock running (a car that keeps planning
+again and gets nowhere still fades - test/arrests); the way back behind a vehicle costs a U-turn in the plan
+(opts.heading, UTURN_PX); a police car leaving a stop with someone standing in front of it backs off and leaves the
+other way after a few seconds (test/stops: it waited behind the player for good). The driving suite passes but
+gridlock, which fails on main too. Not done (P8 part 2): racers, taxis and the cinematics' cars, medians, unsticking
+in jams.
