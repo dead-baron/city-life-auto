@@ -26964,3 +26964,9 @@ when it gets no nearer than ARRIVE_NEAR (40 px) for a few seconds - whoever it w
 each end is the word on the radio (it was a 45% chance a look, so a short run could see none). Tests: wildfolk,
 pedunstick, leisure, activities, fences.
 Also from the run: test/unlocks' detective tracking failed once under load and passes alone (flaky, noted).
+
+## 2026-11-24 · The page's code budget 540 -> 560 KB (the owner's call)
+The owner, 11-24 08:15: "Okay to raise the limit". The page (client/boot.js + main.js and what they load at once) was at
+540.46 of 540 KB gzipped after the 11-23 batch - three old comments were shortened to fit it - and P2's biggest
+per-frame garbage left (main.js collectLights, render/weather.js drawRain) is page code. 20 KB more is about 0.1 s on a
+phone on 4G. tools/perf.mjs; DECISIONS (performance budgets).
