@@ -26727,3 +26727,28 @@ behind them. Alleys (3 rows or fewer) are left to the fade: any second storey co
   street lowered (none in the regress frames).
 - Art only (the bake): going live is a full re-bake (~5 h). Held on branch `heights-1123` until the 11-23 re-bake has
   finished and the owner says go - it changes the skyline in 762 places.
+
+## 2026-11-23 · Fences hold vehicles (P6 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: cars drove through the courts' chain-link "and more". The fences (`shared/fences.js`) held people
+only; a car hit just the posts. Now every fence holds a vehicle like a wall (`fenceVehicle`, called from
+`shared/physics.js` vehStep on the server and in the page's prediction): low or tall, square on or at an angle, and a
+fast bike can't skip through one in a step (the middle's way checked against the line). A horse jumps a low fence;
+boats aren't held. Found by the class check and fixed with it:
+- 10 yard-fence panels standing down the middle of a road in The Yards (a later pass laid the road over the yard's
+  line): `shared/world3-tidy.js` takes a fence piece out of a roadway (road on both sides along most of it).
+- 4 parking spaces in a Westport car park with a fence through them: `shared/parkcheck.js` parkWhy - no space across a
+  fence (the build's badBays3, the lint, the server's traffic).
+- Tests: `test/fences.test.js` (sedan, box truck, bikes at three angles into a low and a tall fence; the horse) - it
+  fails without the fix. Lint 42/42, world3server, traffic, tow, police, horses, car soccer, first car and the others
+  that drive: all pass.
+
+## 2026-11-23 · NPCs don't stay pinned; pool players go round the table (P7 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: NPCs stuck on fences, in corners, between a lamp and a fence at the skate park; one inside the pool
+table. The cause: only wanderers stepped aside when pressing into something (`server/systems/npc.js` sidestep);
+someone at an activity walking to their spot, a skater on his loop, a persona on an errand walked straight and pressed
+on for good. Now every walking NPC steps aside the same way, and someone at an activity held both ways three times
+running gives the activity up and wanders off. Furniture isn't solid (by design: shoprooms.js), so a pool player crossed
+the table to his next shot: he now goes round it (`activities.js` roundBox - the shortest way round the rim, a corner at
+a time). Tests: `test/pedunstick.test.js` (every way round a table keeps off it; an activity's NPC fenced off from his
+spot isn't pinned - fails without the fix). A measure round 40 activity spots (not kept as a test: too slow) still
+shows a few wanderers standing in the middle of a wide road for 12 s - looked at, not explained yet.

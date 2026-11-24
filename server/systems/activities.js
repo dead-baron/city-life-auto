@@ -646,6 +646,46 @@ function pose(ped, on) {
   if (a.chop && !!ped.chop !== on) { ped.chop = on ? { tool: 'pickaxe', npc: true } : null; ped.appVer = (ped.appVer || 0) + 1; }   // (the swing: net.js ch)
 }
 
+// The way from (x, y) to (tx, ty) round a box (a pool table's rim, m px of room kept round it): the target when the
+// straight way misses it, else the box's corner (m out) that goes round it the shorter way - one leg at a time
+export function roundBox(x, y, tx, ty, B, m) {
+  const x0 = B.x0 - m, y0 = B.y0 - m, x1 = B.x1 + m, y1 = B.y1 + m;
+  const cuts = (ax, ay, bx, by) => {   // (does a -> b pass through the box's inside: Liang-Barsky, the edges themselves allowed)
+    let t0 = 0, t1 = 1;
+    const dx = bx - ax, dy = by - ay, e = 0.5;
+    for (const [pp, q] of [[-dx, ax - (x0 + e)], [dx, (x1 - e) - ax], [-dy, ay - (y0 + e)], [dy, (y1 - e) - ay]]) {
+      if (pp === 0) { if (q < 0) return false; continue; }
+      const r = q / pp;
+      if (pp < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; }
+    }
+    return t1 - t0 > 1e-6;
+  };
+  if (x > x0 + 1 && x < x1 - 1 && y > y0 + 1 && y < y1 - 1) {   // (inside it: out the nearest side first)
+    const o = [[x0 - 1, y, x - x0], [x1 + 1, y, x1 - x], [x, y0 - 1, y - y0], [x, y1 + 1, y1 - y]].sort((a, b) => a[2] - b[2])[0];
+    return { x: o[0], y: o[1] };
+  }
+  if (!cuts(x, y, tx, ty)) return { x: tx, y: ty };
+  // (the shortest way round: the walker, the four corners and the target, joined where the box doesn't cut - the first
+  // leg of it)
+  const N = [[x, y], [x0, y0], [x1, y0], [x0, y1], [x1, y1], [tx, ty]], D = [0, Infinity, Infinity, Infinity, Infinity, Infinity], prev = [-1, -1, -1, -1, -1, -1], done = [];
+  for (let k = 0; k < 6; k++) {
+    let u = -1;
+    for (let i = 0; i < 6; i++) if (!done[i] && (u < 0 || D[i] < D[u])) u = i;
+    if (u < 0 || D[u] === Infinity) break;
+    done[u] = true;
+    for (let v = 1; v < 6; v++) {
+      if (done[v] || cuts(N[u][0], N[u][1], N[v][0], N[v][1])) continue;
+      const dd = D[u] + Math.hypot(N[v][0] - N[u][0], N[v][1] - N[u][1]);
+      if (dd < D[v]) { D[v] = dd; prev[v] = u; }
+    }
+  }
+  if (D[5] === Infinity) return { x: tx, y: ty };
+  const path = [];
+  for (let v = 5; v > 0; v = prev[v]) path.unshift(v);
+  const f = path.find((v) => Math.hypot(N[v][0] - x, N[v][1] - y) >= 1) ?? 5;   // (right on a corner already: the leg after it)
+  return { x: N[f][0], y: N[f][1] };
+}
+
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
@@ -675,7 +715,11 @@ export function steer(world, ped, now) {
     const t = a.ride[a.leg % a.ride.length];
     return { inp: seekTo(ped, t.x, t.y, 1), factor: 0.85 };
   }
-  if (d > 5) { if (ped.gt || ped.pp || ped.fishing || ped.chop) pose(ped, false); return { inp: seekTo(ped, a.x, a.y, 0.9), factor: 0.55 }; }   // back to it
+  if (d > 5) {   // back to it - round a pool table, never across it (the owner, 11-23: "one inside the pool table")
+    if (ped.gt || ped.pp || ped.fishing || ped.chop) pose(ped, false);
+    const G = world.acts && world.acts.get(a.g), to = G && G.table ? roundBox(ped.x, ped.y, a.x, a.y, G.table, 12) : a;
+    return { inp: seekTo(ped, to.x, to.y, 0.9), factor: 0.55 };
+  }
   ped.vx = ped.vy = 0;
   if (n.state !== 'idle') { n.state = 'idle'; n.until = now + 9999; }
   pose(ped, true);
