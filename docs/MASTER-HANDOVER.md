@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-23 night (the pre-beta chat, Opus 5.5). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-24 morning (the pre-beta chat, Opus 5.5 - its part done; next: the Fable 5.2 art chat). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -101,39 +101,31 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 | 3 | Systems and UI fixes, by area (NPCs, vehicles, minigames, menus) | `main` | `docs/audit/PREBETA-LIST.md` sections C-D and the 11-22 section, `docs/audit/REPORT2.md` | Batch 1 live (PR #1); N7 the quick bar live (PR #5: a strip over the weapon plate on a keyboard; touch and pad keep the wheel). Open: N13 the hospital "robbers" (confirm in play), the gridlock test (a busy four-way: a car waits 37-53 s at the head of a queue, the limit 30 - failing on main; traffic tuning). Done 11-22 night: N14 rooms lit inside at night (PR #11, client only), hudlayout (one note at a time on a small phone on its side) and the prison test (the stash) (PR #12). |
 | 4 | Music and the instrument sound pack | `main` | `docs/tasks/MUSIC-HANDOVER.md` (the 11-22 sections), DECISIONS "Music and sound" | **Live 11-22 (PRs #3, #4):** all 56 approved takes as files (loop + full song, Opus + MP3); radios, tapes, car radios stream the full songs, takes rotating 70/30 in sync; shops, lobbies, drive-in, night club, casino, roadhouse loop theirs; each source its speaker sound. The debug menu's *Recorded music* turns them off on one screen. Next: the gigs and the mat to the recordings (charts from the measured beats - N9, N15, N10 tips), the city's neon bars (storefronts with no room: no music yet), the 20 optional takes when he places them. |
 | 5 | Checks that stop regressions | `main` after 1 | `tools/regress/README.md` | Half built 11-22: 55 fixed places, shots and a diff (`tools/regress/`); a guard column for the 11-22 notes (their triage table). Still: a guard column for the older notes in the register. |
-| 6 | Art, continued (water at sunset and in rain, then buildings and districts, then vehicles) - and from the 11-22 notes: item icons toward the concepts + a UI/UX polish on every device (N2), the hospitals' and storefronts' design (N20), the playing animations on the beat (N15) | branch `nature` | `claude/nature-status-2026-11-21.md`, the 11-22 section of the pre-beta list | For Fable. |
+| 6 | **The Fable 5.2 art pass (next)** - the 11-23 notes' art list; the cinema redesigned (lobby + separate auditoriums: world and art, before the beta - the owner 11-24); car soccer's arena art (branch `arenaart`); the races' markers and grid; tennis's swing and the people pass; mouths; the UI art and item icons (N2); the hospitals' and storefronts' design (N20); the playing animations on the beat (N15); water at sunset and in rain, buildings and districts, vehicles; then the cinematics reshot on the final art | `main` (and branch `nature` for the earlier art pass) | `docs/tasks/PREBETA-NOTES-2026-11-23.md` section 3, `docs/audit/PREBETA-LIST.md` ("Art on Fable", the 11-24 sections), `claude/nature-status-2026-11-21.md`, the style targets in `docs/art-v2/targets/` | Next chat. |
 | 7 | Launch steps | `main` | `docs/audit/PREBETA-LIST.md` section H, `claude/launch-plan-2026-11-03.md` | On his word "launch the beta". |
 
 Chats that can run side by side: 4 with any other; nothing else safely.
 
-## 6. Where things stand (2026-11-24, 05:35 PST)
-**The plan the owner agreed (11-23 15:37, "this shouldn't switch directions"):** Opus 5.5 finishes everything that isn't
-art, pushing as it goes; then a new chat on **Fable 5.2** does the art pass; then the cinematics are reshot and added on
-the final art; then the beta's walkthrough, load test and launch. The order for the Opus part:
-1. ~~Art that vanishes in view~~ (PR #29). 2. ~~Cinematics groundwork~~ (#30). 3. ~~Shadows over water~~ (#31); the water
-   streaks (likely the boats' wakes) and the beach's long shadows - look in a running game first.
-4-6. **Live: PR #35 merged 11-24 05:34 PST** (the owner's go 11-23 22:54; `heights-1123` with `smash-1123` on top, one
-   batch: one server restart, P5's ~5 h re-bake - identical chunks carry over). The whole suite ran on it first. In it
-   (each in the DEVLOG, with what wasn't looked at in a running game): P5, P6, P7, P9, P10, P11, P12, aim on right
-   click, the flash at the barrel, the "!"; vehicles smash things;
-   P2 part 1 (the way ahead downloaded first at speed); P8 part 2a (racers off the median - the city's traffic and
-   called taxis measured fine); the UI pass (tools/uishots.py, four sizes, fixes incl. the hub blocked after a stalled
-   arrival); the stash side by side (UIC-21); headlights' share of the light cap; My looks in the creator.
-   **The page is at its code budget (540.46 of 540 KB):** the next page change needs a lazy load or the owner's word.
-   Also there: P2 part 2 (less garbage per frame in the renderer - drivebench --alloc); the whole-suite run's finds on
-   the batch fixed (a plant rounding into a pasture rail's tile; P7's step aside had taken the ranger, the trail walkers
-   and the kayaker off their walks). Flaky under load, pass alone: arrests (shop), unlocks (detective tracking).
-   Still to do: P2's biggest garbage is page code (main.js collectLights, weather.js drawRain - the page is at its
-   budget); P8's cinematic scripted cars and jams; PREBETA-LIST C's other items (most are art); the walkthrough (G).
-   Failing on main too: calendar's armored run "leaves from its bank" (date-dependent: today's bank puts the van 713 px
-   off, the limit 700). Flaky: b8jobs (Crazy Taxi), passes alone.
-7. ~~The UI pass~~ (above). Seen, not fixed: the Inventory's character slots under 44 px on phones; its frame empty a
-   moment on first open; the pause menu's second column cut in a narrow desktop window.
-8. PREBETA-LIST D: **a status table is ready for the owner's finish-or-hide call** (casino, car soccer, raceway, tennis,
-   kayak run, cinema). The balance proposals 1, 3, 4 wait on him too.
-Then **the Fable 5.2 chat**: the art list in `docs/tasks/PREBETA-NOTES-2026-11-23.md` section 3 (and the 11-22 PDF's art
-items, PREBETA-LIST "Art on Fable"), mouths (a face-stability check first), the UI art, item icons; then the cinematics
-(section 2 there: reshoot, wildlife first, new behaviour scenes) and C4's variants.
+## 6. Where things stand (2026-11-24, 09:00 PST - the Opus part of the pre-beta is done)
+**The plan the owner agreed (11-23 15:37):** Opus 5.5 finished everything that isn't art; now a new chat on **Fable 5.2**
+does the art pass; then the cinematics are reshot on the final art; then the beta's walkthrough, load test and launch.
+**Live on main (PRs #29-#46):** art that vanishes in view; cinematics groundwork; shadows over water; **PR #35, the
+batch (05:34 PST)** - P5 building heights (its ~5 h re-bake started then; identical chunks carry over), P6 fences, P7
+NPCs unpinned, P9, P10 the hoop marker, P11, P12, aim on right click, the flash at the barrel, the "!", vehicles smash
+fences/benches/shelters (sitters thrown), P2 (the way ahead first at speed; less garbage per frame), P8 (routes from the
+street you're on, the police ride, racers off the median), the UI pass (tools/uishots.py) and its fixes, the stash side
+by side (UIC-21), My looks, headlights' share of the lights; **#45** the page's code budget 540 -> 560 KB (the owner's
+call); **#46** the kayak races hidden, the other road in the daily goals, "bank it" on the first knock-down.
+**Not looked at in a running game on a device** (the owner to try - the list in the 11-24 chat): smashing, aim and
+flash, the hoop marker, the Pixel at speed, the police ride, the stash on a big screen, My looks, P5's streets once the
+re-bake is done.
+**Left for later (non-art, not blocking the art pass):** P2's biggest garbage is page code (main.js collectLights,
+weather.js drawRain - the budget has room now); P8's cinematic scripted cars and jams; the UI pass's three findings
+(Inventory slots under 44 px on phones, its frame empty a moment on first open, the pause menu's second column in a
+narrow desktop window); PREBETA-LIST C's other items; the walkthrough (G).
+**Next: the Fable 5.2 chat** - package 6 above. The cinema's redesign is in it (world + art; the owner wants it before
+the beta). Then the cinematics (PREBETA-NOTES-2026-11-23 section 2: reshoot, wildlife first, new behaviour scenes) and
+C4's variants.
 
 **Live today (main, PRs #17-#32):** the quick bar a keyboard's only; the ellipsis and touch ammo; the Inventory (character,
 clothes, underwear and socks, towels, REMOVE ALL); the stash in the Inventory (home, gun/pawn counters, hideout); press and
@@ -144,11 +136,11 @@ clean start, quiet page and Keep/Cut/Bug marks; no long shadows on water; the re
 districts; casinos kept, doors made to read; the stash holds items and weapons (clothes stay in the wardrobe); the trunk
 its own storage, at risk; cargo crates always visible; REMOVE ALL (not "take it all off") leaves underwear on; underwear
 and towels change only at home, a bathhouse or a shower.
-**Known failing on main too:** scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
+**Known failing on main too:** calendar's armored run "leaves from its bank" (date-dependent), gridlock, scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
 picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz, arrests (hiding in a shop: failed
 once under load, passes alone and as a file). Follow-ups: two
 north doors at Northshore Beaches under trees.
-**Waiting on the owner:** a look at the batch in play (it went live 05:34); the finish-or-hide calls (PREBETA-LIST D, the table); the balance proposals 1, 3, 4; whether clothes should go in the stash after all. **Done 11-23 night:** the server's disk
+**Waiting on the owner:** a look at the batch in play; whether clothes should go in the stash after all. (Decided 11-24: finish or hide, the balance proposals, the page budget - DECISIONS.) **Done 11-23 night:** the server's disk
 grown to 146 GB (105 GB free) - he did it, Oracle console + growpart.
 
 ## 7. How a chat ends (do all of it, in this order)
