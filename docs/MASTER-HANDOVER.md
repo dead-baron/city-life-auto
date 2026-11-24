@@ -106,27 +106,27 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 
 Chats that can run side by side: 4 with any other; nothing else safely.
 
-## 6. Where things stand (2026-11-23 afternoon)
+## 6. Where things stand (2026-11-23 night)
 **The plan the owner agreed (11-23 15:37, "this shouldn't switch directions"):** Opus 5.5 finishes everything that isn't
 art, pushing as it goes; then a new chat on **Fable 5.2** does the art pass; then the cinematics are reshot and added on
 the final art; then the beta's walkthrough, load test and launch. The order for the Opus part:
 1. ~~Art that vanishes in view~~ (PR #29). 2. ~~Cinematics groundwork~~ (#30). 3. ~~Shadows over water~~ (#31); the water
    streaks (likely the boats' wakes) and the beach's long shadows - look in a running game first.
-4. ~~Buildings covering streets~~ (P5) and 5. ~~the small mechanics~~ P6 fences hold vehicles, P7 NPCs unpinned and round
-   the pool table, P9 the head bandana's flicker, P11 doors kept clear, P12 the cinematic train: **all on branch
-   `heights-1123`, PR #35 - one batch, waiting for the owner's go** (P5 lowers 762 buildings; going live re-bakes the art
-   ~5 h - after the 11-23 re-bake has finished; it also restarts the server once). P10 "the hoop arrow over the hoop":
-   asked the owner which arrow (none found drawn at a hoop). Its DEVLOG entries say what was tested and what wasn't.
-6. P8 NPC driving: **part 1 done on the batch branch** (routes from the street you're on, shortest by length; the police
-   ride gets there - DEVLOG). Part 2: racers, taxis, the cinematics' cars, medians, jams.
-6b. **P2, the Pixel 7 Pro (owner's readout 11-23 20:52):** 60 fps typical, 1 frame in 20 at 40-60 ms, a few ~70 ms long
-   tasks; blurry stand-ins at speed in the desert (the art ahead not there in time). Next after P8 part 1: the way ahead
-   fetched sooner at speed, the long tasks found.
-6c. The owner's notes of 11-23 evening (PREBETA-LIST, the last two sections; DECISIONS "Vehicles and the car"): vehicles
-   smash fences / fell trees / break benches and shelters with a visible reaction, sitters thrown (supersedes P6's
-   "fences hold" at speed); the gun up only while right click is held on mouse and keyboard (today: twin-stick - the
-   gun up whenever the mouse moved in the last 8 s, client/input.js; right click held unarmed = block); muzzle flash at
-   the barrel; the "!" above the head; the white boxes are phone boxes (art).
+4. ~~Buildings covering streets~~ (P5) and 5. ~~the small mechanics~~ P6, P7, P9, P10 (the hoop marker: above the
+   backboard, fading), P11, P12, and the 11-23 evening notes (aim on right click only with a mouse, the flash at the
+   barrel, the "!" above the head): **branch `heights-1123`, PR #35 - the owner's go given 11-23 22:54 ("push pr 35
+   whenever you think is right")**, merged once the whole suite has run (P5 lowers 762 buildings: a ~5 h re-bake and one
+   server restart).
+6. P8 NPC driving: part 1 on #35 (routes from the street you're on; the police ride gets there). **Part 2a on branch
+   `smash-1123`:** racers never cross a divided road's median (the city's traffic measured: it doesn't -
+   tools/trafficsim.mjs `where`). Still: the cinematics' scripted cars (director legs), taxis (measuring:
+   /tmp/p8/taxi.mjs - a called taxi's ride has no unsticking with you aboard), jams.
+6b. P2, the Pixel 7 Pro: **part 1 on `smash-1123`** (driving fast, the downloads go ahead first, 6 at once on a phone).
+   Still: the ~70 ms long tasks (tools/drivebench.mjs --profile), nothing measured on a phone.
+6c. **Vehicles smash things (the owner's 20:10 note): on `smash-1123`** - fences go down at speed (FENCE_SMASH), what's
+   knocked over lies there on its side with its shards, sitters thrown. Field rail runs still only hold. **The page is
+   at its code budget (540.45 of 540 KB): the next page change needs a lazy load or the owner's word.**
+   `smash-1123` sits on top of `heights-1123`: merged with it (one batch, one restart).
 7. The UI pass on every screen: a harness shooting the real game's screens (pause, settings, map, phone, shops, death) at
    four sizes; the stash's desktop side-by-side to the owner's UIC-21 concept (`docs/art-v2/targets/ui/UIC-21_stash.png`).
 8. The rest of `docs/audit/PREBETA-LIST.md` sections C-D (systems, finish-or-hide calls) and the balance proposals 1, 3, 4.
@@ -144,10 +144,10 @@ districts; casinos kept, doors made to read; the stash holds items and weapons (
 its own storage, at risk; cargo crates always visible; REMOVE ALL (not "take it all off") leaves underwear on; underwear
 and towels change only at home, a bathhouse or a shower.
 **Known failing on main too:** scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
-picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz. Follow-ups: two
+picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz, arrests (hiding in a shop: failed
+once under load, passes alone and as a file). Follow-ups: two
 north doors at Northshore Beaches under trees.
-**Waiting on the owner:** his go on PR #35 (the batch: re-bake + one restart); P10 "the hoop arrow" - which arrow; the
-balance proposals 1, 3, 4; whether clothes should go in the stash after all. **Done 11-23 night:** the server's disk
+**Waiting on the owner:** the balance proposals 1, 3, 4; whether clothes should go in the stash after all. **Done 11-23 night:** the server's disk
 grown to 146 GB (105 GB free) - he did it, Oracle console + growpart.
 
 ## 7. How a chat ends (do all of it, in this order)
