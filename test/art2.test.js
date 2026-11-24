@@ -229,3 +229,18 @@ test('bake ahead: driving fast, the way ahead before the road behind; more downl
   assert.ok(list(150).slice(0, 40).some(([x, y]) => y === row && x <= me - 3), 'slow, the road behind as near as ahead');
   assert.ok(LR.aheadPlan(900, { phone: true }).fetch > LR.aheadPlan(200, { phone: true }).fetch, 'more at once, fast');
 });
+
+// Night lights (PREBETA-LIST C): on the Neon Strip the signs and lamps took every light the tier allows and the cars'
+// headlights went out - the moving lights are sure of MOVE_SHARE of the cap (host.js pickLights).
+test('the cars\' lamps keep a share of the lights where neon fills the cap', async () => {
+  const { pickLights, MOVE_SHARE } = await import('../client/art2/game/host.js');
+  const L = [];
+  for (let i = 0; i < 200; i++) L.push({ s: 10 + (i % 7), mv: 0, id: 'neon' + i });
+  for (let i = 0; i < 40; i++) L.push({ s: 1 + i * 0.01, mv: 1, id: 'car' + i });
+  const n = pickLights(L, 96), kept = L.slice(0, n);
+  assert.equal(n, 96);
+  assert.ok(kept.filter((q) => q.mv).length >= Math.ceil(96 * MOVE_SHARE), `${kept.filter((q) => q.mv).length} of the cars' lamps kept`);
+  assert.ok(kept.some((q) => q.id === 'car39') && !kept.some((q) => q.id === 'car0'), 'the strongest of them');
+  const few = [{ s: 5, mv: 0 }, { s: 1, mv: 1 }];
+  assert.equal(pickLights(few, 96), 2, 'under the cap: all of them');
+});

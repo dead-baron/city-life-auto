@@ -225,6 +225,26 @@ export function planBake(need, bake, view, vx, vy, reach, out = [], grid = [Infi
   return out;
 }
 
+// The frame's lights, best first, the first n kept (in place; returns n): the strongest and nearest (s) up to cap, but the
+// moving ones (mv: the vehicles' headlights, tail lights, sirens) are sure of MOVE_SHARE of it before the rest fill it -
+// a street full of neon never puts out the cars' lamps.
+export const MOVE_SHARE = 0.25;
+export function pickLights(L, cap) {
+  L.sort((a, b) => b.s - a.s);
+  if (L.length <= cap) return L.length;
+  const res = Math.ceil(cap * MOVE_SHARE);
+  let mv = 0;
+  for (let i = 0; i < cap; i++) if (L[i].mv) mv++;
+  // (short of the share: the best moving ones from past the cap swapped in for the weakest of the rest)
+  for (let j = cap, k = cap - 1; j < L.length && mv < res; j++) {
+    if (!L[j].mv) continue;
+    while (k >= 0 && L[k].mv) k--;
+    if (k < 0) break;
+    const t = L[k]; L[k] = L[j]; L[j] = t; k--; mv++;
+  }
+  return cap;
+}
+
 export function qualityOf(gfx, lowMem) {
   if (lowMem) return 0;
   const named = { low: 0, medium: 1, high: 2, ultra: 3 }[gfx.preset];
@@ -2760,7 +2780,7 @@ export class World2 {
     L.x = x; L.y = y; L.z = z; L.r = r; L.col = col; L.k = k;
     if (cone) { L.cn.a = cone[0]; L.cn.spread = cone[1]; L.cn.len = cone[2]; L.cone = L.cn; } else L.cone = null;
     const d = Math.hypot(x - this.camX, y - this.camY);
-    L.s = k * Math.sqrt(r) / (1 + (d / 700) ** 2);
+    L.s = k * Math.sqrt(r) / (1 + (d / 700) ** 2); L.mv = this.mvOn;
     this.lights.push(L);
   }
   _lights(F) {
@@ -2785,7 +2805,8 @@ export class World2 {
     if (night > 0.05) this._v1StaticLights(F, (x, y) => inV(x, y) && !this._litChunk(x, y), nightK);
     // the glowing mushrooms and golden stars (_forage): a soft pool of their colour in the dark
     if (nightK > 0.02 && this.fgLit) for (let i = 0; i < this.fgLit.length; i += 3) this._light(this.fgLit[i], this.fgLit[i + 1], 5, 58, this.fgLit[i + 2], 1.2 * nightK);
-    // 2. moving lights
+    // 2. moving lights (their own share of the cap: MOVE_SHARE)
+    this.mvOn = 1;
     for (const v of F.vehs) {
       const def = VEHICLE_BY_INDEX[v.d.m];
       if (!def) continue;
@@ -2802,6 +2823,7 @@ export class World2 {
       if (f & (VF.SIREN | VF.BEACON)) this._light(v.rx, v.ry, zb + 24, 240, Math.floor(now * 6) % 2 ? C.red : C.blue, 2.2);
       if (f & VF.BURN) this._light(v.rx, v.ry, zb + 20, 200, C.fire, 2.2 * (0.75 + 0.25 * Math.sin(now * 23 + v.id)));
     }
+    this.mvOn = 0;
     for (const c of F.cars) {
       if (!(c.flags & 8)) continue;
       const def = TRAIN_CARS[c.d.c];
@@ -2878,11 +2900,10 @@ export class World2 {
         else this._light(p.x, p.y, p.y - countryLightY(p, 0.96), 280, C.fire, (0.8 + 1.8 * night) * fl);
       }
     }
-    // the strongest and nearest, up to the tier's cap
-    const out = this.lights;
-    out.sort((a, b) => b.s - a.s);
-    const n = Math.min(out.length, this.tier.lights);
-    for (let i = 0; i < n; i++) this.E.addLight(out[i]);
+    // the strongest and nearest, up to the tier's cap - the vehicles' lamps with a share of their own (the owner: headlights
+    // lost on the Neon Strip, where its signs and lamps took every one of the 96)
+    const n = pickLights(this.lights, this.tier.lights);
+    for (let i = 0; i < n; i++) this.E.addLight(this.lights[i]);
     this.n.lights = n;
   }
   // is (x, y) in a chunk whose bake brought its own static lights?

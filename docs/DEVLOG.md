@@ -26909,3 +26909,10 @@ dragged across moves (what you carry is a drop target now too); the details one 
 buttons (they scroll when a thing has many). Smaller screens keep the CARRIED | STASH switch (1440x900 and 1280x720
 tried side by side: the details didn't fit). Test: `test/invlayout.test.js` (side by side at the desktops at or over
 the size, the switch below it; nothing cut off or on another at every size). Not looked at with a pad.
+
+## 2026-11-24 · Headlights keep their share at night (PREBETA-LIST C, "Night lights") - on branch `smash-1123`
+On the Neon Strip the signs, tubes and lamps filled every light the tier allows (96 on Ultra) and the cars' headlights,
+tail lights and sirens were the ones dropped. The frame's lights are still the strongest and nearest first, but the
+moving ones are sure of a quarter of the cap (client/art2/game/host.js pickLights, MOVE_SHARE): short of it, the best of
+them past the cap are swapped in for the weakest of the rest. Test: `test/art2.test.js`. Not looked at on the Strip at
+night in a running game.
