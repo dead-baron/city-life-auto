@@ -27087,3 +27087,12 @@ Test: `test/floraclip.test.js` (flora.js tells it, through globalThis.__FLORA_CL
 outermost row and columns: nothing; and each picture fits floraExt). Baked art: a new art hash, with the nature
 re-bake. Seen: the twelve worst as sprites lit at noon, before and after. Not seen: in the game. Found with it, not
 fixed: the redwood sorrel's carpet is 25 px past its item's room (it was before) - a chunk's edge can cut it.
+
+## 2026-11-24 · The water pass: the whole recorder run again, after - on branch `fable-art-1124`
+All 17 places at five looks with parts 1 to 3 in (85 films, set beside the first run's). Lakes, the tarn, rivers,
+creeks, the marsh, the oasis and rain - not looked at since the changes - show nothing broken: the same water by day,
+no long shadows on open water at sunset or under the moon (a lake at night reads a little brighter for it), the hot
+springs as water at every hour. Flicker by day as before (0.2 to 2% of water pixels). Higher where it is meant: the
+sea at sunset (the glitter: 1.1 at the pier, 5.3 off the surf beach). Not water at all, and not to be read: 'marina'
+(a shop street), 'pond' (a creek under redwoods, the frame a few pixels off the first run's) and 'rainforest' (leaf
+edges). The recorder still needs a harbour and a real pond among its places.

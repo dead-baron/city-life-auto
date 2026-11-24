@@ -28,6 +28,7 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
    blotches"); hot springs and ground pools as still water, the onsen no longer a white shape after dark.
    Then the salmon's leap (DEVLOG "The water pass, 3": seen from the side with a tail, a real splash, the climb from
    the foot of the falls) - page-side.
+   The whole recorder run again after (85 films): nothing broken at the lakes, rivers, marsh, oasis or in rain.
    **Left in water:** water beside docks checked after the world batch; reflections,
    ripples and wakes against the concepts; a harbour place for the recorder ('marina' is a shop street); his eye on
    the evening glitter, on the sea now deeper blue offshore, and on whether the calm sparkle reads flat.
