@@ -106,16 +106,16 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 
 Chats that can run side by side: 4 with any other; nothing else safely.
 
-## 6. Where things stand (2026-11-24, 04:00 PST)
+## 6. Where things stand (2026-11-24, 05:35 PST)
 **The plan the owner agreed (11-23 15:37, "this shouldn't switch directions"):** Opus 5.5 finishes everything that isn't
 art, pushing as it goes; then a new chat on **Fable 5.2** does the art pass; then the cinematics are reshot and added on
 the final art; then the beta's walkthrough, load test and launch. The order for the Opus part:
 1. ~~Art that vanishes in view~~ (PR #29). 2. ~~Cinematics groundwork~~ (#30). 3. ~~Shadows over water~~ (#31); the water
    streaks (likely the boats' wakes) and the beach's long shadows - look in a running game first.
-4-5. ~~P5, P6, P7, P9, P10, P11, P12, aim on right click, the flash at the barrel, the "!"~~: branch `heights-1123`, PR
-   #35 - the owner's go 11-23 22:54. **One batch with `smash-1123` on top of it** (below): merged together once the
-   whole suite has run (P5's ~5 h re-bake, one server restart).
-6. **On `smash-1123`** (each in the DEVLOG, with what wasn't looked at in a running game): vehicles smash things;
+4-6. **Live: PR #35 merged 11-24 05:34 PST** (the owner's go 11-23 22:54; `heights-1123` with `smash-1123` on top, one
+   batch: one server restart, P5's ~5 h re-bake - identical chunks carry over). The whole suite ran on it first. In it
+   (each in the DEVLOG, with what wasn't looked at in a running game): P5, P6, P7, P9, P10, P11, P12, aim on right
+   click, the flash at the barrel, the "!"; vehicles smash things;
    P2 part 1 (the way ahead downloaded first at speed); P8 part 2a (racers off the median - the city's traffic and
    called taxis measured fine); the UI pass (tools/uishots.py, four sizes, fixes incl. the hub blocked after a stalled
    arrival); the stash side by side (UIC-21); headlights' share of the light cap; My looks in the creator.
@@ -125,7 +125,8 @@ the final art; then the beta's walkthrough, load test and launch. The order for 
    and the kayaker off their walks). Flaky under load, pass alone: arrests (shop), unlocks (detective tracking).
    Still to do: P2's biggest garbage is page code (main.js collectLights, weather.js drawRain - the page is at its
    budget); P8's cinematic scripted cars and jams; PREBETA-LIST C's other items (most are art); the walkthrough (G).
-   **Before merging #35 + smash-1123:** the first third of the suite again on `smash-1123` (it ran on heights only).
+   Failing on main too: calendar's armored run "leaves from its bank" (date-dependent: today's bank puts the van 713 px
+   off, the limit 700). Flaky: b8jobs (Crazy Taxi), passes alone.
 7. ~~The UI pass~~ (above). Seen, not fixed: the Inventory's character slots under 44 px on phones; its frame empty a
    moment on first open; the pause menu's second column cut in a narrow desktop window.
 8. PREBETA-LIST D: **a status table is ready for the owner's finish-or-hide call** (casino, car soccer, raceway, tennis,
@@ -147,7 +148,7 @@ and towels change only at home, a bathhouse or a shower.
 picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz, arrests (hiding in a shop: failed
 once under load, passes alone and as a file). Follow-ups: two
 north doors at Northshore Beaches under trees.
-**Waiting on the owner:** the finish-or-hide calls (PREBETA-LIST D, the table); the balance proposals 1, 3, 4; whether clothes should go in the stash after all. **Done 11-23 night:** the server's disk
+**Waiting on the owner:** a look at the batch in play (it went live 05:34); the finish-or-hide calls (PREBETA-LIST D, the table); the balance proposals 1, 3, 4; whether clothes should go in the stash after all. **Done 11-23 night:** the server's disk
 grown to 146 GB (105 GB free) - he did it, Oracle console + growpart.
 
 ## 7. How a chat ends (do all of it, in this order)
