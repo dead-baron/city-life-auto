@@ -106,7 +106,7 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 
 Chats that can run side by side: 4 with any other; nothing else safely.
 
-## 6. Where things stand (2026-11-24 morning)
+## 6. Where things stand (2026-11-24, 04:00 PST)
 **The plan the owner agreed (11-23 15:37, "this shouldn't switch directions"):** Opus 5.5 finishes everything that isn't
 art, pushing as it goes; then a new chat on **Fable 5.2** does the art pass; then the cinematics are reshot and added on
 the final art; then the beta's walkthrough, load test and launch. The order for the Opus part:
@@ -120,8 +120,12 @@ the final art; then the beta's walkthrough, load test and launch. The order for 
    called taxis measured fine); the UI pass (tools/uishots.py, four sizes, fixes incl. the hub blocked after a stalled
    arrival); the stash side by side (UIC-21); headlights' share of the light cap; My looks in the creator.
    **The page is at its code budget (540.46 of 540 KB):** the next page change needs a lazy load or the owner's word.
-   Still to do: P2's long tasks (tools/drivebench.mjs --profile); P8's cinematic scripted cars and jams; PREBETA-LIST C's
-   other items (most are art); the walkthrough (G).
+   Also there: P2 part 2 (less garbage per frame in the renderer - drivebench --alloc); the whole-suite run's finds on
+   the batch fixed (a plant rounding into a pasture rail's tile; P7's step aside had taken the ranger, the trail walkers
+   and the kayaker off their walks). Flaky under load, pass alone: arrests (shop), unlocks (detective tracking).
+   Still to do: P2's biggest garbage is page code (main.js collectLights, weather.js drawRain - the page is at its
+   budget); P8's cinematic scripted cars and jams; PREBETA-LIST C's other items (most are art); the walkthrough (G).
+   **Before merging #35 + smash-1123:** the first third of the suite again on `smash-1123` (it ran on heights only).
 7. ~~The UI pass~~ (above). Seen, not fixed: the Inventory's character slots under 44 px on phones; its frame empty a
    moment on first open; the pause menu's second column cut in a narrow desktop window.
 8. PREBETA-LIST D: **a status table is ready for the owner's finish-or-hide call** (casino, car soccer, raceway, tennis,
