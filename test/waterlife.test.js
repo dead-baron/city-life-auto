@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
 import { T, TILE } from '../shared/constants.js';
-import { WaterLife } from '../client/art2/game/waterlife.js';
+import { WaterLife, CLIMB, SP, leapSprite } from '../client/art2/game/waterlife.js';
 
 const M = generateCity(1337);
 const wetT = (t) => t === T.WATER || t === T.DEEP || t === T.BRIDGE;
@@ -168,7 +168,16 @@ test('salmon at a falls: some make it up the face into the water above it, and s
     wl.update(M, V, now, 1 / 30, [], [], ENV);
     for (const f of wl.fish) {
       if (f.s !== 'salmon') continue;
-      if (f.air >= 0 && f.climb) { climbing++; ph.add(f.climb.ph); assert.ok(f.az >= 0, 'up the face in front of the falls'); }
+      if (f.air >= 0 && f.climb) {
+        climbing++; ph.add(f.climb.ph); assert.ok(f.az >= 0, 'up the face in front of the falls');
+        // (the water pass, 11-24: it climbed the air over the pool wherever it happened to be - or over the bank, where
+        // a falls lands short of its pool. A climb starts with a leap across the pool to the foot of the falls, in the
+        // fish's own water, and goes up from there)
+        const U = f.climb;
+        assert.ok(cls(U.xf, U.yf) === cls(U.x0, U.y0) && cls(U.xf, U.yf) > 0, 'the foot of the climb is in the pool the fish left');
+        assert.ok(Math.hypot(U.xf - U.x0, U.yf - U.y0) <= CLIMB.reach, 'a leap away');
+        if (U.ph !== 'in') assert.ok(f.x === U.xf && f.y === U.yf, 'climbing from the foot of the falls, not from where it lay');
+      }
       if (f.mig) { const t = track.get(f); if (!t) track.set(f, { y: f.y }); else if (t.y - f.y > 20 && !t.done) { t.done = true; moved++; } } else track.delete(f);
     }
   }
@@ -299,4 +308,29 @@ test('a boat moored over the fish leaves them be; a boat under way scatters them
   let darted = false;
   for (let i = 0; i < 20; i++) { run.x += 6; wl.update(M, V, now, 1 / 30, [run], [], ENV); now += 1 / 30; if (f.st === 1) darted = true; }
   assert.ok(darted, 'a boat coming through sends them off');
+});
+
+// The owner, 11-23: "the salmon leaping (tail, splash)". In the air a fish was the swimming fish's shape from above, held
+// stiff - a bar with a twig for a tail - and a leap marked the water with one ring. Now it is seen from the side, arched,
+// with a broad tail that flicks, and a leap throws up spray and leaves foam.
+test('a leaping fish: seen from the side with a broad flicking tail; a leap splashes', () => {
+  for (const k of ['salmon', 'trout', 'mullet', 'bass', 'carp']) {
+    const S = SP[k], G = leapSprite(S, 0, 0, 0), rows = (x) => { let n = 0; for (let y = 0; y < G.h; y++) if (G.col[(y * G.w + x) * 4 + 3]) n++; return n; };
+    let x0 = G.w, x1 = -1;
+    for (let x = 0; x < G.w; x++) if (rows(x)) { x0 = Math.min(x0, x); x1 = x; }
+    const len = x1 - x0 + 1, tail = Math.max(rows(x0), rows(x0 + 1)), wrist = Math.min(...[2, 3, 4].map((d) => rows(x0 + d))), deep = Math.max(...Array.from({ length: len }, (_, i) => rows(x0 + i)));
+    assert.ok(len >= S.L - 1, `${k}: its whole length (${len} px)`);
+    assert.ok(tail > wrist && tail >= 3, `${k}: a tail fin broader than the wrist before it (${tail} against ${wrist})`);
+    assert.ok(deep >= Math.round(S.W * 0.9), `${k}: a flank, not a bar (${deep} px deep)`);
+    const A = leapSprite(S, 0, 0, 1), B = leapSprite(S, 0, 0, -1);
+    let diff = 0; for (let i = 3; i < A.col.length; i += 4) if ((A.col[i] > 0) !== (B.col[i] > 0)) diff++;
+    assert.ok(diff >= 4, `${k}: the tail flicks (${diff} px differ between the two beats)`);
+  }
+  const wl = new WaterLife(2); wl.now = 5; wl.env = ENV;
+  wl._splash(1000, 1000, 5);
+  const spray = wl.puffs.filter((p) => p.on && !p.foam), foam = wl.puffs.filter((p) => p.on && p.foam);
+  assert.ok(spray.length >= 2 && spray.every((p) => p.vz > 15 && p.life < 0.6), `spray thrown up, soon gone (${spray.length})`);
+  assert.ok(foam.length >= 1, 'foam left on the water');
+  let rings = 0; for (let j = 0; j < wl.rings.length; j += 5) if (wl.rings[j] === 1000 && wl.rings[j + 2] === 5) rings++;
+  assert.ok(rings >= 2, `rings spreading (${rings})`);
 });

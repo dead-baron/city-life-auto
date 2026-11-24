@@ -43,8 +43,9 @@ const MAXR = 96, MAXP = 260, MAXW = 240;   // rings on the water, puffs of mist 
 // much of the drop (px) each leap gains (stages [min, max] of them), leap how long each arc takes (s), arc how far
 // above its line it bows (px), rest how long it hangs on in the white water between leaps ([min, max] s), fail the odds
 // each leap after the first slips and it drops back to the pool, up how far (px past the falls' drop) it looks for the
+// (foot: how far below a falls' line its pool may begin, px; reach: how far from the foot a climb can start)
 // water above, swim how long it swims on upstream before it's gone
-export const CLIMB = { ok: 0.55, step: 22, stages: [2, 6], leap: 0.5, arc: 9, rest: [0.5, 1.3], fail: 0.3, up: [24, 150], swim: [6, 11] };
+export const CLIMB = { ok: 0.55, step: 22, stages: [2, 6], leap: 0.5, arc: 9, rest: [0.5, 1.3], fail: 0.3, up: [24, 150], swim: [6, 11], foot: 40, reach: 90 };
 const ART = 2;                      // world px per art pixel of these sprites
 // the height the fish and the rings are drawn at: a decal is tested at 3.5 px over its z0 (engine.js DECAL_H), the water
 // at 0 and a lily pad at 1 (groundbake.js LILY_Z less the ground's sink) - so the pads cover what swims under them
@@ -443,12 +444,61 @@ export function fishSprite(S, vk, b) {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const o = fishPx(S, vk, b, x + 0.5 - w / 2, y + 0.5 - h / 2); if (o) px(G, x, y, o.c, o.a); }
   return G;
 }
-// a fish in the air (leaping): a sprite of its own, facing one of eight ways, bright in the light
-export function leapSprite(S, vk, d8) {
-  const n = S.L + 4, G = gb(n, n, n / 2, n / 2), a = d8 * Math.PI / 4, c = Math.cos(a), s = Math.sin(a);
+// A fish in the air (leaping): a sprite of its own, facing one of eight ways, bright in the light. Out of the water it
+// is seen from the side (the owner, 11-23: "the salmon leaping (tail, splash)" - it was the swimming fish's shape from
+// above, held stiff: a bar with a twig for a tail): arched, its back up, a deep flank with a pale belly, an eye, a
+// dorsal fin, and a broad forked tail that flicks (bi -1 | 0 | 1). (u, v) art px from its middle, u forward, -v its back.
+const mixc = (a, b, k) => [Math.round(a[0] + (b[0] - a[0]) * k), Math.round(a[1] + (b[1] - a[1]) * k), Math.round(a[2] + (b[2] - a[2]) * k)];
+const EYE = [14, 16, 20], WHITE = [255, 255, 255];
+function leapPx(S, vk, bi, u, v) {
+  const L = S.L, t = (u + L / 2) / L;
+  if (t < 0 || t > 1) return null;
+  const H = Math.max(1.3, S.W * 0.56), arch = L * 0.1, tl = t < 0.35 ? (0.35 - t) / 0.35 : 0;
+  const w = v - (arch * (0.55 - Math.sin(Math.PI * t)) + bi * tl * tl * 1.7);   // (from its middle line: arched, the tail flicked)
+  const K = S === SP.koi ? KOI[vk % KOI.length] : null, fin = K ? KOI_FIN : S.fin;
+  if (t < 0.2) {   // the tail: fanning from the wrist, forked
+    const k = (0.2 - t) / 0.2, hw = H * (0.42 + 0.95 * k);
+    if (Math.abs(w) > hw || (L > 6 && k > 0.5 && Math.abs(w) < hw * 0.42 * ((k - 0.5) / 0.5))) return null;
+    OUT.c = fin; OUT.a = 255; return OUT;
+  }
+  const kh = t > 0.62 ? (t - 0.62) / 0.38 : 0, hd = t > 0.62 ? H * Math.sqrt(Math.max(0, 1 - kh * kh * kh)) : H * (0.42 + 0.58 * sstep((t - 0.2) / 0.42));
+  if (Math.abs(w) > hd) {
+    if (L > 6 && t > 0.4 && t < 0.6 && w < 0 && w > -hd - 1.2) { OUT.c = fin; OUT.a = 255; return OUT; }   // (the dorsal fin)
+    return null;
+  }
+  const r = w / Math.max(0.6, hd), iu = Math.round(u * 1.4), iv = Math.round(w);
+  OUT.a = 255;
+  if (L > 6 && t > 0.84 && t < 0.93 && r > -0.6 && r < 0.15) { OUT.c = EYE; return OUT; }
+  if (K) {
+    let col = r > 0.45 ? K.side || mixc(K.base, WHITE, 0.3) : K.base;
+    if (K.tancho) { if (t > 0.72 && t < 0.92 && r < 0.2) col = K.mark; }
+    else if (K.mark && hh(Math.floor((u + 12) / 2.6) + vk * 31, Math.floor((w + 6) / 2) + vk * 7, 3) < K.p) col = K.mark;
+    OUT.c = col; return OUT;
+  }
+  const back = S.flash ? SILVER_FLASH[0] : S.back, side = S.flash ? SILVER_FLASH[1] : S.side;
+  let col = r < -0.25 ? back : r > 0.5 ? mixc(side, WHITE, 0.38) : side;   // (its back, its flank, the pale belly)
+  if (r <= 0.5) switch (S.marks) {
+    case 'bars': if (t > 0.25 && t < 0.78 && (Math.floor(u + L) & 1) === 0) col = S.mark; break;
+    case 'spots': if (hh(iu * 7 + 3, iv * 13 + 5, 11) < 0.2) col = S.mark; break;
+    case 'stripe': if (r > -0.1 && r < 0.35 && t > 0.2 && t < 0.85) col = S.mark; break;
+    case 'bands': if (Math.abs(t - 0.66) < 0.09 || Math.abs(t - 0.36) < 0.08) col = S.mark; break;
+    case 'scales': if (((Math.floor(u + L) + Math.floor(w + 9)) % 3) === 0 && t < 0.85) col = S.mark; break;
+  }
+  if (t > 0.84 && S.head) col = r > 0.5 ? mixc(S.head, WHITE, 0.3) : S.head;   // (a salmon's green head)
+  OUT.c = col; return OUT;
+}
+export function leapSprite(S, vk, d8, bi = 0) {
+  if (S.jelly || S.crab || S.ray) {   // (none of these leaps: kept as they are seen from above)
+    const n0 = S.L + 4, G0 = gb(n0, n0, n0 / 2, n0 / 2), a0 = d8 * Math.PI / 4, c0 = Math.cos(a0), s0 = Math.sin(a0);
+    for (let y = 0; y < n0; y++) for (let x = 0; x < n0; x++) { const X = x + 0.5 - n0 / 2, Y = y + 0.5 - n0 / 2, o = fishPx(S, vk, 0, X * c0 + Y * s0, -X * s0 + Y * c0); if (o && o.a > 200) px(G0, x, y, o.c, 255, 2); }
+    return G0;
+  }
+  // (its back is up the screen whichever way it goes: going left the side seen is mirrored; straight up or down its
+  // back is to the left)
+  const n = S.L + 8, G = gb(n, n, n / 2, n / 2), a = d8 * Math.PI / 4, c = Math.cos(a), s = Math.sin(a), up = c < -0.01 || (Math.abs(c) < 0.01 && s > 0) ? -1 : 1;
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-    const X = x + 0.5 - n / 2, Y = y + 0.5 - n / 2, o = fishPx(S, vk, 0, X * c + Y * s, -X * s + Y * c);
-    if (o && o.a > 200) px(G, x, y, o.c, 255, 2);
+    const X = x + 0.5 - n / 2, Y = y + 0.5 - n / 2, o = leapPx(S, vk, bi, X * c + Y * s, (-X * s + Y * c) * up);
+    if (o) px(G, x, y, o.c, 255, 2);
   }
   return G;
 }
@@ -499,10 +549,10 @@ function fishKey(M, s, S, vk, fr) {
   const i = (vk + 2) * 4 + fr;
   return a[i] || (a[i] = { k: `wlf|${s}|${vk}|${fr}`, mk: () => fishSprite(S, vk, BEND[fr]) });
 }
-function leapKey(M, s, S, vk, d8) {
+function leapKey(M, s, S, vk, d8, bi = 0) {
   let a = M.get(s); if (!a) M.set(s, a = []);
-  const i = (vk + 2) * 8 + d8;
-  return a[i] || (a[i] = { k: `wlj|${s}|${vk}|${d8}`, mk: () => leapSprite(S, S.flash ? 1 : vk, d8) });
+  const i = ((vk + 2) * 8 + d8) * 3 + bi + 1;
+  return a[i] || (a[i] = { k: `wlj|${s}|${vk}|${d8}|${bi}`, mk: () => leapSprite(S, S.flash ? 1 : vk, d8, bi) });
 }
 
 export class WaterLife {
@@ -774,31 +824,36 @@ export class WaterLife {
       const up = this.rnd() < CLIMB.ok && this._above(m, f);
       if (up) {
         up.n = Math.max(CLIMB.stages[0], Math.min(CLIMB.stages[1], Math.round(up.h / CLIMB.step))); up.i = 0;
-        up.ph = 'leap'; up.t0 = now; up.dur = CLIMB.leap; up.z0 = 0;
+        // (first across the pool to the foot of the falls - 'in' - then up its face)
+        up.ph = 'in'; up.t0 = now; up.dur = CLIMB.leap * (0.7 + Math.hypot(up.xf - f.x, up.yf - f.y) / 90); up.z0 = 0;
         f.air = now; f.airT = 1e9; f.airV = 0; f.climb = up; f.az = 0;
-        this._ring(f.x, f.y, 6, 1);
-        if (this.onSplash) this.onSplash(f.x, f.y, 5);
+        this._splash(f.x, f.y, 5);
         return true;
       }
       f.air = now; f.airT = 0.7 + this.rnd() * 0.25; f.airV = 0; f.airBack = { x: f.x, y: f.y, r: 18 + this.rnd() * 16 };
-      this._ring(f.x, f.y, 5, 0.9);
-      if (this.onSplash) this.onSplash(f.x, f.y, 4);
+      this._splash(f.x, f.y, 4);
       return true;
     }
     if (!clearAt(m, f.x + c * sp * T0, f.y + s * sp * T0, f.c, 8)) return false;
     f.air = now; f.airT = T0; f.airV = sp;
-    this._ring(f.x, f.y, 5, 0.9);
-    if (this.onSplash) this.onSplash(f.x, f.y, 3);
+    this._splash(f.x, f.y, 3);
     return true;
   }
-  // the water above the falls a salmon at its foot leaps for: { x0, y0 (where it leaves), x1, y1, c1 (its class), h } or null
+  // The climb a salmon in a falls' pool leaps for: { x0, y0 (where it leaves the water), xf, yf (the foot of the falls:
+  // the pool's water under the curtain), x1, y1, c1 (the water above, its class), h (yf to y1) } or null. Only where the
+  // falls comes down into the fish's own water and the foot is a leap away over water (CLIMB.reach): it climbed the air
+  // over the pool, or over the bank where a falls lands short of its pool (the gorge's, seen 11-24) - there it leaps at
+  // the falls and falls back, no more.
   _above(m, f) {
     const F = this.falls || (this.falls = fallsOf(m));
     let q = null;
     for (const o of F) if (Math.abs(f.x - o.x) < o.w / 2 + 48 && f.y > o.y - 12 && f.y < o.y + 150 && (!q || Math.abs(f.x - o.x) < Math.abs(f.x - q.x))) q = o;
     if (!q) return null;
-    const x1 = Math.max(q.x - q.w / 2 + 8, Math.min(q.x + q.w / 2 - 8, f.x));
-    for (let d = q.h + CLIMB.up[0]; d <= q.h + CLIMB.up[1]; d += 8) { const y = q.y - d, c = wcls(m, x1, y); if (c && clearAt(m, x1, y, c, 8)) return { x0: f.x, y0: f.y, x1, y1: y, c1: c, h: f.y - y }; }
+    const x1 = Math.max(q.x - q.w * 0.3, Math.min(q.x + q.w * 0.3, f.x));   // (well inside the curtain: its edges are rock)
+    let yf = NaN;
+    for (let d = 0; d <= CLIMB.foot; d += 4) if (wcls(m, x1, q.y + d) === f.c) { yf = q.y + d + 4; break; }
+    if (!(yf === yf) || wcls(m, x1, yf) !== f.c || Math.hypot(x1 - f.x, yf - f.y) > CLIMB.reach || wcls(m, (x1 + f.x) / 2, (yf + f.y) / 2) !== f.c) return null;
+    for (let d = q.h + CLIMB.up[0]; d <= q.h + CLIMB.up[1]; d += 8) { const y = q.y - d, c = wcls(m, x1, y); if (c && clearAt(m, x1, y, c, 8)) return { x0: f.x, y0: f.y, xf: x1, yf, x1, y1: y, c1: c, h: yf - y }; }
     return null;
   }
   _airStep(m, f, now, dt) {
@@ -807,8 +862,16 @@ export class WaterLife {
       // up the face in stages: kept at the foot in front of the falls, raised by its height on the face (so it's drawn
       // over the curtain) - a leap in an arc, a splash into the falling water, a rest there nosing into it, the next leap;
       // or a slip and a drop back to the pool. The last leap carries it into the water above, and on upstream
-      const zAt = (i) => (U.h * i) / U.n, xAt = (z) => U.x0 + (U.x1 - U.x0) * (z / U.h);
+      const zAt = (i) => (U.h * i) / U.n;
       const q = Math.min(1, (now - U.t0) / U.dur);
+      if (U.ph === 'in') {   // (out of the pool and across it in one arc, into the white water at the foot)
+        f.x = U.x0 + (U.xf - U.x0) * q; f.y = U.y0 + (U.yf - U.y0) * q; f.az = Math.sin(q * Math.PI) * (CLIMB.arc + 5);
+        f.a = Math.atan2(U.yf - U.y0 - Math.cos(q * Math.PI) * 40, U.xf - U.x0);
+        if (q < 1) return;
+        f.x = U.xf; f.y = U.yf; f.az = 0; this._splash(f.x, f.y, 4);
+        U.ph = 'leap'; U.t0 = now; U.dur = CLIMB.leap;
+        return;
+      }
       if (U.ph === 'rest') {
         f.az = U.z0 + Math.sin(now * 7 + f.ph) * 0.5; f.a = -Math.PI / 2 + Math.sin(now * 16 + f.ph) * 0.12;
         if (q < 1) return;
@@ -819,27 +882,25 @@ export class WaterLife {
       if (U.ph === 'drop') {   // (it slipped: tumbling back down the face into the pool)
         f.az = U.z0 * (1 - q * q); f.a = -Math.PI / 2 + q * Math.PI * 1.3;
         if (q < 1) return;
-        f.air = -1; f.climb = null; f.az = 0; f.y = U.y0; f.hide = now + 2.5; f.v = f.S.cruise;
-        this._ring(f.x, f.y, 7, 1); this._ring(f.x, f.y, 4, 0.7);
-        if (this.onSplash) this.onSplash(f.x, f.y, 5);
+        f.air = -1; f.climb = null; f.az = 0; f.x = U.xf; f.y = U.yf; f.hide = now + 2.5; f.v = f.S.cruise;
+        this._splash(f.x, f.y, 6);
         return;
       }
       // a leap: from this stage's height to the next, bowed out over the white water
       const z1 = zAt(U.i + 1);
-      f.az = U.z0 + (z1 - U.z0) * q + Math.sin(q * Math.PI) * CLIMB.arc; f.x = xAt(U.z0 + (z1 - U.z0) * q); f.y = U.y0;
+      f.az = U.z0 + (z1 - U.z0) * q + Math.sin(q * Math.PI) * CLIMB.arc; f.x = U.xf; f.y = U.yf;
       f.a = -Math.PI / 2 + Math.sin(q * 9) * 0.25;
       if (q < 1) return;
       U.i++; U.z0 = z1;
       if (U.i < U.n) {   // (into the falling water: a splash where it hit, then a rest)
-        if (this.onSplash) this.onSplash(f.x, U.y0 - z1, 3);
+        this._splash(f.x, f.y, 3, z1);
         U.ph = 'rest'; U.t0 = now; U.dur = CLIMB.rest[0] + this.rnd() * (CLIMB.rest[1] - CLIMB.rest[0]);
         return;
       }
       {
         f.air = -1; f.climb = null; f.x = U.x1; f.y = U.y1; f.c = U.c1; f.az = 0;
         f.mig = now + CLIMB.swim[0] + this.rnd() * (CLIMB.swim[1] - CLIMB.swim[0]); f.v = f.S.cruise * 2;
-        this._ring(f.x, f.y, 7, 1);
-        if (this.onSplash) this.onSplash(f.x, f.y, 5);
+        this._splash(f.x, f.y, 5);
         this.n.up = (this.n.up || 0) + 1; (this.ups ||= []).push({ x: f.x, y: f.y, c: f.c, h: U.h }); if (this.ups.length > 20) this.ups.shift();
       }
       return;
@@ -848,9 +909,24 @@ export class WaterLife {
     else { f.x += Math.cos(f.a) * f.airV * dt; f.y += Math.sin(f.a) * f.airV * dt; }
     if (k >= 1) {
       f.air = -1; f.hide = now + 2.5; f.v = f.S.cruise;
-      this._ring(f.x, f.y, 7, 1); this._ring(f.x, f.y, 4, 0.7);
-      if (this.onSplash) this.onSplash(f.x, f.y, f.S.L > 8 ? 6 : 4);
+      this._splash(f.x, f.y, f.S.L > 8 ? 6 : 4);
     }
+  }
+  // A fish breaking the water or falling back into it (k: its size, 3 small .. 6 a salmon back from a fall; z: how high
+  // up a falls' face it hit): rings, a burst of spray thrown up from the place and flecks of foam left on the water,
+  // and the page's own drops. (It was a ring and a few drops: the salmon's leaps left the water nearly unmarked.)
+  _splash(x, y, k, z = 0) {
+    const now = this.now, big = k >= 5;
+    if (!z) { this._ring(x, y, big ? 7 : 5, 1); if (big) this._ring(x, y, 4, 0.7); }
+    for (let i = 0, n = Math.round(k * 0.7); i < n; i++) {
+      const p = this._puff();
+      if (!p) break;
+      const t = this.rnd() * TAU, out = 10 + this.rnd() * (8 + k * 3), foam = !z && i % 3 === 2;
+      p.on = true; p.foam = foam; p.churn = false; p.t0 = now; p.life = foam ? 0.9 + this.rnd() * 0.8 : 0.28 + this.rnd() * 0.24;
+      p.x = x + Math.cos(t) * 2; p.y = y + Math.sin(t) * 2; p.z = foam ? 0 : z + 2 + this.rnd() * 3; p.vx = Math.cos(t) * out; p.vy = Math.sin(t) * out * 0.7;
+      p.vz = foam ? 0 : 22 + this.rnd() * (10 + k * 4); p.k = 0.9; p.s = foam ? Math.floor(this.rnd() * 2) : 0; p.lift = 0;
+    }
+    if (this.onSplash) this.onSplash(x, y - z, k);
   }
   _ring(x, y, r, k) { const R = this.rings, j = this.ri * 5; R[j] = x; R[j + 1] = y; R[j + 2] = this.now; R[j + 3] = r; R[j + 4] = k; this.ri = (this.ri + 1) % MAXR; }
 
@@ -995,8 +1071,16 @@ export class WaterLife {
       if (f.vis <= 0) continue;
       if (f.air >= 0) {
         // in the air: the fish itself, up over the water, its shadow down on it
-        const k = Math.min(1, (now - f.air) / f.airT), z = f.climb ? f.az : Math.sin(k * Math.PI) * (8 + S.L * 1.2) * (f.airBack ? 1.7 : 1), d8 = ((Math.round(f.a / (Math.PI / 4)) % 8) + 8) % 8;   // (a salmon at the falls: higher, up the white water)
-        const ke = leapKey(KC.j, f.s, S, f.vk, d8), key = conv(ke.k, ke.mk);
+        const k = Math.min(1, (now - f.air) / f.airT), zm = (8 + S.L * 1.2) * (f.airBack ? 1.7 : 1), z = f.climb ? f.az : Math.sin(k * Math.PI) * zm;   // (a salmon at the falls: higher, up the white water)
+        // (the way it points is the way it goes on the screen: nose up as it rises, over at the top, nose down into the
+        // water - a leap straight up and back lies over on its side at the top; a climber's is its own)
+        let pa = f.a;
+        if (!f.climb) {
+          const ck = Math.cos(k * Math.PI), out = f.airBack ? ck * Math.PI * f.airBack.r / f.airT : f.airV, dz = ck * Math.PI * zm / f.airT;
+          pa = f.airBack && Math.abs(ck) < 0.3 ? (f.ph % 2 < 1 ? 0 : Math.PI) : Math.atan2(Math.sin(f.a) * out - dz, Math.cos(f.a) * out);
+        }
+        const d8 = ((Math.round(pa / (Math.PI / 4)) % 8) + 8) % 8, bi = Math.max(-1, Math.min(1, Math.round(Math.sin(now * 21 + f.ph) * 1.4)));
+        const ke = leapKey(KC.j, f.s, S, f.vk, d8, bi), key = conv(ke.k, ke.mk);
         if (key && E.drawSprite) { const o = this.jo || (this.jo = { alpha: 1, flipX: false, flash: 0, xray: false, shadow: true, tint: null, air: true }); E.drawSprite(key, f.x, f.y, z, o); }
         continue;
       }

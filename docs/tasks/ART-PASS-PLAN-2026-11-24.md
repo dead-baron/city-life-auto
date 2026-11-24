@@ -26,7 +26,9 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
    falls); the evening's glitter; the sea's blocks gone (its slope blended from the coasts near it, DEVLOG "The water pass, 2"); seagrass and coral edges; koi live
    instead of standing on the water; small waters get a pond's fish (moon jellies were in the garden pond - the "white
    blotches"); hot springs and ground pools as still water, the onsen no longer a white shape after dark.
-   **Left in water:** the salmon's leap (tail, splash); water beside docks checked after the world batch; reflections,
+   Then the salmon's leap (DEVLOG "The water pass, 3": seen from the side with a tail, a real splash, the climb from
+   the foot of the falls) - page-side.
+   **Left in water:** water beside docks checked after the world batch; reflections,
    ripples and wakes against the concepts; a harbour place for the recorder ('marina' is a shop street); his eye on
    the evening glitter, on the sea now deeper blue offshore, and on whether the calm sparkle reads flat.
 2. **The biomes, in the order approved 11-21 12:12** - pine/oak forest and meadow (started), redwood, mountain,
@@ -45,7 +47,10 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
    - Coast and jungle: Coral Cay's pool and stream above the falls; kelp wrack and seaweed on the tideline; a rock
      fishing spot; cypress knees in the marsh; the sea cave placeholder (into a cliff or headland the land has, N3,
      N8). 11-23: the sea cave's square rocks, the sea stacks in a line, shells too thick, hammocks too long.
-   - The water's edges: rocks, cliffs and banks against E2 and NR1.
+   - The water's edges: rocks, cliffs and banks against E2 and NR1. Falls that land short of their pool (found
+     11-24, the foot not in water straight below it: the gorge's by 76 px - seen, a strip of dry bank between falls
+     and pond -, a jungle falls by 40, three small falls, one coast fall by 128; the ledge falls' 32 may be only the
+     lip's tile): a world change, with a lint row, in this step's batch.
    - 11-23, across biomes: the dark outlines on some trees and plants - set to the one outline rule (a dark tone of
      the neighbouring colour, never black), not a new rule.
 3. Rocks and the hand-made places' props brought under the variety test (today it covers plants).

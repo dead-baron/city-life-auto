@@ -27047,3 +27047,27 @@ Test: world3waterbodies - between neighbouring sea tiles four tiles out and more
 most over 7,114 pairs; a change of coast was 0.33 and more). Also run: waterbake, water, surf, world3water, calmwater,
 poolwater, desertwaters, perf (the bake's budget holds with the three transforms), mapwindow, dmath. Not run: the
 whole suite. Not looked at: harbours and quays (the recorder has no harbour place yet), the islands, a phone.
+
+## 2026-11-24 · The water pass, 3: the salmon's leap - on branch `fable-art-1124`
+The owner, 11-23: "the salmon leaping (tail, splash)". Filmed at the gorge and at a river falls (a page script that
+keeps the frames with a fish in the air; `near falls` is new in server/dev.js for it), and the sprites drawn large.
+- **The tail.** A fish in the air was the swimming fish's shape from above, held stiff: a bar with a one-pixel stem
+  and a twig fork. Out of the water it is now seen from the side (waterlife.js leapPx): arched, back up, a flank with
+  a pale belly, an eye, a dorsal fin and a broad forked tail that flicks (three sprites a direction). Every fish that
+  leaps - salmon, trout, mullet, bass, carp, chub, the silver fish, koi - not the salmon alone. And it points the
+  way it goes on the screen: nose up rising, over on its side at the top, nose down into the water.
+- **The splash.** A leap marked the water with one ring and a few of the page's drops. `_splash`: rings, spray
+  thrown up and soon gone, foam flecks left on the water - where it leaves, where it lands, and against the falling
+  water at each stage of a climb.
+- **The climb.** A salmon "up the face in stages" climbed from wherever it lay in the pool: through the air over the
+  water - or, at the gorge, over a strip of dry bank, because that falls lands 76 px short of its pond. A climb now
+  starts with a leap across the pool to the foot of the falls ('in'), well inside the curtain, and only where the
+  foot is in the fish's own water within a leap (CLIMB.foot, CLIMB.reach); elsewhere it leaps at the falls and falls
+  back. The gorge's dry foot is a world fault, listed for the biomes' batch with the other falls like it
+  (docs/tasks/ART-PASS-PLAN-2026-11-24.md).
+Page-side: no re-bake. Tests (test/waterlife.test.js, each seen to fail on the old code): the climb's foot is in the
+pool the fish left, a leap away, and the stages go up from it; a leaping fish has its length, a flank, a tail broader
+than its wrist that differs between the two beats; a splash throws spray, leaves foam and rings. Also run: perf (the
+page's budgets - waterlife loads lazily), mapwindow, world3waterbodies, guide, devtp, devplay. Not run: the whole
+suite. Seen in a running game (headless): a leap and fall back at the gorge, a climb's first stages at a river
+falls. Not seen: a climb's last leap over the top, the other species' leaps, a phone.
