@@ -27031,3 +27031,19 @@ copy): pier, surf beach, cove, garden pond, hot springs, pool, before and after.
 lakes, rivers, marsh, oasis, rain (shader paths they share were seen at the sea); no phone.
 Left in water: the salmon's leap; water beside docks; reflections, ripples and wakes against the concepts; a harbour
 for the recorder ('marina' finds a shop street). Seen on the way, not art: cars jammed on Coral Cay's jungle track.
+
+## 2026-11-24 · The water pass, 2: the sea's blocks - on branch `fable-art-1124`
+Left by part 1: the dark rectangle and the azure block off the surf beach, their edges wandering but still there. The
+sea's slope (depth per tile out) was the one nearest land tile's - 0.22 off sand, 0.55 off rock, 1.4 off a quay, rock's
+where no land lay within 24 tiles - so the depth stepped along a ruled line wherever that tile changed kind or ran
+out. Now (water.js coastSlopes) every kind of coast within 24 tiles counts by how near it is (1 / d^3, one distance
+transform a kind on landField's grid - exact, nothing that depends on the chunk's window), and from 10 to 22 tiles
+out every coast's slope comes to the same. Right by the shore the nearest coast's own still rules (the shallows by a
+beach, deep at a quay). Seen at the pier, the surf beach and the cove, noon and sunset: no blocks; a shelf of clear
+shallows along the sand, then deep. A change of look with it, for the owner's eye: the sea is a deeper blue offshore -
+the wide turquoise that reached 20 tiles out off a sandy coast now ends nearer in (two numbers, FAR0 / FAR1, bring it
+back; the test's count of see-through sea off Sunset Beach went 459,916 -> 399,121 px).
+Test: world3waterbodies - between neighbouring sea tiles four tiles out and more the slope never steps (0.071 at
+most over 7,114 pairs; a change of coast was 0.33 and more). Also run: waterbake, water, surf, world3water, calmwater,
+poolwater, desertwaters, perf (the bake's budget holds with the three transforms), mapwindow, dmath. Not run: the
+whole suite. Not looked at: harbours and quays (the recorder has no harbour place yet), the islands, a phone.

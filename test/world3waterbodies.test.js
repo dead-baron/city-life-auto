@@ -16,6 +16,7 @@ import { bakeGround, CHUNK } from '../client/art2/game/groundbake.js';
 import { F_GROUND, F_WATER, F_WET, F_NOCAST } from '../client/art2/gbuf.js';
 import { prepare } from '../tools/world3-build.mjs';
 import { WaterLife, POCKET } from '../client/art2/game/waterlife.js';
+import { seaFields, WK } from '../client/art2/water.js';
 
 test('World v3: the water bodies - which water is which, which way it runs; the bake reads them', { timeout: 300000 }, () => {
   const prep = prepare();
@@ -75,6 +76,21 @@ test('World v3: the water bodies - which water is which, which way it runs; the 
   assert.ok(lake.still > 50000 && !lake.bad, `the lake lies still (${lake.still} px)`);
   assert.ok(beach.seaClear > 20000 && !beach.bad, `the sea off the beach is see-through (${beach.seaClear} px)`);
 
+  // The sea's bed falls away without a ruled line (the water pass, 11-24): its slope was the one nearest land tile's -
+  // 0.22 off sand, 0.55 off rock, 1.4 off a quay - and stepped where that changed kind, a dark rectangle off the surf
+  // beach. Between neighbouring sea tiles four tiles out and more, the slope now never steps (water.js coastSlopes).
+  let step = 0, pairs = 0;
+  for (const [tx, ty] of [[2850, 3270], [2850 - C, 3270], [2850, 3270 - C], [2850 - C, 3270 + C]]) {
+    bakeGround(m, Math.floor(tx / C), Math.floor(ty / C), { quality: 1, seed: 1337 });
+    const Fs = seaFields(), TN = Math.round(Math.sqrt(Fs.k.length));
+    for (let j = 0; j < TN - 1; j++) for (let i = 0; i < TN - 1; i++) {
+      const k = j * TN + i;
+      if (Fs.k[k] !== WK.SEA) continue;
+      for (const kk of [k + 1, k + TN]) if (Fs.k[kk] === WK.SEA && Math.min(Fs.ld[k], Fs.ld[kk]) >= 4) { pairs++; step = Math.max(step, Math.abs(Fs.sl[k] - Fs.sl[kk])); }
+    }
+  }
+  console.log('the sea\'s slope', JSON.stringify({ pairs, step: +step.toFixed(3) }));
+  assert.ok(pairs > 3000 && step < 0.15, `the sea's slope never steps between neighbouring tiles (${step.toFixed(3)} over ${pairs} pairs; a change of coast was 0.33 and more)`);
   // A hot spring's pool and a swimming pool laid in the ground: still inland water with a pond's word (224..231) - they
   // were baked as open sea, no word at all (the light pass ran the sea's waves over them) - and a spring's glow is its
   // own, dim: a cream one over the whole pool fed the bloom till the onsen was a white shape after dark (11-24).

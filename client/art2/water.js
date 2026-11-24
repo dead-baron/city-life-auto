@@ -1154,7 +1154,7 @@ const PKW = [];
 function ensure(n) {
   if (F.n === n) return;
   F.n = n; F.k = new Uint8Array(n); F.st = new Uint8Array(n); F.ld = new Float32Array(n); F.dep = new Float32Array(n); F.fx = new Float32Array(n); F.fy = new Float32Array(n);
-  F.fv = new Float32Array(n); F.sa = new Float32Array(n); F.su = new Float32Array(n); F.ch = new Int16Array(n); F.bs = new Float32Array(n); F.cst = new Uint8Array(n); F.tmp = new Float32Array(n);
+  F.fv = new Float32Array(n); F.sa = new Float32Array(n); F.su = new Float32Array(n); F.ch = new Int16Array(n); F.bs = new Float32Array(n); F.cst = new Uint8Array(n); F.sl = new Float32Array(n); F.tmp = new Float32Array(n);
   F.rp = new Float32Array(n); F.pk = new Float32Array(n); F.pi = new Int16Array(n);
   F.mx = new Float32Array(n); F.mk = new Uint8Array(n); F.ms = new Uint8Array(n); F.mr = new Float32Array(n); F.wd = new Uint8Array(n);
 }
@@ -1203,6 +1203,53 @@ function landField(M, TX0, TY0, TN) {
     D[k] = v; Hh[k] = h;
   }
   return G;
+}
+// How steeply the sea's bed falls away from each kind of coast (depth per tile out): off sand a shelf (the tropics'
+// wider), off rock - a cliff, the stacks - steeper, off a quay or a seawall deep at once; and SEA_FAR, what every
+// coast's comes to far out.
+const SEA_SLOPE = [0.55, 0.22, 1.4], SAND_TROPIC = 0.14, SEA_FAR = 0.55, FAR0 = 10, FAR1 = 22;
+const coastOf = (t) => (t === T.SAND ? 1 : t === T.SIDEWALK || t === T.ROAD || t === T.BUILDING || t === T.LOT || t === T.PLAZA ? 2 : 0);
+// The sea's slope at each tile of the window (the water pass, 11-24). It was the one nearest land tile's: where that
+// stopped being sand - a pier's foot, a headland - the depth stepped along a ruled line, a dark rectangle off the surf
+// beach. Now each kind of coast within LAND_R counts by how near it is (1 / d^3: its own close in, shared out where two
+// are as far), and from FAR0 to FAR1 tiles out every coast's slope comes to the same: no line where the coast's kind
+// changes, none where it ends. The distances: landField's grid, one transform a kind (rock, sand, quay).
+export const seaFields = () => ({ k: F.k, ld: F.ld, sl: F.sl, dep: F.dep, cst: F.cst });   // (the last window's, for the tests)
+const CT = { n: 0, d: [null, null, null] };
+function coastSlopes(M, TX0, TY0, TN, G) {
+  const n = G * G, X0 = TX0 - LAND_R, Y0 = TY0 - LAND_R, S2 = 1.4142;
+  if (CT.n !== n) { CT.n = n; CT.d = [new Float32Array(n), new Float32Array(n), new Float32Array(n)]; }
+  for (let c = 0; c < 3; c++) CT.d[c].fill(1e6);
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { const h = DT.d[j * G + i] === 0 ? DT.hit[j * G + i] : -1; if (h >= 0) CT.d[coastOf(M.tiles[h])][j * G + i] = 0; }
+  for (let c = 0; c < 3; c++) {
+    const D = CT.d[c];
+    for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+      const k = j * G + i; let v = D[k];
+      if (i > 0 && D[k - 1] + 1 < v) v = D[k - 1] + 1;
+      if (j > 0) { if (D[k - G] + 1 < v) v = D[k - G] + 1; if (i > 0 && D[k - G - 1] + S2 < v) v = D[k - G - 1] + S2; if (i < G - 1 && D[k - G + 1] + S2 < v) v = D[k - G + 1] + S2; }
+      D[k] = v;
+    }
+    for (let j = G - 1; j >= 0; j--) for (let i = G - 1; i >= 0; i--) {
+      const k = j * G + i; let v = D[k];
+      if (i < G - 1 && D[k + 1] + 1 < v) v = D[k + 1] + 1;
+      if (j < G - 1) { if (D[k + G] + 1 < v) v = D[k + G] + 1; if (i < G - 1 && D[k + G + 1] + S2 < v) v = D[k + G + 1] + S2; if (i > 0 && D[k + G - 1] + S2 < v) v = D[k + G - 1] + S2; }
+      D[k] = v;
+    }
+  }
+  for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
+    const k = j * TN + i;
+    if (F.k[k] !== WK.SEA) continue;
+    const q = (j + LAND_R) * G + i + LAND_R;
+    let ws = 0, ss = 0;
+    for (let c = 0; c < 3; c++) {
+      const d = CT.d[c][q];
+      if (d > LAND_R + 0.5) continue;
+      const dd = Math.max(0.5, d - 0.5), w = 1 / (dd * dd * dd);
+      ws += w; ss += w * (c === 1 && F.st[k] === S.tropic ? SAND_TROPIC : SEA_SLOPE[c]);
+    }
+    const sl = ws ? ss / ws : SEA_FAR, u = Math.min(1, Math.max(0, (F.ld[k] - FAR0) / (FAR1 - FAR0)));
+    F.sl[k] = sl + (SEA_FAR - sl) * u * u * (3 - 2 * u);
+  }
 }
 // Where a river runs out into the sea (the owner, 10-22: "these water connections ... unnatural"): the two waters blend
 // over a stretch, not at a seam - the river's water carried out into the sea in a plume, the sea's up into the mouth a
@@ -1342,12 +1389,13 @@ export function waterTiles(C, mats, TN) {
   }
   if (!any) return;
   F.on = true;
+  coastSlopes(M, TX0, TY0, TN, G);
   // the channels: each tile of their water takes the nearest centre line's - its kind, look, the way it runs, how far
   // along it and across it (px) it is
   const chs = channels(M);
   if (chs) channelTiles(chs, TX0, TY0, TN);
   mouths(M, TX0, TY0, TN);
-  for (let k = 0; k < n; k++) if (F.k[k]) F.dep[k] = depthOf(F.k[k], F.ld[k], F.cst[k], F.st[k]) * (F.mr[k] < MOUTH_R ? 0.15 + 0.85 * (F.mr[k] / MOUTH_R) ** 2 : 1);   // (off a river's mouth the sea is shallow: the bar the river builds, fanning out)
+  for (let k = 0; k < n; k++) if (F.k[k]) F.dep[k] = depthOf(F.k[k], F.ld[k], F.cst[k], F.st[k], F.k[k] === WK.SEA ? F.sl[k] : -1) * (F.mr[k] < MOUTH_R ? 0.15 + 0.85 * (F.mr[k] / MOUTH_R) ** 2 : 1);   // (off a river's mouth the sea is shallow: the bar the river builds, fanning out)
   // (blurred twice over the water's tiles: where a shallow creek runs into a deep lake the bed falls away over a few
   // tiles, not in the tiles' steps)
   const T2 = F.tmp;
@@ -1473,9 +1521,9 @@ const CLAR_K = [1, 1, 1.15, 0.75, 1, 1, 1];
 // how much the bed's depth wanders (the sea's sandbanks and hollows; a pond's bowl is smooth)
 const DEPTH_N = [0.36, 0.36, 0.3, 0.3, 0.25, 0.1, 0.25];
 // metres of water at a pixel: kind, the tiles to the shore, the sea's coast (0 rock, 1 sand, 2 a quay), its look
-function depthOf(k, dt, cst, st) {
+function depthOf(k, dt, cst, st, sl = -1) {   // (sl: the sea's slope there, coastSlopes - without it the nearest coast's own, right by the shore)
   switch (k) {
-    case WK.SEA: { const s = cst === 1 ? (st === S.tropic ? 0.14 : 0.22) : cst === 2 ? 1.4 : 0.55, e = dt - 10; return s * dt + (e > 0 ? e * e * 0.08 : 0); }
+    case WK.SEA: { const s = sl >= 0 ? sl : cst === 1 ? (st === S.tropic ? SAND_TROPIC : SEA_SLOPE[1]) : SEA_SLOPE[cst === 2 ? 2 : 0], e = dt - 10; return s * dt + (e > 0 ? e * e * 0.08 : 0); }
     case WK.LAKE: { const e = dt - 8; return Math.min(14, 0.32 * dt + (e > 0 ? e * e * 0.05 : 0)); }
     case WK.POND: return Math.min(3.2, 0.55 * dt);
     case WK.CREEK: return Math.min(2.4, 0.3 * dt);
