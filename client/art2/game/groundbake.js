@@ -992,8 +992,12 @@ function paint(C, G) {
         const ti = (Math.floor(Y / TILE) - TY0) * TN + Math.floor(X / TILE) - TX0;
         if (m === M_.POOL || m === M_.SPRING) {
           const r = m === M_.POOL ? poolPx(C.M.pools, X, Y, d, seed) : springPx(X, Y, d, seed);
-          c = r.c; nx = r.nx; ny = r.ny; f = F_GROUND | F_WATER; b.wcode[gi] = 0;
-          if (r.e) { emi[j] = 255; emi[j + 1] = 246; emi[j + 2] = 222; emi[j + 3] = r.e; }
+          // (the water pass, 11-24: a pool or a hot spring laid in the ground was baked as open sea - no word, no
+          // inland flag - where a pool that is a sprite has been a still pond since 10-22 (chunkbake.js POOL_WORD): it
+          // is one too now, a pool clear to its floor, a spring milky. And a spring's glow is its own, dim: the cream
+          // one, over a whole pool, fed the bloom till the onsen was a white shape after dark)
+          c = r.c; nx = r.nx; ny = r.ny; f = F_GROUND | F_WATER | F_NOCAST; b.wcode[gi] = m === M_.POOL ? 230 : 224;
+          if (r.e) { const sp = m !== M_.POOL && r.e < 30; emi[j] = sp ? 60 : 255; emi[j + 1] = sp ? 92 : 246; emi[j + 2] = sp ? 84 : 222; emi[j + 3] = sp ? 1 : r.e; }
         } else {
           const r = waterPx(C, X, Y, d, ti, k00, vx, vy, TN, m === M_.SEA ? WK.SEA : m === M_.LAKE ? WK.LAKE : m === M_.POND ? WK.POND : WK.RIVER);
           c = r.c; nx = r.nx; ny = r.ny;

@@ -21,6 +21,14 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
    reflections, ripples and wakes tuned against the concepts. With it, from 11-23: waves forming out of a straight
    hard edge, underwater details with a hard edge near shore, the salmon's leap (tail, splash). His open question:
    whether the calmer sparkle reads flat.
+   **Done 11-24 (first batch, DEVLOG "The water pass, 1"; on branch `fable-art-1124`, waiting for the nature re-bake):**
+   the recorder at five looks; the shore wave; no long shadows on open water (the 11-23 rule had only reached the
+   falls); the evening's glitter; the sea's depth and look no longer cut in cells; seagrass and coral edges; koi live
+   instead of standing on the water; small waters get a pond's fish (moon jellies were in the garden pond - the "white
+   blotches"); hot springs and ground pools as still water, the onsen no longer a white shape after dark.
+   **Left in water:** the salmon's leap (tail, splash); water beside docks checked after the world batch; reflections,
+   ripples and wakes against the concepts; a harbour place for the recorder ('marina' is a shop street); his eye on
+   the evening glitter and on whether the calm sparkle reads flat.
 2. **The biomes, in the order approved 11-21 12:12** - pine/oak forest and meadow (started), redwood, mountain,
    desert, coast and jungle, the water's edges. For each: (a) rocks, logs, stumps and props at the game's pixel with
    variety; (b) its hand-made places set beside their concepts and corrected; (c) its missing pieces; (d) small found

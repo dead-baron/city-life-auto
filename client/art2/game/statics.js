@@ -2736,7 +2736,7 @@ function propItems(c, p, pi, I) {
     case 'bathpav': V('bpav', 'bathPavilion', [0.6]); lightAt(I, x, y + 26, 22, 120, [1, 0.78, 0.46], 1.5, 'lamp'); return;
     case 'onsenlodge': V('olodge', 'onsenLodge', [0.6]); lightAt(I, x, y + 70, 30, 190, [1, 0.76, 0.44], 1.6, 'window'); return;   // (nat5: the onsen at Granite Hot Springs - naturesites.js hotSprings)
     case 'bamboo': { const len = Math.round((p.len || 80) / 8) * 8, hd = qa(p.a || 0, 4); V(`bmb:${len}:${hd.toFixed(2)}`, 'bambooFence', [len, 30], hd); return; }
-    case 'koi': put(I, { key: `koi:${p.v || 0}:${qa(p.a || 0, 8).toFixed(2)}`, recipe: { t: 'koi', v: p.v || 0, a: qa(p.a || 0, 8) }, x, y, ext: [12, 12, 12, 12], pi }); return;
+    case 'koi': return;   // (the water pass, 11-24 - the owner, 11-17: "Koi fish drawn above the water, not under it". A koi laid as a prop was a picture standing on the pond; the koi are the live ones now, swimming under the surface where a pond has them marked: waterlife.js koiPond)
     case 'gravelgarden': put(I, { key: 'zen', recipe: { t: 'zen' }, x, y, ext: [70, 50, 70, 50], pi }); return;
     case 'beaverdam': V(`bdam:${p.len || 130}`, 'beaverDam', [p.len || 130]); return;
     case 'gnawstump': V(`gstump:${p.v || 0}`, 'gnawStump', [p.v || 0, 1 + (seed % 5)]); return;   // (the beavers' work round a pond)

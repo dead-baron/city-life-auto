@@ -1081,7 +1081,8 @@ function bedPx(bed, X, Y, distT, fine, seed) {
     }
     case 6: {   // a sandy seabed: ripples along the shore, seagrass meadows, a boulder now and then
       const g = vnc(X, Y, 61, seed + 61) + (vnc(X, Y, 13, seed + 63) - 0.5) * 0.25;
-      if (distT > 3 && g > 0.6) return sd(BED.grass, 0.25 + (g - 0.6) * 1.4 + (Math.sin(X * 0.9 + vnc(X, Y, 5, seed + 65) * 6) > 0.2 ? 0.3 : 0), x, y, 0.5);
+      const gs = 2 + vnc(X, Y, 53, seed + 91) * 2.6;   // (where the meadows start: it wanders, and they come in thin - no ruled edge three tiles out)
+      if (distT > gs && g > 0.6 + Math.max(0, gs + 1.6 - distT) * 0.14) return sd(BED.grass, 0.25 + (g - 0.6) * 1.4 + (Math.sin(X * 0.9 + vnc(X, Y, 5, seed + 65) * 6) > 0.2 ? 0.3 : 0), x, y, 0.5);
       const b = hh(Math.floor(X / 31), Math.floor(Y / 31), seed + 67) > 0.9 ? stoneOf(X, Y, 31, seed + 69, 0.35, BED.rock, BED.gran) : null;
       if (b) return b;
       const rip = Math.sin(X * 0.21 + Y * 0.09 + vnc(X, Y, 43, seed + 71) * 6);
@@ -1089,7 +1090,7 @@ function bedPx(bed, X, Y, distT, fine, seed) {
     }
     case 7: {   // a reef: coral heads in patches (lumpy, a few colours), white sand and seagrass between
       const w = worley(X + 0.5, Y + 0.5, 30, seed + 73, 0.9), r = (9 + 9 * w.h) * (0.75 + 0.5 * vnc(X, Y, 9, seed + 85));
-      if (distT > 2 && w.h > 0.35 && w.d1 < r && vnc(X, Y, 120, seed + 87) > 0.38) {
+      if (distT > 1.4 + vnc(X, Y, 47, seed + 93) * 1.6 && w.h > 0.35 && w.d1 < r && vnc(X, Y, 120, seed + 87) > 0.38) {
         const C = BED.coral[(w.h * 97 | 0) % BED.coral.length], f = worley(X + 0.5, Y + 0.5, 4, seed + 75, 0.9);
         return sd(C, 0.5 - w.d1 / r * 0.32 + (f.d2 - f.d1 < 0.8 ? -0.28 : 0.04) - (w.dx + w.dy) / r * 0.14, x, y, 0.4);
       }
@@ -1496,6 +1497,22 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     let kc = r < w00 ? k00 : r < w00 + w10 ? k00 + 1 : r < w00 + w10 + w01 ? k00 + TN : k00 + TN + 1;
     if (!F.k[kc]) kc = ti;
     if (F.k[kc]) { k = F.k[kc]; st = F.st[kc]; cst = F.cst[kc]; }
+    // (the water pass, 11-24 - the owner, 11-23: "underwater details with a hard edge". Out at sea the depth and the look
+    // (one coast's water or another's) were read off the nearest land tile, so the sea was cut into cells with ruled
+    // edges where the nearest land changed - a square of dark harbour water in a turquoise bay. The sea reads them a
+    // little way off now, by a slow noise (up to two tiles), and dithers the looks over a wider band: the edges wander.
+    // Within the window's margin of whole tiles: TP 4, PAD 48 px - groundbake.js.)
+    let kw = k00, vxw = vx, vyw = vy;
+    if (k === WK.SEA) {
+      const ox = (vnc(X, Y, 211, seed + 401) - 0.5) * 3.2 + (vnc(X, Y, 67, seed + 403) - 0.5), oy = (vnc(X, Y, 211, seed + 405) - 0.5) * 3.2 + (vnc(X, Y, 67, seed + 407) - 0.5);
+      const ux = X / TILE - 0.5 - C.TX0 + ox, uy = Y / TILE - 0.5 - C.TY0 + oy;
+      const iw = Math.max(0, Math.min(TN - 2, Math.floor(ux))), jw = Math.max(0, Math.min(TN - 2, Math.floor(uy)));
+      kw = jw * TN + iw; vxw = clamp01(ux - iw); vyw = clamp01(uy - jw);
+      // the look: one of the tiles round the far point, through a dither spread over a tile and a half
+      const r2 = (by(x + 1, y + 2) + 0.5) * 0.6 + hh(x, y, seed + 411) * 0.4;
+      const si = Math.max(0, Math.min(TN - 1, Math.round(ux + (r - 0.5) * 1.5))), sj = Math.max(0, Math.min(TN - 1, Math.round(uy + (r2 - 0.5) * 1.5))), ks = sj * TN + si;
+      if (F.k[ks] === WK.SEA) { st = F.st[ks]; cst = F.cst[ks]; }
+    }
     // a river's mouth: the other water in drifting streaks, drawn out along the current (mouths)
     const mw = (F.mx[k00] * (1 - vx) + F.mx[k00 + 1] * vx) * (1 - vy) + (F.mx[k00 + TN] * (1 - vx) + F.mx[k00 + TN + 1] * vx) * vy;
     capDep = 1e9;
@@ -1509,10 +1526,10 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
         if (k !== WK.SEA) capDep = 1.2;   // (the river's water out over the bar: shallow, never the sea's deep)
       }
     }
-    const ld = (F.ld[k00] * (1 - vx) + F.ld[k00 + 1] * vx) * (1 - vy) + (F.ld[k00 + TN] * (1 - vx) + F.ld[k00 + TN + 1] * vx) * vy;
+    const ld = (F.ld[kw] * (1 - vxw) + F.ld[kw + 1] * vxw) * (1 - vyw) + (F.ld[kw + TN] * (1 - vxw) + F.ld[kw + TN + 1] * vxw) * vyw;
     const far = Math.max(46 / TILE, ld - 0.35), u = d < 36 ? 0 : (d - 36) / 10;
     dt = d >= 46 ? far : d / TILE * (1 - u) + Math.max(d / TILE, far) * u;
-    dep = Math.min(capDep, (F.dep[k00] * (1 - vx) + F.dep[k00 + 1] * vx) * (1 - vy) + (F.dep[k00 + TN] * (1 - vx) + F.dep[k00 + TN + 1] * vx) * vy);
+    dep = Math.min(capDep, (F.dep[kw] * (1 - vxw) + F.dep[kw + 1] * vxw) * (1 - vyw) + (F.dep[kw + TN] * (1 - vxw) + F.dep[kw + TN + 1] * vxw) * vyw);
     fx = (F.fx[k00] * (1 - vx) + F.fx[k00 + 1] * vx) * (1 - vy) + (F.fx[k00 + TN] * (1 - vx) + F.fx[k00 + TN + 1] * vx) * vy;
     fy = (F.fy[k00] * (1 - vx) + F.fy[k00 + 1] * vx) * (1 - vy) + (F.fy[k00 + TN] * (1 - vx) + F.fy[k00 + TN + 1] * vx) * vy;
     fv = F.fv[ti];

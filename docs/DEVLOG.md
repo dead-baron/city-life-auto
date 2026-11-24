@@ -26983,3 +26983,50 @@ phone on 4G. tools/perf.mjs; DECISIONS (performance budgets).
 - The audit's 1: pay unchanged until the first test weekend's money data (DECISIONS).
 No world or art change: the hashes are as before, so the P5 re-bake runs on. Tests: hidden, races, goals, ftue,
 guide, perf, phones, world3rapids, world3marsh, world3woods, riders, activities.
+
+## 2026-11-24 · The water pass, 1: what the recorder saw at sunset, at night and in rain - on branch `fable-art-1124`
+The art pass (work package 6, docs/tasks/ART-PASS-PLAN-2026-11-24.md) starts where nature stopped on 11-21: water.
+The recorder (tools/nature/waterwatch.sh) had only ever run at a clear midday; it now films each kind of water body at
+several hours and weathers in one run (`MODES`, default noon / sunset / night clear, noon / night in rain), tells the
+water's pixels once at clear noon (it told them by their blue, wrong after dark), sets how wet the page draws things
+outright (the ease takes minutes at a headless page's frame rate) and saves its pictures straight from the canvas
+(tools/playtest.py `save:`). 17 places x 5 looks, set beside the concepts (W1, BE5, the ES and E2 sheets). What it
+showed, and what changed - nothing here is live: it rides the nature re-bake, on the owner's word.
+- **The shore wave was a ruled line racing in** (the owner, 11-23: "waves forming out of a straight hard edge"): born
+  whole on the 47-px contour, the band crossed in 2.2 s. Now (lightgame.js waterSurf) a 9 s cycle with the run in over
+  3.8 s, the front scalloped by two noises, in lengths with gaps, a faint swell far out that fades up, white only near
+  the sand.
+- **Long shadows on the sea** - the Ferris wheel's across the bay at sunset, the stacks', the boats'. The 11-23 rule
+  (P3) tested "water and not ground", which is only a fall's sheet: the sea, lakes and rivers are baked ground | water.
+  Now `openWater()`: water that is not a puddle - and not a pool, a hot spring or a pond (inland water with a pond's
+  word), which sit among paving and lawns and take their trees' shadows like the ground round them.
+  test/watershadow-gl.test.js used a flag the game never bakes; it now lights the game's own four (sea, fall, puddle,
+  pool).
+- **Sunset water was flat and dark** against W1 / BE5: with the sun low and still lit the sea glitters - more cells,
+  longer on, in the sun's own colour (`glintCol`), turned down a step after the first pictures. The owner's eye wanted
+  on it. test/calmwater.test.js mirrors it: more than by day, no rows, no sheet.
+- **The sea cut into cells with ruled edges** (a dark rectangle and an azure block off the surf beach): depth and look
+  come from the one nearest land tile. water.js waterPx reads the sea's far field at a point moved by slow noise (to
+  about two tiles) and dithers the look wider; bedPx lets seagrass and coral begin at a wandering distance from shore,
+  thinning in ("underwater details with a hard edge near shore").
+- **Koi stood on the water** (the 'koi' prop was baked over it): no longer drawn (statics.js); a marked koi pond gets
+  live koi (waterlife.js koiPond).
+- **Moon jellies in the botanical garden's lily pond** (the "white blotches" of the 11-21 list): 103 small waters the
+  map lists as no lake, pond or river read as sea, and got the shore's fish. A small water of its own (flooded out,
+  under POCKET = 600 tiles) gets a pond's (waterlife.js pocket); its class stays the map's - a fish keeps to water of
+  its own class (the salmon tests caught the first try, which changed it).
+- **The hot springs were a white shape after dark** (and cream at sunset): a spring or a pool laid in the ground was
+  baked as open sea - no word, no inland flag - and the spring's cream glow over the whole pool fed the bloom. Both are
+  still inland water with a pond's word now (groundbake.js; a pool that is a sprite has been since 10-22), the spring's
+  glow dim and its own; its bubbles keep theirs.
+Flicker (median % of water pixels jumping between frames 0.1 s apart) before, by place: 0 to 2 everywhere but the
+jungle (35% at noon on Coral Cay: leaf edges swaying, not water - for the coast and jungle step). After: the same by
+day; at sunset the sea reads 1.2 to 3.5 where it read 0.3 to 0.8 - that is the glitter twinkling, as meant (the
+3.5, off the surf beach, was measured before the glitter was turned down a step; the pier read 1.4 after).
+Tests: watershadow-gl, calmwater, world3waterbodies (the small waters' fish - seen to fail without the fix -, a koi
+pond's koi, a spring's bake), waterlife, water, waterbake, poolwater, pool, surf, desertwaters, bathhouse,
+bathhouses2, perf, mapwindow, dmath. Not run: the whole suite. Looked at in a running game (headless, the local
+copy): pier, surf beach, cove, garden pond, hot springs, pool, before and after. Not yet looked at after the change:
+lakes, rivers, marsh, oasis, rain (shader paths they share were seen at the sea); no phone.
+Left in water: the salmon's leap; water beside docks; reflections, ripples and wakes against the concepts; a harbour
+for the recorder ('marina' finds a shop street). Seen on the way, not art: cars jammed on Coral Cay's jungle track.

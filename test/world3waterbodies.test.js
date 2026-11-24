@@ -15,6 +15,7 @@ import { KESTREL } from '../shared/world3-water.js';
 import { bakeGround, CHUNK } from '../client/art2/game/groundbake.js';
 import { F_GROUND, F_WATER, F_WET, F_NOCAST } from '../client/art2/gbuf.js';
 import { prepare } from '../tools/world3-build.mjs';
+import { WaterLife, POCKET } from '../client/art2/game/waterlife.js';
 
 test('World v3: the water bodies - which water is which, which way it runs; the bake reads them', { timeout: 300000 }, () => {
   const prep = prepare();
@@ -73,4 +74,47 @@ test('World v3: the water bodies - which water is which, which way it runs; the 
   assert.ok(creek.run > 50000 && !creek.bad, `the creek runs (${creek.run} px)`);
   assert.ok(lake.still > 50000 && !lake.bad, `the lake lies still (${lake.still} px)`);
   assert.ok(beach.seaClear > 20000 && !beach.bad, `the sea off the beach is see-through (${beach.seaClear} px)`);
+
+  // A hot spring's pool and a swimming pool laid in the ground: still inland water with a pond's word (224..231) - they
+  // were baked as open sea, no word at all (the light pass ran the sea's waves over them) - and a spring's glow is its
+  // own, dim: a cream one over the whole pool fed the bloom till the onsen was a white shape after dark (11-24).
+  assert.ok((m.springs || []).length > 0 && (m.pools || []).length > 0, 'hot springs and pools in the world');
+  const small = (e, x, y) => {
+    const G = bakeGround(m, Math.floor(x / CHUNK), Math.floor(y / CHUNK), { quality: 1, seed: 1337 }), o = { n: 0, bad: 0, lit: 0, bright: 0 };
+    for (let i = 0; i < G.w * G.h; i++) {
+      const X = Math.floor(x / CHUNK) * CHUNK + (i % G.w) * (CHUNK / G.w), Y = Math.floor(y / CHUNK) * CHUNK + Math.floor(i / G.w) * (CHUNK / G.h);
+      if (!e(X, Y) || !(G.flag[i] & F_WATER) || (G.flag[i] & F_WET)) continue;
+      o.n++; const c = G.col[i * 4 + 3];
+      if (!(G.flag[i] & F_NOCAST) || c < 224 || c >= 232) o.bad++;
+      const ea = G.emi[i * 4 + 3]; if (ea) { o.lit++; if (Math.max(G.emi[i * 4], G.emi[i * 4 + 1], G.emi[i * 4 + 2]) * ea > 255 * 2) o.bright++; }
+    }
+    return o;
+  };
+  const sp = m.springs[0], spring = small((X, Y) => ((X - sp.x) / sp.rx) ** 2 + ((Y - sp.y) / sp.ry) ** 2 < 0.6, sp.x, sp.y);
+  console.log('a hot spring baked', JSON.stringify(spring));
+  assert.ok(spring.n > 2000 && !spring.bad, `a hot spring's pool is still inland water with a pond's word (${JSON.stringify(spring)})`);
+  assert.ok(spring.lit > spring.n * 0.5 && spring.bright < spring.n * 0.01, `its glow is dim - only the bubbles bright (${spring.bright} of ${spring.lit} lit px; the cream glow was 255 x 20 over them all)`);
+  // The small waters the map lists as no lake, pond or river (a garden's lily pond, a plaza's basin): the fish placed in
+  // them are a pond's, never the sea's - moon jellies drifted in a botanical garden's pond (the water pass, 11-24).
+  const cls = (i) => (m.lake && m.lake[i] ? 1 : m.river && m.river[i] ? 2 : 0), wet = (t) => t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.DOCK;
+  const seen = new Uint8Array(m.tiles.length), probe = new WaterLife(2), SEA = new Set(['shore', 'harbour', 'open', 'reef']);
+  let pockets = 0, cells = 0; const bad = [];
+  for (let ty = m.y0; ty < m.y0 + m.h; ty++) for (let tx = m.x0; tx < m.x0 + m.w; tx++) {
+    const i0 = m.idx(tx, ty);
+    if (seen[i0] || !wet(m.tiles[i0]) || cls(i0)) continue;
+    const st = [[tx, ty]], body = []; seen[i0] = 1;
+    while (st.length) {
+      const [x, y] = st.pop(); if (body.length < POCKET) body.push([x, y]);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Y = y + dy; if (!m.inside(X, Y)) continue; const j = m.idx(X, Y); if (seen[j] || !wet(m.tiles[j]) || cls(j)) continue; seen[j] = 1; st.push([X, Y]); }
+    }
+    if (body.length >= POCKET) continue;
+    pockets++;
+    const own = new Set(body.map(([x, y]) => y * 65536 + x));
+    // (a patch's fish are those of its most open water: counted when that water is this one)
+    for (const [x, y] of body) { const c = probe._cell(m, Math.floor(x / 6), Math.floor(y / 6)); if (!c || !own.has(Math.floor(c.y / TILE) * 65536 + Math.floor(c.x / TILE))) continue; cells++; if (SEA.has(c.k) && bad.length < 6) bad.push(`${x},${y}: ${c.k}`); }
+  }
+  console.log('small waters of their own', JSON.stringify({ pockets, cells }));
+  assert.ok(pockets > 20, `the small waters found (${pockets})`);
+  assert.deepEqual(bad, [], 'no sea fish in a small water of its own');
+  for (const p of m.props) if (p.t === 'koi') { const c = probe._cell(m, Math.floor(p.x / (6 * TILE)), Math.floor(p.y / (6 * TILE))); assert.ok(c && c.k === 'koi', `a koi pond's fish are koi (${Math.round(p.x)}, ${Math.round(p.y)}: ${c && c.k})`); }
 });

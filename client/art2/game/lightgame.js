@@ -312,6 +312,21 @@ vec3 caustics(vec2 w, float t, float k, ivec2 wq){
   // from pixel to pixel - a cove's whole floor crawling. It comes up and dies away across its edge now)
   return vec3(0.085, 0.105, 0.09) * (0.5 + k * 0.6) * smoothstep(0.26, 0.62, caustic(w, t) * k + (bayer4(wq) - 0.5) * 0.24);
 }
+// Open water, for the sun's shadows (sunVis WATER_REACH): the sea, a lake, a river, a creek - baked as ground | water
+// (groundbake.js) - and a fall's sheet (water alone). Not a puddle (wet); and not a pool, a hot spring or a pond (inland
+// water with a pond's word, 224..231 - water.js): small water among paving and lawns takes its trees' shadows like the
+// ground round it. (The 11-23 rule tested "water and not ground", which only a fall's sheet is: the sea kept its long
+// shadows - the Ferris wheel's across the bay at sunset, the stacks' and the boats', in the water pass's pictures of
+// 11-24.)
+bool openWater(int fl, float code){
+  int c = int(code + 0.5);
+  return (fl & ${F_WATER}) != 0 && (fl & ${F_WET}) == 0 && !((fl & ${F_NOCAST}) != 0 && c >= 224 && c < 232);
+}
+// a glint's colour: the sun's own, near white while it is high, gold and orange as it sets (the moon's: white)
+vec3 glintCol(){
+  float m = max(max(sunCol.r, sunCol.g), max(sunCol.b, 1e-3));
+  return mix(vec3(1.0), sunCol / m, 0.85 * smoothstep(0.25, 0.7, m));
+}
 float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 wq){
   float glint = 0.0, t = time;
   int cf = int(code + 0.5);
@@ -352,7 +367,11 @@ float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 
     vec3 nw = normalize(vec3(n.xy + g, n.z));
     ivec2 gc = inl ? wq : ivec2(floor(w * 0.5));
     float gh = hash2(gc + ivec2(7, 7)), crest = n1.x * 0.6 + n2.x * 0.4;
-    glint = step(0.93, hash2(gc + ivec2(31, 57))) * smoothstep(0.8, 1.0, 0.5 + 0.5 * sin(t * (0.6 + gh * 0.9) + gh * 40.0)) * smoothstep(0.42, 0.7, crest) * (pond ? 0.22 : inl ? 0.4 : 0.5);
+    // (the water pass, 11-24: at golden hour and sunset the water was a flat dark sheet - the concepts' evening water
+    // glitters, W1, BE5. With the sun low more cells sparkle, brighter, and - where the glint is added - in the sun's
+    // own colour. The moon's light is too weak to count as a low sun: the night stays as it was.)
+    float low = smoothstep(0.62, 0.3, sunDir.z) * smoothstep(0.25, 0.7, max(sunCol.r, sunCol.g));
+    glint = step(0.93 - 0.08 * low, hash2(gc + ivec2(31, 57))) * smoothstep(0.8 - 0.25 * low, 1.0, 0.5 + 0.5 * sin(t * (0.6 + gh * 0.9) + gh * 40.0)) * smoothstep(0.42 - 0.1 * low, 0.7, crest) * (pond ? 0.22 : inl ? 0.4 : 0.5) * (1.0 + 0.6 * low);
     glint *= smoothstep(0.45, 0.55, wnoise(w * 0.0053 - d1 * (t * 0.03) + 7.0));
     float k = inl ? (cf >= 192 && cf < 216 ? 1.0 : cf >= 216 && cf < 232 ? float(cf - (pond ? 224 : 216)) / 7.0 : 0.0) : cf >= 239 && cf <= 254 ? float(cf - 239) / 15.0 : cf >= 191 && cf <= 238 ? 0.55 * (1.0 - float(cf - 191) / 47.0) : 0.0;
     if (k > 0.2) alb += caustics(w + d1 * (t * 1.8), t * 0.45, k * (pond ? 0.6 : 0.9), wq);   // (still water: the net drifts slowly)
@@ -367,14 +386,28 @@ float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 
   if (ci >= 143 && ci <= 238) {
     float sd = float(ci - 191);                                    // + out into the water, - up the beach
     float al = wnoise(w * vec2(0.012, 0.009));                      // along the shore: waves arrive at different times
-    float c = fract(t / 7.0 + al * 0.6);                            // this stretch of shore's place in its wave cycle
+    // (the water pass, 11-24 - the owner, 11-23: "fast straight streaks" on the water, "waves forming out of a straight
+    // hard edge". A wave was one white line born whole on the last coded contour, 47 px out, and in at the shore 2.2 s
+    // later: along a straight beach, a ruled streak racing in. Now it comes in over 3.8 s of a 9 s cycle; out there it is
+    // a swell - a paler line that fades up from nothing as it leaves the band's edge - and it whitens only as it nears
+    // the sand; its line wanders along the shore in scallops and runs in lengths with gaps, so no two stretches break
+    // together. Concepts W2, E2, AQ1-A, BE5: lace at the water's edge, broken arcs behind it.)
+    float cyc = t / 9.0 + al * 0.6, c = fract(cyc);                 // this stretch of shore's place in its wave cycle
+    const float CB = 0.42;                                          // the wave is in at the sand at c = CB
     float reach = 10.0 + al * 10.0;
-    float run = reach * pow(sin(3.14159 * clamp((c - 0.3) / 0.7, 0.0, 1.0)), 0.6); // the swash up the sand
-    float front = 47.0 * (1.0 - c / 0.32);                          // the wave coming in, until it breaks
+    float sc = (wnoise(w * 0.045 + 3.0) - 0.5) * 9.0 + (wnoise(w * 0.13 + 11.0) - 0.5) * 3.5;   // the scallops, px
+    float run = (reach + sc * 0.35) * pow(sin(3.14159 * clamp((c - CB + 0.02) / (1.02 - CB), 0.0, 1.0)), 0.6); // the swash up the sand
+    float front = 44.0 * (1.0 - c / CB) + sc * smoothstep(0.0, 14.0, sd);   // the wave coming in, until it breaks
     float foam = 0.0;
     if (sd >= 0.0) {
       float df = sd - front;
-      if (c < 0.32 && df > -1.5 && df < 12.0) foam = (df < 2.5 ? 1.0 : (1.0 - (df - 2.5) / 9.5) * 0.85) * smoothstep(0.0, 0.08, c); // (it builds as it comes in)
+      if (c < CB && df > -1.5 && df < 10.0) {
+        float len = smoothstep(0.36, 0.52, wnoise(w * vec2(0.021, 0.017) + floor(cyc) * 7.3));   // this wave's lengths of crest
+        float near = smoothstep(19.0, 8.0, sd), far = smoothstep(46.0, 33.0, sd);                // white close in; nothing at the band's edge
+        float body = df < 2.0 ? 1.0 : (1.0 - (df - 2.0) / 8.0) * 0.85;
+        foam = body * near * (0.35 + 0.65 * len);
+        if (df < 2.5) alb = mix(alb, vec3(0.42, 0.66, 0.7), 0.3 * far * (1.0 - near) * len);     // the swell before it breaks
+      }
       if (sd < 2.0 + sin(t * 1.9 + al * 9.0)) foam = max(foam, 0.7);   // lapping at the water's edge
     } else {
       float ds = -sd;
@@ -557,7 +590,7 @@ void main(){
   int fl = flOf(B);
   ivec2 wq = (q + org) / AP;                                       // the art pixel of the world
   vec3 P = vec3(float(q.x) + 0.5, float(q.y) + 0.5 + Z, Z);
-  bool openW = (fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0;
+  bool openW = openWater(fl, A.a * 255.0);
   float sh = dot(n, sunDir) > 0.0 && sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, wq, openW ? WATER_REACH : 140.0, openW ? WATER_TMAX : 1e4) : 1.0;
   vec3 plight = vec3(0.0), refl = vec3(0.0);
   pointLights(P, n, q, (fl & ${F_GROUND}) != 0 && wet > 0.0, plight, refl);
@@ -566,8 +599,8 @@ void main(){
   float gl = (fl & ${F_GROUND}) != 0 ? waterSurf(alb, n, fl, A.a * 255.0, w, wq) : 0.0;
   if ((fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0) fallingWater(alb, w);
   o0 = shade(alb, n, fl, sh, plight, refl, C.rgb, wq);
-  float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * sh + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
-  if (add > 0.0 || bioGlow.b > 0.0) o0.rgb = min(o0.rgb + vec3(add) + bioGlow, vec3(1.0));
+  float gk = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * sh, rm = rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
+  if (gk + rm > 0.0 || bioGlow.b > 0.0) o0.rgb = min(o0.rgb + glintCol() * gk + vec3(rm) + bioGlow, vec3(1.0));
 }`;
 
 // Low: the lights at half resolution. lighth lights the top-left texel of each 2 x 2 block: rgb = point
@@ -582,7 +615,7 @@ void main(){
   float Z = zOf(B);
   int fl = flOf(B);
   vec3 P = vec3(float(q.x) + 0.5, float(q.y) + 0.5 + Z, Z);
-  bool openW = (fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0;
+  bool openW = openWater(fl, texelFetch(tA, q, 0).a * 255.0);
   float sh = sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, (q + org) / AP, openW ? WATER_REACH : 140.0, openW ? WATER_TMAX : 1e4) : 1.0;
   vec3 plight = vec3(0.0), refl = vec3(0.0);
   pointLights(P, n, q, (fl & ${F_GROUND}) != 0 && wet > 0.0, plight, refl);
@@ -623,8 +656,8 @@ void main(){
   float gl = (fl & ${F_GROUND}) != 0 ? waterSurf(alb, n, fl, A.a * 255.0, w, wq) : 0.0;
   if ((fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0) fallingWater(alb, w);
   o0 = shade(alb, n, fl, LH.a, LH.rgb * LH.rgb * 8.0, R.rgb * R.rgb * 4.0, C.rgb, wq);
-  float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * LH.a + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
-  if (add > 0.0 || bioGlow.b > 0.0) o0.rgb = min(o0.rgb + vec3(add) + bioGlow, vec3(1.0));
+  float gk = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * LH.a, rm = rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
+  if (gk + rm > 0.0 || bioGlow.b > 0.0) o0.rgb = min(o0.rgb + glintCol() * gk + vec3(rm) + bioGlow, vec3(1.0));
 }`;
 
 // bloom source at half size: glow + whatever is brighter than the threshold

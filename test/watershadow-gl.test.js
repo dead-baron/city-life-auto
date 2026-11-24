@@ -12,7 +12,7 @@ const ROOT = new URL('../', import.meta.url);
 const PAGE = `<!doctype html><meta charset="utf-8"><canvas id="c" width="256" height="256"></canvas><pre id="out">...</pre>
 <script type="module">
 import { Art2Engine } from '/client/art2/game/engine.js';
-import { F_GROUND, F_WATER, OCT_MID } from '/client/art2/gbuf.js';
+import { F_GROUND, F_WATER, F_WET, F_NOCAST, OCT_MID } from '/client/art2/gbuf.js';
 import { PRESETS_GAME } from '/client/art2/game/lightgame.js';
 const out = document.getElementById('out');
 try {
@@ -20,20 +20,23 @@ try {
   if (!E) throw new Error('no engine: ' + Art2Engine.lastWhy);
   // one chunk: a floor (open water, or ground) with a tall block in its middle (world 280..320 x 280..320, 60 high) - a
   // bridge deck's or a mast's height over it; the sun low in the west (golden hour) throws its shadow east
-  const T = 384, mk = (fl) => { const p0 = new Uint8Array(T * T * 4), p1 = new Uint8Array(T * T * 4), p2 = new Uint8Array(T * T * 4);
+  const T = 384, mk = (fl, word = 255) => { const p0 = new Uint8Array(T * T * 4), p1 = new Uint8Array(T * T * 4), p2 = new Uint8Array(T * T * 4);
     for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) { const i = (y * T + x) * 4, b = x >= 140 && x < 160 && y >= 140 && y < 160;
-      p0.set(b ? [150, 150, 150, 255] : fl === F_WATER ? [40, 90, 140, 255] : [120, 160, 90, 255], i);
+      p0.set(b ? [150, 150, 150, 255] : (fl & F_WATER) ? [40, 90, 140, word] : [120, 160, 90, 255], i);
       p1.set(b ? [60, 0, 0, OCT_MID] : [0, 0, fl, OCT_MID], i); p2.set([0, 0, 0, OCT_MID], i); }
     return { w: T, h: T, ap: 2, p0, p1, p2 }; };
   const gl = E.gl, px = new Uint8Array(4), r = {};
-  const lum = (fl) => {
-    E.uploadChunk(0, 0, mk(fl));
+  const lum = (fl, word) => {
+    E.uploadChunk(0, 0, mk(fl, word));
     E.beginFrame({ camX: 300, camY: 300, zoom: 1, viewW: 256, viewH: 256, time: 0, quality: 3, preset: PRESETS_GAME.golden, fades: new Map(), clear: new Float32Array(16) });
     E.endFrame();
     const at = (x, y) => { gl.bindFramebuffer(gl.FRAMEBUFFER, E.fbOut); gl.readPixels(x - E.ox, y - E.oy, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return px[0] + px[1] + px[2]; };   // (the lit frame, before it's shown)
     return { lee: at(334, 334), open: at(334, 230) };   // (down and east of the block: in the low western sun's shadow of it; and well clear of it)
   };
-  r.ground = lum(F_GROUND); r.water = lum(F_WATER);
+  // (the flags the game bakes: the sea, a lake or a river is ground | water - groundbake.js; a fall's sheet is water
+  // alone; a puddle is ground | water | wet. The first version of this test laid water alone, which only a fall is:
+  // it passed while the sea still took the long shadows)
+  r.ground = lum(F_GROUND); r.water = lum(F_GROUND | F_WATER); r.fall = lum(F_WATER); r.puddle = lum(F_GROUND | F_WATER | F_WET); r.pool = lum(F_GROUND | F_WATER | F_NOCAST, 230);   // (a pool, a pond: inland water with a pond's word)
   out.textContent = JSON.stringify(r);
 } catch (e) { out.textContent = 'ERR ' + (e && e.stack || e); }
 </script>`;
@@ -59,4 +62,7 @@ test('open water takes no long shadow from something far above it; ground does',
   const r = JSON.parse(m[1]);
   assert.ok(r.ground.lee < r.ground.open * 0.85, `ground: the block's shadow falls on it (${JSON.stringify(r.ground)})`);
   assert.ok(r.water.lee > r.water.open * 0.9, `open water: no long shadow from a height far above it (${JSON.stringify(r.water)})`);
+  assert.ok(r.fall.lee > r.fall.open * 0.9, `a fall's sheet: none either (${JSON.stringify(r.fall)})`);
+  assert.ok(r.puddle.lee < r.puddle.open * 0.9, `a puddle is ground: the shadow falls on it (${JSON.stringify(r.puddle)})`);
+  assert.ok(r.pool.lee < r.pool.open * 0.9, `a pool or a pond among paving: shadowed like the ground round it (${JSON.stringify(r.pool)})`);
 });

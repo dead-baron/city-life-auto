@@ -32,6 +32,7 @@ Steps
   time:MIN                set the server clock (minutes after midnight, e.g. 720 noon, 1380 night)
   tp:X,Y[,LZ]             teleport the player (world px; LZ 1 = up on the highway deck)
   eval:JS                 evaluate JS (expression or function body with return) and print the result
+  save:JS:PATH            write the data URL that JS gives (a canvas's toDataURL()) to PATH
   waitfor:JS[:MS]         wait until JS is truthy (default 30 s)
   perf:MS                 sample frame times for MS and print avg / p95 / worst ms
 Examples
@@ -176,6 +177,14 @@ def main():
                     v = [float(x) for x in arg.split(',')]
                     pg.evaluate('(v) => window.CLA.send({ t: "dev", c: "tp", x: v[0], y: v[1], lz: v[2] || 0 })', v)
                 elif op == 'eval': print('[eval]', st[5:60], '=>', json.dumps(js(arg), default=str)[:4000], flush=True)
+                elif op == 'save':
+                    # save:JS:PATH  JS gives a data URL (say a canvas's toDataURL()); its bytes are written to PATH - far
+                    # quicker than a screenshot under SwiftShader
+                    expr, _, path = arg.rpartition(':')
+                    import base64
+                    u = js(expr)
+                    if not u or ',' not in u: print('save: nothing at', expr[:60]); continue
+                    open(os.path.abspath(path), 'wb').write(base64.b64decode(u.split(',', 1)[1])); say('saved', path)
                 elif op == 'waitfor':
                     expr, _, ms = arg.rpartition(':') if arg.rsplit(':', 1)[-1].isdigit() else (arg, '', '')
                     expr = expr or arg

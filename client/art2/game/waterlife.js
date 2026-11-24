@@ -132,6 +132,31 @@ function wcls(m, x, y) {
   if (t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE) return 0;
   return m.lake && m.lake[i] ? (m.lake[i] === 2 ? 3 : 2) : m.river && m.river[i] ? 4 : 1;
 }
+// A small water the map lists as no lake, pond or river - a garden's lily pond, a plaza's basin, a moat - reads as the
+// sea (1) above. It is a pond: flooded out from (tx, ty), fewer than POCKET tiles of such water. (The moon jellies
+// drifting in a botanical garden's lily pond, and the mullet: the water pass's pictures, 11-24. 58 such waters in
+// World v3.) W: the map's notes (WaterLife's), where the answers are kept.
+export const POCKET = 600;
+function pocket(W, m, tx, ty) {
+  const P = W.pocket || (W.pocket = new Map()), k0 = ty * 65536 + tx, known = P.get(k0);
+  if (known !== undefined) return known;
+  const seen = new Set([k0]), st = [k0];
+  let small = true;
+  while (st.length) {
+    const k = st.pop(), x = k & 65535, y = k >>> 16;
+    for (let q = 0; q < 4; q++) {
+      const X = x + (q === 0) - (q === 1), Y = y + (q === 2) - (q === 3), kk = Y * 65536 + X;
+      if (seen.has(kk)) continue;
+      if (!m.inside(X, Y)) { small = false; st.length = 0; break; }   // (off the window: the open sea)
+      const i = m.idx(X, Y), t = m.tiles[i];
+      if ((t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE && t !== T.DOCK) || (m.lake && m.lake[i]) || (m.river && m.river[i])) continue;
+      seen.add(kk); st.push(kk);
+      if (seen.size >= POCKET) { small = false; st.length = 0; break; }
+    }
+  }
+  if (small) for (const k of seen) P.set(k, true); else P.set(k0, false);
+  return small;
+}
 // a helicopter's downwash on the water: full low down, none from WASH_H px up (k 0..1: shared/constants.js ROTOR_WASH)
 export const WASH_H = ROTOR_WASH.TOP;
 export { washK };
@@ -141,6 +166,13 @@ const clearAt = (m, x, y, c, r) => wcls(m, x, y) === c && wcls(m, x + r, y) === 
 // a park's water (server/systems/fishing.js parkish: the koi there are the park's): a park's district, or one of World
 // v3's handcrafted parks, gardens and ponds
 const PARK_STYLES = new Set(['park', 'luxury', 'civic', 'arts']), PARK_PLACE = /park|commons|garden|pond|square/i;
+// a pond the world marks with koi (a 'koi' prop: the botanical gardens' ponds - world3-arts.js, naturesites.js): the
+// live koi swim there, whatever the district (the props themselves are not drawn: statics.js)
+function koiPond(m, x, y) {
+  const K = m._wlKoi || Object.defineProperty(m, '_wlKoi', { value: (m.props || []).filter((q) => q && q.t === 'koi'), enumerable: false })._wlKoi;
+  for (const q of K) if (Math.abs(q.x - x) < 260 && Math.abs(q.y - y) < 260) return true;
+  return false;
+}
 function parkish(m, tx, ty, d) {
   const D = DISTRICTS[d];
   if (D && (PARK_STYLES.has(D.style) || d === 12)) return true;
@@ -194,10 +226,13 @@ function cellAt(W, m, cx, cy) {
   }
   if (n < 3) return tidepoolIn(m, cx, cy);   // (too little water for fish - but a tidepool's life)
   if (inPool(m, bx, by)) return null;   // (no fish in a swimming pool)
-  const c = wcls(m, bx, by), tx = Math.floor(bx / TILE), ty = Math.floor(by / TILE), i = m.idx(tx, ty), d = m.dist ? m.dist[i] : -1;
+  const tx = Math.floor(bx / TILE), ty = Math.floor(by / TILE), i = m.idx(tx, ty), d = m.dist ? m.dist[i] : -1;
+  // (a small water of its own, not the sea's: a pond's fish. Its class stays what the map says - a fish keeps to water
+  // of its own class)
+  const c = wcls(m, bx, by), pond = c === 3 || (c === 1 && bs < 10 && pocket(W, m, tx, ty));
   const o = { k: 'shore', c, x: bx, y: by, up: NaN, d, shore: bs };
-  if (c === 2 || c === 3) {
-    o.k = inMarsh(m, bx, by, d) ? 'marsh' : parkish(m, tx, ty, d) ? 'koi' : c === 3 ? 'pond' : bs >= 6 && m.tiles[i] === T.DEEP ? 'deep' : 'lake';
+  if (c === 2 || pond) {
+    o.k = inMarsh(m, bx, by, d) ? 'marsh' : parkish(m, tx, ty, d) || koiPond(m, bx, by) ? 'koi' : pond ? 'pond' : bs >= 6 && m.tiles[i] === T.DEEP ? 'deep' : 'lake';
   } else if (c === 4) {
     const ch = channelNear(W.chan || (W.chan = channelGrid(m)), tx, ty);
     if (ch && ch[3] < ch[2].w / 2 + 6) {
@@ -477,12 +512,12 @@ export class WaterLife {
     this.rings = new Float32Array(MAXR * 5); this.ri = 0;
     this.wakes = new Float32Array(MAXW * 6); this.wi = 0; this.wkT = new Map();
     this.puffs = []; for (let i = 0; i < MAXP; i++) this.puffs.push({ on: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, t0: 0, life: 1, k: 0, foam: false, s: 0, lift: 0 });
-    this.takers = new Map(); this.falls = null; this.chan = null; this.onSplash = null;
+    this.takers = new Map(); this.falls = null; this.chan = null; this.pocket = null; this.onSplash = null;
     this.env = { day: 1, sx: 0.6, sy: 0.8, dusk: 0, wet: 0, wx: 0, wy: 0, ws: 0 };
     this.n = { fish: 0, groups: 0, puffs: 0, takers: 0 };
   }
   rnd() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; return this.seed / 4294967296; }
-  reset(m) { this.m = m; this.fish.length = 0; this.groups.clear(); this.cells.clear(); this.takers.clear(); this.falls = null; this.chan = null; this.popAt = -1; for (const p of this.puffs) p.on = false; this.rings.fill(0); this.wakes.fill(0); this.wkT.clear(); }
+  reset(m) { this.m = m; this.fish.length = 0; this.groups.clear(); this.cells.clear(); this.takers.clear(); this.falls = null; this.chan = null; this.pocket = null; this.popAt = -1; for (const p of this.puffs) p.on = false; this.rings.fill(0); this.wakes.fill(0); this.wkT.clear(); }
 
   // one step: V the view (world px: x0, y0, x1, y1); movers [{ x, y, sp (px/s), wet (in the water), and for a
   // swimmer: id, a (the way it's going), hw (its wake's half width) }]; lines the
