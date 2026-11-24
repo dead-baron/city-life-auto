@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-23 afternoon (the pre-beta chat, Opus 5.5). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-23 evening (the pre-beta chat, Opus 5.5). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -112,11 +112,11 @@ art, pushing as it goes; then a new chat on **Fable 5.2** does the art pass; the
 the final art; then the beta's walkthrough, load test and launch. The order for the Opus part:
 1. ~~Art that vanishes in view~~ (PR #29). 2. ~~Cinematics groundwork~~ (#30). 3. ~~Shadows over water~~ (#31); the water
    streaks (likely the boats' wakes) and the beach's long shadows - look in a running game first.
-4. **Buildings covering streets, sidewalks and alleys** (P5, the owner's repeated note): a world rule + a lint row measuring
-   street hidden per block; its own world batch and re-bake - push after the 11-23 re-bake is done. **Next.**
-5. The small mechanics: P6 fences cars pass through, P7 NPCs stuck (fences, lamps, the pool table), P9 the hat/head
-   flicker, P10 the hoop arrow, P11 the pier's water and the market hall door (check after the batch), P12 the cinematic
-   train; the admin review list's check-off is done (#32).
+4. ~~Buildings covering streets~~ (P5) and 5. ~~the small mechanics~~ P6 fences hold vehicles, P7 NPCs unpinned and round
+   the pool table, P9 the head bandana's flicker, P11 doors kept clear, P12 the cinematic train: **all on branch
+   `heights-1123`, PR #35 - one batch, waiting for the owner's go** (P5 lowers 762 buildings; going live re-bakes the art
+   ~5 h - after the 11-23 re-bake has finished; it also restarts the server once). P10 "the hoop arrow over the hoop":
+   asked the owner which arrow (none found drawn at a hoop). Its DEVLOG entries say what was tested and what wasn't.
 6. P8 NPC driving (police transport first; lanes, medians, unsticking, re-routing).
 7. The UI pass on every screen: a harness shooting the real game's screens (pause, settings, map, phone, shops, death) at
    four sizes; the stash's desktop side-by-side to the owner's UIC-21 concept (`docs/art-v2/targets/ui/UIC-21_stash.png`).
