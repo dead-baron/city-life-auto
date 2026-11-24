@@ -27096,3 +27096,37 @@ springs as water at every hour. Flicker by day as before (0.2 to 2% of water pix
 sea at sunset (the glitter: 1.1 at the pier, 5.3 off the surf beach). Not water at all, and not to be read: 'marina'
 (a shop street), 'pond' (a creek under redwoods, the frame a few pixels off the first run's) and 'rainforest' (leaf
 edges). The recorder still needs a harbour and a real pond among its places.
+
+## 2026-11-24 · The woods' and the meadows' found places (34 of them) - on branch `fable-art-1124`
+The nature audit of 11-21, forest and meadow: "the small found places of NS1-B outside Highland Woods", "a dry-stone
+wall and gate; an oak with a swing; a stile" - and five pieces drawn that day and never placed (props-rural.js:
+dryStoneWall, fieldGate, stile, ropeSwing, woodRuins). Found on the way: the game's rule for small scenes off the road
+(naturesites.js waysideFinds: a camp, a picnic spot, a cairn) names the first city's districts, none of World v3's -
+the whole world had not one.
+`shared/world3-wayside.js` (called from world3-world.js after every place made by hand): little scenes a short walk
+off a trail or a road (6 to 56 tiles), never on one, 36 tiles apart, each on level open ground of its own, clear of
+roads, water, buildings, fields, orchards and crop rows, and of everything made or named. In Highland Woods, among
+pine and oak (not in a redwood grove - those are NS1-A's, the redwood step), 18: the ruins of a house, an old oak
+with a bench and a fingerpost, a fire ring with log seats, a mossy log with ferns and its mushrooms (two forage
+spots each). In Willow Valley's open meadow, 16: a dry-stone wall with a field gate, the same with a stile through
+it and berry bushes, an oak with a rope swing, beehives by sunflowers, a windmill over its trough. The growth is
+cleared off each one's ground and no tree is left standing in front of it.
+The five pieces are world props now ('ruins', 'drywall', 'fgate', 'stile', 'rswing': statics.js), solid by the world's
+circles - a wall stops you, its stile is the way through, a ruin's doorway is open. The ruins are built 1.4 times
+their first drawing (woodRuins' k): at the first size they read as a hut.
+Seen: all 34 rendered as the game draws them (tools/area-shot.mjs), twice - the first pass had an oak with a swing in
+an orchard and a windmill in a lavender field (the farmed strips are grass tiles), a windmill in a thicket (the
+valley's forest ground), flower "lawn" pieces that read as panels, and a bench end-on; all fixed, by rule. Not seen: in
+a running game; after dark.
+Tests: `test/world3wayside.test.js` (enough of each kind; each on its own clear ground; its pieces there; walls solid
+and the stile open; nothing tall in front). `test/undergrowth.test.js`: its log check ran for the first time (it
+sampled every fifth log and needed twenty: the world had 94, now 110) and failed - most logs lie at made places that
+keep their ground bare. It now takes the wild logs only, every one: 13, 6 with undergrowth along them - too few to
+hold to a share, so it prints them; the wild logs are step A3's. Also run: placementlint (its rows hold), dmath,
+mapwindow, perf, and the world tests most likely to notice: world3clearings, world3woods, world3world, world3server,
+world3wild, foraging, finds, wildfolk, nature, world3redwoods, stocktanks - 83 of 84 pass. The one that fails,
+world3wild's "the tracks flagged notraffic (24; others: ... Station Road ...)", fails the same on the commit before
+this work (checked in a second checkout): the stations' roads, not the art pass's - logged for the pre-beta list, not
+touched. Not run: the whole suite.
+A world change (version.json world3 94ff65ee -> 051ab6cf): it goes with the nature batch, on the owner's word.
+No Guide entry: scenery to come across, no new thing to do (the mushrooms are the forage that exists).

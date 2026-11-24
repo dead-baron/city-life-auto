@@ -41,6 +41,10 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
      overlook; the found places of NS1-B outside Highland Woods; the lawn turf for the art pixel. 11-23: the farm (the
      flower row, hand-crafted fields), sunflowers cut at the top, the off-road trail (a blended start, a real trail).
      Done 11-24: sunflowers cut at the top - with 40 other plants cut by their canvas (DEVLOG, `test/floraclip.test.js`).
+     Done 11-24: the drawn pieces placed and NS1-B's and NS1-E's found places spread by rule - 34 in Highland Woods
+     and Willow Valley (`shared/world3-wayside.js`, a world change). Left here: a cliff overlook (it needs a cliff the
+     land has), the lily pond with a duck and the farm pond with a jetty (water tiles), the farm (the flower row,
+     hand-crafted fields), the off-road trail, the lawn turf for the art pixel.
    - Redwood: still denser than N1; the fern layer over the floor, creek and paths; a walk-in hollow trunk, a root cave.
    - Mountain: the six ledge falls' setting (the river below lower and darker); the redwood horseshoe against NR1-E;
      standing stones that barely read; lichen boulders; the Summit Tarn placeholder (a shelf and a rock face the land
@@ -55,7 +59,8 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
      lip's tile): a world change, with a lint row, in this step's batch.
    - 11-23, across biomes: the dark outlines on some trees and plants - set to the one outline rule (a dark tone of
      the neighbouring colour, never black), not a new rule.
-3. Rocks and the hand-made places' props brought under the variety test (today it covers plants).
+3. Rocks and the hand-made places' props brought under the variety test (today it covers plants). The wild logs:
+   13 in the whole world, 6 with undergrowth along them (the undergrowth test counted them for the first time 11-24).
 
 ### B. Buildings and districts - one concept-led pass, a district at a time
 Read: `claude/world-craft-pass-2026-11-14.md` (its checklist is the method), `claude/concept-audit-2026-11-03.md`

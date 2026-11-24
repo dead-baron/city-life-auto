@@ -550,25 +550,26 @@ export function ropeSwing(side = 1) {
 }
 // stone ruins in the woods (NS1-B): what is left of a house - an L of wall with a doorway and a window's sill, its
 // corner still standing tall, the rest down to a few courses, blocks fallen round it, ivy over the stone
-export function woodRuins(seed = 1) {
-  const W = 58, D = 40, m = new Vox(W, D, 30);
+// (k: its size - 1 the first drawing's, 58 x 40 voxels; in the world it is built at 1.4, a house's worth of wall)
+export function woodRuins(seed = 1, k = 1) {
+  const W = Math.round(58 * k), D = Math.round(40 * k), kh = 1 + (k - 1) * 0.6, m = new Vox(W, D, Math.round(30 * kh) + 2);
   const st = m.mat({ ramp: FIELDSTONE, k: 3.6, shade: (x, y, z) => { const s = stoneOf(x + y, z, seed + 50, 4); return (hash(s.i, s.c, seed + 53) - 0.5) * 2.2 - (s.edge ? 1.7 : 0) + (z < 2 ? -0.6 : 0) - (z < 4 && hash(Math.round(x / 2), Math.round(y / 2), seed + 59) > 0.5 ? 0.8 : 0); } });
   const ivy = m.mat({ ramp: MAT.leaf, k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y) + Math.round(z) * 7, seed + 57) - 0.5) * 2.4 });
   const li = m.mat({ ramp: LICHEN, k: 2 });
   // how high the wall still stands along its run (u: 0..1 from the back wall's left end round the corner to the side wall's end)
-  const hAt = (u) => { const base = u < 0.18 ? 6 + u * 60 : u < 0.5 ? 24 - Math.abs(u - 0.34) * 40 : u < 0.62 ? 26 : 22 - (u - 0.62) * 46; return Math.max(3, Math.round(base + (hash(Math.floor(u * 40), 61, seed) - 0.5) * 5)); };
+  const hAt = (u) => { const base = u < 0.18 ? 6 + u * 60 : u < 0.5 ? 24 - Math.abs(u - 0.34) * 40 : u < 0.62 ? 26 : 22 - (u - 0.62) * 46; return Math.max(3, Math.round((base + (hash(Math.floor(u * 40), 61, seed) - 0.5) * 5) * kh)); };
   const wall = (x, y, u) => {
     let h = hAt(u);
     const door = u > 0.2 && u < 0.3, win = u > 0.72 && u < 0.84;
     if (door) return;                                         // (the doorway: open to the ground)
-    for (let z = 0; z < h; z++) { if (win && z >= 9 && z < 17) continue; m.set(x, y, z, st); m.set(x, y + 1, z, st); m.set(x + (y === 6 ? 0 : 0), y + 2, z, st); }
+    for (let z = 0; z < h; z++) { if (win && z >= 9 * kh && z < 17 * kh) continue; m.set(x, y, z, st); m.set(x, y + 1, z, st); m.set(x + (y === 6 ? 0 : 0), y + 2, z, st); }
     if (hash(x + y, 67, seed) < 0.3) m.set(x, y + 1, h, li);
     if (hash(Math.floor((x + y) / 5), 71, seed) < 0.45) for (let z = Math.max(0, h - 2 - Math.floor(hash(x, y, seed + 73) * 9)); z <= h; z++) if (hash(x * 3 + y, z, seed + 75) < 0.7) m.set(x, y + 3, z, ivy);   // (ivy hung down its face)
   };
-  const bx0 = 6, bx1 = 46, by = 6, sy1 = 32, run = (bx1 - bx0) + (sy1 - by);
+  const bx0 = 6, bx1 = Math.round(46 * k), by = 6, sy1 = Math.round(32 * k), run = (bx1 - bx0) + (sy1 - by);
   for (let x = bx0; x <= bx1; x++) wall(x, by, (x - bx0) / run);
-  for (let y = by; y <= sy1; y++) { const u = ((bx1 - bx0) + (y - by)) / run, h = hAt(u), win = u > 0.72 && u < 0.84; for (let z = 0; z < h; z++) { if (win && z >= 9 && z < 17) continue; for (let k = 0; k < 3; k++) m.set(bx1 + k, y, z, st); } if (hash(y, 79, seed) < 0.4) for (let z = Math.max(0, h - 8); z <= h; z++) if (hash(y, z, seed + 81) < 0.6) m.set(bx1 + 3, y, z, ivy); }
-  for (let i = 0; i < 9; i++) {   // (fallen blocks, inside and out)
+  for (let y = by; y <= sy1; y++) { const u = ((bx1 - bx0) + (y - by)) / run, h = hAt(u), win = u > 0.72 && u < 0.84; for (let z = 0; z < h; z++) { if (win && z >= 9 * kh && z < 17 * kh) continue; for (let k = 0; k < 3; k++) m.set(bx1 + k, y, z, st); } if (hash(y, 79, seed) < 0.4) for (let z = Math.max(0, h - 8); z <= h; z++) if (hash(y, z, seed + 81) < 0.6) m.set(bx1 + 3, y, z, ivy); }
+  for (let i = 0; i < Math.round(9 * k * k); i++) {   // (fallen blocks, inside and out)
     const x = 4 + hash(i, 83, seed) * (W - 10), y = 10 + hash(i, 85, seed) * (D - 14), r = 1.4 + hash(i, 87, seed) * 1.6;
     m.box(x, y, 0, x + r * 2, y + r * 1.4, r * 1.3, st); if (hash(i, 89, seed) < 0.4) m.box(x, y, r * 1.3, x + r * 2, y + r, r * 1.3 + 1, li);
   }

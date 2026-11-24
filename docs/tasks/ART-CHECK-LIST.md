@@ -6,7 +6,7 @@ where to look, what changed, what to judge. "Picture" names what was sent in the
 added as the work goes; a line he has checked is marked with his word and the date, not removed.
 
 **Judge from the pictures before the batch goes live** (baked in - changing one afterwards is another re-bake, ~5 h):
-- [ ] **The sea is a deeper blue offshore.** A shelf of clear shallows along a sandy beach, then deep; the wide
+- [x] **The sea is a deeper blue offshore.** (The owner, 11-24 14:37: "I think the new sea looks fine.") A shelf of clear shallows along a sandy beach, then deep; the wide
   turquoise that reached far out is gone with the dark and azure blocks. Picture: `report-4-sea-blocks`. If he wants
   the wide turquoise back: two numbers (water.js FAR0 / FAR1).
 
@@ -29,6 +29,13 @@ Plants
 - [ ] **Shrubs and sunflowers whole** - the botanical gardens' sunflower row; any hedge, hibiscus, bougainvillea,
   pampas grass. 41 kinds were cut flat by their canvas. Judge: none looks too tall where it stands (5 to 10 art
   pixels more crown). Picture: `report-6-plants-cut`.
+
+The woods and the meadows
+- [ ] **The found places** - 34 little scenes a short walk off the trails and roads (dev: `near wayside`, again for the
+  next): in Highland Woods ruins, an oak with a bench, a fire ring, a mossy log with mushrooms; in Willow Valley a
+  dry-stone wall with a gate or a stile, an oak with a rope swing, beehives by sunflowers, a windmill and trough.
+  Judge: do they read as places someone made and left; are there too many or too few; the ruins' size. Picture:
+  `report-7-found-places`.
 
 **Not looked at by Claude at all** (so his look is the first): a phone; the islands' and harbours' water; a salmon's
 last leap over the top of a falls; the other fish's leaps.

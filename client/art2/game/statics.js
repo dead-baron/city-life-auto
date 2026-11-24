@@ -2788,6 +2788,13 @@ function propItems(c, p, pi, I) {
     case 'storedplane': { const col = ['#c83a30', '#2a5aa8', '#2a8a6a', '#e8a030', '#7a3a8a'][(p.c || 0) % 5], st = (p.v || 0) % 6 + 1, hd = qa(p.a || 0, 16); V(`spl:${col}:${st}:${hd.toFixed(2)}`, 'airliner', [300, 270, col, st], hd); return; }
     case 'mstall': { const k = (p.v || 0) % 4, col = ['#c8343a', '#2f7a5c', '#2f6ab0', '#e8a030'][(p.c || 0) % 4], hd = qa(p.a || 0, 4); V(`mstall:${k}:${col}:${hd.toFixed(2)}`, 'marketStall', [k, col], hd); lightAt(I, x, y, 34, 110, [1, 0.78, 0.48], 1.1, 'lamp'); return; }   // (the bulb under its canopy, after dark)
     case 'seaarch': V(`sarch:${p.w || 150}:${qa(p.a || 0, 8).toFixed(2)}`, 'seaArch', [p.w || 150, p.d || 56, p.h || 96, 3], qa(p.a || 0, 8)); return;
+    // the woods' and the meadows' found pieces (concepts NS1-B, NS1-E; shared/world3-wayside.js places them - their solid
+    // parts are the world's own circles): models built at the art pixel (recipe 'va', props-rural.js)
+    case 'ruins': { const sd = (p.v || 0) % 3 + 1; put(I, { key: `va:ruins:${sd}`, recipe: { t: 'va', m: 'ruins', a: [sd, RUINS_K] }, x, y, ext: [90, 140, 90, 64], pi }); return; }
+    case 'drywall': { const len = Math.max(12, Math.min(64, Math.round((p.len || 88) / 2))), sd = (p.v || 0) % 6 + 1; put(I, { key: `va:dw:${len}:${sd}`, recipe: { t: 'va', m: 'dryWall', a: [len, sd] }, x, y, ext: [len + 8, 44, len + 8, 16], pi }); return; }
+    case 'fgate': put(I, { key: 'va:fgate', recipe: { t: 'va', m: 'fieldGate', a: [26] }, x, y, ext: [34, 44, 34, 12], pi }); return;
+    case 'stile': put(I, { key: 'va:stile', recipe: { t: 'va', m: 'stile' }, x, y, ext: [24, 50, 24, 22], pi }); return;
+    case 'rswing': { const sd = p.side < 0 ? -1 : 1; put(I, { key: `va:swing:${sd}`, recipe: { t: 'va', m: 'swing', a: [sd] }, x, y, ext: [30, 74, 30, 12], pi }); return; }
     case 'mstone': { const w = p.w || 16, d = p.d || 9, h = p.h || 48, sd = (p.v || 0) % 8 + 1, ln = Math.round((p.lean || 0) * 20) / 20; V(`mst:${w}:${d}:${h}:${sd}:${ln}:${qa(p.a || 0, 8).toFixed(2)}`, 'standingStone', [w, d, h, sd, ln], qa(p.a || 0, 8)); return; }
     case 'ferris': V('ferris:0', 'ferrisWheel', [0.7, 0], 0, null, { z0: p.z ?? 4 }); for (const [z, r, c] of [[140, 260, [1, 0.45, 0.85]], [240, 170, [0.5, 0.8, 1]], [50, 170, [1, 0.8, 0.5]]]) lightAt(I, x, y + 2, z, r, c, 1.3, 'neon');   // (lit after dark: the craft pass)
     case 'rods': V(`rods:${qa(p.a || 0, 4).toFixed(2)}`, 'rodHolder', [], qa(p.a || 0, 4), null, { z0: p.z ?? 4 }); return;
@@ -3009,6 +3016,7 @@ function putFall(c, I, it) {
   }
   put(I, it);
 }
+export const RUINS_K = 1.4;   // (the woods' ruins: how much bigger than their first drawing - shared/world3-wayside.js lays their solid walls to this)
 // the models built at the art pixel (recipe 'va'): the nature pass's missing pieces, placed with the world batch
 function artVox(m, a) {
   switch (m) {
@@ -3016,7 +3024,7 @@ function artVox(m, a) {
     case 'fieldGate': return U.fieldGate(a[0] || 26);
     case 'stile': return U.stile();
     case 'swing': return U.ropeSwing(a[0] ?? 1);
-    case 'ruins': return U.woodRuins(a[0] || 1);
+    case 'ruins': return U.woodRuins(a[0] || 1, a[1] || 1);
     default: return U.dryStoneWall(20, 1);
   }
 }
