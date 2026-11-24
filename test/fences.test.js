@@ -9,6 +9,7 @@ import { TILE, T, DT } from '../shared/constants.js';
 import { IN } from '../shared/input.js';
 import { pedStep, newPedState, vehStep, newVehState } from '../shared/physics.js';
 import { VEHICLES } from '../shared/vehicles.js';
+import { FENCE_SMASH } from '../shared/rules.js';
 import { fencesOf, fenceSegments, FENCE_HOP, hopLift, fenceCrossed } from '../shared/fences.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import * as players from '../server/systems/players.js';
@@ -160,13 +161,13 @@ test('fences: the people walking about never head into a chain-link fence and st
 // tall, at any speed, square on or at an angle); a horse jumps a low one (fences.js fenceVehicle)
 test('fences: a car never drives through a fence, square on or at an angle; a horse jumps a low one', () => {
   // (through it: its middle on the far side while still between the fence's ends - round an end is fair)
-  const run = (model, cx, fyy, a, secs = 3) => {
+  const run = (model, cx, fyy, a, secs = 3, gas = 0.35) => {
     const def = VEHICLES[model], s = newVehState(cx, fyy - 70, a), x0 = cx - 6 * TILE + def.W, x1 = cx + 6 * TILE - def.W;
-    s.through = false;
+    s.through = false; s.gas = gas;
     for (let i = 0; i < Math.round(secs / DT); i++) {
-      const wasX = s.x, wasY = s.y;
-      vehStep(s, { throttle: 1, steer: 0, hb: false, slide: false, drv: true }, DT, m, def, { rain: false });
-      if (wasY < fyy && s.y >= fyy && Math.min(wasX, s.x) > x0 && Math.max(wasX, s.x) < x1) s.through = true;
+      const wasX = s.x, wasY = s.y, sp = Math.hypot(s.vx, s.vy);
+      vehStep(s, { throttle: s.gas ?? 1, steer: 0, hb: false, slide: false, drv: true }, DT, m, def, { rain: false });
+      if (wasY < fyy && s.y >= fyy && Math.min(wasX, s.x) > x0 && Math.max(wasX, s.x) < x1) { s.through = true; s.crossSp = sp; }
     }
     return s;
   };
@@ -175,7 +176,9 @@ test('fences: a car never drives through a fence, square on or at an angle; a ho
     for (const a of [Math.PI / 2, Math.PI / 2 - 0.5, Math.PI / 2 + 0.4]) {
       for (const [P, Y] of [[A, fy], [B, gy]]) {
         const s = run(model, (P[0] + 6) * TILE, Y, a);
-        assert.ok(!s.through, `${model} at ${a.toFixed(2)} held by the ${Y === fy ? 'wooden' : 'chain-link'} fence`);
+        // (11-23 20:10: fast, it goes through - knocked flat, test/smash.test.js; at a crawl, held)
+        const lim = Y === fy ? FENCE_SMASH.low : FENCE_SMASH.tall;
+        assert.ok(!s.through || s.crossSp > lim, `${model} at ${a.toFixed(2)} held by the ${Y === fy ? 'wooden' : 'chain-link'} fence (${Math.round(s.crossSp || 0)} px/s)`);
       }
     }
   }

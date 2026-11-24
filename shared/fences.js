@@ -19,6 +19,7 @@
 // The segments are worked out from the map's own data (props, fields) once per map: nothing new in the world's data.
 import { TILE, PED_RADIUS, T } from './constants.js';
 import { PED_BLOCK, WATER_T } from './mapcore.js';
+import { FENCE_SMASH } from './rules.js';
 
 // s: the hop's whole time; crouch: the pause before the vault; speed: px/s across; lift: px up at the top (the page's);
 // run: how far the stick has to be pushed (0..1, a walk is up to 0.6); aim: how square on you have to be heading into it;
@@ -188,8 +189,10 @@ export function fenceCollide(s, inp, m, mods, swim) {
   if (!near.length) return;
   const ml = Math.hypot(inp.mx || 0, inp.my || 0);
   const can = !!mods.canMove && mods.canSprint !== false && !mods.board && !swim && !mods.tumble && !mods.air && (ml >= FENCE_HOP.run || s.rollT > 0);
+  const down = m.downFences;
   for (const id of near) {
     const g = F.segs[id];
+    if (g.src >= 0 && down && down.has(g.src)) continue;
     const [qx, qy] = nearest(g, s.x, s.y);
     let dx = s.x - qx, dy = s.y - qy, d = Math.hypot(dx, dy);
     if (d >= r + (g.k === LOW && can ? FENCE_HOP.reach : 0)) continue;   // (a post along it may hold you a little short of the rails)
@@ -236,15 +239,27 @@ export function hopLift(left) {
 // like a wall (shared/physics.js collideVehicleTiles); a horse (hoof) clears a low one. -> the impact speed (0: none)
 // (px, py: where it was a step ago - a fast bike's step is longer than it is wide: a middle that crossed a fence is put
 // back on its side first)
-export function fenceVehicle(s, def, m, hoof = false, px = s.x, py = s.y) {
+// smash(i, a, sp): fence prop i knocked flat (server: props.js breakProp). m.downFences: those lying flat.
+export function fenceVehicle(s, def, m, hoof = false, px = s.x, py = s.y, smash = null) {
   const F = fencesOf(m);
   if (!F.segs.length) return 0;
+  const sp = Math.hypot(s.vx, s.vy), down = m.downFences;
   const hl = def.L / 2, hw = def.W / 2, r = FENCE_HALF;
   const near = fencesNear(m, (s.x + px) / 2, (s.y + py) / 2, Math.hypot(hl, hw) + r + 2 + Math.hypot(s.x - px, s.y - py) / 2);
   let impact = 0;
   for (const id of near) {
     const g = F.segs[id];
     if (hoof && g.k === LOW) continue;
+    if (g.src >= 0 && down && down.has(g.src)) continue;
+    // fast: through it, slowed once as its middle crosses (a field rail run, no prop, only holds)
+    if (g.src >= 0 && sp > (g.k === LOW ? FENCE_SMASH.low : FENCE_SMASH.tall)) {
+      if ((px !== s.x || py !== s.y) && crosses(g, px, py, s.x, s.y)) {
+        const f = g.k === LOW ? FENCE_SMASH.lowKeep : FENCE_SMASH.tallKeep;
+        s.vx *= f; s.vy *= f;
+        if (smash) smash(g.src, Math.atan2(s.vy, s.vx), sp);
+      }
+      continue;
+    }
     if ((px !== s.x || py !== s.y) && crosses(g, px, py, s.x, s.y)) {
       const ex = g.x1 - g.x0, ey = g.y1 - g.y0, el = Math.hypot(ex, ey) || 1;
       let nx = -ey / el, ny = ex / el;

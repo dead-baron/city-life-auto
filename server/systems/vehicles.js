@@ -1,4 +1,5 @@
 // Vehicle physics, seats (multi-passenger binding), collisions, ped strikes, wrecks.
+import { breakProp as breakFence } from './props.js';   // (a fence knocked flat: props.js imports this module too - used at run time only)
 import * as insurance from './insurance.js';   // (a player's own vehicle wrecked or sunk: its claim)
 import * as firstcar from './firstcar.js';   // (the hustle's first car: the one theft nobody calls in)
 import { K, T, VF, WEATHER } from '../../shared/constants.js';
@@ -42,7 +43,10 @@ export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHE
   }
   if (v.dead) { const di = deadInput(v, v.input.steer || 0, v.input.hb); v.input.throttle = di.throttle; v.input.slide = false; } // (engine dead: it rolls to a stop)
   const pvx = v.vx, pvy = v.vy;   // (the way it was going: the end that hit the wall)
+  // (a fence gone through fast: knocked flat - props.js breakProp, by whoever's driving)
+  env.smash = (i, a, sp) => breakFence(world, i, Math.cos(a) * sp, Math.sin(a) * sp, v.seats[0] ? world.get(v.seats[0]) : null);
   const impact = vehStep(v, v.input, dt, world.map, v.def, env);
+  env.smash = null;
   if (v.def.cart && impact >= CART.hit) cartCrash(world, v, impact);   // (a shopping cart into anything: the one in the basket flies)
   if (impact > 160) {
     const dmg = (impact - 140) * 0.22 / Math.sqrt(v.def.mass);

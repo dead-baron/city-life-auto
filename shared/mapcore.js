@@ -482,7 +482,9 @@ export const BREAKABLE = new Set([
   'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b', 'cactus', 'sigpole',
   'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'bollard', 'crates', 'acunit', 'trashpile', 'atm', 'billboard',
   'tent', 'picnic', 'upole', 'dspeaker', 'scope',
+  'fenceline', 'chainfence', 'yfence', 'rail', 'hedgerun',
 ]);
+export const FENCE_PROPS = new Set(['fenceline', 'chainfence', 'yfence', 'rail', 'hedgerun']);
 export const HEAVY_PROPS = new Set(['fuelpump', 'tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole', 'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'acunit', 'billboard', 'upole']);
 
 // The terrain class a wild district really grows: the little sea islands (Lighthouse Rock, the Islets) are never

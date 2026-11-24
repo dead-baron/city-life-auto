@@ -26829,3 +26829,27 @@ in a running game.
 - The reported suspect's red "!" (the only "!" the page draws over people): its foot 6 px above the head, measured from
   its foot whatever text baseline was left set, the bob only upward. Test: `test/overhead.test.js`.
 Not looked at in a running game.
+
+## 2026-11-23 · Vehicles smash things, and what they smash lies there (the owner's 20:10 note) - on branch `smash-1123`
+The owner, 11-23: cars should "actually knock over or break down or smash through" fences, trees, bus stops and
+benches, with "a visible reaction not just disappear", and anyone sitting on one "should go flying off".
+- Fences (`shared/fences.js`): a wooden, picket, chain-link or yard fence, a hedge run or a rail still holds a car at a
+  crawl, but one crossing it faster than `FENCE_SMASH` (rules.js: low 150 px/s, tall 230) goes through - slowed (kept
+  85% / 70% of its speed) - and the panel's prop breaks on the server (`props.js` breakProp, the same 'propbreak' every
+  page already hears). A down fence (`m.downFences`, set on the server and on each page from propbreak, cleared by
+  propfix and on a resync) holds no one: walked and driven over until it's put back with the other props.
+  `mapcore.js` BREAKABLE gains the fence kinds (FENCE_PROPS); `smash.js` keeps them off the bump grid (the fence
+  segments do their colliding). The page predicts the hold, not the break - the server's word puts the fence down.
+- What's knocked over (`client/art2/game/statics.js` brokenVariant, `gbuf.js` toppleGBuf): benches, shelters, phone
+  boxes, planters, bins and the fence pieces lie flat on their side, laid along the way they were hit, with shards of
+  their own stuff round them (glass, wood, metal) - before, a broken one of these drew as a small pile of generic
+  bits. Trees, poles, pumps and stumps keep the fallen looks they had. Fence pieces are tied to their prop now (`pi`).
+- Whoever sat on it (`props.js` throwSitters): within reach of a broken seat, a sitter is taken off it and flung the way
+  the car went (vehicles.js fling, half a hit's hurt). 
+- Guide: Driving says it.
+Tests: `test/smash.test.js` (a car fast into a chain-link fence goes through, slowed, the fence broken and down for
+everyone; the knocked-over shelter lies flat; a sitter thrown off), `test/fences.test.js` (at a crawl every vehicle is
+held, as before). Not done: field rail runs (the countryside's own, not props) still only hold; nothing on the page
+plays a crash sound or dust for a fence. The page is at its code budget (540.45 of 540 KB rounded): to fit, three
+old comments in main.js, mapcore.js and smash.js were shortened - the next page change needs a lazy load or the owner's
+word on the budget. Not looked at in a running game.

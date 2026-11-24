@@ -2,7 +2,7 @@
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_LOOP_S, SKY_LIFT } from '../shared/constants.js';
-import { cityFromData, WATER_T, TRAIN_CARS, mapSignature } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
+import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, FENCE_PROPS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
 import { pedStep, vehStep, driveInput, setFences } from '../shared/physics.js';
@@ -31,9 +31,8 @@ import { createRouter } from './route.js';
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
-// The first-time experience (the old city tour's place - retired 11-04): the server runs it (server/systems/ftue.js); its
-// page side, client/ftue.js, loads the first time the server speaks of it - a new character's arrival, the first goal's
-// lines, a first-time moment's tip - never with the page.
+// The first-time experience: the server runs it (server/systems/ftue.js); its page side, client/ftue.js, loads the
+// first time the server speaks of it - never with the page.
 let FT = null, ftP = null;
 const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
   m.init({ S, send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay: () => topOverlay(), sfx: (n, v) => sfx(n, v), hud: () => S.hud, openGuide: (sec) => { S.guideSec = sec; openHub('phone', 'guide'); }, openApp: (k) => openHub('phone', k), setCam: (fn) => { S.camOver = fn; }, refocus: () => { ovFocus = startFocus(); focusOverlay(); } });
@@ -460,6 +459,7 @@ function onText(m) {
       // home leaves you stuck" - the page kept showing the rooms while the server had you out by the door)
       if (S.homeP) S.homeP.then((mod) => mod.onMsg(S, { off: 1 })).catch(() => {});
       for (const p of S.map.props) if (p && p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
+      if (S.map.downFences) S.map.downFences.clear();
       S.confirmedBreaks.clear(); S.predBreaks.clear();
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
       S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) if (pr) pr.off = false;
@@ -798,6 +798,7 @@ function setPropBroken(i, a, withFx) {
   p.broken = { a };
   const se = S.map.propSolid.get(i);
   if (se) se.off = true;
+  if (FENCE_PROPS.has(p.t)) (S.map.downFences ??= new Set()).add(i);
   S.ground.invalidateAt(p.x, p.y);
   if (S.art2) S.art2.propChanged(i);
   if (!withFx) return;
@@ -1159,7 +1160,7 @@ function onEvent(ev) {
     case 'propfix': {
       const p = S.map.props[ev.i];
       S.confirmedBreaks.delete(ev.i); S.predBreaks.delete(ev.i);
-      if (p) { delete p.broken; const se = S.map.propSolid.get(ev.i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); if (S.art2) S.art2.propChanged(ev.i); }
+      if (p) { delete p.broken; if (S.map.downFences) S.map.downFences.delete(ev.i); const se = S.map.propSolid.get(ev.i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); if (S.art2) S.art2.propChanged(ev.i); }
       break;
     }
     case 'geyser': { const g = S.geysers.find((q) => Math.hypot(q.x - ev.x, q.y - ev.y) < 4); if (g) delete g.seq; else S.geysers.push({ x: ev.x, y: ev.y, until: performance.now() + ev.d * 1000 }); fx.splash(ev.x, ev.y, 14); break; }
@@ -3220,9 +3221,8 @@ function pedPose(e) {
 }
 
 let last = performance.now(), fpsAcc = 0, fpsN = 0, pingAt = 0;
-// A frame that throws no longer ends the game (the owner, 2026-10-15: "Spawning a helicopter turned the screen black and
-// froze the game" - the next frame was only asked for at the end of this one): the next frame is always asked for, and
-// the error goes to the server once (reportError: /clienterrors).
+// A frame that throws doesn't end the game (DEVLOG 10-15): the next frame is always asked for; the error goes to the
+// server (reportError).
 function frame(nowMs) {
   try { frameBody(nowMs); } catch (e) { reportError('frame', e); }
   if (!CAP) requestAnimationFrame(frame);
