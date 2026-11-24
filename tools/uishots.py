@@ -78,7 +78,7 @@ def steps_for(size, screens, outdir):
     if want('hud'): st += shot('hud')
     for tab in ['pause', 'settings', 'map', 'phone', 'bag', 'people']:
         if not want(tab) and not (tab == 'phone' and any(want('phone-' + a) for a in APPS)): continue
-        st += [f'eval:CLA.hub("{tab}"); return 1', 'wait:700', f'eval:CLA.hub("{tab}"); return 1', 'wait:' + ('3000' if tab == 'bag' else '900')]   # (twice: the first can land while a card is closing)   # (the Inventory loads the first time it opens: client/bag.js)
+        st += [f'eval:CLA.hub("{tab}"); return 1', 'wait:700', f'eval:CLA.hub("{tab}"); return 1', 'wait:' + ('3000' if tab in ('bag', 'map') else '900')]   # (twice: the first can land while a card is closing)   # (the Inventory loads the first time it opens: client/bag.js)
         if want(tab): st += shot(tab)
         if tab == 'phone':
             for a in APPS:
