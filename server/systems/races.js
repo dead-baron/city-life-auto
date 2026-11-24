@@ -4,6 +4,7 @@
 // Anyone who turns up mid-race joins the next round. Leave your vehicle, die, or wander off and you forfeit - the
 // race carries on for everyone else.
 import { store } from '../store.js';
+import { raceShown } from '../../shared/hidden.js';
 import * as skills from './skills.js';
 import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
@@ -32,6 +33,7 @@ export function update(world) {
   if (!world.raceState || world.tick % 5 !== 3) return;
   const now = world.time;
   world.map.races.forEach((race, i) => {
+    if (!raceShown(race)) return;   // (hidden for the beta: rules.js RACES_HIDDEN)
     const st = world.raceState[i];
     // who is sitting at the start buoy in the right kind of craft
     const atStart = [];
@@ -129,7 +131,7 @@ export function footInteraction(world, p, rentals, openMenu) {
     const near = Math.hypot(ped.x - race.start.x, ped.y - race.start.y) < START_R * 1.2 || Math.hypot(ped.x - r.dock.x, ped.y - r.dock.y) < 120;
     if (!near || rentals.current(world, p)) continue;
     const model = rentals.modelsAt(r)[0];
-    return { label: `Rent a ${model} for ${race.name}`, run: () => { openMenu(world, p, poi); if (p.menu) p.menu.at = { x: ped.x, y: ped.y }; } };
+    return { label: raceShown(race) ? `Rent a ${model} for ${race.name}` : `Rent a ${model}`, run: () => { openMenu(world, p, poi); if (p.menu) p.menu.at = { x: ped.x, y: ped.y }; } };
   }
   return null;
 }

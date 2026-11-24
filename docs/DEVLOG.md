@@ -26970,3 +26970,16 @@ The owner, 11-24 08:15: "Okay to raise the limit". The page (client/boot.js + ma
 540.46 of 540 KB gzipped after the 11-23 batch - three old comments were shortened to fit it - and P2's biggest
 per-frame garbage left (main.js collectLights, render/weather.js drawRain) is page code. 20 KB more is about 0.1 s on a
 phone on 4G. tools/perf.mjs; DECISIONS (performance budgets).
+
+## 2026-11-24 · Finish or hide, and the balance calls (the owner, 08:44)
+- **The kayak races hidden for the beta** (shared/hidden.js RACES_HIDDEN - a small module the page reads at once;
+  rules.js isn't page code): races.js starts none, the page draws no buoys for them (main.js drawBuoys), their starts
+  are in no list or map (mapwaypoints.js placesOf), the Guide's "The river kayak run" is out; the kayak hire stays
+  ("Rent a kayak"). Test: `test/hidden.test.js`; world3rapids checks the race as hidden. The rest of the D table kept.
+- **The other road** (the balance audit's 3): the daily goals' second is a crime lead for the honest careers, an
+  honest one for crime (goals.js roll; the Guide's "Daily and weekly goals" says it).
+- **Bank it** (the audit's 4): the first knock-down's line - "the cash and guns you carry fall where you lie (bank cash
+  at any ATM)" (ftue.js MOMENTS.down; cargo.js dropEverything drops the cash, as it says).
+- The audit's 1: pay unchanged until the first test weekend's money data (DECISIONS).
+No world or art change: the hashes are as before, so the P5 re-bake runs on. Tests: hidden, races, goals, ftue,
+guide, perf, phones, world3rapids, world3marsh, world3woods, riders, activities.

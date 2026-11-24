@@ -56,6 +56,13 @@ and then - world3scenes flakes on main.
 (chunks vanishing first), C1-C4 cheap cinematic infrastructure, the Fable art list, after-beta events. The stash concept
 UIC-21 is in (`docs/art-v2/targets/ui/UIC-21_stash.png`).
 
+## 2026-11-24 morning - the owner's calls, done
+- Finish or hide (D): the kayak races hidden; the rest kept (above). The page's code budget 540 -> 560 KB.
+- The balance audit (BALANCE-2026-11-22.md): 1 pay unchanged until the test weekend's data; 3 the daily goals' second
+  from the other road; 4 the first knock-down's line: carried cash drops, bank it.
+- **For the Fable 5.2 chat, added:** the cinema's redesign (lobby + separate auditoriums - world and art); car soccer's
+  arena art (branch `arenaart`); the races' markers and grid; tennis's swing (with the people pass).
+
 ## 2026-11-24 overnight (Opus) - done, on branch `smash-1123` (on top of PR #35's `heights-1123`; DEVLOG has each)
 - Vehicles smash things (the owner's 11-23 20:10 note): fences go down at speed, what's knocked over lies there with
   its shards, sitters thrown.
@@ -182,7 +189,10 @@ a story, NPC life per district, checked at noon/sunset/night, the owner's review
 Casino/card tables, car soccer, the raceway, tennis, kayak racing, the cinema, Practice Offline (already hidden),
 anything else the walkthrough finds unfinished. Hidden = no map marker, no door, no Guide entry until it's done.
 
-**Where each stands (Claude, 11-24 - for the owner's call; nothing hidden or changed yet):**
+**Decided 11-24 08:44 (the owner: "Lets Agreed on your suggestions"; DECISIONS "Product and launch"):** as suggested
+below - the kayak races are hidden (shared/hidden.js); car soccer's arena art, the races' markers and grid and tennis's
+swing go to the Fable pass; and **the cinema is redesigned before the beta** (a lobby and separate auditoriums), in the
+Fable chat's world-art work. The table as it stood:
 | Item | Plays today | Missing (section C) | Claude's suggestion |
 |---|---|---|---|
 | Casino floors and card tables | Slots, roulette, blackjack, video poker and the race book against the house; NPC regulars seated, the wheel spinning and cards dealt for everyone near (casinofloor.js, 11-14) | The fancy-tier art and the table games' look (art); poker with other players | Keep - it plays end to end; the art goes in the Fable pass |
