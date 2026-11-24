@@ -26916,3 +26916,13 @@ tail lights and sirens were the ones dropped. The frame's lights are still the s
 moving ones are sure of a quarter of the cap (client/art2/game/host.js pickLights, MOVE_SHARE): short of it, the best of
 them past the cap are swapped in for the weakest of the rest. Test: `test/art2.test.js`. Not looked at on the Strip at
 night in a running game.
+
+## 2026-11-24 · My looks: the saved looks under the creator's preview (PREBETA-LIST C, the design agreed 11-17)
+The owner, 11-17 23:06: "Add to Saved" didn't say where your saved looks were, and saving isn't how you'd look for them.
+As agreed: a **My looks** strip right under the preview, on every tab (client/creator.js mine()) - your saved looks as
+small portraits (a tap wears one; its ⋯ opens Rename / Delete in a row under the strip) and a **+** at its end that
+saves the look on now, named in place ("Save looks here" while there are none). The Saved tab and the "Add to Saved"
+footer button are gone (footer: Random, Undo, Done); the 12-look limit and the server's messages are as before. On a
+short screen the left column scrolls (never cut at both ends) and brings what you're doing into view. The Guide's "Your
+look" says it. Looked at in the running game at 1440x900 and 844x390 (two looks saved, one's menu open). Not looked at
+with a pad.
