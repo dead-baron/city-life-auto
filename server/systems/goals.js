@@ -45,13 +45,17 @@ export function eligible(p, T) {
 const rankFor = (p, c) => careers.careerRank(p, CAREERS[c] ? c : careers.mainCareer(p));
 function make(p, T, slot) { return { k: T.id, slot, c: T.c, n: T.n[tierOf(rankFor(p, T.c))], got: 0, done: 0 }; }
 function pick(rnd, list) { return list.length ? list[Math.floor(rnd() * list.length)] : null; }
-// today's three: the main career's, another of any career's (another career's if there is one), a side activity's
+// today's three: the main career's, one from the other road (crime for the honest careers, an honest one for crime -
+// else another career's), a side activity's
 export function roll(p, day, salt = 0, keep = []) {
   const rnd = mulberry32(seed(p.pid || p.profile.pid || '', day, salt)), main = careers.mainCareer(p);
   const ok = (T) => eligible(p, T) && !keep.includes(T.id);
   const a = pick(rnd, GOALS.daily.filter((T) => T.c === main && ok(T)));
   const others = GOALS.daily.filter((T) => CAREER_KEYS.includes(T.c) && T.c !== main && ok(T));
-  const b = pick(rnd, others.length ? others : GOALS.daily.filter((T) => CAREER_KEYS.includes(T.c) && ok(T) && T !== a));
+  // (the other road, the balance audit's A5 - the owner, 11-24: an honest player's second goal a crime lead, a crook's
+  // an honest one, so each sees the way across once a day)
+  const across = main === 'crime' ? others.filter((T) => T.c !== 'crime') : others.filter((T) => T.c === 'crime');
+  const b = pick(rnd, across.length ? across : others.length ? others : GOALS.daily.filter((T) => CAREER_KEYS.includes(T.c) && ok(T) && T !== a));
   const s = pick(rnd, GOALS.daily.filter((T) => T.c === 'side' && ok(T)));
   return [a && make(p, a, 'main'), b && make(p, b, 'any'), s && make(p, s, 'side')].filter(Boolean);
 }

@@ -13,6 +13,7 @@ import { VEHICLE_BY_INDEX, vehicleWord } from '../shared/vehicles.js';
 import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb, ITEMS } from '../shared/items.js';
 import { loadout } from '../shared/loadout.js';
 import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
+import { raceShown } from '../shared/hidden.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
@@ -4284,7 +4285,7 @@ $('int-open').onclick = () => send({ t: 'interior' });
 // Race marks: the start float or flag, the numbered gate buoys - pixel art (client/render/racemarks.js, loaded the first
 // time one is in view)
 function drawBuoys(view, now) {
-  const races = S.map.races;
+  const races = S.map.races && S.map.races.filter(raceShown);
   if (!races || !races.length) return;
   if (S.raceMarks) { S.raceMarks.drawRaceMarks(g, races, view, now); return; }
   const near = (p) => p.x > view.x0 - 200 && p.x < view.x1 + 200 && p.y > view.y0 - 200 && p.y < view.y1 + 200;

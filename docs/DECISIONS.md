@@ -42,6 +42,13 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - /perf and /clienterrors behind the owner/admin login (clients can still post errors). (11-04; decisions-11-04)
 
 - App icon: the neon logo (City Life over Auto, the skyline) on a navy-to-magenta dusk, from the title art (assets/icons; option A of four). (11-17; chat)
+- Finish or hide, the pre-beta calls (11-24 08:44; chat: "Lets Agreed on your suggestions"): the casino floors and card
+  tables kept (their art in the Fable pass); car soccer kept, its arena art (ball, pads, goals, scoreboard, the boost
+  flame - branch `arenaart`) on the Fable list; the raceway and the water races kept, their markers and grid on the
+  Fable list; tennis kept (the racket swing with the people pass); the kayak races hidden until the kayaker sits in it
+  and paddles (shared/hidden.js - kayaks still hire and ride); the cinema **redesigned before the beta** ("for the
+  cinema lets redesign before the beta") - a lobby and separate auditoriums, in the Fable chat's world-art work.
+
 ## Accounts, sign-in and privacy
 - One account, many sign-ins; our own account record with providers linked. (11-03; launch-plan 11-03)
 - Sign-ins: Guest, Email + password, Google, Discord. Reddit and email magic links OUT. (11-12; DEVLOG 11-12) - SUPERSEDES the 11-03 lineup (Google, Discord, magic link).
@@ -427,6 +434,12 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - ATMs: a pop-up (Deposit all / Use ATM), on foot only. (10-06; DEVLOG 10-22)
 - Air hockey is two-player (or vs the machine); a game in progress can only be watched. (11-07; DEVLOG 11-07)
 - Games watchable from outside, for ALL games (pool, hockey, skee-ball, cabinets, bowling, chess, cards, dice, roulette, darts): light server sims only while someone is near. (11-13; queue)
+
+- The balance audit's proposals (11-24 08:44; chat: "I think for the balance stuff that all looks good"): 1) pay left
+  as it is until the first test weekend's money sources, then aimed at a median home ~5-8 h of honest work and a mid car
+  ~3 h; 3) the other road - the daily goals' second is a crime lead for the honest careers and an honest one for crime
+  (goals.js roll); 4) the first time you're knocked down, its line says the cash you carry drops - bank it at any ATM
+  (ftue.js MOMENTS.down). (docs/audit/BALANCE-2026-11-22.md)
 
 ## Director and content
 - Scripted scenes for trailers, with player-like NPC actors and set camera moves; also as occasional live-world events. (11-13; chat, DEVLOG 11-13)

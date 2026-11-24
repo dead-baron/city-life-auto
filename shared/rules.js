@@ -1508,3 +1508,4 @@ export const RACERS = {
 // picket, a rail, a board fence, a low hedge) or a tall one (chain-link, a wall's run, a tall hedge); slower, it holds the
 // car like a wall. keep: the share of its speed the car keeps going through.
 export const FENCE_SMASH = { low: 150, tall: 230, lowKeep: 0.85, tallKeep: 0.7 };
+
