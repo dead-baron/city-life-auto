@@ -407,3 +407,20 @@ bus stop, then they should go flying off while the bench or object they're on ge
   knock-down the player already has). One table of what breaks at what speed in `shared/rules.js`. Test: every
   breakable prop kind has a reaction; a sitter is thrown.
 - Art (Fable): the fallen / broken pictures of each (a flattened fence panel, a fallen trunk, a broken bench, shelter glass).
+
+## Weapons and markers (owner, 11-23 21:37-21:39 - for the pre-beta, "when the time is right")
+- **Aiming (keyboard and mouse):** "when you have it equipped it will always point out straight in your hand. You used to
+  only hold up the weapon when you were aiming ... hold right click and that's when you would aim and put your weapon up,
+  or hold right click to block if you were unarmed or had a melee weapon. Now it just seems like your gun is held up
+  whenever you have it equipped ... the gun still comes down when I use controller." To do: find what changed on mouse
+  and keyboard (the pose follows the cursor's aim while equipped?); the gun down unless the aim button (right click) is
+  held, as on a pad; right click held unarmed / melee: block. A test row: equipped and not aiming -> gun down, on every device.
+- **Muzzle flash at the barrel:** "gun shot flashes aren't coming from the barrel of the gun, they are coming from the
+  middle of my character ... showing on the end of barrels for all weapons." The flash (and the tracer's start) at each
+  weapon's muzzle point, by facing and pose; a test over every weapon.
+- **The "!" over people:** "when an exclamation mark shows up on my character or other characters or NPCs ... slightly
+  above the player model instead of over the player." One head-top anchor (the N5 overhead-label rule of 11-22): the
+  mark clear above the head; test row with the labels.
+- **The white rectangles everywhere:** they're the cash machines (385 ATMs: set into a shop's wall, or standing at a kerb
+  - the 52 left standing are atmStray, a booth decided 11-22). The picture doesn't say ATM: for the Fable art pass - a
+  screen, a keypad, the ATM sign or bank colours, the booth for the free-standing ones.
