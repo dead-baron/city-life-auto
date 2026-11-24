@@ -43,6 +43,10 @@ hand-crafted fields); koi drawn over the water (a layering fix - may land in sec
 features hold their place in every frame of every cycle, then a softer, thinner line or none - NPCs lose theirs today,
 players keep them).
 
+**11-24, the Fable chat:** this list is not a pass of its own - each note is done with the biome or district it belongs to
+(the order: project doc `claude/art-pass-plan-2026-11-24.md`; DECISIONS, Art direction). Mouths: the dark line was his
+character's black lipstick - as intended; a face polish for painted lips and stray pixels instead (DECISIONS 11-24).
+
 ## 4. After the beta (new features)
 Bank and store robberies (hands up, comply or fight, Samaritan points); rare streakers (and one at a sports match,
 security chasing); sports betting while games are on; real basketball (play or watch NPCs); lying in a hammock.
