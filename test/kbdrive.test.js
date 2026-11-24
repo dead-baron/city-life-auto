@@ -100,3 +100,12 @@ test('touch: the aim stick fires from its outer ring only with the FIRE toggle o
   assert.match(input, /settings\.touchEdgeFire = !settings\.touchEdgeFire; saveSettings\(\)/);
   assert.match(main, /settings\.touchEdgeFire = e\.target\.checked; saveSettings\(\); input\.showFireToggle\?\.\(\)/);
 });
+
+// (the owner, 11-23) on a keyboard and mouse the gun is down unless the right button is held (or you fire): the cursor
+// aims only then - no gun up whenever the mouse moved (twin-stick, 11-13 to 11-23)
+test('mouse: the gun up only while the right button is held, or firing', () => {
+  const input = src('client/input.js');
+  assert.match(input, /if \(mouse\.down \|\| mouse\.clicked \|\| mouse\.rdown\) \{ aim = cursorAim; bits \|= IN\.AIMING; \}/);
+  assert.doesNotMatch(input, /view\.armed && mouseRecent/, 'no aiming because the mouse moved');
+  assert.equal(KB.aim, 'RMB', 'the controls say so');
+});

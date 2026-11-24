@@ -26816,3 +26816,16 @@ it's hard to see where you're shooting." The job marker (client/main.js, the yel
 stands (`h`) and that its marker fades once seen (`fade`: full for JOB_MARK[0] s, gone over JOB_MARK[1] s, back when the
 target moves); hoops.js targetFor sends the rim's height + 30 and fade. Test: `test/hoopmark.test.js`. Not looked at
 in a running game.
+
+## 2026-11-23 · The gun up only while aiming, the flash at the barrel, the "!" above the head (the owner's 21:37-21:39 notes) - on branch `heights-1123`
+- Mouse and keyboard (`client/input.js`): the cursor aims - the gun up, pointed at it - only while the right button is
+  held, or as you fire; otherwise you face where you walk with the gun down, as on a pad. It had been twin-stick since
+  11-13 (the gun up whenever the mouse had moved in the last 8 s). The controls table's aim is RMB. DECISIONS, Controls.
+  Test: `test/kbdrive.test.js`.
+- The muzzle flash and the tracer start at the barrel's end (`client/main.js` MUZZLE: along the aim and up, by how the
+  gun is held - a pistol at arm's length, a long gun at the shoulder, a tube), the flash drawn at that height
+  (`host.js` f.z); measured off the people renderer's aiming pose. Test: `test/muzzle.test.js` (each held kind within
+  6 px of the pose's barrel). Before: 14 px out at chest height whatever the gun.
+- The reported suspect's red "!" (the only "!" the page draws over people): its foot 6 px above the head, measured from
+  its foot whatever text baseline was left set, the bob only upward. Test: `test/overhead.test.js`.
+Not looked at in a running game.

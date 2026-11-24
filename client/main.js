@@ -972,7 +972,10 @@ function onEvent(ev) {
       // running shooter (the owner, 2026-10-09). The flash stays on the gun for its few frames (collectLights).
       const sh = ev.id ? S.ents.get(ev.id) : null, still = ev.x2 === ev.x1 && ev.y2 === ev.y1;
       const a = still ? (sh && sh.ra !== undefined ? sh.ra : 0) : Math.atan2(ev.y2 - ev.y1, ev.x2 - ev.x1);
-      const off = w && w.type === 'rocket' ? 20 : 14, follow = !!(sh && sh.rx !== undefined && Math.hypot(sh.rx - ev.x1, sh.ry - ev.y1) < 260);
+      // (at the barrel's end as the aiming pose draws it - the owner, 11-23: "coming from the middle of my character":
+      // MUZZLE [reach along the aim, height] by how it's held, measured off the people renderer's aim pose)
+      const mz = MUZZLE[w && LONG_GUN.has(w.id) ? 'long' : w && (w.type === 'rocket' || w.type === 'flame') ? 'tube' : 'hand'];
+      const off = mz[0], follow = !!(sh && sh.rx !== undefined && Math.hypot(sh.rx - ev.x1, sh.ry - ev.y1) < 260);
       // (from a car: out of its window as the car's drawn, not at the shooter lagging behind it - render/fx.js windowMuzzle)
       const car = follow && sh.parent ? S.ents.get(sh.parent) : null, cd = car && car.kind === K.VEH && car.d && car.rx !== undefined ? VEHICLE_BY_INDEX[car.d.m] : null;
       const win = cd && cd.kind !== 'bike' && cd.kind !== 'air' && !cd.crew && !cd.horse ? { car: car.id, def: cd, back: !!sh.back, aim: a } : null;
@@ -981,7 +984,7 @@ function onEvent(ev) {
       fx.tracer(x1, y1, ev.x2, ev.y2);
       if (win) { win.until = S.loopClock + 0.45; (S.leans ||= []).push(win); }   // (the arm and the gun out of the window: drawLeans)
       if (w && w.silenced) { sfx('swing', distVol(ev.x1, ev.y1) * 0.5); break; } // a suppressed cough, no muzzle flash
-      S.flashes.push({ x: x1, y: y1, t: 0.065, a, r: 170, id: follow && !win ? ev.id : 0, off, win });
+      S.flashes.push({ x: x1, y: y1, z: win ? 18 : mz[1], t: 0.065, a, r: 170, id: follow && !win ? ev.id : 0, off, win });
       fx.spawn(4, x1, y1, 0, 0, 0.05, 6, '#fff3b0');
       sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun' || w.id === 'huntrifle') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
       break;
@@ -5356,6 +5359,7 @@ function founderMark(x, y, z) {
   for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) if (CROWN[j][i] === '1') g.fillRect(x0 + (i - 1) * u, y0 + (j - 1) * u, 3 * u, 3 * u);
   for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) if (CROWN[j][i] === '1') { g.fillStyle = j === 0 ? '#fff2b0' : j === 3 ? '#c89220' : '#ffcc33'; g.fillRect(x0 + i * u, y0 + j * u, u, u); }
 }
+const MARK_GAP = 6;   // screen px between the head's top and the foot of the "!" over a reported suspect
 function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the camera's { tags, marks, rest } - what of it's drawn)
   const fs = 12 / z;
   g.textAlign = 'center';
@@ -5372,10 +5376,13 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
     if ((!only || only.marks) && p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD) && !(S.launch && S.launch.chat.balloonOn(p.id))) drawSkull(p.rx, hd - tagUp - ((p.flags & PF.FLARE) ? 46 : 16) / z, z, now);
     if ((!only || only.marks) && p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
-      const bob = Math.sin(now * 10) * 3 / z;
-      g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, hd - tagUp - 6 / z + bob + 1.5 / z);
-      g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, hd - tagUp - 6 / z + bob);
-      g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
+      // (its foot clear above the head whatever the baseline was left at - the owner, 11-23: "slightly above the player model
+      // instead of over the player"; MARK_GAP screen px, the bob only ever upward)
+      const bob = -Math.abs(Math.sin(now * 10)) * 3 / z, bl = g.textBaseline, y = hd - tagUp - MARK_GAP / z + bob;
+      g.textBaseline = 'bottom';
+      g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, y + 1.5 / z);
+      g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, y);
+      g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textBaseline = bl;
     }
     if ((!only || only.rest) && !p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
       // health bar over whoever you're brawling with, just over the head; tough/brute builds get a tag so you can size them
@@ -5434,6 +5441,11 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
   void vehs;
 }
 
+// where a shot's flash and tracer start: [px along the aim from the shooter, px up] - a pistol held out at arm's length,
+// a long gun at the shoulder, a tube on it (client/art2/people.js aimPose, measured: the barrel's end 23-25 px out,
+// 22-31 up)
+const MUZZLE = { hand: [24, 28], long: [27, 23], tube: [26, 27] };
+const LONG_GUN = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
 // a fading job marker's strength JOB_MARK[0] s after it showed: full, then gone over JOB_MARK[1] s
 const JOB_MARK = [2.5, 1];
 function jobMarkAlpha(s) { return s <= JOB_MARK[0] ? 1 : Math.max(0, 1 - (s - JOB_MARK[0]) / JOB_MARK[1]); }

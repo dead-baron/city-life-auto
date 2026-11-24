@@ -376,6 +376,12 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The plasma blade comes in colors you choose. (10-09; DEVLOG 10-09)
 - A SAM launcher to fight helicopters, without making them weak. (10-16; DEVLOG 10-22)
 
+## Controls (keyboard and mouse)
+- The gun is down unless the right mouse button is held (aim: the gun up, pointed at the cursor) or you fire (left
+  click, at the cursor) - as on a pad; right button held unarmed or with a melee weapon: block. Not twin-stick (the gun up
+  whenever the mouse had moved, 11-13 to 11-23). The owner, 11-23 21:37: "You used to only hold up the weapon when you
+  were aiming ... hold right click and that's when you would aim". (11-23)
+
 ## Vehicles and the car
 - Things a vehicle hits react, for the pre-beta (11-23 20:10, "anything that a vehicle can knock over or drive through or
   destroy should have a visible reaction not just disappear"): fences - chain-link, wooden, the rest - are knocked flat or

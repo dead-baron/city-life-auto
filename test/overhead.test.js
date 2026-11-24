@@ -17,6 +17,10 @@ test('the marks over a person are measured from the head, not the feet', () => {
   assert.match(L, /const y = hd - 4 \/ z;/, 'the name just over the head');
   assert.match(L, /const y = hd - 9 \/ z, bd =/, 'the brawl bar just over the head');
   assert.match(L, /drawSkull\(p\.rx, hd - tagUp/, 'the bounty skull over the name');
+  // (11-23, the owner: "slightly above the player model instead of over the player") the reported suspect's "!": its
+  // foot MARK_GAP above the head, the baseline at its foot, the bob only upward
+  assert.match(L, /const bob = -Math\.abs\(Math\.sin\(now \* 10\)\) \* 3 \/ z, bl = g\.textBaseline, y = hd - tagUp - MARK_GAP \/ z \+ bob;/, 'the "!" above the head');
+  assert.match(L, /g\.textBaseline = 'bottom';/, 'measured from its foot');
   const M = body('drawSuspectMarks');
   assert.match(M, /e\.ry - SKULL_HEAD/, 'an officer\'s chevron over the suspect\'s head');
 });
