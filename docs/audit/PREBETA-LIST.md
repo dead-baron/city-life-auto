@@ -56,6 +56,18 @@ and then - world3scenes flakes on main.
 (chunks vanishing first), C1-C4 cheap cinematic infrastructure, the Fable art list, after-beta events. The stash concept
 UIC-21 is in (`docs/art-v2/targets/ui/UIC-21_stash.png`).
 
+## 2026-11-24 overnight (Opus) - done, on branch `smash-1123` (on top of PR #35's `heights-1123`; DEVLOG has each)
+- Vehicles smash things (the owner's 11-23 20:10 note): fences go down at speed, what's knocked over lies there with
+  its shards, sitters thrown.
+- P2 part 1: driving fast, the art ahead downloaded first (6 at once on a phone). Still: the ~70 ms long tasks.
+- P8 part 2a: racers never cross a median. Measured fine: the city's traffic (no median riding) and called taxis (8/8
+  got there, nothing off the road). Still: the cinematics' scripted cars, jams.
+- The UI pass (item 7): tools/uishots.py - every screen at four sizes with an audit. Fixed what it found: the hub's
+  buttons blocked after a stalled arrival (a real bug on slow phones), cut-off look names, quick bar and job-pay labels,
+  the Inventory's stat labels. The stash side by side on big screens (UIC-21).
+- C, Night lights: headlights keep a quarter of the light cap. C, saved looks: the My looks strip (as agreed 11-17).
+- D: a status table for the owner's finish-or-hide call (below).
+
 ## How we work through it
 - **Every fix is a class fix**: fixed everywhere it occurs, with a lint row or test that runs over the WHOLE World v3
   map in `npm test`, so it can't come back. A note fixed in one spot only is not done.
@@ -169,6 +181,17 @@ a story, NPC life per district, checked at noon/sunset/night, the owner's review
 ## D. Finish or hide for the beta (owner's call per item)
 Casino/card tables, car soccer, the raceway, tennis, kayak racing, the cinema, Practice Offline (already hidden),
 anything else the walkthrough finds unfinished. Hidden = no map marker, no door, no Guide entry until it's done.
+
+**Where each stands (Claude, 11-24 - for the owner's call; nothing hidden or changed yet):**
+| Item | Plays today | Missing (section C) | Claude's suggestion |
+|---|---|---|---|
+| Casino floors and card tables | Slots, roulette, blackjack, video poker and the race book against the house; NPC regulars seated, the wheel spinning and cards dealt for everyone near (casinofloor.js, 11-14) | The fancy-tier art and the table games' look (art); poker with other players | Keep - it plays end to end; the art goes in the Fable pass |
+| Car soccer | Lobby, teams filled by NPC drivers, the ball, goals, kick-off (no replay since 11-17) | The boost flame; the SNES art pass for ball, pads, goals, scoreboard (branch `arenaart`, paused) | Keep if the arena art makes the Fable list; else hide until it does |
+| The raceway (Westport oval) and the water races | Three laps for anything with wheels; a jetski sprint and a boat classic at Pelican Key; join at the start, checkpoints, forfeits | Markers that belong (not floating cones), the grid, better tracks (design first) | Keep the races; the markers are art - put them on the Fable list |
+| Tennis | A game against the club pro on any court: serve, rallies, tennis scoring | Rackets in hand with a swing (art and animation) | Keep - the swing is the people pass |
+| Kayak racing | The Redwood River Run: gates down the river, kayaks hired at its dock (races.js, world3-riverrun.js); the MX park's dirt laps too | Sitting in it, paddle strokes (C: Kayak) | Hide the race until the paddling's done; keep kayaks to ride |
+| The cinema (Grand Theatre) | Tickets, seats, films on the screen, NPCs watching (no lobby music since 11-17) | The owner's redesign (section "The cinema", 11-17) | Owner's call: keep as is for the beta, redesign after |
+
 
 ## E. Unshipped work on branches (all backed up to GitHub 11-17) - ship or drop
 - `egret` (+8): Egret Point interiors, paths to the doors, signs clear, the wallOnly/doorOnGrass/signCovered rows.
