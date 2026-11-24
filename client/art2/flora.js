@@ -126,9 +126,17 @@ export function artDouble(G) {
 
 // ---- canvas, pixels, finishing -------------------------------------------------------------------------
 // a sprite canvas: foot (anchor) at the middle of the bottom, `below` rows left under it for bases
+// The canvas a maker asks for, with room round it it doesn't know of - ROOM_X a side, ROOM_Y over the top (G.ox, G.oy:
+// pxn and has() shift by them, done() folds them into the anchor and crops to what was drawn, so the room costs
+// nothing kept). Without it 41 of the plants were drawn past their canvas and cut off flat there - the sunflowers'
+// heads, the tops of the hibiscus, the salal, the hedges (the owner, 11-23: "sunflowers cut at the top"). A maker's own
+// coordinates are as they were: a plant that fitted its canvas comes out pixel for pixel the same.
+const ROOM_X = 24, ROOM_Y = 40;
 function sprite(w, h, below = 4) {
-  const G = new GBuf(Math.ceil(uu(w)), Math.ceil(uu(h)));
-  G.ax = G.w >> 1; G.ay = G.h - 1 - Math.ceil(uu(below)); G.lz = new Int16Array(G.w * G.h).fill(-1);
+  const w0 = Math.ceil(uu(w)), h0 = Math.ceil(uu(h)), mx = Math.ceil(uu(ROOM_X)), my = Math.ceil(uu(ROOM_Y));
+  const G = new GBuf(w0 + mx * 2, h0 + my);
+  G.ox = mx; G.oy = my;
+  G.ax = w0 >> 1; G.ay = h0 - 1 - Math.ceil(uu(below)); G.lz = new Int16Array(G.w * G.h).fill(-1);
   if (UD()) { G.du = U; G.ax /= U; G.ay /= U; }   // (a maker in world px reads its foot in world px; done() puts it back)
   return G;
 }
@@ -138,14 +146,15 @@ function px(G, x, y, c, n, f = F_LEAF, z = -1) { pxn(G, x, y, c, n[0], n[1], n[2
 function pxn(G, x, y, c, nx, ny, nz, f = F_LEAF, z = -1) {
   if (UD()) { if (z < 0 && G.root) z = Math.max(1, (G.root.b + G.root.y - y) * U); else if (z > 0) z = Math.max(1, z * U); x *= U; y *= U; }
   x = Math.round(x); y = Math.round(y);
-  if (x < 0 || y < 0 || x >= G.w || y >= G.h) return;
   if (z < 0 && G.root) z = Math.max(1, Math.round(G.root.b + G.root.y - y));   // standing on raised or flat ground
+  if (G.ox) { x += G.ox; y += G.oy; }   // (the room round the canvas: sprite())
+  if (x < 0 || y < 0 || x >= G.w || y >= G.h) return;
   const i = y * G.w + x, j = i * 4, l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
   G.col[j] = c[0]; G.col[j + 1] = c[1]; G.col[j + 2] = c[2]; G.col[j + 3] = 255;
   G.nrm[j] = (nx / l * 0.5 + 0.5) * 255; G.nrm[j + 1] = (ny / l * 0.5 + 0.5) * 255; G.nrm[j + 2] = (nz / l * 0.5 + 0.5) * 255; G.nrm[j + 3] = 255;
   G.emi[j + 3] = 0; G.flag[i] = f; if (G.lz) G.lz[i] = z;
 }
-const has = (G, x, y) => { x = Math.round(uu(x)); y = Math.round(uu(y)); return x >= 0 && y >= 0 && x < G.w && y < G.h && G.col[(y * G.w + x) * 4 + 3] > 0; };
+const has = (G, x, y) => { x = Math.round(uu(x)) + (G.ox || 0); y = Math.round(uu(y)) + (G.oy || 0); return x >= 0 && y >= 0 && x < G.w && y < G.h && G.col[(y * G.w + x) * 4 + 3] > 0; };
 // GBuf.outline(dark, true) without per-pixel allocations: each empty pixel left of, right of or above the shape
 // (not under its bottom edge) takes a dark, violet-shifted copy of that neighbour
 function outline(G, dark) {
@@ -171,6 +180,10 @@ function outline(G, dark) {
 // The ground and what is strewn on it have none.)
 function done(G, ol = 0.42) {
   if (G.du) { G.ax = Math.round(G.ax * G.du); G.ay = Math.round(G.ay * G.du); G.du = 0; }
+  if (G.ox) { G.ax += G.ox; G.ay += G.oy; G.ox = 0; G.oy = 0; }
+  // (a plant drawn past its canvas is cut off flat there - the sunflowers' heads, the owner, 11-23: "sunflowers cut at
+  // the top". test/floraclip.test.js counts the pixels on the canvas's top row and side columns before the crop)
+  if (globalThis.__FLORA_CLIP) { let t = 0, sd = 0; for (let x = 0; x < G.w; x++) if (G.col[x * 4 + 3]) t++; for (let y = 0; y < G.h; y++) { if (G.col[y * G.w * 4 + 3]) sd++; if (G.col[(y * G.w + G.w - 1) * 4 + 3]) sd++; } globalThis.__FLORA_CLIP(t, sd, G); }
   if (ol) outline(G, ol);
   const n = G.w * G.h;
   for (let i = 0; i < n; i++) if (G.col[i * 4 + 3]) G.z[i] = G.lz && G.lz[i] >= 0 ? G.lz[i] : Math.max(1, G.ay - Math.floor(i / G.w));
@@ -634,17 +647,17 @@ export function shrub(seed = 1, o = {}) {
 }
 // snow resting on the tops of a sprite's foliage: pixels whose pixel above is empty (or snow) turn white
 function snowCap(G, k = 0.6, seed = 1) {
-  const W = G.w, H = G.h, mark = new Uint8Array(W * H);
-  for (let x = 0; x < W; x++) {
-    let run = 0;
-    for (let y = 0; y < H; y++) {
-      const i = y * W + x, a = G.col[i * 4 + 3];
+  const W = G.w, H = G.h, mark = new Uint8Array(W * H), ox = G.ox || 0, oy = G.oy || 0;   // (x, y below: the maker's own, the canvas's room taken off)
+  for (let bx = 0; bx < W; bx++) {
+    let run = 0; const x = bx - ox;
+    for (let by = 0; by < H; by++) {
+      const i = by * W + bx, a = G.col[i * 4 + 3], y = by - oy;
       if (!a) { run = 0; continue; }
       if (run === 0 && (G.flag[i] & F_LEAF) && hash(x >> 1, y >> 2, seed) < k) run = 2 + (hash(x, y, seed + 1) * 2.5 | 0);
       if (run > 0) { mark[i] = run; run--; if (run === 0) run = -1; }
     }
   }
-  for (let i = 0; i < W * H; i++) if (mark[i]) { const x = i % W, y = (i / W) | 0; px(G, x, y, step(SNOW, 0.45 + mark[i] * 0.12 - (hash(x, y, 2) > 0.85 ? 0.15 : 0), x, y, 0.3), [-0.15, -0.2, 1], 0, G.lz[i]); }
+  for (let i = 0; i < W * H; i++) if (mark[i]) { const x = i % W - ox, y = ((i / W) | 0) - oy; px(G, x, y, step(SNOW, 0.45 + mark[i] * 0.12 - (hash(x, y, 2) > 0.85 ? 0.15 : 0), x, y, 0.3), [-0.15, -0.2, 1], 0, G.lz[i]); }
 }
 
 // ---- city plants (E3a) ---------------------------------------------------------------------------------------

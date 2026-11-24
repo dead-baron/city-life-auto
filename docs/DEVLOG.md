@@ -27071,3 +27071,19 @@ than its wrist that differs between the two beats; a splash throws spray, leaves
 page's budgets - waterlife loads lazily), mapwindow, world3waterbodies, guide, devtp, devplay. Not run: the whole
 suite. Seen in a running game (headless): a leap and fall back at the gorge, a climb's first stages at a river
 falls. Not seen: a climb's last leap over the top, the other species' leaps, a phone.
+
+## 2026-11-24 · Plants cut off by their own canvas (41 of them) - on branch `fable-art-1124`
+The owner, 11-23: "sunflowers cut at the top". Each plant maker in client/art2/flora.js draws on a canvas of a size it
+names, and the tallest sunflowers' heads ran past theirs. Counted over every species and twelve shapes each, before
+the crop that hides it: 41 species drew past their canvas and were sliced flat there - not the sunflowers alone but
+the tops of the hibiscus, the bougainvillea, the salal, the creosote, the berry shrubs, the hydrangea, the roses and
+the hedges (5 to 10 art pixels of crown gone), the pampas's plumes and the juniper and prickly pear at the sides.
+sprite() now gives every canvas room round it that the makers don't know of (G.ox / G.oy: pxn and has() shift by it,
+done() folds it into the anchor and crops), so a maker's own coordinates are as they were. Checked against a
+checkout of the commit before, every species x 12 shapes as the bake makes them: 1,122 of 1,548 pictures byte for
+byte the same (every tree among them); the other 426 are the 49 species that were cut, now whole; none still cut;
+every one still inside the room its item claims in a chunk (floraExt).
+Test: `test/floraclip.test.js` (flora.js tells it, through globalThis.__FLORA_CLIP, what a plant left on the canvas's
+outermost row and columns: nothing; and each picture fits floraExt). Baked art: a new art hash, with the nature
+re-bake. Seen: the twelve worst as sprites lit at noon, before and after. Not seen: in the game. Found with it, not
+fixed: the redwood sorrel's carpet is 25 px past its item's room (it was before) - a chunk's edge can cut it.

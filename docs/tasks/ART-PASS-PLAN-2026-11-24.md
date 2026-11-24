@@ -39,6 +39,7 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
    - Forest and meadow: the drawn pieces placed (dry-stone wall, gate, stile, rope swing, stone ruins); a cliff
      overlook; the found places of NS1-B outside Highland Woods; the lawn turf for the art pixel. 11-23: the farm (the
      flower row, hand-crafted fields), sunflowers cut at the top, the off-road trail (a blended start, a real trail).
+     Done 11-24: sunflowers cut at the top - with 40 other plants cut by their canvas (DEVLOG, `test/floraclip.test.js`).
    - Redwood: still denser than N1; the fern layer over the floor, creek and paths; a walk-in hollow trunk, a root cave.
    - Mountain: the six ledge falls' setting (the river below lower and darker); the redwood horseshoe against NR1-E;
      standing stones that barely read; lichen boulders; the Summit Tarn placeholder (a shelf and a rock face the land

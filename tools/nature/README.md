@@ -13,11 +13,16 @@ with `NODE_OPTIONS=--max-old-space-size=3072`.
 - `variety.mjs`: one world build; in several places counts how often a plant's near neighbours are the very same
   picture (the numbers in the DEVLOG entry of 11-21). The test that guards it: `test/undergrowth.test.js`.
 - `falls.mjs`: one world build; lists every waterfall with its tile, width and drop.
-- `waterwatch.sh OUTDIR [MINUTE]` (with `waterprobe.js`): the water recorder. Starts a local game headless, jumps to
-  each kind of water place (`PLACES="pier marsh tarn"`: kinds the dev command `near` knows), and prints for each how
-  much of the water jumps in brightness per tenth of a second (`jumpMedian`, %) - sparkle and crawl that read as
-  glitches score high; calm water is under about 1. It also saves one picture per place with the jumping pixels in
-  red. About a minute and a half per place after four minutes of start-up. `waterscore.py DIR` scores plain
+- `waterwatch.sh OUTDIR` (with `waterprobe.js`): the water recorder. Starts a local game headless, jumps to each kind
+  of water place (`PLACES="pier marsh tarn falls"`: kinds the dev command `near` knows) and films it at several hours
+  and weathers (`MODES="780:clear 1160:clear 1320:clear 780:rain 1320:rain"`, minute of the day : weather - the first
+  must be a clear midday, which tells the water's pixels). For each it prints how much of the water jumps in
+  brightness per tenth of a second (`jumpMedian`, %) - sparkle and crawl that read as glitches score high; calm water
+  is under about 1; the evening's glitter on the sea reads 1 to 3.5, as meant - and saves two pictures: the place, and
+  the jumping pixels in red. About three minutes a place at five looks. Things to know: the local server keeps its
+  baked chunks by art hash (`.playtest-data/8171/art/`), so **stamp** (`node tools/stamp-version.mjs`) after a change to
+  the bake or the pictures show the old one; `near` goes to the nearest place from where the character last stood, so
+  delete `.playtest-data/8171/profiles.json` for the same places as a run before. `waterscore.py DIR` scores plain
   screenshots instead (too far apart in time to show flicker; kept for white-out and stills).
 - Pictures of places: `tools/area-shot.mjs` takes many `--rect`s in one world build, e.g. sixteen falls in one run.
 
