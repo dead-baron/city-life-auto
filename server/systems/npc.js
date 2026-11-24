@@ -149,7 +149,7 @@ export function sidestep(world, ped, inp, dt) {
   n.stuckT = want > 0.3 && moved < 40 * dt ? (n.stuckT || 0) + dt : 0;
   if (n.stuckT > STUCK_S) {
     // (stepped aside both ways and still held - a fence, a corner: a wanderer gives up on that spot and picks another)
-    if (now - (n.sideAt || -99) < STUCK_S + SIDE_S * 2 + 0.2) { n.sideN = (n.sideN || 0) + 1; if (n.sideN >= 3 && n.state === 'wander') { n.sideN = 0; n.until = 0; } } else n.sideN = 0;
+    if (now - (n.sideAt || -99) < STUCK_S + SIDE_S * 2 + 0.2) { n.sideN = (n.sideN || 0) + 1; if (n.sideN >= 3) { n.pinned = 1; if (n.state === 'wander') { n.sideN = 0; n.until = 0; } } } else n.sideN = 0;
     n.sideAt = now;
     n.stuckT = 0; n.sideSign = -(n.sideSign || -1);
     const fx = inp.mx / want, fy = inp.my / want, s = n.sideSign;
@@ -292,7 +292,19 @@ export function update(world, dt) {
     if ((n.role === 'civ' || n.role === 'mugger') && n.state !== 'crawl') checkDive(world, ped, now);
     let inp = NO_INPUT, factor = 0.55;
     const pin = n.persona && (n.state === 'wander' || n.state === 'idle') ? personas.steer(world, ped, now) : n.act && (n.state === 'wander' || n.state === 'idle') ? activities.steer(world, ped, now) : null;   // (personas.js; at an activity: activities.js)
-    if (pin) { inp = pin.inp; factor = pin.factor; } else switch (n.state) {
+    if (pin) {
+      inp = pin.inp; factor = pin.factor;
+      // (on their way to their spot, a persona's errand: pressing into a fence, a lamp, a corner - a step aside, as anyone
+      // walking; held both ways three times running, someone at an activity gives up on it - the owner, 11-23: NPCs stuck
+      // on fences, between a lamp and a fence at the skate park. A pool game's players keep theirs: they go round the table)
+      // (a walk that is the activity - a trail out and back, a ranger's beat - keeps to its line as before: the step aside
+      // and the giving up took the ranger off its beat within seconds - test/wildfolk.test.js, 11-24)
+      if (Math.hypot(inp.mx, inp.my) > 0.3 && !(n.act && (n.act.route || n.act.ranger || n.act.patrol))) {
+        n.pinned = 0; inp = sidestep(world, ped, { ...inp }, dt);
+        if (n.pinned && n.act && !(world.acts && world.acts.get(n.act.g) && world.acts.get(n.act.g).table)) activities.leave(ped);
+      }
+      n.pinned = 0;
+    } else switch (n.state) {
       case 'wander': inp = sidestep(world, ped, wander(world, ped, now), dt); factor = rain && !ped.umbrella ? 0.85 : 0.55; break;   // (pressing into a parked car, a bin, a corner: a step aside - sidestep)
       case 'idle': inp = idle(world, ped, now); break;
       case 'flee': {

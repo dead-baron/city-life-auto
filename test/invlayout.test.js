@@ -17,6 +17,16 @@ test('the Inventory fits every screen: nothing off it, nothing cut off, no butto
   for (const r of await measureAll(list)) {
     const { w, h, extra } = r;
     bad.push(...problems(r));
+    // the stash open on a big screen (UIC-21, 11-24): beside what you carry - carried tiles, the moves, the stash's tiles left to
+    // right; smaller, the CARRIED | STASH switch
+    if (extra === '&stash=1') {
+      const { SIDE_W, SIDE_H } = await import('../client/bag.js');
+      const V = r.boxes.filter((b) => !b.hidden), mine = V.find((b) => b.name.startsWith('bag-cell') && !b.name.includes('in-stash')), kept = V.find((b) => b.name.startsWith('bag-cell') && b.name.includes('in-stash'));
+      const mv = V.find((b) => b.name.includes('bag-mvb')), sw = V.find((b) => b.name.includes('chip') && /:carried|CARRIED/.test(b.name));
+      if (w >= SIDE_W && h >= SIDE_H && r.dev === 'kbm') {
+        assert.ok(mine && kept && mv && mine.x1 <= mv.x0 && mv.x1 <= kept.x0, `${w}x${h}: carried | the moves | the stash, side by side`);
+      } else assert.ok(!mv && (kept || sw), `${w}x${h}: the switch, one side shown`);
+    }
     if (extra) continue;
     const fw = r.frame[2] - r.frame[0];
     assert.ok(fw >= w * 0.9, `${w}x${h}: the frame uses the screen (${fw} px wide)`);

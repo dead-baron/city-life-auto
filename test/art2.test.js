@@ -206,3 +206,41 @@ test('a vehicle\'s length for the page\'s lights is its built model\'s, without 
   const host = (await import('node:fs')).readFileSync(new URL('../client/art2/game/host.js', import.meta.url), 'utf8');
   assert.ok(!/A\.vehicleLights\(/.test(host), 'the page never builds a vehicle model for its lights');
 });
+
+// Driving fast (P2, the owner's Pixel 7 Pro, 11-23: blurry stand-ins at speed in the desert - the art ahead not there in
+// time): the downloads go to the way ahead first - the roads behind you wait (a turn round, BEHIND_S), and more of them
+// go at once (lowres.js aheadPlan fetch).
+test('bake ahead: driving fast, the way ahead before the road behind; more downloads at once', async () => {
+  const { World2 } = await import('../client/art2/game/host.js');
+  const LR = await import('../client/art2/game/lowres.js');
+  const C = 768, X = 15000, Y = 15000;
+  // a road east-west through the camera, the car going east at 900 px/s
+  const net = { nodes: [{ id: 0, x: X - 6000, y: Y, edges: [0] }, { id: 1, x: X, y: Y, edges: [0, 1] }, { id: 2, x: X + 9000, y: Y, edges: [1] }],
+    edges: [{ a: 0, b: 1, pts: [{ x: X - 6000, y: Y }, { x: X }].map((p) => ({ y: Y, ...p })), len: 6000 }, { a: 1, b: 2, pts: [{ x: X, y: Y }, { x: X + 9000, y: Y }], len: 9000 }] };
+  const list = (vx) => {
+    const h = Object.create(World2.prototype);
+    Object.assign(h, { LR, map: { net, frame: { w: 1000, h: 1000 } }, grid: [60, 60], S: { pred: { kind: 'veh' } }, camV: { out: { x: vx, y: 0 } }, camX: X, camY: Y, vx0: X - 1035, vx1: X + 1035, vy0: Y - 478, vy1: Y + 478, bigMem: false });
+    return h._prebakeList().map((k) => [k % 1000, Math.floor(k / 1000)]);
+  };
+  const row = Math.floor(Y / C), me = Math.floor(X / C), first = list(900).slice(0, 24);
+  const behind = first.filter(([x, y]) => y === row && x < me - 2);
+  assert.equal(behind.length, 0, `the first 24 downloads: none on the road more than two chunks behind (${behind.map(([x]) => x - me)})`);
+  assert.ok(first.some(([x, y]) => y === row && x >= me + 6), 'the road ahead 6 chunks on among them');
+  assert.ok(list(150).slice(0, 40).some(([x, y]) => y === row && x <= me - 3), 'slow, the road behind as near as ahead');
+  assert.ok(LR.aheadPlan(900, { phone: true }).fetch > LR.aheadPlan(200, { phone: true }).fetch, 'more at once, fast');
+});
+
+// Night lights (PREBETA-LIST C): on the Neon Strip the signs and lamps took every light the tier allows and the cars'
+// headlights went out - the moving lights are sure of MOVE_SHARE of the cap (host.js pickLights).
+test('the cars\' lamps keep a share of the lights where neon fills the cap', async () => {
+  const { pickLights, MOVE_SHARE } = await import('../client/art2/game/host.js');
+  const L = [];
+  for (let i = 0; i < 200; i++) L.push({ s: 10 + (i % 7), mv: 0, id: 'neon' + i });
+  for (let i = 0; i < 40; i++) L.push({ s: 1 + i * 0.01, mv: 1, id: 'car' + i });
+  const n = pickLights(L, 96), kept = L.slice(0, n);
+  assert.equal(n, 96);
+  assert.ok(kept.filter((q) => q.mv).length >= Math.ceil(96 * MOVE_SHARE), `${kept.filter((q) => q.mv).length} of the cars' lamps kept`);
+  assert.ok(kept.some((q) => q.id === 'car39') && !kept.some((q) => q.id === 'car0'), 'the strongest of them');
+  const few = [{ s: 5, mv: 0 }, { s: 1, mv: 1 }];
+  assert.equal(pickLights(few, 96), 2, 'under the cap: all of them');
+});

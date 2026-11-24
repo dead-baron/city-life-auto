@@ -1420,7 +1420,7 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
   const ex = A.hair?.style || 'short';
   let st = BASE_HAIR[ex] || ex;
   if (A.mask || (A.fmask && (A.fmask.k === 'pig' || A.fmask.k === 'alien'))) return;   // a balaclava, a ski mask or a costume head hides the hair completely
-  const hatOn = hat && !['bandana', 'headband', 'visor', 'flowers', 'tiara', 'earmuffs', 'catears', 'veil'].includes(hat) && !(PL && hat === 'paper');   // (the polish pass: a paper hat is a narrow cap on top of the hair - cut as under a hat, the head was bald round it)   // (a crown of flowers, a tiara, earmuffs, cat ears or a veil sit on the hair as it is)
+  const hatOn = hat && !['headband', 'visor', 'flowers', 'tiara', 'earmuffs', 'catears', 'veil'].includes(hat) && !(PL && hat === 'paper');   // (a head bandana too, 11-23: tied over the crown, the hair under it - the polish pass's fuller hair stood out through it and it flickered in and out as she walked)   // (the polish pass: a paper hat is a narrow cap on top of the hair - cut as under a hat, the head was bald round it)   // (a crown of flowers, a tiara, earmuffs, cat ears or a veil sit on the hair as it is)
   if (hatOn) { if (st === 'afro' || st === 'spiky' || st === 'curly' || st === 'mohawk' || st === 'topknot' || st === 'twinbuns' || st === 'curtains' || st === 'shag') st = 'short'; if (['hood', 'helmet', 'hijab', 'turban', 'durag', 'wrap', 'moto', 'skatehelmet'].includes(hat)) return; }   // (all the hair under a hood, a helmet, a hijab, a turban, a durag or a wrap)
   if (st === 'bald') return;
   const hr = D.head, HD = S.HD;

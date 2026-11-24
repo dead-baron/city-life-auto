@@ -157,5 +157,7 @@ export function targetFor(world, p) {
   const H = p.hoops;
   if (!H) return null;
   const rim = courtHoops(world.map)[H.k].rim;
-  return { text: awayText(world, H) || `Hoops: ${H.streak} in a row · ${H.made}/${H.shots}`, x: rim.x, y: rim.y, stage: 'hoops' };
+  // (the marker above the backboard, not over it, fading once you've seen it - the owner, 11-23: "an arrow shows up over the
+  // hoop and blocks the hoop art so it's hard to see where you're shooting"): h, the height it stands over; fade
+  return { text: awayText(world, H) || `Hoops: ${H.streak} in a row · ${H.made}/${H.shots}`, x: rim.x, y: rim.y, h: Math.round((rim.z || 48) + 30), fade: 1, stage: 'hoops' };
 }

@@ -7,7 +7,7 @@
 //        cut-away); makeStatic(recipe) -> GBuf (anchor = the ground point, z = height); staticLights(M, cx, cy).
 // Deterministic: every choice is hashed from positions and indices; the index is built once per M (a WeakMap), the
 // worker caches sprites by key.
-import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
+import { GBuf, toppleGBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
 import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW } from '../buildings.js';
 import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, paintBoard, paintLine, lineMask, rgbOf, TRADES } from '../signfont.js';   // (wave A1: the sign faces, by trade)
@@ -351,6 +351,7 @@ export function makeStatic(r) {
     case 'sign': return makeSignBoard(r);
     case 'msign': return makeMotelSign(r);
     case 'debris': return makeDebris(r);
+    case 'topple': { const G = makeStatic(r.of); return G ? toppleGBuf(G, r.a, r.shards ? { shards: SHARDS[r.shards], n: r.n || 36, seed: r.seed || 7 } : {}) : null; }   // (knocked over: brokenVariant)
     case 'rock': return makeRock(r);
     case 'rk': return rkSprite(r);
     case 'fall': return WT.waterfall({ art: WT.FALL_LOOK.v > 0, src: r.src || 0, kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams, stone: r.stone, rock: r.rock });
@@ -1549,7 +1550,20 @@ function specOf(c, b, A, s, D) {
 // at a time (to STREET_CAP.minFl at the least) while its wall covers more than `rows` rows of street, pavement, plaza or
 // car park north of it across its front (a street and its pavements: a mid-rise of four or five storeys still stands) and
 // more than `tiles` of them in all. tools/tallblocks.mjs surveys it (test/plainblocks.test.js).
-export const STREET_CAP = { rows: 10, tiles: 72, minFl: 2, on: true };
+export const STREET_CAP = { rows: 10, tiles: 72, minFl: 2, on: true, half: 0.5, lane: 5, laneFl: 1 };
+// and, the owner 11-23 ("buildings covering streets, sidewalks and alleys - again"): the wall reaches over at most
+// `half` of the street in front of it (streetDepth: its rows of street, pavement, plaza or car park north, the middle
+// column's) - the far half always shows; over a lane (`lane` rows or fewer) it comes down to `laneFl` storeys. An alley
+// (3 rows or fewer) is left to the see-through fade: any second storey covers it.
+export function streetDepth(c, tx, ty, tw) {
+  const D = [];
+  for (let x = tx; x < tx + tw; x++) { let d = 0; while (d < 40 && STREET_T.has(c.tile(x, ty - 1 - d))) d++; D.push(d); }
+  D.sort((a, b) => a - b);
+  return D[D.length >> 1];
+}
+// the rows a wall H px high may reach over a street D rows deep, and the storeys it may come down to there
+export const reachOK = (H, D) => D < 4 || Math.ceil(H / TILE) <= Math.max(D <= STREET_CAP.lane ? 2 : 4, Math.floor(STREET_CAP.half * D));
+export const floorsMin = (D) => (D >= 4 && D <= STREET_CAP.lane ? STREET_CAP.laneFl : STREET_CAP.minFl);
 export const STREET_T = new Set([T.ROAD, T.SIDEWALK, T.PLAZA, T.LOT]);
 // the street tiles a wall H px high over the section (tx, ty, tw) hides: the rows north of it its height reaches
 export function streetUnder(c, tx, ty, tw, H) {
@@ -1567,12 +1581,13 @@ export function purposeful(c) {
   return (c._purpose = P);
 }
 function streetCap(c, b, s, spec, pitched, lights) {
-  if (!STREET_CAP.on || pitched || s.frame || s.vox || purposeful(c).has(b.id)) return false;
-  const low = 64 + (STREET_CAP.minFl - 1) * FLOOR_PX, over = () => blocks(streetUnder(c, s.tx, s.ty, s.tw, buildingH(spec)), s.tw);
-  if (spec.height ? spec.height <= low : (spec.floors || 1) <= STREET_CAP.minFl) return false;
+  if (!STREET_CAP.on || s.frame || s.vox || purposeful(c).has(b.id)) return false;   // (a pitched roof: the reach rule only - 11-23)
+  const D = streetDepth(c, s.tx, s.ty, s.tw), minFl = floorsMin(D), low = 64 + (minFl - 1) * FLOOR_PX;
+  const over = () => { const H = buildingH(spec); return (!pitched && blocks(streetUnder(c, s.tx, s.ty, s.tw, H), s.tw)) || !reachOK(H, D); };
+  if (spec.height ? spec.height <= low : (spec.floors || 1) <= minFl) return false;
   if (!over()) return false;
-  if (spec.height) { while (spec.height - FLOOR_PX >= low && over()) { spec.height -= FLOOR_PX; if (spec.floors > STREET_CAP.minFl) spec.floors--; } }
-  else while (spec.floors > STREET_CAP.minFl && over()) spec.floors--;
+  if (spec.height) { while (spec.height - FLOOR_PX >= low && over()) { spec.height -= FLOOR_PX; if (spec.floors > minFl) spec.floors--; } }
+  else while (spec.floors > minFl && over()) spec.floors--;
   const H = buildingH(spec);
   for (let j = lights.length - 1; j >= 0; j--) if (lights[j][2] > H) lights.splice(j, 1);   // (the windows' light on the storeys gone)
   return true;
@@ -1581,7 +1596,7 @@ const FLOOR_PX = 56;
 // a setback's storeys on top (statics.js upperOf, a hand plan's art.up) that would take the wall's reach over the street
 // past the cap: left off
 function upBlocks(c, b, s, H) {
-  return STREET_CAP.on && !purposeful(c).has(b.id) && blocks(streetUnder(c, s.tx, s.ty, s.tw, H), s.tw);
+  return STREET_CAP.on && !purposeful(c).has(b.id) && (blocks(streetUnder(c, s.tx, s.ty, s.tw, H), s.tw) || !reachOK(H, streetDepth(c, s.tx, s.ty, s.tw)));
 }
 
 // ================================================================================================
@@ -2593,7 +2608,7 @@ function propItems(c, p, pi, I) {
     case 'straddle': V('strd', 'straddle', []); return;
     case 'ymast': V('ymast', 'floodMast', [150, 1]); lightAt(I, x, y, 150, 300, [1, 0.9, 0.7], 2.6, 'lamp'); return;
     case 'ygate': V(`ygt:${p.a ? 1 : 0}`, 'barrierArm', [90, false], p.a || 0); return;
-    case 'yfence': fenceLine(I, 'chain', x, y, p.x1, p.y1); return;
+    case 'yfence': fenceLine(I, 'chain', x, y, p.x1, p.y1, {}, '', pi); return;
     case 'crail': { const L = p.len || 256; put(I, p.ew ? { key: `crail:${L}:ew`, recipe: { t: 'crail', len: L, ew: 1 }, x, y, ext: [L / 2 + 10, 10, L / 2 + 10, 10], pi } : { key: `crail:${L}`, recipe: { t: 'crail', len: L }, x, y, ext: [10, L / 2 + 10, 10, L / 2 + 10], pi }); return; }   // (p.ew: along an east-west quay)
     case 'foodcart': V('fc', 'hotdogCart', [1]); lightAt(I, x, y + 6, 40, 70, [1, 0.8, 0.5], 0.8, 'sign'); return;
     case 'tent': { const col = ['#e07b20', '#3f8a3a', '#2f6fc8', '#c8b88a'][p.v || 0]; V(`tent:${p.v || 0}`, 'tent', [col]); return; }   // (v 3: a hunting camp's canvas wall tent)
@@ -2791,9 +2806,9 @@ function propItems(c, p, pi, I) {
     case 'lguard': V(`lgt:${qa(p.a || 0, 4).toFixed(2)}`, 'lifeguard', [], qa(p.a || 0, 4)); return;
     case 'hammock': V(`ham:${p.len || 60}:${qa(p.a || 0, 4).toFixed(2)}`, 'hammock', [p.len || 60], qa(p.a || 0, 4)); return;   // (slung between two palms: World v3's Coral Cay)
     case 'cafetable': V('ctab', 'cafeTable', []); return;
-    case 'chainfence': fenceLine(I, 'chain', x, y, x + (p.tx || 0), y + (p.ty || 0), p.barbed ? { barbed: true } : {}); return;   // (p.barbed: an airside's fence)
-    case 'fenceline': fenceLine(I, p.kind || 'iron', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;   // (a hand plan's fence: picket, wood, chain, iron, stone)
-    case 'hedgerun': fenceLine(I, 'hedge', x, y, x + (p.tx || 0), y + (p.ty || 0), { h: p.h || 16 }); return;
+    case 'chainfence': fenceLine(I, 'chain', x, y, x + (p.tx || 0), y + (p.ty || 0), p.barbed ? { barbed: true } : {}, '', pi); return;   // (p.barbed: an airside's fence)
+    case 'fenceline': fenceLine(I, p.kind || 'iron', x, y, x + (p.tx || 0), y + (p.ty || 0), {}, '', pi); return;   // (a hand plan's fence: picket, wood, chain, iron, stone)
+    case 'hedgerun': fenceLine(I, 'hedge', x, y, x + (p.tx || 0), y + (p.ty || 0), { h: p.h || 16 }, '', pi); return;
     case 'boathouse': V('bhouse', 'boathouse', [1]); lightAt(I, x, y + 36, 30, 100, [1, 0.8, 0.5], 1.3, 'lamp'); return;
     case 'kayakshack': V('kshack', 'kayakShack', []); lightAt(I, x - 2, y + 18, 18, 80, [1, 0.8, 0.5], 1.1, 'lamp'); return;   // (a river put-in's kayak hire: shared/world3-riverrun.js)
     case 'culvert': { const len = p.len || 96, w = p.w || 64, hd = qa(p.a || 0, 32); V(`rculv:${len}:${w}:${hd.toFixed(3)}`, 'roadCulvert', [len, w, 16, 12], hd); return; }   // (a county road's canal crossing, the lane over it: world3-countyroad.js)
@@ -2816,7 +2831,7 @@ function propItems(c, p, pi, I) {
     case 'logcabin': V('lcab', 'logCabin', [96, 60, 0.6]); lightAt(I, x, y + 8, 22, 120, [1, 0.78, 0.46], 1.4, 'window'); return;
     case 'lookout': { const h = p.h || 110; V(h === 110 ? 'lkout' : `lkout:${h}`, 'lookout', [h, 0.6]); lightAt(I, x, y, h + 20, 140, [1, 0.82, 0.5], 1.2, 'window'); return; }   // (p.h: a taller tower - the woods' fire lookout over the redwoods)
     case 'outcrop': put(I, { key: `oc:${p.style || 'granite'}:${p.w || 80}:${p.d || 50}:${p.h || 46}:${(p.s || 1) % 4}${p.j ? ':j' : ''}`, recipe: { t: 'outcrop', style: p.style || 'granite', w: p.w || 80, d: p.d || 50, h: p.h || 46, s: (p.s || 1) % 4, j: p.j ? 1 : 0 }, x, y, ext: [(p.w || 80) / 2 + 16, (p.h || 46) + (p.d || 50) / 2 + 20, (p.w || 80) / 2 + 16, (p.d || 50) / 2 + 16], pi }); return;
-    case 'rail': fenceLine(I, 'rail', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;
+    case 'rail': fenceLine(I, 'rail', x, y, x + (p.tx || 0), y + (p.ty || 0), {}, '', pi); return;
     case 'chair': V(`chr:${p.v || 0}:${qa(p.a || 0, 8).toFixed(2)}`, 'chair', [p.v || 0], qa(p.a || 0, 8)); return;
     case 'cooler': V(`col:${p.v || 0}`, 'cooler', [p.v || 0], qa(u * TAU, 4)); return;
     case 'woodpile': V('wpile', 'woodpile', [], qa(u * PI, 2)); return;
@@ -2930,8 +2945,23 @@ export function propSprite(M, pi) {
   return null;
 }
 // what a smashed prop leaves: a fallen post, a stump, glass and bits (it.pi's prop has .broken)
+// What's left lying when a car knocks a thing over (the owner, 11-23: "a visible reaction not just disappear"): the thing
+// itself on its side the way it was hit (toppleGBuf), with its pieces round it - glass from a shelter or a phone box,
+// soil from a planter, planks from a bench; a tree, a lamp or a pole keeps its own fallen look below
+const SHARDS = {
+  glass: [[200, 226, 244], [168, 208, 236], [236, 244, 250]], soil: [[92, 64, 40], [70, 50, 32], [60, 110, 50]],
+  wood: [[122, 82, 48], [168, 116, 68], [90, 58, 30]], metal: [[120, 124, 132], [80, 84, 92], [200, 60, 50]], paper: [[242, 240, 230], [232, 228, 212], [200, 60, 50]],
+};
+const SHARD_OF = (t) => (/busstop|phonebox|shelter|vend|atm/.test(t) ? 'glass' : /planter|potted|flowers|produce/.test(t) ? 'soil'
+  : /bench|picnic|pallet|crate|lumber|planks|fenceline|cart|rail/.test(t) ? 'wood' : /news|mail|bags|trash/.test(t) ? 'paper' : 'metal');
 function brokenVariant(it, p) {
-  const a = p.broken && p.broken.a !== undefined ? p.broken.a : 0, kind = p.broken && p.broken.f ? 'stump' : p.t === 'lamp' || p.t === 'plamp' ? 'pole' : p.t === 'sigpole' ? 'sigpole' : p.t === 'fuelpump' ? 'pump' : PLANTS.has(p.t) ? 'tree' : 'bits';
+  const a0 = p.broken && p.broken.a !== undefined ? p.broken.a : 0;
+  const kind0 = p.broken && p.broken.f ? 'stump' : p.t === 'lamp' || p.t === 'plamp' ? 'pole' : p.t === 'sigpole' ? 'sigpole' : p.t === 'fuelpump' ? 'pump' : PLANTS.has(p.t) ? 'tree' : 'bits';
+  if (kind0 === 'bits' && it.recipe && it.recipe.t !== 'topple') {
+    const q = qa(a0, 16), e = it.ext || [40, 40, 40, 40], R = Math.max(e[0], e[1], e[2], e[3]) + 60, sh = SHARD_OF(p.t);
+    return { key: `tpl:${it.key}:${q.toFixed(2)}:${sh}`, recipe: { t: 'topple', of: it.recipe, a: q, shards: sh, seed: (it.x * 7 + it.y * 13) % 97 | 0 }, x: it.x, y: it.y, z0: 0, ext: [R, R, R, R], pi: it.pi };
+  }
+  const a = a0, kind = p.broken && p.broken.f ? 'stump' : p.t === 'lamp' || p.t === 'plamp' ? 'pole' : p.t === 'sigpole' ? 'sigpole' : p.t === 'fuelpump' ? 'pump' : PLANTS.has(p.t) ? 'tree' : 'bits';
   const q = qa(a, 16);
   return { key: `deb:${kind}:${q.toFixed(2)}:${p.t}`, recipe: { t: 'debris', kind, a: q, prop: p.t }, x: it.x, y: it.y, z0: 0, ext: [68, 58, 68, 58], pi: it.pi };
 }
@@ -3608,16 +3638,17 @@ function makeEl(r) {
 // ================================================================================================
 // set pieces: pumps under their canopies, venues, gates, motor pools, the Rock, airports, quarry, islands...
 // ================================================================================================
-function fenceLine(I, kind, x0, y0, x1, y1, opt = {}, keyX = '') {
+function fenceLine(I, kind, x0, y0, x1, y1, opt = {}, keyX = '', pi = undefined) {   // (pi: the fence prop's - its pieces knocked flat with it: brokenVariant)
   const ns = Math.abs(x1 - x0) < Math.abs(y1 - y0), len = Math.hypot(x1 - x0, y1 - y0);
   const fl = I.fl;   // (the index's own lines - the alleys', the set pieces', the farms': addGreenery keeps the undergrowth out of their tiles; a prop's line it reads from the prop)
   for (let s = 0; s < len - 4; s += 80) {
     const l = Math.round(Math.min(80, len - s)), t = (s + l / 2) / len, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
     if (fl) { if (ns) fl.push(x, y - l / 2, x, y + l / 2); else fl.push(x - l / 2, y, x + l / 2, y); }   // (each piece as it stands: a slanted line is laid in steps)
-    if (kind === 'wall') put(I, vitem(`cw:${l}`, 'compoundWall', [l, 40, true], x, y, ns ? PI / 2 : 0));
-    else if (kind === 'hedge') put(I, vitem(`hg:${l}:${ns ? 1 : 0}`, 'hedge', [l, opt.h || 14], x, y, ns ? PI / 2 : 0));
-    else if (kind === 'rail') put(I, vitem(`fk:rail:${l}:${ns ? 1 : 0}`, 'fenceKind', ['rail', l], x, y, ns ? PI / 2 : 0));
-    else put(I, vitem(`fn:${kind}:${l}:${ns ? 1 : 0}:${opt.barbed ? 1 : 0}${keyX}`, 'fence', [kind, l, opt], x, y, ns ? PI / 2 : 0));
+    const P = pi !== undefined ? { pi } : null;
+    if (kind === 'wall') put(I, vitem(`cw:${l}`, 'compoundWall', [l, 40, true], x, y, ns ? PI / 2 : 0, null, P));
+    else if (kind === 'hedge') put(I, vitem(`hg:${l}:${ns ? 1 : 0}`, 'hedge', [l, opt.h || 14], x, y, ns ? PI / 2 : 0, null, P));
+    else if (kind === 'rail') put(I, vitem(`fk:rail:${l}:${ns ? 1 : 0}`, 'fenceKind', ['rail', l], x, y, ns ? PI / 2 : 0, null, P));
+    else put(I, vitem(`fn:${kind}:${l}:${ns ? 1 : 0}:${opt.barbed ? 1 : 0}${keyX}`, 'fence', [kind, l, opt], x, y, ns ? PI / 2 : 0, null, P));
   }
 }
 function addSetPieces(c, I) {
@@ -4384,7 +4415,9 @@ function coverItems(c, I, cx, cy) {
     if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16) || rails.has(i) || steps.has(i)) continue;
     const tk = trk.get(i) || 0;
     if (tk === 2) continue;
-    const x = Math.round((tx + hash(tx, ty, 7005)) * TILE), y = Math.round((ty + hash(tx, ty, 7007)) * TILE); // (anywhere in its tile: no rows)
+    // (anywhere in its tile: no rows - and in it: rounded up to the next tile's edge, a plant stood in the tile beside,
+    // a pasture rail's: test/undergrowth.test.js, 11-24)
+    const x = Math.min(Math.round((tx + hash(tx, ty, 7005)) * TILE), (tx + 1) * TILE - 1), y = Math.min(Math.round((ty + hash(tx, ty, 7007)) * TILE), (ty + 1) * TILE - 1);
     let weed = tk === 1;
     if (orch.length) {
       const o = orch.find((q) => x >= q.x - 16 && x < q.x + q.w + 16 && y >= q.y - 16 && y < q.y + q.h + 16);

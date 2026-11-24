@@ -354,13 +354,12 @@ export function sample(view) {
   pressedOnce.clear();
   tappedKeys.clear();
 
-  // mouse: the cursor is the aim. With a gun out you always face the cursor (twin-stick);
-  // unarmed / melee you face where you walk and turn to the cursor only to hit or when
-  // holding the right button.
+  // mouse: the cursor is the aim, while the right button is held (the gun up, pointed at it) or as you fire; otherwise
+  // you face where you walk, the gun down - as on a pad (the owner, 11-23: "you used to only hold up the weapon when you
+  // were aiming ... hold right click"; it was twin-stick since 11-13, the gun up whenever the mouse had moved)
   if (input.device === 'keyboard' && view.selfScreen) {
-    const mouseRecent = performance.now() - mouse.movedAt < 8000;
     const cursorAim = Math.atan2(mouse.y - view.selfScreen.y, mouse.x - view.selfScreen.x);
-    if ((view.armed && mouseRecent) || mouse.down || mouse.clicked || mouse.rdown) { aim = cursorAim; bits |= IN.AIMING; }
+    if (mouse.down || mouse.clicked || mouse.rdown) { aim = cursorAim; bits |= IN.AIMING; }
     if (mouse.down || mouse.clicked) bits |= IN.FIRE;
     if (mouse.rdown && !view.inVehicle) bits |= IN.BLOCK;
   }

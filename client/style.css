@@ -1362,6 +1362,25 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
 #creator .cc-btn.gold, #creator .cc-btn.green { background: var(--gold); color: var(--ink); }
 #creator .cc-btn[disabled] { opacity: .4; cursor: default; border-style: dashed; }
 #creator .cc-name { width: min(220px, 60vw); min-height: 40px; padding: 0 10px; font: 600 var(--fs-3) var(--ui); color: var(--cream); background: var(--navy); border: 2px solid var(--gold-a); border-radius: var(--r1); user-select: text; -webkit-user-select: text; }
+/* My looks: the saved looks as a strip under the preview, a + at its end (client/creator.js mine()) */
+#creator .cc-left:has(.cc-mine:not([hidden])) { justify-content: flex-start; overflow-y: auto; }   /* (taller than the column: scrolled, never cut at both ends) */
+#creator .cc-mine { align-self: stretch; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#creator .cc-mine[hidden] { display: none; }
+#creator .cc-mh { font: 700 var(--fs-1) var(--pixel); color: var(--gold); letter-spacing: 1px; } #creator .cc-mh small { color: var(--dim); }
+#creator .cc-ms { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; touch-action: pan-x; }
+#creator .cc-mt { position: relative; flex: none; display: flex; flex-direction: column; align-items: center; width: 64px; border: 2px solid var(--gold-a); border-radius: var(--r2); background: var(--navy); }
+#creator .cc-mt.on { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+#creator .cc-mtb { display: flex; flex-direction: column; align-items: center; width: 100%; min-height: 44px; padding: 2px 2px 3px; background: none; border: 0; color: var(--cream); cursor: pointer; }
+#creator .cc-mt .cc-th { width: 34px; height: 64px; }
+#creator .cc-mtb span, #creator .cc-mt.add span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 var(--fs-1) var(--ui); }
+#creator .cc-mtm { position: absolute; top: -2px; right: -2px; width: 26px; height: 26px; padding: 0; border: 2px solid var(--gold-a); border-radius: var(--r1); background: var(--navy3); color: var(--cream); font: 700 var(--fs-2)/1 var(--ui); cursor: pointer; }
+#creator .cc-mtx { display: flex; align-items: center; gap: 6px; } #creator .cc-mtx span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 var(--fs-2) var(--ui); color: var(--cream); }
+#creator .cc-mtm.on { border-color: var(--gold); background: var(--gold); color: var(--ink); }
+#creator .cc-mtx .cc-btn { min-height: 36px; padding: 0 10px; }
+#creator .cc-mt.add { justify-content: center; min-height: 92px; border-style: dashed; border-color: var(--cream-a); background: transparent; color: var(--cream); cursor: pointer; }
+#creator .cc-mt.add b { font: 700 var(--fs-5)/1 var(--pixel); color: var(--gold); }
+#creator .cc-mt.edit { flex-direction: row; gap: 6px; width: auto; padding: 4px 6px; min-height: 0; border-style: solid; }
+#creator .cc-mt.edit .cc-name { width: 130px; }
 #creator .cc-saved { display: flex; flex-direction: column; gap: 6px; }
 #creator .cc-sv { display: flex; align-items: center; gap: 10px; padding: var(--s1) var(--s2); background: var(--navy); border: 2px solid var(--gold-a); border-radius: var(--r2); }
 #creator .cc-sv .cc-th { width: 40px; height: 75px; }
@@ -1400,6 +1419,8 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #creator .cc-pname { flex: none; width: 90px; min-width: 0; }   /* (a fixed width: the preview beside it never shifts as the view's name changes) */
   #creator.cc-start .cc-left { flex-wrap: wrap; justify-content: center; }
   #creator .cc-under { flex: 1 0 100%; flex-direction: row; justify-content: center; }
+  #creator .cc-mine { flex: 1 0 100%; }   /* (upright: My looks a row of its own under the preview and the turns) */
+  #creator .cc-left { flex-wrap: wrap; }
   #creator .cc-under .cc-btn { padding: 0 var(--s2); letter-spacing: 0; }
   #creator .cc-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x; padding: 5px 6px 0; }
   #creator .cc-tabs::-webkit-scrollbar { display: none; }
@@ -1420,6 +1441,8 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #creator .cc-tab { padding: 0 var(--s2); }
   #creator .cc-left { gap: var(--s1); padding: var(--s1); }
   #creator .cc-prev { width: auto; height: min(56vh, 240px); max-width: 100%; }
+  #creator .cc-left:has(.cc-mine:not([hidden])) .cc-prev { height: min(30vh, 150px); }   /* (room for My looks under it) */
+  #creator .cc-mt .cc-th { width: 26px; height: 48px; } #creator .cc-mt { width: 54px; } #creator .cc-mt.add { min-height: 72px; }
 }
 
 /* ==== the touch arrangement: the HUD's own is in its section above (UI-4); the district's card and the warnings ==== */
@@ -1715,8 +1738,9 @@ body.portrait #hub #bm-mapwrap { min-height: 46%; }
 .jc-t b { font: 600 var(--fs-4) var(--ui); line-height: 1.2; }
 .jc-t em { font: 700 var(--fs-3) var(--ui); font-style: normal; color: var(--gold); }
 .jc-t small { color: var(--dim); font: 500 var(--fs-3) var(--ui); line-height: 1.3; }
-.jc-pay { font: 700 var(--fs-5) var(--pixel); color: var(--money); white-space: nowrap; line-height: 1.1; }
-.jc-pay small { margin-left: var(--s2); font: 500 var(--fs-2) var(--ui); color: var(--dim); }
+.jc-pay { font: 700 var(--fs-5) var(--pixel); color: var(--money); white-space: normal; line-height: 1.1; }
+.jc-amt { white-space: nowrap; }
+.jc-pay small { margin-left: var(--s2); font: 500 var(--fs-2) var(--ui); color: var(--dim); white-space: nowrap; display: inline-block; }   /* ("a call" under the price when the card's narrow, not cut off: uishots 11-24) */
 .jc-d { display: inline-flex; align-items: center; gap: var(--s1); font: 700 var(--fs-3) var(--ui); color: var(--cream); }
 .jc-d .pi24 { width: 16px; height: 16px; }
 .jc-row { display: flex; align-items: center; gap: var(--s2); font: 600 var(--fs-3) var(--ui); }
@@ -1880,6 +1904,8 @@ body.touch .bc-nm { font-size: var(--fs-w2); }
 .bag-slot > b { position: absolute; left: 3px; top: 1px; font: 700 var(--fs-1) var(--pixel); color: var(--gold); }
 .bag-slot > small { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 600 var(--fs-1) var(--ui); color: var(--dim); }
 .bag-slot.iv-w > small { font-weight: 700; letter-spacing: .5px; }
+.bag-wheel { container-type: inline-size; }
+@container (max-width: 560px) { .bag-slot.iv-w > small { display: none; } .bag-slot.iv-w::after { content: attr(data-sh); font: 700 var(--fs-w1) var(--ui); letter-spacing: 0; color: var(--dim); } }
 .bag-slot .bq-gl { display: grid; place-items: center; height: 24px; } .bag-slot .bq-gl canvas, .bag-slot .bq-gl .bc-gl svg { max-height: 22px; }
 .bag-slot .bq-n { position: absolute; right: 3px; top: 1px; font: 700 var(--fs-1) var(--ui); font-style: normal; color: var(--cream); }
 .iv-qb > .bag-slot:nth-child(4) { margin-right: 6px; }   /* (the weapons, then the things to use) */
@@ -1905,7 +1931,7 @@ body.touch .bc-nm { font-size: var(--fs-w2); }
   .iv-sb, .touch .iv-sb { width: 44px; height: 32px; } .iv-sb .gl { width: 22px; height: 22px; }
   .iv-turn { display: none; }   /* (a drag turns the figure: the arrows would cover it here) */
   .iv-dacts .btn { min-height: 32px; font-size: var(--fs-1); letter-spacing: 0; }
-  .iv-stat { grid-template-columns: 70px minmax(0, 1fr) 28px; }
+  .iv-stat { grid-template-columns: 88px minmax(0, 1fr) 28px; }   /* (STAMINA whole, not under its bar: uishots 11-24) */
   .iv-items { display: grid; grid-template-columns: 92px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 6px; }
   .bag-seg { grid-column: 1 / -1; grid-row: 1; margin: 0; } .bag-seg .chip { height: 32px; padding: 0 10px; }   /* (the stash's switch: a row of its own over the rail and the grid) */
   .bag-tools { grid-row: 2; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 6px; min-height: 0; overflow-y: auto; }
@@ -2114,3 +2140,20 @@ body:not(.touch) :is(#t-buttons, #t-row2) { width: min(560px, 90vw); }
 .br-go .btn { flex: 1; }
 .br-go .br-send { background: var(--gold); border-color: var(--gold); color: var(--ink); }
 .br-done h3 { margin: var(--s2) 0 0; font: 700 var(--fs-4) var(--pixel); color: var(--money); }
+/* the stash beside what you carry (a wide screen, the stash open - UIC-21): character | carried | the moves | the stash,
+   the details a bar along the foot (client/bag.js SIDE_W) */
+.bag.side { grid-template-columns: minmax(260px, 330px) minmax(0, 1fr) 104px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(150px, 22%); grid-template-areas: "eq items mv st" "eq detail detail detail"; }
+.bag .st-cats { flex: none; } .bag.side .iv-keys { display: none; }   /* (the keys are in the details below) */
+.bag-ch { display: flex; align-items: baseline; gap: var(--s2); } .bag-ch small, .bag-sth small { font: 700 var(--fs-2) var(--pixel); color: var(--dim); }
+.bag-ch[hidden], .bag-mv[hidden], .bag-st[hidden] { display: none; }
+.bag-mv { grid-area: mv; display: flex; flex-direction: column; justify-content: center; gap: var(--s3); }
+.bag-mvb { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 76px; padding: var(--s2) 4px; font: 700 var(--fs-1) var(--pixel); }
+.bag-mvb b { font-size: var(--fs-5); line-height: 1; color: var(--gold); } .bag-mvb:disabled { opacity: 0.45; }
+.bag-st { grid-area: st; display: flex; flex-direction: column; gap: var(--s2); min-width: 0; min-height: 0; }
+.bag-sth { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.bag-find { height: 36px; padding: 0 var(--s2); border: 2px solid var(--gold-a); border-radius: var(--r1); background: var(--navy2); color: var(--cream); font: 400 var(--fs-2) var(--pixel); }
+.bag.side .bag-detail { overflow-y: auto; }
+/* (side by side, something picked: the details one bar - what it is | what it does | what you can do with it - UIC-21) */
+.bag.side.has-sel .bag-detail { display: grid; grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1fr) minmax(420px, 1.5fr); grid-template-areas: "head what acts" "head n acts"; column-gap: var(--s4, 24px); align-items: center; padding: var(--s2) var(--s3); }
+.bag.side .bd-head { grid-area: head; } .bag.side .bd-what { grid-area: what; margin: 0; align-self: end; } .bag.side .bd-n { grid-area: n; margin: 0; align-self: start; }
+.bag.side .bd-acts { grid-area: acts; align-self: stretch; align-content: flex-start; padding: 2px 0; max-height: 100%; overflow-y: auto; } .bag.side.has-sel .bag-detail { overflow: hidden; } .bag.side .bd-three .btn { min-height: 40px; } .bag.side .bd-eq { display: none; } .bag.side .bd-stash { margin-bottom: 0; }

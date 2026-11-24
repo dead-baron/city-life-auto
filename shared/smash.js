@@ -1,7 +1,7 @@
 // Cars smashing street furniture - shared so the driver's client predicts the exact same
 // momentum loss the server applies (otherwise every lamp post you clip causes a correction,
 // which reads as the car jittering).
-import { BREAKABLE, HEAVY_PROPS } from './mapcore.js';
+import { BREAKABLE, HEAVY_PROPS, FENCE_PROPS } from './mapcore.js';
 import { PROP_SIZES } from './prefab-data.js';
 import { circleVsObb, obbBounds } from './math.js';
 import { TILE } from './constants.js';
@@ -24,7 +24,7 @@ export function breakGrid(map) {
   if (map.breakGrid) return map.breakGrid;
   const g = new Map();
   map.props.forEach((p, i) => {
-    if (!BREAKABLE.has(p.t)) return;
+    if (!BREAKABLE.has(p.t) || FENCE_PROPS.has(p.t)) return;   // (fences: fences.js)
     const k = map.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE));
     (g.get(k) || g.set(k, []).get(k)).push(i);
   });

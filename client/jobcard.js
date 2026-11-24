@@ -35,7 +35,7 @@ export function jobCardHtml(j, o = {}) {
   if (o.compact) {
     const go = `<button class="btn btn-1 jc-go" data-take="${esc(j.id)}"${o.busy ? ' disabled' : ''}>${o.busy ? 'ON A JOB' : 'START'}</button>`;
     return `<div class="jc compact" data-kind="${jobKind(j)}"><div class="jc-top"><span class="jc-ic">${JOB_ICON[jobKind(j)]}</span><span class="jc-t"><b>${esc(j.title)}</b>`
-      + `<span class="jc-pay">${payText(j)}<small>${esc(j.per || 'the job')}</small></span>${d ? `<span class="jc-d">${pix('pin')}${d}</span>` : ''}`
+      + `<span class="jc-pay"><span class="jc-amt">${payText(j)}</span><small>${esc(j.per || 'the job')}</small></span>${d ? `<span class="jc-d">${pix('pin')}${d}</span>` : ''}`
       + `<span class="jc-step"><i>FIRST</i>${esc(j.step || 'Head there and start')}</span></span></div>${go}</div>`;
   }
   const go = `<button class="btn btn-1 jc-go" data-take="${esc(j.id)}"${o.busy ? ' disabled' : ''}>${o.busy ? 'FINISH YOURS FIRST' : 'ACCEPT'}</button>`;

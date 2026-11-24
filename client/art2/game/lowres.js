@@ -122,6 +122,8 @@ export const CHUNK_PX = 768;
 // a helicopter flat out is 1,350 px/s, a plane 2,000)
 export const AHEAD_S = 12, AHEAD_AIR_S = 20;
 export const AHEAD_MAX = 14000, AHEAD_AIR_MAX = 30000;
+// driving this fast: more downloads at once, and the roads behind you wait (host.js _prebakeList: BEHIND_S)
+export const FAST_DRIVE = 500, BEHIND_S = 4;
 export function aheadPlan(sp, o = {}) {
   const air = !!o.air, phone = !!o.phone, big = !!o.big;
   const s = air ? AHEAD_AIR_S : AHEAD_S;
@@ -134,8 +136,9 @@ export function aheadPlan(sp, o = {}) {
   const base = big ? 96 : phone ? 64 : 120, band = Math.ceil(L / CHUNK_PX) * (2 * w + 1);
   const cap = Math.max(base, Math.floor((o.cap || (big ? 160 : phone ? 90 : 180)) * 0.8));
   const maxN = Math.min(cap, Math.max(base, band + 25));
-  // downloads at once (worker.js fetchChunk: a download waits on the network, not the phone): more when it flies fast
-  const fetch = (phone ? 4 : 6) + (air && sp > 600 ? 2 : 0);
+  // downloads at once (worker.js fetchChunk: a download waits on the network, not the phone): more when it flies or
+  // drives fast (P2, 11-23: a Pixel at speed in the desert outran the art)
+  const fetch = (phone ? 4 : 6) + (sp > (air ? 600 : FAST_DRIVE) ? 2 : 0);
   return { L, s, w, maxN, fetch };
 }
 // the low-detail ground from high up: from HIGH_ALT px up (15 m: the camera's pulled well back - render/aircraft.js

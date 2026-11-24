@@ -43,7 +43,7 @@ Object.assign(TOUCH, { use: 'HOLD BAG', bag: 'BAG', phone: 'PHONE', pause: 'MENU
 TOUCH.vehicle = 'GET IN / ON';
 export const KB = {
   action: 'E', vehicle: 'F', throw: 'Q', dive: 'SPACE', reload: 'R', use: 'X', horn: 'H', nextw: 'TAB', prevw: 'WHEEL', wpnwheel: 'HOLD TAB', map: 'M', fire: 'CLICK', drivefire: 'CLICK', sprint: 'SHIFT', boost: 'SHIFT', cruiser: 'V', phone: 'P', bag: 'I', light: 'L',
-  move: 'WASD', aim: 'MOUSE', gas: 'W', brake: 'S', pause: 'ESC', back: 'ESC',
+  move: 'WASD', aim: 'RMB', gas: 'W', brake: 'S', pause: 'ESC', back: 'ESC',
   steer: 'A/D', block: 'RMB',
   dance: 'G',
   chat: 'T',

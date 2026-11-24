@@ -249,6 +249,27 @@ test('no ghost train: someone where its cars were left, far from the train itsel
   assert.ok(Math.hypot(e0.x - at0[0], e0.y - at0[1]) > trains.NEAR_PX, 'its cars gone from the platform, where the train is');
 });
 
+// (the owner, 11-23: in a cinematic station shot the train never left after BOARDING) a scene's camera on a train counts
+// as someone near it: its cars are placed where it is, the player himself far off
+test('a cinematic camera on a train keeps it moving in the shot, the player far away', () => {
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const t = w.trains.find((q) => !w.rails[q.r].subway);
+  const { p } = joinPlayer(w);
+  const rail = w.rails[t.r], a = railAt(rail, t.s);
+  let far = null;
+  for (const q of w.trains) { const b = railAt(w.rails[q.r], q.s); if (Math.hypot(b.x - a.x, b.y - a.y) > trains.NEAR_PX * 2.5) { far = b; break; } }
+  if (!far) far = { x: a.x + trains.NEAR_PX * 3, y: a.y };
+  teleport(w, p.ped, far.x, far.y);
+  w.step();
+  assert.equal(trains.nearSomeone(w, t), false, 'the player alone: too far');
+  p.dirCam = { x: a.x, y: a.y, z: 1, vx: 0, vy: 0 };
+  assert.equal(trains.nearSomeone(w, t), true, 'the scene camera on it: near');
+  const e0 = w.get(t.cars[0].id);
+  for (let i = 0; i < TICK_HZ * 120; i++) { p.dirCam.x = railAt(rail, t.s).x; p.dirCam.y = railAt(rail, t.s).y; w.step(); }
+  const poses = trains.__test.carPoses(w, t);
+  assert.ok(Math.hypot(e0.x - poses[0].x, e0.y - poses[0].y) < 1e-6, 'its cars where the train is, two minutes on');
+});
+
 // two-sided stations (queued since 10-07): every open-air main-line station has a platform each side of its double
 // track and a footbridge between them you walk over - up a flight from one platform, across above the tracks, down to
 // the other - and a train is boarded from either platform (shared/world3-rail.js stationFootbridges)

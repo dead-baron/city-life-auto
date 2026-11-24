@@ -63,6 +63,7 @@
 // spotWhy(M, e, def, want) is the same look for something put down while the game runs (a scene's vehicles and people)
 // lint(M) -> { rows: { kind: [{ what, x, y, why }] }, seen: { boats, signs, props } }
 //   node tools/placementlint.mjs   builds World v3 and prints the rows (the heavy lock)
+import { doorSteps, doorBox, blockersOf, doorPoi, DOOR_EXTRA } from '../shared/world3-doorsteps.js';
 import { sliverAt } from '../shared/world3-deckroots.js';
 import { TILE, T } from '../shared/constants.js';
 import { wildAt, TIDY3, homePaths3 } from '../shared/world3-tidy.js';
@@ -115,6 +116,11 @@ export const LINT_ALLOW = {
   // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
   // the most part (West Hills', Southside's, Old Town's lots)
   doorOnGrass: 89,
+  // something solid on a door's step or the tile out past it (the owner, 11-23: the market hall's door behind a planter;
+  // 60 at the check): shared/world3-doorsteps.js slides it along the wall or takes it up. Left: a hand plan's own solids
+  // (Midtown's apartment row on the el, Midnight Pho, Westport PD), the traffic signal poles at a corner door, and three
+  // trees (moving one put its crown over a north door: the visibility audit) - for the art pass
+  doorBlocked: 13,
   // the places you'd walk into still served at the wall: a building too shallow for a room (Pelican Key Charters, a few
   // of World v3's added shop rows), a row shared with a place that isn't a shop (Egret Marsh Outfitters' and the Marsh
   // Bait & Tackle's), a lot building with a home or a bay behind the same front, the hand-built Greenfield Park shops
@@ -161,7 +167,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [], signCovered: [], doorOnGrass: [], wallOnly: [] };
+  const rows = { doorBlocked: [], boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [], signCovered: [], doorOnGrass: [], wallOnly: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -331,6 +337,8 @@ export function lint(M) {
   artRows(M, rows, seen);
   atmRows(M, rows, seen);
   doorRows(M, rows, seen);
+  // doorBlocked: every door's step and the tile past it clear (the build's own answer: shared/world3-doorsteps.js)
+  for (const d of doorSteps(M, doorPoi(WALK_IN))) { const e = blockersOf(M, doorBox(d))[0]; if (e) { const pr = e.pi >= 0 ? M.props[e.pi] : null; rows.doorBlocked.push({ what: `${d.p.label || d.b.name || d.p.kind}'s door (${d.p.kind})`, x: (d.steps[0][0] + 0.5) * TILE, y: (d.steps[0][1] + 0.5) * TILE, why: `${pr ? pr.t : 'a solid'} on its step` }); } }
   auditRows(M, rows, seen);   // (the whole-game audit's rows, 11-19: tools/audit/worldrows.mjs)
   // the hanging lights: each run made fast at both ends, slack, over people's heads (shared/festoon.js)
   const FW = festoonWorld(M);
@@ -515,10 +523,11 @@ function plantRows(M, I, rows, seen) {
 // The doors: a path to every business's and home's door; a room behind the door of every place you'd walk into
 //   doorOnGrass  its step (the tile outside the door) not on what a path is made of, or that path not reaching a road
 //                within DOOR_REACH steps
+//   doorBlocked  something solid (a planter, a bin, a bench...) on the door's step or the tile out past it
 //   wallOnly     a walk-in kind's place (WALK_IN, a charter office, a hand plan's walk-in shop) with no walk-in room
 export const PATH_T = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK, T.ROAD, T.BRIDGE, T.DIRT, T.FLOOR]);
 export const ENTER_KINDS = new Set([...WALK_IN, 'charter']);
-const DOOR_KINDS = new Set([...ENTER_KINDS, 'home', 'diner', 'snack', 'market', 'cinema', 'bowling', 'arcade', 'casino', 'bathhouse', 'smuggler', 'gang', 'usedlot', 'dealer', 'garage', 'marina', 'winery', 'lodge', 'butcher', 'trapper', 'assay', 'huntcamp', 'clubhouse', 'farmstand', 'fruitstand', 'salvage', 'warehouse']);
+const DOOR_KINDS = new Set([...ENTER_KINDS, ...DOOR_EXTRA]);   // (one list with the build's: world3-doorsteps.js)
 const DOOR_REACH = 400;
 function doorRows(M, rows, seen) {
   const TN = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));

@@ -1502,3 +1502,9 @@ export const RACERS = {
   startleS: 1.4,
   stuckS: 1.2,         // s stopped against something before it backs off and takes another line
 };
+
+// A vehicle into a fence (shared/fences.js fenceVehicle; the owner, 11-23 20:10: "cars/vehicles actually knock over or break
+// down or smash through the fence"): faster than this (px/s) it goes through, the panel knocked flat - a low fence (a
+// picket, a rail, a board fence, a low hedge) or a tall one (chain-link, a wall's run, a tall hedge); slower, it holds the
+// car like a wall. keep: the share of its speed the car keeps going through.
+export const FENCE_SMASH = { low: 150, tall: 230, lowKeep: 0.85, tallKeep: 0.7 };

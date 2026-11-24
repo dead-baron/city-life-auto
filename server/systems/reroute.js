@@ -187,7 +187,10 @@ export function goRound(world, v, ai, speed, desired) {
     return { x: b.x + c * ahead - s * r.off, y: b.y + s * ahead + c * r.off, speed: Math.min(desired, behind ? (v.siren ? 90 : 55) : v.siren ? 170 : 110), ignore: b.id };
   }
   const b = v._blk && world.get(v._blk);
-  if (!b || b.kind !== K.VEH || speed > 40 || desired < 60 || Math.hypot(b.vx, b.vy) > 15 || after(world, ai, b)) { ai.roundT = 0; return null; }
+  // (a siren goes round a car pulling over for it as well as one stopped - the owner, 11-23: the car taking you in crawled
+  // a block behind cars easing over at walking pace, every one of them giving way to it)
+  const yielding = v.siren && b && b.ai && b.ai.yieldUntil > now && Math.hypot(b.vx, b.vy) < 70;
+  if (!b || b.kind !== K.VEH || speed > (yielding ? 90 : 40) || desired < 60 || (Math.hypot(b.vx, b.vy) > 15 && !yielding) || after(world, ai, b)) { ai.roundT = 0; return null; }
   ai.roundT = (ai.roundT || 0) + 0.05;
   if (ai.roundT < (v.siren ? ROUND_S : ROUND_BUS_S)) return null;
   ai.roundT = 0;
@@ -205,7 +208,7 @@ export function goRound(world, v, ai, speed, desired) {
     // nose right up to it: back off a little first, for the room to swing out (pulling out from a car's length or less
     // behind it, the corner of its bumper caught the other's and shoved it on up the street)
     const need = v.def.L * 1.2;
-    if (gap0 < need) { const back = Math.min(need - gap0, back0); if (back > 8) { ai.reverseUntil = now + Math.min(1.4, 0.25 + back / 80); ai.stuck = 0; } }
+    if (gap0 < need && !yielding) { const back = Math.min(need - gap0, back0); if (back > 8) { ai.reverseUntil = now + Math.min(1.4, 0.25 + back / 80); ai.stuck = 0; } }
     return goRound(world, v, ai, speed, desired);
   }
   return null;

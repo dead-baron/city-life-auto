@@ -210,8 +210,10 @@ function end(skipped, quiet = false) {
   C.S.hideMe = false;
   document.body.classList.remove('arriving');
   if (TR) { if (t < (m.stop || 6)) stopTrain(); else if (t < TR.leave) TR.leave = t; }
-  if (C.topOverlay() === 'arrival') C.closeOverlay('arrival');
-  else $('arrival').classList.add('hidden');
+  // (out of the screens' stack wherever it is: the question's menu can be over it when the server moved on first - a slow
+  // phone's arrival running past FTUE.arriveS - and left under it, it was the top again once that closed and the hub's
+  // buttons opened nothing: tools/uishots.py, 11-24)
+  C.closeOverlay('arrival');
   if (!quiet) C.send({ t: 'intro', a: skipped ? 'skip' : 'arrived' });
 }
 // main.js closeOverlay('arrival') - Esc or B backed out of it: a skip (the card: the default)

@@ -26705,3 +26705,262 @@ filter hits, movement and economy flags) now has, on each open entry, **Resolved
 (moderation.js resolve's how), and **Open again** on a done one - a POST with the session's own token, as the bug
 reports', each in the admin log. The open ones come first. The page no longer shows players' account ids (the owner's
 rule: none on any dashboard). test/bugreports.test.js.
+
+## 2026-11-23 · Buildings no longer cover the far half of a street (P5 of the 11-23 notes) - branch, waiting for the owner's word
+The owner, 11-23 (and 11-12 before it): buildings covering streets, sidewalks and alleys - again. The 11-12 street cap
+(`client/art2/game/statics.js` STREET_CAP) let a plain building's wall reach 10 rows over the street north of it - most
+streets here are 9-13 rows deep, so a five-storey front could still cover a whole street. The cap now also measures the
+street in front (`streetDepth`: its rows of street, pavement, plaza or car park north, the middle column's) and lowers
+the wall until it reaches over at most half of it (`reachOK`, STREET_CAP.half 0.5); over a lane (5 rows or fewer) the
+building comes down to one storey (`floorsMin`). Pitched roofs (houses, terraces) are held to the half rule too; the
+old 10-row rule still applies to flat roofs only. Buildings with a reason to stand tall (landmark towers, walk-ins,
+trades, named places - `purposeful`) keep their height, as decided 11-12; the see-through fade still shows anyone
+behind them. Alleys (3 rows or fewer) are left to the fade: any second storey covers one.
+- Counted on the live world against main: 762 buildings (771 sections) come down, 1,957 storeys in all - Northgate 255,
+  Westport Center 213, Old Quarter 80, Arts District 43, Southside 36, Downtown 30, Midtown 29. Buildings hiding the
+  whole street in front: 245 -> 54 (the rest have a reason, or are hand-built frames). Street tiles hidden: 213,167 ->
+  191,027.
+- Lint: `test/plainblocks.test.js` tall blocks - no plain wall over half the street in front (lane: one storey), and the
+  street hidden by plain buildings at least 15% below the uncapped city. Passes.
+- Looked at: before / after of 8 regress places (`tools/regress/`): Northgate's corner block and Westport Center's front
+  lowered as meant, the street's far lane and centre line showing; nothing else moved. Not looked at: a pitched-roof
+  street lowered (none in the regress frames).
+- Art only (the bake): going live is a full re-bake (~5 h). Held on branch `heights-1123` until the 11-23 re-bake has
+  finished and the owner says go - it changes the skyline in 762 places.
+
+## 2026-11-23 · Fences hold vehicles (P6 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: cars drove through the courts' chain-link "and more". The fences (`shared/fences.js`) held people
+only; a car hit just the posts. Now every fence holds a vehicle like a wall (`fenceVehicle`, called from
+`shared/physics.js` vehStep on the server and in the page's prediction): low or tall, square on or at an angle, and a
+fast bike can't skip through one in a step (the middle's way checked against the line). A horse jumps a low fence;
+boats aren't held. Found by the class check and fixed with it:
+- 10 yard-fence panels standing down the middle of a road in The Yards (a later pass laid the road over the yard's
+  line): `shared/world3-tidy.js` takes a fence piece out of a roadway (road on both sides along most of it).
+- 4 parking spaces in a Westport car park with a fence through them: `shared/parkcheck.js` parkWhy - no space across a
+  fence (the build's badBays3, the lint, the server's traffic).
+- Tests: `test/fences.test.js` (sedan, box truck, bikes at three angles into a low and a tall fence; the horse) - it
+  fails without the fix. Lint 42/42, world3server, traffic, tow, police, horses, car soccer, first car and the others
+  that drive: all pass.
+
+## 2026-11-23 · NPCs don't stay pinned; pool players go round the table (P7 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: NPCs stuck on fences, in corners, between a lamp and a fence at the skate park; one inside the pool
+table. The cause: only wanderers stepped aside when pressing into something (`server/systems/npc.js` sidestep);
+someone at an activity walking to their spot, a skater on his loop, a persona on an errand walked straight and pressed
+on for good. Now every walking NPC steps aside the same way, and someone at an activity held both ways three times
+running gives the activity up and wanders off. Furniture isn't solid (by design: shoprooms.js), so a pool player crossed
+the table to his next shot: he now goes round it (`activities.js` roundBox - the shortest way round the rim, a corner at
+a time). Tests: `test/pedunstick.test.js` (every way round a table keeps off it; an activity's NPC fenced off from his
+spot isn't pinned - fails without the fix). A measure round 40 activity spots (not kept as a test: too slow) still
+shows a few wanderers standing in the middle of a wide road for 12 s - looked at, not explained yet.
+
+## 2026-11-23 · A head bandana stays on through a walk (P9 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: the blue-dress NPC's head flickered between skin and hat as she walked. Measured every hat on every
+walk frame (`client/art2/people.js`, the polish pass): a head bandana was drawn under the polish pass's fuller hair -
+1 to 4 pixels of it showing, frame by frame, out of the ~120 it covers on a bald head. It's now drawn like a hat
+(hairPrims hatOn: the hair under it). `test/hatframes.test.js`: every hat that covers the crown, over a spread of hair
+styles, four ways, eight walk frames - it shows, and its area never drops below 60% of its biggest (fails without the
+fix). Not fixed, logged for the art pass: a flower crown sinks into big curly hair (0-4 px), cat ears and a headband
+vary a few pixels with the walk's bob.
+
+## 2026-11-23 · The cinematic station shot's train leaves (P12 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: in a station scene the train never left after BOARDING. World v3's trains are placed only near
+someone (`server/systems/trains.js` nearSomeone - the player's own position), and in the cinematic mode the camera is
+far from the player: the train ran on, its cars stood frozen at the platform. A scene's camera or a follow shot
+(`p.dirCam`, `p.cineF`) now counts - what it looks at is near someone. Test: `test/world3rail.test.js` (fails without).
+
+## 2026-11-23 · Doors kept clear (P11 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: the market hall's door behind a planter. A new lint row, `doorBlocked` (tools/placementlint.mjs):
+something solid on a door's step or the tile out past it, across the doorway - 60 doors world-wide, most behind a
+planter (31), then lamps, café tables, trees, signal poles, vending machines. `shared/world3-doorsteps.js`
+clearDoorSteps3 (the build's last pass before the pumps) slides each along the wall out of the doorway, the nearer way
+first, up to three tiles, onto open pavement clear of every door and every other solid; a planter, a table or a bench
+with nowhere to go is taken up; the prop's own anchor kept off the clutter guard's door tiles too (a planter's solid
+stands off its anchor). One door list for the build and the lint (doorSteps, doorPoi). Left, 13: a hand plan's own
+solids (Midtown's apartment row along the el, Midnight Pho, Westport PD), traffic signal poles at a corner door (a
+signal belongs to its crossing - moving one put it over Old Town Deli's sign) and three trees (moving a tree put its
+crown over a north door) - for the art pass. visaudit fails as on main (5 north doors under trees, picnic 29, cola 2:
+the same lines on main). The other half of P11 - the sea
+creeping up a pier's planks where they meet the sand - was the world batch's deckRoots (beachWater 0, live 11-23):
+to be looked at in the game.
+
+## 2026-11-23 · The police car taking you in gets there (P8 of the 11-23 notes, part 1) - on branch `heights-1123`
+The owner, 11-23: NPC drivers - the police taking you in among them - crash, ride the median, get stuck. Measured: 12
+arrests on streets across World v3 with the city's traffic: 2 driven to a station, 10 faded to black. The causes, fixed:
+- `server/systems/traffic.js` planRoute (every NPC driver with a destination uses it: police, tow trucks, ambulances,
+  stops, the director's cars): the route started at the nearest junction - often a long way down the street - and the
+  car drove straight there across the pavement; and it counted junctions, not distance. Now it starts along the street
+  the car is on, its kerb lane, to whichever end makes the way shorter (a one-way street: its own way), then the
+  shortest way by length (a heap Dijkstra). opts.inner: the inside lane.
+- `server/systems/custody.js`: the car sent for you sat a block off behind the officers and the crowd in the road until
+  the screen faded - stood held up a few seconds within PICKUP_FAR, they walk you to it. The ride counted as stuck when
+  it got no nearer as the crow flies - a route going round first faded; it's judged along the route now, a new plan
+  starting the count again. The station nearest by road (stationByRoad), and the ride allowed as long as the way takes
+  at a police car's pace (RIDE_PACE) if that's longer than RIDE_MAX_S. On its siren it drives the inside lane: the
+  traffic pulls over to the kerb.
+- `server/systems/reroute.js` goRound: a siren goes round a car crawling along in front of it to pull over, as well as
+  one stopped (it sat behind them at walking pace).
+Measured after: with traffic 6-9 of 12 driven (it varies with the traffic), with none 11 of 12; time up on a pavement
+down, still some going round a car. Tests: `test/custodyride.test.js` (five arrests across the city driven to the
+station nearest by road, on the road, no fade; a route's first leg on the road for 155 routes - 9 started across a
+pavement or a block before). Found by the tests and fixed with it: a replan kept the stuck clock running (a car that keeps planning
+again and gets nowhere still fades - test/arrests); the way back behind a vehicle costs a U-turn in the plan
+(opts.heading, UTURN_PX); a police car leaving a stop with someone standing in front of it backs off and leaves the
+other way after a few seconds (test/stops: it waited behind the player for good). The driving suite passes but
+gridlock, which fails on main too. Not done (P8 part 2): racers, taxis and the cinematics' cars, medians, unsticking
+in jams.
+
+## 2026-11-23 · The hoop marker above the backboard, and it fades (P10 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: "When you start the basketball activity an arrow shows up over the hoop and blocks the hoop art so
+it's hard to see where you're shooting." The job marker (client/main.js, the yellow arrow over a job's target) stood
+20-40 px over the target's ground point - on a hoop, over the backboard. A target can now say how high what it marks
+stands (`h`) and that its marker fades once seen (`fade`: full for JOB_MARK[0] s, gone over JOB_MARK[1] s, back when the
+target moves); hoops.js targetFor sends the rim's height + 30 and fade. Test: `test/hoopmark.test.js`. Not looked at
+in a running game.
+
+## 2026-11-23 · The gun up only while aiming, the flash at the barrel, the "!" above the head (the owner's 21:37-21:39 notes) - on branch `heights-1123`
+- Mouse and keyboard (`client/input.js`): the cursor aims - the gun up, pointed at it - only while the right button is
+  held, or as you fire; otherwise you face where you walk with the gun down, as on a pad. It had been twin-stick since
+  11-13 (the gun up whenever the mouse had moved in the last 8 s). The controls table's aim is RMB. DECISIONS, Controls.
+  Test: `test/kbdrive.test.js`.
+- The muzzle flash and the tracer start at the barrel's end (`client/main.js` MUZZLE: along the aim and up, by how the
+  gun is held - a pistol at arm's length, a long gun at the shoulder, a tube), the flash drawn at that height
+  (`host.js` f.z); measured off the people renderer's aiming pose. Test: `test/muzzle.test.js` (each held kind within
+  6 px of the pose's barrel). Before: 14 px out at chest height whatever the gun.
+- The reported suspect's red "!" (the only "!" the page draws over people): its foot 6 px above the head, measured from
+  its foot whatever text baseline was left set, the bob only upward. Test: `test/overhead.test.js`.
+Not looked at in a running game.
+
+## 2026-11-23 · Vehicles smash things, and what they smash lies there (the owner's 20:10 note) - on branch `smash-1123`
+The owner, 11-23: cars should "actually knock over or break down or smash through" fences, trees, bus stops and
+benches, with "a visible reaction not just disappear", and anyone sitting on one "should go flying off".
+- Fences (`shared/fences.js`): a wooden, picket, chain-link or yard fence, a hedge run or a rail still holds a car at a
+  crawl, but one crossing it faster than `FENCE_SMASH` (rules.js: low 150 px/s, tall 230) goes through - slowed (kept
+  85% / 70% of its speed) - and the panel's prop breaks on the server (`props.js` breakProp, the same 'propbreak' every
+  page already hears). A down fence (`m.downFences`, set on the server and on each page from propbreak, cleared by
+  propfix and on a resync) holds no one: walked and driven over until it's put back with the other props.
+  `mapcore.js` BREAKABLE gains the fence kinds (FENCE_PROPS); `smash.js` keeps them off the bump grid (the fence
+  segments do their colliding). The page predicts the hold, not the break - the server's word puts the fence down.
+- What's knocked over (`client/art2/game/statics.js` brokenVariant, `gbuf.js` toppleGBuf): benches, shelters, phone
+  boxes, planters, bins and the fence pieces lie flat on their side, laid along the way they were hit, with shards of
+  their own stuff round them (glass, wood, metal) - before, a broken one of these drew as a small pile of generic
+  bits. Trees, poles, pumps and stumps keep the fallen looks they had. Fence pieces are tied to their prop now (`pi`).
+- Whoever sat on it (`props.js` throwSitters): within reach of a broken seat, a sitter is taken off it and flung the way
+  the car went (vehicles.js fling, half a hit's hurt). 
+- Guide: Driving says it.
+Tests: `test/smash.test.js` (a car fast into a chain-link fence goes through, slowed, the fence broken and down for
+everyone; the knocked-over shelter lies flat; a sitter thrown off), `test/fences.test.js` (at a crawl every vehicle is
+held, as before). Not done: field rail runs (the countryside's own, not props) still only hold; nothing on the page
+plays a crash sound or dust for a fence. The page is at its code budget (540.45 of 540 KB rounded): to fit, three
+old comments in main.js, mapcore.js and smash.js were shortened - the next page change needs a lazy load or the owner's
+word on the budget. Not looked at in a running game.
+
+## 2026-11-23 · Driving fast, the downloads go ahead first (P2 of the 11-23 notes, part 1) - on branch `smash-1123`
+The owner's Pixel 7 Pro, 11-23 20:52: blurry stand-ins at speed in the desert - the server's art there, not on the
+page in time. What the page downloads ahead (host.js `_prebakeList`, then `_fetchAhead`, a few at once) mixed the band
+ahead with the roads from here by their distance - the road behind you as soon as the road ahead at half the distance.
+Now, faster than 300 px/s, a road point more than a chunk behind waits BEHIND_S (4 s) worth of driving (a turn round),
+and above FAST_DRIVE (500 px/s) a phone downloads 6 at once, not 4 (lowres.js aheadPlan: a download waits on the
+network, not the phone). Test: `test/art2.test.js` (900 px/s east: none of the first 24 on the road behind - one was;
+slow, both ways). Not measured on a phone; the long tasks (~70 ms) are not looked at yet.
+
+## 2026-11-23 · Racers keep off the median (P8 part 2, the first of it) - on branch `smash-1123`
+The owner's 11-23 notes: the cinematics' cars "ride the median". Measured first: the city's own traffic doesn't
+(`tools/trafficsim.mjs` now counts moving NPC traffic on a divided road's median away from its junctions, or off the
+road: 0.02% and 0% of 22,862 samples over 4 in-game minutes, World v3 - noise). The racers did: the street race and the
+chase look across the whole road for the line with the most room (racers.js raceStep), and a planted median is road
+tiles under its palms, so a racer boxed in on its own side swung over the median into the oncoming lanes. Now a race's
+way carries, on a divided road away from its junctions (MED_END), the room before the median (`med`, `mw`), and the
+racer's lines stay on the side of it the racer is on - its own, or the far side if it was already overtaking there
+when the median began, till the median ends. Test: `test/racers.test.js` (a racer boxed in on an avenue: never over the
+median - it went over before; now it stops behind). The director's scenes measured (5 races and chases, the test city):
+3 samples in 2,834 on a median (9 before; 199 with a first version that kept every racer to its own side - one already
+across was steered back over the palms). Not done: the cinematics' scripted cars (director legs), taxis,
+unsticking in jams.
+
+## 2026-11-24 · The UI pass's pictures, and what they found (pre-beta item 7) - on branch `smash-1123`
+`tools/uishots.py` (new): the real game played headless (tools/playtest.py, a local dev server), the starting looks
+and the arrival passed, then every screen opened the way a player opens it (`window.CLA.hub` - the HUD's own
+function, now reachable for tools) and shot at four sizes - desk 1440x900, laptop 1280x720, a phone on its side
+844x390 and upright 390x844 - each with an audit beside it: what a player can press that's under 44 px (touch) / 24 px
+(desk), cut off, covered or off the screen, or over another. `tools/playtest.py` answers the first-launch gate
+(age line, consent: essential) - every playtest had stopped at it since it came in. Found and fixed:
+- **The hub's buttons opened nothing after a stalled arrival.** When a page's arrival scene runs long (a slow phone),
+  the server asks the question itself (ftue.js ftueUntil); its menu opened over the arrival, and the arrival stayed in
+  the screens' stack under it - once the question closed it was the top screen again, hidden, and MENU, PHONE, MAP and
+  the Inventory gave way to it. `client/ftue.js` end() now takes it off the stack wherever it is. Test: ftue.test.js.
+- The starting looks on a phone on its side: "The Beachgoer", "The Club-goer", "The Executive" cut to "he Beachgoe"
+  (the names a size down and allowed two lines there - client/creator.js).
+- A 1440 desktop's quick bar: the empty weapon slots read "GU...", "ME...", "T..." - where the bar is narrow they say
+  GUN / MEL / THR (a container query on .bag-wheel; bag.js SLOT_SHORT).
+- The Inventory on a phone on its side: HEALTH and STAMINA ran under their bars (the label column 70 -> 88 px).
+- The phone's Jobs cards: "$140-$330 a call" cut by 4 px on a desktop - "a call" goes under the amount when it must.
+Seen, not fixed (for the UI art pass or a call): the Inventory's character slots on a phone are 44x32 / 52x32 and
+their ✕ 22x22 (under 44: they were sized to fit, the layout test allows the ✕ on the corner); the Inventory shows its
+frame empty for a moment the first time it opens (bag.js loads then); the pause menu in a narrow desktop window (844 px
+wide, keyboard) cuts its second column ("SETT", "INVE"). The pictures are in /tmp/ui2 on the build machine (not kept).
+
+## 2026-11-24 · The stash beside what you carry on a big screen (UIC-21) - on branch `smash-1123`
+The owner's concept UIC-21 (docs/art-v2/targets/ui/UIC-21_stash.png, desktop 1920x1080): CHARACTER | CARRIED | the
+moves | STASH, the details a bar along the foot. With the stash open on a screen at least SIDE_W x SIDE_H (1600 x 1000
+CSS px, not upright - client/bag.js), the Inventory lays out that way: what you carry on the left as ever (its tabs, the
+quick bar), "→ TO STASH" and "← TO CARRY" between (for what's picked; greyed when it can't go), the stash on the right
+with its own tabs and a search ("Search the stash..."), its count against its room in its header and CLOSE; a tile
+dragged across moves (what you carry is a drop target now too); the details one row - what it is, what it does, its
+buttons (they scroll when a thing has many). Smaller screens keep the CARRIED | STASH switch (1440x900 and 1280x720
+tried side by side: the details didn't fit). Test: `test/invlayout.test.js` (side by side at the desktops at or over
+the size, the switch below it; nothing cut off or on another at every size). Not looked at with a pad.
+
+## 2026-11-24 · Headlights keep their share at night (PREBETA-LIST C, "Night lights") - on branch `smash-1123`
+On the Neon Strip the signs, tubes and lamps filled every light the tier allows (96 on Ultra) and the cars' headlights,
+tail lights and sirens were the ones dropped. The frame's lights are still the strongest and nearest first, but the
+moving ones are sure of a quarter of the cap (client/art2/game/host.js pickLights, MOVE_SHARE): short of it, the best of
+them past the cap are swapped in for the weakest of the rest. Test: `test/art2.test.js`. Not looked at on the Strip at
+night in a running game.
+
+## 2026-11-24 · My looks: the saved looks under the creator's preview (PREBETA-LIST C, the design agreed 11-17)
+The owner, 11-17 23:06: "Add to Saved" didn't say where your saved looks were, and saving isn't how you'd look for them.
+As agreed: a **My looks** strip right under the preview, on every tab (client/creator.js mine()) - your saved looks as
+small portraits (a tap wears one; its ⋯ opens Rename / Delete in a row under the strip) and a **+** at its end that
+saves the look on now, named in place ("Save looks here" while there are none). The Saved tab and the "Add to Saved"
+footer button are gone (footer: Random, Undo, Done); the 12-look limit and the server's messages are as before. On a
+short screen the left column scrolls (never cut at both ends) and brings what you're doing into view. The Guide's "Your
+look" says it. Looked at in the running game at 1440x900 and 844x390 (two looks saved, one's menu open). Not looked at
+with a pad.
+
+## 2026-11-24 · P2 part 2: less garbage per frame (the long tasks) - on branch `smash-1123`
+The Pixel's ~70 ms long tasks: tools/drivebench.mjs (2 minutes' night drive in the rain, this machine) puts most of the
+long-task time "not in a callback" - the garbage collector's (6.9 MB a second allocated, 48 collections). New:
+`--alloc` samples what the page allocates while it drives (collected or not), by the function that allocated it. The
+top were the classic lighting pass (main.js collectLights, ~100 MB in the 2 minutes), the renderer's lights and decals
+(host.js _lights, _decals), the fish (waterlife.js draw, 97 MB: a key string and a maker closure per fish per frame),
+the rain and Map entry iterators. Fixed in the renderer (not the page - it's at its budget): the fish's, rings' and
+foam's sprite keys and makers made once per kind and kept (waterlife.js fishKey, leapKey); a decal's key and arguments
+kept on it (host.js _decals, _genDecal: no key string, colour join or closure per decal per frame once its sprite is
+up); the headlight and train-light cones one array each; the chunks' lights walked by key, not [key, value] entries;
+the frame's lights picked without a sort (host.js pickLights: an insertion into the best cap - Array sort's work
+buffers per frame). Measured after: the fish 97 -> 16 MB, the entry iterators 94 -> 47 MB, the whole drive's
+allocation down about a quarter; the long-task counts vary too much run to run on this machine (2 cores, the suite
+running) to claim a change - the phone is the measure. Still the biggest: main.js collectLights (the classic
+renderer's light list, run with art v2 too for the lamps' levels) and render/weather.js drawRain - both page code, at
+its budget; the next step there is to skip what art v2 doesn't use. Tests: art2, waterlife, perf.
+
+## 2026-11-24 · A plant never rounds into the next tile (a pasture rail's) - on branch `smash-1123`
+The whole-suite run on the batch failed test/undergrowth.test.js's sanity floor ("plants looked at beside them": 153,
+needs 500): P6 took some fences off the roads, the props' order shifted, and the test's sample - every 40th fence prop,
+the first 160 places - happened onto far fewer plants (main: 1,273). Sampled wider (every 16th, every place: ~2,400
+plants) it found what the old sample missed, on main as on the batch: a few tufts and lupines standing in a pasture
+rail's tile. The wild undergrowth puts a plant anywhere in its own tile (statics.js coverItems) - Math.round could
+carry it to the next tile's edge, past the fence check made for its own. Now kept inside its tile; the test samples
+wider. (Only the rare plants on a tile's edge move: the chunks the server compares byte for byte stay as they were
+elsewhere.)
+
+## 2026-11-24 · The ranger keeps its beat, the kayaker the shore (the whole-suite run on the batch) - on branch `smash-1123`
+test/wildfolk.test.js failed on the batch (it passes on main): P7's step aside (npc.js - someone walking to their
+activity who presses into something steps aside, and held both ways three times gives the activity up) also ran for
+the people whose activity *is* the walk - a trail out and back, the ranger's beat, the kayaker along the shore - and
+took them off it within seconds (the ranger was wandering after 4.6 s, the kayaker had put the kayak down). Those keep
+to their line as before (npc.js: route, ranger, patrol). And the ranger's beat (wildfolk.js): an end counts as reached
+when it gets no nearer than ARRIVE_NEAR (40 px) for a few seconds - whoever it waits for there - and the first look at
+each end is the word on the radio (it was a 45% chance a look, so a short run could see none). Tests: wildfolk,
+pedunstick, leisure, activities, fences.
+Also from the run: test/unlocks' detective tracking failed once under load and passes alone (flaky, noted).

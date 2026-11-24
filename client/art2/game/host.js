@@ -225,6 +225,47 @@ export function planBake(need, bake, view, vx, vy, reach, out = [], grid = [Infi
   return out;
 }
 
+// The frame's lights: the best n moved to the front of L (in place; returns n) - the strongest and nearest (s) up to cap, but the
+// moving ones (mv: the vehicles' headlights, tail lights, sirens) are sure of MOVE_SHARE of it before the rest fill it -
+// a street full of neon never puts out the cars' lamps.
+export const MOVE_SHARE = 0.25;
+// (no sort: an insertion into the best cap kept - the cap is small - so nothing is allocated per frame; the kept ones
+// end up first in L, in no order: the engine orders its own)
+const PK_I = new Int32Array(256), PK_S = new Float64Array(256), PM_I = new Int32Array(64), PM_S = new Float64Array(64);
+let pkStamp = 0;
+function topInto(I, S, cap, m, i, s) {
+  if (m === cap && s <= S[m - 1]) return m;
+  let j = m < cap ? m++ : m - 1;
+  while (j > 0 && S[j - 1] < s) { S[j] = S[j - 1]; I[j] = I[j - 1]; j--; }
+  S[j] = s; I[j] = i;
+  return m;
+}
+export function pickLights(L, cap) {
+  const n = L.length;
+  if (n <= cap) return n;
+  cap = Math.min(cap, PK_I.length);
+  let m = 0;
+  for (let i = 0; i < n; i++) m = topInto(PK_I, PK_S, cap, m, i, L[i].s);
+  const res = Math.min(PM_I.length, Math.ceil(cap * MOVE_SHARE));
+  let mv = 0;
+  for (let k = 0; k < m; k++) if (L[PK_I[k]].mv) mv++;
+  const st = ++pkStamp;
+  for (let k = 0; k < m; k++) L[PK_I[k]]._pk = st;
+  if (mv < res) {
+    // (short of the share: the best moving ones not kept, in for the weakest of the rest)
+    let q = 0;
+    for (let i = 0; i < n; i++) if (L[i].mv && L[i]._pk !== st) q = topInto(PM_I, PM_S, res - mv, q, i, L[i].s);
+    for (let j = 0, k = m - 1; j < q && k >= 0; j++) {
+      while (k >= 0 && L[PK_I[k]].mv) k--;
+      if (k < 0) break;
+      L[PK_I[k]]._pk = 0; L[PM_I[j]]._pk = st; PK_I[k] = PM_I[j]; k--;
+    }
+  }
+  let w = 0;
+  for (let i = 0; i < n; i++) if (L[i]._pk === st) { const t = L[i]; L[i] = L[w]; L[w] = t; w++; }
+  return w;
+}
+
 export function qualityOf(gfx, lowMem) {
   if (lowMem) return 0;
   const named = { low: 0, medium: 1, high: 2, ultra: 3 }[gfx.preset];
@@ -1162,6 +1203,8 @@ export class World2 {
     }
     // 2. along the roads from here, by the distance along them (the ground level: a deck's chunks are its ground's)
     const net = air || rail ? null : this.map.net;
+    // (fast, the roads behind you wait BEHIND_S s - a turn round - so the downloads go to the way ahead: P2, 11-23)
+    const bx = sp > 300 ? v.x / sp : 0, by = sp > 300 ? v.y / sp : 0, late = Math.min(sp, 1500) * (this.LR ? this.LR.BEHIND_S : 4);
     if (net && net.nodes && net.nodes.length) {
       const dist = new Map(), open = [];
       for (const nd of net.nodes) { const d = Math.hypot(nd.x - x0, nd.y - y0); if (d < 700) { dist.set(nd.id, d); open.push(nd.id); } }
@@ -1180,7 +1223,7 @@ export class World2 {
           for (let i = 0; i < e.pts.length; i++) {
             const pt = e.pts[back ? e.pts.length - 1 - i : i], nx = e.pts[back ? Math.max(0, e.pts.length - 2 - i) : Math.min(e.pts.length - 1, i + 1)];
             const seg = Math.hypot(nx.x - pt.x, nx.y - pt.y), steps = Math.max(1, Math.ceil(seg / 300));
-            for (let t = 0; t < steps; t++) { const f = t / steps, px = pt.x + (nx.x - pt.x) * f, py = pt.y + (nx.y - pt.y) * f; if (d0 + along + seg * f <= ROAD) add(Math.floor(px / CHUNK), Math.floor(py / CHUNK), d0 + along + seg * f); }
+            for (let t = 0; t < steps; t++) { const f = t / steps, px = pt.x + (nx.x - pt.x) * f, py = pt.y + (nx.y - pt.y) * f; if (d0 + along + seg * f <= ROAD) add(Math.floor(px / CHUNK), Math.floor(py / CHUNK), d0 + along + seg * f + ((px - x0) * bx + (py - y0) * by < -CHUNK ? late : 0)); }
             along += seg;
           }
           const nd2 = d0 + (e.len || along);
@@ -2271,7 +2314,7 @@ export class World2 {
       if (f.kind === 'boom' || f.a === undefined) continue;
       const hi = quant(f.a, 16), frm = f.t > 0.045 ? 0 : f.t > 0.02 ? 1 : 2;
       const k = this._spr('actors', 'muzzle', A.muzzleKey(1, hi, 16, frm), [1, hi, 16, frm]);
-      if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; this.E.drawSprite(k, f.x, f.y, 18, o); }
+      if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; this.E.drawSprite(k, f.x, f.y, f.z ?? 18, o); }   // (f.z: the barrel's height - main.js MUZZLE)
     }
   }
 
@@ -2704,7 +2747,8 @@ export class World2 {
       const age = now - c.born, hold = c.small ? 1.5 : 150, a = c.alpha * (age > hold ? 1 - (age - hold) / (c.small ? 3.5 : 40) : 1);   // (feet: pushed down a moment, back up within seconds - the owner, 11-14)
       if (a <= 0.02) { c.on = false; continue; }
       const frm = c.small * 8 + (Math.round(((((c.a || 0) % Math.PI) + Math.PI) % Math.PI) / Math.PI * 8) & 7);
-      E.drawDecal(this._spr('actors', 'fx', A.fxKey('dCrush', frm), ['dCrush', frm]), c.x, c.y, 0, a, 0, 18);   // (zt: over the standing crop, as farmart.js CROP_Z - it lies flat where it was)
+      const CK = this.crushK || (this.crushK = []), ck = CK[frm] || (CK[frm] = [A.fxKey('dCrush', frm), ['dCrush', frm]]);
+      E.drawDecal(this._spr('actors', 'fx', ck[0], ck[1]), c.x, c.y, 0, a, 0, 18);   // (zt: over the standing crop, as farmart.js CROP_Z - it lies flat where it was)
     }
     for (let i = 0; i < fx.d.length; i++) {
       const d = fx.d[i];
@@ -2715,14 +2759,16 @@ export class World2 {
       if (a <= 0.02) { d.on = false; continue; }
       let key = null;
       if (d.type === 1 && d.size < 4) key = this._genDecal(d);
-      else if (A) { const name = A.v1DecalFx(d), frm = A.v1DecalFrame(d); key = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]); }
+      else if (A) { const name = A.v1DecalFx(d), frm = A.v1DecalFrame(d); if (d._kn !== name || d._kf !== frm) { d._kn = name; d._kf = frm; d._kk = A.fxKey(name, frm); d._ka = [name, frm]; } key = this._spr('actors', 'fx', d._kk, d._ka); }   // (its key kept on it: built per decal per frame, a drive's garbage - drivebench --alloc, 11-24)
       if (key) E.drawDecal(key, d.x, d.y, d.a, a, 0);
     }
   }
   _genDecal(d) {
+    if (d._gk && d._gc === d.color && d._gs === d.size && this.E.hasSprite(d._gk)) return d._gk;   // (kept on it: no key string or maker per frame)
     const t = d.type, sz = t === 1 || t === 5 ? Math.max(1, Math.min(24, Math.round(d.size))) : t === 3 ? Math.max(4, Math.min(64, Math.round(d.size / 4) * 4)) : t === 6 ? Math.max(1, Math.min(5, Math.round(d.size))) : 1;
     const rgb = rgbOf(d.color);
-    return this._conv(`gdc|${t}|${sz}|${rgb.join(',')}`, () => {
+    d._gk = `gdc|${t}|${sz}|${rgb.join(',')}`; d._gc = d.color; d._gs = d.size;
+    return this._conv(d._gk, () => {
       const blob = (rx, ry, extra) => {
         const w = Math.ceil(rx * 2 + (extra ? rx * 1.4 : 0)) + 2, h = Math.ceil(ry * 2) + 2, G = gbuf(w, h, Math.ceil(rx) + 1, h >> 1);
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -2758,7 +2804,7 @@ export class World2 {
     L.x = x; L.y = y; L.z = z; L.r = r; L.col = col; L.k = k;
     if (cone) { L.cn.a = cone[0]; L.cn.spread = cone[1]; L.cn.len = cone[2]; L.cone = L.cn; } else L.cone = null;
     const d = Math.hypot(x - this.camX, y - this.camY);
-    L.s = k * Math.sqrt(r) / (1 + (d / 700) ** 2);
+    L.s = k * Math.sqrt(r) / (1 + (d / 700) ** 2); L.mv = this.mvOn;
     this.lights.push(L);
   }
   _lights(F) {
@@ -2767,7 +2813,8 @@ export class World2 {
     const x0 = this.vx0 - 260, x1 = this.vx1 + 260, y0 = this.vy0 - 260, y1 = this.vy1 + 360;
     const inV = (x, y) => x > x0 && x < x1 && y > y0 && y < y1;
     // 1. the chunks' static lights (where a chunk has none baked yet: v1's lamps, windows and doors)
-    for (const [k, st] of this.chunkState) {
+    for (const k of this.chunkState.keys()) {   // (keys, not [k, st] entries: an array per chunk per frame)
+      const st = this.chunkState.get(k);
       if (!st.lights.length) continue;
       const cx = k % 1000, cy = Math.floor(k / 1000);
       if ((cx + 1) * CHUNK < x0 || cx * CHUNK > x1 || (cy + 1) * CHUNK < y0 || cy * CHUNK > y1) continue;
@@ -2783,7 +2830,8 @@ export class World2 {
     if (night > 0.05) this._v1StaticLights(F, (x, y) => inV(x, y) && !this._litChunk(x, y), nightK);
     // the glowing mushrooms and golden stars (_forage): a soft pool of their colour in the dark
     if (nightK > 0.02 && this.fgLit) for (let i = 0; i < this.fgLit.length; i += 3) this._light(this.fgLit[i], this.fgLit[i + 1], 5, 58, this.fgLit[i + 2], 1.2 * nightK);
-    // 2. moving lights
+    // 2. moving lights (their own share of the cap: MOVE_SHARE)
+    this.mvOn = 1;
     for (const v of F.vehs) {
       const def = VEHICLE_BY_INDEX[v.d.m];
       if (!def) continue;
@@ -2794,17 +2842,19 @@ export class World2 {
       const hl = (vL || def.L) / 2;
       if (f & VF.LIGHTS) {
         const fx = v.rx + c * hl, fy = v.ry + s * hl;
-        this._light(fx, fy, zb + 8, 340, C.head, 2.4 * (0.35 + 0.65 * nightK), [v.ra, 0.42, 340]);
+        const hc = this.hcone || (this.hcone = [0, 0.42, 340]); hc[0] = v.ra;   // (_light copies it: one array for every car)
+        this._light(fx, fy, zb + 8, 340, C.head, 2.4 * (0.35 + 0.65 * nightK), hc);
         for (let sd = -1; sd <= 1; sd += 2) this._light(v.rx - c * hl - s * def.W * 0.31 * sd, v.ry - s * hl + c * def.W * 0.31 * sd, zb + 8, f & VF.BRAKE ? 60 : 36, C.tail, f & VF.BRAKE ? 1.4 : 0.7);
       } else if (f & VF.BRAKE) this._light(v.rx - c * hl, v.ry - s * hl, zb + 8, 40, C.tail, 0.9);
       if (f & (VF.SIREN | VF.BEACON)) this._light(v.rx, v.ry, zb + 24, 240, Math.floor(now * 6) % 2 ? C.red : C.blue, 2.2);
       if (f & VF.BURN) this._light(v.rx, v.ry, zb + 20, 200, C.fire, 2.2 * (0.75 + 0.25 * Math.sin(now * 23 + v.id)));
     }
+    this.mvOn = 0;
     for (const c of F.cars) {
       if (!(c.flags & 8)) continue;
       const def = TRAIN_CARS[c.d.c];
       this._light(c.rx, c.ry, 20, def.L * 0.75, C.window, 1.2);
-      if (c.d.c === 0) this._light(c.rx + Math.cos(c.ra) * def.L / 2, c.ry + Math.sin(c.ra) * def.L / 2, 14, 460, C.head, 2.4, [c.ra, 0.36, 460]);
+      if (c.d.c === 0) { const tc = this.tcone || (this.tcone = [0, 0.36, 460]); tc[0] = c.ra; this._light(c.rx + Math.cos(c.ra) * def.L / 2, c.ry + Math.sin(c.ra) * def.L / 2, 14, 460, C.head, 2.4, tc); }
     }
     // signal heads: the lit lens of every head in a baked chunk (a little out in front), v1's heads elsewhere
     const hs = this.liveHeads, sigK = 0.25 + 1.2 * nightK;
@@ -2876,11 +2926,10 @@ export class World2 {
         else this._light(p.x, p.y, p.y - countryLightY(p, 0.96), 280, C.fire, (0.8 + 1.8 * night) * fl);
       }
     }
-    // the strongest and nearest, up to the tier's cap
-    const out = this.lights;
-    out.sort((a, b) => b.s - a.s);
-    const n = Math.min(out.length, this.tier.lights);
-    for (let i = 0; i < n; i++) this.E.addLight(out[i]);
+    // the strongest and nearest, up to the tier's cap - the vehicles' lamps with a share of their own (the owner: headlights
+    // lost on the Neon Strip, where its signs and lamps took every one of the 96)
+    const n = pickLights(this.lights, this.tier.lights);
+    for (let i = 0; i < n; i++) this.E.addLight(this.lights[i]);
     this.n.lights = n;
   }
   // is (x, y) in a chunk whose bake brought its own static lights?
