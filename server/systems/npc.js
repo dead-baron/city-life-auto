@@ -297,7 +297,9 @@ export function update(world, dt) {
       // (on their way to their spot, a persona's errand: pressing into a fence, a lamp, a corner - a step aside, as anyone
       // walking; held both ways three times running, someone at an activity gives up on it - the owner, 11-23: NPCs stuck
       // on fences, between a lamp and a fence at the skate park. A pool game's players keep theirs: they go round the table)
-      if (Math.hypot(inp.mx, inp.my) > 0.3) {
+      // (a walk that is the activity - a trail out and back, a ranger's beat - keeps to its line as before: the step aside
+      // and the giving up took the ranger off its beat within seconds - test/wildfolk.test.js, 11-24)
+      if (Math.hypot(inp.mx, inp.my) > 0.3 && !(n.act && (n.act.route || n.act.ranger || n.act.patrol))) {
         n.pinned = 0; inp = sidestep(world, ped, { ...inp }, dt);
         if (n.pinned && n.act && !(world.acts && world.acts.get(n.act.g) && world.acts.get(n.act.g).table)) activities.leave(ped);
       }

@@ -26953,3 +26953,14 @@ rail's tile. The wild undergrowth puts a plant anywhere in its own tile (statics
 carry it to the next tile's edge, past the fence check made for its own. Now kept inside its tile; the test samples
 wider. (Only the rare plants on a tile's edge move: the chunks the server compares byte for byte stay as they were
 elsewhere.)
+
+## 2026-11-24 · The ranger keeps its beat, the kayaker the shore (the whole-suite run on the batch) - on branch `smash-1123`
+test/wildfolk.test.js failed on the batch (it passes on main): P7's step aside (npc.js - someone walking to their
+activity who presses into something steps aside, and held both ways three times gives the activity up) also ran for
+the people whose activity *is* the walk - a trail out and back, the ranger's beat, the kayaker along the shore - and
+took them off it within seconds (the ranger was wandering after 4.6 s, the kayaker had put the kayak down). Those keep
+to their line as before (npc.js: route, ranger, patrol). And the ranger's beat (wildfolk.js): an end counts as reached
+when it gets no nearer than ARRIVE_NEAR (40 px) for a few seconds - whoever it waits for there - and the first look at
+each end is the word on the radio (it was a 45% chance a look, so a short run could see none). Tests: wildfolk,
+pedunstick, leisure, activities, fences.
+Also from the run: test/unlocks' detective tracking failed once under load and passes alone (flaky, noted).
