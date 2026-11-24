@@ -459,3 +459,9 @@ bus stop, then they should go flying off while the bench or object they're on ge
   furniture, shared/map.js), their picture from the 11-22 art pass reading as a plain white and blue box. For the Fable
   art pass: a phone box that reads as one (the handset, glass, a PHONE sign). To confirm in the game: he'll send the
   district of one that doesn't fit.
+
+## Found by the Fable art pass (11-24) - not art, not touched
+- `test/world3wild.test.js` fails: "the tracks flagged notraffic (24; others: Northshore Station Road, Lucky Mesa
+  Station Road, ...)" - the stations' roads count as tracks there. It fails the same on branch `fable-art-1124` before
+  its world change (commit bef7671), so it comes from the world batch, not the art. Not checked on `main` itself.
+- Cars jammed nose to tail on Coral Cay's jungle track (seen twice in the water recorder's films of the rainforest).

@@ -165,3 +165,8 @@ places (`tools/regress/`), the placement lint (its rows at their counts), `test/
 - The original chat's last days (11-19 to 11-22) cannot be searched from here: only its October text comes back. The
   comparison was made against what that chat wrote down - DECISIONS, the DEVLOG, the five nature documents.
 - Push access: given by the owner 11-24 09:39; `fable-art-1124` pushed.
+- Not art, logged 11-24 for the pre-beta list: `test/world3wild.test.js` fails on "the tracks flagged notraffic (24;
+  others: ... Station Road ...)" - the same on the commit before the found places, so the stations' roads, not this
+  pass. Cars jammed on Coral Cay's jungle track (seen in the water films). The redwood sorrel's carpet is 25 px past
+  its item's room (a chunk's edge can cut it). Of 49 waterfalls, a handful land short of their pool (in the plan's
+  water's-edges step).
