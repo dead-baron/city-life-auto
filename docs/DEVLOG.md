@@ -26767,3 +26767,15 @@ The owner, 11-23: in a station scene the train never left after BOARDING. World 
 someone (`server/systems/trains.js` nearSomeone - the player's own position), and in the cinematic mode the camera is
 far from the player: the train ran on, its cars stood frozen at the platform. A scene's camera or a follow shot
 (`p.dirCam`, `p.cineF`) now counts - what it looks at is near someone. Test: `test/world3rail.test.js` (fails without).
+
+## 2026-11-23 · Doors kept clear (P11 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: the market hall's door behind a planter. A new lint row, `doorBlocked` (tools/placementlint.mjs):
+something solid on a door's step or the tile out past it, across the doorway - 60 doors world-wide, most behind a
+planter (31), then lamps, café tables, trees, signal poles, vending machines. `shared/world3-doorsteps.js`
+clearDoorSteps3 (the build's last pass before the pumps) slides each along the wall out of the doorway, the nearer way
+first, up to three tiles, onto open pavement clear of every door and every other solid; a planter, a table or a bench
+with nowhere to go is taken up. One door list for the build and the lint (doorSteps, doorPoi). Left, 10: a hand plan's
+own solids (Midtown's apartment row along the el, Midnight Pho, Westport PD) and traffic signal poles at a corner
+door (a signal belongs to its crossing - moving one put it over Old Town Deli's sign). The other half of P11 - the sea
+creeping up a pier's planks where they meet the sand - was the world batch's deckRoots (beachWater 0, live 11-23):
+to be looked at in the game.
