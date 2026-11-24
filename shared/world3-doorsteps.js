@@ -8,6 +8,7 @@
 //     table, a lamp, a pole); a planter, a table, a bench, a vending machine with nowhere to go is taken up; a hand-placed
 //     solid is left (counted)
 import { TILE, T } from './constants.js';
+import { doorTiles } from './world3-clutter.js';
 
 // the places with a door of their own (the lint's doors too: tools/placementlint.mjs) - a walk-in's (WALK_IN: map.js), a
 // home's, a diner's...; a cash machine or a phone in a wall is no door
@@ -58,16 +59,16 @@ export function blockersOf(m, B) {
 // what may be taken up when there's nowhere along the wall to slide it (the street's lamps and poles, a hydrant, a tree in
 // its grate stay where they are rather than go)
 const LOOSE = /^(planter|pot|cafetable|table|bench|vend|bin|crate|aboard|menuboard|chair|parasol)/;
-// what may slide along the wall: those, the street's lamps and power poles, a hydrant, a bollard, a tree (never a traffic light - a sigpole:
+// what may slide along the wall: those, the street's lamps and power poles, a hydrant, a bollard (never a traffic light - a sigpole:
 // it belongs to its crossing)
-const SLIDES = /^(planter|pot|cafetable|table|bench|vend|bin|crate|aboard|menuboard|chair|parasol|lamp|upole|hydrant|bollard|tree)/;
+const SLIDES = /^(planter|pot|cafetable|table|bench|vend|bin|crate|aboard|menuboard|chair|parasol|lamp|upole|hydrant|bollard)/;
 const GROUND = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 export function clearDoorSteps3(m, WALK_IN) {
   const out = { doors: 0, moved: 0, dropped: 0, left: 0 };
-  if (!m.solidProps || !Array.isArray(m.props)) return out;
+  if (!m.solidProps || !Array.isArray(m.props) || process.env.CLA_NODOORS) return out;
   const doors = doorSteps(m, doorPoi(WALK_IN)), boxes = doors.map(doorBox), gone = new Set();
   out.doors = doors.length;
-  const anyDoor = (e, x, y) => boxes.some((B) => onBox(e, B, x, y));
+  const DT = doorTiles(m), anyDoor = (e, x, y) => boxes.some((B) => onBox(e, B, x, y)) || DT.has(m.idx(Math.floor(x / TILE), Math.floor(y / TILE)));   // (and the clutter guard's door tiles: world3-clutter.js)
   const solidsOf = (pi) => {
     const p = m.props[pi], L = [];
     for (let ty = Math.floor(p.y / TILE) - 2; ty <= Math.floor(p.y / TILE) + 2; ty++) for (let tx = Math.floor(p.x / TILE) - 2; tx <= Math.floor(p.x / TILE) + 2; tx++) {
@@ -76,7 +77,9 @@ export function clearDoorSteps3(m, WALK_IN) {
     }
     return L;
   };
-  const free = (S, dx, dy) => {
+  const free = (p, S, dx, dy) => {
+    // (the prop's own point too: a planter's solid may stand off its anchor - the clutter guard judges the anchor)
+    if (anyDoor({ r: 2 }, p.x + dx, p.y + dy)) return false;
     for (const e of S) {
       const x = e.x + dx, y = e.y + dy, tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
       if (!m.inside(tx, ty) || !GROUND.has(m.tiles[m.idx(tx, ty)]) || anyDoor(e, x, y)) return false;
@@ -108,7 +111,7 @@ export function clearDoorSteps3(m, WALK_IN) {
       // along the wall (the door's row), the nearer way first, up to three tiles
       let done = false;
       const side = p.x < (boxes[d].x0 + boxes[d].x1) / 2 ? -1 : 1;
-      for (let k = 4; k <= 3 * TILE && !done; k += 4) for (const s of [side, -side]) if (!done && free(S, s * k, 0)) { shift(pi, S, s * k, 0); done = true; out.moved++; }
+      for (let k = 4; k <= 3 * TILE && !done; k += 4) for (const s of [side, -side]) if (!done && free(p, S, s * k, 0)) { shift(pi, S, s * k, 0); done = true; out.moved++; }
       if (done) continue;
       if (LOOSE.test(p.t)) { gone.add(p); out.dropped++; } else out.left++;
     }

@@ -26774,8 +26774,11 @@ something solid on a door's step or the tile out past it, across the doorway - 6
 planter (31), then lamps, café tables, trees, signal poles, vending machines. `shared/world3-doorsteps.js`
 clearDoorSteps3 (the build's last pass before the pumps) slides each along the wall out of the doorway, the nearer way
 first, up to three tiles, onto open pavement clear of every door and every other solid; a planter, a table or a bench
-with nowhere to go is taken up. One door list for the build and the lint (doorSteps, doorPoi). Left, 10: a hand plan's
-own solids (Midtown's apartment row along the el, Midnight Pho, Westport PD) and traffic signal poles at a corner
-door (a signal belongs to its crossing - moving one put it over Old Town Deli's sign). The other half of P11 - the sea
+with nowhere to go is taken up; the prop's own anchor kept off the clutter guard's door tiles too (a planter's solid
+stands off its anchor). One door list for the build and the lint (doorSteps, doorPoi). Left, 13: a hand plan's own
+solids (Midtown's apartment row along the el, Midnight Pho, Westport PD), traffic signal poles at a corner door (a
+signal belongs to its crossing - moving one put it over Old Town Deli's sign) and three trees (moving a tree put its
+crown over a north door) - for the art pass. visaudit fails as on main (5 north doors under trees, picnic 29, cola 2:
+the same lines on main). The other half of P11 - the sea
 creeping up a pier's planks where they meet the sand - was the world batch's deckRoots (beachWater 0, live 11-23):
 to be looked at in the game.

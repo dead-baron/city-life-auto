@@ -118,8 +118,9 @@ export const LINT_ALLOW = {
   doorOnGrass: 89,
   // something solid on a door's step or the tile out past it (the owner, 11-23: the market hall's door behind a planter;
   // 60 at the check): shared/world3-doorsteps.js slides it along the wall or takes it up. Left: a hand plan's own solids
-  // (Midtown's apartment row on the el, Midnight Pho, Westport PD) and the traffic signal poles at a corner door
-  doorBlocked: 10,
+  // (Midtown's apartment row on the el, Midnight Pho, Westport PD), the traffic signal poles at a corner door, and three
+  // trees (moving one put its crown over a north door: the visibility audit) - for the art pass
+  doorBlocked: 13,
   // the places you'd walk into still served at the wall: a building too shallow for a room (Pelican Key Charters, a few
   // of World v3's added shop rows), a row shared with a place that isn't a shop (Egret Marsh Outfitters' and the Marsh
   // Bait & Tackle's), a lot building with a home or a bay behind the same front, the hand-built Greenfield Park shops
