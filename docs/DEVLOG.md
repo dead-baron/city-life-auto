@@ -26862,3 +26862,17 @@ Now, faster than 300 px/s, a road point more than a chunk behind waits BEHIND_S 
 and above FAST_DRIVE (500 px/s) a phone downloads 6 at once, not 4 (lowres.js aheadPlan: a download waits on the
 network, not the phone). Test: `test/art2.test.js` (900 px/s east: none of the first 24 on the road behind - one was;
 slow, both ways). Not measured on a phone; the long tasks (~70 ms) are not looked at yet.
+
+## 2026-11-23 · Racers keep off the median (P8 part 2, the first of it) - on branch `smash-1123`
+The owner's 11-23 notes: the cinematics' cars "ride the median". Measured first: the city's own traffic doesn't
+(`tools/trafficsim.mjs` now counts moving NPC traffic on a divided road's median away from its junctions, or off the
+road: 0.02% and 0% of 22,862 samples over 4 in-game minutes, World v3 - noise). The racers did: the street race and the
+chase look across the whole road for the line with the most room (racers.js raceStep), and a planted median is road
+tiles under its palms, so a racer boxed in on its own side swung over the median into the oncoming lanes. Now a race's
+way carries, on a divided road away from its junctions (MED_END), the room before the median (`med`, `mw`), and the
+racer's lines stay on the side of it the racer is on - its own, or the far side if it was already overtaking there
+when the median began, till the median ends. Test: `test/racers.test.js` (a racer boxed in on an avenue: never over the
+median - it went over before; now it stops behind). The director's scenes measured (5 races and chases, the test city):
+3 samples in 2,834 on a median (9 before; 199 with a first version that kept every racer to its own side - one already
+across was steered back over the palms). Not done: the cinematics' scripted cars (director legs), taxis,
+unsticking in jams.

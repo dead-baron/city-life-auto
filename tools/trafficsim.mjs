@@ -22,6 +22,7 @@ import { buildWorld3 } from '../server/world3.js';
 import { K, T, TILE } from '../shared/constants.js';
 import { PED_BLOCK } from '../shared/map.js';
 import { signalFor } from '../shared/signals.js';
+import { nearestEdge } from '../shared/roadcore.js';
 import { mulberry32 } from '../shared/rng.js';
 import { MAIN_STATIONS3 } from '../shared/world3-layout.js';
 import { wildStyle } from '../server/systems/wildlife.js';
@@ -112,6 +113,29 @@ function ownCause(v, b) {
   return 'other';
 }
 
+// ---- where they drive (P8, 11-23: "ride the median"): moving NPC traffic on a divided road's median (away from its
+// junctions, where the turn lanes cross it) or off the road altogether, per kind and the worst places
+const where = { samples: 0, median: 0, offRoad: 0, by: {}, spots: new Map() };
+function whereDriven(v, sp) {
+  if (sp < 20) return;
+  where.samples++;
+  const tx = Math.floor(v.x / TILE), ty = Math.floor(v.y / TILE), t = M.inside(tx, ty) ? M.tileAt(tx, ty) : -1;
+  let bad = null;
+  if (t !== T.ROAD && t !== T.BRIDGE && t !== T.LOT && t !== T.DIRT) bad = 'offRoad';
+  else {
+    const ne = nearestEdge(net, v.x, v.y, (e) => e.median > 0 && !e.oneway);
+    if (ne && ne.d < ne.e.median / 2 - 3) {
+      const len = ne.e.len || 0, nearEnd = Math.min(ne.s, len - ne.s) < 4 * TILE;
+      if (!nearEnd) bad = 'median';
+    }
+  }
+  if (!bad) return;
+  where[bad]++;
+  const k = `${bad}:${v.ai.kind}`; where.by[k] = (where.by[k] || 0) + 1;
+  const n = M.nearestNode(v.x, v.y), key = `${bad}@${n ? n.id : -1}`;
+  const h = where.spots.get(key) || { bad, node: n, n: 0 }; h.n++; where.spots.set(key, h);
+}
+
 // ---- the close look (--dump file): each stuck car's state, and people pressing into something ----
 const DUMP = opt('--dump', ''), dumps = [], pedDumps = [];
 const r1 = (x) => Math.round(x);
@@ -177,6 +201,7 @@ for (let tick = 1; tick <= ticks; tick++) {
     c.last = { x: v.x, y: v.y, inView: false };
     if (v.ai.hopeless && !c.hopeless) { c.hopeless = true; if (!warm) hopeless++; }
     const sp = Math.hypot(v.vx, v.vy), e = net.edges[v.ai.edge];
+    if (!warm && !v.ai.parkIt) whereDriven(v, sp);
     if (!warm && e && !v.ai.parkIt) { const s = (speedBy[e.kind] ||= { n: 0, sum: 0, stopped: 0, red: 0 }); s.n++; s.sum += sp; if (sp < 8) { s.stopped++; if (atRed(v)) s.red++; } }
     if (Math.hypot(v.x - c.ax, v.y - c.ay) > STILL_PX) {
       if (now - c.at >= STUCK_S && c.n) episodes.push({ id: v.id, model: c.model, secs: now - c.at, x: c.ax, y: c.ay, red: c.red / c.n, why: c.why, end: 'moved' });
@@ -283,7 +308,10 @@ const jams = episodes.filter((e) => e.red < 0.5);
 const mainWhy = (e) => Object.entries(e.why).sort((a, b) => b[1] - a[1])[0]?.[0] || '?';
 const byWhy = {}; for (const e of jams) byWhy[mainWhy(e)] = (byWhy[mainWhy(e)] || 0) + 1;
 const counters = Object.fromEntries(COUNTERS.map((k) => [k, (w[k] || 0) - (counters0[k] || 0)]).filter(([, v]) => v));
+const wherePart = { samples: where.samples, medianPct: +(100 * where.median / Math.max(1, where.samples)).toFixed(2), offRoadPct: +(100 * where.offRoad / Math.max(1, where.samples)).toFixed(2), by: where.by,
+  worst: [...where.spots.values()].sort((a, b) => b.n - a.n).slice(0, 10).map((h) => ({ bad: h.bad, at: nodeName(h.node), samples: h.n })) };
 const out = {
+  where: wherePart,
   seed: SEED, minutes: MINUTES, counted: MINUTES - WARM_S / 60, players: spots.map((s) => s.name), wallS: +((performance.now() - tStart) / 1000).toFixed(0),
   vehicles: {
     seen: carsSeen,

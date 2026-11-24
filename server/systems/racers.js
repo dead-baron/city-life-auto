@@ -12,7 +12,7 @@
 //   - Anyone on foot in its path dives out of the way (npc.js diveFrom: the dive roll); a car it shaves past brakes and
 //     honks (traffic.js startle). Blocked (wedged, boxed in), it backs off and takes the other side, then a new way.
 import { K, T, DT } from '../../shared/constants.js';
-import { lanePath, turnPath, nearestEdge } from '../../shared/roads.js';
+import { lanePath, turnPath, nearestEdge, laneOffset } from '../../shared/roads.js';
 import { pointAt, project, measure } from '../../shared/geom.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
@@ -21,6 +21,7 @@ import { driveToward, enterEdge } from './traffic.js';
 import { diveFrom, spawnNpc } from './npc.js';
 
 const ROADISH = (t) => t === T.ROAD || t === T.BRIDGE || t === T.LOT;
+const MED_END = 160;   // px from a junction where a median's gap lets the turns across
 // a wide street at ground level (two lanes or more each way, or a boulevard) - not an alley, a ramp, a tunnel, a deck
 // (World v3's kinds: 'ave', 'blvd', 'art' and the wider streets; never 'alley', 'dirt' or a 'ramp' / deck - lvl)
 const POOR = new Set(['alley', 'dirt', 'rural', 'ramp', 'drive']);
@@ -113,7 +114,10 @@ function chainPts(net, chain, fx, fy, tx, ty) {
     if (last) for (const p of turnPath(last.p, last.d, lp[0], dirAt(lp, 0), 4)) pts.push({ x: p.x, y: p.y });
     // (the first: from level with where it starts, never back along the road behind it)
     const s0 = k === 0 ? Math.min(lp[lp.length - 1].s, ((project(lp, { x: fx, y: fy }) || { s: 0 }).s) + 60) : 0;
-    for (let s = s0; s < lp[lp.length - 1].s; s += 96) { const q = pointAt(lp, s); pts.push({ x: q.x, y: q.y }); }
+    // med: on a divided road, the room toward the middle before its median (P8, 11-23: racers rode the planted median,
+    // its palms in the way) - not within MED_END of a junction, where the turns cross it
+    const med = e.median > 0 && !e.oneway ? Math.max(0, laneOffset(e, 0) - e.median / 2) : -1, Le = lp[lp.length - 1].s;
+    for (let s = s0; s < Le; s += 96) { const q = pointAt(lp, s); pts.push(med >= 0 && s > MED_END && s < Le - MED_END ? { x: q.x, y: q.y, med, mw: e.median } : { x: q.x, y: q.y }); }
     const q = lp[lp.length - 1];
     pts.push({ x: q.x, y: q.y });
     last = { p: q, d: dirAt(lp, lp[lp.length - 1].s) };
@@ -141,8 +145,8 @@ function extend(world, R) {
   if (!more || more[more.length - 1].s < 600) { const w = wideRoute(world, b.x, b.y, b.x + Math.cos(h) * 3000, b.y + Math.sin(h) * 3000, h); if (w && w[w.length - 1].s > 600 && w[w.length - 1].s < 9000) more = w; }
   R.extended++;
   if (!more || more[more.length - 1].s < 300) { R.noMore = true; return; }
-  const out = r.map((p) => ({ x: p.x, y: p.y }));
-  for (const p of more.slice(1)) out.push({ x: p.x, y: p.y });
+  const out = r.map((p) => (p.med >= 0 ? { x: p.x, y: p.y, med: p.med, mw: p.mw } : { x: p.x, y: p.y }));
+  for (const p of more.slice(1)) out.push(p.med >= 0 ? { x: p.x, y: p.y, med: p.med, mw: p.mw } : { x: p.x, y: p.y });
   measure(out);
   out.edges = [...(r.edges || []), ...(more.edges || [])];
   R.route = out;
@@ -201,7 +205,17 @@ export function raceStep(world, v, R) {
   const obs = around(world, v, look + 160);
   // its line across the road: kept while clear, else the clearest - one to the side swung out to early
   const lanes = [];
-  for (let o = -RACERS.width; o <= RACERS.widthR; o += RACERS.step) lanes.push(o);   // (its route is the kerb lane's line: across the road is to its left - the oncoming lanes too)
+  // (a divided road: no line across its median - kept to the side of it the racer is on, its own or, overtaking on the
+  // far side when the median began, that one till it ends; the least room along the stretch it looks down)
+  let med = Infinity, mw = 0;
+  for (let i = i0; i < route.length && route[i].s <= R.s + look; i++) if (route[i].s >= R.s - 40 && route[i].med >= 0 && route[i].med < med) { med = route[i].med; mw = route[i].mw; }
+  let lo = -RACERS.width, hi = RACERS.widthR;
+  if (med < Infinity) {
+    const pad = v.def.W / 2 + RACERS.margin / 2, side = sideOf(route, R.s, v);
+    if (side < -(med + mw / 2)) hi = Math.min(hi, -(med + mw) - pad); else lo = Math.max(lo, -Math.max(0, med - pad));
+  }
+  for (let o = -RACERS.width; o <= RACERS.widthR; o += RACERS.step) if (o >= lo && o <= hi) lanes.push(o);
+  if (!lanes.length) lanes.push(Math.max(lo, Math.min(hi, 0)));
   let best = null;
   for (const o of lanes) {
     const r = roomOn(world, v, R, o, look, obs, fwd);
@@ -209,7 +223,7 @@ export function raceStep(world, v, R) {
     const score = Math.min(r.free, look + 200) - Math.abs(o - R.off) * RACERS.stick - Math.abs(o) * 0.08 + (R.side && Math.sign(o) === R.side ? 60 : 0);
     if (!best || score > best.score) best = { o, score, ...r };
   }
-  if (!best) best = { o: 0, free: 0, ...roomOn(world, v, R, 0, look, obs, fwd) };
+  if (!best) { const o = Math.max(lo, Math.min(hi, 0)); best = { o, free: 0, ...roomOn(world, v, R, o, look, obs, fwd) }; }
   const st = Math.min(1, RACERS.swing * DT / Math.max(1, Math.abs(best.o - R.off)));
   R.off += (best.o - R.off) * st;
   const tgt = pointAt(route, Math.min(Ls, R.s + look)), tx = tgt.x - tgt.ty * R.off, ty = tgt.y + tgt.tx * R.off;

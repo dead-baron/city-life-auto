@@ -97,3 +97,31 @@ test('the way to race: straight on along the street, never back round the block 
   assert.ok(route && route.length > 4);
   for (const q of route.slice(1, 6)) assert.ok((q.x - v.x) * Math.cos(h) + (q.y - v.y) * Math.sin(h) > -40, 'ahead of it, not behind');
 });
+
+// Medians (P8, the owner's 11-23 notes: the cinematics' cars "ride the median"): a racer on a divided road finds both
+// its lanes shut ahead and gets round - but never over the planted median (its palms): only by its own side's room.
+test('a racer boxed in on a divided road never crosses its median', async () => {
+  const { nearestEdge, lanePath } = await import('../shared/roads.js');
+  const { pointAt } = await import('../shared/geom.js');
+  const world = makeWorld({ npcBudget: 0 }), net = world.map.net;
+  const e = net.edges.find((q) => q.median > 0 && !q.oneway && !q.lvl && !q.tunnel && q.kind === 'ave' && q.len > 2200);
+  assert.ok(e, 'an avenue');
+  const lp = lanePath(net, e, e.a, 0), q0 = pointAt(lp, 300), a = Math.atan2(q0.ty, q0.tx);
+  const v = world.spawnVehicle('sports', q0.x, q0.y, a, {});
+  const { spawnNpc } = await import('../server/systems/npc.js');
+  const d = spawnNpc(world, 'casual', v.x, v.y);
+  d.vehId = v.id; d.seat = 0; v.seats[0] = d.id;
+  v.ai = { kind: 'actor' };
+  // both its side's lanes shut 700 px on (cars nobody drives, side by side)
+  const inner = lanePath(net, e, e.a, 1), b0 = pointAt(lp, 1000), b1 = pointAt(inner, 1000);
+  const blk = [b0, b1].map((b) => { const c = world.spawnVehicle('sedan', b.x, b.y, a, {}); c.parked = true; c.despawnable = false; return c; });
+  const route = racers.straightOn(world, q0.x, q0.y, a, 1800);
+  const R = racers.racer(world, v, route, { skill: 1 });
+  let over = 0;
+  for (let i = 0; i < 20 * 5; i++) {
+    racers.raceStep(world, v, R); world.step();
+    const ne = nearestEdge(net, v.x, v.y, (x) => x.id === e.id);
+    if (ne && ne.s > 200 && ne.s < e.len - 200 && ne.d < e.median / 2 + v.def.W / 2 - 2) over++;
+  }
+  assert.equal(over, 0, `over the median ${over} ticks of 100`);
+});
