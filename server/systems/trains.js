@@ -9,7 +9,7 @@
 // most drivers wait, a few gamble, and you can smash straight through the arms.
 // The mail train carries a strongbox: the long run through Dry Creek is robbery country (World v3: the Red Rock Desert's
 // - robberyCountry, below).
-import { inAnyView } from '../view.js';
+import { inAnyView, viewRect } from '../view.js';
 import { K, T } from '../../shared/constants.js';
 import {  } from '../../shared/rules.js';
 import { IN } from '../../shared/input.js';
@@ -349,9 +349,16 @@ export function nearSomeone(world, t) {
   for (const p of world.players.values()) {
     const q = p.ped;
     if (q && (by(q, a) || by(q, b) || by(q, c0) || by(q, c1))) return true;
+    // (a camera away from the player - the cinematic mode's scene or follow shot: what it looks at counts too. The owner,
+    // 11-23: the train in a station shot never left after BOARDING - its cars stood frozen, the player far off)
+    if ((p.dirCam || p.cineF) && viewRect(world, p, VR)) {
+      const inV = (e) => !!e && e.x > VR.x0 - NEAR_PX && e.x < VR.x1 + NEAR_PX && e.y > VR.y0 - NEAR_PX && e.y < VR.y1 + NEAR_PX;
+      if (inV(a) || inV(b) || inV(c0) || inV(c1)) return true;
+    }
   }
   return false;
 }
+const VR = {};
 export function update(world, dt) {
   if (!world.trains || !world.trains.length) return;
   const lazy = !!world.rails;   // (World v3's loops)

@@ -26752,3 +26752,18 @@ the table to his next shot: he now goes round it (`activities.js` roundBox - the
 a time). Tests: `test/pedunstick.test.js` (every way round a table keeps off it; an activity's NPC fenced off from his
 spot isn't pinned - fails without the fix). A measure round 40 activity spots (not kept as a test: too slow) still
 shows a few wanderers standing in the middle of a wide road for 12 s - looked at, not explained yet.
+
+## 2026-11-23 · A head bandana stays on through a walk (P9 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: the blue-dress NPC's head flickered between skin and hat as she walked. Measured every hat on every
+walk frame (`client/art2/people.js`, the polish pass): a head bandana was drawn under the polish pass's fuller hair -
+1 to 4 pixels of it showing, frame by frame, out of the ~120 it covers on a bald head. It's now drawn like a hat
+(hairPrims hatOn: the hair under it). `test/hatframes.test.js`: every hat that covers the crown, over a spread of hair
+styles, four ways, eight walk frames - it shows, and its area never drops below 60% of its biggest (fails without the
+fix). Not fixed, logged for the art pass: a flower crown sinks into big curly hair (0-4 px), cat ears and a headband
+vary a few pixels with the walk's bob.
+
+## 2026-11-23 · The cinematic station shot's train leaves (P12 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: in a station scene the train never left after BOARDING. World v3's trains are placed only near
+someone (`server/systems/trains.js` nearSomeone - the player's own position), and in the cinematic mode the camera is
+far from the player: the train ran on, its cars stood frozen at the platform. A scene's camera or a follow shot
+(`p.dirCam`, `p.cineF`) now counts - what it looks at is near someone. Test: `test/world3rail.test.js` (fails without).
