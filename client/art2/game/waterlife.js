@@ -457,6 +457,19 @@ function puffSprite(k) {
 
 // ---- the simulation ---------------------------------------------------------------------------------------------
 const CRUISE = 0, DART = 1;
+// the fish's frames and bends, and their sprites' keys and makers kept per kind (draw): made once, never per frame
+const FR = [0, 1, 0, 2], BEND = [0, 1, -1];
+function fishKey(M, s, S, vk, fr) {
+  let a = M.get(s); if (!a) M.set(s, a = []);
+  const i = (vk + 2) * 4 + fr;
+  return a[i] || (a[i] = { k: `wlf|${s}|${vk}|${fr}`, mk: () => fishSprite(S, vk, BEND[fr]) });
+}
+function leapKey(M, s, S, vk, d8) {
+  let a = M.get(s); if (!a) M.set(s, a = []);
+  const i = (vk + 2) * 8 + d8;
+  return a[i] || (a[i] = { k: `wlj|${s}|${vk}|${d8}`, mk: () => leapSprite(S, S.flash ? 1 : vk, d8) });
+}
+
 export class WaterLife {
   constructor(tier = 1) {
     this.tier = tier; this.m = null; this.now = 0; this.seed = 0x9e3779b9;
@@ -931,13 +944,14 @@ export class WaterLife {
   // E the engine (drawDecal, drawSprite); conv(key, make) the key once its sprite is up (null: not this frame)
   draw(E, conv) {
     const now = this.now, e = this.env, rainK = 1 - 0.45 * Math.min(1, e.wet || 0), day = e.day;
-    const FR = [0, 1, 0, 2], BEND = [0, 1, -1];
-    const spr = (S, s, vk, fr) => conv(`wlf|${s}|${vk}|${fr}`, () => fishSprite(S, vk, BEND[fr]));
+    // (each sprite's key and maker made once and kept: a key string and a maker closure built per fish per frame were a
+    // drive's second-biggest garbage - tools/drivebench.mjs --alloc, 11-24)
+    const KC = this.kc || (this.kc = { f: new Map(), j: new Map(), r: [], p: [] });
     // the shadows on the bed first (clear shallows, by day), then the fish over them
     if (day > 0.05) for (const f of this.fish) {
       const S = f.S, cell = f.g ? f.g.c : null, sh = cell ? SHADOWED[cell.k] || 0 : 0.8;
       if (S.deep || f.air >= 0 || !sh || f.vis <= 0) continue;
-      const fr = FR[Math.floor(f.ph * 4) & 3], key = conv(`wlf|${f.s}|-1|${fr}`, () => fishSprite(S, -1, BEND[fr]));
+      const fr = FR[Math.floor(f.ph * 4) & 3], ke = fishKey(KC.f, f.s, S, -1, fr), key = conv(ke.k, ke.mk);
       const dep = S.jelly ? 9 : 5;
       if (key) E.drawDecal(key, f.x + e.sx * dep, f.y + e.sy * dep + FISH_Z, S.crab ? f.a + Math.PI / 2 : f.a, Math.min(0.45, 0.24 * day * sh * f.vis * rainK), FISH_Z);
     }
@@ -947,7 +961,7 @@ export class WaterLife {
       if (f.air >= 0) {
         // in the air: the fish itself, up over the water, its shadow down on it
         const k = Math.min(1, (now - f.air) / f.airT), z = f.climb ? f.az : Math.sin(k * Math.PI) * (8 + S.L * 1.2) * (f.airBack ? 1.7 : 1), d8 = ((Math.round(f.a / (Math.PI / 4)) % 8) + 8) % 8;   // (a salmon at the falls: higher, up the white water)
-        const key = conv(`wlj|${f.s}|${f.vk}|${d8}`, () => leapSprite(S, S.flash ? 1 : f.vk, d8));
+        const ke = leapKey(KC.j, f.s, S, f.vk, d8), key = conv(ke.k, ke.mk);
         if (key && E.drawSprite) { const o = this.jo || (this.jo = { alpha: 1, flipX: false, flash: 0, xray: false, shadow: true, tint: null, air: true }); E.drawSprite(key, f.x, f.y, z, o); }
         continue;
       }
@@ -955,7 +969,7 @@ export class WaterLife {
       const hide = now < f.hide ? 0.55 : 1, al = S.al * clr * (1 - (S.deep || 0) * 0.25) * hide * f.vis * rainK;
       if (al <= 0.02) continue;
       const fr = S.jelly ? Math.floor(f.ph * 3) % 3 : FR[Math.floor(f.ph * 4) & 3], vk = S.jelly ? fr : S.flash ? (f.flash > 0.5 ? 1 : 0) : f.vk;
-      const key = S.jelly ? conv(`wlf|jelly|${fr}|0`, () => fishSprite(S, fr, 0)) : spr(S, f.s, vk, fr);
+      const ke = S.jelly ? fishKey(KC.f, 'jelly', S, fr, 0) : fishKey(KC.f, f.s, S, vk, fr), key = conv(ke.k, ke.mk);
       if (key) E.drawDecal(key, f.x, f.y + FISH_Z, S.crab ? f.a + Math.PI / 2 : f.a, al, FISH_Z);   // (a crab: sideways)
     }
     // the rings spreading on the water
@@ -965,7 +979,7 @@ export class WaterLife {
       if (!k) continue;
       const life = 1.1 + R[j + 3] * 0.12, age = now - R[j + 2];
       if (age < 0 || age > life) { if (age > life) R[j + 4] = 0; continue; }
-      const u = age / life, r = Math.max(1, Math.round(1 + u * R[j + 3] * 1.6)), key = conv(`wlr|${r}`, () => ringSprite(r));
+      const u = age / life, r = Math.max(1, Math.round(1 + u * R[j + 3] * 1.6)), ke = KC.r[r] || (KC.r[r] = { k: `wlr|${r}`, mk: () => ringSprite(r) }), key = conv(ke.k, ke.mk);
       if (key) E.drawDecal(key, R[j], R[j + 1] + FISH_Z, 0, Math.pow(1 - u, 1.4) * 0.55 * k * rainK, FISH_Z);
     }
     // the swimmers' wakes: two thin streaks from each point, spreading out from its track and fading - a small V
@@ -983,10 +997,10 @@ export class WaterLife {
       if (!p.on) continue;
       const u = (now - p.t0) / p.life;
       if (p.foam) {
-        const key = conv(`wlp|${3 + p.s}`, () => puffSprite(3 + p.s));
+        const n = 3 + p.s, ke = KC.p[n] || (KC.p[n] = { k: `wlp|${n}`, mk: () => puffSprite(n) }), key = conv(ke.k, ke.mk);
         if (key) E.drawDecal(key, p.x, p.y + p.lift, 0, Math.min(1, (1 - u) * 1.25), p.lift);
       } else {
-        const s = Math.min(2, p.s + Math.floor(u * 2.2)), key = conv(`wlp|${s}`, () => puffSprite(s));
+        const s = Math.min(2, p.s + Math.floor(u * 2.2)), ke = KC.p[s] || (KC.p[s] = { k: `wlp|${s}`, mk: () => puffSprite(s) }), key = conv(ke.k, ke.mk);
         if (key) E.drawDecal(key, p.x, p.y + p.lift, 0, Math.min(1, sstep(u * 5) * Math.pow(1 - u, 1.2) * 1.4 * (0.4 + p.k * 0.6)), p.z + p.lift);
       }
     }

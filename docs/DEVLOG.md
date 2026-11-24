@@ -26926,3 +26926,20 @@ footer button are gone (footer: Random, Undo, Done); the 12-look limit and the s
 short screen the left column scrolls (never cut at both ends) and brings what you're doing into view. The Guide's "Your
 look" says it. Looked at in the running game at 1440x900 and 844x390 (two looks saved, one's menu open). Not looked at
 with a pad.
+
+## 2026-11-24 · P2 part 2: less garbage per frame (the long tasks) - on branch `smash-1123`
+The Pixel's ~70 ms long tasks: tools/drivebench.mjs (2 minutes' night drive in the rain, this machine) puts most of the
+long-task time "not in a callback" - the garbage collector's (6.9 MB a second allocated, 48 collections). New:
+`--alloc` samples what the page allocates while it drives (collected or not), by the function that allocated it. The
+top were the classic lighting pass (main.js collectLights, ~100 MB in the 2 minutes), the renderer's lights and decals
+(host.js _lights, _decals), the fish (waterlife.js draw, 97 MB: a key string and a maker closure per fish per frame),
+the rain and Map entry iterators. Fixed in the renderer (not the page - it's at its budget): the fish's, rings' and
+foam's sprite keys and makers made once per kind and kept (waterlife.js fishKey, leapKey); a decal's key and arguments
+kept on it (host.js _decals, _genDecal: no key string, colour join or closure per decal per frame once its sprite is
+up); the headlight and train-light cones one array each; the chunks' lights walked by key, not [key, value] entries;
+the frame's lights picked without a sort (host.js pickLights: an insertion into the best cap - Array sort's work
+buffers per frame). Measured after: the fish 97 -> 16 MB, the entry iterators 94 -> 47 MB, the whole drive's
+allocation down about a quarter; the long-task counts vary too much run to run on this machine (2 cores, the suite
+running) to claim a change - the phone is the measure. Still the biggest: main.js collectLights (the classic
+renderer's light list, run with art v2 too for the lamps' levels) and render/weather.js drawRain - both page code, at
+its budget; the next step there is to skip what art v2 doesn't use. Tests: art2, waterlife, perf.

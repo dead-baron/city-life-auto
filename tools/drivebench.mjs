@@ -11,7 +11,7 @@
 //   art        the perf readout's numbers: bakes, kept / server chunks, sprites made on the page ("made here"), late %
 //   memory     the JS heap each minute, the engine's GPU MB, the renderer's kept chunks and sprites
 // Heavy - run it under `flock /tmp/cla-heavy.lock`:
-//   node tools/drivebench.mjs [--min 4] [--cpu 1] [--root <another build>] [--out file.json] [--label x] [--day] [--dry] [--port 8094]
+//   node tools/drivebench.mjs [--alloc] [--min 4] [--cpu 1] [--root <another build>] [--out file.json] [--label x] [--day] [--dry] [--port 8094]
 //                             [--url http://... --game ws://...] [--trace trace.json] [--car sedan] [--draw] [--cores 8] [--hostprof]
 // --cpu slows the page's thread (CDP; not the workers). This machine has no GPU: WebGL runs in SwiftShader on the CPU (a
 // night frame took 1.2 s, every frame a "long task" waiting on it), so by default nothing is rasterized (--nodraw: every
@@ -41,7 +41,7 @@ const ROOT = arg0('root') ? join(arg0('root'), '/') : HERE;
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i < 0 ? d : process.argv[i + 1] === undefined || process.argv[i + 1].startsWith('--') ? true : process.argv[i + 1]; };
 const PORT = +arg('port', 8094), CPU = +arg('cpu', 1), MIN = +arg('min', 4), OUT = arg('out', null), LABEL = arg('label', 'run'), TRACE = arg('trace', null);
 const FLY = arg('fly', null), ALT = +arg('alt', 900), SHOTS = arg('shots', null), SHOT_S = +arg('shot', 15);
-const HOSTPROF = !!arg('hostprof', false), NIGHT = !arg('day', false), RAIN = !arg('dry', false), CAR = arg('car', 'sedan'), NODRAW = !arg('draw', false), CORES = +arg('cores', 8);
+const ALLOC = !!arg('alloc', false), HOSTPROF = !!arg('hostprof', false), NIGHT = !arg('day', false), RAIN = !arg('dry', false), CAR = arg('car', 'sedan'), NODRAW = !arg('draw', false), CORES = +arg('cores', 8);
 const req = createRequire(import.meta.url);
 let pw;
 for (const p of ['playwright', '/opt/npm-tools/node_modules/playwright', '/home/claude/.npm-global/lib/node_modules/playwright']) { try { pw = req(p); break; } catch { /* next */ } }
@@ -422,6 +422,9 @@ try {
     E.uploadChunk = (cx, cy, ...a) => { D.shown.add(cy * 1000 + cx); return up0(cx, cy, ...a); };
   }, HOSTPROF);
   log(`driving for ${MIN} min (cpu x${CPU}, ${NIGHT ? 'night' : 'day'}, ${RAIN ? 'rain' : 'dry'})`);
+  // --alloc: what the page allocates while it drives (the GC's long tasks - 'not in a callback' - come from it): the
+  // sampling heap profiler, its samples summed by the function that allocated, the top ones by MB
+  if (ALLOC) { await cdp.send('HeapProfiler.enable'); await cdp.send('HeapProfiler.startSampling', { samplingInterval: 16384, includeObjectsCollectedByMajorGC: true, includeObjectsCollectedByMinorGC: true }); }
   let prevFt = 0, prevLong = 0;
   for (let mi = 0; mi < MIN; mi++) {
     await wait(60000);
@@ -435,6 +438,15 @@ try {
       heapMB: h.heapMB, gpuMB: h.gpuMB, kept: h.kept, server: h.server, bakeN: h.bakeN, bakeAvg: h.bakeAvg, madeHere: h.madeHere - h0.madeHere, sprites: h.sprites, evicted: h.evicted - h0.evicted, late: h.late, slots: h.slots, reworld: h.reworld, ents: h.ents, ap: m.ap, perf: h.perf, part: h.part, est: h.est };
     R.minutes.push(row);
     log(`min ${mi + 1}: ${JSON.stringify(row)}`);
+  }
+  if (ALLOC) {
+    const { profile } = await cdp.send('HeapProfiler.stopSampling');
+    const by = new Map();
+    const walk = (n) => { const f = n.callFrame, k = `${f.functionName || '(anon)'} ${f.url.replace(/^.*?\/(client|shared)\//, '$1/')}:${f.lineNumber + 1}`; by.set(k, (by.get(k) || 0) + n.selfSize); for (const c of n.children || []) walk(c); };
+    walk(profile.head);
+    const tot = [...by.values()].reduce((a, b) => a + b, 0);
+    R.alloc = { mb: +(tot / 1048576).toFixed(1), note: 'all the drive allocated, collected or not (a sample every 16 KB) - by the function that allocated', top: [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25).map(([fn, b]) => ({ fn, mb: +(b / 1048576).toFixed(2), pct: +(100 * b / tot).toFixed(1) })) };
+    log(`allocations: ${JSON.stringify(R.alloc.top.slice(0, 12))}`);
   }
   // then out of the car and a walk round, turning every way (your own figure's poses: the sprites made for it)
   const hf = await page.evaluate(hudNow);
