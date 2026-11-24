@@ -26782,3 +26782,24 @@ crown over a north door) - for the art pass. visaudit fails as on main (5 north 
 the same lines on main). The other half of P11 - the sea
 creeping up a pier's planks where they meet the sand - was the world batch's deckRoots (beachWater 0, live 11-23):
 to be looked at in the game.
+
+## 2026-11-23 · The police car taking you in gets there (P8 of the 11-23 notes, part 1) - on branch `heights-1123`
+The owner, 11-23: NPC drivers - the police taking you in among them - crash, ride the median, get stuck. Measured: 12
+arrests on streets across World v3 with the city's traffic: 2 driven to a station, 10 faded to black. The causes, fixed:
+- `server/systems/traffic.js` planRoute (every NPC driver with a destination uses it: police, tow trucks, ambulances,
+  stops, the director's cars): the route started at the nearest junction - often a long way down the street - and the
+  car drove straight there across the pavement; and it counted junctions, not distance. Now it starts along the street
+  the car is on, its kerb lane, to whichever end makes the way shorter (a one-way street: its own way), then the
+  shortest way by length (a heap Dijkstra). opts.inner: the inside lane.
+- `server/systems/custody.js`: the car sent for you sat a block off behind the officers and the crowd in the road until
+  the screen faded - stood held up a few seconds within PICKUP_FAR, they walk you to it. The ride counted as stuck when
+  it got no nearer as the crow flies - a route going round first faded; it's judged along the route now, a new plan
+  starting the count again. The station nearest by road (stationByRoad), and the ride allowed as long as the way takes
+  at a police car's pace (RIDE_PACE) if that's longer than RIDE_MAX_S. On its siren it drives the inside lane: the
+  traffic pulls over to the kerb.
+- `server/systems/reroute.js` goRound: a siren goes round a car crawling along in front of it to pull over, as well as
+  one stopped (it sat behind them at walking pace).
+Measured after: with traffic 6-9 of 12 driven (it varies with the traffic), with none 11 of 12; time up on a pavement
+down, still some going round a car. Tests: `test/custodyride.test.js` (five arrests across the city driven to the
+station nearest by road, on the road, no fade; a route's first leg on the road for 155 routes - 9 started across a
+pavement or a block before). Not done (P8 part 2): racers, taxis and the cinematics' cars, medians, unsticking in jams.

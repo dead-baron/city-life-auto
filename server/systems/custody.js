@@ -55,6 +55,7 @@ import { moved } from '../movemark.js';   // (a move the server made: not a tele
 import { poisKind } from '../pois.js';
 
 const PICKUP_PX = 200;   // a car this close to the prisoner is walked to (further off, it drives over first)
+const PICKUP_FAR = 520;  // ...or this close, once it's stood held up a few seconds (runCar)
 const DROP_PX = 170;     // at the station: this close to the kerb outside the front door
 const ESCORT_S = 25;     // a walk to the car that takes longer than this: they're put in anyway
 const WALK = { canMove: true, canSprint: false, speedMul: 0.95, canSwim: true, regenMul: 1, staminaMax: 100 };
@@ -110,6 +111,26 @@ export function reachableStation(world, x, y) {
     if (stationPiece(world, st) !== piece) continue;
     const d = Math.hypot(st.x - x, st.y - y);
     if (d < bd) { bd = d; best = st; }
+  }
+  return best;
+}
+// The station nearest by road from (x, y) - not as the crow flies: across a river the nearest can be the far side of the
+// city by road -> { st, len } | null (none on its roads)
+const RIDE_PACE = 260;   // px/s: a police car's pace through the city, lights and traffic and all (the time a ride's allowed)
+export function stationByRoad(world, x, y) {
+  const piece = pieceAt(world.map, x, y);
+  if (piece < 0) return null;
+  let best = null;
+  for (const st of stations(world)) {
+    if (stationPiece(world, st) !== piece) continue;
+    const k = kerbOf(world, st.id);
+    if (!k) continue;
+    if (best && Math.hypot(k.x - x, k.y - y) > best.len) continue;   // (further as the crow flies than the best by road)
+    const r = planRoute(world, x, y, k.x, k.y);
+    let len = 0, px = x, py = y;
+    for (const q of r) { len += Math.hypot(q.x - px, q.y - py); px = q.x; py = q.y; }
+    if (r.length <= 1 && Math.hypot(k.x - x, k.y - y) > 600) continue;   // (no way there after all)
+    if (!best || len < best.len) best = { st, len };
   }
   return best;
 }
@@ -392,8 +413,11 @@ function seat(world, p, v, esc) {
     const fs = !v.seats[0] ? 0 : v.seats.findIndex((q) => !q);
     if (fs >= 0) { v.seats[fs] = esc.id; esc.vehId = v.id; esc.seat = fs; esc.vx = 0; esc.vy = 0; }
   }
-  const st = reachableStation(world, v.x, v.y);
-  Object.assign(c, { stage: 'ride', since: now, until: now + RIDE_MAX_S, holder: 0, station: st ? st.id : -1, blastSeen: v.blastAt || 0, hitSeen: v.hardHitAt || 0, best: undefined, brk: false, tries: 0, tryAt: now + BREAK_RETRY_S });
+  const near = stationByRoad(world, v.x, v.y), st = near ? near.st : reachableStation(world, v.x, v.y);
+  // (the time allowed: as long as the way by road takes, at a police car's pace, if that's longer - the owner, 11-23: the
+  // screen faded on a car nearly there, across the city)
+  const allow = Math.max(RIDE_MAX_S, near ? near.len / RIDE_PACE + 30 : 0);
+  Object.assign(c, { stage: 'ride', since: now, until: now + allow, holder: 0, station: st ? st.id : -1, blastSeen: v.blastAt || 0, hitSeen: v.hardHitAt || 0, best: undefined, brk: false, tries: 0, tryAt: now + BREAK_RETRY_S });
   if (!st) { fadeIn(world, p, 'There\'s no road to a police station from here - you\'re taken to the nearest cells.'); return; }
   world.notify(p, `In the back of the police car to ${st.label} - when it slows, press E to make a break for it.`, 'bad');   // (the one line, fading: no bar over the screen - client/hud.js)
   p.meDirty = true;
@@ -450,10 +474,20 @@ function rideStep(world, p) {
   // and in the end the screen fades and they're booked (the owner, 11-07: "they always get stuck somewhere ... and then
   // after a while I end up in prison" - never stuck for ever in the back of a police car)
   slowWatch(world, c, v);   // (the car crawling: the chance to kick the door open, held a moment - carTry)
-  const stuck = progress(c, d, now);
+  // (getting nearer along its route, not as the crow flies: a way that goes round first is still progress - the owner,
+  // 11-23: the screen faded on a car that was on its way; a new plan starts the count again)
+  const R = v.ai && v.ai.route;
+  if (R && v.ai.routeAt !== c.routeSeen) { c.routeSeen = v.ai.routeAt; c.best = undefined; }
+  const stuck = progress(c, R && R.length ? routeLeft(v, R) : d, now);
   if (stuck > CUSTODY_SKIP_S) { fadeIn(world, p, 'The police car is going nowhere - you\'re taken in.'); return; }
   if (stuck > CUSTODY_STUCK_S) offerBreak(world, p);
   if (c.armed && canBreak(p, world)) { c.armed = false; breakOut(world, p); }   // (braced for it: the kick as it slows - notYet)
+}
+// what's left of a route from where the vehicle is
+function routeLeft(v, R) {
+  let L = Math.hypot(R[0].x - v.x, R[0].y - v.y);
+  for (let i = 1; i < R.length; i++) L += Math.hypot(R[i].x - R[i - 1].x, R[i].y - R[i - 1].y);
+  return L;
 }
 // how long the car has got no nearer (by 40 px) to where it's going
 function progress(c, d, now) {
@@ -866,12 +900,17 @@ export function runCar(world, v, crew, dt) {
     const wi = walkInAt(world.map, ped.x, ped.y), kb = wi ? doorKerb(world, wi) : null, gx = kb ? kb.x : ped.x, gy = kb ? kb.y : ped.y;
     const d = Math.hypot(v.x - gx, v.y - gy);
     v.sirenOn = d > 600;
+    // (held up close by - the officers and the crowd round the arrest in the road, a queue at the lights: after a few
+    // seconds standing it's near enough, and they walk over to it - the owner, 11-23: the car that came for you sat a
+    // block off and the screen faded)
+    if (Math.hypot(v.vx, v.vy) > 25 || d > PICKUP_FAR) c.carStill = now; else if (c.carStill === undefined) c.carStill = now;
+    const pick = now - c.carStill > 3 && clearWalk(world, ped.x, ped.y, v.x, v.y) ? PICKUP_FAR : PICKUP_PX;
     let fx = null;
-    if (d > PICKUP_PX && drv && drv.npc && waterAhead(world, v)) { halt(v); v.ai.route = null; }   // (never into the sea on the way either)
-    else if (d > PICKUP_PX && drv && drv.npc) route(world, v, gx, gy, d < 450 ? 170 : 460);
+    if (d > pick && drv && drv.npc && waterAhead(world, v)) { halt(v); v.ai.route = null; }   // (never into the sea on the way either)
+    else if (d > pick && drv && drv.npc) route(world, v, gx, gy, d < 450 ? 170 : 460);
     else {
       halt(v);
-      if (d > PICKUP_PX) {
+      if (d > pick) {
         // nobody at the wheel - they all got out after the suspect on foot: one of them runs back for it and drives it over
         // (task #378: the car sat there empty and never came); nobody left who can, and another car is sent
         fx = fetcherOf(world, v, crew, c.holder);
@@ -881,7 +920,7 @@ export function runCar(world, v, crew, dt) {
       }
     }
     for (const q of crew) if (!q.vehId && q.id !== c.holder && q !== fx) guard(world, q, ped, dt);
-    if (c.stage === 'fetch' && d <= PICKUP_PX + 60 && Math.hypot(v.vx, v.vy) < 40) {
+    if (c.stage === 'fetch' && d <= pick + 60 && Math.hypot(v.vx, v.vy) < 40) {
       // an officer to walk them over: the one holding them if they're this car's, else one of its crew
       const h = live(world, c.holder);
       let esc = h && h.npc && h.npc.unit === v.id && !h.vehId ? h : null;
@@ -951,7 +990,7 @@ function route(world, v, x, y, speed) {
   const lost = ai.route && ai.route.length && segDist(v.x, v.y, ai.routePrev || ai.route[0], ai.route[0]) > 300;
   let planned = false;
   if (!ai.route || !ai.route.length || ai.routeKey !== key || lost || now - ai.routeAt > 25) {
-    ai.route = trimBehind(planRoute(world, v.x, v.y, x, y), v); ai.routeAt = now; ai.routeKey = key; ai.routePrev = { x: v.x, y: v.y }; planned = true;
+    ai.route = trimBehind(planRoute(world, v.x, v.y, x, y, { inner: !!v.sirenOn }), v); ai.routeAt = now; ai.routeKey = key; ai.routePrev = { x: v.x, y: v.y }; planned = true;
   }
   // on to the next waypoint once this one's reached (the faster, the sooner), or driven past while still on the line
   // of the route (never cutting a corner across: onto a bridge it'd be straight into the water beside it)
