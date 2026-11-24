@@ -421,6 +421,8 @@ bus stop, then they should go flying off while the bench or object they're on ge
 - **The "!" over people:** "when an exclamation mark shows up on my character or other characters or NPCs ... slightly
   above the player model instead of over the player." One head-top anchor (the N5 overhead-label rule of 11-22): the
   mark clear above the head; test row with the labels.
-- **The white rectangles everywhere:** they're the cash machines (385 ATMs: set into a shop's wall, or standing at a kerb
-  - the 52 left standing are atmStray, a booth decided 11-22). The picture doesn't say ATM: for the Fable art pass - a
-  screen, a keypad, the ATM sign or bank colours, the booth for the free-standing ones.
+- **The white rectangles everywhere:** not the cash machines (the owner, 21:51: "there was an ATM on the wall right
+  next to it") - most likely the phone boxes (`phonebox`, the nightlife, Southside and red-light districts' street
+  furniture, shared/map.js), their picture from the 11-22 art pass reading as a plain white and blue box. For the Fable
+  art pass: a phone box that reads as one (the handset, glass, a PHONE sign). To confirm in the game: he'll send the
+  district of one that doesn't fit.
