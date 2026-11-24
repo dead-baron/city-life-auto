@@ -26808,3 +26808,11 @@ again and gets nowhere still fades - test/arrests); the way back behind a vehicl
 other way after a few seconds (test/stops: it waited behind the player for good). The driving suite passes but
 gridlock, which fails on main too. Not done (P8 part 2): racers, taxis and the cinematics' cars, medians, unsticking
 in jams.
+
+## 2026-11-23 · The hoop marker above the backboard, and it fades (P10 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: "When you start the basketball activity an arrow shows up over the hoop and blocks the hoop art so
+it's hard to see where you're shooting." The job marker (client/main.js, the yellow arrow over a job's target) stood
+20-40 px over the target's ground point - on a hoop, over the backboard. A target can now say how high what it marks
+stands (`h`) and that its marker fades once seen (`fade`: full for JOB_MARK[0] s, gone over JOB_MARK[1] s, back when the
+target moves); hoops.js targetFor sends the rim's height + 30 and fade. Test: `test/hoopmark.test.js`. Not looked at
+in a running game.

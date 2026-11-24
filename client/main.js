@@ -5418,12 +5418,25 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
   }
   if (S.meters) { S.meters.drawGolf(g, z, now); S.meters.drawHoops(g, z); }   // (your golf ball's aim and meter, the hoop's: client/meters.js)
   if (me && me.job) {
-    g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
-    const bob = Math.sin(now * 4) * 5;
-    g.beginPath(); g.moveTo(me.job.x, me.job.y - 20 + bob); g.lineTo(me.job.x - 10, me.job.y - 40 + bob); g.lineTo(me.job.x + 10, me.job.y - 40 + bob); g.closePath(); g.fill(); g.stroke();
+    // (above what it marks - j.h, the height of a hoop's backboard - never over it; j.fade: shown a moment, then gone,
+    // till the target moves - the owner, 11-23: the arrow over the hoop hid where you were shooting)
+    const j = me.job, key = `${Math.round(j.x)},${Math.round(j.y)}`, t = performance.now() / 1000;
+    if (S.jobMarkKey !== key) { S.jobMarkKey = key; S.jobMarkAt = t; }
+    const a = j.fade ? jobMarkAlpha(t - S.jobMarkAt) : 1;
+    if (a > 0) {
+      g.save(); g.globalAlpha = a;
+      g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
+      const bob = Math.sin(now * 4) * 5, y = j.y - (j.h || 0);
+      g.beginPath(); g.moveTo(j.x, y - 20 + bob); g.lineTo(j.x - 10, y - 40 + bob); g.lineTo(j.x + 10, y - 40 + bob); g.closePath(); g.fill(); g.stroke();
+      g.restore();
+    }
   }
   void vehs;
 }
+
+// a fading job marker's strength JOB_MARK[0] s after it showed: full, then gone over JOB_MARK[1] s
+const JOB_MARK = [2.5, 1];
+function jobMarkAlpha(s) { return s <= JOB_MARK[0] ? 1 : Math.max(0, 1 - (s - JOB_MARK[0]) / JOB_MARK[1]); }
 
 // ---- lighting: every light source of the frame into the light map and the bloom pass -----------
 // (render/lighting.js does the compositing). Also returns the light sources the puddles and the rain
