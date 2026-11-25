@@ -1212,11 +1212,8 @@ function landField(M, TX0, TY0, TN) {
 // coast's comes to far out.
 const SEA_SLOPE = [0.55, 0.22, 1.4], SAND_TROPIC = 0.14, SEA_FAR = 0.55, FAR0 = 10, FAR1 = 22;
 const coastOf = (t) => (t === T.SAND ? 1 : t === T.SIDEWALK || t === T.ROAD || t === T.BUILDING || t === T.LOT || t === T.PLAZA ? 2 : 0);
-// The sea's slope at each tile of the window (the water pass, 11-24). It was the one nearest land tile's: where that
-// stopped being sand - a pier's foot, a headland - the depth stepped along a ruled line, a dark rectangle off the surf
-// beach. Now each kind of coast within LAND_R counts by how near it is (1 / d^3: its own close in, shared out where two
-// are as far), and from FAR0 to FAR1 tiles out every coast's slope comes to the same: no line where the coast's kind
-// changes, none where it ends. The distances: landField's grid, one transform a kind (rock, sand, quay).
+// The sea's slope at each tile (11-24, DEVLOG "The water pass, 2"): every kind of coast within LAND_R counts by how
+// near it is (1 / d^3), all coming to one slope from FAR0 to FAR1 tiles out - no line where the coast's kind changes.
 export const seaFields = () => ({ k: F.k, ld: F.ld, sl: F.sl, dep: F.dep, cst: F.cst });   // (the last window's, for the tests)
 const CT = { n: 0, d: [null, null, null] };
 function coastSlopes(M, TX0, TY0, TN, G) {
@@ -1487,7 +1484,7 @@ export const WQ = { c: null, nx: 0, ny: 0, code: 255, inl: false, solid: false, 
 // river has a few along its banks; a rocky sea coast its stacks of rock; a mountain lake's shore its granite): a dome
 // of rock lit by the light pass (its normal, its height), wet and dark at the waterline, moss on top in the woods; a
 // collar of foam round it - white on the side the current comes from, a broken wake behind.
-const BCELL = 64, BOULDER = [0, 0.1, 0.14, 0.06, 0.06, 0, 0], BOULDER_DT = [0, 5, 99, 3, 3, 0, 0];
+const BCELL = 64, BOULDER = [0, 0.1, 0.09, 0.045, 0.06, 0, 0], BOULDER_DT = [0, 5, 99, 3, 3, 0, 0];
 const MOSS_W = RB('#5e7a34', { dark: 0.55, shift: 0.3 }), BASALT_W = RB('#4e4c4a', { dark: 0.6, light: 0.45 });
 // (rp: how wild the rapids are there - world3-rapids.js: strewn right across them, more the wilder)
 function boulder(X, Y, k, st, dt, cst, fx, fy, fv, seed, rp = 0) {

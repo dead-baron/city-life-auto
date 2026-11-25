@@ -435,10 +435,8 @@ export function tinaPx(list, X, Y, seed) {
 }
 // a two-rut track's ruts (shared/naturesites.js: the canyon's, the trailhead's): two lines either side of its middle
 // (0 off it, 1 the track, 2 a rut; a track drawn per pixel - r.px - is all its own, else only its ruts on its dirt tiles).
-// A track of its own (the owner, 11-23: "the off-road trail (a blended start, a real trail)" - it was one dark band
-// from edge to edge, begun and ended in a round blot): two ruts worn dark, the crown between them the ground's own with
-// worn patches, the shoulders worn beside the ruts and thinning out to a ragged edge; and over its first and last
-// TRACK_FADE px it narrows and thins to nothing - no cap past either end.
+// A track of its own (11-24, DEVLOG "Fields with edges ..."): two worn ruts and a crown between (one rut for a
+// narrow ride), ragged shoulders; over its last TRACK_FADE px it narrows and thins to nothing.
 export const TRACK_FADE = 96, SINGLE_HW = 26;
 const DRYTRACK = new Uint8Array(MATS.length);
 for (const k of ['DESERT', 'DUNE', 'REDROCK', 'CRACKED', 'BEACH', 'SCREE', 'WASH', 'SHINGLE', 'QUARRY', 'TRACKD']) DRYTRACK[M_[k]] = 1;
@@ -838,9 +836,7 @@ function fieldEdge(b, ti, X, Y, m, seed) {
   return e < FIELD_EDGE.head ? M_.DIRT : -1;
 }
 
-// A country car park's edge (the art pass, 11-24; concept MX2, the trailhead's lot): gravel laid on the ground has no
-// ruled edge. Within LOT_EDGE px of a tile of soft ground (grass, forest floor, dirt, sand - not paving, a road or
-// water) the gravel gives way to it, by two noises: bays of the ground reach in, spits of gravel stay.
+// A country car park's edge (11-24): within LOT_EDGE px of soft ground the gravel gives way to it, raggedly.
 export const LOT_EDGE = 9;
 function lotEdge(b, ti, X, Y, seed) {
   const lx = X - Math.floor(X / TILE) * TILE + 0.5, ly = Y - Math.floor(Y / TILE) * TILE + 0.5, rx = TILE - lx, ry = TILE - ly;
@@ -859,6 +855,8 @@ function lotEdge(b, ti, X, Y, seed) {
 // A wild bank's kind along the shore (11-24, not one brown line): 0 an earth lip, 1 grown over to the water,
 // 2 shingle, 3 a bar of dirt. Designed ground keeps 0. test/groundedges.test.js
 const WILD_BANK = new Set([M_.MEADOW, M_.DRYGRASS, M_.ALPINE, M_.FOREST, M_.FORESTDIRT, M_.PASTURE, M_.DIRT]);
+const BANK_IN = 13;
+const tongue = (X, Y, seed) => vnc(X, Y, 10, seed + 215) * 0.85 + hh(X >> 1, Y >> 1, seed + 216) * 0.15;
 const beachW = (X, Y, seed) => 7 + vnc(X, Y, 23, seed + 213) * 22;   // (px: a shingle or sand bank's width, wandering)
 export function bankKind(m, X, Y, seed) {
   if (!WILD_BANK.has(m)) return 0;
@@ -1697,6 +1695,16 @@ function edges(C, G) {
         setC(G, gi, sd(R, near === 1 ? 0.5 : near === 2 ? 0.88 : 0.74 + (hh(X >> 3, Y >> 3, seed) - 0.5) * 0.12, X, Y, 0.3));
       }
     } else if (k === 3 || k === 2) {
+      const dw = k === 2 ? b.dist[i] / 10 : 9;
+      if (dw < BANK_IN) {   // (a soft bank going under)
+        let lm = 0;
+        for (const o of [-BANK_IN * WN, BANK_IN * WN, -BANK_IN, BANK_IN]) if (WILD_BANK.has(M[i + o])) { lm = M[i + o]; break; }
+        const bk = lm ? bankKind(lm, X, Y, seed) : 0;
+        if (bk && tongue(X, Y, seed) < 0.9 - dw / BANK_IN) {
+          const c = bk === 2 ? GSHADE.washGravel(X, Y, seed) : bk === 3 ? GSHADE.sandWet(X, Y, seed) : SHADER[lm](X, Y, seed), j = gi * 4;
+          G.col[j] = (G.col[j] + c[0] * 0.8) >> 1; G.col[j + 1] = (G.col[j + 1] + c[1] * 0.85) >> 1; G.col[j + 2] = (G.col[j + 2] + c[2] * 0.9) >> 1;
+        }
+      }
       // the face of a raised edge just north of this pixel, facing the camera: kerbs over roads, quay walls, pier
       // and deck sides and earth banks over the water (scan up through this pixel's own kind of low ground)
       let open = k === 2;   // (open water straight north of it: the lee of a bridge running north-south is looked for below)
@@ -1764,7 +1772,7 @@ function edges(C, G) {
         else if (m === M_.ROCKSHORE || m === M_.SHINGLE) { if (d < 6) darken(G, gi, 0.72 + d * 0.04); }
         else {
           const bk = bankKind(m, X, Y, seed);
-          if (bk === 1) { if (d < 2) darken(G, gi, 0.88); }
+          if (bk === 1) { if (tongue(X, Y, seed) < 0.82 - d * 0.085) { darken(G, gi, 0.72); G.col[gi * 4 + 2] += 14; } }   // (damp)
           else if (bk) { if (d < beachW(X, Y, seed)) { setC(G, gi, bk === 2 ? GSHADE.washGravel(X, Y, seed) : d < 3 ? GSHADE.sandWet(X, Y, seed) : GSHADE.dirtPebbly(X, Y, seed)); if (d < 2) darken(G, gi, 0.84); } }
           else if (d < 3) setC(G, gi, sd(MAT.soil, 0.3 + d * 0.15 + hh(X, Y, seed) * 0.15, X, Y, 0.6));
           else if (d < 6) darken(G, gi, 0.8 + d * 0.025);
@@ -1877,7 +1885,9 @@ function decor(C, G) {
     const i = py * WN + px, m = b.mat[i];
     const list = COVER[m];
     if (list) {
-      if (bankKind(m, X, Y, seed) > 1 && b.dist[i] / 10 < beachW(X, Y, seed)) continue;   // (a beach is bare)
+      const nd = b.dist[i] / 10, bk = nd < 30 ? bankKind(m, X, Y, seed) : 0;
+      if (WILD_BANK.has(m) && nd < 18 && h0 > 1 - (bk > 1 ? 0.3 : 0.18) * dens) { stamp(C, G, cover(C, h0 > 0.94 ? 'rock' : 'pebble', (hh(cx, cy, seed + 97) * 6) | 0), X, Y, b.zb[i]); continue; }
+      if (bk > 1 && nd < beachW(X, Y, seed)) continue;
       let acc = 0;
       for (const [kind, nv, p] of list) {
         acc += p * dens;

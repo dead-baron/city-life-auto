@@ -28,7 +28,7 @@ export const CREEKS3 = {
   hw: [26, 38],     // px: its half width at the spring and at its mouth
   fall: 1,          // a step down of the smoothed height by this much makes a riffle and a pool
   apart: 40,        // tiles between two riffles at least
-  rock: [5, 9, 3],  // tiles between boulders in the water, boulders on a bank, ferns on a bank - about
+  rock: [11, 6, 3], // tiles between boulders in the water, boulders on a bank, ferns on a bank - about
   pool: [86, 62],   // px: a pool's half axes (its middle deep)
   road: 14,         // tiles: a spring rises no nearer a road, a lot or a building than this
   stones: 14,       // a crossing of more path tiles than this is reported, not laid

@@ -109,3 +109,17 @@ test('wild banks: four kinds in a natural mix along the shore, in long stretches
   assert.ok(60000 / runs >= 60, `the kinds come in stretches (a change every ${Math.round(60000 / runs)} px)`);
   for (const m of [M_.LAWN, M_.PARK, M_.GOLF, M_.GREEN, M_.BEACH, M_.DESERT]) for (let x = 0; x < 4000; x += 37) assert.equal(bankKind(m, x, x * 3, 1337), 0);
 });
+
+// Land and water blended at a soft bank (the owner, 11-24 23:18: "blending the surface and underwater art between
+// land and water, some more stones on land, some less stones in water, a few harder edges, some softer transition").
+// The bake of a small pond in forest floor: along its shore some water pixels carry the land's colour (the bank going
+// under), and the earth-lip stretches still have their line.
+test('a soft bank goes under the water in tongues; fewer rocks stand in a creek than did', async () => {
+  const W = await import('../client/art2/water.js');
+  const src = (await import('node:fs')).readFileSync(new URL('../client/art2/game/groundbake.js', import.meta.url), 'utf8');
+  assert.match(src, /const BANK_IN = (\d+)/); assert.ok(+src.match(/const BANK_IN = (\d+)/)[1] >= 8, 'the band of water a bank shows through');
+  assert.match(src, /tongue\(X, Y, seed\) < [\d.]+ - dw \/ BANK_IN/, 'the water side thins out with distance');
+  assert.match(src, /cover\(C, h0 > [\d.]+ \? 'rock' : 'pebble'/, 'stones stamped along a bank');
+  const wsrc = (await import('node:fs')).readFileSync(new URL('../client/art2/water.js', import.meta.url), 'utf8'), B = wsrc.match(/BOULDER = \[([^\]]+)\]/)[1].split(',').map(Number);
+  assert.ok(B[W.WK.CREEK] <= 0.1 && B[W.WK.RIVER] <= 0.05 && B[W.WK.CREEK] > 0.04, `rocks in running water (${B[W.WK.CREEK]}, ${B[W.WK.RIVER]}): fewer, not none`);
+});
