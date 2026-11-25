@@ -5,6 +5,7 @@ const R = process.env.ROOT || new URL('../..', import.meta.url).pathname.replace
 const [out, preset, list] = process.argv.slice(2);
 if (process.env.TONE) globalThis.__FLORA_TONE = +process.env.TONE;
 if (process.env.SIDE) globalThis.__SIDE = +process.env.SIDE;
+if (process.env.BARK) { const [flat, dark, knee] = process.env.BARK.split(',').map(Number); Object.assign((await import(R + '/client/art2/flora.js')).BARK_LOOK, { flat, dark, knee }); }   // (try the bark light's numbers)
 const ST = await import(R + '/client/art2/game/statics.js');
 const PK = await import(R + '/client/art2/game/chunkpack.js');
 const LG = await import(R + '/client/art2/game/lightgame.js'); const P = LG.PRESETS_GAME[preset];

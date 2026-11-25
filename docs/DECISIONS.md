@@ -402,6 +402,15 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   first known ... even if some people try cloning"): Claude's answer recorded in PREBETA-LIST - no effect on players
   once done, about a day, a deploy risk while it is done; the one cheap step (stop sending server source to browsers)
   can be taken on its own. His call when; not scheduled.
+- The giant redwoods' tops are a mix of three (the owner, 11-25 03:20: "can we do a mix of all three (A and both J
+  column and J ragged?)"): the tapering spire as it was, a column under a round top, a column under a ragged top -
+  two of each among a giant's six shapes (statics.js `RW_TOP`). The young redwoods keep their cones.
+- Art with the dark shadow painted in is redrawn from its source, not corrected afterwards (the owner, 11-25 03:29:
+  "the art that has the super dark shadow drawn into it all of those just need to be redrawn from scratch ... trying
+  to get rid of it seems to change the color of the asset and it doesnt blend in with the other nature in the area
+  ... lets get a list and redraw all of them and just let me know what needed the redraw"). So: the palettes' shade
+  tones and the painters' shading are what change; no lift of the finished picture; a census over the baked world
+  (tools/nature/darkscan.mjs) and a list of what was redrawn.
 - WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
   the consoles we are aiming for").
 - The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was

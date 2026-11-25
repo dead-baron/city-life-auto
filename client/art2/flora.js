@@ -104,12 +104,22 @@ export function floraArt(k, fn, tint = 0) {
 }
 // Leaves lit evenly, never black (11-25): leaf pixels turned up, as the sword fern's; tones under `knee` pressed
 // up to `dark` and pulled to `tone` (the style anchor's dark green).
+export const BARK_LOOK = { flat: 0.15, dark: 50, knee: 86, pull: 0.7, tone: [92, 54, 40] };
 export const LEAF_LOOK = { flat: 0.75, dark: 46, knee: 72, tone: [22, 50, 38] };
 export function leafLight(G) {
   if (!G || !G.col || G.lit) return G;
   const { flat: K, dark: F, knee: T, tone: D } = LEAF_LOOK, lD = D[0] * 0.3 + D[1] * 0.59 + D[2] * 0.11, c = G.col, n = G.nrm;
+  const { flat: Kb, dark: Fb, knee: Tb, tone: Db } = BARK_LOOK, lDb = Db[0] * 0.3 + Db[1] * 0.59 + Db[2] * 0.11;
   for (let i = 0, j = 0; i < G.w * G.h; i++, j += 4) {
-    if (!c[j + 3] || !(G.flag[i] & F_LEAF)) continue;
+    if (!c[j + 3]) continue;
+    if (!(G.flag[i] & F_LEAF)) {
+      // (bark, stems, stone: turned part-way to the sky so a flank away from the sun is shade, not black; its
+      // darkest paint pressed up to the anchor's darkest wood, its own hue kept)
+      if (n[j + 3] && Kb) { const x = (n[j] / 127.5 - 1) * (1 - Kb), y = (n[j + 1] / 127.5 - 1) * (1 - Kb) + 0.3 * Kb, z = (n[j + 2] / 127.5 - 1) * (1 - Kb) + 0.95 * Kb, l = Math.hypot(x, y, z) || 1; n[j] = (x / l + 1) * 127.5; n[j + 1] = (y / l + 1) * 127.5; n[j + 2] = (z / l + 1) * 127.5; }
+      const l = c[j] * 0.3 + c[j + 1] * 0.59 + c[j + 2] * 0.11;
+      if (l < Tb) { const l2 = Fb + l * (Tb - Fb) / Tb, k = l2 / Math.max(l, 4), w = c[j] > c[j + 1] * 1.2 ? (1 - l / Tb) * BARK_LOOK.pull : 0; for (let q = 0; q < 3; q++) c[j + q] = Math.min(255, c[j + q] * k * (1 - w) + Db[q] * (l2 / lDb) * w); }
+      continue;
+    }
     if (n[j + 3]) { const x = (n[j] / 127.5 - 1) * (1 - K), y = (n[j + 1] / 127.5 - 1) * (1 - K) + 0.3 * K, z = (n[j + 2] / 127.5 - 1) * (1 - K) + 0.95 * K, l = Math.hypot(x, y, z) || 1; n[j] = (x / l + 1) * 127.5; n[j + 1] = (y / l + 1) * 127.5; n[j + 2] = (z / l + 1) * 127.5; }
     const l = c[j] * 0.3 + c[j + 1] * 0.59 + c[j + 2] * 0.11;
     if (l < T) { const l2 = F + l * (T - F) / T, w = 1 - l / T, k = l2 / Math.max(l, 4); for (let q = 0; q < 3; q++) c[j + q] = Math.min(255, c[j + q] * k * (1 - w) + D[q] * (l2 / lD) * w); }

@@ -2281,6 +2281,10 @@ function signalModel(L = 70, heads = []) {
 // ================================================================================================
 // species: [maker(seed), sprite half-width, height at scale 1]
 const LEAF_GOLD = [[220, 170, 50], [196, 132, 40], [232, 196, 80]];
+// A giant's top, a mix of three by its shape number (the owner, 11-25 03:20: "a mix of all three (A and both J column
+// and J ragged)"): the tapering spire, a column under a round top, a column under a ragged one.
+export const RW_TOP = [{}, { taper: 0, top: 'dome' }, { taper: 0, top: 'ragged' }], redwoodTop = (s) => RW_TOP[s % 3];
+const giantOf = (H, hw, o) => (s) => RW.giantRedwoodArt(s, H, hw, { ...o, ...redwoodTop(s) });
 const HIGH_CROWN = { low: 0.76, crown: 0.5 };   // (a giant's boughs from three quarters of the way up, and fewer)
 const SPECIES = {
   street: [(s) => FL.streetTree(s, 'grate'), 46, 128], streetPl: [(s) => FL.streetTree(s, 'planter'), 46, 128], ginkgo: [FL.ginkgo, 40, 124], redMaple: [FL.redMaple, 44, 122],
@@ -2293,8 +2297,8 @@ const SPECIES = {
   coconut: [FL.coconutPalm, 76, 151], cocoUp: [FL.cityCoconut, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
   smallPalm: [FL.smallFanPalm, 36, 76], coastCypress: [FL.coastalCypress, 90, 98], banana: [FL.banana, 60, 99],
   // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
-  giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770, 92], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660, 76], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
-  giantLH: [(s) => RW.giantRedwoodArt(s, 720, 70, HIGH_CROWN), 250, 770, 92], giantH: [(s) => RW.giantRedwoodArt(s, 620, 54, HIGH_CROWN), 210, 660, 76], giantSH: [(s) => RW.giantRedwoodArt(s, 520, 40, HIGH_CROWN), 175, 555],   // (the same giants, their crowns carried high: over a trail, a creek, a road - crownOver)
+  giantL: [giantOf(720, 70), 250, 770, 92], giant: [giantOf(620, 54), 210, 660, 76], giantS: [giantOf(520, 40), 175, 562],
+  giantLH: [giantOf(720, 70, HIGH_CROWN), 250, 770, 92], giantH: [giantOf(620, 54, HIGH_CROWN), 210, 660, 76], giantSH: [giantOf(520, 40, HIGH_CROWN), 175, 562],   // (the same giants, their crowns carried high: over a trail, a creek, a road - crownOver)
   redwoodB: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.48, cone: 1 }), 110, 405], redwoodC: [(s) => RW.giantRedwoodArt(s, 380, 20, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 110, 405],   // (11-21: the common redwood's two higher crowns - redwoodAt picks among the three by where the tree stands)
   redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 112, 365], redwood2H: [(s) => RW.giantRedwoodArt(s, 340, 18, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 116, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
   gate: [(s) => RW.giantRedwoodArt(s, 760, 78, { tunnel: { w: 46, h: 60 } }), 270, 815],   // (Giant's Gate, the drive-through: shared/world3-drivetree.js)

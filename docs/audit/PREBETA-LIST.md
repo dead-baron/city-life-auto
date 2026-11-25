@@ -560,3 +560,52 @@ the tools, the plans and everything unreleased.
   boats, wakes, swimmers and their effects under the deck, with a test over all bridges.
 - **Live 11-25: see-through buildings along your street or alley** (PR #48, page-side) - on `main` on his word; the
   art branch carries the same code.
+
+## The owner's notes from playing on desktop and phone (PDF "City Life Auto Prebeta v2", 11-25 03:23)
+"Dont interrupt the current plan just take note and add appropriately ... if its something to fix now lets do it, if
+its something that can wait lets make note of it and revisit at the right time." Sorted:
+
+**Art and the page - taken into the art pass (docs/tasks/ART-CHECK-LIST.md has their state):**
+- **See under elevated structures** (a railroad bridge over a street in his picture): "It would help if players can
+  see under elevated platforms like this railroad bridge, but im sure highways and maybe some other structures ...
+  like we do behind buildings, letting the player see a wide range under a bridge like this."
+- **Mountains**: "Mountain areas can look better than this right? We need to get some big rock structure and mountain
+  side and cliffs and rocky terrain systems in because this doesnt look good when we create these mountainous areas
+  with a group of 4 similar shaped rocks stacked in a row ... water chunks that blend into the mountainous area
+  above and foothills below and just a better looking mountain cliff rocky area in general and across the other
+  mountain/cliff/rocky areas that are put together like this." A new look: variants to him first.
+- **A double yellow line merging into another** on a desert road (two centre lines running into each other, by the
+  hospital there): "Does not look right and its right outside this hospital so a lot of people will see it."
+- **A road bridge over open water** (seen while spectating): the deck's edge against the water "is too hard"; land
+  may run out a way with the bridge, "but eventually the bridge goes over water and there is a passable channel
+  underneath for boats and swimmers and fish and animals". And the white idle marks in the shallows by the shore "just
+  show as static images instead of animated water ripples ... we want that moving but subtle and natural and
+  animated, or can be removed if it isnt needed."
+- **The shark**: "not right yet, doesn't look updated, when it opens it mouth to attack part of its head disappear".
+- **Faceplant, lying down, sleeping**: "it just leans forward but not falling flat on their face (as well as lying
+  down or sleeping, it doesn't lay all the way down)".
+- **"Where to?"**: "You dont need to say there's a cheap car to be had near each one." Done 11-25 (ftue.js).
+- **Cloud shadows** passing over the world: "Or maybe not a good detail to add not sure." An idea: a still to show him
+  before anything is built.
+
+**Game rules and features - logged, not for the art pass:**
+- **Boom Tester**: a punching animation, the shot leaving flaming or glowing hands; it should blow up most vehicles in
+  one or two hits ("A rocket or explosive or grenade or boom tester should blow up most vehicles in a single hit,
+  maybe two it's three if it's especially armored"); and two versions - today's, to which NPCs do not react and which
+  earns no record, and one that "acts as a real in game weapon" with NPCs reacting as to gunfire.
+- **Vehicles and fire**: badly damaged vehicles sometimes catch fire; fire weapons set a vehicle alight only after
+  enough exposure; a burning vehicle goes out or explodes. (With "Vehicles smash things" above.)
+- **SAM**: two hits, three at most, to bring down a full-health helicopter; a plane about two, by how easy the lock is.
+- **Flamethrower**: far longer range - "at least a quarter way across the screen" on desktop.
+- **Wanted level stops** after a great deal of crime on a character made that day: no more stars. A bug to find
+  (a cap, a cooldown, or the new-character protection?) - reproduce on a fresh character first.
+- **Pepper spray and taser against players**: no keeping a player down for good - full effect the first time or two,
+  then little for a while. NPCs matter less.
+- **Ambulance job**: wear a paramedic outfit for the job, your own clothes back when it ends or you quit; and the
+  ambulance must spawn where it can drive off forward (his spawned nose-on to a brick wall in an alley).
+- **Prison**: ideas from The Escapists games - things to do inside, meeting a crime group or a boss who gives work
+  outside, a small training bonus inside (strength, cardio) under the in-game daily cap; escapes, jobs, routines.
+- **Photo mode**: a camera you set up (zoom, local settings), clean stills and video; shots into a public Discord pile
+  that he or moderators approve into a gallery channel; perhaps a gallery in the game.
+- **Events**: NPC bank and store robberies (hands up, or run, or fight back for Samaritan points if no innocent is
+  hurt); rare streakers, tackled by security or police; a rare streaker at a sports event.

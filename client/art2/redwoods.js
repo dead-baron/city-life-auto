@@ -74,6 +74,7 @@ function clump(G, cx, cy, rx, ry, seed, zAt, sun = 0.5, n = 0) {
 // rooted, mossy foot, and a trunk that rises into its crown, the sprays closing over its tip.
 export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
   const rnd = mulberry32(seed * 977 + 3), flare = o.flare ?? 0.6, bulge = 0.5, cone = !!o.cone;
+  const tp = o.taper ?? 1;   // (0: a column that keeps its width to the top; o.top 'dome' / 'ragged' closes it - statics.js RW_TOP)
   // (a dead top, only when asked for: a silver spike standing out of the crown)
   const snag = !!o.snag && !cone, Ht = snag ? H * 1.06 : H;
   const lean = o.lean ?? (hash(seed, 7, 2) - 0.5) * hw * 0.7, crownW = hw * 2.6 + 30;
@@ -83,7 +84,7 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
   const cx = G.ax, foot = G.ay, nfl = Math.max(6, Math.round(hw / 3.6));
   // the column: wide flared foot, a gentle taper, a slight wobble, narrowing to a spire in the crown; xAt: its
   // middle at height z (the lean)
-  const rad = (z) => hw * (1 + flare * Math.max(0, 1 - z / (hw * 1.7)) ** 2) * (1 + 0.03 * Math.sin(z * 0.04 + seed)) * (1 - Math.min(1, z / Ht) * 0.42) * (1 - clamp((z - Ht * 0.68) / (Ht * 0.32)) ** 1.6 * 0.86);
+  const rad = (z) => hw * (1 + flare * Math.max(0, 1 - z / (hw * 1.7)) ** 2) * (1 + 0.03 * Math.sin(z * 0.04 + seed)) * (1 - Math.min(1, z / Ht) * 0.42 * (0.3 + 0.7 * tp)) * (1 - clamp((z - Ht * 0.68) / (Ht * 0.32)) ** 1.6 * 0.86 * tp);
   const xAt = (z) => cx + lean * (z / H) ** 1.6;
   const SNAG = ramp('#8c8274', 6, 3, { dark: 0.62, light: 0.38 });
   const scar = !!o.scar, scarH = hw * (1.1 + hash(seed, 10, 4) * 0.9), scarW = 0.38 + hash(seed, 11, 4) * 0.2;
@@ -172,7 +173,20 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
     }
   }
   const tz = snag ? H * 0.9 : H - 4;
-  for (let i = 0; i < 5; i++) { const zz = tz - i * 9, mx = xAt(zz); clump(G, mx + (hash(seed, 40 + i, 5) - 0.5) * 10, foot - zz, 5 + i * 2.2, 4 + i * 0.8, seed + 90 + i, zAt, 0.75); }
+  if (o.top === 'ragged') {
+    // (a broken old top: sprays hung over the trunk's end in two uneven rows, a few leaders above)
+    const rt = rad(H - 10), n = Math.round(5 + rt * 0.4), zF = (yy) => zAt(yy) + rt;
+    for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) {
+      const u = (i + 0.5) / n * 2 - 1 + (hash(seed, 60 + i + row * 40, 5) - 0.5) * 0.4, zz = H - 20 + row * 9 + hash(seed, 80 + i + row * 40, 5) * 9 - Math.abs(u) * 6;
+      clump(G, xAt(zz) + u * rt * (1.3 - row * 0.25), foot - zz, 5 + hash(seed, 100 + i + row * 40, 5) * 4.5, 4 + hash(seed, 120 + i + row * 40, 5) * 3, seed + 300 + i * 17 + row * 701, zF, 0.7);
+    }
+    const L = 2 + Math.floor(hash(seed, 140, 5) * 3);
+    for (let i = 0; i < L; i++) {
+      const u = (hash(seed, 150 + i, 5) - 0.5) * 1.6, hi = 6 + hash(seed, 160 + i, 5) * 14;
+      for (let k = 0; k < 3; k++) { const zz = H - 6 + hi * k / 2; clump(G, xAt(zz) + u * rt + (hash(seed, 170 + i * 3 + k, 5) - 0.5) * 4, foot - zz, 6.5 - k * 1.5, 5 - k, seed + 500 + i * 31 + k, zF, 0.78); }
+    }
+  } else
+  for (let i = 0; i < 5; i++) { const zz = tz - i * 9, mx = xAt(zz); clump(G, mx + (hash(seed, 40 + i, 5) - 0.5) * 10, foot - zz, o.top === 'dome' ? Math.max(5 + i * 2.2, rad(zz) * 1.25) : 5 + i * 2.2, 4 + i * 0.8, seed + 90 + i, zAt, 0.75); }
   G.outline(0.42, true);
   return G;
 }

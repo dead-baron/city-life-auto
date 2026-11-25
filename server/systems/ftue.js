@@ -281,7 +281,7 @@ function offer(world, p) {
   if (opts.length < 2) { pick(world, p, null); return; }   // (one station, or none: nothing to choose)
   f.st = 'pick'; stamp(f, 'pick'); p.ftuePickAt = 0;
   p.ftuePickUntil = world.time + FTUE.pickS;
-  send(p, { t: 'ftue', a: 'pick', title: 'Where to?', sub: 'Pick where your train comes in. There\'s a cheap car to be had near each one.', opts, s: FTUE.pickS });
+  send(p, { t: 'ftue', a: 'pick', title: 'Where to?', sub: 'Pick where your train comes in.', opts, s: FTUE.pickS });
   store.touch(); p.meDirty = true;
 }
 // picked (stn: a station's poi from the card), or the default (null: skipped, left, or not one of the card's)

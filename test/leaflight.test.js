@@ -9,7 +9,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeStatic, FLORA_SPECIES } from '../client/art2/game/statics.js';
-import { LEAF_LOOK } from '../client/art2/flora.js';
+import { LEAF_LOOK, BARK_LOOK } from '../client/art2/flora.js';
 import { F_LEAF } from '../client/art2/gbuf.js';
 import { PRESETS_GAME } from '../client/art2/game/lightgame.js';
 
@@ -54,7 +54,24 @@ test('lit at noon, no plant is a near-black mass: its leaves under 6% near-black
     if (ln >= 120) { assert.ok(ldark / ln < 0.06, `${sp}: ${(ldark / ln * 100).toFixed(1)}% of its leaves near-black at noon`); if (ldark / ln > worst) { worst = ldark / ln; worstSp = sp; } }
     if (dark / n > 0.15) over.push(`${sp} ${Math.round(dark / n * 100)}%`);
   }
-  // (what is left is not leaf: bark, cones, twigs, stones, cactus skin, an iron planter - pinned so it cannot grow)
+  // (what is left is not leaf: bark, cones, stones in the ambient light of a face turned from the noon sun - since
+  // 11-25 lifted too, flora.js BARK_LOOK: 18 kinds over 15% before it; pinned so it cannot grow)
   console.log('darkest leaves:', worstSp, (worst * 100).toFixed(1) + '%', '| kinds over 15% near-black by their bark, stone or stems:', over.length, over.join(', '));
-  assert.ok(over.length <= 22, `kinds over 15% near-black (${over.length}; were 102)`);
+  assert.ok(over.length <= 2, `kinds over 15% near-black (${over.length}; were 102, then 18 by their bark)`);
+});
+
+// Bark, stems, cactus skin and stones too (the owner, 11-25 03:18: "make sure you are fixing the darkness on the
+// trees/plants/etc. we discussed earlier and that is prioritized"): no pixel of a plant is painted darker than the
+// floor - a trunk's furrows and its flank away from the light are dark wood, not black.
+test('no bark, stem or stone of a plant is painted near-black', () => {
+  let checked = 0;
+  for (const sp of kinds) for (let v = 0; v < 3; v++) {
+    const G = makeStatic({ t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k: 1.2 });
+    let n = 0, dark = 0, min = 255;
+    for (let i = 0; i < G.w * G.h; i++) { if (!G.col[i * 4 + 3] || (G.flag[i] & F_LEAF)) continue; n++; const l = lum(G.col, i * 4); min = Math.min(min, l); if (l < BARK_LOOK.dark - 4) dark++; }
+    if (!n) continue;
+    checked++;
+    assert.equal(dark, 0, `${sp} ${v}: ${dark} of ${n} bark or stem pixels painted darker than ${BARK_LOOK.dark} (the darkest ${min.toFixed(0)})`);
+  }
+  assert.ok(checked > 250, `plants with bark or stems checked (${checked})`);
 });
