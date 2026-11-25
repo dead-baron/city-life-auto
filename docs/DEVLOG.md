@@ -27226,7 +27226,9 @@ Not run: the whole test suite (the redwood, fade, flora and budget tests pass). 
 
 ## 2026-11-24 · Every footbridge walked and seen (the redwood overhaul, step 2) - on branch `fable-art-1124`
 The owner, 18:00: "a lot of bridges over streams aren't at the right angle or they don't actually let you walk over
-them". Counted in the built world: thirteen footbridges over water, three of them in Highland Woods. What was wrong:
+them". Counted in the built world: thirteen footbridges over water (seven plank bridges, four log bridges, one creek
+site's own, one rope bridge), three of them in Highland Woods. The rope bridge over the gorge keeps the trails' own
+deck and is not in this pass; of the other twelve:
 - **Three were pictures only**: the Stadium park's bridge across its pond and West Hills' two over the creek had
   water tiles under them and no deck - you walked into the pond under the bridge.
 - **Three log stubs** stood where a trail steps onto a road's bridge over a lake, ending in the water.
@@ -27235,8 +27237,8 @@ them". Counted in the built world: thirteen footbridges over water, three of the
 `shared/world3-footbridges.js` `footbridges3`, one pass after every place is made: bridge tiles under the whole deck;
 an end over water carried on to its bank (4 lengthened); a short bridge with no bank within reach taken out (3); a
 worn link from an end to the path near it, dirt or paving as the path is (2); no tree left standing where it is drawn
-over a deck (10 props out with the links' undergrowth). `test/world3wayside.test.js` checks every footbridge: no open
-water under it, its ends on land, a path at both, nothing tall over it - 9 footbridges, all pass.
+over a deck (10 props out with the links' undergrowth). `test/world3wayside.test.js` checks every footbridge left (9:
+twelve less the three stubs): no open water under it, its ends on land, a path at both, nothing tall over it.
 The angle: one bridge sits 26 degrees off square to its river (Highland Way's); left as laid - with the trees off it,
 it reads. A world change (world3 hash): it goes with the nature batch.
 Seen: offline renders of each bridge. Not seen: in a running game; the stubs' spot after they went.

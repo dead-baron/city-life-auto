@@ -82,7 +82,8 @@ bridges are few and two of three are wrong; and the forest has very little water
 creeks, not repairs.
 
 ## 6. Step 2 done (11-24, 19:40): the footbridges
-`shared/world3-footbridges.js` (DEVLOG "Every footbridge walked and seen"): all thirteen footbridges in the world
-checked by test - decked, on their banks, met by a path, nothing drawn over them. Left of step 2: the trails
+`shared/world3-footbridges.js` (DEVLOG "Every footbridge walked and seen"): the world's plank and log footbridges
+(twelve; nine after three stubs went) checked by test - decked, on their banks, met by a path, nothing drawn over
+them. The gorge's rope bridge is not in the pass. Left of step 2: the trails
 themselves (narrowed and worn in, roots, a log step on a slope, side paths that leave them) and the crossing kit's
 other pieces (stepping stones, a ford) - these come with the new creeks of step 3, which need crossings of their own.
