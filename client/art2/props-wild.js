@@ -6,9 +6,9 @@
 // Voxel models (voxel.js) unless noted; sprites are GBufs anchored at their foot (.ax, .ay).
 import { Vox } from './voxel.js';
 import { GBuf, F_WATER, F_NOCAST, F_LEAF, F_ROCKLEAF, F_GLASS, F_GROUND, F_THIN, hash, bayer, vnoise } from './gbuf.js';
-import { MAT, ramp } from './palette.js';
+import { MAT, ramp, natRamp } from './palette.js';
 
-const R = (c, n = 6, k) => ramp(c, n, k);
+const R = (c, n = 6, k) => natRamp(c, n, k);   // (nature's ramps: no near-black shade - palette.js NAT)
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
 const pick = (Rm, t, x, y, d = 0.6) => Rm[Math.max(0, Math.min(Rm.length - 1, Math.round(t * (Rm.length - 1) + bayer(x, y) * d)))];
 const nz = (x, y, z) => { const l = Math.hypot(x, y, z) || 1; return [x / l, y / l, z / l]; };

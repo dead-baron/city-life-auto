@@ -20,17 +20,18 @@
 //   hang:   { kind: 'moss'|'vine'|'kelp', amount }   growth hanging down the faces from their lips
 // Sprites: boulder, outcrop, rockSprite, stalagmite, crystals (emissive), seaStack.
 import { GBuf, F_GROUND, F_WATER, F_WET, F_LEAF, F_ROCKLEAF, F_NOCAST, hash, vnoise, bayer } from './gbuf.js';
-import { ramp } from './palette.js';
+import { ramp, natRamp, lumFloor, NAT } from './palette.js';
 import { distSq } from './scene.js';
 import { groundPixel } from './ground.js';
 
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
 const pickR = (R, t, x, y, d = 0.7) => R[Math.max(0, Math.min(R.length - 1, Math.round(t * (R.length - 1) + bayer(x, y) * d)))];
 const nz3 = (x, y, z) => { const l = Math.hypot(x, y, z) || 1; return [x / l, y / l, z / l]; };
-const OUTC = (c) => [c[0] * 0.42 * 0.85 + 6, c[1] * 0.42 * 0.8 + 4, c[2] * 0.42 * 0.95 + 18];
+const OUTC = (c) => lumFloor([c[0] * 0.42 * 0.85 + 6, c[1] * 0.42 * 0.8 + 4, c[2] * 0.42 * 0.95 + 18], NAT.floor);
 
 // ---- rock styles ---------------------------------------------------------------------------------------
-const RO = (c, o = {}) => ramp(c, 7, 3, { dark: 0.64, light: 0.48, shift: 0.24, ...o });
+// (11-25: rock's shade is a deeper tone of the rock, never near-black - palette.js NAT; its outline the same)
+const RO = (c, o = {}) => natRamp(c, 7, 3, { dark: 0.64, light: 0.48, shift: 0.24, ...o });
 export const ROCK = {
   redrock: { id: 0, face: [RO('#cc5a30', { shift: 0.3 }), RO('#b04428', { dark: 0.58, shift: 0.3 }), RO('#dc7438', { shift: 0.3 }), RO('#c25232', { shift: 0.3 })], top: RO('#c86c3c', { light: 0.3, shift: 0.3 }), jag: 6, block: 12, blocky: 0.9, fine: 1.2 },   // (the red rock desert's bright orange-red: concepts N4, NT1-B, SC3-F)
   sandstone: { id: 0, face: [RO('#b05238'), RO('#923c34', { dark: 0.62 }), RO('#c06c46'), RO('#a04a3a')], top: RO('#a45a40', { light: 0.36 }), jag: 9, block: 13, blocky: 0.75, fine: 1.5 },

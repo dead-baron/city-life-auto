@@ -655,6 +655,14 @@ export function gsReset() { GS.nx = 0; GS.ny = 0; GS.h = 0; GS.water = 0; }
 // world ramps: hex steps dark -> light, with extra contrast laid on (E1's materials have far brighter sunlit
 // highlights than a plain ramp: the upper steps lift and warm, the lowest dips a little)
 const RP = (s) => { const R = s.split(' ').map(hex), n = R.length; return R.map((c, k) => { const u = n > 1 ? k / (n - 1) : 0, f = 0.94 + 0.5 * u * u; return [Math.min(255, Math.round(c[0] * f * (1 + 0.06 * u))), Math.min(255, Math.round(c[1] * f)), Math.min(255, Math.round(c[2] * f * (1 - 0.06 * u)))]; }); };
+// Nature's ground palettes never go near-black (the owner, 11-25 03:29: art with the dark shade painted in is redrawn
+// from its source): a palette whose darkest tone is under the floor (46 of 255, the style anchor R1-D's darkest
+// green) has its tones spread from the floor up to its own lightest, each keeping its hue.
+const NP = (s, floor = 46) => {
+  const R = RP(s), L = R.map((c) => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11), lo = Math.min(...L), hi = Math.max(...L);
+  if (lo >= floor) return R;
+  return R.map((c, i) => { const k = (floor + (L[i] - lo) * (hi - floor) / Math.max(1, hi - lo)) / Math.max(L[i], 1); return c.map((v) => Math.min(255, Math.round(v * k))); });
+};
 // a fast integer hash -> 0..1 (integer arguments; the world shaders' own, cheaper than gbuf's hash())
 export const hh = (x, y, s) => { let h = Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(y | 0, 0x165667b1) ^ Math.imul(s | 0, 0x9e3779b9); h = Math.imul(h ^ (h >>> 15), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const BAY = new Float32Array([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.5 + 1 / 32));
@@ -775,33 +783,33 @@ function slabCrack(lx, ly, S, sh, x, y) {
   return Math.abs(d + (vnc(x, y, 5, 77) - 0.5) * 3) < 0.6;
 }
 
-const G_LAWN = RP('#122a20 #183825 #20482b #2b592f #396932 #4b7a34 #618a39 #809d41');
-const G_PARK = RP('#122d22 #193c27 #234c2d #2e5d31 #3d6c33 #507c36 #698e3c #87a246');
-const G_GREEN = RP('#1a4424 #24562a #2f6a30 #3c7c36 #4c8e3c #5ea044 #74b24e #8ec45c');   // a putting green: short, even, bright
-const G_MEAD = RP('#0f201b #142d1e #1c3b22 #284b25 #385827 #4c662c #677633 #888a42');
-const G_DRY = RP('#2a3426 #3a442c #4c5432 #5e6438 #727240 #86824a #9c9458 #b4aa6c');
-const G_ALP = RP('#1e2e2c #283c32 #344a38 #42583c #546640 #687448 #808452 #9a9862');
-const CLOV = RP('#143327 #1b432c #255432 #336638 #46783e #5e8b47');
+const G_LAWN = NP('#122a20 #183825 #20482b #2b592f #396932 #4b7a34 #618a39 #809d41');
+const G_PARK = NP('#122d22 #193c27 #234c2d #2e5d31 #3d6c33 #507c36 #698e3c #87a246');
+const G_GREEN = NP('#1a4424 #24562a #2f6a30 #3c7c36 #4c8e3c #5ea044 #74b24e #8ec45c');   // a putting green: short, even, bright
+const G_MEAD = NP('#0f201b #142d1e #1c3b22 #284b25 #385827 #4c662c #677633 #888a42');
+const G_DRY = NP('#2a3426 #3a442c #4c5432 #5e6438 #727240 #86824a #9c9458 #b4aa6c');
+const G_ALP = NP('#1e2e2c #283c32 #344a38 #42583c #546640 #687448 #808452 #9a9862');
+const CLOV = NP('#143327 #1b432c #255432 #336638 #46783e #5e8b47');
 const FLWR = RP('#d8d2c0 #f2eedf'), FLWY = RP('#c8902a #ecc848');
-const SOIL_F = RP('#121012 #1d181a #292121 #362c2c #453937 #574945 #685b57');
-const NEEDLE = RP('#2c2420 #40352a #564837 #6c5a44 #806d55 #928167');
-const MOSS = RP('#1e3a2a #284c30 #345e36 #42703c');
-const MUD = RP('#231d20 #312829 #403432 #50423c #625248 #766456 #8a7866');
+const SOIL_F = NP('#3a2c27 #43332c #4c3a31 #564237 #614b3e #6c5546 #77604f');   // (11-25: the forest's duff a deep warm brown - it ran from near-black, #121012)
+const NEEDLE = NP('#2c2420 #40352a #564837 #6c5a44 #806d55 #928167');
+const MOSS = NP('#1e3a2a #284c30 #345e36 #42703c');
+const MUD = NP('#231d20 #312829 #403432 #50423c #625248 #766456 #8a7866');
 const PUD = RP('#1e3450 #2c4a6e #46689a #6a8ec0 #9cbce6');
-const GRV_C = RP('#1a232a #2f3840 #404953 #4d5762 #636c73 #727c80 #7c8687');
+const GRV_C = NP('#1a232a #2f3840 #404953 #4d5762 #636c73 #727c80 #7c8687');
 const GRV_W = RP('#3a3432 #4e4642 #645a54 #7a6e66 #908478 #a69a8c');
-const DIRT2 = RP('#3c3028 #524236 #685444 #7c6652 #8e7660 #a0886e #b29a80');
-const PLOW = RP('#211b1e #2e2526 #3c302e #4c3c38 #5c4a42 #6e5a4e #82705e');
-const SPROUT = RP('#2e5a32 #4a7e3a #6aa044');
+const DIRT2 = NP('#3c3028 #524236 #685444 #7c6652 #8e7660 #a0886e #b29a80');
+const PLOW = NP('#211b1e #2e2526 #3c302e #4c3c38 #5c4a42 #6e5a4e #82705e');
+const SPROUT = NP('#2e5a32 #4a7e3a #6aa044');
 const DUNE = RP('#896d52 #9a7c5a #a98963 #b5956d #bd9f75 #c5a97f #cbb289');
 const DESR = RP('#644632 #7c583e #946c4a #aa7e56 #bc8e62 #cc9e70 #d8ae80');   // (warm: the concepts' golden desert - the nature showcase)
-const REDS = RP('#382325 #4d2d2d #623835 #72433d #835046 #905d53 #9c6c60');
-const REDST = RP('#3f2527 #563131 #6c3c39 #7e4741 #90544a #9f6357 #ad7466');
+const REDS = NP('#382325 #4d2d2d #623835 #72433d #835046 #905d53 #9c6c60');
+const REDST = NP('#3f2527 #563131 #6c3c39 #7e4741 #90544a #9f6357 #ad7466');
 const CRACK = RP('#4a3a32 #62503e #78644e #8a745c #9a846a #aa947a #b8a48a');
 const BEACH = RP('#7e7a6e #989383 #aea997 #beb8a4 #cac4af #d3ceba #dad6c5');
 const WETS = RP('#4e4c48 #605c54 #726c62 #847c70 #948a7c #a49884');
 const WASHG = RP('#76706e #8c8684 #a29c96 #b6b0a8 #c6c0b6 #d4cec2 #e2dccf');   // (a dry wash's pale gravel: concepts N4, SC3-F)
-const PEBG = RP('#2c2e34 #44464c #5c5e64 #76787c #929494');
+const PEBG = NP('#2c2e34 #44464c #5c5e64 #76787c #929494');
 const SETT = RP('#1c2327 #383f46 #515963 #646d79 #737b84 #7c8489 #818a8c');
 const SETTW = RP('#3a3230 #4c4240 #605450 #746660 #887870 #9a8a80');
 const BRK = RP('#2d202d #472d37 #5e3840 #6f4046 #744b49 #75524b #73564b');
@@ -816,14 +824,14 @@ const AGG = RP('#7e8084 #939292 #aaa6a1');
 const YARDC = RP('#3a3d44 #4b4f56 #5d626b #6f747e #80858f #9096a0 #a0a6b0');
 const WOOD = RP('#2e2420 #40322a #544234 #68523e #7a624a #8c7256 #9e8466');
 const WOODG = RP('#3a3836 #4e4a46 #625c56 #766e66 #8a8076 #9c9286 #aea496');
-const SCREE = RP('#2a2c32 #3a3c42 #4c4e52 #5e6064 #727476 #868886 #9a9a98');
+const SCREE = NP('#2a2c32 #3a3c42 #4c4e52 #5e6064 #727476 #868886 #9a9a98');
 const FLAGS = RP('#3e3a36 #4c4741 #5b554d #6a6359 #797165 #887f71 #978d7d');   // (warm granite flagstones: the hot springs' paths)
 const SNOWR = RP('#7c8ca6 #98a8c0 #b4c2d4 #ccd6e4 #dfe6ef #edf1f6 #f8fafc');
 const QUAR = RP('#575a5c #6b6e6f #7f8181 #939494 #a5a6a5 #b4b6b3 #c4c4c2');
 const GRAIN = RP('#5e4218 #80601e #a07e28 #bc9632 #d2ae42 #e4c45a #f2d87c');   // (golden-hour ripe wheat: SC3-E)
-const CORN = RP('#183026 #20402c #2a5232 #386438 #4a763e #608846 #789a50');
-const VEGL = RP('#1e3c38 #284e44 #34644e #447a58 #589062 #6ea66e');
-const HAY = RP('#40462c #565c34 #6e723e #848648 #9a9a54 #aeac62 #c0bc74');
+const CORN = NP('#183026 #20402c #2a5232 #386438 #4a763e #608846 #789a50');
+const VEGL = NP('#1e3c38 #284e44 #34644e #447a58 #589062 #6ea66e');
+const HAY = NP('#40462c #565c34 #6e723e #848648 #9a9a54 #aeac62 #c0bc74');
 const FOUND = RP('#2b2c2f #333437 #3b3c3f #444548 #4d4e50');
 const PATHG = RP('#555454 #6a6867 #7e7d7b #90908d #a1a19e #b1b1af #bdbebd');
 const BALL = RP('#2c2c30 #3c3a3c #4c4a4a #5e5a58 #706a66 #847c76');
@@ -1255,7 +1263,7 @@ function makeCover(kind, v, art = false) {
       break;
     }
     case 'corn': {                                         // a corn plant: a tall stalk, broad leaves arching out, a tassel
-      const R = RP('#1e3a1c #2c5426 #3e6e30 #568a3a #74a448 #96bc5c'), h = 13 + (r() * 4 | 0), lean = (r() - 0.5) * 0.08;
+      const R = NP('#1e3a1c #2c5426 #3e6e30 #568a3a #74a448 #96bc5c'), h = 13 + (r() * 4 | 0), lean = (r() - 0.5) * 0.08;
       for (let k = 0; k < h; k++) put(S.ax + lean * k, S.ay - k, R[1 + Math.min(3, k >> 2)], lean, 0.45, k, F_LEAF);
       for (let l = 0; l < 4; l++) {
         const k0 = 3 + l * 3, side = l & 1 ? 1 : -1, L = 5 + (r() * 3 | 0);
@@ -1273,7 +1281,7 @@ function makeCover(kind, v, art = false) {
       break;
     }
     case 'fern': {
-      const R = RP('#14301c #1e4424 #2c5a2a #3e702e #568634 #74a03e'), nf = 5 + (r() * 3 | 0);
+      const R = NP('#14301c #1e4424 #2c5a2a #3e702e #568634 #74a03e'), nf = 5 + (r() * 3 | 0);
       for (let f = 0; f < nf; f++) {
         const a = -Math.PI / 2 + (f / (nf - 1) - 0.5) * 2.6 + (r() - 0.5) * 0.3, L = 6 + r() * 3;
         for (let k = 0; k <= L; k++) {
@@ -1286,18 +1294,18 @@ function makeCover(kind, v, art = false) {
       break;
     }
     case 'reed': {
-      const R = RP('#1e3a22 #2c5028 #42682e #5e8034 #7e9840'), nr = 3 + (r() * 3 | 0);
+      const R = NP('#1e3a22 #2c5028 #42682e #5e8034 #7e9840'), nr = 3 + (r() * 3 | 0);
       for (let b = 0; b < nr; b++) blade(Math.round((b - nr / 2) * 1.2), (b - nr / 2) * 0.08 + (r() - 0.5) * 0.12, 8 + (r() * 6 | 0), R, (r() - 0.5) * 0.02);
       if (r() > 0.35) { const h = 10 + (r() * 3 | 0); for (let k = h - 3; k <= h; k++) put(S.ax + 1, S.ay - k, k === h ? RP('#6a4426')[0] : RP('#4a2c1a #5e3820')[k & 1], 0, 0.4, k, F_LEAF); }
       break;
     }
     case 'duneGrass': {
-      const R = RP('#2e4a3a #3e5e44 #54744e #6e8a5a #8ea06c'), nb = 5 + (r() * 4 | 0);
+      const R = NP('#2e4a3a #3e5e44 #54744e #6e8a5a #8ea06c'), nb = 5 + (r() * 4 | 0);
       for (let b = 0; b < nb; b++) { const sp = (b / (nb - 1) - 0.5) * 2; blade(Math.round(sp * 2), sp * 0.6, 5 + (r() * 4 | 0), R, sp * 0.03); }
       break;
     }
     case 'weed': {
-      const R = RP('#1e3c20 #2e5426 #44702c #62903a');
+      const R = NP('#1e3c20 #2e5426 #44702c #62903a');
       for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + r(); put(S.ax + Math.round(Math.cos(a) * 2), S.ay + Math.round(Math.sin(a) * 1.2), R[1 + (k & 1)], Math.cos(a) * 0.4, Math.sin(a) * 0.4, 0, F_LEAF); }
       blade(0, (r() - 0.5) * 0.5, 2 + (r() * 3 | 0), R); if (r() > 0.5) blade(1, 0.5, 2, R);
       break;
@@ -1306,12 +1314,12 @@ function makeCover(kind, v, art = false) {
     case 'rock': rock(3 + (r() * 3 | 0), 2 + (r() * 3 | 0), [SCREE, PEBG, GRV_C][v % 3]); break;
     case 'redStone': rock(2 + (r() * 4 | 0), 2 + (r() * 3 | 0), REDST); break;
     case 'cone': {
-      const R = RP('#2a1810 #4a2c18 #6a4224 #8a5a30'), a = r() > 0.5;
+      const R = NP('#2a1810 #4a2c18 #6a4224 #8a5a30'), a = r() > 0.5;
       for (let y = 0; y < 4; y++) for (let x = 0; x < 3; x++) { const X = a ? y - 1 : x - 1, Y = a ? x - 1 : y - 2; put(S.ax + X, S.ay + Y, R[((x + y) & 1) ? 1 : 2 + (y === 0 ? 1 : 0)], 0, 0.3, a ? 1 : 3 - y, 0); }
       break;
     }
     case 'twig': {
-      const R = RP('#3a2418 #5a3a24 #7a5434'), a = r() * Math.PI, L = 4 + (r() * 5 | 0);
+      const R = NP('#3a2418 #5a3a24 #7a5434'), a = r() * Math.PI, L = 4 + (r() * 5 | 0);
       for (let k = -L / 2; k <= L / 2; k++) put(S.ax + Math.cos(a) * k, S.ay + Math.sin(a) * k * 0.7, R[k > 0 ? 2 : 1], 0, 0, 0, 0);
       if (r() > 0.5) put(S.ax + Math.cos(a + 0.8) * 2, S.ay + Math.sin(a + 0.8) * 1.4, R[1], 0, 0, 0, 0);
       break;
@@ -1327,7 +1335,7 @@ function makeCover(kind, v, art = false) {
       break;
     }
     case 'starfish': {
-      const R = RP('#9a3a1a #d0602a #f08a40');
+      const R = NP('#9a3a1a #d0602a #f08a40');
       put(S.ax, S.ay, R[1], 0, 0, 1, 0);
       for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2 - Math.PI / 2; for (let d = 1; d <= 2; d++) put(S.ax + Math.cos(a) * d, S.ay + Math.sin(a) * d * 0.8, R[d === 1 ? 2 : 1], 0, 0, 0, 0); }
       break;
@@ -1338,7 +1346,7 @@ function makeCover(kind, v, art = false) {
       break;
     }
     case 'seaweed': {
-      const R = RP('#1e2a1c #2e3c22 #46502a'), L = 5 + (r() * 5 | 0); let x = 0;
+      const R = NP('#1e2a1c #2e3c22 #46502a'), L = 5 + (r() * 5 | 0); let x = 0;
       for (let k = 0; k < L; k++) { x += (r() - 0.5) * 1.6; put(S.ax + x, S.ay - k * 0.5, R[(k & 1) + (k > L / 2 ? 1 : 0)], 0, 0, 0, 0); }
       break;
     }
@@ -1350,7 +1358,7 @@ function makeCover(kind, v, art = false) {
       break;
     }
     case 'scrub': {                                         // a low dusty desert bush: a mound of tiny leaves
-      const R = RP('#2a3022 #3a4428 #4e5a30 #66703a #828848 #9ea05a');
+      const R = NP('#2a3022 #3a4428 #4e5a30 #66703a #828848 #9ea05a');
       for (let y = -5; y <= 0; y++) for (let x = -5; x <= 5; x++) {
         const q = (x / 5.5) ** 2 + ((y + 2.5) / 3.2) ** 2;
         if (q > 1 || hh(x, y, v) > 0.8) continue;

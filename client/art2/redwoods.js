@@ -13,7 +13,7 @@
 //   nurseLog(seed, len, r)        a fallen giant lying east-west, mossed over, ferns and seedlings growing on it
 //   sorrel(seed, w)               a patch of redwood sorrel: clover leaves carpeting the floor, a few pale flowers
 import { GBuf, F_LEAF, F_GROUND, hash, vnoise, bayer, mulberry32 } from './gbuf.js';
-import { ramp } from './palette.js';
+import { natRamp as ramp } from './palette.js';   // (nature's ramps: no near-black shade - palette.js NAT)
 import { FOL } from './flora.js';
 
 const PI = Math.PI;
@@ -187,7 +187,7 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
     }
   } else
   for (let i = 0; i < 5; i++) { const zz = tz - i * 9, mx = xAt(zz); clump(G, mx + (hash(seed, 40 + i, 5) - 0.5) * 10, foot - zz, o.top === 'dome' ? Math.max(5 + i * 2.2, rad(zz) * 1.25) : 5 + i * 2.2, 4 + i * 0.8, seed + 90 + i, zAt, 0.75); }
-  G.outline(0.42, true);
+  G.outline(0.42, true, 50);
   return G;
 }
 
@@ -226,7 +226,7 @@ export function oldStump(seed = 1, r = 26) {
       G.put(x, y, mo ? pick(MOSS, 0.4 - u * 0.15, x, y) : pick(BARK, 0.45 - u * 0.25 + (fl > 0.5 ? 0.12 : fl < -0.4 ? -0.22 : 0), x, y), nrm(u, Math.sqrt(1 - u * u), 0.1), z, null, mo ? F_LEAF : 0);
     }
   }
-  G.outline(0.42, true);
+  G.outline(0.42, true, 50);
   return G;
 }
 
@@ -265,7 +265,7 @@ export function nurseLog(seed = 1, len = 200, r = 18, flip = 0) {
     if (rnd() < 0.6) for (let k = 0; k < 7; k++) { const a = -PI / 2 + (k - 3) * 0.42, L = 8 + rnd() * 5; for (let s = 0; s < L; s += 0.7) { const X = Math.round(x + Math.cos(a) * s), Y = Math.round(y + Math.sin(a) * s * 0.8 + s * s * 0.02); if (G.inside(X, Y)) G.put(X, Y, pick(SPRAY, 0.4 + s / L * 0.3 - (a > -PI / 2 ? 0.1 : 0), X, Y), [Math.cos(a) * 0.4, 0.3, 0.85], zAt(Y), null, F_LEAF); } }
     else clump(G, x, y - 6, 5, 7, seed + i, zAt, 0.4, 6);
   }
-  G.outline(0.42, true);
+  G.outline(0.42, true, 50);
   return flip ? mirror(G) : G;
 }
 // the same picture the other way round (the light stays on the left: only the shape flips, the normals turn back)
@@ -317,7 +317,7 @@ export function swordFernArt(seed = 1, size = 84) {
       }
     }
   }
-  G.outline(0.5, true);
+  G.outline(0.5, true, 50);
   G.ax *= 2; G.ay *= 2; G.ap2 = 2;
   return G;
 }

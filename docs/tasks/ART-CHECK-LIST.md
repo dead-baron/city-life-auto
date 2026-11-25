@@ -95,3 +95,9 @@ The woods and the meadows
 
 **Not looked at by Claude at all** (so his look is the first): a phone; the islands' and harbours' water; a salmon's
 last leap over the top of a falls; the other fish's leaps.
+
+- **Nature redrawn without the painted shadow** (11-25, his word of 03:29): done on the branch - 114 of 129 plant
+  kinds, rocks, logs, the forest floor and the ground palettes, at the source; the list and the census are in
+  docs/tasks/NATURE-REDRAW-2026-11-25.md. For his eye: before / after of the spot he circled, Pine Lake, Coral Cay
+  Falls. Live with the re-bake.
+- **The giants' tops**: a mix of three, his pick of 03:20 - in.

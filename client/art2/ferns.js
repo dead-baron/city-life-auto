@@ -16,7 +16,7 @@
 // own plant: the number of fronds, their lengths, lean and lift all vary (the variety test: twelve shapes a kind).
 // Not in the bake yet (statics.js SPECIES): shown to the owner first; test/ferns.test.js holds the kit.
 import { GBuf, F_LEAF, hash, bayer, mulberry32 } from './gbuf.js';
-import { ramp } from './palette.js';
+import { natRamp as ramp } from './palette.js';
 import { FOL } from './flora.js';
 
 const PI = Math.PI;
@@ -38,7 +38,7 @@ const STEM = ramp('#3a2a22', 5, 2, { dark: 0.5, light: 0.4 }), STALK = ramp('#8a
 
 const canvas = (w, h, below) => { const G = new GBuf(Math.ceil(w), Math.ceil(h)); G.ax = G.w >> 1; G.ay = G.h - Math.ceil(below); return G; };
 // (thin: what is drawn after the outline, so it keeps its one pixel - a wiry stem, a stalk, a fertile frond)
-const finish = (G, thin = null) => { G.outline(0.5, true); if (thin) thin(); G.ax *= 2; G.ay *= 2; G.ap2 = 2; return G; };
+const finish = (G, thin = null) => { G.outline(0.5, true, 50); if (thin) thin(); G.ax *= 2; G.ay *= 2; G.ap2 = 2; return G; };
 const leaf = (G, x, y, R, t, z, n) => { const X = Math.round(x), Y = Math.round(y); if (G.inside(X, Y)) G.put(X, Y, pick(R, clamp(t), X, Y), n || [0, 0.3, 0.95], Math.max(1, Math.round(z)), null, F_LEAF); };
 
 // One frond from (cx, cy) out along azimuth a (0 east, PI/2 toward the viewer), len art px long. It rises and arches

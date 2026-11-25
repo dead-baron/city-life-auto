@@ -27377,3 +27377,18 @@ light, the banks and the stones were fitted in by cutting comments (it stood at 
 natural wild flowers and a stick bridge do not fit.
 **Capturing the running game**: the first-time dialogs can be hidden from a playtest step (an eval that sets the
 dialog's panel to display none), which gives real game pictures - tools/nature/README.md.
+
+## 2026-11-25 · Nature redrawn without the painted shadow - on branch `fable-art-1124`
+The owner, 03:29: art with the dark shadow drawn in is to be redrawn from scratch, with a list; the lift of the
+finished picture changed colours and did not blend. Found: the shadow was in the shared palettes (leaf shade to 28% of
+the leaf's lightness and 42% toward blue-green; bark, stone and props to about 35%, toward violet; the forest soil
+from #121012) and in the clump painter (a dark pocket, a dark core). Redrawn at the source - palette.js `natRamp` /
+`NAT` / `lumFloor`, flora.js `FOL` / `LEAF_PAINT` and the one pixel writer, ground.js `NP`, terrain.js, redwoods.js,
+ferns.js, the redwood / wild / tropic / desert prop kits, water.js RB - and the lift removed (`leafLight` only turns
+normals; it changes no colour). 114 of 129 plant kinds needed it; all plant pixels painted under the
+floor 15.4% -> 0.0%. The forest spot he circled: 21.8% of the land under 50 at noon -> 4.1% (under 35: 10.2% -> 0.1%).
+Tools: `tools/nature/darkscan.mjs` (the census over the baked world, by place, `--who` by kind of art),
+`tools/nature/paintscan.mjs` (each plant kind). Tests: test/leaflight.test.js rewritten to the source rule (no leaf
+under 46, no bark under 50, the even light changes no colour). The full account and the list:
+docs/tasks/NATURE-REDRAW-2026-11-25.md. Baked art: live with the re-bake, on his word.
+Also: the giants' tops a mix of three (statics.js `RW_TOP`), his PDF of play notes logged (PREBETA-LIST).

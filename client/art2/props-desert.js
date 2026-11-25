@@ -5,9 +5,9 @@
 // at its foot (.ax, .ay).
 import { Vox } from './voxel.js';
 import { GBuf, F_GROUND, F_NOCAST, F_THIN, hash } from './gbuf.js';
-import { MAT, ramp } from './palette.js';
+import { MAT, ramp, natRamp } from './palette.js';
 
-const R = (c, n = 6, k) => ramp(c, n, k);
+const R = (c, n = 6, k) => natRamp(c, n, k);   // (nature's ramps: palette.js NAT)
 const LOG = R('#7a5a3c'), LOGD = R('#5a3e28'), PIPE = R('#5e6268'), WIRE = R('#8a8a86');
 
 // a ranch gate across a dirt road (along x, w between the posts): two tall log posts, a log crossbeam over them with a

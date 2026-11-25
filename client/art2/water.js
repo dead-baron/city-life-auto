@@ -25,7 +25,7 @@
 // A bridge deck stands faceH above the water: place it with deckAt() so its deck lands on the road and its
 // face hangs down over the river (the river reads as running below the road).
 import { GBuf, F_GROUND, F_WATER, F_WET, F_NOCAST, hash, vnoise, bayer, step, norm } from './gbuf.js';
-import { MAT, ramp } from './palette.js';
+import { MAT, ramp, natRamp } from './palette.js';
 import { Vox } from './voxel.js';
 import { person } from './people.js';
 import { distSq } from './scene.js';
@@ -996,7 +996,7 @@ export { detectFeatures };
 //     marsh or a still river, 224 + how clear on a pond (a mirror).
 export const WK = { LAND: 0, SEA: 1, CREEK: 2, RIVER: 3, LAKE: 4, POND: 5, MARSH: 6 };
 const RW = (h, n = 7, k = 3, o = {}) => ramp(h, n, k, { dark: 0.55, light: 0.5, shift: 0.08, ...o });
-const RB = (h, o = {}) => ramp(h, 6, 3, { dark: 0.5, light: 0.45, shift: 0.15, ...o });
+const RB = (h, o = {}) => natRamp(h, 6, 3, { dark: 0.5, light: 0.45, shift: 0.15, ...o });   // (banks, moss, rock: nature's ramps - palette.js NAT)
 const BAYW = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.5);
 const by = (X, Y) => BAYW[(Y & 3) * 4 + (X & 3)];
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);

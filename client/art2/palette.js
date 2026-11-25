@@ -49,6 +49,21 @@ export function ramp(base, n = 6, k = Math.floor((n - 1) / 2), opt = {}) {
   return out;
 }
 
+// Nature's ramps (the owner, 11-25 03:29: art with a near-black shade painted in is redrawn from its source, not
+// corrected afterwards). A plant's, a rock's or a log's shade is a deeper tone of its own colour: the shade side stops
+// `cap` of the way to black, leans less to violet, and no tone is under `floor` (luminance of 255 - the style anchor
+// R1-D's darkest green is 46, its darkest wood near 50). lumFloor: a colour raised to a luminance, its hue kept.
+export const NAT = { cap: 0.44, floor: 50, shift: 0.6 };
+export function lumFloor(c, floor) {
+  const l = c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
+  if (l >= floor) return c;
+  const k = floor / Math.max(l, 8), o = [Math.min(255, c[0] * k), Math.min(255, c[1] * k), Math.min(255, c[2] * k)], d = floor - (o[0] * 0.3 + o[1] * 0.59 + o[2] * 0.11);
+  return d > 0.5 ? o.map((v) => Math.min(255, Math.round(v + d))) : o.map(Math.round);
+}
+export function natRamp(base, n = 6, k = Math.floor((n - 1) / 2), opt = {}) {
+  return ramp(base, n, k, { ...opt, dark: Math.min(opt.dark ?? 0.62, NAT.cap), shift: (opt.shift ?? 0.28) * NAT.shift }).map((c) => lumFloor(c, opt.floor ?? NAT.floor));
+}
+
 // ---- materials ------------------------------------------------------------------------------------
 export const MAT = {
   asphalt: ramp('#6a6f7c', 6, 3, { dark: 0.55, light: 0.35, shift: 0.14 }),
