@@ -42,11 +42,11 @@ export const ANIMALS = {
   chihuahua: { len: 12, h: 10, w: 6.5, coat: '#e0a050', belly: '#f0d8a8', ears: 'big', tail: 'curl', snout: 2, head: 4.2, collar: '#c83030' },
   terrier: { len: 17, h: 13.5, w: 8.5, coat: '#7a7c84', muzzle: '#b4b6bc', ears: 'flop', tail: 'up', tailN: 7, snout: 3.2, head: 4.6, fluffy: 1, beard: 1, collar: '#3a8a46', tongue: 1 },
   dalmatian: { len: 25, h: 20, w: 10, coat: '#f2f0ec', patch: '#26262c', pattern: 'dots', earC: '#26262c', ears: 'flop', tail: 'down', snout: 4, head: 5, collar: '#c83030', tongue: 1 },
-  catBlack: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f0aab6', coat: '#302e38', eye: '#e8c83a', ears: 'cat', tail: 'cat', snout: 0.9, head: 5.1, cat: 1, collar: '#c83030' },
-  catTabby: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#e8c440', coat: '#8a8c90', patch: '#4a4c52', pattern: 'tabby', muzzle: '#d8d8d4', ears: 'cat', tail: 'cat', tailBands: '#4a4c52', snout: 0.9, head: 5.1, cat: 1, collar: '#3a8a46' },
-  catGinger: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#e08a3a', patch: '#b85a20', pattern: 'tabby', belly: '#f4dcb8', muzzle: '#f4e4cc', ears: 'cat', tail: 'cat', tailBands: '#b85a20', snout: 0.9, head: 5.1, cat: 1, collar: '#3a6ab0' },
-  catCalico: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#f2ece2', patch: '#d8783a', patch2: '#2a2830', pattern: 'calico', headC: '#d8783a', muzzle: '#f4f0ea', blaze: '#f4f0ea', ears: 'cat', tail: 'cat', tailC: '#d8783a', snout: 0.9, head: 5.1, cat: 1, collar: '#c83030' },
-  catWhite: { len: 18, h: 11.5, w: 8.5, legK: 0.85, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#4a9ad0', coat: '#f2eee8', ears: 'cat', tail: 'feather', snout: 0.9, head: 5.3, cat: 1, fluffy: 1, collar: '#b04a9a' },
+  catBlack: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f0aab6', coat: '#302e38', eye: '#e8c83a', ears: 'cat', tail: 'cat', tailLow: 1, snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
+  catTabby: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#e8c440', coat: '#8a8c90', patch: '#4a4c52', pattern: 'tabby', muzzle: '#d8d8d4', ears: 'cat', tail: 'cat', tailLow: 1, tailBands: '#4a4c52', snout: 0.9, head: 4.5, cat: 1, collar: '#3a8a46' },
+  catGinger: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#e08a3a', patch: '#b85a20', pattern: 'tabby', belly: '#f4dcb8', muzzle: '#f4e4cc', ears: 'cat', tail: 'cat', tailBands: '#b85a20', snout: 0.9, head: 4.5, cat: 1, collar: '#3a6ab0' },
+  catCalico: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#f2ece2', patch: '#d8783a', patch2: '#2a2830', pattern: 'calico', headC: '#d8783a', muzzle: '#f4f0ea', blaze: '#f4f0ea', ears: 'cat', tail: 'cat', tailC: '#d8783a', snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
+  catWhite: { len: 18, h: 11.5, w: 8.5, legK: 0.85, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#4a9ad0', coat: '#f2eee8', ears: 'cat', tail: 'feather', snout: 0.9, head: 4.7, cat: 1, fluffy: 1, collar: '#b04a9a' },
   cow: { len: 48, h: 31, w: 19, coat: '#f2f0ec', patch: '#26262c', pattern: 'spots', ears: 'side', earC: '#26262c', tail: 'thin', snout: 6, head: 8, hup: 0.5, muzzle: '#e8b4ac', nose: '#b87878', horns: 'short', udder: 1 },
   horse: { len: 50, h: 36, w: 14, coat: '#8a4a26', belly: '#8a4a26', mane: '#2a1e1a', ears: 'up', tail: 'long', snout: 9, head: 6, neck: 18, socks: '#f2eee8' },
   sheep: { len: 27, h: 19, w: 15, coat: '#ece2c8', headC: '#34303a', muzzle: '#34303a', legC: '#34303a', earC: '#34303a', eye: '#e8e0c8', ears: 'side', tail: 'stub', snout: 3, head: 5.2, hup: 0.5, fluffy: 2 },
@@ -93,7 +93,7 @@ function legendOf(A) {
 }
 
 // extra room behind the rump for the long tails (so they stay inside the model)
-const TAIL_ROOM = { longcat: 14, fox: 9, paddle: 8, otter: 8, squirrel: 3, cat: 9 };
+const TAIL_ROOM = { longcat: 14, fox: 9, paddle: 8, otter: 8, squirrel: 3, cat: 12 };
 // A great white (server/systems/sharks.js) seen from above as it swims: its long dark shape just under the water, the
 // dorsal fin standing out of it and the top of the tail beating side to side (phase); biting, the head up out of the
 // water, the jaws wide; dead, rolled belly up. +x is its nose, as every animal's.
@@ -222,7 +222,8 @@ export function animalModel(kind, o = {}) {
     if (A.pattern === 'saddle' && z > bz + bodyR * 0.1 && x < x1 - 4) return patch;
     if (A.pattern === 'dots' && z > bz - bodyR * 0.8 && (x | 0) % 7 < 4 && (y | 0) % 7 < 4 && (z | 0) % 7 < 4 && hash(((x | 0) / 7) | 0, (((y | 0) / 7) | 0) * 31 + (((z | 0) / 7) | 0), 7) > 0.1) return patch;   // (a dalmatian's: an art pixel each, apart)
     if (A.pattern === 'tabby' && z > bz - bodyR * 0.35 && (((x - x0) % 7) + 7) % 7 < 3) return patch;   // (bands down the flanks, an art pixel wide)
-    if (A.pattern === 'calico') { const h = hash(Math.floor(x / 6), Math.floor((y + z) / 6), 9); if (h > 0.72) return patch; if (h < 0.18) return patch2; }
+    if (A.pattern === 'calico') { const h = hash(Math.floor((x - (A.tail === 'cat' ? TAIL_ROOM.cat - 4 : 0)) / 6), Math.floor((y + z) / 6), 9);   // (her patches where they were before her tail's room grew, 11-25)
+      if (h > 0.72) return patch; if (h < 0.18) return patch2; }
     if (A.pattern === 'rump' && x < x0 + 5 && z > bz - bodyR * 0.6) return patch;                       // an elk's pale rump
     if (A.pattern === 'flank' && z < bz + bodyR * 0.2 && z > bz - bodyR * 0.5 && x > x0 + 3) return patch;   // a grey fox's rusty sides
     if (A.pattern === 'fawn' && z > bz - bodyR * 0.1 && x > x0 + 2 && x < x1 - 2 && hash(Math.floor(x / 2.2), Math.floor(y / 2.2) * 17 + Math.floor(z / 2.2), 11) > 0.8) return patch;   // a fawn's spots along the back
@@ -386,7 +387,10 @@ export function animalModel(kind, o = {}) {
   const tx = x0, tz = bz + bodyR * 0.5;
   const tail = (pts, r) => pts.forEach(([dx, dz, dy = 0], i) => m.ell(tx - dx, cy + dy, tz + dz, r(i), r(i), r(i), asThin(A.tail === 'ringed' ? (i % 2 ? R('#2a282c') : base) : A.tailBands && (i >> 1) % 2 ? R(A.tailBands) : A.tailC ? R(A.tailC) : coat(tx - dx, cy, tz + dz + 6))));
   const wag = Math.sin((o.wag ?? phase) * Math.PI * 4) * 1.2;
-  if (A.tail === 'cat') tail([...Array(28)].map((_, i) => { const u = i / 27; return [0.6 + u * 4.4 + (u > 0.7 ? (u - 0.7) * 11 : 0) + wag * 0.3 * u, Math.sin(Math.min(1, u * 1.2) * Math.PI * 0.5) * 11 - (u > 0.78 ? (u - 0.78) * 8 : 0), u * 5]; }), () => 0.95);   // (11-25: longer - "a longer cat like tail")   // (up behind and hooked back at the tip, a little to one side: below the ears from the front)
+  // a cat's tail (11-25, the owner: "a little thinner and longer like a cats tail (or variations if we have a long hair
+  // cat in the mix vs a short haired cat)"): thin and long - carried up behind with the tip hooked back, or (tailLow)
+  // out low behind and curling up at its tip; the long-haired white cat keeps its plume ('feather')
+  if (A.tail === 'cat') tail([...Array(30)].map((_, i) => { const u = i / 29; return A.tailLow ? [0.5 + u * 10.5 + wag * 0.3 * u, -1.2 + u * u * u * 8.5, u * 2.5] : [0.6 + u * 4.4 + (u > 0.7 ? (u - 0.7) * 11 : 0) + wag * 0.3 * u, Math.sin(Math.min(1, u * 1.2) * Math.PI * 0.5) * 11 - (u > 0.78 ? (u - 0.78) * 8 : 0), u * 5]; }), () => 0.72);
   else if (A.tail === 'up') tail([...Array(A.tailN || 12)].map((_, i) => [i * 0.45 - wag * 0.25 * (i / 10) * (i / 10) - (i > 7 ? (i - 7) * 0.5 : 0), i * 0.85]), () => 1.25);
   else if (A.tail === 'curl') tail([...Array(10)].map((_, i) => [1.5 - Math.cos(i * 0.6) * 2.4, 2.5 + Math.sin(i * 0.6) * 3]), () => 1.4);
   else if (A.tail === 'down') tail([...Array(9)].map((_, i) => [i * 0.6, -i * 0.7]), () => 1.25);

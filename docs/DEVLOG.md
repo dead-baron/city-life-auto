@@ -27649,4 +27649,10 @@ The owner, 13:33 and 13:35, on the mountain streams' pictures (his words in DECI
   head a size bigger, the tail half as long again, up behind and hooked. A first try for his eye: `report-55`, the
   cats before and after beside two dogs. They are 17 art pixels tall: a face is two eyes and a nose.
 - Page code: no re-bake. test/animalart.test.js and test/perf.test.js (the page's budget) pass. Not seen in a game.
+- **The cats, second try the same hour** (the owner, 15:26: "the before cats looked better ... keep them like that in
+  the face and snout but just add a little nose ... the tail a little thinner and longer"): the head back to its
+  size; the small nose stays; the tail thin (0.72, was 0.95) and long, in two carriages - up behind and hooked
+  (ginger, calico) or out low with the tip curled up (`tailLow`: black, tabby); the long-haired white cat keeps its
+  plume. The calico's patches are laid from where the model's origin was (her tail's room moved it and with it her
+  patches). Picture: `report-56`.
 

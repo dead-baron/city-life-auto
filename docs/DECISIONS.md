@@ -435,6 +435,11 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   it out").
 - The shark gets another pass (the owner, 11-25 15:10: "The shark could use another pass on it let's try to make it
   look better").
+- The cats, settled for now (the owner, 11-25 15:26, on the first try): "the before cats looked better but can we keep
+  them like that in the face and snout but just add a little nose to them? And make the tail a little thinner and
+  longer like a cats tail (or variations if we have a long hair cat in the mix vs a short haired cat)" - done so: the
+  face and head as they were, a small pink nose, a thin long tail carried up and hooked (ginger, calico) or out low
+  with the tip curled up (black, tabby); the long-haired white cat keeps its plume (`report-56`).
 - The cats, again (the owner, 11-25 15:22, on their sheet): "the cat could be better with a longer cat like tail and
   a cuter face. The dog looks really good in game and I think it has a nose and a bit more detailed, can we try to
   match the cuteness with the cat but make sure it looks like a cat?" - a first try shown the same hour (`report-55`).
