@@ -391,7 +391,10 @@ export function personaPose(d, pose) {
   const g = d.gt;
   if (!g) return pose;
   if (g === 'dance' && d.dm !== undefined && pose === 'idle') return DANCE_POSE[d.dm] || g;   // (a move: dancing, task #394)
-  if (g === 'emote') { if (!EMOTE_FPS['em' + d.em] && d.em) loadPoses(); return pose === 'idle' && EMOTE_FPS['em' + d.em] ? 'em' + d.em : pose; }   // (an emote on the body: server emote.js)
+  // (11-25: the poses are asked for until THIS module has them - EM - not until the table is filled: the emote wheel's
+  // portraits load poses.js on their own (client/portrait.js), which filled EMOTE_FPS and so stopped the load here; with
+  // no EM every emote stood on its first frame - a faceplant only leaned, lying down and sleeping never lay down.)
+  if (g === 'emote') { if (d.em && !EM) loadPoses(); return pose === 'idle' && EM && EMOTE_FPS['em' + d.em] ? 'em' + d.em : pose; }   // (an emote on the body: server emote.js)
   if (g === 'dance' || g === 'lean' || g === 'statue' || g === 'statuebow') return pose === 'idle' ? g : pose;   // (statue: a living statue on its crate - personas.js BUSKS)
   if (ACT_POSES[g]) return pose === 'idle' ? ACT_POSES[g] : pose;   // (at an activity, held while they stay: server activities.js)
   if (pose === 'walk0' || pose === 'walk1' || ((g === 'skate' || g === 'blade') && pose.startsWith('walk'))) return g;

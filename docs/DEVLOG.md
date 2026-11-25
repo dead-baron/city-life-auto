@@ -27468,3 +27468,14 @@ and a flat grey slab stood over the gap. Now the body runs on under the head, an
 rounded across, grey above and white under, the lower jaw dropped, the mouth red between, teeth along both jaws, the
 eye, gill slits. test/animalart.test.js (in all eight directions the biting shark is no smaller than the swimming
 one; white and red show). Picture: report-41. Actors' art: no re-bake. Not seen in a running game.
+
+## 2026-11-25 · Emotes run through their frames: a faceplant falls flat - on branch `fable-art-1124`
+The owner's note: "Faceplant lose still not working it just leans forward but not falling flat on their face (as well
+as lying down or sleeping, it doesn't lay all the way down)". Seen in a local game: 4 s into a faceplant the player's
+sprite was `emfaceplant` frame 0. Cause: the page's people module (art2/game/peds.js) loaded art2/poses.js only while
+the emotes' table was empty - and the emote wheel's portraits (client/portrait.js) load poses.js on their own, which
+fills that table. So once the wheel had been near, peds.js never got the module for itself: no frame timing
+(`emoteAt`) and no frame counts in its sprite keys, and every emote stood on its first frame - the first lean of a
+faceplant, the start of sitting down for lie and sleep. Fix: the poses are asked for until this module has them.
+test/emotes.test.js (in a process of its own, the poses loaded first by someone else: fails on the old code).
+Seen in a local game after: flat on the face; lying flat. Page code: no re-bake; live with the page on his word.
