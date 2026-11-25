@@ -58,7 +58,13 @@ const DRY_D = new Set(DISTRICTS.filter((d) => d.isl === 'Red Rock Desert' && !WI
 const PAD = 48, WN = CHUNK + PAD * 2, WA = WN * WN, TP = 4, TN = WN / TILE + TP * 2 + 1;
 const DECK_LIFT = 88;                                  // shared/levels.js: px per deck level (ramp heights)
 const DECK_FACE = 13, DECK_SHADE = 9;                  // a bridge's face over the water (slab and girders), the shade under it
-const DECK_LEE = 14;                                    // the shade east of a deck that runs north-south (the light is from the north-west)
+// A bridge stands on piers (the owner, 11-25: a bridge over open water read as a causeway - "it should be a bridge
+// that things can go under ... a passable channel underneath for boats and swimmers and fish and animals"): every
+// PIER.gap px along it a pier's nose shows `out` px beyond the deck's edge either side, `len` px long, and under an
+// east-west deck's face a pier's column stands down into the shade. No painted foam round them: the water moves.
+export const PIER = { gap: 192, len: 20, out: 7, z: 2 };
+export const pierNose = (along, r) => { const pm = ((along % PIER.gap) + PIER.gap) % PIER.gap; return pm < PIER.len && r >= 1 && r <= PIER.out; };
+const DECK_LEE = 30;                                    // the shade east of a deck that runs north-south (the light is from the north-west)
 const CITY = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
 // the boardwalks' leg tiles (m.walkways: shared/world3-marsh.js), as a set kept on the map (not sent)
 const walkways = (M) => M._walkways || Object.defineProperty(M, '_walkways', { value: new Set(M.walkways), enumerable: false, configurable: true })._walkways;
@@ -1756,7 +1762,10 @@ function edges(C, G) {
         // water in its lee: boats pass under it (host.js draws a boat part-way under a deck beneath it)
         const span = deck && k === 2 && Z[i - r * WN] >= C.deckZ - 1;
         const H = quay ? 12 : dock ? 6 : bank ? 3 : up === M_.PLATFORM ? 6 : span ? DECK_FACE : Z[i - r * WN];
-        if (span && r > H) { darken(G, gi, 0.62 + (r - H) / DECK_SHADE * 0.3); break; }
+        if (span && r > H) {
+          if (pierNose(X, 1)) { setC(G, gi, sd(MAT.concrete, 0.2 - (r - H) * 0.012 + (((X % PIER.gap) + PIER.gap) % PIER.gap < 2 ? 0.1 : 0), X, Y, 0.3)); putN(G, gi, 0, 2.2); G.z[gi] = PIER.z; G.flag[gi] = F_GROUND | F_WET; break; }   // (a pier's column under the deck)
+          darken(G, gi, 0.62 + (r - H) / DECK_SHADE * 0.3); break;
+        }
         if (r > H) break;
         if (span) {
           const girder = r > DECK_FACE - 5, rib = (X % 48) < 3;
@@ -1780,7 +1789,14 @@ function edges(C, G) {
       if (open) for (let r = 1; r <= DECK_LEE; r++) {
         const lf = M[i - r];
         if (isWater(lf)) continue;
-        if ((lf === M_.DECK || lf === M_.DECKF || lf === M_.RAILDECK || lf === M_.DECKWALK) && Z[i - r] >= C.deckZ - 1) darken(G, gi, 0.6 + r / DECK_LEE * 0.32);
+        if ((lf === M_.DECK || lf === M_.DECKF || lf === M_.RAILDECK || lf === M_.DECKWALK) && Z[i - r] >= C.deckZ - 1) darken(G, gi, 0.46 + (r / DECK_LEE) * (r / DECK_LEE) * 0.5);   // (the lee: deep by the deck, easing out)
+        break;
+      }
+      // (a pier's nose beyond the edge of a deck that runs north-south: either side of it)
+      if (k === 2 && pierNose(Y, 1)) for (const sg of [-1, 1]) for (let r = 1; r <= PIER.out; r++) {
+        const nb = M[i + sg * r];
+        if (isWater(nb)) continue;
+        if ((nb === M_.DECK || nb === M_.DECKF) && Z[i + sg * r] >= C.deckZ - 1) { const pm = ((Y % PIER.gap) + PIER.gap) % PIER.gap; setC(G, gi, sd(MAT.concrete, (sg < 0 ? 0.3 : 0.5) - r * 0.03 + (pm < 2 ? 0.14 : pm > PIER.len - 3 ? -0.12 : 0), X, Y, 0.3)); putN(G, gi, 0, 1); G.z[gi] = PIER.z; G.flag[gi] = F_GROUND | F_WET; }
         break;
       }
       if (m === M_.TRACK) {                                     // red-and-white kerbs along a race track's edges; the chequered start line

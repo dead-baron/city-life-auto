@@ -1632,7 +1632,10 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     const kd = Math.floor(clamp01((near ? Math.min(1, vis * 1.35 + 0.12) : vis) * 1.05 + by(x, y) * 0.22) * 4) / 4;
     if (kd > 0) c = mixTo(MIX, c, MIX2, kd * 0.88);
   }
-  if (lat && k === WK.SEA && d < 30 && cst !== 2) c = sd(FOAM, 0.28 + (d < 14 ? 0.15 : 0) + fine * 0.2, x, y, 0.4);   // (the crests break white near the shore)
+  // (11-25, the owner: the white near the shore "just show as static images" - the crests that broke white within 30 px
+  // of a beach, the wash line and the scalloped band beyond it were still pictures under the engine's moving waves and
+  // swash. The lattice keeps its own lighter water there; the waterline a pale wet edge; the white is the engine's.)
+  if (lat && k === WK.SEA && d < 30 && cst !== 2) c = mixTo(MIX, c, rr[Math.min(rr.length - 1, 5)], 0.42);
   else if (lat) c = mixTo(MIX, c, rr[Math.min(rr.length - 1, 5)], q < 0.6 ? 0.34 : 0.2);
   if (lane) c = mixTo(MIX, c, rr[5], 0.22);
   if (rp > 0.04) {   // the rapids: churns of white water in patches, standing waves in trains by them (thin crests across the current), foam streaks along it, the rest paled with air
@@ -1656,8 +1659,7 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     if (cst === 2) { if (d < 1.6) c = sd(FOAM, 0.45, x, y, 0.4); }
     else if (d < 18) {                                  // the wash: foam at the waterline, a broken scalloped band beyond
       const wash = 2.5 + 2 * Math.sin(X * 0.07 + Y * 0.05) + fine * 2.5;
-      if (d < wash) c = sd(FOAM, 0.85 - d / wash * 0.35, x, y, 0.4);
-      else if (Math.abs(d - (10 + 3.5 * Math.sin(X * 0.05 + Y * 0.031))) < 1.1 + fine * 1.4 && hh(x >> 1, y >> 1, seed) > 0.3) c = sd(FOAM, 0.62, x, y, 0.4);
+      if (d < wash) c = mixTo(MIX, c, FOAM[3], 0.34 - d / wash * 0.2);
     }
   } else if (d < 1.4) c = mixTo(MIX, c, WET, k === WK.CREEK ? 0.5 : 0.35);
   else if (k === WK.MARSH && vnc(X, Y, 47, seed + 221) + (fine - 0.5) * 0.3 > 0.76 && hh(x >> 1, y >> 1, seed + 223) > 0.55) c = sd(DUCKWEED, 0.25 + fine * 0.4, x, y, 0.5);   // (duckweed floating in drifts)

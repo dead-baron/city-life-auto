@@ -27441,3 +27441,22 @@ flowers". flora.js `spikes` (foxglove, lupines, alpine lupine, paintbrush): each
 its own way (`SPIKE_WILD`: up to 0.3 px a px of height), bows, nods at the tip, and one in four is a short one; the
 flower follows its stem. `o.straight` keeps a bed's rows upright for a garden. Their items claim the wider room
 (statics.js SPECIES; test/floraart.test.js caught the foxglove 4 px out of its room). Picture: report-40.
+
+## 2026-11-25 · Bridges stand on piers; the sea's edge is not painted white - on branch `fable-art-1124`
+From the owner's notes (a road bridge over the sea, seen while spectating: its edge "too hard", "it should be a
+bridge that things can go under ... a passable channel underneath"; and the white in the shallows "just show as
+static images instead of animated").
+- **Is any road laid on the sea as land?** No: tools/causeways.mjs counts road tiles with open water on both sides -
+  21 in the whole world, no run of ten; 47,898 tiles are bridge. The bridges are bridges; they did not look it.
+- **Piers and a shadow** (groundbake.js `PIER`, `pierNose`, `DECK_LEE` 14 -> 30): every 192 px along a deck over the
+  water a pier's nose shows 7 px beyond its edge either side (decks running north-south), or a pier's column stands
+  down under its face (east-west); the water in a north-south deck's lee is darker by the deck and eases out.
+  test/underdeck.test.js. The fringe of shallows and foam along the deck in his picture is the live build's: on the
+  branch the shelf lies along sandy beaches only (11-24).
+- **No painted white at the sea's edge** (water.js): the crests drawn white within 30 px of a beach, the white wash
+  line and the scalloped white band beyond it were still pictures under the engine's moving waves and swash - 3.43%
+  of the sea's pixels by a beach painted white, now none (test/waterbake.test.js, under 0.2%). The lattice keeps a
+  lighter water there, the waterline a pale wet edge. Left as they were: the white of a creek's riffles and rapids
+  and round rocks (still pictures too - to look at with the creeks).
+tools/nature/darkscan.mjs `--seabridge n` finds the long bridges over open water. Baked: with the re-bake. Not seen
+in a running game.
