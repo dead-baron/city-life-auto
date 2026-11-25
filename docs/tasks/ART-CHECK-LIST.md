@@ -16,7 +16,10 @@ added as the work goes; a line he has checked is marked with his word and the da
   crowns over paths, creeks and roads, a mix deeper in).
 
 - [x] **"The lake a perfect oval"** (his note of 11-23): answered 11-24 18:13 - Mirage Lake, the one in the
-  cinematics. Its shore is to be reshaped; a new line goes here when it is.
+  cinematics.
+- [ ] **Mirage Lake's new shore** - a bay in the west shore, a sandy point south-west, a cove south-east; the beach,
+  palms and jetty follow it. Picture: `report-23-mirage`. Judge: does it read as a natural lake; enough, or more.
+  Its cinematics are reshot at the end of the art pass.
 - [ ] **The sample creek: is this the creek the redwoods should have many of?** Fernwater Creek, laid by rule down
   the land from the woods west of the Giants Loop to the lake (283 tiles; riffles, 7 pools, stepping stones where a
   path crosses). Pictures: `report-20-creek`. Judge: its width, how many boulders, the pools (big enough to read as

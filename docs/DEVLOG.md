@@ -27289,3 +27289,16 @@ creek's pool (a channel's calm pocket) clear but for its very edge. A class fix:
 an art change, with the nature re-bake. `test/groundedges.test.js` holds the rule. The bake's code was 1 KB over its
 budget with it (1,081 of 1,080): two of today's comments trimmed, no budget raised.
 Seen: the spring, a run, the crossing's pool. Not seen: other creeks and rivers after the rule; a running game.
+
+## 2026-11-24 · Mirage Lake is no longer an oval - on branch `fable-art-1124`
+The owner, 11-23: "the lake a perfect oval"; 11-24 18:13: "I think it was mirage lake ... It's one that shows up in
+the cinematics". Its rim (shared/world3-mirage.js, 10-21) was an ellipse wavering in six slow lobes: measured against
+the oval that fits it best on 72 bearings, the shore lay within a twelfth of it all round (sd 0.042, 0.91 to 1.07).
+Now the six lobes carry a finer waver of eleven and the shore has features of its own (`MIRAGE3.shore`): a bay bitten
+into the west shore, a sandy point on the south-west, a cove on the south-east, the east shore bellied out, a notch in
+the north-west; a bay may cut into the old water (deep tiles too). Sd 0.083, 0.76 to 1.16. The green belt, the palms,
+the white beach, the jetty and its rowboat follow the new shore by the same rules as before.
+`test/world3desert.test.js`: the shore strays from its oval (sd, least and most), and the jetty stands in the water.
+Not done: the other near-ovals counted on 11-24 are the city parks' ornamental ponds (Westport's, the Stadium's two,
+Northgate's basin) - theirs with the districts. The cinematics that show the lake want reshooting (they are reshot at
+the end of the art pass). Seen: one offline render at half size. A world change: with the nature batch.
