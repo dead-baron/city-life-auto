@@ -53,3 +53,32 @@ test('each kind is a build of its own: tall or flat, big or small, its own green
   const stem = (k) => mean(k, (G) => { let n = 0; for (let i = 0; i < G.w * G.h; i++) if (G.col[i * 4 + 3] === 255 && !(G.flag[i] & F_LEAF) && G.col[i * 4 + 1] < 60) n++; return n; });
   assert.ok(stem('maidenhair') > 20, `maidenhair's black stems (${stem('maidenhair') | 0} px)`);
 });
+
+// The kit in the world (11-25): which fern grows where (statics.js fernKind), and each kind's picture inside the room
+// its item claims. The owner on the gold bracken: "use it sparingly and in places that would make sense logically,
+// and sometimes in little clusters but mostly just good detail to add in sparingly among the other green fern".
+test('which fern grows where: by wetness, in drifts, the gold bracken sparingly and only in sunlit gaps', async () => {
+  const { fernKind, FERN_GOLD, makeStatic, floraExt } = await import('../client/art2/game/statics.js');
+  let a = 7; const rnd = () => (a = (a * 16807) % 2147483647) / 2147483647;
+  const n = {}, N = 60000; let goldWet = 0, goldShade = 0, bank = new Set(), inCluster = 0, clusterN = 0;
+  for (let i = 0; i < N; i++) {
+    const w = rnd(), q = { base: rnd() < 0.1 ? 'bracken' : 'fern', wet: w < 0.06 ? 2 : w < 0.2 ? 1 : 0, redwood: rnd() < 0.5, drift: rnd(), gold: rnd(), u: rnd() };
+    q.dry = !q.wet && rnd() < 0.3;
+    const k = fernKind(q); n[k] = (n[k] || 0) + 1;
+    if (k === 'fGold') { if (q.wet) goldWet++; if (!q.dry) goldShade++; }
+    if (q.wet === 2) bank.add(k);
+    if (q.dry && q.gold > FERN_GOLD.cluster) { clusterN++; if (k === 'fGold') inCluster++; }
+  }
+  assert.equal(goldWet + goldShade, 0, 'gold bracken only on dry ground in a sunlit gap');
+  assert.ok(n.fGold / N < 0.05 && n.fGold > 0, `gold bracken sparingly (${(n.fGold / N * 100).toFixed(1)}% of ferns)`);
+  assert.ok(inCluster / clusterN > 0.5, 'where it clusters, most of the bracken there has turned');
+  assert.deepEqual([...bank].sort(), ['fDeer', 'fLady', 'fMaiden', 'fSwordS'], 'at a bank: the wet ground\'s ferns');
+  for (const k of ['fSword', 'fSwordS', 'fLady', 'fMaiden', 'fBracken', 'fGold', 'fDeer', 'fChain', 'fFiddle', 'fClump', 'fernR']) assert.ok(n[k] > 0, `${k} grows somewhere`);
+  // each kind's picture is inside the room its item claims (a picture beyond it is cut at a chunk's edge)
+  for (const sp of ['fSword', 'fSwordS', 'fLady', 'fMaiden', 'fBracken', 'fGold', 'fDeer', 'fChain', 'fFiddle', 'fClump']) for (let v = 0; v < 6; v++) {
+    const G = makeStatic({ t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k: 1 }), e = floraExt(sp, 1), k = G.ap2 || 1;
+    let L = 0, R = 0, U = 0, D = 0;
+    for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) if (G.col[(y * G.w + x) * 4 + 3]) { L = Math.max(L, G.ax - x * k); R = Math.max(R, (x + 1) * k - G.ax); U = Math.max(U, G.ay - y * k); D = Math.max(D, (y + 1) * k - G.ay); }
+    assert.ok(L <= e[0] && U <= e[1] && R <= e[2] && D <= e[3], `${sp} ${v}: L${L}/${e[0]} U${U}/${e[1]} R${R}/${e[2]} D${D}/${e[3]}`);
+  }
+});

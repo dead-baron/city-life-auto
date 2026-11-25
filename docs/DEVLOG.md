@@ -27392,3 +27392,13 @@ Tools: `tools/nature/darkscan.mjs` (the census over the baked world, by place, `
 under 46, no bark under 50, the even light changes no colour). The full account and the list:
 docs/tasks/NATURE-REDRAW-2026-11-25.md. Baked art: live with the re-bake, on his word.
 Also: the giants' tops a mix of three (statics.js `RW_TOP`), his PDF of play notes logged (PREBETA-LIST).
+
+## 2026-11-25 · The fern kit is planted - on branch `fable-art-1124`
+The owner approved the kit (03:05: "Fern looks good to me ... go easy on the gold bracken"). statics.js: ten kinds in
+the plant table (`fSword` ... `fClump`, made by ferns.js at the art pixel), and `fernKind` - which fern grows where
+in the woods: at a bank the lady fern and maidenhair; near water lady and chain fern; on the ordinary floor sword and
+deer fern in drifts, an old tussock or fiddleheads now and then; in a sunlit gap bracken, and only there the gold - a
+small cluster where a noise runs high, else one frond in twenty-five. `floraExt` claims the room below a foot that a
+kind needs (the tussock and the chain fern hang 40 px under theirs). test/ferns.test.js: the rule (gold never on wet
+or shaded ground, under 5% of ferns, every kind grows somewhere) and each kind's picture inside its room. The bake's
+code: 1,089 of 1,100 KB.

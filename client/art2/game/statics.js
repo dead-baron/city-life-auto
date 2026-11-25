@@ -37,6 +37,7 @@ import * as RK from '../props-redwoods.js';   // (the redwoods' kit: basalt colu
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
 import * as RW from '../redwoods.js';
+import { fernArt } from '../ferns.js';   // (the fern kit: nine kinds, planted by wetness and in drifts - fernKind)
 import { boulder as rockLump, outcrop, rockSprite, seaStack, crystals, redStack } from '../terrain.js';
 import { distSq } from '../scene.js';
 import { SCENE_MASKS } from '../../../shared/interior-art.js';
@@ -2303,6 +2304,10 @@ const SPECIES = {
   redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 112, 365], redwood2H: [(s) => RW.giantRedwoodArt(s, 340, 18, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 116, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
   gate: [(s) => RW.giantRedwoodArt(s, 760, 78, { tunnel: { w: 46, h: 60 } }), 270, 815],   // (Giant's Gate, the drive-through: shared/world3-drivetree.js)
   fernR: [(s) => RW.swordFernArt(s, 78 + (s % 3) * 8), 52, 64],
+  // the fern kit (ferns.js; [maker, half width, height, room below the foot]): which grows where - fernKind
+  fSword: [(s) => fernArt('sword', s), 56, 44], fSwordS: [(s) => fernArt('swordS', s), 40, 34], fLady: [(s) => fernArt('lady', s), 62, 90], fMaiden: [(s) => fernArt('maidenhair', s), 64, 62],
+  fBracken: [(s) => fernArt('bracken', s), 72, 86], fGold: [(s) => fernArt('brackenGold', s), 72, 86], fDeer: [(s) => fernArt('deer', s), 42, 54], fChain: [(s) => fernArt('chain', s), 84, 90, 42],
+  fFiddle: [(s) => fernArt('fiddle', s), 40, 58], fClump: [(s) => fernArt('clump', s), 88, 60, 46],
   // shrubs, bushes and flowers
   hedge: [FL.hedge, 38, 51], topBall: [FL.topiaryBall, 20, 57], topCone: [FL.topiaryCone, 17, 66], rose: [FL.roseBush, 24, 41], hydrangea: [FL.hydrangea, 27, 41], lavender: [FL.lavender, 28, 45],
   tulips: [FL.tulipPlanter, 26, 41], daffodils: [FL.daffodilPlanter, 27, 41], boxStone: [(s) => FL.flowerBox(s, 'stone'), 34, 41], boxIron: [(s) => FL.flowerBox(s, 'iron'), 33, 38], pampas: [FL.pampasGrass, 56, 89],
@@ -2324,9 +2329,9 @@ const SPECIES = {
 };
 // Every plant is made at the art pixel (flora.js floraArt: the maker run at half size, a pixel of it an art pixel) - the
 // owner's nature kit pass, 2026-11-21 - but the redwoods' own (redwoods.js: at the art pixel already).
-const OWN_ART_FLORA = new Set(['redwood', 'redwoodB', 'redwoodC', 'giantLH', 'giantH', 'giantSH', 'redwood2', 'redwood2H', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR']);
+const OWN_ART_FLORA = new Set(['redwood', 'redwoodB', 'redwoodC', 'giantLH', 'giantH', 'giantSH', 'redwood2', 'redwood2H', 'giantL', 'giant', 'giantS', 'gate', 'sorrel', 'fernR', 'fSword', 'fSwordS', 'fLady', 'fMaiden', 'fBracken', 'fGold', 'fDeer', 'fChain', 'fFiddle', 'fClump']);
 export const floraHalf = (sp, k = 1) => (SPECIES[sp] || [null, 30])[1] * k;   // (a plant's own half-width in world px - tools/placementlint.mjs; floraExt is its item's room, a size roomier)
-export const FLORA_SPECIES = Object.keys(SPECIES), floraExt = (sp, k = 1) => { const S = SPECIES[sp] || [null, 30, 60]; return [Math.ceil(S[1] * k * 1.2) + 10, Math.ceil(S[2] * k * 1.16) + 16, Math.ceil(S[1] * k * 1.2) + 10, 30]; };   // (every species; the room an item claims for its picture - a fifth over the species' size: each shape has its own build, flora.js VARY)
+export const FLORA_SPECIES = Object.keys(SPECIES), floraExt = (sp, k = 1) => { const S = SPECIES[sp] || [null, 30, 60]; return [Math.ceil(S[1] * k * 1.2) + 10, Math.ceil(S[2] * k * 1.16) + 16, Math.ceil(S[1] * k * 1.2) + 10, Math.max(30, S[3] || 0)]; };   // (every species; the room an item claims for its picture - a fifth over the species' size: each shape has its own build, flora.js VARY)
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
 function makeFlora(r) {
   const sp = SPECIES[r.sp];
@@ -4269,6 +4274,32 @@ const TOWN_COVER = {
   oldtown: [['lavender', 2], ['poppies', 2], ['daisies', 2]],
 };
 const pickW = (list, u) => { let t = 0; for (const e of list) t += e[1]; let a = u * t; for (const e of list) { a -= e[1]; if (a < 0) return e[0]; } return list[list.length - 1][0]; };
+// Which fern grows where (the owner, 11-24 18:00: "a lot of variety of ferns"; 11-25 03:05: "go easy on the gold
+// bracken and use it sparingly and in places that would make sense logically, and sometimes in little clusters but
+// mostly just good detail to add in sparingly among the other green fern"). A bed is mostly one kind (drift: a slow
+// noise), by how wet the ground is: at a bank the lady fern and maidenhair, near water lady and the giant chain fern,
+// on the ordinary floor sword and deer fern with an old tussock or a clutch of fiddleheads now and then, in a sunlit
+// gap bracken - and there only, the gold: a small cluster where `gold` runs high, a stray frond in twenty-five.
+// q: { base, wet 0|1|2, dry, redwood, drift 0..1, gold 0..1, u 0..1 } -> a species name.
+export const FERN_BASE = new Set(['fern', 'fernR', 'bracken']), FERN_GOLD = { cluster: 0.84, in: 0.7, stray: 0.04 };
+export function fernKind(q) {
+  const u = q.u, sword = q.redwood ? 'fernR' : 'fSword';
+  if (q.wet === 2) return u < 0.45 ? 'fLady' : u < 0.75 ? 'fMaiden' : u < 0.9 ? 'fDeer' : 'fSwordS';
+  if (q.wet === 1) return q.drift < 0.5 ? (u < 0.6 ? 'fLady' : u < 0.85 ? sword : 'fDeer') : (u < 0.5 ? 'fChain' : u < 0.75 ? 'fLady' : sword);
+  if (q.dry) {
+    if (q.gold > FERN_GOLD.cluster) return u < FERN_GOLD.in ? 'fGold' : 'fBracken';
+    return u < FERN_GOLD.stray ? 'fGold' : u < 0.72 ? 'fBracken' : 'fSwordS';
+  }
+  if (q.base === 'bracken') return 'fBracken';
+  if (q.drift < 0.3) return u < 0.65 ? 'fDeer' : u < 0.9 ? sword : 'fFiddle';
+  if (q.drift < 0.75) return u < 0.6 ? sword : u < 0.8 ? 'fSwordS' : u < 0.88 ? 'fClump' : u < 0.94 ? 'fFiddle' : 'fLady';
+  return u < 0.4 ? 'fLady' : u < 0.75 ? sword : u < 0.9 ? 'fChain' : 'fDeer';
+}
+function fernAt(c, tx, ty, x, y, base) {
+  const M = c.M, wat = (r) => { for (let k = 0; k < 8; k++) { const X = tx + Math.round(Math.cos(k * 0.785) * r), Y = ty + Math.round(Math.sin(k * 0.785) * r); if (M.inside(X, Y) && M.tiles[M.idx(X, Y)] === T.WATER) return true; } return false; };
+  const wet = wat(1) || wat(2) ? 2 : wat(4) || wat(6) ? 1 : 0, di = c.di(x, y);
+  return fernKind({ base, wet, dry: !wet && vnoise(x, y, 90, 7107) < 0.32, redwood: di === 29 || di === 47, drift: vnoise(x, y, 130, 7211), gold: vnoise(x, y, 44, 7213), u: hash(tx, ty, 7215) });
+}
 // what a wild tile grows, or null: [species, scale]
 const inWashBed = (list, x, y) => { let best = 0; for (const e of list) { if (x < e.bb[0] || x > e.bb[2] || y < e.bb[1] || y > e.bb[3]) continue; const P = e.pts, r2 = e.hw * e.hw * 0.7, b2 = e.bank ? e.hw * e.hw * e.bank * e.bank : 0; for (let k = 1; k < P.length; k++) { const ax = P[k - 1][0], ay = P[k - 1][1], dx = P[k][0] - ax, dy = P[k][1] - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)), qx = x - ax - dx * t, qy = y - ay - dy * t, q = qx * qx + qy * qy; if (q < r2) return 2; if (q < b2) best = 1; } } return best; };   // (2 in a wash's bed, 1 on its banks)
 function coverAt(c, tx, ty, x, y) {
@@ -4452,6 +4483,7 @@ function coverItems(c, I, cx, cy) {
       if (hash(tx, ty, 7177) > 0.3) continue;
       r = [/^(creosote|bursage|brittle|dryGrass|sage|tumble|dFlowers|dPoppies|barrel|pear|agave|cholla|saguaroSmall|yucca|heather|juniper|twisted|aDaisies|aLupine|paintbrush)$/.test(r[0]) ? 'dryTuft' : 'weed', 1];
     }
+    if (FERN_BASE.has(r[0]) && c.biome(x, y) === 2) r = [fernAt(c, tx, ty, x, y, r[0]), 1];   // (the fern kit, by wetness and in drifts)
     const [sp, k] = r, v = shapeAt(sp, x, y, NV(sp));
     if (sight.has(i) && (SPECIES[sp] ? SPECIES[sp][2] : 0) * k > 80) continue;
     if ((SPECIES[sp] ? SPECIES[sp][1] : 0) * k > 50 && TOWN_COVER[(DISTRICTS[c.M.dist[i]] || {}).style] && !coverClear(c, tx, ty, 2)) continue;   // (a wide drift in town: two tiles clear of a path or a drive, not one - its spread reaches over - the owner, 11-14)
