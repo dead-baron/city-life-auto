@@ -2480,8 +2480,7 @@ const PLANTS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_
 // trunk (or the sprays just round it) covers you fades - fbox, narrower than the picture - not every crown nearby.
 export const TREE_FADE = 1e6;
 const RW_R = { giantL: 70, giant: 54, giantS: 40, redwood2: 16, gate: 78 };
-// the room a redwood's picture takes round its foot (left, up, right, down - px; a giant's roots reach further below it
-// than the 60 px all of them claimed, 11-24): test/redwood-art.test.js holds the art to it
+// the room a redwood's picture takes round its foot (left, up, right, down - px): test/redwood-art.test.js
 export const redwoodRoom = (art) => { const A = SPECIES[art]; return [A[1], A[2], A[1], A[3] || 60]; };
 // Which of a species' pictures the plant at (x, y) is, laid out so the same one never stands close by (the owner,
 // 11-21: "the same tree used multiple times near each other" - picked by chance, two trees in three had their twin

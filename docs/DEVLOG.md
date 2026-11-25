@@ -27278,3 +27278,14 @@ NOT in the bake (statics.js SPECIES) and not planted: the sheet is with the owne
 kinds into the plant table (the bake's code is at its budget - 1,080 of 1,080 KB - so that is a budget decision or a
 trim), laid in drifts by how wet the ground is (thick and mixed along creeks and in hollows, bracken on dry ground).
 Seen: the sheet lit at noon, and a mock-up bed composed from the sprites - not the game's own floor.
+
+## 2026-11-24 · The sample creek: a spring among rocks, reeds kept to a creek's banks - on branch `fable-art-1124`
+Two things seen in the sample's own pictures. **The spring** ended in a channel's blunt cut end with its boulders off to
+one side: now a small round head pool with five mossy boulders ringed round its upstream side and ferns between them
+(`shared/world3-creeks.js`). **Reeds**: the ground bake stood reed beds wherever water was shallow - right for a pond,
+but a creek is shallow from side to side, so beds grew across it and filled its pools; it read as a marsh.
+`groundbake.js` `reedAt`: beds across still water as before; along running water's banks only (within 12 px); a
+creek's pool (a channel's calm pocket) clear but for its very edge. A class fix: every creek and river in the world -
+an art change, with the nature re-bake. `test/groundedges.test.js` holds the rule. The bake's code was 1 KB over its
+budget with it (1,081 of 1,080): two of today's comments trimmed, no budget raised.
+Seen: the spring, a run, the crossing's pool. Not seen: other creeks and rivers after the rule; a running game.

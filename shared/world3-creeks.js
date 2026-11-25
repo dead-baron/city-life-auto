@@ -130,8 +130,15 @@ export function woodsCreeks3(m, H3) {
       C.drop((p) => /^(tree_|redwood|shrub_|bush_|flowers_|boulder|log$|rwlog|rwstump)/.test(p.t) && Math.hypot(p.x - px, p.y - py) < G.pool[0] + 14);
       last = k; hLast = hAt(k);
     }
-    // the spring: out from among mossy boulders
-    for (const [dx, dy, s] of [[-36, -28, 32], [34, -24, 26], [6, -48, 38]]) mossRock(C, line[0][0] + dx, line[0][1] + dy, s, 'granite');
+    // the spring: a small round head pool, mossy boulders ringed round its upstream side, ferns between them - the
+    // creek rises from among the rocks (not a channel's cut end)
+    {
+      const [x0, y0] = line[0], [x4, y4] = line[Math.min(n - 1, 5)], l = Math.hypot(x4 - x0, y4 - y0) || 1, ux = -(x4 - x0) / l, uy = -(y4 - y0) / l;   // (upstream)
+      blob(C, x0 + ux * 8, y0 + uy * 8, 46, 36, 0.18, seed + 5, (i) => { const t = m.tiles[i]; if ((t === T.GRASS || t === T.SAND) && !(m.bld && m.bld[i] >= 0)) { C.water(i); tiles++; } });
+      C.drop((p) => /^(tree_|redwood|shrub_|bush_|flowers_|boulder|log$|rwlog|rwstump)/.test(p.t) && Math.hypot(p.x - x0, p.y - y0) < 96);
+      for (const [da, o, sz] of [[0, 66, 40], [0.62, 62, 30], [-0.66, 64, 34], [1.25, 58, 24], [-1.3, 60, 22]]) { const ca = Math.cos(da), sa = Math.sin(da), rx = ux * ca - uy * sa, ry = ux * sa + uy * ca; mossRock(C, x0 + rx * o, y0 + ry * o * 0.8, sz, 'granite'); }
+      for (const [da, o] of [[0.3, 96], [-0.35, 100], [1.0, 92], [-1.0, 94], [1.7, 84], [-1.75, 86]]) { const ca = Math.cos(da), sa = Math.sin(da); fern(C, x0 + (ux * ca - uy * sa) * o, y0 + (ux * sa + uy * ca) * o * 0.8, true); }
+    }
     // the crossings: a path's tiles under the creek become stepping stones
     const groups = [];
     for (const [i, [tx, ty, k]] of paths) {

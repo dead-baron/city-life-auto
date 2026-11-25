@@ -75,3 +75,22 @@ test('an off-road ride: ruts, a crown, worn shoulders; it fades in at its ends, 
   // a track that only marks ruts on its own dirt tiles (no px, no ride) is as it was: nothing off its dirt
   assert.equal(rutPx([{ pts: [[200, 400], [900, 400]], hw: 26, bb: [100, 300, 1000, 500], ruts: 1 }], 500, 400 + 10, SEED, false), 0);
 });
+
+// Reeds keep to a running creek's banks (groundbake.js reedAt; the redwood overhaul, 11-24: a creek is shallow from
+// side to side, and reed beds across it read as a marsh; its pools were full of them).
+test('reeds: beds across still shallows, only the banks of running water, a creek\'s pool clear', () => {
+  const { reedAt, WK } = EDGE_TEST;
+  // a pond and the marsh, shallow, in a reed bed, mid-water: reeds
+  assert.ok(reedAt(WK.POND, 0, 0, 0.2, 40, 0.7) > 0.3 && reedAt(WK.MARSH, 0, 0, 0.6, 60, 0.7) > 0.3 && reedAt(WK.LAKE, 0, 0, 0.3, 30, 0.7) > 0.3);
+  assert.ok(reedAt(WK.POND, 0, 0, 0.2, 3, 0.2) > 0 && reedAt(WK.POND, 0, 0, 0.2, 40, 0.2) === 0, 'outside a bed: only at the edge');
+  assert.equal(reedAt(WK.POND, 0, 0, 0.8, 40, 0.9), 0, 'none in deep water');
+  // a running creek (not a pond, a lake or the marsh): the same bed stops a few px from the bank
+  const run = WK.CREEK;
+  assert.ok(reedAt(run, 0.5, 0, 0.2, 3, 0.7) > 0.3 && reedAt(run, 0.5, 0, 0.2, 8, 0.7) > 0, 'along its bank');
+  assert.equal(reedAt(run, 0.5, 0, 0.2, 20, 0.7), 0, 'none out in the run');
+  assert.ok(reedAt(run, 0.1, 0, 0.2, 20, 0.7) > 0.3, 'a backwater (hardly running) is still water');
+  // its pool: clear but for the very edge
+  assert.equal(reedAt(run, 0.5, 0.6, 0.2, 20, 0.9), 0);
+  assert.equal(reedAt(run, 0.5, 0.6, 0.2, 8, 0.9), 0);
+  assert.ok(reedAt(run, 0.5, 0.6, 0.2, 3, 0.9) > 0);
+});

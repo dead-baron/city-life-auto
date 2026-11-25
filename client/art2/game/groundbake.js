@@ -860,7 +860,16 @@ function lotEdge(b, ti, X, Y, seed) {
   return d + (vnc(X, Y, 27, seed + 181) - 0.5) * 14 + (vnc(X, Y, 8, seed + 183) - 0.5) * 6 < LOT_EDGE ? other : -1;
 }
 
-export const EDGE_TEST = { fieldEdge, lotEdge, rutPx, TN };   // (for test/groundedges.test.js)
+// Reeds in the shallows, how thick (0 none): beds across still water; along a running creek's banks only (beds
+// across it made a marsh of it, 11-24); a creek's pool clear but for its edge. test/groundedges.test.js
+export function reedAt(k, fv, pk, depth, d, reedy) {
+  if (depth >= (k === WK.MARSH ? 0.9 : 0.45)) return 0;
+  const still = k === WK.POND || k === WK.LAKE || k === WK.MARSH || fv < 0.2, bed = reedy > 0.55, e = d < 5;
+  if (pk > 0.05) return e ? 0.1 : 0;
+  if (!still && !e) return bed && d < 12 ? 0.3 : 0;
+  return e || bed ? (bed ? 0.42 : 0.1) : 0;
+}
+export const EDGE_TEST = { fieldEdge, lotEdge, rutPx, TN, reedAt, WK };   // (for test/groundedges.test.js)
 
 // ---- 3. classes ------------------------------------------------------------------------------------------------
 function classify(C) {
@@ -1875,7 +1884,8 @@ function decor(C, G) {
       if (!w || w.k === WK.SEA || b.tt[(Math.floor(Y / TILE) - C.TY0) * TN + Math.floor(X / TILE) - C.TX0] === T.WALL) continue;   // (nor on a ledge fall's lip)
       const still = (w.k === WK.POND || w.k === WK.LAKE || w.k === WK.MARSH || w.fv < 0.2) && !(w.pk > 0.05);   // (a river's calm pocket: no lilies)
       const reedy = vnc(X, Y, 150, seed + 103) + (w.k === WK.MARSH ? 0.25 : w.k === WK.POND ? 0.1 : 0);
-      if (w.depth < (w.k === WK.MARSH ? 0.9 : 0.45) && (d < 5 || reedy > 0.55) && h0 < (reedy > 0.55 ? 0.42 : 0.1) * dens) stamp(C, G, cover(C, 'reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
+      const rd = reedAt(w.k, w.fv, w.pk, w.depth, d, reedy);
+      if (rd && h0 < rd * dens) stamp(C, G, cover(C, 'reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
       else if (still && w.depth > 0.25 && w.depth < 1.9 && d > 5 && vnc(X, Y, 110, seed + 105) > (w.k === WK.LAKE ? 0.68 : w.k === WK.MARSH ? 0.7 : 0.6) && h0 < 0.55 * dens) stamp(C, G, cover(C, 'lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, LILY_Z, F_NOCAST);
       continue;
     }
