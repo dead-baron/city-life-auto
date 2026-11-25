@@ -20,24 +20,30 @@ added as the work goes; a line he has checked is marked with his word and the da
 - [x] **Mirage Lake's new shore** (the owner, 11-24 21:40: "The lake looks better like this so this would be
   acceptable"). An offshoot cove on its west side added at his suggestion: picture `report-27-mirage-cove`. Judge
   the cove: keep, smaller, or out. Its cinematics are reshot at the end of the art pass.
-- [ ] **The plants' dark undersides - built (variant F)** on his word of 11-25 00:04. Every plant kind: leaves lit
+- [x] **The plants' dark undersides - superseded** (his word of 11-25 03:29: redrawn from the source instead; see
+  the end of this list). What was built first, on his word of 11-25 00:04, was variant F: Every plant kind: leaves lit
   evenly, no leaf tone under the style anchor's dark green. Pictures: `report-34` (the creek, before and after, at
   the game's pixel). Judge in the game: enough, or a step lighter (`flora.js` `LEAF_LOOK`); the trunks' and cacti's
   shaded sides, which were left.
 - [ ] **The banks** - any wild river, creek or lake: grown over and going under the water in tongues, an earth lip
   (about a fifth), shingle or a dirt bar by turns; stones along the banks, fewer in the water. Pictures:
   `report-32`, `report-34`. Judge: the mix; whether the damp band reads as bank or as a smear.
-- [ ] **The bake's code budget** - at 1,080 of 1,080 KB. The fern kit (about 6 KB), the shade floor and a stick
+- [x] **The bake's code budget** (the owner, 11-25 03:05: "Yes raise the bake code limit as you need": 1,100 KB; at
+  1,089 with the fern kit). It stood at 1,080 of 1,080 KB. The fern kit (about 6 KB), the shade floor and a stick
   bridge need room: raise it (to 1,100?) or say what to trim.
-- [ ] **The sample creek: is this the creek the redwoods should have many of?** Fernwater Creek, laid by rule down
+- [ ] **The sample creek: is this the creek the redwoods should have many of?** (The owner, 11-25 03:05: "I believe
+  so can you show me the right one to look at?" - sent 11-25 morning: `report-39`, the creek as it is now with the
+  redrawn plants, the banks and the ferns.) Fernwater Creek, laid by rule down
   the land from the woods west of the Giants Loop to the lake (283 tiles; riffles, 7 pools, stepping stones where a
   path crosses). Pictures: `report-20-creek`. Judge: its width, how many boulders, the pools (big enough to read as
   pools, to fish), the stones. On his word the same rule lays a network, with ponds in the hollows.
-- [ ] **The fern kit: which kinds, and is this the look.** Nine kinds drawn, none planted yet: sword, an old
+- [x] **The fern kit: which kinds, and is this the look.** (The owner, 11-25 03:05: "Fern looks good to me", the
+  gold bracken sparingly - planted 11-25.) Nine kinds drawn, none planted yet: sword, an old
   tussock, lady, maidenhair, bracken (green and gold), deer, chain, fiddleheads, licorice. Pictures: `report-21`
   (the sheet, four shapes a kind, beside today's three) and `report-22` (a mock-up of a bed: today's ferns, the
   kit's). Judge: any kind to drop or redraw (the bracken and the licorice fern are the weakest); how much gold.
-- [ ] **The giant redwoods' tops: pick one.** The trunks-only look was rejected on sight (11-24 18:47). Forms of the
+- [x] **The giant redwoods' tops: pick one.** (The owner, 11-25 03:20: "a mix of all three (A and both J column and
+  J ragged)" - in.) The trunks-only look was rejected on sight (11-24 18:47). Forms of the
   same tree shown since, none in the code: A as now; B crown carried high; C a small crown higher still; D smaller
   again (`report-13`, `report-14`); E, F, G the small high crown with half, a little and no taper; H today's crown,
   little taper (`report-15`, `report-16`); J today's crown and leaves on a trunk with no taper - his own ask of 19:35
