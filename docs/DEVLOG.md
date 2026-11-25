@@ -27674,4 +27674,9 @@ screen, reloads; `cla.clouds`).
   canopy's own shade hides most of it - it will read plainer on open ground, which was not photographed).
 - test/cloudshadow.test.js (the presets by day only, the shader's rule from the source, the land's share, the
   switch); the lighting tests and test/perf.test.js pass.
+- **The cats, 15:48** (the owner: the black cat no nose, the grey a black one, "off center from the front view"): the
+  black cat's nose is left off (`noNose`), the tabby's is black. Seen from the front a cat's eyes stand an even gap
+  apart, so no single pixel is the middle: the nose is drawn on both middle pixels (renderArt, a feature's `center`).
+  The collar is a voxel wider on cats so it shows on both middle pixels too. The low-carried tail's tip stays under
+  the head's top (from the front it stood up between the ears as a spike). Picture: `report-59`.
 

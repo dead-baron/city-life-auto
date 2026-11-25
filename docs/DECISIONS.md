@@ -435,6 +435,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   it out").
 - The shark gets another pass (the owner, 11-25 15:10: "The shark could use another pass on it let's try to make it
   look better").
+- The black cat has no nose and the grey cat a black one; a cat's nose sits centred under its eyes from the front
+  (the owner, 11-25 15:48: "the black cat can have a black nose (or no nose since its all black cat face) and grey
+  could have a black nose. The nose on the black cat and the grey cat seem off center from the front view").
 - The cats' nose is a light pink (the owner, 11-25 15:42: "slightly more light pink, right now its too dark red").
 - The cats, settled for now (the owner, 11-25 15:26, on the first try): "the before cats looked better but can we keep
   them like that in the face and snout but just add a little nose to them? And make the tail a little thinner and
