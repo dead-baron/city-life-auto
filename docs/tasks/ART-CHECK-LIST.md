@@ -31,9 +31,8 @@ added as the work goes; a line he has checked is marked with his word and the da
 - [x] **The bake's code budget** (the owner, 11-25 03:05: "Yes raise the bake code limit as you need": 1,100 KB; at
   1,089 with the fern kit). It stood at 1,080 of 1,080 KB. The fern kit (about 6 KB), the shade floor and a stick
   bridge need room: raise it (to 1,100?) or say what to trim.
-- [ ] **The sample creek: is this the creek the redwoods should have many of?** (The owner, 11-25 03:05: "I believe
-  so can you show me the right one to look at?" - sent 11-25 morning: `report-39`, the creek as it is now with the
-  redrawn plants, the banks and the ferns.) Fernwater Creek, laid by rule down
+- [x] **The sample creek: is this the creek the redwoods should have many of?** (The owner, 11-25 09:03, on
+  `report-39`: "Creek looks good let's go with it" - the network is laid, see below.) Fernwater Creek, laid by rule down
   the land from the woods west of the Giants Loop to the lake (283 tiles; riffles, 7 pools, stepping stones where a
   path crosses). Pictures: `report-20-creek`. Judge: its width, how many boulders, the pools (big enough to read as
   pools, to fish), the stones. On his word the same rule lays a network, with ponds in the hollows.
