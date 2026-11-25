@@ -15,6 +15,10 @@ added as the work goes; a line he has checked is marked with his word and the da
   and whether the deep grove should open further, which would mean more high crowns there (his 11-21 call was high
   crowns over paths, creeks and roads, a mix deeper in).
 
+- [ ] **"The lake a perfect oval"** (his note of 11-23): which lake? The most oval are the city parks' ponds
+  (Westport's long one with the footbridge, the Stadium's two, Northgate's paved basin) and Mirage Lake in the desert.
+  Picture: `report-11-oval-ponds`. Summit Tarn and the farm ponds already have wavering shores.
+
 **In the game, when the batch is live**
 Water
 - [ ] **The shore wave** - any beach (Sunset Beach, the pier at Westport). It came in as a ruled white line, fast; now
@@ -42,6 +46,8 @@ The woods and the meadows
   Judge: do they read as places someone made and left; are there too many or too few; the ruins' size. Picture:
   `report-7-found-places`.
 
+- [ ] **The Sentinel Stones** (Granite Peaks, the headland north of the observatory) - darker, lichened, drawn half
+  as tall again, on a round of turf. Judge: do they read; too tall. Picture: `report-12-stones`.
 - [ ] **The fields' edges** - any farm (the Dry Creek co-op, Lake Road): a ragged grass verge and a strip of turned
   earth round every field instead of a ruled line. Judge: the widths (a verge of about 6 px, earth to about 17);
   whether fields now read as hand-made or want more (a track between fields, hay bales, a tractor: the farm's own

@@ -27189,3 +27189,20 @@ Test: test/world3redwoods.test.js (no wild redwood right behind another; more th
 change: with the nature batch, on the owner's word.
 Run and passing: world3redwoods, world3wayside (the found places as before: 18 and 16), world3clearings,
 world3woods, undergrowth, placementlint, wildfolk, foraging, perf, dmath. Not run: the whole suite.
+
+## 2026-11-24 · The Sentinel Stones read; the oval ponds counted - on branch `fable-art-1124`
+The mountain step, begun. The nature status of 11-21: "standing stones barely read". Rendered: ten pale grey posts on
+pale grey scree, shoulder-high. Now (props-rural.js standingStone, a class - every standing stone) dark weathered
+granite, banded, darker at the foot, patches of pale lichen, moss at the base; a stone that stands (taller than a
+headstone) is drawn 1.5 times its height and a fifth broader (statics.js MSTONE_UP), the altar and the fallen one as
+laid; and the ring stands on a ragged round of green turf (naturesites.js sentinelStones: the map's lush grass). Seen
+rendered, before and after. Tests: the stones in test/world3wayside.test.js (for its world build); nature (the ring's
+own test), perf. The turf is a world change (both worlds' hashes: naturesites.js is the first city's too).
+"The lake a perfect oval" (11-23): counted over the 59 lake and pond bodies - how far each shore is from its box's
+ellipse. The most oval are city parks' ponds made by hand as ellipses (Westport's 69 x 26 with a footbridge straight
+across, the Stadium's two retention ponds, Northgate's Linden Park basin - that one a paved formal pool, an oval on
+purpose) and Mirage Lake (an egg). Summit Tarn and the farm ponds have wavering shores already. No change made: each
+is a hand-made place with its rails, reeds and bridges set on its ellipse - the districts' pass, or sooner where the
+owner says which lake he meant (on the check list).
+Paused here on the owner's word of 18:00: the redwood forest first (docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md).
+

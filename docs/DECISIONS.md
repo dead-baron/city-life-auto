@@ -289,6 +289,12 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Mouths (the owner, 11-24 09:39: "I think mouths I noted are tied to makeup actually ... my character had black lipstick on. If that's working as intended then I think we're good with how mouths work"): it is as intended - the small faces have no mouth (11-19, `POLISH.mouthOn`), painted lips (lipstick, glam, goth, a clown's) always show. What stays to do is a face polish: painted lips drawn the same in every frame and direction ("drawn consistently if we do have lipstick"), fewer stray pixels, features that read - without overwriting the earlier character work ("Please don't break things during this"): each fix measured against a snapshot of every figure, as on 11-20. SUPERSEDES the 11-23 note's "a softer, thinner line or none". (11-24; chat)
 - The sea deeper blue offshore, a shelf of clear shallows along the sand (the water pass, 11-24): kept - the owner,
   11-24 14:37, on the pictures: "I think the new sea looks fine."
+- The redwood forest opened up (the owner, 11-24 18:00: "I'd like to give you some creative flexibility on the redwood
+  forest because currently it's not working as well as I think it could ... if a decision I've made conflicts with
+  polishing and maybe overhauling the redwood area let me know"): an overhaul, proposed in
+  `docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md` - the giants as trunks with no crown in the walking view, crossings
+  square to the water, a fern kit, finds placed by hand rules and never hidden. It would replace his crown mix of
+  11-21 15:39; the tree treatment is his pick from variants before it is rolled out. OPEN until he picks.
 - The art pass's checks (the owner, 11-24 14:35: "Keep a list of things to check and I will check them when we push
   everything live, but since a lot of this is a world art update i think we should wait until we get all the art done
   first, or at least a large chunk"): what wants his eye is kept in `docs/tasks/ART-CHECK-LIST.md` (project copy

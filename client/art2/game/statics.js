@@ -2795,7 +2795,9 @@ function propItems(c, p, pi, I) {
     case 'fgate': put(I, { key: 'va:fgate', recipe: { t: 'va', m: 'fieldGate', a: [26] }, x, y, ext: [34, 44, 34, 12], pi }); return;
     case 'stile': put(I, { key: 'va:stile', recipe: { t: 'va', m: 'stile' }, x, y, ext: [24, 50, 24, 22], pi }); return;
     case 'rswing': { const sd = p.side < 0 ? -1 : 1; put(I, { key: `va:swing:${sd}`, recipe: { t: 'va', m: 'swing', a: [sd] }, x, y, ext: [30, 74, 30, 12], pi }); return; }
-    case 'mstone': { const w = p.w || 16, d = p.d || 9, h = p.h || 48, sd = (p.v || 0) % 8 + 1, ln = Math.round((p.lean || 0) * 20) / 20; V(`mst:${w}:${d}:${h}:${sd}:${ln}:${qa(p.a || 0, 8).toFixed(2)}`, 'standingStone', [w, d, h, sd, ln], qa(p.a || 0, 8)); return; }
+    // (a stone that stands - taller than a headstone - is drawn MSTONE_UP times its height and a little broader: a megalith
+    // over a walker's head, not a post at their shoulder. A fallen one, an altar, a headstone: as laid.)
+    case 'mstone': { const up = (p.h || 48) > 20, w = Math.round((p.w || 16) * (up ? 1.2 : 1)), d = p.d || 9, h = Math.round((p.h || 48) * (up ? MSTONE_UP : 1)), sd = (p.v || 0) % 8 + 1, ln = Math.round((p.lean || 0) * 20) / 20; V(`mst:${w}:${d}:${h}:${sd}:${ln}:${qa(p.a || 0, 8).toFixed(2)}`, 'standingStone', [w, d, h, sd, ln], qa(p.a || 0, 8)); return; }
     case 'ferris': V('ferris:0', 'ferrisWheel', [0.7, 0], 0, null, { z0: p.z ?? 4 }); for (const [z, r, c] of [[140, 260, [1, 0.45, 0.85]], [240, 170, [0.5, 0.8, 1]], [50, 170, [1, 0.8, 0.5]]]) lightAt(I, x, y + 2, z, r, c, 1.3, 'neon');   // (lit after dark: the craft pass)
     case 'rods': V(`rods:${qa(p.a || 0, 4).toFixed(2)}`, 'rodHolder', [], qa(p.a || 0, 4), null, { z0: p.z ?? 4 }); return;
     case 'fishtable': V(`ftbl:${qa(p.a || 0, 4).toFixed(2)}`, 'fishTable', [], qa(p.a || 0, 4), null, { z0: p.z ?? 4 }); return;
@@ -3016,6 +3018,7 @@ function putFall(c, I, it) {
   }
   put(I, it);
 }
+export const MSTONE_UP = 1.5;
 export const RUINS_K = 1.4;   // (the woods' ruins: how much bigger than their first drawing - shared/world3-wayside.js lays their solid walls to this)
 // the models built at the art pixel (recipe 'va'): the nature pass's missing pieces, placed with the world batch
 function artVox(m, a) {

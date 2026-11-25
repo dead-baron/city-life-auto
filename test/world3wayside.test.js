@@ -10,7 +10,7 @@ import { buildWorld3 } from '../server/world3.js';
 import { TILE, T } from '../shared/constants.js';
 import { WAYSIDE } from '../shared/world3-wayside.js';
 import { SHORE_R, SHORE_MIN } from '../shared/world3-croptidy.js';
-import { FLORA_SPECIES } from '../client/art2/game/statics.js';
+import { FLORA_SPECIES, staticItems, STATIC_CHUNK, MSTONE_UP } from '../client/art2/game/statics.js';
 
 const { map: m } = await buildWorld3(1337, { log: () => {} });
 const finds = (m.natureSites || []).filter((s) => s.kind === 'wayside');
@@ -86,3 +86,26 @@ test('planted rows keep off the sand and the sea', () => {
   // (the sunflowers that stood on North Cape's cobbles: tiles 4466..4520, 580..602)
   assert.equal(m.props.filter((p) => p && p.sp === 'sunflowers' && p.x > 4466 * TILE && p.x < 4520 * TILE && p.y > 580 * TILE && p.y < 602 * TILE).length, 0, 'no sunflowers on the cape');
 });
+
+// (In this file for its world build.) The Sentinel Stones read (the nature status of 11-21: "standing stones barely
+// read" - pale grey posts on pale grey scree): the ring stands on a round of green turf, and a stone that stands is
+// drawn MSTONE_UP times its height - a megalith over a walker's head; the altar and the fallen one as laid.
+test('the Sentinel Stones: on a round of turf, drawn tall', () => {
+  const site = (m.natureSites || []).find((s) => s.kind === 'stones');
+  assert.ok(site, 'the ring');
+  const tx = Math.floor(site.x / TILE), ty = Math.floor(site.y / TILE);
+  let turf = 0;
+  for (let dy = -7; dy <= 7; dy++) for (let dx = -8; dx <= 8; dx++) { const i = m.idx(tx + dx, ty + dy); if (m.tiles[i] === T.GRASS && (m.reserve[i] & 128)) turf++; }
+  assert.ok(turf >= 70, `a round of turf under the ring (${turf} tiles)`);
+  const stones = m.props.map((p, pi) => [p, pi]).filter(([p]) => p && p.t === 'mstone' && Math.hypot(p.x - site.x, p.y - site.y) < 12 * TILE);
+  assert.ok(stones.length >= 10, `the stones (${stones.length})`);
+  let tall = 0;
+  for (const [p, pi] of stones) {
+    const it = staticItems(m, Math.floor(p.x / STATIC_CHUNK), Math.floor(p.y / STATIC_CHUNK)).find((q) => q.pi === pi);
+    assert.ok(it && /^mst:/.test(it.key), 'drawn');
+    const h = +it.key.split(':')[3];
+    if (p.h > 20) { tall++; assert.equal(h, Math.round(p.h * MSTONE_UP), 'a standing stone drawn tall'); } else assert.equal(h, p.h, 'a laid stone as laid');
+  }
+  assert.ok(tall >= 8 && MSTONE_UP >= 1.4, `${tall} standing`);
+});
+

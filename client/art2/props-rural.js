@@ -484,15 +484,17 @@ export function missionRuins() {
 // its faces pitted, lichen on the weather side, moss at the foot; a flat one (h small) is the altar or a fallen stone
 export function standingStone(w = 16, d = 9, h = 48, seed = 1, lean = 0) {
   const W = Math.ceil(w + Math.abs(lean) * h + 6), m = new Vox(W, d + 6, h + 2);
-  const st = m.mat({ ramp: R('#8a8a86'), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2) + Math.round(y / 2), seed) - 0.5) * 0.9 + (hash(Math.round(x / 6), Math.round(z / 5), seed + 1) - 0.5) * 0.6 });
+  // (dark weathered granite, banded and pitted, darker toward its foot: the first stone was the scree's own pale grey
+  // and was lost on it - the nature status of 11-21, "standing stones barely read")
+  const st = m.mat({ ramp: R('#63666c', 7, 3), k: 3.4, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2) + Math.round(y / 2), seed) - 0.5) * 1.3 + (hash(Math.round(x / 6), Math.round(z / 5), seed + 1) - 0.5) * 1.0 - (z < h * 0.3 ? (1 - z / (h * 0.3)) * 1.2 : 0) + (z > h * 0.8 ? 0.5 : 0) });
   const lichen = m.mat({ ramp: R('#b8b878'), k: 3 }), moss = m.mat({ ramp: R('#5a7a34'), k: 3, flag: F_LEAF });
   const x0 = 3 + Math.max(0, -lean * h);
   m.fill((x, y, z) => {
     const t = z / h, cx = x0 + w / 2 + lean * z, hw = w / 2 * (1 - t * 0.25) - (t > 0.85 ? (t - 0.85) * 18 * hash(Math.round(x), 3, seed) : 0), hd = d / 2 * (1 - t * 0.2);
     const n = (hash(Math.round(x / 3), Math.round(z / 3), seed + 2) - 0.5) * 2.2;
     if (Math.abs(x - cx) > hw + n * 0.5 || Math.abs(y - (3 + d / 2)) > hd + n * 0.4 || z > h - Math.abs(x - cx) * 0.35 * hash(seed, 4, 7)) return -1;
-    if (z < 3 && hash(Math.round(x), Math.round(y), seed + 3) > 0.5) return moss;
-    if (y < 4 && hash(Math.round(x / 2), Math.round(z / 2), seed + 4) > 0.82) return lichen;
+    if (z < 4 && hash(Math.round(x), Math.round(y), seed + 3) > 0.4) return moss;
+    if (hash(Math.round(x / 3), Math.round(z / 3) + Math.round(y / 3), seed + 4) > 0.8 && z > h * 0.25) return lichen;   // (patches of pale lichen up its faces)
     return st;
   });
   m.smooth = 1;
