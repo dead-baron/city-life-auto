@@ -431,6 +431,13 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   leading into a skinny concrete structure. Lets make sure water under roads looks more like a bridge with the road
   going over it, or just have the water line up correctly so its clear it goes under the road"). The same eye for the
   trains' tunnel mouths ("the tunnel entrance and exit doesnt quite line up with what the tunnel is leading into").
+- Cloud shadows: yes, to try (the owner, 11-25 15:10, on the still `report-43`: "I think the cloud looks okay let's try
+  it out").
+- The shark gets another pass (the owner, 11-25 15:10: "The shark could use another pass on it let's try to make it
+  look better").
+- The cats (his question of 11-25 15:10, "Did we already fix the cats ... faces and tail were off"): yes - redrawn
+  twice on 11-21 after his notes of 09:27 and 09:55 (a flat wide face that is its eyes, ears set wide, a thin tail up
+  behind with a hooked tip), live since the 11-22 merge; shown to him again 11-25 (`report-53`).
 - The road over a creek: good as shown in `report-51` - the creek up to the road either side, a rail on each edge -
   with the rails a little longer and joined to the street (the owner, 11-25 14:52: "I think it looks good how it is
   now except the railings should be a little longer and connected to the street (right now you see the top one have

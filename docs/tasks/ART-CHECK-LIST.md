@@ -136,4 +136,11 @@ last leap over the top of a falls; the other fish's leaps.
 - **The shark's bite**: redrawn (`report-41`).
 - **Bridges over the water**: on piers, a deeper shadow in their lee; the sea's edge has no painted white. With the
   re-bake. Judge in the game: do bridges now read as bridges; is the shore right with only the moving waves.
-- **Cloud shadows**: a still (`report-43`) - say yes or no before anything is built.
+- [x] **Cloud shadows**: a still (`report-43`) - the owner, 11-25 15:10: "I think the cloud looks okay let's try it
+  out". To build.
+- [ ] **Summit Tarn in a cirque** (11-25, his yes of 13:33): rock with cliff walls behind its north shore, a lower pool
+  where its outflow ended. Picture: `report-52`. Judge: the wall's height and reach; Eagle Crag moved 5 tiles.
+- [x] **The road over a creek** (the owner, 11-25 14:52: "looks good how it is now except the railings should be a
+  little longer and connected to the street" - done, `report-52`).
+- [ ] **The cats** (his question of 15:10): as they are since 11-21 - `report-53`. Judge: anything still off.
+- [ ] **The shark**: another pass asked 15:10 - to do.

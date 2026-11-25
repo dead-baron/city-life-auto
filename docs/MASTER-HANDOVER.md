@@ -147,8 +147,9 @@ entries have each piece):**
   cascade down the rock band was tried five ways and is off (`CREEKS3.alp.tarnOn`). Logged for their turn
   (PREBETA-LIST, 11-25 13:33): train riders swimming, the train's front above ground past a tunnel mouth, tunnel
   mouths that do not line up.
-- **Waiting on him:** the cloud-shadow still (`report-43`); the redwoods stood apart; the banks; when he stops for
-  the day (the gate).
+- **15:10, his word:** cloud shadows - yes, try it (to build: page code, the light pass); the shark - another pass (to
+  do: page code); the cats - asked whether fixed: yes, 11-21, shown again (`report-53`).
+- **Waiting on him:** the redwoods stood apart; the banks; the cats' sheet; when he stops for the day (the gate).
 - **Next in the plan:** the gate and the re-bake; then mountain water (tarns and falls set into rock), desert, coast and jungle, the water's edges (creek riffles' white is still painted), rocks; parts B, C. Not done from the summit plan: switchbacks, the bench turned to the view.
 - **Tools made:** `tools/nature/darkscan.mjs` (the near-black census over the baked world; `--who`, `--place`, `--prop`,
   `--seabridge`), `tools/nature/paintscan.mjs`, `tools/causeways.mjs`; a running-game picture recipe in
