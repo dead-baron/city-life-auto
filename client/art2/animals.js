@@ -113,7 +113,7 @@ function sharkModel(pose, phase) {
   // the shape under the water: the body, the pectoral fins out to the sides, the tail's lower lobe (all dark: deep)
   for (let x = 6; x < 104; x++) {
     const u = (x - 6) / 98, hw = half(u), off = u < 0.35 ? sway * (1 - u / 0.35) : 0;
-    if (bite && u > 0.62) continue;   // (the head's up out of the water, drawn below)
+    if (bite && u > 0.86) continue;   // (the snout's tip is up out of the water; the body runs on under the raised head)
     m.box(x, cy + off - hw, 0, x + 1, cy + off + hw, 2, dark);
   }
   for (const sd of [-1, 1]) for (let k = 0; k < 14; k++) m.box(66 - k * 0.9, cy + sd * (12 + k * 0.55), 0, 68 - k * 0.9, cy + sd * (13.5 + k * 0.55), 2, dark);
@@ -123,15 +123,34 @@ function sharkModel(pose, phase) {
   // the top of the tail: its upper lobe beating side to side, out of the water
   for (let z = 1; z < 10; z++) { const t = (z - 1) / 9; m.box(4 - t * 4, cy + sway * 1.4 - 1, z, 9 - t * 3, cy + sway * 1.4 + 1, z + 1, back); }
   if (bite) {
-    // the head up out of the water at the bite: the snout raised, the jaws open, the rows of teeth, the black eye
-    for (let x = 66; x < 112; x++) {
-      const u = (x - 66) / 46, hw = 12 * (1 - u * u * 0.7), up = 3 + u * 10;
-      m.box(x, cy - hw, up + 5, x + 1, cy + hw, up + 9, back);                   // (the upper jaw, grey)
-      if (u < 0.85) m.box(x, cy - hw * 0.9, 1, x + 1, cy + hw * 0.9, 3 + u * 2, belly);   // (the lower jaw, white)
-      if (u > 0.15 && u < 0.92) m.box(x, cy - hw * 0.75, 3 + u * 2, x + 1, cy + hw * 0.75, up + 5, mouth);
-      if (x % 3 === 0 && u > 0.2 && u < 0.9) for (const sd of [-1, 1]) { m.box(x, cy + sd * hw * 0.8 - 0.5, up + 3, x + 1, cy + sd * hw * 0.8 + 0.5, up + 5, teeth); m.box(x, cy + sd * hw * 0.75 - 0.5, 3 + u * 2, x + 1, cy + sd * hw * 0.75 + 0.5, 5 + u * 2, teeth); }
+    // the head up out of the water at the bite (redrawn 11-25, the owner: "when it opens it mouth to attack part of its
+    // head disappear and looks off" - the head was a flat slab over a gap in the body): a cone of a snout, rounded
+    // across, grey above and white under; the lower jaw dropped, the mouth red between them, teeth along both jaws'
+    // edges, the black eye, the gill slits behind it. The body under the water runs on beneath it (above).
+    const HX0 = 64, HX1 = 113;
+    for (let x = HX0; x < HX1; x++) {
+      const u = (x - HX0) / (HX1 - HX0), hw = 12.5 * (1 - Math.pow(u, 2.4) * 0.82), rise = 2 + u * 9, th = 6 - u * 3.2;
+      for (let y = -Math.ceil(hw); y <= hw; y++) {
+        const v = y / hw; if (v < -1 || v > 1) continue;
+        const zt = rise + 8 - v * v * 3.2, zu = zt - th * (1 - v * v * 0.35);      // (the upper jaw's top and its underside)
+        m.box(x, cy + y, Math.max(2, zu), x + 1, cy + y + 1, zt, Math.abs(v) > 0.86 && u > 0.1 ? belly : back);
+        if (u < 0.84) {
+          const zl = 2.2 + u * 1.2 - v * v * 1.2;                                  // (the lower jaw, white, shorter than the snout)
+          m.box(x, cy + y, 0, x + 1, cy + y + 1, zl, belly);
+          if (u > 0.1 && Math.abs(v) < 0.82 && zu > zl + 0.6) m.box(x, cy + y, zl, x + 1, cy + y + 1, zu, mouth);
+        }
+      }
+      // teeth: a row along each jaw's edge, every other px, longer at the front
+      if (u > 0.16 && u < 0.97 && (x & 1)) for (const sd of [-1, 1]) {
+        const yy = cy + sd * hw * 0.84, zt = rise + 8 - 0.7 * 3.2, zu = zt - th * 0.83;
+        m.box(x, yy - 0.5, zu - 1.6 - u, x + 1, yy + 0.5, zu, teeth);
+        if (u < 0.82) m.box(x, yy - 0.5, 2 + u * 1.2, x + 1, yy + 0.5, 3.4 + u * 1.6, teeth);
+      }
     }
-    for (const sd of [-1, 1]) m.box(84, cy + sd * 9 - 0.5, 13, 86, cy + sd * 9 + 1, 15, eye);
+    for (const sd of [-1, 1]) {
+      m.box(86, cy + sd * 10 - 0.6, 11.2, 88, cy + sd * 10 + 0.6, 12.8, eye);
+      for (let g = 0; g < 3; g++) m.box(69 + g * 3, cy + sd * 12.2 - 0.3, 5.5, 70 + g * 3, cy + sd * 12.2 + 0.3, 9.5, dark);   // (gill slits)
+    }
   }
   m.smooth = 1;
   patchHidden(m);

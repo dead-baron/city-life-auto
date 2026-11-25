@@ -27460,3 +27460,11 @@ static images instead of animated").
   and round rocks (still pictures too - to look at with the creeks).
 tools/nature/darkscan.mjs `--seabridge n` finds the long bridges over open water. Baked: with the re-bake. Not seen
 in a running game.
+
+## 2026-11-25 · The shark's bite redrawn - on branch `fable-art-1124`
+The owner's note: "Shark animal is not right yet, doesn't look updated, when it opens it mouth to attack part of its
+head disappear and looks off". animals.js `sharkModel`: biting, the body under the water stopped at 62% of its length
+and a flat grey slab stood over the gap. Now the body runs on under the head, and the head is one: a cone of a snout
+rounded across, grey above and white under, the lower jaw dropped, the mouth red between, teeth along both jaws, the
+eye, gill slits. test/animalart.test.js (in all eight directions the biting shark is no smaller than the swimming
+one; white and red show). Picture: report-41. Actors' art: no re-bake. Not seen in a running game.

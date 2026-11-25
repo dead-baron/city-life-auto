@@ -109,3 +109,19 @@ test('the sparrow is its own picture at the art pixel; the game hands the painte
   assert.ok(!critterSprite('pigeon', 0, false).ap, 'px 1: the painted frame');
   setArtPx(2);
 });
+
+// The shark's bite (the owner, 11-25: "when it opens it mouth to attack part of its head disappear and looks off").
+// Biting, the head comes up out of the water over the body - nothing of the swimming shape goes missing under it -
+// and it is a head: grey above, white under, a red mouth, teeth, an eye.
+test('the shark biting: its head up over a whole body, in every direction', async () => {
+  const { animalModel, renderUpright } = await import('../client/art2/animals.js');
+  for (let d = 0; d < 8; d++) {
+    const r = (pose) => renderUpright(animalModel('shark', { pose, phase: 0 }), Math.PI / 2 + d * Math.PI / 4, { px: 2 });
+    const S = r('swim'), B = r('bite'), n = (G, f) => { let c = 0; for (let i = 0; i < G.w * G.h; i++) if (G.col[i * 4 + 3] && (!f || f(G.col[i * 4], G.col[i * 4 + 1], G.col[i * 4 + 2]))) c++; return c; };
+    assert.ok(n(B) >= n(S), `direction ${d}: the biting shark is no smaller than the swimming one (${n(B)} px, ${n(S)})`);
+    assert.ok(n(B, (R, G2, B2) => R > 190 && G2 > 190 && B2 > 180) >= 6, `direction ${d}: white - the underside and the teeth`);
+  }
+  const side = renderUpright(animalModel('shark', { pose: 'bite', phase: 0 }), Math.PI / 2, { px: 2 });
+  let red = 0; for (let i = 0; i < side.w * side.h; i++) if (side.col[i * 4 + 3] && side.col[i * 4] > 110 && side.col[i * 4 + 1] < 80) red++;
+  assert.ok(red >= 4, `the mouth shows red from the side (${red} px)`);
+});
