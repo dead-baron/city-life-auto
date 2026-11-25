@@ -330,7 +330,7 @@ export const trainSteps = (N) => Math.min(128, N * 2);
 // half way up - measured from the art (redwoods.js giantRedwood: where a third or more of nine trees is covered;
 // the giant's top band again when its dead tops went, task #399). The host fades one only when it's in front of you
 // (_treeCovers).
-const TREE_FADE = 1e6;
+const TREE_FADE = 1e6, EL_FADE = 4e5, UP_Z = 24;   // (EL_FADE..TREE_FADE: the El's deck and the highway decks - statics.js; UP_Z: you are up on one, not under it)
 const RW_OUTLINE = {
   giantL: [112, 80, 72, 64, 64, 64, 64, 64, 64, 104, 136, 144, 144, 136, 104, 88, 88, 80],
   gate: [124, 88, 80, 72, 72, 72, 72, 72, 72, 112, 144, 152, 152, 144, 112, 96, 96, 88, 80],   // (Giant's Gate: giantL a size up)
@@ -1372,7 +1372,8 @@ export class World2 {
     if (!F.sub && !F.spec && !riding) for (const st of this.chunkState.values()) { // (none while spectating)
       if (!st.blds) continue;
       for (const r of st.blds) {
-        const b = r[0], fading = (this.fades.get(b) || 0) !== 0, m = fading ? 16 : 0;
+        const b = r[0], fading = (this.fades.get(b) || 0) !== 0, m = fading ? 16 : 0, el = b >= EL_FADE && b < TREE_FADE;
+        if (el && (z0 > UP_Z || onTrain)) continue;   // (up on the deck or the platform, or riding the train on it: it stays)
         // (its foot north of yours: it stands behind you - unless its picture hangs out over you: an awning, a canopy over
         // its door. The owner, 11-22: "the awning over the doorway still hides a lot ... as soon as you go under the awning
         // ... it makes the awning partly transparent ... so you can see the doors open as you go inside". Its footprint
@@ -1383,7 +1384,7 @@ export class World2 {
         if (r[3] < px - rx - m || r[1] > px + rx + m || r[4] < sy - up - m || r[2] > sy + down + m) continue;
         // (thin: its picture much taller than wide, or narrow - a hut by a mast, a lighthouse, a silo)
         const pw = r[3] - r[1], ph = r[4] - r[2];
-        want.set(b, pw < 72 || pw * 2.2 < ph ? -1 : 1);
+        want.set(b, !el && (pw < 72 || pw * 2.2 < ph) ? -1 : 1);
       }
     }
     // the open ground round you (the owner, 11-25: "see the entire street and sidewalk from anywhere in the street ...
@@ -1392,6 +1393,7 @@ export class World2 {
     // up and down, never through a building or a wall - and every building whose picture lies over that ground fades.
     // A building you face from its own street covers none of it, and keeps its front. Worked out when you change tile.
     const M = this.map;
+    this._upZ = z0 > UP_Z;
     if (M && M.tiles && M.inside && !F.sub && !F.spec && !riding && !onTrain) {
       const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE), key = tx + ty * 65536 + this.chunkState.size * 4294967296;
       if (this._openKey !== key || (this._openN = (this._openN | 0) + 1) > 40) {   // (and now and then: chunks' buildings arrive)
@@ -1407,16 +1409,17 @@ export class World2 {
           }
           for (const st of this.chunkState.values()) for (const r of st.blds || []) {
             if (r[0] >= TREE_FADE) continue;
+            const el = r[0] >= EL_FADE;
             // (the ground its picture lies over: tiles of the open ground inside its picture, north of its foot)
             const a0 = Math.max(0, Math.ceil((r[1] + 8) / TILE - 0.5) - (tx - RX)), a1 = Math.min(GW - 1, Math.floor((r[3] - 8) / TILE - 0.5) - (tx - RX));
             const b0 = Math.max(0, Math.ceil(r[2] / TILE - 0.5) - (ty - RY)), b1 = Math.min(GH - 1, Math.floor(Math.min(r[4], r[5]) / TILE - 0.5) - (ty - RY));
             let n = 0;
             for (let gy = b0; gy <= b1 && n < 2; gy++) for (let gx = a0; gx <= a1; gx++) if (G[gy * GW + gx] && ++n >= 2) break;
-            if (n >= 2) { const pw = r[3] - r[1], ph = r[4] - r[2]; out.set(r[0], pw < 72 || pw * 2.2 < ph ? -1 : 1); }
+            if (n >= 2) { const pw = r[3] - r[1], ph = r[4] - r[2]; out.set(r[0], !el && (pw < 72 || pw * 2.2 < ph) ? -1 : 1); }
           }
         }
       }
-      for (const [b, sg] of this._openB) if (!want.has(b)) want.set(b, sg);
+      for (const [b, sg] of this._openB) if (!want.has(b) && !(this._upZ && b >= EL_FADE && b < TREE_FADE)) want.set(b, sg);
     }
     // each one's progress runs linearly (fadeP) and is shown through a smoothstep, so it eases in and out at both ends
     const dt = Math.min(0.1, F.dt || 0.016), P = this.fadeP || (this.fadeP = new Map());

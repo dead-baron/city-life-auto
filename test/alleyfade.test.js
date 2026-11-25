@@ -46,3 +46,23 @@ test('from the street behind a row - the far sidewalk under its roofs - the row 
   for (let i = 0; i < 30; i++) World2.prototype._fades.call(host, { dt: 0.1 }, { x: 26 * TILE, y: 17.5 * TILE, z: 0 });
   for (const b of [1, 2, 3, 4]) assert.ok(host.fades.get(b) > 0.8, `building ${b} along the street`);
 });
+
+// What stands over the street on legs (the owner, 11-25: "It would help if players can see under elevated platforms
+// like this railroad bridge, but im sure highways and maybe some other structures ... like we do behind buildings,
+// letting the player see a wide range under a bridge like this"). The El's deck pieces and the highway decks carry
+// fade ids from EL_FADE (statics.js): on the ground under or beside one, the pieces over your street fade - a wide
+// range, as the buildings do; up on the deck or the platform, or riding the train, it stays under you.
+test('the El over a street fades along the street when you are under it, and never when you are up on it', async () => {
+  const { EL_FADE, DECK_FADE } = await import('../client/art2/game/statics.js');
+  // a street on rows 16-23 with the El along it: its deck pieces 4 tiles long, feet at row 22's south edge, pictures up to row 13
+  const t3 = new Uint8Array(W * H).fill(T.BUILDING); for (let x = 5; x <= 70; x++) for (let y = 16; y <= 23; y++) t3[y * W + x] = T.ROAD;
+  const el = []; for (let c = 8; c < 64; c += 4) el.push([EL_FADE + c / 4, c * TILE, 13 * TILE, (c + 4) * TILE, 23 * TILE + 4, 23 * TILE, c * TILE, 23 * TILE - 2, (c + 4) * TILE, 23 * TILE]);
+  const run = (px, py, z, train) => { const host = { map: { ...map, tiles: t3 }, S: { pred: null, me: null }, fades: new Map(), _gz: () => 0, _treeCovers: World2.prototype._treeCovers, chunkState: new Map([[0, { blds: el }]]) }; for (let i = 0; i < 30; i++) World2.prototype._fades.call(host, { dt: 0.1, myTrain: train ? 1 : -1 }, { x: px, y: py, z }); return host.fades; };
+  const f = run(30 * TILE, 18.5 * TILE, 0);
+  const faded = el.filter((r) => f.get(r[0]) > 0.8).length;
+  assert.ok(faded >= 8, `under the El on the street: ${faded} of ${el.length} pieces along it fade (a wide range)`);
+  assert.ok(el.every((r) => !(f.get(r[0]) < 0)), 'as a building fades - not the thin ghost of a mast');
+  assert.equal(run(30 * TILE, 18.5 * TILE, 1).size, 0, 'up on the deck: it stays');
+  assert.equal(run(30 * TILE, 18.5 * TILE, 0, true).size, 0, 'riding the train: it stays');
+  assert.ok(EL_FADE >= 1e5 && DECK_FADE > EL_FADE && DECK_FADE + 499999 < 1e6, 'ids between the buildings\' and the trees\'');
+});

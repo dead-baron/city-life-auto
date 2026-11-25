@@ -27412,3 +27412,14 @@ where its middle comes out of the other's pavement (the other's half width over 
 px) - unless it is the one that carries straight on through the junction, which keeps them. Every fork in the world,
 not this one. test/groundedges.test.js (a Y, a T, a crossroads, a symmetric Y, a very sharp fork); seen at the first
 aid station's fork. Ground paint: with the re-bake.
+
+## 2026-11-25 · You can see under the El and the highway decks - on branch `fable-art-1124`
+The owner's note (PDF): "It would help if players can see under elevated platforms like this railroad bridge, but im
+sure highways and maybe some other structures ... like we do behind buildings, letting the player see a wide range
+under a bridge like this." The El's deck pieces (and its inclines from head height) and the highway decks are now
+fade items like buildings (statics.js `EL_FADE`, `DECK_FADE`: ids between the buildings' and the trees'; `fy`, a deck's
+foot line, read by chunkbake.js): on the ground under or beside one, the pieces over the street you stand on fade
+along it by the same open-ground rule (host.js `_fades`), clear round you, their rim kept; the bents and piers stay.
+Up on the deck or a platform (`UP_Z`) or riding the train, it stays under you. A deck fades as a building does, not
+as a thin mast. test/alleyfade.test.js; seen in a local game under a highway deck (today's world has no El: the El
+itself is untested in a running game). Baked: with the re-bake.

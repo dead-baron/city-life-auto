@@ -253,7 +253,7 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
         if (!k && blds.length < 63) { k = blds.length + 1; local.set(it.b, k); blds.push([it.b, Infinity, Infinity, -Infinity, -Infinity, -Infinity, Infinity, Infinity, -Infinity, -Infinity]); }
         if (k) {
           const r = blds[k - 1], e = it.fbox || it.ext || [0, 0, 0, 0];   // (fbox: what fades it, when narrower than its picture)
-          r[1] = Math.min(r[1], it.x - e[0]); r[2] = Math.min(r[2], it.y - (it.z0 || 0) - e[1]); r[3] = Math.max(r[3], it.x + e[2]); r[4] = Math.max(r[4], it.y + e[3]); r[5] = Math.max(r[5], it.y);
+          r[1] = Math.min(r[1], it.x - e[0]); r[2] = Math.min(r[2], it.y - (it.z0 || 0) - e[1]); r[3] = Math.max(r[3], it.x + e[2]); r[4] = Math.max(r[4], it.y + e[3]); r[5] = Math.max(r[5], it.fy !== undefined ? it.fy : it.y);   // (fy: a deck's foot line - its item's y is its corner)
           if (it.fp) { r[6] = Math.min(r[6], it.fp[0]); r[7] = Math.min(r[7], it.fp[1]); r[8] = Math.max(r[8], it.fp[2]); r[9] = Math.max(r[9], it.fp[3]); }
         }
       }
