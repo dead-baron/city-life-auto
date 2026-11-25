@@ -109,7 +109,8 @@ Chats that can run side by side: 4 with any other; nothing else safely.
 ## 6. Where things stand (2026-11-24, 09:00 PST - the Opus part of the pre-beta is done)
 **The art pass, 2026-11-25 07:00 PST (the Fable 5.2 chat; branch `fable-art-1124`, pushed; the DEVLOG's 11-24 and 11-25
 entries have each piece):**
-- **Live:** PR #48 only (11-25 01:35, his word) - the buildings over your street, sidewalk or alley go see-through.
+- **Live:** PR #48 (11-25 01:35, his word) - the buildings over your street, sidewalk or alley go see-through; PR #49
+  (09:10, his word) - they fade all but clear, and emotes run through their frames.
 - **On the branch, baked - goes out with ONE re-bake (~5 h) on his word:** the water pass; fields' edges, found places,
   trails; redwood rooms, footbridges, Fernwater Creek (a sample: he said "I believe so" to a network, wants to look at
   `report-39` first), wild banks, Mirage Lake's shore; **nature redrawn at the source** (palette.js `natRamp`,
@@ -117,12 +118,13 @@ entries have each piece):**
   redraw, do not correct afterwards); the fern kit planted (`fernKind`), wild spike flowers leaning, the giants'
   tops a mix of three, a stick bridge; a fork's centre lines; the El and highway decks fade from the ground; bridges
   on piers; no painted white at the sea's edge.
-- **On the branch, page code - no re-bake, live on his word:** faded buildings all but clear with a dissolving rim
-  (`GHOST` 0.94; he asked for it 11-25 03:05); emotes run through their frames (a faceplant falls flat - the poses
-  were never loaded for the page once the emote wheel had loaded them); the shark's bite redrawn.
+- **On the branch, page code - no re-bake, live on his word:** the shark's bite redrawn.
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
-- **Waiting on him:** whether "no snow" also means the world's existing snowfields; the creek network; the see-through and emote fixes to
-  main; the re-bake's go; the cloud-shadow still (`report-43`); the redwoods stood apart; the banks.
+- **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
+  with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all
+  but clear, emotes run through their frames.
+- **Waiting on him:** re-bake now or after more of the art (asked 09:15); the cloud-shadow still (`report-43`); the
+  redwoods stood apart; the banks.
 - **Next in the plan:** talus at the crags' feet, summits as knobs (a world change), alpine ledges, mountain water; then desert, coast and jungle, the water's edges (creek riffles' white is still painted), rocks; parts B, C.
 - **Tools made:** `tools/nature/darkscan.mjs` (the near-black census over the baked world; `--who`, `--place`, `--prop`,
   `--seabridge`), `tools/nature/paintscan.mjs`, `tools/causeways.mjs`; a running-game picture recipe in

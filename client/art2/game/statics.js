@@ -3282,7 +3282,7 @@ function addDecks(c, I) {
     if (X1 <= X0 || Y1 <= Y0) continue;
     const segs = e.list.map((i) => { const s = L.segs[i], ed = M.edges[s.edge] || {}; return [s.ax, s.ay, s.bx, s.by, s.hw, s.za, s.zb, s.ramp ? 1 : 0, ed.nl || 1, ed.median || 0, s.s0 || 0, ed.oneway ? 1 : 0, s.edge]; });
     // (deck: what staticItems needs to draw the barrier pieces smashed through here open - deckBroken)
-    put(I, { key: `dk:${e.cx}:${e.cy}`, recipe: { t: 'deck', x0: X0, y0: Y0, w: X1 - X0, h: Y1 - Y0, T: TM, segs }, x: X0, y: Y0, z0: 0, ext: [0, TM, X1 - X0, Y1 - Y0], deck: { X0, Y0, X1, Y1, segs: e.list }, fade: 1, b: DECK_FADE + ((e.cx & 511) * 512 + (e.cy & 511)) % 499999, fy: Y1, fp: [X0, Y1 - 2, X1, Y1] });
+    put(I, { key: `dk:${e.cx}:${e.cy}`, recipe: { t: 'deck', x0: X0, y0: Y0, w: X1 - X0, h: Y1 - Y0, T: TM, segs }, x: X0, y: Y0, z0: 0, ext: [0, TM, X1 - X0, Y1 - Y0], deck: { X0, Y0, X1, Y1, segs: e.list }, ...(DECK_SEE && { fade: 1, b: DECK_FADE + ((e.cx & 511) * 512 + (e.cy & 511)) % 499999, fy: Y1, fp: [X0, Y1 - 2, X1, Y1] }) });
   }
   // pillars: short piers under the deck's edges, turned with the deck
   const near = (x, y) => { let best = null, bd = 1e9; for (const s of L.segs) { if (!s || s.ramp) continue; let t = (x - s.ax) * s.ux + (y - s.ay) * s.uy; t = clamp(t, 0, s.len); const d = Math.hypot(x - s.ax - s.ux * t, y - s.ay - s.uy * t); if (d < bd) { bd = d; best = s; } } return best; };
@@ -3565,6 +3565,10 @@ const EL_PIECE = 128, EL_HW = 104, EL_STA_HW = 168, EL_STA_LEN = 400;
 // EL_FADE), a foot line along their south edge (fy), and no footprint to speak of - a deck's picture lies north of
 // the ground it stands over. The bents and piers stay.
 export const EL_FADE = 4e5, DECK_FADE = 5e5;
+// OFF for now (the owner, 11-25 09:03, of the picture under a highway deck: "The highway/bridge transparency not sure
+// that's right yet, maybe we leave that alone for now"): the pieces carry no fade ids, so the El and the decks are
+// drawn as they always were. The rule and its test stay (host.js _fades, test/alleyfade.test.js) for when he says.
+export const DECK_SEE = false;
 function addEl(c, I) {
   const E = c.M.el;
   if (!E) return;
@@ -3579,14 +3583,14 @@ function addEl(c, I) {
     for (let x = lo; x < hi; x += EL_PIECE) {
       const len = Math.min(EL_PIECE, hi - x), za = Math.round(Z * Math.abs(x - a) / (hi - lo)), zb = Math.round(Z * Math.abs(x + len - a) / (hi - lo));
       const r = { t: 'el', len, hw: EL_HW, za, zb, ramp: 1 };
-      put(I, { key: `el:r:${len}:${za}:${zb}`, recipe: r, x, y: yc + EL_HW, ext: [0, 2 * EL_HW + Math.max(za, zb) + 24, len, 4], ...(Math.min(za, zb) >= 48 ? { fade: 1, b: EL_FADE + Math.round(x / EL_PIECE) % 99999, fp: [x, yc + EL_HW - 2, x + len, yc + EL_HW] } : null) });   // (the incline fades once it is head high)
+      put(I, { key: `el:r:${len}:${za}:${zb}`, recipe: r, x, y: yc + EL_HW, ext: [0, 2 * EL_HW + Math.max(za, zb) + 24, len, 4], ...(DECK_SEE && Math.min(za, zb) >= 48 ? { fade: 1, b: EL_FADE + Math.round(x / EL_PIECE) % 99999, fp: [x, yc + EL_HW - 2, x + len, yc + EL_HW] } : null) });   // (the incline fades once it is head high)
     }
   }
   // the deck at full height
   for (let x = E.x1; x < E.x2; x += EL_PIECE) {
     const len = Math.min(EL_PIECE, E.x2 - x), st = atSta(x + len / 2), hw = st ? EL_STA_HW : EL_HW;
     const r = { t: 'el', len, hw, za: Z, zb: Z, ramp: 0, st: st ? 1 : 0, s: (x / EL_PIECE) % 4 };
-    put(I, { key: `el:d:${len}:${hw}:${r.st}:${r.s}`, recipe: r, x, y: yc + hw, ext: [0, 2 * hw + Z + 24, len, 4], fade: 1, b: EL_FADE + Math.round(x / EL_PIECE) % 99999, fp: [x, yc + hw - 2, x + len, yc + hw] });
+    put(I, { key: `el:d:${len}:${hw}:${r.st}:${r.s}`, recipe: r, x, y: yc + hw, ext: [0, 2 * hw + Z + 24, len, 4], ...(DECK_SEE && { fade: 1, b: EL_FADE + Math.round(x / EL_PIECE) % 99999, fp: [x, yc + hw - 2, x + len, yc + hw] }) });
     // the deck's lamps every other piece (and over the platforms)
     if (st || (x / EL_PIECE) % 3 === 0) lightAt(I, x + len / 2, yc + (st ? 120 : 0), Z + 40, st ? 220 : 160, [1, 0.88, 0.66], st ? 1.7 : 1.1, 'lamp', 1);
   }

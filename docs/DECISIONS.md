@@ -414,8 +414,18 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The mountains' crags are look B (the owner, 11-25 07:19, of three variants: "B for the mountain/cliffs is best, also
   were not doing snow yet so let's not do any snow for now"): a granite cliff one sheer wall half as tall again, its
   top the grey of the rock behind it, that rock in big light slabs rising in ledges along the land's contours. No
-  snow is drawn on the benches. The snowfields the world already has (above the snow line) are as they were - asked
-  11-25 whether "no snow for now" means those too.
+  snow is drawn on the benches. (Claude's question whether this meant "the world's existing snowfields" was wrong:
+  no snow has been drawn since 10-17 - the ground above the snow line is pale cut granite and scree; shown to him
+  11-25 09:15.)
+- The El and the highway decks do NOT go see-through for now (the owner, 11-25 09:03, on the picture under a deck:
+  "The highway/bridge transparency not sure that's right yet, maybe we leave that alone for now"): statics.js
+  `DECK_SEE` false - the rule and its test are kept for when he says.
+- The summits are built as knobs of rock from the plan (the owner, 11-25 09:03: "Build the summit from plans" -
+  docs/tasks/MOUNTAIN-LOOK-2026-11-25.md).
+- The redwoods get a network of creeks like Fernwater Creek (the owner, 11-25 09:03: "Creek looks good let's go with
+  it").
+- Live 11-25 09:10 (PR #49, his word "Push the transparent buildings and emotes"): faded buildings all but clear;
+  emotes run through their frames.
 - WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
   the consoles we are aiming for").
 - The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was

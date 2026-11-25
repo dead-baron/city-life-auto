@@ -53,7 +53,10 @@ test('from the street behind a row - the far sidewalk under its roofs - the row 
 // fade ids from EL_FADE (statics.js): on the ground under or beside one, the pieces over your street fade - a wide
 // range, as the buildings do; up on the deck or the platform, or riding the train, it stays under you.
 test('the El over a street fades along the street when you are under it, and never when you are up on it', async () => {
-  const { EL_FADE, DECK_FADE } = await import('../client/art2/game/statics.js');
+  const { EL_FADE, DECK_FADE, DECK_SEE } = await import('../client/art2/game/statics.js');
+  // (the owner, 11-25 09:03: "The highway/bridge transparency not sure that's right yet, maybe we leave that alone for
+  // now" - the rule below stays, the bake gives the El and the decks no fade ids until he says)
+  assert.equal(DECK_SEE, false, 'off for now: the El and the highway decks are drawn as they always were');
   // a street on rows 16-23 with the El along it: its deck pieces 4 tiles long, feet at row 22's south edge, pictures up to row 13
   const t3 = new Uint8Array(W * H).fill(T.BUILDING); for (let x = 5; x <= 70; x++) for (let y = 16; y <= 23; y++) t3[y * W + x] = T.ROAD;
   const el = []; for (let c = 8; c < 64; c += 4) el.push([EL_FADE + c / 4, c * TILE, 13 * TILE, (c + 4) * TILE, 23 * TILE + 4, 23 * TILE, c * TILE, 23 * TILE - 2, (c + 4) * TILE, 23 * TILE]);

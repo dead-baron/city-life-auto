@@ -26,8 +26,9 @@ Picture: the crag at tiles 684, 588, game pixel, noon light - `report-38.png`.
 ## His pick (11-25 07:19): B, and no snow
 "B for the mountain/cliffs is best, also were not doing snow yet so let's not do any snow for now." B is in: the
 switch is gone (statics.js `cliffH` / `CRAG_TALL`, terrain.js style `crag`, ground.js `crag`, groundbake.js `LEDGE`);
-C's snow is taken out; test/crags.test.js. The world's own snowfields above the snow line are untouched - asked
-whether he means those as well.
+C's snow is taken out; test/crags.test.js. There is no other snow: since 10-17 the ground above the snow line is
+drawn as pale granite (the quarry's cut slabs) and scree - it reads as neither snow nor a summit; natural slabs for it
+go with the summits' build.
 
 ## What a pick leads to (in this order)
 1. The crags' look he picks, for every granite band (and tried on the desert's sandstone and the coasts' basalt).

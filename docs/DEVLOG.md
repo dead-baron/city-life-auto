@@ -27507,3 +27507,11 @@ test/crags.test.js (the numbers, the pass order); test/cliffs.test.js passes wit
 crag at tiles 684, 588 and at Summit Tarn. No bake-level test of the apron (it needs a World v3 build: by picture
 and the census tool). The summits as knobs: a plan in docs/tasks/MOUNTAIN-LOOK-2026-11-25.md, not built. The bake's
 code: 1,095 of 1,100 KB.
+
+## 2026-11-25 · PR #49 live; the El's and the decks' see-through off for now - on branch `fable-art-1124`
+The owner, 09:03: "Push the transparent buildings and emotes" - PR #49 merged to main (engine.js `GHOST` 0.94 and its
+rim; peds.js the emotes' poses; version.json's world and art hashes unchanged; 27 tests on the main copy). "The
+highway/bridge transparency not sure that's right yet, maybe we leave that alone for now" - statics.js `DECK_SEE`
+false: the El's pieces and the highway decks carry no fade ids, the rule and its test stay. "Build the summit from
+plans"; "Creek looks good let's go with it" - next. His question about snowfields: none is drawn (10-17: the ground
+above the snow line is pale cut granite and scree) - Claude's earlier wording was wrong; corrected in DECISIONS.
