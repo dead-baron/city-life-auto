@@ -51,7 +51,7 @@ import { coastByHand3 } from './world3-coast.js';
 import { tropic3 } from './world3-tropic.js';   // (the nature showcase: Coral Cay's east lobe as NA1-E, Macaw Cove as SC3-H)
 import { mirageByHand3 } from './world3-mirage.js';
 import { fallsInView3 } from './world3-falls.js';
-import { redwoodsByHand3 } from './world3-redwoods.js';
+import { redwoodsByHand3, thinRedwoods3 } from './world3-redwoods.js';
 import { ledgeFalls3 } from './world3-ledgefalls.js';
 import { beachCamps3 } from './world3-camps.js';
 import { driveTree3 } from './world3-drivetree.js';
@@ -334,6 +334,7 @@ export function worldOpts(asked) {
       m.world3.desertWaters = desertWaters3(m, H3);   // (the desert's waters: tinajas in the slickrock at the cliffs' feet, seep pools in the dam's dry wash - world3-tinajas.js)
       m.world3.redwoods = redwoodsByHand3(m, H3);   // (the nature showcase: Redwood Creek Falls, Hidden Pool and the Giants Loop by the owner's concepts, their kit spread to the woods' other falls, glades and trails - world3-redwoods.js)
       m.world3.redrock = desertKit3(m, H3);   // (the red rock desert by hand - the nature showcase, 10-31: every tinaja a waterhole in a dry wash, the trailhead on the highway, the pull-offs, the Red Rock Trail's start, Mirage Camp and the arch dressed from the kit - redrock.js)
+      m.world3.redwoodThin = thinRedwoods3(m, H3);   // (the art pass, 11-24: no redwood's trunk right behind another's - world3-redwoods.js)
       m.world3.wayside = buildWayside3(m, H3);   // (the art pass, 11-24: the woods' and the meadows' found places - ruins, an oak with a bench, a fire ring, a dry-stone wall and its gate, an oak with a swing: world3-wayside.js; after every place made by hand)
       m.world3.fallsView = fallsInView3(m, H3);   // (the falls chain, part 1: no tree standing where it would hide a fall - world3-falls.js)
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)

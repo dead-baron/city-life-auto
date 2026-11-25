@@ -8,7 +8,7 @@ import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { T, TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
-import { REDWOODS3 } from '../shared/world3-redwoods.js';
+import { REDWOODS3, THIN } from '../shared/world3-redwoods.js';
 import { prepare } from '../tools/world3-build.mjs';
 import * as RK from '../client/art2/props-redwoods.js';
 
@@ -73,4 +73,22 @@ test('World v3: Redwood Creek Falls, Hidden Pool and the Giants Loop by hand; th
   assert.equal(R.glades.length, REDWOODS3.glades.length, 'the other glades dressed');
   assert.ok(R.trails.length === REDWOODS3.trails.length && R.trails.every(([, f]) => f > 5), `the trails' edges (${JSON.stringify(R.trails)})`);
   for (const p of m.props) if (p && p.t === 'rk' && p.k === 'cols') assert.ok(!wet(p.x, p.y - 12), `columns on dry ground (${p.x},${p.y})`);
+
+  // The redwoods stood apart (thinRedwoods3; the art pass, 11-24): none with a nearer redwood's trunk right in front of
+  // its own - but for the trees of a place made by hand, whose ground is kept - and the woods still woods.
+  const TH = m.world3.redwoodThin, rwAll = m.props.filter((p) => p && p.t === 'redwood' && THIN.hw[p.sp] !== undefined);
+  console.log('redwoods thinned', JSON.stringify(TH), 'standing', rwAll.length);
+  assert.ok(TH.gone > 1500 && TH.gone < TH.redwoods * 0.25, `some went, most stay (${TH.gone} of ${TH.redwoods})`);
+  assert.ok(rwAll.length > 12000, `the woods still woods (${rwAll.length} redwoods)`);
+  const TG = 8 * TILE, grid = new Map();
+  for (const p of rwAll) { const k = Math.floor(p.x / TG) * 65536 + Math.floor(p.y / TG); let a = grid.get(k); if (!a) grid.set(k, (a = [])); a.push(p); }
+  const TF = THIN.front * TILE, made = (p) => !!(m.reserve[m.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))] & 32);
+  let behind = 0, byHand = 0;
+  for (const p of rwAll) {
+    let cov = false;
+    for (let cy = Math.floor(p.y / TG); cy <= Math.floor((p.y + TF) / TG) && !cov; cy++) for (let cx = Math.floor((p.x - 140) / TG); cx <= Math.floor((p.x + 140) / TG) && !cov; cx++) for (const q of grid.get(cx * 65536 + cy) || []) if (q !== p && q.y > p.y + 16 && q.y < p.y + TF && Math.abs(q.x - p.x) < THIN.hw[q.sp] + THIN.hw[p.sp] * 0.5) { cov = true; break; }
+    if (cov) { if (made(p)) byHand++; else behind++; }
+  }
+  console.log('redwoods behind another', JSON.stringify({ behind, byHand }));
+  assert.equal(behind, 0, 'no wild redwood right behind another');
 });

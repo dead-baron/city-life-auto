@@ -49,6 +49,9 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
      worn tracks that fade in, a country car park's edge (DEVLOG "Fields with edges ..."). Left of the farm: its
      yards against D13 (tyre tracks, hay, a tractor, a track between fields).
    - Redwood: still denser than N1; the fern layer over the floor, creek and paths; a walk-in hollow trunk, a root cave.
+     Done 11-24: 2,915 redwoods out from right behind another's trunk (`thinRedwoods3`); the fern layer counted - 2%
+     of the undergrowth reaches over a path, the creek clear. Left: the hollow trunk and the root cave (new places);
+     a straight-edged light patch at Hidden Pool to look at in a running game; his call on more high crowns deep in.
    - Mountain: the six ledge falls' setting (the river below lower and darker); the redwood horseshoe against NR1-E;
      standing stones that barely read; lichen boulders; the Summit Tarn placeholder (a shelf and a rock face the land
      really has, N5). 11-23: the lake that is a perfect oval; birds flying through rock art.

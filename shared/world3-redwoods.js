@@ -476,3 +476,38 @@ function giantsLoop(C, t) {
   for (const k of [12, 33, 55]) if (k < line.length) C.prop('rk', line[k][0] - 30, line[k][1] + 8, 0, { k: 'ray', w: 76, h: 320, s: (k & 3) + 1 });
   return { line: line.length, giants, creek: cr.tiles, bridge: cr.bridge, ferns: e.ferns };
 }
+
+// The redwoods stood apart (the art pass, 2026-11-24; the nature status of 11-21: "Redwood woods still denser than concept
+// N1"). By count the grove is N1's - two giants to a 16 x 16-tile patch - but a trunk is 17 to 24 tiles tall in this
+// view, and 40% of the redwoods had another standing right in front of theirs: trunk on trunk, a brown wall, the
+// floor and its ferns unseen (measured 11-24: 6,559 of 16,546). A redwood whose trunk a nearer one covers - within
+// FRONT tiles south of it, their trunks overlapping - goes; taken from the south, so the one in front is the one that
+// stays. Not the trees of a place made by hand (its ground is kept: the Giants Loop's giants, a clearing's fairy ring,
+// Giant's Gate), and never the last trees of a patch: the woods stay woods (the test holds the count kept).
+//   thinRedwoods3(m, H3) -> { redwoods, gone }
+export const THIN = { front: 6, hw: { giantL: 70, giant: 54, giantS: 40, redwood2: 16, redwood: 30 } };
+export function thinRedwoods3(m, H3) {
+  const out = { redwoods: 0, gone: 0 };
+  if (!H3 || !H3.removeProps) return out;
+  const W = m.w, rw = [];
+  for (const p of m.props) if (p && p.t === 'redwood' && THIN.hw[p.sp] !== undefined) rw.push(p);
+  out.redwoods = rw.length;
+  rw.sort((a, b) => b.y - a.y || a.x - b.x);   // (from the south: nearest the camera first)
+  const G = 8 * TILE, kept = new Map(), drop = new Set(), F = THIN.front * TILE;
+  for (const p of rw) {
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE), made = tx >= 0 && ty >= 0 && tx < W && ty < m.h && (m.reserve[ty * W + tx] & RES);
+    let covered = false;
+    if (!made) {
+      const hp = THIN.hw[p.sp];
+      for (let cy = Math.floor(p.y / G); cy <= Math.floor((p.y + F) / G) && !covered; cy++) for (let cx = Math.floor((p.x - 140) / G); cx <= Math.floor((p.x + 140) / G); cx++) {
+        for (const q of kept.get(cx * 65536 + cy) || []) if (q.y > p.y + 16 && q.y < p.y + F && Math.abs(q.x - p.x) < THIN.hw[q.sp] + hp * 0.5) { covered = true; break; }
+        if (covered) break;
+      }
+    }
+    if (covered) { drop.add(p.x + ',' + p.y); continue; }
+    const k = Math.floor(p.x / G) * 65536 + Math.floor(p.y / G); let a = kept.get(k); if (!a) kept.set(k, (a = [])); a.push(p);
+  }
+  if (drop.size) { const before = m.props.length; H3.removeProps(m, (x, y) => drop.has(x + ',' + y)); out.gone = before - m.props.length; }
+  return out;
+}
+

@@ -27163,3 +27163,29 @@ field's own stubble; the lot's edge not against paving; two ruts or one, the fad
 In the built world: 66 strips cut back, 30 gone, 497 plants with them, of 513 strips. Run and passing (88 tests):
 world3wayside, placementlint (its rows hold), perf (the bake's budgets), harvestart, world3dirt, redrock,
 world3kestrel, undergrowth, mapwindow, dmath, waterbake, groundedges. Not run: the whole suite.
+
+## 2026-11-24 · The redwoods stood apart (2,915 trunks out from behind others) - on branch `fable-art-1124`
+The nature status of 11-21: "Redwood woods still denser than concept N1". Rendered first (the Giants Loop, Hidden Pool,
+a plain stretch of grove, the Highland Way) and counted: by number the grove is N1's already - a median of two giants
+to a 16 x 16-tile patch, four at the ninetieth percentile - but a trunk stands 17 to 24 tiles tall in this view, and
+6,559 of the 16,546 redwoods (40%) had another standing right in front of their trunk. Trunk on trunk reads as a
+brown wall, the floor between unseen.
+`thinRedwoods3` (shared/world3-redwoods.js, called after the redwoods' places made by hand): taken from the south, a
+redwood goes if a kept one stands within 6 tiles in front of it with their trunks overlapping. The trees of a place
+made by hand - on ground that place keeps: the Giants Loop's giants, a clearing's fairy ring, Giant's Gate - all
+stay. 2,915 gone (18%), 13,631 standing; 22% still have a trunk in front further off than 6 tiles (was 40%).
+What it does not change, on purpose: where a redwood carries its crown. The lower boughs are most of what still
+covers the floor in a plain stretch of grove, and that mix is the owner's of 11-21 15:39 ("use C for areas it's
+covering the paths but in other areas a combo of A or B"). If he wants the deep grove opener still, more high crowns
+there is the next lever - his call (on the check list, with the picture).
+Also counted, of the 11-21 note "the fern layer covers the floor, the creek and the paths": of 8,731 undergrowth
+pieces in the chunks round six redwood places, 179 (2%) reach over a dirt path by their width and 3 over water - the
+paths and the creek read clear in the pictures. Nothing changed there.
+Not done: the walk-in hollow trunk and the root cave (NS1-A) - new pieces, each a place to walk into: not started.
+Seen at Hidden Pool, not explained: a lighter straight-edged patch on the glade's floor in the offline picture (a
+light shaft, or the offline picture's own way of drawing one) - to look at in a running game before anything is
+touched.
+Test: test/world3redwoods.test.js (no wild redwood right behind another; more than 12,000 still standing). A world
+change: with the nature batch, on the owner's word.
+Run and passing: world3redwoods, world3wayside (the found places as before: 18 and 16), world3clearings,
+world3woods, undergrowth, placementlint, wildfolk, foraging, perf, dmath. Not run: the whole suite.

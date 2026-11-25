@@ -10,6 +10,11 @@ added as the work goes; a line he has checked is marked with his word and the da
   turquoise that reached far out is gone with the dark and azure blocks. Picture: `report-4-sea-blocks`. If he wants
   the wide turquoise back: two numbers (water.js FAR0 / FAR1).
 
+- [ ] **The redwoods stood apart.** 2,915 of 16,546 redwoods (18%) taken out from right behind another's trunk, so
+  trunks read one by one and more floor shows. Picture: `report-10-redwoods` - the change is modest. Judge: keep it;
+  and whether the deep grove should open further, which would mean more high crowns there (his 11-21 call was high
+  crowns over paths, creeks and roads, a mix deeper in).
+
 **In the game, when the batch is live**
 Water
 - [ ] **The shore wave** - any beach (Sunset Beach, the pier at Westport). It came in as a ruled white line, fast; now
