@@ -1,38 +1,48 @@
-// A whole stretch of alley opens up, not one building (client/art2/game/host.js _fades; the owner, 11-25 01:13: "It
-// shows one building transparent but you cant see through the other ones. Could we have more buildings go transparent
-// when they're blocking an alley or street"). Once a building hides you, the others hiding the same alley or street
-// along your row fade too - as far as the ground stays open, FADE_REACH tiles at most; nothing fades while you stand
-// in the clear; a building past a wall across the alley, or beyond the reach, stays.
+// The open ground round you is never hidden (client/art2/game/host.js _fades; the owner, 11-25 01:13: "It shows one
+// building transparent but you cant see through the other ones", and 01:24: "it would be good to see the entire street
+// and sidewalk from anywhere in the street here ... so nobody can hide"). The street, sidewalk or alley you stand on is
+// followed out from your tile - FADE_REACH tiles along, FADE_ACROSS up and down, not through a building or a wall -
+// and every building whose picture lies over that ground fades. A building faced from its own street keeps its front.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { World2, FADE_REACH } from '../client/art2/game/host.js';
+import { World2, FADE_REACH, FADE_ACROSS } from '../client/art2/game/host.js';
 import { TILE, T } from '../shared/constants.js';
 
-// an alley along row 20, open from column 5 to 60 but for a wall at column 40; buildings south of it (feet at y 760)
-// whose pictures rise over the alley's row: A (cols 8-14), B (16-22: the one over the player), C (24-30), D past the
-// wall (42-48), E far along (beyond the reach from B, before the wall: none fits - so the reach is tested from A)
-const W = 80, H = 40, tiles = new Uint8Array(W * H).fill(T.BUILDING);
-for (let x = 5; x <= 60; x++) if (x !== 40) tiles[20 * W + x] = T.SIDEWALK;
+// A row of buildings, footprints on rows 21-23 (feet at y 760), their pictures rising to y 560: over the alley behind
+// them (row 20, open from column 5 to 70 but for a wall at column 40). Their own street in front: rows 24-27. A second
+// street far north (rows 4-6), with nothing over it.
+const W = 90, H = 40, tiles = new Uint8Array(W * H).fill(T.BUILDING);
+for (let x = 5; x <= 70; x++) { if (x !== 40) tiles[20 * W + x] = T.SIDEWALK; for (let y = 24; y <= 27; y++) tiles[y * W + x] = T.ROAD; for (let y = 4; y <= 6; y++) tiles[y * W + x] = T.ROAD; }
+tiles[20 * W + 40] = T.WALL;
 const map = { props: [], tiles, inside: (x, y) => x >= 0 && y >= 0 && x < W && y < H, idx: (x, y) => y * W + x };
-const bld = (id, c0, c1) => [id, c0 * TILE, 560, (c1 + 1) * TILE, 770, 760];   // (picture from y 560 to 770, foot at 760: it covers row 20 = y 640..672)
-const blds = [bld(1, 8, 14), bld(2, 16, 22), bld(3, 24, 30), bld(4, 42, 48)];
+const bld = (id, c0, c1) => [id, c0 * TILE, 560, (c1 + 1) * TILE, 770, 760];
+const blds = [bld(1, 8, 14), bld(2, 16, 22), bld(3, 24, 30), bld(4, 42, 48), bld(5, 62, 68)];
 function fades(px, py) {
   const host = { map, S: { pred: null, me: null }, fades: new Map(), _gz: () => 0, _treeCovers: World2.prototype._treeCovers, chunkState: new Map([[0, { blds }]]) };
   for (let i = 0; i < 30; i++) World2.prototype._fades.call(host, { dt: 0.1 }, { x: px, y: py, z: 0 });
   return host.fades;
 }
 
-test('behind one building of an alley, the buildings hiding the alley either side fade with it', () => {
-  const f = fades(19 * TILE, 20.5 * TILE);
-  assert.ok(f.get(2) > 0.8, 'the one over you');
-  assert.ok(f.get(1) > 0.8 && f.get(3) > 0.8, 'its neighbours along the alley');
-  assert.ok(!f.get(4), 'the one past the wall across the alley stays');
+test('in an alley, every building over the alley fades - not only the one over you - as far as the alley is open', () => {
+  const f = fades(19 * TILE, 20.5 * TILE);   // (behind B)
+  assert.ok(f.get(1) > 0.8 && f.get(2) > 0.8 && f.get(3) > 0.8, 'the one over you and its neighbours along the alley');
+  assert.ok(!f.get(4) && !f.get(5), 'past the wall across the alley: kept');
+  const g = fades(33.5 * TILE, 20.5 * TILE);   // (in the alley where nothing covers you: the stretch is open all the same)
+  assert.ok(g.get(2) > 0.8 && g.get(3) > 0.8, 'the buildings over the alley either side of a gap');
+  const e = fades(45 * TILE, 20.5 * TILE);     // (east of the wall)
+  assert.ok(e.get(4) > 0.8 && !e.get(3), 'its own side of the wall only');
+  assert.ok(!e.get(5) || FADE_REACH >= 17, 'and no further than the reach');
 });
-test('in the clear nothing fades; the stretch ends at the reach', () => {
-  assert.equal(fades(19 * TILE, 30 * TILE).size, 0, 'south of them all, in front: nothing');
-  assert.equal(fades(32.5 * TILE, 20.5 * TILE).size, 0, 'in the alley where no building covers you: nothing');
-  assert.ok(FADE_REACH >= 8 && FADE_REACH <= 24);
-  const f = fades(8.5 * TILE, 20.5 * TILE);   // (behind the west end of A: C starts 16 tiles on - beyond the reach)
-  assert.ok(f.get(1) > 0.8 && f.get(2) > 0.8, 'A and B');
-  assert.ok(FADE_REACH >= 15 || !f.get(3), 'C is beyond the reach from here');
+test('a building faced from its own street keeps its front; an open street with nothing over it fades nothing', () => {
+  assert.equal(fades(19 * TILE, 26.5 * TILE).size, 0, 'on the street in front of the row');
+  assert.equal(fades(19 * TILE, 5.5 * TILE).size, 0, 'on a street nothing lies over');
+  assert.deepEqual([...fades(19 * TILE, 22.5 * TILE).keys()], [2], 'under a building\'s own picture, off the open ground: that one alone, as before');
+  assert.ok(FADE_REACH >= 12 && FADE_REACH <= 28 && FADE_ACROSS >= 4 && FADE_ACROSS <= 12);
+});
+test('from the street behind a row - the far sidewalk under its roofs - the row fades', () => {
+  // (a street on rows 17-20 instead of the one-tile alley: you stand on its north side, the row's roofs lie over its south)
+  const t2 = tiles.slice(); for (let x = 5; x <= 70; x++) for (let y = 17; y <= 20; y++) t2[y * W + x] = T.ROAD;
+  const host = { map: { ...map, tiles: t2 }, S: { pred: null, me: null }, fades: new Map(), _gz: () => 0, _treeCovers: World2.prototype._treeCovers, chunkState: new Map([[0, { blds }]]) };
+  for (let i = 0; i < 30; i++) World2.prototype._fades.call(host, { dt: 0.1 }, { x: 26 * TILE, y: 17.5 * TILE, z: 0 });
+  for (const b of [1, 2, 3, 4]) assert.ok(host.fades.get(b) > 0.8, `building ${b} along the street`);
 });

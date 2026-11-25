@@ -22,7 +22,7 @@ import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bak
 // see-through buildings (_fades): seconds to ease in and out; the clear space's radius round you on foot, in a vehicle at
 // most (else half its length + 34 px), round another player
 export const FADE_IN = 0.35, FADE_OUT = 0.5, CLR_FOOT = 64, CLR_VEH_MAX = 130, CLR_OTHER = 48;
-export const FADE_REACH = 14;   // tiles either way along your row: the stretch of an alley or street opened up with you (_fades)
+export const FADE_REACH = 20, FADE_ACROSS = 7;   // tiles: how far the open ground round you is followed, along and up or down - what lies over it fades (_fades)
 const AWN_MIN = 6;   // a building's picture this far south of its foot is an overhang you can stand under (_fades)
 const XF_MS = 320;   // a walk-in's swap: its pixel dissolve (engine.js XF_MS - the same; the engine loads lazily)
 const TURRET_TOP = 47;   // (_turret)
@@ -1386,21 +1386,37 @@ export class World2 {
         want.set(b, pw < 72 || pw * 2.2 < ph ? -1 : 1);
       }
     }
-    // the stretch (the owner, 11-25: "more buildings go transparent when they're blocking an alley or street"): once
-    // a building hides you, the others hiding the same alley or street go too - as far along your row as the ground
-    // stays open, FADE_REACH tiles at most either way
+    // the open ground round you (the owner, 11-25: "see the entire street and sidewalk from anywhere in the street ...
+    // so nobody can hide"; "more buildings go transparent when they're blocking an alley or street"): the street,
+    // sidewalk or alley you stand on is followed out from your tile - FADE_REACH tiles either way along, FADE_ACROSS
+    // up and down, never through a building or a wall - and every building whose picture lies over that ground fades.
+    // A building you face from its own street covers none of it, and keeps its front. Worked out when you change tile.
     const M = this.map;
-    if (M && M.tiles && M.inside && [...want.keys()].some((b) => b < TREE_FADE)) {
-      const ty = Math.floor(py / TILE), tx = Math.floor(px / TILE), open = (x) => M.inside(x, ty) && M.tiles[M.idx(x, ty)] !== TT.BUILDING;
-      let xl = tx, xr = tx;
-      while (tx - xl < FADE_REACH && open(xl - 1)) xl--;
-      while (xr - tx < FADE_REACH && open(xr + 1)) xr++;
-      const x0 = xl * TILE, x1 = (xr + 1) * TILE;
-      for (const st of this.chunkState.values()) for (const r of st.blds || []) {
-        if (r[0] >= TREE_FADE || want.has(r[0]) || r[5] <= py + 2 || r[3] < x0 || r[1] > x1 || r[4] < sy - up || r[2] > sy + down) continue;
-        const pw = r[3] - r[1], ph = r[4] - r[2];
-        want.set(r[0], pw < 72 || pw * 2.2 < ph ? -1 : 1);
+    if (M && M.tiles && M.inside && !F.sub && !F.spec && !riding && !onTrain) {
+      const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE), key = tx + ty * 65536 + this.chunkState.size * 4294967296;
+      if (this._openKey !== key) {
+        this._openKey = key;
+        const RX = FADE_REACH, RY = FADE_ACROSS, GW = RX * 2 + 1, GH = RY * 2 + 1, G = this._openG || (this._openG = new Uint8Array(GW * GH)), out = this._openB || (this._openB = new Map());
+        G.fill(0); out.clear();
+        const open = (x, y) => { if (!M.inside(x, y)) return false; const t = M.tiles[M.idx(x, y)]; return t !== TT.BUILDING && t !== TT.WALL; };
+        if (open(tx, ty)) {
+          const q = [RX, RY]; G[RY * GW + RX] = 1;
+          for (let h = 0; h < q.length; h += 2) {
+            const gx = q[h], gy = q[h + 1];
+            for (let d = 0; d < 4; d++) { const nx = gx + (d === 0) - (d === 1), ny = gy + (d === 2) - (d === 3); if (nx < 0 || ny < 0 || nx >= GW || ny >= GH || G[ny * GW + nx] || !open(tx - RX + nx, ty - RY + ny)) continue; G[ny * GW + nx] = 1; q.push(nx, ny); }
+          }
+          for (const st of this.chunkState.values()) for (const r of st.blds || []) {
+            if (r[0] >= TREE_FADE) continue;
+            // (the ground its picture lies over: tiles of the open ground inside its picture, north of its foot)
+            const a0 = Math.max(0, Math.ceil((r[1] + 8) / TILE - 0.5) - (tx - RX)), a1 = Math.min(GW - 1, Math.floor((r[3] - 8) / TILE - 0.5) - (tx - RX));
+            const b0 = Math.max(0, Math.ceil(r[2] / TILE - 0.5) - (ty - RY)), b1 = Math.min(GH - 1, Math.floor(Math.min(r[4], r[5]) / TILE - 0.5) - (ty - RY));
+            let n = 0;
+            for (let gy = b0; gy <= b1 && n < 2; gy++) for (let gx = a0; gx <= a1; gx++) if (G[gy * GW + gx] && ++n >= 2) break;
+            if (n >= 2) { const pw = r[3] - r[1], ph = r[4] - r[2]; out.set(r[0], pw < 72 || pw * 2.2 < ph ? -1 : 1); }
+          }
+        }
       }
+      for (const [b, sg] of this._openB) if (!want.has(b)) want.set(b, sg);
     }
     // each one's progress runs linearly (fadeP) and is shown through a smoothstep, so it eases in and out at both ends
     const dt = Math.min(0.1, F.dt || 0.016), P = this.fadeP || (this.fadeP = new Map());

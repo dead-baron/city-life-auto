@@ -27351,10 +27351,14 @@ The bake's code budget: still 1,080 KB - twelve comments from this pass cut down
 Seen: plant sheets with the game's noon light; offline renders at the art pixel. NOT seen in the running game: five
 tries to photograph World v3 in the local game failed on the tool (PREBETA-LIST). The whole suite has not been run.
 
-## 2026-11-25 · A stretch of alley opens up when a building hides you - on branch `fable-art-1124`
-The owner's screenshot of an Old Town alley: the one building over him a ghost, its neighbours solid over the same
-alley. `host.js` `_fades`: once any building hides you, every building whose picture covers your row of ground fades
-with it, along the row either way for as long as the ground stays open (not a building's tile), `FADE_REACH` 14 tiles
-at most. Nothing fades while you stand in the clear, so an open street is as it was. Page-side: no re-bake; it goes
-live with the page. `test/alleyfade.test.js`. Controls unchanged (README table as it was).
-Not seen in a running game: how it reads on a wide street with a tall row to its south, and in a vehicle.
+## 2026-11-25 · The open ground round you is never hidden - on branch `fable-art-1124`
+The owner's two screenshots: an Old Town alley with the one building over him a ghost and its neighbours solid; a
+street at night with the far sidewalk under the roofs of the row to its south ("see the entire street and sidewalk
+from anywhere in the street ... so nobody can hide"). `host.js` `_fades` had one rule - the building whose picture
+covers your own figure fades. Added: the ground you stand on is followed out from your tile (a flood over tiles that
+are not a building or a wall: `FADE_REACH` 20 tiles either way along, `FADE_ACROSS` 7 up and down), and every
+building whose picture lies over two or more tiles of it, north of its own foot, fades. So the row whose roofs hang
+over the street you are on goes see-through for the length of the block, and a whole alley opens when you step into
+it; a building faced from its own street lies over none of your ground and keeps its front. Worked out when you
+change tile (a few hundred tile reads), not every frame. Page-side: no re-bake. `test/alleyfade.test.js`.
+Not seen in a running game: how much of a city street ghosts at once, at an intersection, and from a vehicle.
