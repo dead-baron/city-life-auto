@@ -616,3 +616,17 @@ its something that can wait lets make note of it and revisit at the right time."
 - Summit Tarn's outflow ends on the scree after 20 tiles; south of it a road, then a band of rock 40 tiles deep. A
   cascade down the band is the fix (art + world, part A, the mountains' water).
 
+### 11-25 13:33, the owner's notes while looking at the mountain streams ("prioritize correctly dont let me stop the plan")
+- **Train riders swim for a few seconds** ("in some places the train might be registering as in water and all the
+  people on the train will do a swimming animation for a few seconds then go back to normal"). A system fault (the
+  riders' pose is taken from the tile under the car - a bridge or a causeway over water): systems, package 3. To find:
+  every stretch of track over water tiles, counted from the data; a test that a rider's pose never reads the ground.
+- **The train going into a tunnel** ("you see the front of the train go through the tunnel entrance and still looks
+  like its above ground before your screen transitions underground so we need to hide the front part of the train in
+  front of you as it goes into the tunnel"). Page drawing: the cars past the portal are not drawn above ground (cut at
+  the portal's line). Art pass, part B (transit), or sooner if a transit pass comes first.
+- **Tunnel mouths and what they lead into do not line up** (the trains' portals; his words under DECISIONS, "Water
+  under a road"). The class: every portal and every water-under-road crossing - the arrival bores (16), the subway's
+  mouths, the town creeks' and county roads' culverts. The creeks' own crossings are a bridge deck now (11-25); the
+  rest in part B (transit) with the same rule: what goes in is seen to go under.
+

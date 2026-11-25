@@ -45,19 +45,20 @@ export const CREEKS3 = {
   // least `min` tiles long; a road passed in a culvert of at most `culvert` tiles; a pond's half axes (px)
   // (px); stall: over this many steps of its trace it got no further than this many tiles - it is winding round a
   // hollow's floor: the pond is put where that began (was: a scribble of creek 500 tiles long, round and round)
-  net: { n: 7, dist: 47, grid: 56, apart: 110, dry: 14, min: 40, culvert: 12, pond: [150, 108], room: 40, stall: [12, 12], reach: 12,
+  net: { n: 7, dist: 47, grid: 56, apart: 110, dry: 14, min: 40, culvert: 12, pond: [150, 108], room: 40, stall: [12, 12], reach: 16,
     names: ['Salamander Creek', 'Thimbleberry Run', 'Mossy Fork', 'Owl Hollow Creek', 'Sorrel Brook', 'Dipper Creek', 'Huckleberry Run', 'Newt Creek'] },
   // the mountains' streams (11-25, the owner's note: "water chunks that blend into the mountainous area above and
   // foothills below"; counted: Granite Peaks had one tarn and not one running water in 572,588 tiles of land): the same
   // rule over Granite Peaks - a spring may rise on scree, a path there is a trail's own tiles (the scree is dirt too),
   // bare granite boulders and no ferns, clear alpine water; one that ends in a hollow makes a tarn with granite
   // outcrops round its far shore
-  alp: { alp: 1, n: 6, dist: 48, grid: 64, apart: 140, dry: 14, min: 50, culvert: 12, pond: [170, 120], room: 40, stall: [12, 12], reach: 12,
+  alp: { alp: 1, n: 6, dist: 48, grid: 64, apart: 140, dry: 14, min: 50, culvert: 12, pond: [170, 120], room: 40, stall: [12, 12], reach: 16, tarn: 'Tarn Creek',
     names: ['Pika Creek', 'Marmot Run', 'Granite Fork', 'Columbine Creek', 'Eagle Run', 'Windy Fork', 'Heather Brook'] },
 };
 
 // the line a creek takes from (tx, ty): down the smoothed heights, never back up, to the first water - or null
 // (net: a network creek's rules - CREEKS3.net: round rock, over a road, to water within two tiles, a pond in a hollow)
+let WHY = '';   // (why the last trace gave no creek: for the build's report)
 function smoothed(m) {
   const W = m.w, HH = m.h, S = CREEKS3.smooth, memo = new Map();
   return (tx, ty) => {
@@ -70,46 +71,52 @@ function smoothed(m) {
     return v;
   };
 }
-function trace(m, sx, sy, sites, sm, net = null) {
+function trace(m, sx, sy, sites, sm, net = null, over = false) {   // (over: it may run over a band of the land's own rock - a cascade)
   const G = CREEKS3, W = m.w, HH = m.h, inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH, idx = (x, y) => y * W + x;
   const wetT = (x, y) => inF(x, y) && (m.tiles[idx(x, y)] === T.WATER || m.tiles[idx(x, y)] === T.DEEP);
   let road = 0;
-  // (where it would end in a hollow: water within net.reach tiles - it runs on into that instead of a pond beside it)
+  // (where it would end in a hollow: water within net.reach tiles - it runs on into that, cutting through whatever lip
+  // lies between; the owner, 11-25 13:35, on a stream that ended in a pool at the sea's edge: "streams and flowing
+  // water is still connecting to the larger bodies of water its going towards, doesnt just close off right before")
   const pondOr = (pts, x, y, h) => {
     let best = null;
     for (let dy = -net.reach; dy <= net.reach; dy++) for (let dx = -net.reach; dx <= net.reach; dx++) { const d = dx * dx + dy * dy; if (d <= net.reach * net.reach && wetT(x + dx, y + dy) && (!best || d < best[2])) best = [x + dx, y + dy, d]; }
-    // (not over a rise: a hollow behind a beach's berm keeps its pond)
-    if (best) { const L = Math.sqrt(best[2]); for (let d = 1; d < L; d++) if (sm(Math.round(x + (best[0] - x) * d / L), Math.round(y + (best[1] - y) * d / L)) > h + 0.8) { best = null; break; } }
     if (best) pts.push([best[0], best[1], h]); else pts.pond = 1;
     return pts;
   };
   const DIR = [[3, 0], [3, 1], [2, 2], [1, 3], [0, 3], [-1, 3], [-2, 2], [-3, 1], [-3, 0], [-3, -1], [-2, -2], [-1, -3], [0, -3], [1, -3], [2, -2], [3, -1]];
   const pts = [[sx, sy, sm(sx, sy)]], seen = new Set([idx(sx, sy)]);
   let x = sx, y = sy, h = pts[0][2];
+  let ldx = 0, ldy = 0;
   for (let k = 0; k < G.max; k++) {
     let b = null;
-    for (const [dx, dy] of DIR) {
+    // (a cascade's stream on a road: straight on the way it came, whatever the heights - it passes under and takes the
+    // land's level on the far side; the networks' creeks keep their own way, as laid and looked at)
+    if (over && road && (ldx || ldy)) { const nx = x + ldx, ny = y + ldy; if (inF(nx, ny) && !seen.has(idx(nx, ny))) b = { x: nx, y: ny, q: 0, h: sm(nx, ny), free: true }; }
+    else for (const [dx, dy] of DIR) {
       const nx = x + dx, ny = y + dy;
       if (!inF(nx, ny)) continue;
       // (a path is crossed, not followed: a little dearer; a made place's ground is not entered)
       const i = idx(nx, ny), q = sm(nx, ny) + (m.tiles[i] === T.DIRT ? 0.4 : 0);
       if (seen.has(i) || sites.some((s) => Math.hypot(s[0] - nx, s[1] - ny) < s[2])) continue;
-      if (net && m.tiles[i] === T.WALL) continue;   // (round the rock)
+      if (net && m.tiles[i] === T.WALL && !(over && (m.reserve[i] & 32))) continue;   // (round the rock)
+      if (over) { let hard = false; for (let ey = -2; ey <= 2 && !hard; ey++) for (let ex = -2; ex <= 2; ex++) { if (!inF(nx + ex, ny + ey)) continue; const j = idx(nx + ex, ny + ey), t = m.tiles[j]; if (t === T.LOT || t === T.FIELD || t === T.PLAZA || t === T.SIDEWALK || t === T.BRIDGE || (m.bld && m.bld[j] >= 0) || (t === T.WALL && !(m.reserve[j] & 32))) { hard = true; break; } } if (hard) continue; }   // (and two tiles clear of built ground)
       if (!b || q < b.q) b = { x: nx, y: ny, q, h: sm(nx, ny) };
     }
     // (a hollow with no way on: no creek from here - a network creek long enough ends there in a pond)
-    if (!b || b.h > h + 0.05) { if (net && !road && pts.length * G.step >= net.min) return pondOr(pts, x, y, h); return null; }
-    x = b.x; y = b.y; h = Math.min(h, b.h);
+    if (!b || (!b.free && b.h > h + 0.05)) { if (net && !road && pts.length * G.step >= net.min) return pondOr(pts, x, y, h); WHY = `no way on at ${x},${y} after ${pts.length} steps`; return null; }
+    ldx = b.x - x; ldy = b.y - y;
+    x = b.x; y = b.y; h = b.free ? b.h : Math.min(h, b.h);
     const i = idx(x, y), t = m.tiles[i];
     seen.add(i);
     if (t === T.WATER || t === T.DEEP) { pts.push([x, y, h]); return pts; }
-    if (net && t === T.ROAD && !(m.bld && m.bld[i] >= 0)) { road += G.step; if (road > net.culvert) return null; pts.push([x, y, h]); continue; }   // (under the road)
-    if (t === T.ROAD || t === T.LOT || t === T.FIELD || t === T.BRIDGE || t === T.PLAZA || t === T.SIDEWALK || (m.bld && m.bld[i] >= 0)) return null;
+    if (net && t === T.ROAD && !(m.bld && m.bld[i] >= 0)) { road += G.step; if (road > net.culvert * (over ? 2 : 1)) { WHY = `a road too wide at ${x},${y}`; if (!over) return null; pts.length -= Math.min(pts.length - 1, Math.round(road / G.step) + 3); const e = pts[pts.length - 1]; return pondOr(pts, e[0], e[1], e[2]); } pts.push([x, y, h]); continue; }   // (a cascade's stream that meets a road it cannot pass ends above it, in a pond or the water near by)   // (under the road)
+    if (t === T.ROAD || t === T.LOT || t === T.FIELD || t === T.BRIDGE || t === T.PLAZA || t === T.SIDEWALK || (m.bld && m.bld[i] >= 0)) { WHY = `built ground (tile ${t}) at ${x},${y}`; return null; }
     road = 0;
     pts.push([x, y, h]);
     if (net && pts.length > net.stall[0] && Math.hypot(pts[pts.length - 1 - net.stall[0]][0] - x, pts[pts.length - 1 - net.stall[0]][1] - y) < net.stall[1]) {
       pts.length -= net.stall[0] - 2;
-      if (pts.length * G.step < net.min) return null;
+      if (pts.length * G.step < net.min) { WHY = `winds in place at ${x},${y}`; return null; }
       { const e = pts[pts.length - 1]; return pondOr(pts, e[0], e[1], e[2]); }
     }
     if (net) { // (water within two tiles: it joins it)
@@ -146,12 +153,15 @@ function creeks3(m, H3, cfg) {
     const under = new Uint8Array(n), spans = [];
     for (let k = 0; k < n; k++) { const i = C.at(line[k][0], line[k][1]); if (i >= 0 && m.tiles[i] === T.ROAD) under[k] = 1; }
     for (let k = 0; k < n; k++) if (under[k]) { let e = k; while (e + 1 < n && under[e + 1]) e++; spans.push([k, e]); k = e; }
-    const nearSpan = (k, d) => spans.some(([a, b]) => k >= a - d && k <= b + d);
+    // where it runs over rock (a cascade: S.over): the runs of its line on the land's own rock
+    const rspans = [];
+    if (S.over) for (let k = 0; k < n; k++) { const i = C.at(line[k][0], line[k][1]); if (i >= 0 && m.tiles[i] === T.WALL && (m.reserve[i] & 32)) { let e = k; while (e + 1 < n) { const j = C.at(line[e + 1][0], line[e + 1][1]); if (j >= 0 && m.tiles[j] === T.WALL && (m.reserve[j] & 32)) e++; else break; } rspans.push([k, e]); k = e; } }
+    const nearSpan = (k, d) => spans.some(([a, b]) => k >= a - d && k <= b + d) || rspans.some(([a, b]) => k >= a - d && k <= b + d);
     if (net) {
       // a network creek is laid only where it fits: open ground (or water, or a road to pass under) all along its line,
       // each culvert short, with open ground either end, none at its spring or its mouth
-      for (let k = 0; k < n; k++) { const i = C.at(line[k][0], line[k][1]), t = i < 0 ? -1 : m.tiles[i]; if (!(t === T.GRASS || t === T.DIRT || t === T.SAND || t === T.WATER || t === T.DEEP || t === T.ROAD) || (m.bld && m.bld[i] >= 0)) return 'ground'; }
-      for (const [a, b] of spans) if ((b - a + 1) * G.step / 6 > NET.culvert || a < 12 || b > n - 12) return 'road';
+      for (let k = 0; k < n; k++) { const i = C.at(line[k][0], line[k][1]), t = i < 0 ? -1 : m.tiles[i]; if (!(t === T.GRASS || t === T.DIRT || t === T.SAND || t === T.WATER || t === T.DEEP || t === T.ROAD || (S.over && t === T.WALL && (m.reserve[i] & 32))) || (m.bld && m.bld[i] >= 0)) return `ground: tile ${t} at ${Math.floor(line[k][0] / TILE)},${Math.floor(line[k][1] / TILE)}`; }
+      for (const [a, b] of spans) if ((b - a + 1) * G.step / 6 > NET.culvert * (S.over ? 2 : 1) || a < 12 || b > n - 12 || (S.over && hAt(Math.min(n - 1, b + 6)) > hAt(Math.max(0, a - 6)) + 1)) return 'road';   // (a cascade's: and not up to higher ground the far side)
       // (a pond needs room: where rock or a road hems the hollow in, no creek ends there)
       if (tr.pond) { let room = 0; blob(C, line[n - 1][0], line[n - 1][1], NET.pond[0], NET.pond[1], 0.2, seed + 9, (i) => { const t = m.tiles[i]; if (t === T.WATER || t === T.DEEP || soft(i)) room++; }); if (room < NET.room) return 'pond'; }
     }
@@ -171,24 +181,38 @@ function creeks3(m, H3, cfg) {
       if (gs.some((g) => g.length > G.stones)) return 'path';
     }
     // the water (narrow at the spring, wider below), what grew there gone
-    let tiles = 0;
+    let tiles = 0, decks = 0;
     for (let k = 0; k < n; k++) {
       const [x, y] = line[k], w = hwAt(k) * (0.85 + 0.3 * hh(k >> 2, seed, 73));
       for (let ty = Math.floor((y - w) / TILE); ty <= Math.floor((y + w) / TILE); ty++) for (let tx = Math.floor((x - w) / TILE); tx <= Math.floor((x + w) / TILE); tx++) {
         if (!C.inF(tx, ty) || Math.hypot((tx + 0.5) * TILE - x, (ty + 0.5) * TILE - y) > w) continue;
         const i = C.idx(tx, ty), t = m.tiles[i];
-        if ((t === T.GRASS || t === T.DIRT || t === T.SAND) && !(m.bld && m.bld[i] >= 0)) { C.water(i); tiles++; }
+        if ((t === T.GRASS || t === T.DIRT || t === T.SAND || (S.over && t === T.WALL && (m.reserve[i] & 32))) && !(m.bld && m.bld[i] >= 0)) { C.water(i); tiles++; }
       }
     }
     C.drop((p) => p.t !== 'painted' && !/^(fingerpost|textsign|mapboard|pbench|blaze)/.test(p.t) && line.some(([x, y], k) => !nearSpan(k, 4) && Math.abs(p.x - x) < hwAt(k) + 20 && Math.abs(p.y - y) < hwAt(k) + 20));
-    // the culverts: the creek passes under the road, a headwall either side
+    // under a road: the road's tiles over the creek are a bridge's - a deck with the water running under it, seen on
+    // both sides right up to it (the owner, 11-25 13:33, on the first try's stone headwalls: "doesnt look like the
+    // stream is goin under the road, just looks like its leading into a skinny concrete structure ... more like a
+    // bridge with the road going over it")
+    // (and a rail along each edge of the road over the water - a stone kerb with timber posts, the art's creekRail -
+    // lying the way the road runs there: the long axis of the road's own tiles round the crossing)
     for (const [a, b] of spans) {
-      const [x0, y0] = line[Math.max(0, a - 1)], [x1, y1] = line[Math.min(n - 1, b + 1)];
-      // (a stone headwall on each edge of the road, its arch facing along the creek - the art's `culvert`; first laid as
-      // the county road's pipe piece, which draws nothing here: the creek stopped at the road with no reason)
-      const th = Math.atan2(y1 - y0, x1 - x0);
-      C.prop('culvhead', x0, y0, 0, { a: Math.round((th + Math.PI / 2) * 1000) / 1000, len: 112 });
-      C.prop('culvhead', x1, y1, 0, { a: Math.round((th - Math.PI / 2) * 1000) / 1000, len: 112 });
+      const [x0, y0] = line[Math.max(0, a - 2)], [x1, y1] = line[Math.min(n - 1, b + 2)], cx = Math.floor((x0 + x1) / 2 / TILE), cy = Math.floor((y0 + y1) / 2 / TILE);   // (a point clear of the road's own tiles either side: a piece is not put on a road)
+      let sx = 0, sy = 0, c = 0, xx = 0, yy = 0, xy = 0;
+      for (let dy = -7; dy <= 7; dy++) for (let dx = -7; dx <= 7; dx++) if (C.inF(cx + dx, cy + dy) && m.tiles[C.idx(cx + dx, cy + dy)] === T.ROAD) { sx += dx; sy += dy; c++; }
+      if (!c) continue;
+      for (let dy = -7; dy <= 7; dy++) for (let dx = -7; dx <= 7; dx++) if (C.inF(cx + dx, cy + dy) && m.tiles[C.idx(cx + dx, cy + dy)] === T.ROAD) { const u = dx - sx / c, v = dy - sy / c; xx += u * u; yy += v * v; xy += u * v; }
+      const ra = Math.round(0.5 * Math.atan2(2 * xy, xx - yy) * 1000) / 1000, len = Math.round(hwAt(a) * 2 + 52);
+      C.prop('creekrail', x0, y0, 0, { a: ra, len }); C.prop('creekrail', x1, y1, 0, { a: ra, len });
+    }
+    for (const [a, b] of spans) for (let k = Math.max(0, a - 2); k <= Math.min(n - 1, b + 2); k++) {
+      const [x, y] = line[k], w = hwAt(k) + 6;
+      for (let ty = Math.floor((y - w) / TILE); ty <= Math.floor((y + w) / TILE); ty++) for (let tx = Math.floor((x - w) / TILE); tx <= Math.floor((x + w) / TILE); tx++) {
+        if (!C.inF(tx, ty) || Math.hypot((tx + 0.5) * TILE - x, (ty + 0.5) * TILE - y) > w) continue;
+        const i = C.idx(tx, ty);
+        if (m.tiles[i] === T.ROAD) { m.tiles[i] = T.BRIDGE; m.reserve[i] |= RES; decks++; }
+      }
     }
     // boulders in it and on its banks, ferns along it - by the tile along its run, hashed, never in step
     const perT = 2;   // (points a tile)
@@ -201,6 +225,20 @@ function creeks3(m, H3, cfg) {
     }
     // riffles and pools where the ground steps down
     const rap = [], pools = [];
+    // the cascade: white water all the way over the rock; where it comes out through a cliff's face, that face gives
+    // way to a fall of its height with a plunge pool at its foot
+    let cascades = 0;
+    for (const [a, b] of rspans) {
+      rap.push([a, b, 1]);
+      const [ex, ey] = line[Math.min(n - 1, b + 1)];
+      const face = m.props.find((p) => p && p.t === 'cliff' && Math.abs(p.x - ex) < p.w / 2 + 20 && Math.abs(p.y - ey) < 3 * TILE);
+      if (!face) continue;
+      C.drop((p) => p === face);
+      C.prop('coastfall', ex, face.y + 6, 0, { w: 44, drop: Math.round(face.h * (face.w >= 160 ? 1.5 : face.w >= 96 ? 1.25 : 1)), s: 7 + cascades, mist: 0.6 });
+      blob(C, ex, face.y + 64, 84, 58, 0.2, seed + 13 + b, (i, q) => { const t = m.tiles[i]; if (t === T.WATER || t === T.DEEP) { if (q < 0.5) C.water(i, true); } else if (soft(i)) { C.water(i, q < 0.5); tiles++; } });
+      pools.push([Math.round(ex / TILE * 10) / 10, Math.round((face.y + 64) / TILE * 10) / 10, 3, 2]);
+      cascades++;
+    }
     let last = -1e9, hLast = hAt(0);
     for (let k = 12; k < n - 18; k++) {
       if (hLast - hAt(k) < G.fall || (k - last) * (TILE * G.step / 6) / TILE < G.apart) continue;
@@ -216,7 +254,7 @@ function creeks3(m, H3, cfg) {
     }
     // the spring: a small round head pool, mossy boulders ringed round its upstream side, ferns between them - the
     // creek rises from among the rocks (not a channel's cut end)
-    {
+    if (!S.nohead) {
       const [x0, y0] = line[0], [x4, y4] = line[Math.min(n - 1, 5)], l = Math.hypot(x4 - x0, y4 - y0) || 1, ux = -(x4 - x0) / l, uy = -(y4 - y0) / l;   // (upstream)
       blob(C, x0 + ux * 8, y0 + uy * 8, 46, 36, 0.18, seed + 5, (i) => { if (soft(i)) { C.water(i); tiles++; } });
       C.drop((p) => /^(tree_|redwood|shrub_|bush_|flowers_|boulder|log$|rwlog|rwstump)/.test(p.t) && Math.hypot(p.x - x0, p.y - y0) < 96);
@@ -298,15 +336,16 @@ function creeks3(m, H3, cfg) {
     C.flush();
     m.waters.ch.push({ k: 'creek', w: Math.round(G.hw[1] * 2 / TILE * 10) / 10, t: cfg.t, v: 0.55, hand: 1, pts: line.filter((_, k) => k % 3 === 0 || k === n - 1).map(([x, y]) => [Math.round(x / TILE * 10) / 10, Math.round(y / TILE * 10) / 10]), ...(pools.length ? { p: pools } : {}), ...(rap.length ? { r: rap.map(([a, b, s]) => [Math.round(a / 3), Math.round(b / 3), s]) } : {}) });
     (m.natureSites ||= []).push({ kind: cfg.kind, name: S.name, x: Math.round(line[0][0]), y: Math.round(line[0][1]), mouth: [Math.round(line[n - 1][0]), Math.round(line[n - 1][1])], len: Math.round(n * TILE * G.step / 6 / TILE), pools: pools.map((p) => [Math.round(p[0] * TILE), Math.round(p[1] * TILE)]), line: line.filter((_, k) => k % 6 === 0 || k === n - 1).map(([x, y]) => [Math.round(x), Math.round(y)]) });
-    out.creeks.push({ name: S.name, tiles: Math.round(n * G.step / 6), water: tiles, pools: pools.length, riffles: rap.length, crossings, kinds, clips, long, fall: Math.round((tr[0][2] - tr[tr.length - 1][2]) * 10) / 10, ...(net && { net: 1 }), ...(spans.length && { culverts: spans.length }), ...(tr.pond && { pond: 1 }) });
+    out.creeks.push({ name: S.name, tiles: Math.round(n * G.step / 6), water: tiles, pools: pools.length, riffles: rap.length, crossings, kinds, clips, long, fall: Math.round((tr[0][2] - tr[tr.length - 1][2]) * 10) / 10, ...(net && { net: 1 }), ...(spans.length && { culverts: spans.length, decks }), ...(tr.pond && { pond: 1 }), ...(rspans.length && { rock: rspans.reduce((q, [a, b]) => q + Math.round((b - a + 1) * G.step / 6), 0), falls: cascades }) });
     springs.push([tr[0][0], tr[0][1]]);
     return '';
   };
   for (const S of cfg.springs) {
     let tr = null;
-    for (const [sx, sy] of S.at) { const q = trace(m, sx, sy, sites, sm); if (q && q.length * G.step >= G.min) { tr = q; break; } }
-    while (tr && tr.length && built(tr[0][0], tr[0][1])) tr.shift();
-    const why = !tr ? 'trace' : tr.length * G.step < G.min ? 'short' : lay(S, tr, false);
+    for (const [sx, sy] of S.at) { const q = trace(m, sx, sy, sites, sm, S.over ? NET : null, !!S.over); if (q && q.length * G.step >= G.min) { tr = q; break; } }
+    if (tr && S.from) { const pond = tr.pond; tr.unshift([S.from[0], S.from[1], tr[0][2]]); if (pond) tr.pond = 1; }   // (it starts at water that is there: a tarn's outflow)
+    while (!S.from && tr && tr.length && built(tr[0][0], tr[0][1])) tr.shift();
+    const why = !tr ? 'trace: ' + WHY : tr.length * G.step < G.min ? 'short' : lay(S, tr, !!S.over);
     if (why) { out.unlaid.push(S.name); (out.why ||= {})[S.name] = why; }
   }
   // ---- the network: springs over the woods' high ground, the highest first ----
@@ -330,13 +369,23 @@ function creeks3(m, H3, cfg) {
     if (tr) { const pond = tr.pond; while (tr.length && built(tr[0][0], tr[0][1])) tr.shift(); if (pond) tr.pond = 1; if (tr.length * G.step < NET.min) why = 'short'; }
     if (!why && tr[0][2] - tr[tr.length - 1][2] < 2) why = 'level';
     if (!why) why = lay({ name: NET.names[out.net.laid % NET.names.length] }, tr, true);
-    if (why) out.net.why[why] = (out.net.why[why] || 0) + 1; else out.net.laid++;
+    if (why) { const w = why.split(':')[0]; out.net.why[w] = (out.net.why[w] || 0) + 1; } else out.net.laid++;
   }
   return out;
 }
 
 export const woodsCreeks3 = (m, H3) => creeks3(m, H3, { springs: CREEKS3.springs, net: CREEKS3.net, kind: 'woodscreek', t: 'forest' });
-// the mountains' streams by the same rule. (Summit Tarn's outflow is not run on: it ends on the scree 19 tiles short of a
-// road and a band of rock 40 tiles deep - it wants a cascade down that band, the falls' own piece; tried 11-25, no way
-// down for a creek that goes round rock.)
-export const peakCreeks3 = (m, H3) => creeks3(m, H3, { springs: [], net: CREEKS3.alp, kind: 'peakcreek', t: 'alpine' });
+// the mountains' streams by the same rule - and first Summit Tarn's outflow, which ended on the scree: it runs on from
+// the last water south of the tarn's falls, over the band of rock below it as a cascade (a sample for the owner's eye,
+// 11-25: the rule that would let any stream take a cliff band waits for his word)
+export function peakCreeks3(m, H3) {
+  const A = CREEKS3.alp, springs = [], W = m.w;
+  const tarn = (m.natureSites || []).find((q) => q.kind === 'tarn' && q.falls);
+  if (tarn && A.tarnOn) {   // (not yet: below the rock it comes down beside a road to a junction and finds no room to end - 11-25)
+    const fx = Math.floor(tarn.falls.x / TILE), fy = Math.floor(tarn.falls.y / TILE), wet = (x, y) => x >= 0 && y >= 0 && x < W && y < m.h && (m.tiles[y * W + x] === T.WATER || m.tiles[y * W + x] === T.DEEP) && !(m.lake && m.lake[y * W + x]);
+    let end = null;
+    for (let y = fy; y < fy + 40; y++) { let hit = null; for (let dx = 0; dx <= 8 && !hit; dx++) for (const x of [fx + dx, fx - dx]) if (wet(x, y)) { hit = [x, y]; break; } if (hit) end = hit; else if (end) break; }
+    if (end) springs.push({ name: A.tarn, from: end, at: [[end[0], end[1] + 4], [end[0] + 2, end[1] + 4], [end[0] - 2, end[1] + 4]], over: 1, nohead: 1 });
+  }
+  return creeks3(m, H3, { springs, net: A, kind: 'peakcreek', t: 'alpine' });
+}

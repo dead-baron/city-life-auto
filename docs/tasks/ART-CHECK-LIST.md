@@ -48,9 +48,10 @@ added as the work goes; a line he has checked is marked with his word and the da
   tiles). A car driven into a creek is in the water, as in a river.
 - [ ] **The mountains' streams** (11-25; his note: "water chunks that blend into the mountainous area above and
   foothills below") - Granite Peaks had one tarn and no running water; six streams now run from the high scree to
-  the sea, the rivers and the woods below, one under a road in a culvert with stone headwalls. Picture: `report-50`.
-  Judge: how many; the headwalls; whether Summit Tarn should get a wall of rock behind it and its outflow a cascade
-  down the rock band below (not built).
+  the sea, the rivers and the woods below, one under a road. Pictures: `report-50`, `report-51` (after his notes of
+  13:33: the headwalls gone, the road over the creek a bridge with a rail each side; streams run on into the water
+  they reach). Judge: how many; whether the road over the creek reads as a bridge or wants a stronger deck. Summit
+  Tarn: he said yes to changing it (13:33) - a wall of rock behind it and its outflow's cascade are not built.
 - [x] **The El and the highway decks see-through**: off (the owner, 11-25 09:03).
 - [x] **The fern kit: which kinds, and is this the look.** (The owner, 11-25 03:05: "Fern looks good to me", the
   gold bracken sparingly - planted 11-25.) Nine kinds drawn, none planted yet: sword, an old

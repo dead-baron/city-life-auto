@@ -27599,3 +27599,26 @@ over ground they may not take, 1 short, 1 too long under a road).
   redraw's list.
 - test/world3wayside.test.js: the creeks' checks run over both networks (`checkCreeks`). The bake's code: 1,096.4 of
   1,100 KB. Not seen in a running game.
+
+## 2026-11-25 · Streams join the water they run to; a road over a creek is a bridge - on branch `fable-art-1124`
+The owner, 13:33 and 13:35, on the mountain streams' pictures (his words in DECISIONS).
+- **"Doesnt just close off right before the open water"** (a stream ended in a pool a few tiles from the sea): a
+  creek that would end in a hollow within 16 tiles of water runs on into it, cutting through whatever lip lies
+  between (`CREEKS3` `reach`; the rule of an hour before kept the pond where the way was over a rise - gone). Marmot
+  Run reaches the sea (the mountains: 6 streams, 1,131 tiles, 29 pools, no tarn left of the rule's); in the woods Owl
+  Hollow Creek reaches the bay (the woods: 8 creeks, 1,421 tiles, 2 ponds).
+- **"Looks like its leading into a skinny concrete structure"** (the stone headwalls at Granite Fork's road): the
+  headwalls are gone (statics.js `culvhead` with them). Where a creek passes under a road the road's tiles over it
+  are a bridge's (22 at Granite Fork: the bake draws a deck there, the water either side right up to it) and a rail -
+  the creek bridges' stone kerb and timber posts, an existing piece - lies along each edge of the road, the way the
+  road runs there. Honest state: it reads as water going under, not yet strongly as a bridge - the deck is asphalt
+  like the road. A stronger deck (a paler slab, parapets) is the next step if he wants it.
+- **Tried and switched off: Summit Tarn's outflow as a cascade** (`CREEKS3.alp.tarnOn`, off). The code lets a stream
+  run over a band of the land's rock (white water all the way, a fall where it comes out through a cliff face) and
+  the outflow does come down the band; below it the land leads it beside a road to a junction where it has no room
+  to end. Five tries; not laid, nothing of it in the world. Needs the junction solved by hand, with the tarn's cirque.
+- Logged from the same message (docs/audit/PREBETA-LIST.md): train riders swimming for a few seconds; the train's
+  front drawn above ground past a tunnel's mouth; tunnel mouths that do not line up.
+- test/world3wayside.test.js: no creek's line on a plain road tile; deck tiles and two rails for every road passed.
+  Not seen in a running game.
+

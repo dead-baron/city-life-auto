@@ -424,6 +424,16 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   docs/tasks/MOUNTAIN-LOOK-2026-11-25.md).
 - The redwoods get a network of creeks like Fernwater Creek (the owner, 11-25 09:03: "Creek looks good let's go with
   it").
+- Summit Tarn may be changed (the owner, 11-25 13:33, to "a wall of rock behind its north shore?": "Yes you can change
+  the summit tarn if you think it looks or works better").
+- Water under a road reads as a bridge: the road going over it, the water lined up either side (the owner, 11-25
+  13:33, on a creek's stone headwalls: "it doesnt look like the stream is goin under the road, just looks like its
+  leading into a skinny concrete structure. Lets make sure water under roads looks more like a bridge with the road
+  going over it, or just have the water line up correctly so its clear it goes under the road"). The same eye for the
+  trains' tunnel mouths ("the tunnel entrance and exit doesnt quite line up with what the tunnel is leading into").
+- A stream joins the larger water it runs toward (the owner, 11-25 13:35, on a stream that ended in a pool at the
+  sea's edge: "Lets make sure streams and flowing water is still connecting to the larger bodies of water its going
+  towards, doesnt just close off right before the open water").
 - Faces and lips, when the art pass reaches them (part C): look only, and fix only what is plainly off (the owner,
   11-25 12:45: "these might already be working okay so lets be careful not to try to over fix or over polish and
   make it not better than it already is. Would be okay to do a pass on it just to consider if something is off and
