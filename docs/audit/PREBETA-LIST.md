@@ -548,3 +548,15 @@ the tools, the plans and everything unreleased.
   waiting before the v3 server is up (220 s) and does not get past the first-time question ("What brings you to
   town?"), so the art pass's pictures are offline renders. A dev switch to skip the first-time flow and a longer
   server wait would give real game pictures of any place.
+- **The swimmer's water effect** (02:00): "the water fx when a playeer swims looks like a placeholder, it doesnt match
+  the art style of the game or how other objects react to water" - thin smooth white rings trailing behind the
+  swimmer (anti-aliased circles), where boats have pixel wakes and foam. Art: for the water pass's leftovers
+  (ripples and wakes) - a swimmer's wake and splashes in the game's pixel, as the boats' are drawn.
+- **Things passing through bridges** (02:36, a road bridge over open water in rain): "A lot of weird things going on
+  in the water under bridges too. Just the way things are passing through the bridge, it doesn't happen on all
+  bridges though." In the picture a boat and its wake, a police boat and the ring effect are drawn OVER the road
+  deck instead of under it. To find: which bridges (a deck whose span is not marked so for the page - host.js draws a
+  boat part-way under a deck beneath it; this one reads as ground-level road), then one rule for every bridge:
+  boats, wakes, swimmers and their effects under the deck, with a test over all bridges.
+- **Live 11-25: see-through buildings along your street or alley** (PR #48, page-side) - on `main` on his word; the
+  art branch carries the same code.

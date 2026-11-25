@@ -1394,8 +1394,8 @@ export class World2 {
     const M = this.map;
     if (M && M.tiles && M.inside && !F.sub && !F.spec && !riding && !onTrain) {
       const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE), key = tx + ty * 65536 + this.chunkState.size * 4294967296;
-      if (this._openKey !== key) {
-        this._openKey = key;
+      if (this._openKey !== key || (this._openN = (this._openN | 0) + 1) > 40) {   // (and now and then: chunks' buildings arrive)
+        this._openKey = key; this._openN = 0;
         const RX = FADE_REACH, RY = FADE_ACROSS, GW = RX * 2 + 1, GH = RY * 2 + 1, G = this._openG || (this._openG = new Uint8Array(GW * GH)), out = this._openB || (this._openB = new Map());
         G.fill(0); out.clear();
         const open = (x, y) => { if (!M.inside(x, y)) return false; const t = M.tiles[M.idx(x, y)]; return t !== TT.BUILDING && t !== TT.WALL; };
