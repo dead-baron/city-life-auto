@@ -27571,3 +27571,31 @@ further than 12 tiles in 12 steps has reached the floor - the pond goes where th
 (each creek downhill, one water along its own run, a way over at every path, a culvert wherever road lies under its
 line, its pond, names and springs apart). A car driven into a creek is in water as in any river (the shallow-water
 work is on the pre-beta list). Not seen in a running game.
+
+## 2026-11-25 · The mountains' streams - on branch `fable-art-1124`
+The plan's next part of nature, the mountains' water (docs/tasks/MOUNTAIN-LOOK-2026-11-25.md item 5; the owner's
+note: "water chunks that blend into the mountainous area above and foothills below"). Counted first: Granite Peaks -
+572,588 tiles of land - held 691 tiles of water: one tarn (Summit Tarn, its falls and a 20-tile outflow that ends on
+the scree), the hot springs' pools, and not one running water of the map's 82. The relief's bytes now reaching the
+tops (the entry above), the creeks' rule works there: shared/world3-creeks.js `CREEKS3.alp`, `peakCreeks3` - six
+streams from springs high on the scree down to the sea, a river, a creek in the woods below (Granite Fork passes
+under the road in a culvert and joins Dipper Creek's water in the foothills) or a tarn in a hollow. The mountains'
+own: a spring may rise on scree; a path there is a trail's own tiles (the scree is dirt too); bare granite boulders,
+no ferns; clear alpine water; granite outcrops on a tarn's far shore. From the data: 6 streams, 1,128 tiles of run,
+2,718 tiles of water, 30 pools, 1 culvert, 1 tarn; 23 springs tried (12 with no way down - they go round rock - 3
+over ground they may not take, 1 short, 1 too long under a road).
+- **The culvert seen for the first time** (the woods' creeks meet no road): the piece first used drew nothing - the
+  creek stopped at the road. Now a stone headwall with its arch on each edge of the road (statics.js `culvhead`,
+  the art's `culvert`).
+- **For both networks**: a creek that would end in a hollow within 12 tiles of water runs on into it, unless the way
+  is over a rise (a hollow behind a beach's berm keeps its pond); a pond is laid only where the hollow has room (40
+  tiles) - one ended in 21 tiles of water hemmed by rock; pools, ponds and springs take scree in the mountains (the
+  first tarn laid was a sliver: only grass was taken). The creeks read the land in metres (`reliefMetres`). The
+  woods' eight creeks come out as they were (1,418 tiles, 36 pools, 3 ponds).
+- **Not done**: Summit Tarn's outflow run on - it ends 19 tiles short of a road and a band of rock 40 tiles deep; it
+  wants a cascade down the band, with the falls' own piece. Summit Tarn set in a cirque (a rock wall behind it): a
+  change to a place made by hand - to show him first. Streams over cliff bands as waterfalls. Seen on the way and
+  not touched: Granite Hot Springs' pool rocks are near-black (7.9% of that picture under 35 of 255) - one for the
+  redraw's list.
+- test/world3wayside.test.js: the creeks' checks run over both networks (`checkCreeks`). The bake's code: 1,096.4 of
+  1,100 KB. Not seen in a running game.

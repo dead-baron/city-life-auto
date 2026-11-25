@@ -133,8 +133,15 @@ entries have each piece):**
   ledged, a look he first sees in `report-49`); the hill's darkest shade 0.64 (was 0.55); **the creek network** (8
   creeks, 1,418 tiles, 36 pools, 3 ponds; no creek meets a road, so the culvert rule is laid but unseen). Pictures
   sent: `report-46` to `report-49`.
-- **Waiting on him:** the cloud-shadow still (`report-43`); the redwoods stood apart; the banks; anything he says to
-  the four pictures above before the re-bake.
+- **11-25 11:57, his word on `report-46` to `-49`: "This looks good lets keep moving forward."** The gate and the
+  re-bake: art while he is here, the gate when he stops for the day (Claude's answer to his question; no merge
+  before his word on that). **12:45:** faces and lips - look only, do not over-polish (DECISIONS).
+- **Built 11-25 12:00-13:40, on the branch, baked:** the mountains' streams (`CREEKS3.alp`: six, one under a road in
+  a culvert with stone headwalls - `report-50`); for both creek networks a pond only where there is room, a creek
+  runs on into water within 12 tiles. Next in the mountains' water: Summit Tarn's outflow as a cascade down the rock
+  band, falls over cliff bands, Summit Tarn in a cirque (show him first). (This file's project copy is as of 12:10.)
+- **Waiting on him:** the cloud-shadow still (`report-43`); the redwoods stood apart; the banks; when he stops for
+  the day (the gate).
 - **Next in the plan:** the gate and the re-bake; then mountain water (tarns and falls set into rock), desert, coast and jungle, the water's edges (creek riffles' white is still painted), rocks; parts B, C. Not done from the summit plan: switchbacks, the bench turned to the view.
 - **Tools made:** `tools/nature/darkscan.mjs` (the near-black census over the baked world; `--who`, `--place`, `--prop`,
   `--seabridge`), `tools/nature/paintscan.mjs`, `tools/causeways.mjs`; a running-game picture recipe in

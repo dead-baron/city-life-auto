@@ -90,7 +90,7 @@ Read: `claude/world-craft-pass-2026-11-14.md` (its checklist is the method), `cl
    the towns and islands; the countryside (lighter). Rail bridges (18) and the boardwalk's bends (5) with their places.
 
 ### C. The rest
-1. **The people's faces** (the owner, 11-24 09:39). Mouths are as intended: the small faces have none (11-19); the dark
+1. **The people's faces** (the owner, 11-24 09:39; **11-25 12:45: look only - "these might already be working okay so lets be careful not to try to over fix or over polish"; fix a plain fault, show him anything more first**). Mouths are as intended: the small faces have none (11-19); the dark
    line he saw was his character's black lipstick. To do: painted lips (lipstick, glam, goth, a clown's) drawn the
    same in every frame and direction (his 11-23 note: in the run cycle it jumps about the face or doesn't draw
    whole); fewer stray pixels on faces; features that read. Read first, so nothing is overwritten: DECISIONS "Art

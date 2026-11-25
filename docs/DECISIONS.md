@@ -424,6 +424,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   docs/tasks/MOUNTAIN-LOOK-2026-11-25.md).
 - The redwoods get a network of creeks like Fernwater Creek (the owner, 11-25 09:03: "Creek looks good let's go with
   it").
+- Faces and lips, when the art pass reaches them (part C): look only, and fix only what is plainly off (the owner,
+  11-25 12:45: "these might already be working okay so lets be careful not to try to over fix or over polish and
+  make it not better than it already is. Would be okay to do a pass on it just to consider if something is off and
+  could be fixed"). No redraw of the faces; anything beyond a plain fault is shown to him first.
 - The summits as built, the high mountains' shading and the creek network are good (the owner, 11-25 11:57, on
   `report-46` to `report-49`: "This looks good lets keep moving forward"). The whole suite and the re-bake: asked by
   him whether now or after more art - Claude's answer: art while he is here, the gate when he stops for the day; no

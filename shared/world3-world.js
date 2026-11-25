@@ -47,7 +47,7 @@ import { buildCaves3 } from './world3-caves.js';
 import { buildClearings3, forageInSight3 } from './world3-clearings.js';
 import { buildWayside3 } from './world3-wayside.js';
 import { footbridges3 } from './world3-footbridges.js';
-import { woodsCreeks3 } from './world3-creeks.js';
+import { woodsCreeks3, peakCreeks3 } from './world3-creeks.js';
 import { buildPeaks3, THAW } from './world3-peaks.js';
 import { coastByHand3 } from './world3-coast.js';
 import { tropic3 } from './world3-tropic.js';   // (the nature showcase: Coral Cay's east lobe as NA1-E, Macaw Cove as SC3-H)
@@ -336,6 +336,7 @@ export function worldOpts(asked) {
       m.world3.desertWaters = desertWaters3(m, H3);   // (the desert's waters: tinajas in the slickrock at the cliffs' feet, seep pools in the dam's dry wash - world3-tinajas.js)
       m.world3.redwoods = redwoodsByHand3(m, H3);   // (the nature showcase: Redwood Creek Falls, Hidden Pool and the Giants Loop by the owner's concepts, their kit spread to the woods' other falls, glades and trails - world3-redwoods.js)
       m.world3.woodsCreeks = woodsCreeks3(m, H3);   // (the redwood overhaul, 11-24: a creek laid by the land's own heights, its riffles, pools and stepping stones - world3-creeks.js)
+      m.world3.peakCreeks = peakCreeks3(m, H3);   // (the mountains' streams and tarns by the creeks' rule, Summit Tarn's outflow run on down - world3-creeks.js CREEKS3.alp, 11-25)
       m.world3.redrock = desertKit3(m, H3);   // (the red rock desert by hand - the nature showcase, 10-31: every tinaja a waterhole in a dry wash, the trailhead on the highway, the pull-offs, the Red Rock Trail's start, Mirage Camp and the arch dressed from the kit - redrock.js)
       m.world3.redwoodThin = thinRedwoods3(m, H3);   // (the art pass, 11-24: no redwood's trunk right behind another's - world3-redwoods.js)
       m.world3.wayside = buildWayside3(m, H3);   // (the art pass, 11-24: the woods' and the meadows' found places - ruins, an oak with a bench, a fire ring, a dry-stone wall and its gate, an oak with a swing: world3-wayside.js; after every place made by hand)

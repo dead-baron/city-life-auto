@@ -609,3 +609,10 @@ its something that can wait lets make note of it and revisit at the right time."
   that he or moderators approve into a gallery channel; perhaps a gallery in the game.
 - **Events**: NPC bank and store robberies (hands up, or run, or fight back for Samaritan points if no innocent is
   hurt); rare streakers, tackled by security or police; a rare streaker at a sports event.
+
+### 11-25, seen during the mountains' water (the art pass; logged, not acted on)
+- Granite Hot Springs: the rocks round its pools are near-black (7.9% of the place's picture under 35 of 255 at noon) -
+  for the nature redraw's list (art, part A).
+- Summit Tarn's outflow ends on the scree after 20 tiles; south of it a road, then a band of rock 40 tiles deep. A
+  cascade down the band is the fix (art + world, part A, the mountains' water).
+

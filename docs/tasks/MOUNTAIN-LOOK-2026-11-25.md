@@ -48,6 +48,13 @@ go with the summits' build.
   is steeper than 0.4 m a tile, at under half strength (`LEDGE.rib`, `LEDGE.soft`).
 - **Short runs**: a cliff piece under five tiles wide keeps its own height (half as tall again it stood like a pillar).
 
+## The mountains' water (item 5) - a first part, 11-25
+Counted: one tarn and no running water in all of Granite Peaks. Laid by the creeks' rule (shared/world3-creeks.js
+`CREEKS3.alp`): six streams from the high scree down to the sea, a river, the woods' creeks in the foothills, or a tarn
+in a hollow; one passes under a road in a culvert with stone headwalls. Pictures: `report-50`. Still to do, in this
+order: Summit Tarn's outflow down the rock band as a cascade (it ends on the scree); streams over cliff bands as
+waterfalls; Summit Tarn set in a cirque - a wall of rock behind it (a hand-made place: shown to him first).
+
 ## The summits as knobs - BUILT 11-25 (his word, 09:03: "Build the summit from plans")
 What stands (shared/world3-peaks.js `PEAKS3.knob`; the DEVLOG's entry of 11-25 has the numbers): a level shelf for the
 cairn, the bench and the telescope; solid rock round it, raised 16 m; a straight foot on the south with a crag wall on

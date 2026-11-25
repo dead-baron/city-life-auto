@@ -46,6 +46,11 @@ added as the work goes; a line he has checked is marked with his word and the da
 - [x] **The creek network** (the owner, 11-25 11:57: "This looks good"; laid 11-25 on his word "Creek looks good let's go with it") - eight creeks in Highland
   Woods; two join others, three end in ponds. Picture: `report-48`. Judge: how many; the ponds' size (about 9 by 7
   tiles). A car driven into a creek is in the water, as in a river.
+- [ ] **The mountains' streams** (11-25; his note: "water chunks that blend into the mountainous area above and
+  foothills below") - Granite Peaks had one tarn and no running water; six streams now run from the high scree to
+  the sea, the rivers and the woods below, one under a road in a culvert with stone headwalls. Picture: `report-50`.
+  Judge: how many; the headwalls; whether Summit Tarn should get a wall of rock behind it and its outflow a cascade
+  down the rock band below (not built).
 - [x] **The El and the highway decks see-through**: off (the owner, 11-25 09:03).
 - [x] **The fern kit: which kinds, and is this the look.** (The owner, 11-25 03:05: "Fern looks good to me", the
   gold bracken sparingly - planted 11-25.) Nine kinds drawn, none planted yet: sword, an old
