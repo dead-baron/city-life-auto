@@ -431,6 +431,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   leading into a skinny concrete structure. Lets make sure water under roads looks more like a bridge with the road
   going over it, or just have the water line up correctly so its clear it goes under the road"). The same eye for the
   trains' tunnel mouths ("the tunnel entrance and exit doesnt quite line up with what the tunnel is leading into").
+- The road over a creek: good as shown in `report-51` - the creek up to the road either side, a rail on each edge -
+  with the rails a little longer and joined to the street (the owner, 11-25 14:52: "I think it looks good how it is
+  now except the railings should be a little longer and connected to the street (right now you see the top one have
+  water under it and not connected to the street"). No stronger deck asked for.
 - A stream joins the larger water it runs toward (the owner, 11-25 13:35, on a stream that ended in a pool at the
   sea's edge: "Lets make sure streams and flowing water is still connecting to the larger bodies of water its going
   towards, doesnt just close off right before the open water").

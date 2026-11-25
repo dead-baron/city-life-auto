@@ -2834,7 +2834,6 @@ function propItems(c, p, pi, I) {
     case 'hedgerun': fenceLine(I, 'hedge', x, y, x + (p.tx || 0), y + (p.ty || 0), { h: p.h || 16 }, '', pi); return;
     case 'boathouse': V('bhouse', 'boathouse', [1]); lightAt(I, x, y + 36, 30, 100, [1, 0.8, 0.5], 1.3, 'lamp'); return;
     case 'kayakshack': V('kshack', 'kayakShack', []); lightAt(I, x - 2, y + 18, 18, 80, [1, 0.8, 0.5], 1.1, 'lamp'); return;   // (a river put-in's kayak hire: shared/world3-riverrun.js)
-    case 'creekrail': { const hd = qa(p.a || 0, 64); V(`crail:${p.len || 110}:${hd.toFixed(3)}`, 'creekRail', [p.len || 110], hd); return; }   // (a creek under a road: the bridge's rail on each edge - shared/world3-creeks.js)
     case 'culvert': { const len = p.len || 96, w = p.w || 64, hd = qa(p.a || 0, 32); V(`rculv:${len}:${w}:${hd.toFixed(3)}`, 'roadCulvert', [len, w, 16, 12], hd); return; }   // (a county road's canal crossing, the lane over it: world3-countyroad.js)
     case 'fbridge': { const len = p.len || 140, hd = qa(p.a || 0, 16); V(`fbr:${len}:${hd.toFixed(2)}`, 'footbridge', [len, 30, 6], hd); return; }
     case 'cavemouth': { const w = Math.round((p.w || 96) / 4) * 4, h = Math.round((p.h || 72) / 4) * 4, st = p.style === 'sea' ? 1 : 0, dp = p.deep || 0; if (p.arch) { V(`carch:${w}:${h}`, 'caveArch', [w, h]); return; } V(`cmouth:${w}:${h}:${st}${dp ? ':' + dp : ''}`, 'caveMouth', dp ? [w, h, st, dp] : [w, h, st]); return; }   // (Nature-B2: the Redwood Caverns' ways in - shared/world3-caves.js)

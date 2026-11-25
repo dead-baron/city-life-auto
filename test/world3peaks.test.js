@@ -123,6 +123,23 @@ test('World v3: Granite Peaks\' alpine meadows, the stone hut and its spring, th
   assert.ok(shingle >= 20, `the pebble beach (${shingle})`);
   // (a real boat since 11-22 - shared/world3-boats.js boatsAfloat3: moored in m.marina, by where it lay)
   assert.ok((m.marina || []).some((q) => q.kind === 'rowboat' && Math.hypot(q.x - tarn.x, q.y - tarn.y) < 16 * TILE), 'a rowboat on it');
+  // the cirque (the owner, 11-25 13:33: "you can change the summit tarn if you think it looks or works better"): rock
+  // behind the tarn's north shore with cliff walls toward the water; the beach, the camp and the cabin left open; the
+  // outflow ends in a lower pool
+  {
+    const Q = TARN3.cirque, tarnS = m.natureSites.find((q) => q.kind === 'tarn'), tx = Math.floor(tarnS.x / TILE), ty = Math.floor(tarnS.y / TILE);
+    console.log('tarn', JSON.stringify(TN));
+    assert.ok(TN.cirque && TN.cirque.rock >= 60 && TN.cirque.faces >= 2, `the cirque: ${JSON.stringify(TN.cirque)}`);
+    let north = 0, south = 0;
+    for (let dy = -26; dy <= 26; dy++) for (let dx = -34; dx <= 34; dx++) { const i = (ty + dy) * W + tx + dx; if (m.tiles[i] === T.WALL && (m.reserve[i] & 32) && Math.hypot(dx, dy * 1.4) < 30) { if (dy < -2) north++; else if (dy > 4 && Math.abs(dx) < 10) south++; } }
+    assert.ok(north >= 60, `rock behind the north shore (${north} tiles)`);
+    const walls = m.props.filter((p) => p && p.t === 'cliff' && p.relief && Math.abs(p.x - tarnS.x) < 30 * TILE && p.y < tarnS.y && tarnS.y - p.y < 26 * TILE).length;
+    assert.ok(walls >= 2, `cliff walls toward the water (${walls})`);
+    for (const nm of [TARN3.camp.name]) { const c = m.natureSites.find((q) => q.name === nm); assert.ok(c && m.tiles[at(c.x, c.y)] !== T.WALL, `${nm} stands open`); }
+    assert.ok(m.tiles[at(tarnS.cabin.x, tarnS.cabin.y + 40)] !== T.WALL && near('logcabin', tarnS.cabin.x, tarnS.cabin.y, 3 * TILE).length === 1, 'the cabin stands, its ground open');
+    assert.ok(TN.pool && TN.pool.tiles >= 20, `the lower pool where the outflow ended (${JSON.stringify(TN.pool)})`);
+    assert.ok(near('outcrop', (TN.pool.x + 0.5) * TILE, (TN.pool.y + 0.5) * TILE, 7 * TILE).length >= 2, 'granite on the pool\'s lip');
+  }
   const crag = m.natureSites.find((s) => s.kind === 'crag' && s.name === TARN3.crag.name);
   assert.ok(crag, 'Eagle Crag');
   assert.ok(near('crashpad', crag.x, crag.y, 3 * TILE).length === 2 && near('ropecoil', crag.x, crag.y, 3 * TILE).length === 1, 'its crash pads and rope');

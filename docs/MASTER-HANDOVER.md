@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-25 12:10 (the Fable 5.2 art chat, still open: section 6's first block and package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-25 15:30 (the Fable 5.2 art chat, still open: section 6's first block and package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -107,7 +107,7 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 Chats that can run side by side: 4 with any other; nothing else safely.
 
 ## 6. Where things stand (2026-11-24, 09:00 PST - the Opus part of the pre-beta is done)
-**The art pass, 2026-11-25 12:00 PST (the Fable 5.2 chat; branch `fable-art-1124`, pushed; the DEVLOG's 11-24 and 11-25
+**The art pass, 2026-11-25 15:30 PST (the Fable 5.2 chat; branch `fable-art-1124`, pushed; the DEVLOG's 11-24 and 11-25
 entries have each piece):**
 - **Live:** PR #48 (11-25 01:35, his word) - the buildings over your street, sidewalk or alley go see-through; PR #49
   (09:10, his word) - they fade all but clear, and emotes run through their frames.
@@ -139,7 +139,14 @@ entries have each piece):**
 - **Built 11-25 12:00-13:40, on the branch, baked:** the mountains' streams (`CREEKS3.alp`: six, one under a road in
   a culvert with stone headwalls - `report-50`); for both creek networks a pond only where there is room, a creek
   runs on into water within 12 tiles. Next in the mountains' water: Summit Tarn's outflow as a cascade down the rock
-  band, falls over cliff bands, Summit Tarn in a cirque (show him first). (This file's project copy is as of 12:10.)
+  band, falls over cliff bands, Summit Tarn in a cirque (show him first). 
+- **11-25 13:33-15:30, his notes on the streams (DECISIONS):** a stream runs on into the water it reaches (`reach` 16
+  tiles); a road over a creek is a bridge - deck tiles, a rail on each edge joined to the street, no headwalls
+  (`report-51`; 14:52: "looks good how it is now" with longer rails); Summit Tarn may be changed - a cirque of rock
+  behind its north shore and a lower pool where its outflow ended (world3-tarn.js `TARN3.cirque`); the outflow's
+  cascade down the rock band was tried five ways and is off (`CREEKS3.alp.tarnOn`). Logged for their turn
+  (PREBETA-LIST, 11-25 13:33): train riders swimming, the train's front above ground past a tunnel mouth, tunnel
+  mouths that do not line up.
 - **Waiting on him:** the cloud-shadow still (`report-43`); the redwoods stood apart; the banks; when he stops for
   the day (the gate).
 - **Next in the plan:** the gate and the re-bake; then mountain water (tarns and falls set into rock), desert, coast and jungle, the water's edges (creek riffles' white is still painted), rocks; parts B, C. Not done from the summit plan: switchbacks, the bench turned to the view.

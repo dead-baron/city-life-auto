@@ -27622,3 +27622,18 @@ The owner, 13:33 and 13:35, on the mountain streams' pictures (his words in DECI
 - test/world3wayside.test.js: no creek's line on a plain road tile; deck tiles and two rails for every road passed.
   Not seen in a running game.
 
+
+## 2026-11-25 · Summit Tarn in a cirque, a lower pool; the creek bridge's rails joined to the street - on branch `fable-art-1124`
+- **The rails** (the owner, 14:52: "looks good how it is now except the railings should be a little longer and
+  connected to the street (right now you see the top one have water under it"): each rail lies on the road's own
+  edge - the first and last of its tiles under the creek - and is 44 px longer. A piece on a street is taken off by
+  the clutter pass (that is how one of the first pair went missing): the rails are marked hand-laid.
+- **Summit Tarn** (the owner, 13:33: "you can change the summit tarn if you think it looks or works better"):
+  shared/world3-tarn.js `TARN3.cirque` - a crescent of the mountain's rock behind the north shore, 5 tiles back from
+  the water so the turf, the slabs and the outcrops stay in front of it, 159 tiles of rock, the land raised 14 m,
+  five cliff walls toward the tarn; the beach and the camp on the west and the cabin's meadow on the east left open
+  (the span is cut short of both). Eagle Crag moved 5 tiles north-west to clear it (its own search). Where the
+  outflow ended on the scree: a lower pool (38 tiles, deep in the middle) with granite on its lip - the stream ends
+  in water, not in nothing. The cascade on down the rock band stays off.
+- Tests: test/world3peaks.test.js (the cirque's rock and walls, the camp and the cabin open, the pool),
+  test/world3wayside.test.js (two rails for every road passed), test/cliffs.test.js pass. Not seen in a running game.

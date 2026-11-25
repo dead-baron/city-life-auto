@@ -198,13 +198,15 @@ function creeks3(m, H3, cfg) {
     // (and a rail along each edge of the road over the water - a stone kerb with timber posts, the art's creekRail -
     // lying the way the road runs there: the long axis of the road's own tiles round the crossing)
     for (const [a, b] of spans) {
-      const [x0, y0] = line[Math.max(0, a - 2)], [x1, y1] = line[Math.min(n - 1, b + 2)], cx = Math.floor((x0 + x1) / 2 / TILE), cy = Math.floor((y0 + y1) / 2 / TILE);   // (a point clear of the road's own tiles either side: a piece is not put on a road)
+      // (on the road's own edge - the first and the last of its tiles under the creek - so the rail joins the street and
+      // no water shows between; the owner, 11-25 14:52: "the railings should be a little longer and connected to the street")
+      const [x0, y0] = line[a], [x1, y1] = line[b], cx = Math.floor((x0 + x1) / 2 / TILE), cy = Math.floor((y0 + y1) / 2 / TILE);
       let sx = 0, sy = 0, c = 0, xx = 0, yy = 0, xy = 0;
       for (let dy = -7; dy <= 7; dy++) for (let dx = -7; dx <= 7; dx++) if (C.inF(cx + dx, cy + dy) && m.tiles[C.idx(cx + dx, cy + dy)] === T.ROAD) { sx += dx; sy += dy; c++; }
       if (!c) continue;
       for (let dy = -7; dy <= 7; dy++) for (let dx = -7; dx <= 7; dx++) if (C.inF(cx + dx, cy + dy) && m.tiles[C.idx(cx + dx, cy + dy)] === T.ROAD) { const u = dx - sx / c, v = dy - sy / c; xx += u * u; yy += v * v; xy += u * v; }
-      const ra = Math.round(0.5 * Math.atan2(2 * xy, xx - yy) * 1000) / 1000, len = Math.round(hwAt(a) * 2 + 52);
-      C.prop('creekrail', x0, y0, 0, { a: ra, len }); C.prop('creekrail', x1, y1, 0, { a: ra, len });
+      const ra = Math.round(0.5 * Math.atan2(2 * xy, xx - yy) * 1000) / 1000, len = Math.round(hwAt(a) * 2 + 96);
+      C.prop('creekrail', x0, y0, 0, { a: ra, len, hand: 1 }); C.prop('creekrail', x1, y1, 0, { a: ra, len, hand: 1 });
     }
     for (const [a, b] of spans) for (let k = Math.max(0, a - 2); k <= Math.min(n - 1, b + 2); k++) {
       const [x, y] = line[k], w = hwAt(k) + 6;
@@ -334,6 +336,8 @@ function creeks3(m, H3, cfg) {
       return false;
     });
     C.flush();
+    // (the rails stand on the road's edge by design: the clutter pass - nothing left on a street - leaves the hand-laid)
+    if (spans.length) { if (!m.handProps) Object.defineProperty(m, 'handProps', { value: new WeakSet(), enumerable: false, configurable: true }); for (let j = m.props.length - 1; j >= 0 && j > m.props.length - 4000; j--) { const p = m.props[j]; if (p && p.t === 'creekrail' && p.hand) m.handProps.add(p); } }
     m.waters.ch.push({ k: 'creek', w: Math.round(G.hw[1] * 2 / TILE * 10) / 10, t: cfg.t, v: 0.55, hand: 1, pts: line.filter((_, k) => k % 3 === 0 || k === n - 1).map(([x, y]) => [Math.round(x / TILE * 10) / 10, Math.round(y / TILE * 10) / 10]), ...(pools.length ? { p: pools } : {}), ...(rap.length ? { r: rap.map(([a, b, s]) => [Math.round(a / 3), Math.round(b / 3), s]) } : {}) });
     (m.natureSites ||= []).push({ kind: cfg.kind, name: S.name, x: Math.round(line[0][0]), y: Math.round(line[0][1]), mouth: [Math.round(line[n - 1][0]), Math.round(line[n - 1][1])], len: Math.round(n * TILE * G.step / 6 / TILE), pools: pools.map((p) => [Math.round(p[0] * TILE), Math.round(p[1] * TILE)]), line: line.filter((_, k) => k % 6 === 0 || k === n - 1).map(([x, y]) => [Math.round(x), Math.round(y)]) });
     out.creeks.push({ name: S.name, tiles: Math.round(n * G.step / 6), water: tiles, pools: pools.length, riffles: rap.length, crossings, kinds, clips, long, fall: Math.round((tr[0][2] - tr[tr.length - 1][2]) * 10) / 10, ...(net && { net: 1 }), ...(spans.length && { culverts: spans.length, decks }), ...(tr.pond && { pond: 1 }), ...(rspans.length && { rock: rspans.reduce((q, [a, b]) => q + Math.round((b - a + 1) * G.step / 6), 0), falls: cascades }) });
