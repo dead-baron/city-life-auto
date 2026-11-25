@@ -21,10 +21,12 @@ added as the work goes; a line he has checked is marked with his word and the da
   the land from the woods west of the Giants Loop to the lake (283 tiles; riffles, 7 pools, stepping stones where a
   path crosses). Pictures: `report-20-creek`. Judge: its width, how many boulders, the pools (big enough to read as
   pools, to fish), the stones. On his word the same rule lays a network, with ponds in the hollows.
-- [ ] **The giant redwoods' tops: pick one.** The trunks-only look was rejected on sight (11-24 18:47). Four forms of
-  the same tree, pictures `report-13` (in the forest: A now, C) and `report-14` (the four side by side): A as now;
-  B crown carried high; C a small crown higher still; D smaller again. Judge: which reads as a really tall redwood and
-  leaves enough of the floor in view.
+- [ ] **The giant redwoods' tops: pick one.** The trunks-only look was rejected on sight (11-24 18:47). Forms of the
+  same tree shown since, none in the code: A as now; B crown carried high; C a small crown higher still; D smaller
+  again (`report-13`, `report-14`); E, F, G the small high crown with half, a little and no taper; H today's crown,
+  little taper (`report-15`, `report-16`); J today's crown and leaves on a trunk with no taper - his own ask of 19:35
+  (`report-18`, `report-19`), its top a round dome; offered: J with A's ragged sprays closing the top instead.
+  Judge: which reads as a really tall redwood and leaves enough of the floor in view.
 
 **In the game, when the batch is live**
 Water
