@@ -14,10 +14,12 @@ import { LEDGE } from '../client/art2/game/groundbake.js';
 const lum = (c, j = 0) => c[j] * 0.3 + c[j + 1] * 0.59 + c[j + 2] * 0.11;
 
 test('a granite cliff is a sheer wall, taller than its band; sandstone and basalt as they were', () => {
-  assert.equal(cliffH({ h: 100, rl: 1 }), Math.round(100 * CRAG_TALL));
-  assert.equal(cliffH({ h: 100, st: 'sandstone', rl: 1 }), 100);
-  assert.equal(cliffH({ h: 100, st: 'basalt', rl: 1 }), 100);
-  assert.equal(cliffH({ h: 100 }), 100, 'a face placed by hand (ground to walk north of it) keeps its height: the rock drawn is the rock that is solid');
+  assert.equal(cliffH({ w: 256, h: 100, rl: 1 }), Math.round(100 * CRAG_TALL));
+  assert.equal(cliffH({ w: 64, h: 100, rl: 1 }), 100, 'a short run keeps its height: it stood like a pillar');
+  assert.ok(cliffH({ w: 128, h: 100, rl: 1 }) > 100 && cliffH({ w: 128, h: 100, rl: 1 }) < 150);
+  assert.equal(cliffH({ w: 256, h: 100, st: 'sandstone', rl: 1 }), 100);
+  assert.equal(cliffH({ w: 256, h: 100, st: 'basalt', rl: 1 }), 100);
+  assert.equal(cliffH({ w: 256, h: 100 }), 100, 'a face placed by hand (ground to walk north of it) keeps its height: the rock drawn is the rock that is solid');
   const g = makeStatic({ t: 'cliff', w: 256, d: 96, h: 100, s: 3, rl: 1 }), s = makeStatic({ t: 'cliff', w: 256, d: 96, h: 100, s: 3, st: 'sandstone' });
   assert.ok(g.h >= s.h + 40, `the granite piece's picture is taller (${g.h} px, the sandstone ${s.h})`);
   // sheer: down the piece's middle column the flat tops it passes (runs of 8 rows or more at one height) - a stair
@@ -44,4 +46,16 @@ test('ledges every few metres of height; no snow painted on them, no trial switc
     assert.ok(!/__CRAG/.test(src), `${f}: the trial switch is gone`);
   }
   assert.ok(!/snow lying on the bench/.test(readFileSync(new URL('../client/art2/game/groundbake.js', import.meta.url), 'utf8')), 'no snow on the benches');
+});
+
+// Talus and the open slopes (11-25): what has come down off a crag lies at its foot - the ground south of solid rock
+// is pale broken stone for a way, with fallen stones on it (groundbake.js talus, TALUS) - and the mountains' open
+// ground shows the rock's ledges too where it is steep, fainter (LEDGE.rib, LEDGE.soft).
+test('talus at a wall\'s foot and fainter ledges on steep open ground: the numbers', async () => {
+  const { TALUS } = await import('../client/art2/game/groundbake.js');
+  assert.ok(TALUS.reach >= 30 && TALUS.reach + TALUS.vary <= 140, 'an apron a tile or two deep, never a field');
+  assert.ok(TALUS.rocks > 0.3 && TALUS.rocks <= 0.9);
+  assert.ok(LEDGE.rib > LEDGE.slope && LEDGE.soft > 0.2 && LEDGE.soft < 0.7, 'open ground: only where steep, and fainter than rock');
+  const src = readFileSync(new URL('../client/art2/game/groundbake.js', import.meta.url), 'utf8');
+  assert.ok(/\['edges', edges\], \['talus', talus\], \['decor', decor\]/.test(src), 'the talus is laid before the decor strews its stones');
 });

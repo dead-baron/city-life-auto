@@ -27495,3 +27495,15 @@ for now". The trial's switch is gone and B is what the bake draws: statics.js `c
 1.5, terrain.js style `crag`, one sheer wall), ground.js `crag` (big light slabs), groundbake.js `reliefOn` (`LEDGE`:
 a bench every 4 m of height along the land's contours on rock). C's snow is taken out. The desert's sandstone and the
 coasts' basalt pieces are as they were. test/crags.test.js. With the re-bake.
+
+## 2026-11-25 · Talus at a crag's foot; ledges on the steep open slopes - on branch `fable-art-1124`
+Following the owner's pick of look B. groundbake.js `talus` (a pass between the edges and the decor; `TALUS`): south
+of solid rock that stands 3 m or more over the ground below (from M.relief), the wild ground - the mountains' brown
+scree too - is pale broken stone for 54 to 100 px, its edge ragged and dithered out, the earth showing between the
+stones; the decor strews fallen stones over it, thickest by the wall. `reliefOn`: the mountains' open ground shows
+the rock's ledges where it is steeper than 0.4 m a tile, at 45% strength (`LEDGE.rib`, `LEDGE.soft`). statics.js
+`cliffH`: a cliff run under five tiles wide keeps its own height (taller it stood like a pillar by Summit Tarn).
+test/crags.test.js (the numbers, the pass order); test/cliffs.test.js passes with the walls as drawn. Seen at the
+crag at tiles 684, 588 and at Summit Tarn. No bake-level test of the apron (it needs a World v3 build: by picture
+and the census tool). The summits as knobs: a plan in docs/tasks/MOUNTAIN-LOOK-2026-11-25.md, not built. The bake's
+code: 1,095 of 1,100 KB.

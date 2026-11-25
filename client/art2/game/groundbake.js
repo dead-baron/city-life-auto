@@ -194,7 +194,7 @@ export function* groundSteps(M, cx, cy, opt = {}) {
   const G = opt.scratch ? scratchG() : new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
   const prof = opt.profile ? {} : null;
   C.prof = prof;
-  for (const [name, f] of [['tiles', tileFacts], ['roads', roadField], ['rail', railField], ['classify', classify], ['shore', shoreDistance], ['paint', paint], ['markings', markings], ['edges', edges], ['decor', decor], ['surf', surf], ['relief', relief]]) {
+  for (const [name, f] of [['tiles', tileFacts], ['roads', roadField], ['rail', railField], ['classify', classify], ['shore', shoreDistance], ['paint', paint], ['markings', markings], ['edges', edges], ['talus', talus], ['decor', decor], ['surf', surf], ['relief', relief]]) {
     const t0 = prof ? performance.now() : 0;
     f(C, G);
     if (prof) prof[name] = Math.round(performance.now() - t0);
@@ -1123,7 +1123,7 @@ function paint(C, G) {
     }
   }
 }
-export const LEDGE = { step: 4, slope: 0.12 };   // (metres of height between a crag's ledges; the slope, m a tile, under which rock lies flat)
+export const LEDGE = { step: 4, slope: 0.12, rib: 0.4, soft: 0.45 };   // (metres of height between a crag's ledges; the slope, m a tile, under which rock lies flat)
 // 9. the land's relief (World v3 8.22: shared/world3-relief.js, M.relief - metres per tile, dithered): the ground
 // shaded by its slope under a light from the north-west, a touch lighter the higher it stands; per tile from a 4 x 4
 // box of heights either side (the box undoes the dithering), bilinear per pixel; the water left as it is
@@ -1159,15 +1159,19 @@ function reliefOn(C, G, under) {
       if (fl[gi] & F_WATER) continue;
       const fx = (WX0 + x + PAD) / TILE - 0.5 - TX0, i0 = Math.floor(fx), vx = fx - i0, k0 = j0 * TN + i0;
       let k = (sh[k0] * (1 - vx) + sh[k0 + 1] * vx) * (1 - vy) + (sh[k0 + TN] * (1 - vx) + sh[k0 + TN + 1] * vx) * vy;
-      if (b.mat[(y + PAD) * WN + x + PAD] === M_.CRAG) {
+      const mt = b.mat[(y + PAD) * WN + x + PAD];
+      if (mt === M_.CRAG || mt === M_.SCREE) {
         // rock rises in benches (the owner's pick "B", 11-25): at every LEDGE.step metres of the land's height a ledge - its
-        // face where the ground falls toward you, a light lip above it; the benches follow the land's own contours
+        // face where the ground falls toward you, a light lip above it; the benches follow the land's own contours. The
+        // mountains' open ground (scree) shows them too where it is steep (LEDGE.rib), fainter (LEDGE.soft): a slope reads
+        // as a slope, and nothing there looks like a wall you cannot climb
         const bl = (A, o) => (A[k0 * 2 + o] * (1 - vx) + A[(k0 + 1) * 2 + o] * vx) * (1 - vy) + (A[(k0 + TN) * 2 + o] * (1 - vx) + A[(k0 + TN + 1) * 2 + o] * vx) * vy;
         const X = WX0 + x + PAD, Y = WY0 + y + PAD, hgt = (zt[k0] * (1 - vx) + zt[k0 + 1] * vx) * (1 - vy) + (zt[k0 + TN] * (1 - vx) + zt[k0 + TN + 1] * vx) * vy + (vnc(X, Y, 46, 7811) - 0.5) * 2.6 + (vnc(X, Y, 13, 7813) - 0.5) * 0.9;
         const gx = bl(gt, 0), gy = bl(gt, 1), sl = Math.sqrt(gx * gx + gy * gy);
-        if (sl > LEDGE.slope) { const STEP = LEDGE.step, f = hgt / STEP, fr = f - Math.floor(f), sp = STEP / sl * TILE, px = fr * sp, south = -gy / sl;   // (px: how far up from the ledge's foot, along the slope)
+        const rk = mt === M_.CRAG ? 1 : LEDGE.soft;
+        if (sl > (rk === 1 ? LEDGE.slope : LEDGE.rib)) { const STEP = LEDGE.step, f = hgt / STEP, fr = f - Math.floor(f), sp = STEP / sl * TILE, px = fr * sp, south = -gy / sl;   // (px: how far up from the ledge's foot, along the slope)
           const face = Math.min(26, sp * 0.4) * Math.max(0.25, south);
-          if (px < face) k *= south > 0 ? 0.62 + 0.12 * (px / face) - (hh(X, 0, 7815) > 0.7 ? 0.05 : 0) : 0.86; else if (px < face + 3) k *= 1.2; }
+          if (px < face) k *= 1 - (1 - (south > 0 ? 0.62 + 0.12 * (px / face) - (hh(X, 0, 7815) > 0.7 ? 0.05 : 0) : 0.86)) * rk; else if (px < face + 3) k *= 1 + 0.2 * rk; }
       }
       if (k > 0.995 && k < 1.005) continue;
       const j = gi * 4;
@@ -1908,6 +1912,40 @@ cov('SHOULDER', [['pebble', 6, 0.04], ['tuftDry', 8, 0.04], ['weed', 4, 0.03]]);
 cov('GRAVLOT', [['weed', 4, 0.012], ['pebble', 6, 0.02]]);
 cov('QUARRY', [['rock', 6, 0.03], ['pebble', 6, 0.05]]);
 cov('BALLAST', [['weed', 4, 0.01]]);
+// 8b. talus: what has come down off a crag lies at its foot. South of solid rock (a relief band's wall, a rock rib)
+// the wild ground is pale broken stone for TALUS.reach px and up to TALUS.vary more, its edge ragged and dithered out, and the decor
+// pass strews fallen blocks and stones over it, thickest by the wall - so a wall does not stand on bare earth (the
+// owner, 11-25: "big rock structure and mountain side and cliffs and rocky terrain systems"; his pick, look B).
+// b.tal: 1 + px south of the rock for an apron pixel, 0 elsewhere.
+export const TALUS = { reach: 54, vary: 46, rocks: 0.7, drop: 3, cover: 0.72 };   // (drop: metres the rock must stand over the ground for an apron - a flat slab in a meadow sheds nothing; cover: how much of the apron is stone, the ground showing between)
+function talus(C, G) {
+  const { b, seed, WX0, WY0 } = C, Mt = b.mat, tal = b.tal || (b.tal = new Uint8Array(WA)), A2 = C.ap === 2;
+  tal.fill(0);
+  let any = false;
+  for (let i = 0; i < WA; i += 5) if (Mt[i] === M_.CRAG) { any = true; break; }
+  if (!any || !SHADER[M_.WASH]) return;
+  const far = TALUS.reach + TALUS.vary, Mp = C.M, R = Mp.relief;
+  const zAtPx = (qx, qy) => { if (!R) return 0; const tx = Math.floor((WX0 + qx) / TILE), ty = Math.floor((WY0 + qy) / TILE); return Mp.inside(tx, ty) ? R[Mp.row(ty) + Mp.col(tx)] : 0; };
+  for (let px = 0; px < WN; px++) {
+    let d = 255, hc = 0;
+    for (let py = 0; py < WN; py++) {
+      const i = py * WN + px, m = Mt[i];
+      if (m === M_.CRAG) { if (d !== 0) hc = 0; d = 0; if (R && (py & 15) === 0) hc = Math.max(hc, zAtPx(px, py - 2 * TILE)); continue; }
+      if (!WILD_BANK.has(m) && m !== M_.SCREE) { d = 255; continue; }   // (a road, water, a yard: the apron ends there)
+      if (d < 255) d++;
+      if (d > far) continue;
+      const x = px - PAD, y = py - PAD, X = WX0 + (A2 ? (x & ~1) + PAD : px), Y = WY0 + (A2 ? (y & ~1) + PAD : py);
+      const edge = (TALUS.reach + TALUS.vary * vnc(X, 0, 52, seed + 311)) * (0.7 + 0.6 * vnc(X, Y, 11, seed + 313));
+      if (d > edge) continue;
+      if (R && hc - zAtPx(px, py) < TALUS.drop) continue;   // (no height over it: nothing came down)
+      tal[i] = 1 + d;
+      if (x < 0 || y < 0 || x >= CHUNK || y >= CHUNK) continue;
+      if (d > edge * 0.55 && hh(X, Y, seed + 315) > (edge - d) / (edge * 0.45)) continue;   // (thinning out toward its edge)
+      if (hh(X >> 1, Y >> 1, seed + 317) > TALUS.cover) continue;   // (the ground shows between the stones)
+      { const c = SHADER[M_.WASH](X, Y, seed), j = (y * CHUNK + x) * 4; G.col[j] = c[0] * 0.88; G.col[j + 1] = c[1] * 0.88; G.col[j + 2] = c[2] * 0.9; }   // (pale broken stone, the granite's own grey - the mountains' ground is the brown scree)
+    }
+  }
+}
 function decor(C, G) {
   const { M, b, q, seed } = C;
   if (q <= 0) return;
@@ -1933,6 +1971,8 @@ function decor(C, G) {
     const px = Math.floor(X - C.WX0), py = Math.floor(Y - C.WY0);
     if (px < 0 || py < 0 || px >= WN || py >= WN) continue;
     const i = py * WN + px, m = b.mat[i];
+    // (the talus under a crag: fallen blocks and stones, thickest by the wall)
+    if (b.tal && b.tal[i] && h0 > 1 - TALUS.rocks * dens * (1 - (b.tal[i] - 1) / (TALUS.reach + TALUS.vary + 1))) { stamp(C, G, cover(C, h0 > 0.8 && b.tal[i] < 60 ? 'rock' : 'pebble', (hh(cx, cy, seed + 97) * 6) | 0), X, Y, b.zb[i]); continue; }
     const list = COVER[m];
     if (list) {
       const nd = b.dist[i] / 10, bk = nd < 30 ? bankKind(m, X, Y, seed) : 0;

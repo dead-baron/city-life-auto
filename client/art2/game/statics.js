@@ -2690,7 +2690,7 @@ function propItems(c, p, pi, I) {
     case 'roadsign': { const k = p.k || 'arrow', hd = qa((p.a || 0) + PI / 2, 8); V(`rsign:${k}:${hd.toFixed(2)}`, 'roadSign', [k], hd); return; }
     case 'fingerpost': V('fpost', 'fingerPost', [], qa(u * PI, 4)); return;
     case 'stand': V('pstand', 'stand', []); return;
-    case 'cliff': put(I, { key: `cliff:${p.w}:${p.d}:${p.h}:${p.s || 1}${p.st ? ':' + p.st : ''}${p.relief ? ':r' : ''}`, recipe: { t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1, st: p.st, ...(p.relief && { rl: 1 }) }, x, y, ext: [p.w / 2 + 20, p.d + cliffH({ h: p.h, st: p.st, rl: p.relief }) + 30, p.w / 2 + 20, 20], pi }); return;
+    case 'cliff': put(I, { key: `cliff:${p.w}:${p.d}:${p.h}:${p.s || 1}${p.st ? ':' + p.st : ''}${p.relief ? ':r' : ''}`, recipe: { t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1, st: p.st, ...(p.relief && { rl: 1 }) }, x, y, ext: [p.w / 2 + 20, p.d + cliffH({ w: p.w, h: p.h, st: p.st, rl: p.relief }) + 30, p.w / 2 + 20, 20], pi }); return;
     case 'mineportal': V('mport', 'minePortal', []); lightAt(I, x, y + 6, 30, 90, [1, 0.75, 0.4], 0.8, 'lamp'); return;
     case 'minecart': V('mcart', 'mineCart', [], PI / 2); return;
     case 'barrel': V('mbarrel', 'mBarrel', []); return;
@@ -3557,7 +3557,7 @@ function crossingSignals(I, list) {
 // (how tall a cliff piece is drawn: a granite crag's wall along a band of the relief - rl, solid rock behind it - half
 // as tall again; a face placed by hand stands alone, with ground you can walk north of it, and keeps the height and the
 // steps its solid shape was cut to: shared/cliffshape.js, test/cliffs.test.js)
-export const CRAG_TALL = 1.5, isCrag = (r) => !!r.rl && r.st !== 'sandstone' && r.st !== 'basalt', cliffH = (r) => (isCrag(r) ? Math.round(r.h * CRAG_TALL) : r.h);
+export const CRAG_TALL = 1.5, isCrag = (r) => !!r.rl && r.st !== 'sandstone' && r.st !== 'basalt', cliffH = (r) => (isCrag(r) ? Math.round(r.h * (r.w >= 160 ? CRAG_TALL : r.w >= 96 ? (1 + CRAG_TALL) / 2 : 1)) : r.h);   // (a short run keeps its height: half as tall again it stood like a pillar)
 const EL_PIECE = 128, EL_HW = 104, EL_STA_HW = 168, EL_STA_LEN = 400;
 // What stands over the street on legs fades as a building does when you are on the ground under or beside it (the
 // owner, 11-25: "see under elevated platforms like this railroad bridge ... highways ... like we do behind

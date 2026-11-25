@@ -38,3 +38,25 @@ whether he means those as well.
    as a slope and not as a brown field.
 5. Water in the mountains: the tarns and the falls set into the rock - a rock rim, a spill over a ledge, the stream
    below running out through the talus to the foothills.
+
+## Done after the pick (11-25 08:30)
+- **Talus** (item 2): south of rock that stands 3 m or more over the ground, the ground is pale broken stone for 54
+  to 100 px, thinning out, the earth showing between, fallen stones strewn over it thickest by the wall
+  (groundbake.js `talus`, `TALUS`). A flat slab in a meadow sheds nothing.
+- **The open slopes** (item 4, a first step): the mountains' open ground (scree) shows the rock's ledges too where it
+  is steeper than 0.4 m a tile, at under half strength (`LEDGE.rib`, `LEDGE.soft`).
+- **Short runs**: a cliff piece under five tiles wide keeps its own height (half as tall again it stood like a pillar).
+
+## The summits as knobs - a plan, not built (item 3: it changes what is solid, so it waits for his word)
+Today Cairn Peak, Eagle Knob and Windy Col are level ground with a cairn, a bench and (the highest) a telescope
+(shared/world3-peaks.js `summits`): nothing says "top". Proposed, for the batched world rebuild:
+1. **A knob of rock at each**: the relief raised 14-20 m over a round of about 14 tiles (the search's own `knob`
+   radius), steep on three sides so the relief makes its cliff band there - the crag wall, the ledges and the talus
+   above then draw themselves - and a ramp left on the side the Summit Trail arrives from.
+2. **The trail climbs it**: the last 20-30 tiles of the Summit Trail routed up the ramp in two or three switchbacks,
+   with stone steps where it is steepest (the `stairs` prop the cliffs' test already knows).
+3. **The top**: a level shelf 6-8 tiles across for the cairn, the bench and the telescope, the bench facing the
+   longest view; nothing planted on it.
+4. **Checks**: every summit reached on foot from its trailhead (the trails' reachability test), nobody walks into
+   drawn rock (test/cliffs.test.js), the telescope's and the bench's interactions still in reach.
+Cost: a world change (the relief, three trails' ends), so the art re-bakes there; about half a day with its tests.
