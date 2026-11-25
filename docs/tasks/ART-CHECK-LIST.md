@@ -144,5 +144,6 @@ last leap over the top of a falls; the other fish's leaps.
 - [x] **The road over a creek** (the owner, 11-25 14:52: "looks good how it is now except the railings should be a
   little longer and connected to the street" - done, `report-52`).
 - [ ] **The cats** (the owner, 11-25 15:26: the face as before with "a little nose", the tail "thinner and longer"):
-  done so, the nose a light pink (15:42). Picture: `report-56`, `report-57`. Judge in the game.
+  done so, the nose a light pink (15:42), centred under the eyes from the front (15:48), the grey cat's pink and
+  the black cat's black (15:52 - faint on a black face). Picture: `report-60`. Judge in the game.
 - [ ] **The shark**: reshaped 11-25 (his ask of 15:10). Picture: `report-54`. Judge in the water, in the game.

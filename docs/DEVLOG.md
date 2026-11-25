@@ -27679,4 +27679,8 @@ screen, reloads; `cla.clouds`).
   apart, so no single pixel is the middle: the nose is drawn on both middle pixels (renderArt, a feature's `center`).
   The collar is a voxel wider on cats so it shows on both middle pixels too. The low-carried tail's tip stays under
   the head's top (from the front it stood up between the ears as a spike). Picture: `report-59`.
+- **The cats, 15:52** (the owner: "the grey cat a pink nose and the black cat an actual black nose"): the tabby's nose
+  is the cats' light pink again; the black cat's is `#0b0a0e`, a step under its coat's darkest tone (`noNose` stays
+  in the code, unused). On a black face it is two pixels a little darker than the fur round them - there, but faint
+  at the game's size. Picture: `report-60`.
 
