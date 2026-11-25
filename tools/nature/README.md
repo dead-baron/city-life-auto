@@ -27,3 +27,10 @@ with `NODE_OPTIONS=--max-old-space-size=3072`.
 - Pictures of places: `tools/area-shot.mjs` takes many `--rect`s in one world build, e.g. sixteen falls in one run.
 
 A plant's shape seed in the world is `1000 + v * 37 + species.length * 7` for shape `v`.
+
+## A picture of the running game at any spot (11-25)
+`tools/playtest.py` with `--start-server` (today's world; for World v3 start `CLA_WORLD=v3 node server/index.js` first
+and wait about four minutes for "listening"), then the steps: wait for "Play as", `key:Escape` twice, `dev:tp:{x,y}`,
+wait for the chunks, and before `shot:` an `eval:` that hides the first-time dialog - find the smallest visible
+element whose text has "WHAT BRINGS YOU" (or "Where to"), walk up to its panel (under 700 px wide) and set
+`style.display = 'none'`. `__S.art2` is the art host (its `fades`, `chunkState`, `map`).

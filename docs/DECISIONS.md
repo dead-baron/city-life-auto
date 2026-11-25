@@ -386,6 +386,22 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   alley you stand on is followed out from your tile, and every building whose picture lies over that ground fades.
   A building faced from its own street keeps its front - so the alley BEHIND the row you face stays hidden until you
   step into it: opening that too would ghost the shopfronts, and is his call. Not seen in a running game.
+- A faded building is all but clear (the owner, 11-25 03:05, on the live see-through streets: "we need the buildings
+  to be totally transparent like as transparent as it is around my character. Maybe a little bit of gradient or
+  dissolve around the edges but it should be really clear you can see past these building blocks ... And have a good
+  transition kind of like how we have for entering buildings now"): engine.js `GHOST` 0.6 -> 0.94, a rim that
+  dissolves in over 12 px along its outline and its footprint (`GHOST_EDGE`, `EDGE_PX`); the eased transition as it
+  was (0.35 s in, 0.5 s out). This replaces the 10-23 "a ghost, not the whole of it at once"; a thin thing (a mast's
+  hut, a tree) keeps its lighter ghost. On the branch; live on his word.
+- The bake's code budget 1,080 -> 1,100 KB (the owner, 11-25 03:05: "Yes raise the bake code limit as you need").
+- The fern kit approved (the owner, 11-25 03:05: "Fern looks good to me, I would go easy on the gold bracken and use
+  it sparingly and in places that would make sense logically, and sometimes in little clusters but mostly just good
+  detail to add in sparingly among the other green fern").
+- The project stays public for now (the owner, 11-25 03:05: "If this can cause performance or connection or any issues
+  for the players Id rather just focus on getting a clean fun great game out first and just make it bet best and
+  first known ... even if some people try cloning"): Claude's answer recorded in PREBETA-LIST - no effect on players
+  once done, about a day, a deploy risk while it is done; the one cheap step (stop sending server source to browsers)
+  can be taken on its own. His call when; not scheduled.
 - WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
   the consoles we are aiming for").
 - The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was

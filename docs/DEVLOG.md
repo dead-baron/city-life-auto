@@ -27362,3 +27362,18 @@ over the street you are on goes see-through for the length of the block, and a w
 it; a building faced from its own street lies over none of your ground and keeps its front. Worked out when you
 change tile (a few hundred tile reads), not every frame. Page-side: no re-bake. `test/alleyfade.test.js`.
 Not seen in a running game: how much of a city street ghosts at once, at an intersection, and from a vehicle.
+
+## 2026-11-25 · A faded building is all but clear; the bake's code budget 1,100 KB - on branch `fable-art-1124`
+**See-through** (the owner on the live build, 03:05: "totally transparent like as transparent as it is around my
+character. Maybe a little bit of gradient or dissolve around the edges"). `engine.js`: `GHOST` 0.6 -> 0.94 - where a
+building fades, 94% of the street shows (it was 60%: roofs' gear lay faintly over the alley); along the rim of what
+fades (within `EDGE_PX` 12 px of its footprint, and where its picture ends: eight taps of the building-index texture)
+it dissolves in from `GHOST_EDGE` 0.5, so its shape stays readable. Thin things keep `GHOST_THIN`. The transition is
+the eased one it had. `test/seethrough.test.js` updated to the new rule (it asserted "semi-transparent, never gone",
+10-23); the GL test passes. Seen in a local game (today's world): the sidewalk behind a roof fully visible.
+Page-side: no re-bake.
+**Budget**: the bake's code 1,080 -> 1,100 KB (tools/perf.mjs), the owner's word of 03:05. Why: the plants' even
+light, the banks and the stones were fitted in by cutting comments (it stood at 1,080.5); the fern kit (about 6 KB),
+natural wild flowers and a stick bridge do not fit.
+**Capturing the running game**: the first-time dialogs can be hidden from a playtest step (an eval that sets the
+dialog's panel to display none), which gives real game pictures - tools/nature/README.md.
