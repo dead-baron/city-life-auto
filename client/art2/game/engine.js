@@ -128,12 +128,17 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // one's lighter, so it keeps its shape), the clear space round a figure - how much of its radius is the feathered edge,
 // how much taller than wide it is; CLR_SWAP: past what share of the clear space a texel takes the ground's height,
 // dithered over CLR_SWAP_W (10-24); SEE: how much of the ghost lies over what is behind it (GHOST_FS), next to over the street
-export const GHOST = 0.6, GHOST_THIN = 0.3, CLR_SOFT = 0.65, CLR_TALL = 1.3, CLR_SWAP = 0.3, CLR_SWAP_W = 0.55, SEE = 0.5;
+// (11-25, the owner on the see-through streets: "we need the buildings to be totally transparent like as transparent as
+// it is around my character. Maybe a little bit of gradient or dissolve around the edges" - GHOST 0.6 -> 0.94: all but
+// clear; and along the edges of what fades - its picture's outline, the rim of its footprint - it dissolves in over
+// EDGE_PX, from GHOST_EDGE: the building's shape stays readable as a soft rim, nothing lies over the street)
+export const GHOST_EDGE = 0.5, EDGE_PX = 12;
+export const GHOST = 0.94, GHOST_THIN = 0.3, CLR_SOFT = 0.65, CLR_TALL = 1.3, CLR_SWAP = 0.3, CLR_SWAP_W = 0.55, SEE = 0.5;
 // seeThrough: STATIC_FS's fade of a texel at world (x, y) outside its building's footprint, in JS (the tests): f the
 // building's fade (uFade), C the clear spaces (uClr) -> 0..1. seenBehind: how much shows of a sprite there (GHOST_FS;
 // 0 when it isn't fading: hidden, as behind anything solid)
-export function seeThrough(f, x, y, C) {
-  const gh = f < 0 ? GHOST_THIN : GHOST, a = Math.abs(f), sst2 = (e0, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (1 - e0))); return t * t * (3 - 2 * t); };
+export function seeThrough(f, x, y, C, edge = 0) {   // (edge 0..1: how near the rim of what fades - fadeOf's e)
+  const gh = f < 0 ? GHOST_THIN : GHOST - (GHOST - GHOST_EDGE) * edge, a = Math.abs(f), sst2 = (e0, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (1 - e0))); return t * t * (3 - 2 * t); };
   let cl = 0;
   for (let i = 0; i < 4; i++) if (C[i * 4 + 2] > 0) cl = Math.max(cl, (1 - sst2(1 - CLR_SOFT, Math.hypot((x - C[i * 4]) / C[i * 4 + 2], (y - C[i * 4 + 1]) / (C[i * 4 + 2] * CLR_TALL)))) * C[i * 4 + 3]);
   return a * (gh + (1 - gh) * cl);
@@ -217,6 +222,12 @@ float fadeOf(ivec2 src, out vec4 u, out float fa, out float fc){
   vec4 fp = uFoot[k];
   vec2 sp = vec2(src * AP) + 0.5 * float(AP);
   if (f <= 0.002 || (fp.x <= fp.z ? sp.x >= fp.x && sp.x < fp.z && sp.y >= fp.y && sp.y < fp.w : length((sp - (fp.xy + fp.zw) * 0.5) / max((fp.xw - fp.zy) * 0.5, vec2(1.0))) < 1.0)) return 0.0;
+  // (the rim: beside its own footprint, and where its picture ends - a neighbour texel EDGE_PX off is not its own)
+  float e = fp.x <= fp.z ? 1.0 - smoothstep(0.0, ${EDGE_PX.toFixed(1)}, length(max(max(fp.xy - sp, sp - fp.zw), vec2(0.0)))) : 0.0;
+  ivec2 tsz = textureSize(t3, 0) - 1; float out4 = 0.0;
+  for (int i = 0; i < 8; i++) { ivec2 o = ivec2(i < 4 ? ${Math.round(EDGE_PX / 2)} : ${EDGE_PX}, 0) / AP; if ((i & 1) == 1) o = -o; if ((i & 2) == 2) o = o.yx; if (int(texelFetch(t3, clamp(src + o, ivec2(0), tsz), 0).a * 255.0 + 0.5) != k) out4 += i < 4 ? 0.2 : 0.1; }
+  e = max(e, min(1.0, out4));
+  if (gh > ${GHOST_EDGE}) gh -= (gh - ${GHOST_EDGE}) * e;
   vec2 wp = uChunk + sp;
   float cl = 0.0;
   for (int i = 0; i < 4; i++) { vec4 q = uClr[i]; if (q.z > 0.0) cl = max(cl, (1.0 - smoothstep(${(1 - CLR_SOFT).toFixed(2)}, 1.0, length((wp - q.xy) / vec2(q.z, q.z * ${CLR_TALL.toFixed(2)})))) * q.w); }
