@@ -27479,3 +27479,19 @@ fills that table. So once the wheel had been near, peds.js never got the module 
 faceplant, the start of sitting down for lie and sleep. Fix: the poses are asked for until this module has them.
 test/emotes.test.js (in a process of its own, the poses loaded first by someone else: fails on the old code).
 Seen in a local game after: flat on the face; lying flat. Page code: no re-bake; live with the page on his word.
+
+## 2026-11-25 · The licorice fern by logs; a stick bridge; a cloud-shadow still - on branch `fable-art-1124`
+- statics.js: beside a log or a mossy rock in the woods the cover is now and then the kit's licorice fern
+  (`fLicorice`), the fern that grows there. test/ferns.test.js (its room).
+- props-garden.js `stickBridge(len, s)`: six poles lashed with cord, three builds; shared/world3-creeks.js
+  `CREEKS3.sticks`: 40% of a creek's log crossings are one (a `logbridge` prop with `k: 'sticks'` - the same deck to
+  walk). The sample creek has no log crossing, so none stands yet: with the network. test/naturepieces.test.js.
+- A still of a cloud's shadow passing over Lakeside Greens for the owner's eye (`report-43`; his note: "Maybe
+  occasional cloud shadows passing through the world? Or maybe not a good detail to add not sure"). Nothing built.
+
+## 2026-11-25 · The mountains' crags: look B, no snow - on branch `fable-art-1124`
+The owner's pick (07:19): "B for the mountain/cliffs is best, also were not doing snow yet so let's not do any snow
+for now". The trial's switch is gone and B is what the bake draws: statics.js `cliff` (granite: `cliffH` / `CRAG_TALL`
+1.5, terrain.js style `crag`, one sheer wall), ground.js `crag` (big light slabs), groundbake.js `reliefOn` (`LEDGE`:
+a bench every 4 m of height along the land's contours on rock). C's snow is taken out. The desert's sandstone and the
+coasts' basalt pieces are as they were. test/crags.test.js. With the re-bake.

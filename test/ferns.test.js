@@ -75,7 +75,7 @@ test('which fern grows where: by wetness, in drifts, the gold bracken sparingly 
   assert.deepEqual([...bank].sort(), ['fDeer', 'fLady', 'fMaiden', 'fSwordS'], 'at a bank: the wet ground\'s ferns');
   for (const k of ['fSword', 'fSwordS', 'fLady', 'fMaiden', 'fBracken', 'fGold', 'fDeer', 'fChain', 'fFiddle', 'fClump', 'fernR']) assert.ok(n[k] > 0, `${k} grows somewhere`);
   // each kind's picture is inside the room its item claims (a picture beyond it is cut at a chunk's edge)
-  for (const sp of ['fSword', 'fSwordS', 'fLady', 'fMaiden', 'fBracken', 'fGold', 'fDeer', 'fChain', 'fFiddle', 'fClump']) for (let v = 0; v < 6; v++) {
+  for (const sp of ['fSword', 'fSwordS', 'fLady', 'fMaiden', 'fBracken', 'fGold', 'fDeer', 'fChain', 'fFiddle', 'fClump', 'fLicorice']) for (let v = 0; v < 6; v++) {
     const G = makeStatic({ t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k: 1 }), e = floraExt(sp, 1), k = G.ap2 || 1;
     let L = 0, R = 0, U = 0, D = 0;
     for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) if (G.col[(y * G.w + x) * 4 + 3]) { L = Math.max(L, G.ax - x * k); R = Math.max(R, (x + 1) * k - G.ax); U = Math.max(U, G.ay - y * k); D = Math.max(D, (y + 1) * k - G.ay); }

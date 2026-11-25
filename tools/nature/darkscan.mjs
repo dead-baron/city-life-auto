@@ -11,7 +11,6 @@ import { spawnSync } from 'node:child_process';
 const ROOT = process.env.ROOT ? process.env.ROOT.replace(/\/?$/, '/') : fileURLToPath(new URL('../..', import.meta.url)), imp = (f) => import(pathToFileURL(join(ROOT, f)).href);
 const shots = []; let sites = false, find = null, who = false;
 for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i], v = process.argv[i + 1]; if (a === '--rect') shots.push({ rect: v.split(',').map(Number), out: null }); else if (a === '--out' && shots.length) shots[shots.length - 1].out = v; else if (a === '--sites') sites = true; else if (a === '--s' && shots.length) shots[shots.length - 1].s = +v; else if (a === '--who') who = true; else if (a === '--find') find = new RegExp(v, 'i'); else if (a === '--place') shots.push({ place: v, out: null }); else if (a === '--prop') shots.push({ prop: v, out: null }); else if (a === '--seabridge') shots.push({ seabridge: +v || 0, out: null }); }
-if (process.env.CRAG) globalThis.__CRAG = +process.env.CRAG;   // (a look on trial: the mountain crags - 1 walls and ledges, 2 taller, 3 snow on the high benches)
 const { buildWorld3 } = await imp('server/world3.js');
 const { TILE, CHUNK_TILES } = await imp('shared/constants.js');
 const { map: M } = await buildWorld3(1337, { log: () => {} });

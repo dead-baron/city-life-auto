@@ -411,6 +411,11 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   ... lets get a list and redraw all of them and just let me know what needed the redraw"). So: the palettes' shade
   tones and the painters' shading are what change; no lift of the finished picture; a census over the baked world
   (tools/nature/darkscan.mjs) and a list of what was redrawn.
+- The mountains' crags are look B (the owner, 11-25 07:19, of three variants: "B for the mountain/cliffs is best, also
+  were not doing snow yet so let's not do any snow for now"): a granite cliff one sheer wall half as tall again, its
+  top the grey of the rock behind it, that rock in big light slabs rising in ledges along the land's contours. No
+  snow is drawn on the benches. The snowfields the world already has (above the snow line) are as they were - asked
+  11-25 whether "no snow for now" means those too.
 - WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
   the consoles we are aiming for").
 - The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was

@@ -34,7 +34,7 @@ test('World v3: the cliffs are solid where they are drawn - on foot, by car, fro
   // each face's rock as drawn, in world pixels: its sprite's opaque pixels on the ground (x, y + z) and where they hide
   // the ground behind them (x, y) - a mask over the face's box
   const rockOf = (p) => {
-    const G = makeStatic({ t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1, st: p.st });
+    const G = makeStatic({ t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1, st: p.st, ...(p.relief && { rl: 1 }) });   // (as statics.js draws it: a relief band's granite face is the crag's wall - 11-25)
     const X0 = Math.round(p.x - G.ax), Y0 = Math.round(p.y - G.ay), mw = G.w, mh = G.h + 40, mask = new Uint8Array(mw * mh);
     for (let sy = 0; sy < G.h; sy++) for (let sx = 0; sx < G.w; sx++) {
       const q = sy * G.w + sx;

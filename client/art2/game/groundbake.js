@@ -1123,7 +1123,7 @@ function paint(C, G) {
     }
   }
 }
-const X0S = (x, w) => x + w;
+export const LEDGE = { step: 4, slope: 0.12 };   // (metres of height between a crag's ledges; the slope, m a tile, under which rock lies flat)
 // 9. the land's relief (World v3 8.22: shared/world3-relief.js, M.relief - metres per tile, dithered): the ground
 // shaded by its slope under a light from the north-west, a touch lighter the higher it stands; per tile from a 4 x 4
 // box of heights either side (the box undoes the dithering), bilinear per pixel; the water left as it is
@@ -1143,10 +1143,10 @@ function reliefOn(C, G, under) {
   const { M, b, TX0, TY0, WY0, WX0 } = C, R = M.relief;
   if (!R) return;
   const zb = (tx, ty) => { let s = 0; for (let dy = -2; dy < 2; dy++) for (let dx = -2; dx < 2; dx++) { const x = tx + dx, y = ty + dy; if (M.inside(x, y)) s += R[M.row(y) + M.col(x)]; } return s / 16; };
-  const sh = b.tsh, CV = globalThis.__CRAG | 0, zt = CV ? new Float32Array(TN * TN) : null, gt = CV ? new Float32Array(TN * TN * 2) : null;   // (TRIAL: CRAG - ledges)
+  const sh = b.tsh, zt = b.tzt || (b.tzt = new Float32Array(TN * TN)), gt = b.tgt || (b.tgt = new Float32Array(TN * TN * 2));   // (the heights and slopes the rock's ledges are drawn from)
   for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, ty = TY0 + j, h = zb(tx, ty);
-    if (CV) { zt[j * TN + i] = h; gt[(j * TN + i) * 2] = (zb(tx + 2, ty) - zb(tx - 2, ty)) / 4; gt[(j * TN + i) * 2 + 1] = (zb(tx, ty + 2) - zb(tx, ty - 2)) / 4; }
+    { zt[j * TN + i] = h; gt[(j * TN + i) * 2] = (zb(tx + 2, ty) - zb(tx - 2, ty)) / 4; gt[(j * TN + i) * 2 + 1] = (zb(tx, ty + 2) - zb(tx, ty - 2)) / 4; }
     const gx = (zb(tx + 3, ty) - zb(tx - 3, ty)) / 6, gy = (zb(tx, ty + 3) - zb(tx, ty - 3)) / 6;
     const k = (0.42 * gx + 0.5 * gy + 0.76) / Math.sqrt(gx * gx + gy * gy + 1) / 0.76;
     sh[j * TN + i] = Math.max(0.55, Math.min(1.3, 1 + (k - 1) * 1.4 + (h - 30) * 0.0007));
@@ -1159,18 +1159,18 @@ function reliefOn(C, G, under) {
       if (fl[gi] & F_WATER) continue;
       const fx = (WX0 + x + PAD) / TILE - 0.5 - TX0, i0 = Math.floor(fx), vx = fx - i0, k0 = j0 * TN + i0;
       let k = (sh[k0] * (1 - vx) + sh[k0 + 1] * vx) * (1 - vy) + (sh[k0 + TN] * (1 - vx) + sh[k0 + TN + 1] * vx) * vy;
-      if (CV && b.mat[(y + PAD) * WN + x + PAD] === M_.CRAG) {
-        // rock rises in benches: at every STEP metres of the land's height a ledge - its face where the ground falls toward you
+      if (b.mat[(y + PAD) * WN + x + PAD] === M_.CRAG) {
+        // rock rises in benches (the owner's pick "B", 11-25): at every LEDGE.step metres of the land's height a ledge - its
+        // face where the ground falls toward you, a light lip above it; the benches follow the land's own contours
         const bl = (A, o) => (A[k0 * 2 + o] * (1 - vx) + A[(k0 + 1) * 2 + o] * vx) * (1 - vy) + (A[(k0 + TN) * 2 + o] * (1 - vx) + A[(k0 + TN + 1) * 2 + o] * vx) * vy;
         const X = WX0 + x + PAD, Y = WY0 + y + PAD, hgt = (zt[k0] * (1 - vx) + zt[k0 + 1] * vx) * (1 - vy) + (zt[k0 + TN] * (1 - vx) + zt[k0 + TN + 1] * vx) * vy + (vnc(X, Y, 46, 7811) - 0.5) * 2.6 + (vnc(X, Y, 13, 7813) - 0.5) * 0.9;
         const gx = bl(gt, 0), gy = bl(gt, 1), sl = Math.sqrt(gx * gx + gy * gy);
-        if (sl > 0.12) { const STEP = 4, f = hgt / STEP, fr = f - Math.floor(f), sp = STEP / sl * TILE, px = fr * sp, south = -gy / sl;   // (px: how far up from the ledge's foot, along the slope)
+        if (sl > LEDGE.slope) { const STEP = LEDGE.step, f = hgt / STEP, fr = f - Math.floor(f), sp = STEP / sl * TILE, px = fr * sp, south = -gy / sl;   // (px: how far up from the ledge's foot, along the slope)
           const face = Math.min(26, sp * 0.4) * Math.max(0.25, south);
-          if (px < face) k *= south > 0 ? 0.62 + 0.12 * (px / face) - (hh(X, 0, 7815) > 0.7 ? 0.05 : 0) : 0.86; else if (px < face + 3) k *= 1.2; else if (CV >= 3 && hgt > 150 && px > face + 6 && px < face + 6 + sp * 0.35 && vnc(X, Y, 23, 7817) > 0.45) k = -1; }   // (-1: snow lying on the bench)
+          if (px < face) k *= south > 0 ? 0.62 + 0.12 * (px / face) - (hh(X, 0, 7815) > 0.7 ? 0.05 : 0) : 0.86; else if (px < face + 3) k *= 1.2; }
       }
       if (k > 0.995 && k < 1.005) continue;
       const j = gi * 4;
-      if (k < 0) { const sv = 226 + (hh(X0S(x, WX0), y, 7819) > 0.8 ? 12 : 0); col[j] = sv - 8; col[j + 1] = sv; col[j + 2] = Math.min(255, sv + 12); continue; }
       col[j] = Math.min(255, col[j] * k); col[j + 1] = Math.min(255, col[j + 1] * k); col[j + 2] = Math.min(255, col[j + 2] * k * (k < 1 ? 1.04 : 1));
       if (under) { under[j] = Math.min(255, under[j] * k); under[j + 1] = Math.min(255, under[j + 1] * k); under[j + 2] = Math.min(255, under[j + 2] * k * (k < 1 ? 1.04 : 1)); }
     }

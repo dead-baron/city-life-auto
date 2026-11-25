@@ -33,6 +33,7 @@ export const CREEKS3 = {
   road: 14,         // tiles: a spring rises no nearer a road, a lot or a building than this
   stones: 14,       // a crossing of more path tiles than this is reported, not laid
   log: [2, 7, 0.5], // a path narrower than this (tiles), crossing no further than this bank to bank, takes a fallen log
+  sticks: 0.4,       // of those log crossings, the share that is a makeshift bridge of poles instead (the owner, 11-24 21:40)
                     // this often; else, and a wider path or a longer way over, stepping stones
 };
 
@@ -183,8 +184,9 @@ export function woodsCreeks3(m, H3) {
       const span = Math.hypot(x1 - x0, y1 - y0) || 1, ux = (x1 - x0) / span, uy = (y1 - y0) / span, mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
       let w0 = 0, w1 = 0; for (const q of g) { const d = -(q[1] + 0.5 - mx) * uy + (q[2] + 0.5 - my) * ux; w0 = Math.min(w0, d); w1 = Math.max(w1, d); }
       if (w1 - w0 < G.log[0] && span <= G.log[1] && hh(Math.round(mx), Math.round(my), 89) < G.log[2]) {
-        C.prop('logbridge', mx * TILE, my * TILE, 0, { len: Math.round((span * TILE + 16) / 8) * 8, a: Math.round(Math.atan2(uy, ux) * 1000) / 1000 });
-        kinds.log++;
+        const sticks = hh(Math.round(mx), Math.round(my), 91) < G.sticks;   // (a makeshift bridge of poles instead of the one great log)
+        C.prop('logbridge', mx * TILE, my * TILE, 0, { len: Math.round((span * TILE + 16) / 8) * 8, a: Math.round(Math.atan2(uy, ux) * 1000) / 1000, ...(sticks && { k: 'sticks' }) });
+        kinds.log++; if (sticks) kinds.sticks = (kinds.sticks || 0) + 1;
       } else {
         for (const [, tx, ty] of g) {
           const u = hh(tx, ty, 81), big = 9 + Math.round(hh(tx, ty, 83) * 7);
