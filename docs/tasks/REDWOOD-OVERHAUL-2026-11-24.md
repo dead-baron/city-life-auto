@@ -80,3 +80,9 @@ tiles of water and three footbridges - Redwood Creek's (square to the water, dir
 off square, deck tiles off its line, a giant standing at its south end). No trail line runs over open water. So the
 bridges are few and two of three are wrong; and the forest has very little water for its size - step 3 is mostly new
 creeks, not repairs.
+
+## 6. Step 2 done (11-24, 19:40): the footbridges
+`shared/world3-footbridges.js` (DEVLOG "Every footbridge walked and seen"): all thirteen footbridges in the world
+checked by test - decked, on their banks, met by a path, nothing drawn over them. Left of step 2: the trails
+themselves (narrowed and worn in, roots, a log step on a slope, side paths that leave them) and the crossing kit's
+other pieces (stepping stones, a ford) - these come with the new creeks of step 3, which need crossings of their own.

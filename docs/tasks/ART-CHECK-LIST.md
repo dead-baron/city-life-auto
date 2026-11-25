@@ -62,5 +62,10 @@ The woods and the meadows
   on Highland Road: two ruts (one for the enduro's single track) that fade in at the start, instead of a grey band.
   Judge: do they read as a trail; is the enduro's too faint under the redwoods to follow. Picture: `report-9-trails`.
 
+- [ ] **The footbridges** - the Stadium park's across its pond, West Hills' two over the creek (you could not walk
+  over any of the three: now you can), the Giants Loop's (its trail reaches it), Highland Way's over the river (the
+  giant that stood over it is gone). Judge: walk each; Highland Way's sits at a slant to its river - does it bother.
+  Picture: `report-17-footbridges`.
+
 **Not looked at by Claude at all** (so his look is the first): a phone; the islands' and harbours' water; a salmon's
 last leap over the top of a falls; the other fish's leaps.

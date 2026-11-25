@@ -9,6 +9,8 @@ import assert from 'node:assert/strict';
 import { buildWorld3 } from '../server/world3.js';
 import { TILE, T } from '../shared/constants.js';
 import { WAYSIDE } from '../shared/world3-wayside.js';
+import { FOOTBRIDGE } from '../shared/world3-footbridges.js';
+import { COVER, TREE_COVER } from '../shared/world3-clearings.js';
 import { SHORE_R, SHORE_MIN } from '../shared/world3-croptidy.js';
 import { FLORA_SPECIES, staticItems, STATIC_CHUNK, MSTONE_UP } from '../client/art2/game/statics.js';
 
@@ -109,3 +111,47 @@ test('the Sentinel Stones: on a round of turf, drawn tall', () => {
   assert.ok(tall >= 8 && MSTONE_UP >= 1.4, `${tall} standing`);
 });
 
+
+// Every footbridge can be walked and seen (shared/world3-footbridges.js; the redwood overhaul's crossings, 11-24 - the
+// owner: "a lot of bridges over streams aren't at the right angle or they don't actually let you walk over them").
+// Before the pass: three with no deck under them (the Stadium park's, West Hills' two), three log stubs ending in a
+// lake, the Giants Loop's ending on grass, Highland Way's under a giant.
+test('every footbridge: a deck under it, its ends on the banks, its path at them, nothing drawn over it', () => {
+  const wet = (t) => t === T.WATER || t === T.DEEP, tAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return m.inside(tx, ty) ? m.tiles[m.idx(tx, ty)] : -1; };
+  const PATH = new Set([T.DIRT, T.SIDEWALK, T.PLAZA, T.ROAD, T.SAND, T.LOT, T.DOCK, T.BRIDGE]);
+  const list = m.props.filter((p) => p && FOOTBRIDGE.kinds.includes(p.t)).map((p) => ({ x: p.x, y: p.y, a: p.a || 0, len: p.len || 140, name: p.t }));
+  for (const s of m.natureSites || []) if (s.footbridge) list.push({ ...s.footbridge, name: s.name });
+  console.log('footbridges', list.length, JSON.stringify(m.world3.footbridges));
+  assert.ok(list.length >= 9, `footbridges in the world (${list.length})`);
+  const tall = m.props.filter((p) => p && /^(tree_a|tree_b|redwood)$/.test(p.t));
+  let noPath = 0, inWater = 0;
+  for (const b of list) {
+    const ux = Math.cos(b.a), uy = Math.sin(b.a), at = `${b.name} at ${Math.round(b.x / TILE)}, ${Math.round(b.y / TILE)}`;
+    let open = 0, over = 0;
+    for (let d = -b.len / 2; d <= b.len / 2; d += 8) { const t = tAt(b.x + ux * d, b.y + uy * d); if (wet(t)) open++; else if (t === T.BRIDGE) over++; }
+    assert.equal(open, 0, `${at}: ${open * 8} px of it over open water - nothing to walk on`);
+    assert.ok(over >= 2, `${at}: it crosses water (${over * 8} px of deck)`);
+    for (const sg of [-1, 1]) {
+      const ex = b.x + ux * sg * (b.len / 2 + 12), ey = b.y + uy * sg * (b.len / 2 + 12);
+      if (wet(tAt(ex, ey))) { inWater++; continue; }
+      let has = false, near = false;
+      for (let dy = -FOOTBRIDGE.link; dy <= FOOTBRIDGE.link; dy++) for (let dx = -FOOTBRIDGE.link; dx <= FOOTBRIDGE.link; dx++) {
+        if (!PATH.has(tAt(ex + dx * TILE, ey + dy * TILE)) || tAt(ex + dx * TILE, ey + dy * TILE) === T.BRIDGE && Math.abs(dx * ux + dy * uy) < 2) continue;
+        if (Math.abs(dx) <= 2 && Math.abs(dy) <= 2) has = true; else if (dx * dx + dy * dy <= FOOTBRIDGE.link ** 2 && (dx * ux + dy * uy) * sg >= -1) near = true;
+      }
+      if (!has) { noPath++; console.log(`${at}: no path at its ${sg < 0 ? 'first' : 'far'} end${near ? ' (one within reach)' : ''}`); }
+    }
+    // (what stands south of the deck and is drawn over two points of it or more)
+    for (const p of tall) {
+      if (Math.abs(p.x - b.x) > b.len / 2 + 130 || p.y < b.y - b.len / 2 - 10 || p.y > b.y + b.len / 2 + 780) continue;
+      const c = p.t === 'redwood' ? COVER[p.sp] || COVER.giant : TREE_COVER, s = p.k && p.t === 'redwood' ? Math.min(1, p.k) : 1;
+      let hit = 0;
+      for (let d = -b.len / 2; d <= b.len / 2; d += 16) { const x = b.x + ux * d, y = b.y + uy * d, dy = p.y - y, dx = Math.abs(p.x - x); if (dy > -6 && dy <= c[1] * s && dx < c[2] * s && (dy >= c[1] * s * 0.42 || dx < c[0] * s + 10)) hit++; }
+      assert.ok(hit < 2, `${at}: a ${p.sp || p.t} at ${Math.round(p.x / TILE)}, ${Math.round(p.y / TILE)} is drawn over it`);
+    }
+  }
+  // (pinned: ends that stop over water - the long boardwalks out into a lake - and ends on a lawn with no path near)
+  console.log('ends over water', inWater, 'ends with no path', noPath);
+  assert.ok(inWater <= 2, `ends over water (${inWater})`);
+  assert.ok(noPath <= 4, `ends with no path at them (${noPath})`);
+});

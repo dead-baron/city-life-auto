@@ -27223,3 +27223,21 @@ Kept from it, because the measuring found them in today's trees:
   Highland Woods, two of them wrong; 1,248 tiles of water in 1.8 million of land.
 
 Not run: the whole test suite (the redwood, fade, flora and budget tests pass). Not seen in a running game.
+
+## 2026-11-24 · Every footbridge walked and seen (the redwood overhaul, step 2) - on branch `fable-art-1124`
+The owner, 18:00: "a lot of bridges over streams aren't at the right angle or they don't actually let you walk over
+them". Counted in the built world: thirteen footbridges over water, three of them in Highland Woods. What was wrong:
+- **Three were pictures only**: the Stadium park's bridge across its pond and West Hills' two over the creek had
+  water tiles under them and no deck - you walked into the pond under the bridge.
+- **Three log stubs** stood where a trail steps onto a road's bridge over a lake, ending in the water.
+- **The Giants Loop's** ended on grass a tile and a half from its trail; **Highland Way's** had a giant redwood drawn
+  over its south end; a log bridge on a lake's edge ended short of its bank.
+`shared/world3-footbridges.js` `footbridges3`, one pass after every place is made: bridge tiles under the whole deck;
+an end over water carried on to its bank (4 lengthened); a short bridge with no bank within reach taken out (3); a
+worn link from an end to the path near it, dirt or paving as the path is (2); no tree left standing where it is drawn
+over a deck (10 props out with the links' undergrowth). `test/world3wayside.test.js` checks every footbridge: no open
+water under it, its ends on land, a path at both, nothing tall over it - 9 footbridges, all pass.
+The angle: one bridge sits 26 degrees off square to its river (Highland Way's); left as laid - with the trees off it,
+it reads. A world change (world3 hash): it goes with the nature batch.
+Seen: offline renders of each bridge. Not seen: in a running game; the stubs' spot after they went.
+Counted for step 3: Highland Woods has 1,248 tiles of water in 1.8 million of land - new creeks, not repairs.
