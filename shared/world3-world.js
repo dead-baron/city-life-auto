@@ -62,7 +62,7 @@ import { boatsAfloat3 } from './world3-boats.js';
 import { railTrim3 } from './world3-railtrim.js';
 import { badBays3 } from './parkcheck.js';
 import { clearDoorSteps3 } from './world3-doorsteps.js';
-import { cropScraps3, farmsOffBeach3 } from './world3-croptidy.js';
+import { cropScraps3, farmsOffBeach3, stripsOffShore3 } from './world3-croptidy.js';
 import { frontNames3 } from './world3-signfix.js';
 import { festoonThin3 } from './world3-festoons.js';
 import { deckRoots3 } from './world3-deckroots.js';
@@ -368,6 +368,7 @@ export function worldOpts(asked) {
       m.world3.railTrim = railTrim3(m);   // (no railing or fence out over open water - the audit's railOverWater: world3-railtrim.js)
       m.world3.badBays = badBays3(m);   // (no parking space whose car would stand on a pavement, a lawn or a pier - the audit's parked: parkcheck.js)
       m.world3.farmsOffBeach = farmsOffBeach3(m);   // (the farms back from the beach - the owner, 11-22 16:45: world3-croptidy.js)
+      m.world3.stripsOffShore = stripsOffShore3(m);   // (the art pass, 11-24: no planted row on the sand or at the sea's edge - world3-croptidy.js)
       m.world3.cropScraps = cropScraps3(m);   // (no stray crop scrap in a town or by a beach - the audit's cropInTown: world3-croptidy.js)
       m.world3.frontNames = frontNames3(m);   // (a shop's sign names what's behind it - the audit's frontNames: world3-signfix.js)
       m.world3.festoonThin = festoonThin3(m);   // (no curtain of hanging lights - the audit's festoonDensity: world3-festoons.js)

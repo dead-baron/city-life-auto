@@ -45,6 +45,9 @@ on main (checked: the recorder, the 'va' pieces, fall look 2, the sun-lit plants
      and Willow Valley (`shared/world3-wayside.js`, a world change). Left here: a cliff overlook (it needs a cliff the
      land has), the lily pond with a duck and the farm pond with a jetty (water tiles), the farm (the flower row,
      hand-crafted fields), the off-road trail, the lawn turf for the art pixel.
+     Done 11-24: every field edged (verge, headland), the planted rows off the shore, the off-road rides drawn as
+     worn tracks that fade in, a country car park's edge (DEVLOG "Fields with edges ..."). Left of the farm: its
+     yards against D13 (tyre tracks, hay, a tractor, a track between fields).
    - Redwood: still denser than N1; the fern layer over the floor, creek and paths; a walk-in hollow trunk, a root cave.
    - Mountain: the six ledge falls' setting (the river below lower and darker); the redwood horseshoe against NR1-E;
      standing stones that barely read; lichen boulders; the Summit Tarn placeholder (a shelf and a rock face the land

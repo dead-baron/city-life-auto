@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { buildWorld3 } from '../server/world3.js';
 import { TILE, T } from '../shared/constants.js';
 import { WAYSIDE } from '../shared/world3-wayside.js';
+import { SHORE_R, SHORE_MIN } from '../shared/world3-croptidy.js';
 import { FLORA_SPECIES } from '../client/art2/game/statics.js';
 
 const { map: m } = await buildWorld3(1337, { log: () => {} });
@@ -65,4 +66,23 @@ test('each find has its pieces, and what should stop you is solid', () => {
     // (every plant a find sets is a species the art knows)
     for (const p of m.props) if (p && p.sp && Math.abs(p.x - f.x) < R && Math.abs(p.y - f.y) < R) assert.ok(FLORA_SPECIES.includes(p.sp), `${at}: ${p.t} of species ${p.sp}`);
   }
+});
+
+// (In this file for its world build.) The planted rows off the shore (shared/world3-croptidy.js stripsOffShore3; the art
+// pass, 11-24: three rows of sunflowers stood on a cobble point with the sea a tile off, lavender on a beach - 65 of the
+// 513 strips had sand under them). No crop strip or orchard row within SHORE_R tiles of sand or the sea; none left a
+// stub; a cut strip's plants gone with its ground.
+test('planted rows keep off the sand and the sea', () => {
+  const R = m.world3.stripsOffShore;
+  console.log('strips off the shore', JSON.stringify(R));
+  assert.ok(R && R.trimmed + R.gone >= 20 && R.plants >= 50, 'the rule found its rows');
+  const shore = (tx, ty) => { for (let j = -SHORE_R; j <= SHORE_R; j++) for (let i = -SHORE_R; i <= SHORE_R; i++) { if (!m.inside(tx + i, ty + j)) continue; const q = m.idx(tx + i, ty + j), t = m.tiles[q]; if (t === T.SAND || ((t === T.WATER || t === T.DEEP) && !(m.lake && m.lake[q]) && !(m.river && m.river[q]))) return true; } return false; };
+  assert.ok(m.orchards.length > 400, `the strips kept (${m.orchards.length})`);
+  for (const o of m.orchards) {
+    const x0 = Math.floor(o.x / TILE), y0 = Math.floor(o.y / TILE), x1 = Math.ceil((o.x + o.w) / TILE) - 1, y1 = Math.ceil((o.y + o.h) / TILE) - 1;
+    assert.ok(x1 - x0 + 1 >= SHORE_MIN || o.w >= SHORE_MIN * TILE - TILE, `a ${o.k} strip at ${x0}, ${y0} is no stub`);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) assert.ok(!shore(tx, ty), `a ${o.k} strip at ${tx}, ${ty}: off the sand and the sea`);
+  }
+  // (the sunflowers that stood on North Cape's cobbles: tiles 4466..4520, 580..602)
+  assert.equal(m.props.filter((p) => p && p.sp === 'sunflowers' && p.x > 4466 * TILE && p.x < 4520 * TILE && p.y > 580 * TILE && p.y < 602 * TILE).length, 0, 'no sunflowers on the cape');
 });

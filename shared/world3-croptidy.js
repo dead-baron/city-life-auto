@@ -88,6 +88,57 @@ export function farmsOffBeach3(m) {
   return out;
 }
 
+// The planted rows off the shore (the art pass, 11-24: three rows of sunflowers on a cobble point with the sea a tile
+// off, lavender on a beach - the rows are planted before the coasts are shaped, and farmsOffBeach3 knows a beach by its
+// district): a crop strip or an orchard row keeps SHORE_R tiles off any sand and off the sea (a lake's or a river's
+// bank is a farm's own). A strip (m.orchards, rows along x) is cut back to its longest stretch that does; under
+// SHORE_MIN tiles of it left, it goes. Its plants go with the ground they lose.
+//   stripsOffShore3(m) -> { strips (looked at), trimmed, gone, plants }
+export const SHORE_R = 3, SHORE_MIN = 6;
+const ROW_SP = new Set(['lavender', 'sunflowers', 'apple', 'orange', 'lemon']);
+export function stripsOffShore3(m) {
+  const out = { strips: (m.orchards || []).length, trimmed: 0, gone: 0, plants: 0 };
+  if (!m.tiles || !out.strips) return out;
+  const memo = new Map();
+  const shore = (tx, ty) => {
+    const key = tx * 65536 + ty; let v = memo.get(key);
+    if (v !== undefined) return v;
+    v = false;
+    for (let j = -SHORE_R; j <= SHORE_R && !v; j++) for (let i = -SHORE_R; i <= SHORE_R; i++) {
+      const X = tx + i, Y = ty + j;
+      if (!m.inside(X, Y)) continue;
+      const q = m.idx(X, Y), t = m.tiles[q];
+      if (t === T.SAND || ((t === T.WATER || t === T.DEEP) && !(m.lake && m.lake[q]) && !(m.river && m.river[q]))) { v = true; break; }
+    }
+    memo.set(key, v); return v;
+  };
+  const keep = [], cuts = [];   // (cuts: [x0, y0, x1, y1] px of ground a strip lost)
+  for (const o of m.orchards) {
+    const x0 = Math.floor(o.x / TILE), y0 = Math.floor(o.y / TILE), x1 = Math.ceil((o.x + o.w) / TILE) - 1, y1 = Math.ceil((o.y + o.h) / TILE) - 1;
+    let a = -1, best = [0, -1], any = false;
+    for (let tx = x0; tx <= x1 + 1; tx++) {
+      let bad = tx > x1;
+      for (let ty = y0; ty <= y1 && !bad; ty++) bad = shore(tx, ty);
+      if (bad && tx <= x1) any = true;
+      if (!bad) { if (a < 0) a = tx; } else { if (a >= 0 && tx - a > best[1] - best[0] + 1) best = [a, tx - 1]; a = -1; }
+    }
+    if (!any) { keep.push(o); continue; }
+    if (best[1] - best[0] + 1 < SHORE_MIN) { out.gone++; cuts.push([o.x, o.y, o.x + o.w, o.y + o.h]); continue; }
+    const nx0 = Math.max(o.x, best[0] * TILE), nx1 = Math.min(o.x + o.w, (best[1] + 1) * TILE);
+    if (nx0 > o.x) cuts.push([o.x, o.y, nx0, o.y + o.h]);
+    if (nx1 < o.x + o.w) cuts.push([nx1, o.y, o.x + o.w, o.y + o.h]);
+    o.x = nx0; o.w = nx1 - nx0; keep.push(o); out.trimmed++;
+  }
+  m.orchards = keep;
+  if (cuts.length) {
+    const gone = new Set();
+    for (const p of m.props) { if (!p || !ROW_SP.has(p.sp)) continue; for (const [cx0, cy0, cx1, cy1] of cuts) if (p.x >= cx0 && p.x < cx1 && p.y >= cy0 && p.y < cy1) { gone.add(p); break; } }
+    out.plants = gone.size;
+    if (gone.size) dropProps(m, gone);
+  }
+  return out;
+}
+
 export function cropScraps3(m) {
   const out = { patches: 0, tiles: 0 };
   if (!m.tiles || !m.districtAt) return out;

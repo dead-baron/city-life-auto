@@ -37,5 +37,16 @@ The woods and the meadows
   Judge: do they read as places someone made and left; are there too many or too few; the ruins' size. Picture:
   `report-7-found-places`.
 
+- [ ] **The fields' edges** - any farm (the Dry Creek co-op, Lake Road): a ragged grass verge and a strip of turned
+  earth round every field instead of a ruled line. Judge: the widths (a verge of about 6 px, earth to about 17);
+  whether fields now read as hand-made or want more (a track between fields, hay bales, a tractor: the farm's own
+  pass, not started). Picture: `report-8-farm`.
+- [ ] **"The flower row"** (his note of 11-23) - read as the sunflower and lavender rows that stood on sand and on
+  North Cape's cobbles (now cut back from the shore) and the rows' ruled soil (now edged). If he meant a particular
+  row somewhere: where.
+- [ ] **The off-road trails** - the Red Rock Trail from the MX park's east gate; the Highland Enduro from its car park
+  on Highland Road: two ruts (one for the enduro's single track) that fade in at the start, instead of a grey band.
+  Judge: do they read as a trail; is the enduro's too faint under the redwoods to follow. Picture: `report-9-trails`.
+
 **Not looked at by Claude at all** (so his look is the first): a phone; the islands' and harbours' water; a salmon's
 last leap over the top of a falls; the other fish's leaps.

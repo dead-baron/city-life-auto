@@ -265,7 +265,7 @@ function tileFacts(C) {
   C.wash = (M.washes || []).filter((e) => e.bb[2] >= TX0 * TILE - 64 && e.bb[0] <= (TX0 + TN) * TILE + 64 && e.bb[3] >= TY0 * TILE - 64 && e.bb[1] <= (TY0 + TN) * TILE + 64);
   const mazes = M.mazes || [];              // hedge mazes: the walls' tiles are lawn under the hedges, the paths gravel
   const tracks = (M.tracks || []).filter((r) => r.bb[2] >= TX0 * TILE - 64 && r.bb[0] <= (TX0 + TN) * TILE + 64 && r.bb[3] >= TY0 * TILE - 64 && r.bb[1] <= (TY0 + TN) * TILE + 64);   // dirt tracks off-road (Red Rock Canyon)
-  C.ruts = tracks.filter((r) => r.ruts);   // (a two-rut track's ruts: rutPx)
+  C.ruts = tracks.filter((r) => r.ruts || r.ride);   // (a two-rut track's ruts, and the off-road rides - the Red Rock Trail, the Highland Enduro - drawn per pixel: rutPx)
   // (World v3 8.22, H50: the desert's tables - their tops' cap rock, the talus at their feet - and Red Rock Canyon's floor
   // as the desert round it, its rock at its walls; a map with relief only: today's bakes as before)
   const tabs = M.relief && M.tables ? M.tables.filter((t) => t.x + t.rx + 18 >= TX0 && t.x - t.rx - 18 <= TX0 + TN && t.y + t.ry + 18 >= TY0 && t.y - t.ry - 18 <= TY0 + TN) : null;
@@ -288,7 +288,7 @@ function tileFacts(C) {
   // shared/world3-biomes.js m.orchards; a vineyard's rows run along x as the lavender's do)
   const orch = farmRects(M).filter((r) => r.x + r.w >= TX0 * TILE && r.x <= (TX0 + TN) * TILE && r.y + r.h >= TY0 * TILE && r.y <= (TY0 + TN) * TILE);
   const farmed = (X, Y) => { for (const r of orch) if (inRect(r, X, Y)) return r.k === 'orchard' ? M_.ORCHARD : M_.PLOW; return -1; };   // (the rows run along x: world3-biomes.js)
-  const onTrack = (X, Y) => tracks.some((r) => { if (r.px) return false; if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
+  const onTrack = (X, Y) => tracks.some((r) => { if (r.px || r.ride) return false; if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
   for (let j = 0; j < TN; j++) { const ty = TY0 + j, row = M.row(ty), rowIn = ty >= M.y0 && ty < M.y0 + M.h; for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, k = j * TN + i;
     if (!rowIn || tx < M.x0 || tx >= M.x0 + M.w) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
@@ -434,21 +434,37 @@ export function tinaPx(list, X, Y, seed) {
   return -1;
 }
 // a two-rut track's ruts (shared/naturesites.js: the canyon's, the trailhead's): two lines either side of its middle
-// (0 off it, 1 the track, 2 a rut; a track drawn per pixel - r.px - is all its own, else only its ruts on its dirt tiles)
+// (0 off it, 1 the track, 2 a rut; a track drawn per pixel - r.px - is all its own, else only its ruts on its dirt tiles).
+// A track of its own (the owner, 11-23: "the off-road trail (a blended start, a real trail)" - it was one dark band
+// from edge to edge, begun and ended in a round blot): two ruts worn dark, the crown between them the ground's own with
+// worn patches, the shoulders worn beside the ruts and thinning out to a ragged edge; and over its first and last
+// TRACK_FADE px it narrows and thins to nothing - no cap past either end.
+export const TRACK_FADE = 96, SINGLE_HW = 26;
+const DRYTRACK = new Uint8Array(MATS.length);
+for (const k of ['DESERT', 'DUNE', 'REDROCK', 'CRACKED', 'BEACH', 'SCREE', 'WASH', 'SHINGLE', 'QUARRY', 'TRACKD']) DRYTRACK[M_[k]] = 1;
 function rutPx(list, X, Y, seed, onDirt) {
   for (const r of list) {
-    if (!r.px && !onDirt) continue;
+    const own = r.px || r.ride;
+    if (!own && !onDirt) continue;
     if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) continue;
-    const P = r.pts, hw = r.hw;
-    let d2 = 1e12;
-    for (let k = 1; k < P.length; k++) {
+    const P = r.pts, hw = r.hw, n = P.length;
+    let d2 = 1e12, end = 1e9;   // (end: px along it from the nearer end, where that is on its first or last stretch)
+    for (let k = 1; k < n; k++) {
       const ax = P[k - 1][0], ay = P[k - 1][1], dx = P[k][0] - ax, dy = P[k][1] - ay;
       if ((X < ax - hw && X < ax + dx - hw) || (X > ax + hw && X > ax + dx + hw) || (Y < ay - hw && Y < ay + dy - hw) || (Y > ay + hw && Y > ay + dy + hw)) continue;
-      const l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)), qx = X - ax - dx * t, qy = Y - ay - dy * t, q = qx * qx + qy * qy;
-      if (q < d2) d2 = q;
+      const l2 = dx * dx + dy * dy || 1, tr = ((X - ax) * dx + (Y - ay) * dy) / l2, t = Math.max(0, Math.min(1, tr)), qx = X - ax - dx * t, qy = Y - ay - dy * t, q = qx * qx + qy * qy;
+      if (q < d2) { d2 = q; end = k === 1 ? tr * Math.sqrt(l2) : k === n - 1 ? (1 - tr) * Math.sqrt(l2) : 1e9; if (n === 2) end = Math.min(tr, 1 - tr) * Math.sqrt(l2); }
     }
-    const lim = r.px ? hw * (0.8 + 0.35 * vnc(X, Y, 23, seed + 91)) : hw;
-    if (d2 < lim * lim) return Math.abs(Math.sqrt(d2) - hw * 0.4) < 3 + vnc(X, Y, 11, seed + 89) * 1.6 ? 2 : r.px ? 1 : 0;
+    if (!own) { if (d2 < hw * hw && Math.abs(Math.sqrt(d2) - hw * 0.4) < 3 + vnc(X, Y, 11, seed + 89) * 1.6) return 2; continue; }
+    if (end <= 0) continue;                                     // (past its end: no round cap)
+    const f = end >= TRACK_FADE ? 1 : end / TRACK_FADE, lim = hw * (0.8 + 0.35 * vnc(X, Y, 23, seed + 91)) * (0.45 + 0.55 * f);
+    if (d2 >= lim * lim) continue;
+    // (a ride no wider than a bike's - the enduro's single track - has one rut down its middle)
+    const d = Math.sqrt(d2), single = r.ride && hw <= SINGLE_HW, rut = single ? 0 : hw * 0.4, rw = (single ? 4.6 : 3.4) + vnc(X, Y, 11, seed + 89) * 2, worn = vnc(X, Y, 17, seed + 93);
+    if (Math.abs(d - rut) < rw && worn < 0.25 + 0.75 * f + 0.2) return f < 1 && worn > f + 0.15 ? 0 : 2;   // (the ruts, breaking up as they start)
+    if (d < rut) return worn > 0.72 - 0.1 * f ? 1 : 0;           // (the crown: the ground's own, worn through here and there)
+    const u = (d - rut) / Math.max(1, lim - rut);                // (the shoulder: 0 by the rut .. 1 its edge)
+    return worn * f > 0.2 + 0.55 * u ? 1 : 0;
   }
   return 0;
 }
@@ -798,6 +814,54 @@ function railLoop(C, R, bias) {
   }
 }
 
+// A field's edge (the art pass, 2026-11-24; the owner, 11-23: "the farm ... hand-crafted fields"; concepts FA4, D13).
+// A crop ended on its tiles' edges: wheat against plough, lavender against meadow along ruled lines and square steps.
+// Round every field now, for each pixel of crop within reach of a tile that is not its crop: a verge of grass comes in
+// ragged (the grass beside it; between two fields a baulk of dry grass), then the headland - bare turned earth where
+// the tractor turns - and only then the crop. The same field's cut stubble against its standing crop is no edge.
+// World px; the widths wander by two noises, so no line is ruled.
+export const FIELD_EDGE = { verge: 6, head: 17 };
+const CROP = new Uint8Array(MATS.length), STUBBLE = new Uint8Array(MATS.length);
+for (const k of ['WHEAT', 'CORN', 'CORNV', 'VEG', 'HAY', 'PLOW', 'PLOWV', 'STUB', 'STUBV']) CROP[M_[k]] = 1;
+STUBBLE[M_.STUB] = 1; STUBBLE[M_.STUBV] = 1;
+function fieldEdge(b, ti, X, Y, m, seed) {
+  const own = b.tm[ti];
+  if (own !== m) return isSoft(own) ? own : M_.DRYGRASS;   // (a crop keeps to its own tiles)
+  const lx = X - Math.floor(X / TILE) * TILE + 0.5, ly = Y - Math.floor(Y / TILE) * TILE + 0.5, rx = TILE - lx, ry = TILE - ly;
+  let d = 99, other = -1;
+  for (let n = 0; n < 8; n++) {
+    const dx = n === 0 || n === 4 || n === 6 ? -1 : n === 1 || n === 5 || n === 7 ? 1 : 0, dy = n === 2 || n === 4 || n === 5 ? -1 : n === 3 || n === 6 || n === 7 ? 1 : 0;
+    const mm = b.tm[ti + dx + dy * TN];
+    if (mm === m || (CROP[mm] && (STUBBLE[mm] || STUBBLE[m]))) continue;
+    const ex = dx < 0 ? lx : dx > 0 ? rx : 0, ey = dy < 0 ? ly : dy > 0 ? ry : 0, q = dx && dy ? Math.sqrt(ex * ex + ey * ey) : ex + ey;
+    if (q < d) { d = q; other = mm; }
+  }
+  if (other < 0) return -1;
+  const e = d + (vnc(X, Y, 29, seed + 171) - 0.5) * 11 + (vnc(X, Y, 9, seed + 173) - 0.5) * 5;
+  if (e < FIELD_EDGE.verge) return isSoft(other) ? other : M_.DRYGRASS;
+  return e < FIELD_EDGE.head ? M_.DIRT : -1;
+}
+
+// A country car park's edge (the art pass, 11-24; concept MX2, the trailhead's lot): gravel laid on the ground has no
+// ruled edge. Within LOT_EDGE px of a tile of soft ground (grass, forest floor, dirt, sand - not paving, a road or
+// water) the gravel gives way to it, by two noises: bays of the ground reach in, spits of gravel stay.
+export const LOT_EDGE = 9;
+function lotEdge(b, ti, X, Y, seed) {
+  const lx = X - Math.floor(X / TILE) * TILE + 0.5, ly = Y - Math.floor(Y / TILE) * TILE + 0.5, rx = TILE - lx, ry = TILE - ly;
+  let d = 99, other = -1;
+  for (let n = 0; n < 8; n++) {
+    const dx = n === 0 || n === 4 || n === 6 ? -1 : n === 1 || n === 5 || n === 7 ? 1 : 0, dy = n === 2 || n === 4 || n === 5 ? -1 : n === 3 || n === 6 || n === 7 ? 1 : 0;
+    const kk = ti + dx + dy * TN, mm = b.tm[kk];
+    if (!isSoft(mm) || b.tw[kk]) continue;
+    const ex = dx < 0 ? lx : dx > 0 ? rx : 0, ey = dy < 0 ? ly : dy > 0 ? ry : 0, q = dx && dy ? Math.sqrt(ex * ex + ey * ey) : ex + ey;
+    if (q < d) { d = q; other = mm; }
+  }
+  if (other < 0) return -1;
+  return d + (vnc(X, Y, 27, seed + 181) - 0.5) * 14 + (vnc(X, Y, 8, seed + 183) - 0.5) * 6 < LOT_EDGE ? other : -1;
+}
+
+export const EDGE_TEST = { fieldEdge, lotEdge, rutPx, TN };   // (for test/groundedges.test.js)
+
 // ---- 3. classes ------------------------------------------------------------------------------------------------
 function classify(C) {
   const { M, b, seed, WX0, WY0, TX0, TY0 } = C;
@@ -854,7 +918,11 @@ function classify(C) {
       // round the water out to a ragged edge, per pixel (a tile's step would show as a square)
       if (C.tina && C.tina.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS)) { const q = tinaPx(C.tina, X, Y, seed); if (q >= 0) m = q; }
       if (C.wash && C.wash.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS) && m !== M_.DIRT) { const q = washPx(C.wash, X, Y, seed); if (q >= 0) m = q; }
-      if (C.ruts && C.ruts.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS)) { const q = rutPx(C.ruts, X, Y, seed, m === M_.DIRT); if (q) m = q === 2 ? M_.RUT : M_.TRACKD; }
+      if (C.ruts && C.ruts.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS)) { const q = rutPx(C.ruts, X, Y, seed, m === M_.DIRT); if (q) m = q === 2 ? M_.RUT : DRYTRACK[m] ? M_.TRACKD : M_.DIRT; }   // (worn ground: pale on sand and rock, dark earth in the woods and the grass)
+      // --- a field's edge (fieldEdge): a grass verge and the headland the tractor turns on, ragged
+      if (CROP[m]) { const q = fieldEdge(b, ti, X, Y, m, seed); if (q >= 0) m = q; }
+      // --- a country car park's edge (lotEdge): its gravel thins out into the ground beside it
+      else if (m === M_.GRAVLOT && b.tm[ti] === m) { const q = lotEdge(b, ti, X, Y, seed); if (q >= 0) m = q; }
       // --- vectors: roads, sidewalks, shoulders, bridge decks
       const a = b.aux[i];
       let z = 0;

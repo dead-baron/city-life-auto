@@ -27130,3 +27130,36 @@ this work (checked in a second checkout): the stations' roads, not the art pass'
 touched. Not run: the whole suite.
 A world change (version.json world3 94ff65ee -> 051ab6cf): it goes with the nature batch, on the owner's word.
 No Guide entry: scenery to come across, no new thing to do (the mushrooms are the forage that exists).
+
+## 2026-11-24 · Fields with edges, rows off the shore, the off-road trails as trails - on branch `fable-art-1124`
+The owner, 11-23: "the farm (the flower row, hand-crafted fields)", "the off-road trail (a blended start, a real
+trail)". Found in the game first (tools/area-shot.mjs: the Dry Creek co-op, Lake Road's fields, the lavender and
+sunflower strips, the Red Rock Trail, the Highland Enduro) and set beside D13, FA4, NS1-E and MX2.
+- **A field's edge** (groundbake.js fieldEdge). A crop ended on its tiles' edges: wheat against plough, lavender
+  soil against meadow, in ruled lines and square steps. Round every field now a ragged verge of the grass beside it
+  (a baulk of dry grass between two crops), then the headland - turned earth where the tractor turns - then the crop.
+  A field's own stubble against its standing wheat is no edge. All 156 fields and the 513 planted strips' soil.
+- **The planted rows off the shore** (world3-croptidy.js stripsOffShore3). Three rows of sunflowers stood on North
+  Cape's cobbles with the sea a tile off, lavender on a beach: 65 of the 513 strips had sand under them (the rows are
+  planted before the coasts are shaped; farmsOffBeach3 knows a beach by its district). A strip keeps 3 tiles off any
+  sand and off the sea (a lake's or a river's bank is a farm's own): cut back to its longest stretch that does, gone
+  under 6 tiles, its plants with the ground it loses. A world change.
+- **The off-road rides** (groundbake.js rutPx; m.tracks with `ride`: the Red Rock Trail, the Highland Enduro, Giant's
+  Gate's lane). Each was one band of dirt tiles painted edge to edge - a grey stripe across the desert that began in a
+  blot at its sign. Drawn per pixel now, as the canyon's two-rut tracks were: two ruts worn dark, the crown between
+  them the ground's own with worn patches, shoulders thinning to a ragged edge - one rut down the middle for a bike's
+  single track (hw <= 26: the enduro) - pale on sand and rock, dark earth in the woods. Over its first and last 96 px
+  it narrows and thins to nothing; no round cap past either end. (The canyon's own tracks get the same ends.)
+- **A country car park's edge** (lotEdge): its gravel gives way raggedly to the ground beside it (the enduro's
+  trailhead lot was a ruled rectangle in the ferns); a road or paving beside it keeps its edge.
+Seen: each of these rendered as the game draws it, before and after. Not seen: in a running game; Giant's Gate's lane
+and the canyon's tracks after the change; a field's edge at night. Not done of his note: "the flower row" is read
+here as the rows on the shore and the rows' ruled soil - if he meant a particular row, it wants his pointer (on the
+check list). The farms' yards against D13 (a barn yard with tyre tracks, hay, a tractor) are the farm's own pass:
+not started.
+Tests: `test/groundedges.test.js` (the three functions on made-up tiles: verge, headland, crop; ragged; none at a
+field's own stubble; the lot's edge not against paving; two ruts or one, the fade, no cap); the rows off the shore in
+`test/world3wayside.test.js` (for its world build). The art and the world hashes change: with the nature batch.
+In the built world: 66 strips cut back, 30 gone, 497 plants with them, of 513 strips. Run and passing (88 tests):
+world3wayside, placementlint (its rows hold), perf (the bake's budgets), harvestart, world3dirt, redrock,
+world3kestrel, undergrowth, mapwindow, dmath, waterbake, groundedges. Not run: the whole suite.
