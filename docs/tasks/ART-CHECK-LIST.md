@@ -84,6 +84,9 @@ The woods and the meadows
   on Highland Road: two ruts (one for the enduro's single track) that fade in at the start, instead of a grey band.
   Judge: do they read as a trail; is the enduro's too faint under the redwoods to follow. Picture: `report-9-trails`.
 
+- [ ] **Alleys open up** - walk any alley behind a row of buildings (Old Town, behind Green Leaf Bagels): the whole
+  run of buildings over the alley goes see-through with the one over you, up to 14 tiles either way. Judge: the
+  reach; whether too much fades on an ordinary street when one building covers you.
 - [ ] **The footbridges** - the Stadium park's across its pond, West Hills' two over the creek (you could not walk
   over any of the three: now you can), the Giants Loop's (its trail reaches it), Highland Way's over the river (the
   giant that stood over it is gone). Judge: walk each; Highland Way's sits at a slant to its river - does it bother.

@@ -369,6 +369,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   at the world pixel and halved by the bake.
 - NPC and wildlife behaviour, the shop door's hop and the shop signs (the owner, 11-25 00:22 / 00:33): logged in
   `docs/audit/PREBETA-LIST.md`; the quail family rule - group behaviours stay whole - recorded with it.
+- A stretch of alley opens up, not one building (the owner, 11-25 01:13: "It shows one building transparent but you
+  cant see through the other ones. Could we have more buildings go transparent when they're blocking an alley or
+  street"): built page-side (host.js `_fades`, `FADE_REACH` 14 tiles) - once a building hides you, the others hiding
+  the same alley or street along your row fade too, as far as the ground stays open. Not seen in a running game.
 - WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
   the consoles we are aiming for").
 - The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was

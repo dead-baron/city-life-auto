@@ -27350,3 +27350,11 @@ standing in creeks and rivers; the sample creek's own moved to its banks. The ea
 The bake's code budget: still 1,080 KB - twelve comments from this pass cut down to fit. Not raised.
 Seen: plant sheets with the game's noon light; offline renders at the art pixel. NOT seen in the running game: five
 tries to photograph World v3 in the local game failed on the tool (PREBETA-LIST). The whole suite has not been run.
+
+## 2026-11-25 · A stretch of alley opens up when a building hides you - on branch `fable-art-1124`
+The owner's screenshot of an Old Town alley: the one building over him a ghost, its neighbours solid over the same
+alley. `host.js` `_fades`: once any building hides you, every building whose picture covers your row of ground fades
+with it, along the row either way for as long as the ground stays open (not a building's tile), `FADE_REACH` 14 tiles
+at most. Nothing fades while you stand in the clear, so an open street is as it was. Page-side: no re-bake; it goes
+live with the page. `test/alleyfade.test.js`. Controls unchanged (README table as it was).
+Not seen in a running game: how it reads on a wide street with a tall row to its south, and in a vehicle.

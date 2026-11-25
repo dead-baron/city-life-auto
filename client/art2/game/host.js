@@ -22,6 +22,7 @@ import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bak
 // see-through buildings (_fades): seconds to ease in and out; the clear space's radius round you on foot, in a vehicle at
 // most (else half its length + 34 px), round another player
 export const FADE_IN = 0.35, FADE_OUT = 0.5, CLR_FOOT = 64, CLR_VEH_MAX = 130, CLR_OTHER = 48;
+export const FADE_REACH = 14;   // tiles either way along your row: the stretch of an alley or street opened up with you (_fades)
 const AWN_MIN = 6;   // a building's picture this far south of its foot is an overhang you can stand under (_fades)
 const XF_MS = 320;   // a walk-in's swap: its pixel dissolve (engine.js XF_MS - the same; the engine loads lazily)
 const TURRET_TOP = 47;   // (_turret)
@@ -1383,6 +1384,22 @@ export class World2 {
         // (thin: its picture much taller than wide, or narrow - a hut by a mast, a lighthouse, a silo)
         const pw = r[3] - r[1], ph = r[4] - r[2];
         want.set(b, pw < 72 || pw * 2.2 < ph ? -1 : 1);
+      }
+    }
+    // the stretch (the owner, 11-25: "more buildings go transparent when they're blocking an alley or street"): once
+    // a building hides you, the others hiding the same alley or street go too - as far along your row as the ground
+    // stays open, FADE_REACH tiles at most either way
+    const M = this.map;
+    if (M && M.tiles && M.inside && [...want.keys()].some((b) => b < TREE_FADE)) {
+      const ty = Math.floor(py / TILE), tx = Math.floor(px / TILE), open = (x) => M.inside(x, ty) && M.tiles[M.idx(x, ty)] !== TT.BUILDING;
+      let xl = tx, xr = tx;
+      while (tx - xl < FADE_REACH && open(xl - 1)) xl--;
+      while (xr - tx < FADE_REACH && open(xr + 1)) xr++;
+      const x0 = xl * TILE, x1 = (xr + 1) * TILE;
+      for (const st of this.chunkState.values()) for (const r of st.blds || []) {
+        if (r[0] >= TREE_FADE || want.has(r[0]) || r[5] <= py + 2 || r[3] < x0 || r[1] > x1 || r[4] < sy - up || r[2] > sy + down) continue;
+        const pw = r[3] - r[1], ph = r[4] - r[2];
+        want.set(r[0], pw < 72 || pw * 2.2 < ph ? -1 : 1);
       }
     }
     // each one's progress runs linearly (fadeP) and is shown through a smoothstep, so it eases in and out at both ends
