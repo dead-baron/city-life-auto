@@ -127,8 +127,10 @@ entries have each piece):**
 - **Tools made:** `tools/nature/darkscan.mjs` (the near-black census over the baked world; `--who`, `--place`, `--prop`,
   `--seabridge`, `CRAG=n`), `tools/nature/paintscan.mjs`, `tools/causeways.mjs`; a running-game picture recipe in
   `tools/nature/README.md` (v3 needs the server started first, ~4 min).
-- **Not done / not verified:** the whole suite was not run (some 250 tests round the changes pass; a batch of the
-  wider suite ran 11-25 - `docs/tasks/PREBETA-TESTS.txt` has no entry for it); nothing baked was seen in a running
+- **Not done / not verified:** the whole suite was not run. Some 300 tests round the changes pass, and a wider batch
+  ran 11-25 morning (core, biz, calmstreets, custodyride, contacts2w3, ftue, guide, dmath, mapwindow, firstcar: 108
+  pass, 1 fail - calmstreets' Midtown test under load; it passes run alone; world3wayside, world3server, cliffs pass);
+  the bake's code stands at 1,094 of 1,100 KB; nothing baked was seen in a running
   game; the El's fade only by unit test; PR #48's deploy was never confirmed from the live site.
 - **His PDF of play notes (11-25):** `claude/prebeta-notes-2026-11-25.md` - art ones taken in, game-rule ones logged.
 
