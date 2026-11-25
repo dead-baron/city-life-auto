@@ -96,7 +96,9 @@ Read: `claude/world-craft-pass-2026-11-14.md` (its checklist is the method), `cl
    whole); fewer stray pixels on faces; features that read. Read first, so nothing is overwritten: DECISIONS "Art
    direction" (11-19 to 11-21), `docs/tasks/CHARACTERS.md` to `CHARACTERS5.md`, `docs/characters/NOTES.md` and
    `OWNER-NOTES-1120.md`, `claude/characters-overnight-2026-11-21.md`. Method: a check that every face feature holds
-   its place over every frame of every cycle, added to `tools/bodycheck.mjs`; each fix measured against a snapshot of
+   its place over every frame of every cycle, added to `tools/bodycheck.mjs` (11-25 01:34, the owner: painted lips
+   work as they are; add a very soft lip colour - default or a choice, his pick from a sheet - and a mouth that
+   takes part in emotes, the idle and the other animations wherever a face has one); each fix measured against a snapshot of
    every figure, the report naming which figures changed (his rule of 11-20 16:51). With it: tennis's racket and
    swing, the playing animations on the beat (N15).
 2. **The UI's style pass** (the owner, 11-24 09:39: "Some UI still looks overly polished and not that 16-bit SNES
