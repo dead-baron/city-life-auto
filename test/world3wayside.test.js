@@ -10,6 +10,7 @@ import { buildWorld3 } from '../server/world3.js';
 import { TILE, T } from '../shared/constants.js';
 import { WAYSIDE } from '../shared/world3-wayside.js';
 import { FOOTBRIDGE } from '../shared/world3-footbridges.js';
+import { CREEKS3 } from '../shared/world3-creeks.js';
 import { COVER, TREE_COVER } from '../shared/world3-clearings.js';
 import { SHORE_R, SHORE_MIN } from '../shared/world3-croptidy.js';
 import { FLORA_SPECIES, staticItems, STATIC_CHUNK, MSTONE_UP } from '../client/art2/game/statics.js';
@@ -154,4 +155,55 @@ test('every footbridge: a deck under it, its ends on the banks, its path at them
   console.log('ends over water', inWater, 'ends with no path', noPath);
   assert.ok(inWater <= 2, `ends over water (${inWater})`);
   assert.ok(noPath <= 4, `ends with no path at them (${noPath})`);
+});
+
+// The woods' creeks (shared/world3-creeks.js; the redwood overhaul's water, 11-24): laid by the land's own heights
+// from a spring in the woods down to water that was there, with riffles and pools; a path goes over on stepping
+// stones; nothing stands in it. One for now - the sample.
+test('a woods creek: from a spring in the woods downhill to the lake, one water, pools, stones where a path crosses', () => {
+  const R = m.world3.woodsCreeks, creeks = (m.natureSites || []).filter((s) => s.kind === 'woodscreek');
+  console.log('woods creeks', JSON.stringify(R));
+  assert.equal(R.unlaid.length, 0, `creeks that could not be laid: ${R.unlaid}`);
+  assert.equal(creeks.length, CREEKS3.springs.length);
+  const wet = (t) => t === T.WATER || t === T.DEEP, tT = (tx, ty) => (m.inside(tx, ty) ? m.tiles[m.idx(tx, ty)] : -1), tAt = (x, y) => tT(Math.floor(x / TILE), Math.floor(y / TILE));
+  const sm = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); let a = 0, c = 0; for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (m.inside(tx + dx, ty + dy)) { a += m.relief[m.idx(tx + dx, ty + dy)]; c++; } return a / c; };
+  for (const [ci, c] of creeks.entries()) {
+    const r = R.creeks[ci], L = c.line;
+    assert.ok(r.tiles >= 100 && r.pools >= 3 && r.riffles >= 3, `${c.name}: ${r.tiles} tiles long, ${r.pools} pools, ${r.riffles} riffles`);
+    // downhill: never higher further on than it was (a point of slack for the smoothing), and well lower at its mouth
+    let top = sm(L[0][0], L[0][1]);
+    for (const [x, y] of L) { const h = sm(x, y); assert.ok(h <= top + 1, `${c.name}: runs uphill at ${Math.round(x / TILE)}, ${Math.round(y / TILE)} (${h.toFixed(1)} after ${top.toFixed(1)})`); top = Math.min(top, h); }
+    assert.ok(sm(L[0][0], L[0][1]) - sm(c.mouth[0], c.mouth[1]) >= 5, `${c.name}: falls from spring to mouth`);
+    // water all along it, and one water from the spring to the mouth
+    for (const [x, y] of L) { const t = tAt(x, y); assert.ok(wet(t) || t === T.BRIDGE, `${c.name}: dry at ${Math.round(x / TILE)}, ${Math.round(y / TILE)}`); }
+    const s0 = [Math.floor(L[0][0] / TILE), Math.floor(L[0][1] / TILE)], goal = Math.floor(c.mouth[0] / TILE) + ',' + Math.floor(c.mouth[1] / TILE), seen = new Set([s0.join()]), q = [s0];
+    let hit = false;
+    while (q.length && !hit && seen.size < 60000) { const [x, y] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy), t = tT(x + dx, y + dy); if (seen.has(k) || !(wet(t) || t === T.BRIDGE)) continue; if (k === goal) { hit = true; break; } seen.add(k); q.push([x + dx, y + dy]); } }
+    assert.ok(hit, `${c.name}: its water is one from spring to mouth`);
+    // the spring in the woods
+    const [sx, sy] = s0;
+    for (let dy = -CREEKS3.road + 1; dy < CREEKS3.road; dy++) for (let dx = -CREEKS3.road + 1; dx < CREEKS3.road; dx++) { if (dx * dx + dy * dy > (CREEKS3.road - 2) ** 2) continue; const t = tT(sx + dx, sy + dy); assert.ok(t !== T.ROAD && t !== T.LOT, `${c.name}: its spring is ${Math.hypot(dx, dy).toFixed(0)} tiles from a road or a lot`); }
+    // nothing standing in it
+    const inIt = m.props.filter((p) => p && /^(tree_a|tree_b|redwood)$/.test(p.t) && L.some(([x, y]) => Math.hypot(p.x - x, p.y - y) < 36));
+    assert.equal(inIt.length, 0, `${c.name}: ${inIt.length} trees standing in it`);
+    // a stepping stone is on a deck tile
+    const stones = m.props.filter((p) => p && p.t === 'rk' && p.k === 'stone' && L.some(([x, y]) => Math.hypot(p.x - x, p.y - y) < 110));
+    assert.ok(r.crossings === 0 || stones.length >= 3, `${c.name}: ${r.crossings} crossings, ${stones.length} stones`);
+    for (const p of stones) assert.equal(tAt(p.x, p.y - 6), T.BRIDGE, `${c.name}: a stone at ${Math.round(p.x / TILE)}, ${Math.round(p.y / TILE)} with nothing to stand on`);
+    assert.equal(r.long, 0, `${c.name}: ${r.long} places where it runs along a path`);
+  }
+});
+test('no trail runs into open water: every wet stretch of a trail has a deck or stones under it', () => {
+  const wet = (t) => t === T.WATER || t === T.DEEP;
+  let n = 0;
+  for (const s of m.natureSites || []) {
+    if (s.kind !== 'trail' || !Array.isArray(s.line)) continue;
+    n++;
+    for (let k = 1; k < s.line.length; k++) {
+      const [x0, y0] = s.line[k - 1], [x1, y1] = s.line[k], L = Math.hypot(x1 - x0, y1 - y0) || 1;
+      let run = 0;
+      for (let d = 0; d < L; d += 8) { const x = x0 + (x1 - x0) * d / L, y = y0 + (y1 - y0) * d / L, tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); if (m.inside(tx, ty) && wet(m.tiles[m.idx(tx, ty)])) run++; else run = 0; assert.ok(run < 3, `${s.name}: open water under it at ${tx}, ${ty}`); }
+    }
+  }
+  assert.ok(n >= 5, `trails with a line (${n})`);
 });

@@ -87,3 +87,9 @@ creeks, not repairs.
 them. The gorge's rope bridge is not in the pass. Left of step 2: the trails
 themselves (narrowed and worn in, roots, a log step on a slope, side paths that leave them) and the crossing kit's
 other pieces (stepping stones, a ford) - these come with the new creeks of step 3, which need crossings of their own.
+
+## 7. Step 3 started (11-24, 20:30): one creek by rule, for the owner's eye
+`shared/world3-creeks.js` (DEVLOG "A woods creek laid by the land"): Fernwater Creek, 283 tiles, 7 riffles and pools,
+stepping stones at 2 paths. The network waits on his look at it. Then: ponds where a creek ends in a hollow (half of
+all test springs do), a culvert where one meets a road, small falls where the land steps down facing the camera, and
+gravel bars. The giants' tops are still his pick (forms A to J; reports 13 to 19).

@@ -27243,3 +27243,22 @@ The angle: one bridge sits 26 degrees off square to its river (Highland Way's); 
 it reads. A world change (world3 hash): it goes with the nature batch.
 Seen: offline renders of each bridge. Not seen: in a running game; the stubs' spot after they went.
 Counted for step 3: Highland Woods has 1,248 tiles of water in 1.8 million of land - new creeks, not repairs.
+
+## 2026-11-24 · A woods creek laid by the land: the sample (the redwood overhaul, step 3) - on branch `fable-art-1124`
+Highland Woods had 1,248 tiles of water in 1.8 million of land; its three creeks are short pieces at the hand-made
+places. `shared/world3-creeks.js` `woodsCreeks3` lays a creek by rule: from a spring it steps down the map's own
+heights (m.relief, a 7 x 7 mean; never back up; off roads, lots, buildings and the made places' ground) to water that
+is already there; the line wanders a little and is curved; narrow at the spring, wider at its mouth; where the ground
+steps down a riffle (white water) and a pool below it with a deep middle, mossy boulders and ferns round it; boulders
+in the run and on its banks and ferns along it by hash; where it meets a path, the path's tiles under it become
+stepping stones on deck tiles; no small tree and no redwood trunk left standing over it; its spring no nearer a road
+than 14 tiles. It is one of the map's running waters (m.waters.ch, with its rapids and pools) and a site
+('woodscreek': name, line, pools - for the finds and the fishing to come).
+ONE creek is laid, the sample for the owner's eye: Fernwater Creek, 283 tiles from the woods west of the Giants Loop
+down to the lake in the Pine Lake hills - 615 tiles of water (half as much again as the whole forest had), 7 riffles
+and pools, 2 path crossings. Counted for a network: of 2,956 test springs on a 24-tile grid, 495 reach water (median
+60 tiles), 1,497 end in a hollow (a pond there is the next rule), 661 meet a road (they want a culvert).
+`test/world3wayside.test.js`: it runs downhill, is one water from spring to mouth, has its pools, nothing stands in
+it, every stone is on a deck tile; and no trail's line anywhere runs over open water.
+Seen: offline renders of four stretches. Not seen: in a running game (the water's motion, the fish, walking the
+stones); its mouth at the lake; night. The whole test suite has not been run. A world change: with the nature batch.

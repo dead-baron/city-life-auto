@@ -17,6 +17,10 @@ added as the work goes; a line he has checked is marked with his word and the da
 
 - [x] **"The lake a perfect oval"** (his note of 11-23): answered 11-24 18:13 - Mirage Lake, the one in the
   cinematics. Its shore is to be reshaped; a new line goes here when it is.
+- [ ] **The sample creek: is this the creek the redwoods should have many of?** Fernwater Creek, laid by rule down
+  the land from the woods west of the Giants Loop to the lake (283 tiles; riffles, 7 pools, stepping stones where a
+  path crosses). Pictures: `report-20-creek`. Judge: its width, how many boulders, the pools (big enough to read as
+  pools, to fish), the stones. On his word the same rule lays a network, with ponds in the hollows.
 - [ ] **The giant redwoods' tops: pick one.** The trunks-only look was rejected on sight (11-24 18:47). Four forms of
   the same tree, pictures `report-13` (in the forest: A now, C) and `report-14` (the four side by side): A as now;
   B crown carried high; C a small crown higher still; D smaller again. Judge: which reads as a really tall redwood and

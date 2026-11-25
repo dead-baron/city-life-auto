@@ -33,7 +33,7 @@ export const REDWOODS3 = {
 const RES = 32;
 const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 // a Catmull-Rom line through control points, n samples a span
-function spline(cp, n = 8) {
+export function spline(cp, n = 8) {
   const out = [];
   for (let i = 0; i < cp.length - 1; i++) {
     const p0 = cp[Math.max(0, i - 1)], p1 = cp[i], p2 = cp[i + 1], p3 = cp[Math.min(cp.length - 1, i + 2)];
@@ -47,7 +47,7 @@ function spline(cp, n = 8) {
 }
 
 // the pass's tools: tiles, props to add, props to take away, solids
-function context(m, H3) {
+export function context(m, H3) {
   const W = m.w, HH = m.h, inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH, idx = (x, y) => y * W + x;
   const P = [], S = [], gone = new Set();
   const C = {
@@ -122,7 +122,7 @@ function cols(C, x, y, len, h, d, seed, wet = 0, fall = 0) {
   for (const yy of [y - 12, y - d + 14]) for (let k = -len / 2 + 12; k <= len / 2 - 12; k += 18) C.solid(x + k, yy, 13);
 }
 // a rough round of tiles (cx, cy, rx, ry px; wob 0..1 how ragged; seed): fn(i, q) for each, q 0 (middle) .. 1 (edge)
-function blob(C, cx, cy, rx, ry, wob, seed, fn) {
+export function blob(C, cx, cy, rx, ry, wob, seed, fn) {
   for (let ty = Math.floor((cy - ry * 1.3) / TILE); ty <= Math.floor((cy + ry * 1.3) / TILE); ty++) for (let tx = Math.floor((cx - rx * 1.3) / TILE); tx <= Math.floor((cx + rx * 1.3) / TILE); tx++) {
     if (!C.inF(tx, ty)) continue;
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, a = Math.atan2((y - cy) / ry, (x - cx) / rx);
@@ -132,8 +132,8 @@ function blob(C, cx, cy, rx, ry, wob, seed, fn) {
   }
 }
 // a sword fern (the big ones of the redwood floor) on open ground
-function fern(C, x, y, big = true) { if (C.open(x, y)) C.prop('shrub_a', x, y, 0, { sp: big ? 'fernR' : 'fern', k: 1 }); }
-function mossRock(C, x, y, s, style = 'basalt') { C.prop('boulder', x, y, s > 26 ? 14 : 0, { s, moss: 1, style }); }
+export function fern(C, x, y, big = true) { if (C.open(x, y)) C.prop('shrub_a', x, y, 0, { sp: big ? 'fernR' : 'fern', k: 1 }); }
+export function mossRock(C, x, y, s, style = 'basalt') { C.prop('boulder', x, y, s > 26 ? 14 : 0, { s, moss: 1, style }); }
 
 // A falls off basalt columns with its horseshoe and pool (NR1-E): F the foot of the fall (px); o.w the water's width,
 // o.drop, o.side the columns either side of it; o.back / o.arms the runs of columns [dx, dy (front's foot), len, h, d,
