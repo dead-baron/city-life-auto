@@ -94,3 +94,18 @@ test('reeds: beds across still shallows, only the banks of running water, a cree
   assert.equal(reedAt(run, 0.5, 0.6, 0.2, 8, 0.9), 0);
   assert.ok(reedAt(run, 0.5, 0.6, 0.2, 3, 0.9) > 0);
 });
+
+// A wild bank is not one brown line (groundbake.js bankKind; the owner, 11-24: "it can blend in with the water in some
+// places, it can be a rocky/stone beach, it can be dirt and sand beach, it can just blend in with the vegetation").
+test('wild banks: four kinds in a natural mix along the shore, in long stretches; designed ground keeps its lip', () => {
+  const { bankKind, M_ } = EDGE_TEST, n = [0, 0, 0, 0];
+  let runs = 0, last = -1;
+  for (let y = 0; y < 6000; y += 7) for (let x = 0; x < 6000; x += 7) n[bankKind(M_.FOREST, 40000 + x, 40000 + y, 1337)]++;
+  for (let x = 0; x < 60000; x += 2) { const k = bankKind(M_.MEADOW, 90000 + x, 51234, 1337); if (k !== last) { runs++; last = k; } }
+  const t = n.reduce((a, b) => a + b, 0), sh = n.map((v) => v / t);
+  console.log('wild banks: earth lip, grown over, shingle, dirt bar', sh.map((v) => (v * 100).toFixed(0) + '%').join(' '), '- a change of kind every', Math.round(60000 / runs), 'px along a shore');
+  for (let k = 0; k < 4; k++) assert.ok(sh[k] >= 0.1 && sh[k] <= 0.5, `kind ${k}: ${(sh[k] * 100).toFixed(0)}% of the shore`);
+  assert.ok(sh[1] >= sh[0], 'more shore grown over than bare earth');
+  assert.ok(60000 / runs >= 60, `the kinds come in stretches (a change every ${Math.round(60000 / runs)} px)`);
+  for (const m of [M_.LAWN, M_.PARK, M_.GOLF, M_.GREEN, M_.BEACH, M_.DESERT]) for (let x = 0; x < 4000; x += 37) assert.equal(bankKind(m, x, x * 3, 1337), 0);
+});

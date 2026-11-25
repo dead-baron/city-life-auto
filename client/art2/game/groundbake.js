@@ -814,12 +814,8 @@ function railLoop(C, R, bias) {
   }
 }
 
-// A field's edge (the art pass, 2026-11-24; the owner, 11-23: "the farm ... hand-crafted fields"; concepts FA4, D13).
-// A crop ended on its tiles' edges: wheat against plough, lavender against meadow along ruled lines and square steps.
-// Round every field now, for each pixel of crop within reach of a tile that is not its crop: a verge of grass comes in
-// ragged (the grass beside it; between two fields a baulk of dry grass), then the headland - bare turned earth where
-// the tractor turns - and only then the crop. The same field's cut stubble against its standing crop is no edge.
-// World px; the widths wander by two noises, so no line is ruled.
+// A field's edge (11-24; DEVLOG "Fields with edges"): round every field a ragged verge of grass, then the headland
+// of turned earth, then the crop - not a ruled line. Its own stubble against its standing crop is no edge.
 export const FIELD_EDGE = { verge: 6, head: 17 };
 const CROP = new Uint8Array(MATS.length), STUBBLE = new Uint8Array(MATS.length);
 for (const k of ['WHEAT', 'CORN', 'CORNV', 'VEG', 'HAY', 'PLOW', 'PLOWV', 'STUB', 'STUBV']) CROP[M_[k]] = 1;
@@ -860,8 +856,16 @@ function lotEdge(b, ti, X, Y, seed) {
   return d + (vnc(X, Y, 27, seed + 181) - 0.5) * 14 + (vnc(X, Y, 8, seed + 183) - 0.5) * 6 < LOT_EDGE ? other : -1;
 }
 
-// Reeds in the shallows, how thick (0 none): beds across still water; along a running creek's banks only (beds
-// across it made a marsh of it, 11-24); a creek's pool clear but for its edge. test/groundedges.test.js
+// A wild bank's kind along the shore (11-24, not one brown line): 0 an earth lip, 1 grown over to the water,
+// 2 shingle, 3 a bar of dirt. Designed ground keeps 0. test/groundedges.test.js
+const WILD_BANK = new Set([M_.MEADOW, M_.DRYGRASS, M_.ALPINE, M_.FOREST, M_.FORESTDIRT, M_.PASTURE, M_.DIRT]);
+const beachW = (X, Y, seed) => 7 + vnc(X, Y, 23, seed + 213) * 22;   // (px: a shingle or sand bank's width, wandering)
+export function bankKind(m, X, Y, seed) {
+  if (!WILD_BANK.has(m)) return 0;
+  const v = vnc(X, Y, 190, seed + 211) + (hh(X >> 2, Y >> 2, seed + 212) - 0.5) * 0.006;
+  return v < 0.44 ? 1 : v < 0.55 ? 0 : v < 0.67 ? 2 : 3;
+}
+// Reeds in the shallows, how thick (0 none): beds across still water; a running creek's banks only; its pool clear
 export function reedAt(k, fv, pk, depth, d, reedy) {
   if (depth >= (k === WK.MARSH ? 0.9 : 0.45)) return 0;
   const still = k === WK.POND || k === WK.LAKE || k === WK.MARSH || fv < 0.2, bed = reedy > 0.55, e = d < 5;
@@ -869,7 +873,7 @@ export function reedAt(k, fv, pk, depth, d, reedy) {
   if (!still && !e) return bed && d < 12 ? 0.3 : 0;
   return e || bed ? (bed ? 0.42 : 0.1) : 0;
 }
-export const EDGE_TEST = { fieldEdge, lotEdge, rutPx, TN, reedAt, WK };   // (for test/groundedges.test.js)
+export const EDGE_TEST = { fieldEdge, lotEdge, rutPx, TN, reedAt, WK, bankKind, M_ };   // (for test/groundedges.test.js)
 
 // ---- 3. classes ------------------------------------------------------------------------------------------------
 function classify(C) {
@@ -1069,10 +1073,7 @@ function paint(C, G) {
         const ti = (Math.floor(Y / TILE) - TY0) * TN + Math.floor(X / TILE) - TX0;
         if (m === M_.POOL || m === M_.SPRING) {
           const r = m === M_.POOL ? poolPx(C.M.pools, X, Y, d, seed) : springPx(X, Y, d, seed);
-          // (the water pass, 11-24: a pool or a hot spring laid in the ground was baked as open sea - no word, no
-          // inland flag - where a pool that is a sprite has been a still pond since 10-22 (chunkbake.js POOL_WORD): it
-          // is one too now, a pool clear to its floor, a spring milky. And a spring's glow is its own, dim: the cream
-          // one, over a whole pool, fed the bloom till the onsen was a white shape after dark)
+          // (11-24: still inland water with its word, as a pool sprite is - not open sea; a spring's glow dim)
           c = r.c; nx = r.nx; ny = r.ny; f = F_GROUND | F_WATER | F_NOCAST; b.wcode[gi] = m === M_.POOL ? 230 : 224;
           if (r.e) { const sp = m !== M_.POOL && r.e < 30; emi[j] = sp ? 60 : 255; emi[j + 1] = sp ? 92 : 246; emi[j + 2] = sp ? 84 : 222; emi[j + 3] = sp ? 1 : r.e; }
         } else {
@@ -1708,6 +1709,7 @@ function edges(C, G) {
         const bank = k === 2 && isSoft(up) && up !== M_.BEACH && up !== M_.DUNE && up !== M_.WETSAND;
         const quay = k === 2 && !isSoft(up) && !deck && !dock;
         if (!quay && !deck && !dock && !bank && KIND[up] !== 4 && up !== M_.PLATFORM) break;
+        if (bank && bankKind(up, X, Y - r, seed)) break;   // (no earth face where the bank is grown over, shingle or sand)
         // a bridge over the water shows the thickness of its deck (the slab and the girders under it) and darkens the
         // water in its lee: boats pass under it (host.js draws a boat part-way under a deck beneath it)
         const span = deck && k === 2 && Z[i - r * WN] >= C.deckZ - 1;
@@ -1757,11 +1759,16 @@ function edges(C, G) {
     } else if (k === 0) {
       // soft ground meeting water: wet sand, a muddy lip, damp grass; elsewhere a damp edge against paving
       const d = b.dist[i] / 10;
-      if (d < 12) {
+      if (d < 30) {
         if (m === M_.BEACH || m === M_.DUNE) { if (d < 7 + vnc(X, Y, 9, seed) * 5) setC(G, gi, GSHADE.sandWet(X, Y, seed)); }
         else if (m === M_.ROCKSHORE || m === M_.SHINGLE) { if (d < 6) darken(G, gi, 0.72 + d * 0.04); }
-        else if (d < 3) setC(G, gi, sd(MAT.soil, 0.3 + d * 0.15 + hh(X, Y, seed) * 0.15, X, Y, 0.6));
-        else if (d < 6) darken(G, gi, 0.8 + d * 0.025);
+        else {
+          const bk = bankKind(m, X, Y, seed);
+          if (bk === 1) { if (d < 2) darken(G, gi, 0.88); }
+          else if (bk) { if (d < beachW(X, Y, seed)) { setC(G, gi, bk === 2 ? GSHADE.washGravel(X, Y, seed) : d < 3 ? GSHADE.sandWet(X, Y, seed) : GSHADE.dirtPebbly(X, Y, seed)); if (d < 2) darken(G, gi, 0.84); } }
+          else if (d < 3) setC(G, gi, sd(MAT.soil, 0.3 + d * 0.15 + hh(X, Y, seed) * 0.15, X, Y, 0.6));
+          else if (d < 6) darken(G, gi, 0.8 + d * 0.025);
+        }
       } else if (KIND[M[i - WN]] === 4 || KIND[M[i - 1]] === 4 || KIND[M[i + 1]] === 4 || KIND[M[i + WN]] === 4) darken(G, gi, 0.8);
     }
   }
@@ -1870,6 +1877,7 @@ function decor(C, G) {
     const i = py * WN + px, m = b.mat[i];
     const list = COVER[m];
     if (list) {
+      if (bankKind(m, X, Y, seed) > 1 && b.dist[i] / 10 < beachW(X, Y, seed)) continue;   // (a beach is bare)
       let acc = 0;
       for (const [kind, nv, p] of list) {
         acc += p * dens;

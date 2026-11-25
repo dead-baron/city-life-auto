@@ -11,15 +11,18 @@ const LG = await import(R + '/client/art2/game/lightgame.js'); const P = LG.PRES
 const { F_LEAF } = await import(R + '/client/art2/gbuf.js');
 const sl = Math.hypot(...P.sunDir), sun = P.sunDir.map((v) => v / sl);
 const B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+// (LEAF_WRAP / LEAF_SKY env: try the leaf light's numbers; default the game's - lightgame.js LEAF_LIGHT)
+const LEAF_WRAP = +(process.env.LEAF_WRAP ?? (LG.LEAF_LIGHT ? LG.LEAF_LIGHT.wrap : 0)), LEAF_SKY = +(process.env.LEAF_SKY ?? (LG.LEAF_LIGHT ? LG.LEAF_LIGHT.sky : 0));
 function light(w, h, col, nrmAt, flagAt) {
   const px = Buffer.alloc(w * h * 4);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x, j = i * 4;
     if (col[j + 3] < 128) continue;
     const n = nrmAt(i);
-    let d = Math.max(0, n[0] * sun[0] + n[1] * sun[1] + n[2] * sun[2]);
+    const fl0 = flagAt(i), LW = (fl0 & F_LEAF) ? LEAF_WRAP : 0;   // (lightgame.js shade: light wraps round a leafy mass)
+    let d = Math.max(0, (n[0] * sun[0] + n[1] * sun[1] + n[2] * sun[2] + LW) / (1 + LW));
     if (P.bands > 0.5) { const q = Math.floor(d * P.bands + 0.5 + (B[(y & 3) * 4 + (x & 3)] / 16 - 0.5 + 1 / 32) * 0.6) / P.bands; d += (Math.min(1, Math.max(0, q)) - d) * P.bandMix; }
-    const kk = n[2] * 0.5 + 0.5, fl = flagAt(i), c3 = [0, 0, 0];
+    const fl = fl0, kk = (fl & F_LEAF) ? Math.max(n[2] * 0.5 + 0.5, LEAF_SKY) : n[2] * 0.5 + 0.5, c3 = [0, 0, 0];
     for (let c = 0; c < 3; c++) {
       let L = P.ambGround[c] + (P.ambSky[c] - P.ambGround[c]) * kk + P.sunCol[c] * d;
       if (fl & F_LEAF) L += P.sunCol[c] * P.leafGlow * Math.pow(Math.max(0, n[0] * sun[0] + n[1] * sun[1]), 2);

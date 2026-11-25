@@ -2738,7 +2738,7 @@ function propItems(c, p, pi, I) {
     case 'bathpav': V('bpav', 'bathPavilion', [0.6]); lightAt(I, x, y + 26, 22, 120, [1, 0.78, 0.46], 1.5, 'lamp'); return;
     case 'onsenlodge': V('olodge', 'onsenLodge', [0.6]); lightAt(I, x, y + 70, 30, 190, [1, 0.76, 0.44], 1.6, 'window'); return;   // (nat5: the onsen at Granite Hot Springs - naturesites.js hotSprings)
     case 'bamboo': { const len = Math.round((p.len || 80) / 8) * 8, hd = qa(p.a || 0, 4); V(`bmb:${len}:${hd.toFixed(2)}`, 'bambooFence', [len, 30], hd); return; }
-    case 'koi': return;   // (the water pass, 11-24 - the owner, 11-17: "Koi fish drawn above the water, not under it". A koi laid as a prop was a picture standing on the pond; the koi are the live ones now, swimming under the surface where a pond has them marked: waterlife.js koiPond)
+    case 'koi': return;   // (11-24: no picture standing on the pond - the koi are live ones, waterlife.js koiPond)
     case 'gravelgarden': put(I, { key: 'zen', recipe: { t: 'zen' }, x, y, ext: [70, 50, 70, 50], pi }); return;
     case 'beaverdam': V(`bdam:${p.len || 130}`, 'beaverDam', [p.len || 130]); return;
     case 'gnawstump': V(`gstump:${p.v || 0}`, 'gnawStump', [p.v || 0, 1 + (seed % 5)]); return;   // (the beavers' work round a pond)
@@ -3887,7 +3887,7 @@ function rkItem(I, p, pi) {
   if (k === 'fall') { const w = q8(p.w, 110), dr = q8(p.drop, 104), sd = q8(p.side, 70), s = (p.s || 7) % 64, lg = p.log === 0 ? 0 : 1; put(I, { key: `rkf:${w}:${dr}:${sd}:${s}:${lg}`, recipe: { t: 'rk', k, a: [w, dr, sd, s, lg] }, x, y, ext: [w / 2 + sd + 80, dr + 140, w / 2 + sd + 80, 80], pi }); lightAt(I, x, y + 10, 12, 150, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }
   if (k === 'fungi') { const v = p.v || 'agaric', s = (p.s || 1) % 4; put(I, { key: `rku:${v}:${s}`, recipe: { t: 'rk', k, a: [v, s] }, x, y, ext: [18, 34, 18, 18], pi }); if (v === 'glow') lightAt(I, x, y, 4, 46, [0.35, 0.75, 1], 0.9, 'sign'); return; }
   if (k === 'puddle') { const w = q8(p.w, 40), d = q8(p.d, 24), s = (p.s || 1) % 4; put(I, { key: `rkp:${w}:${d}:${s}`, recipe: { t: 'rk', k, a: [w, d, s] }, x, y, ext: [w / 2 + 16, d + 16, w / 2 + 16, d / 2 + 16], pi }); return; }
-  if (k === 'stone') { const r = Math.max(6, Math.min(16, Math.round(p.r || 10))), s = (p.s || 1) % 4; put(I, { key: `rks:${r}:${s}`, recipe: { t: 'rk', k, a: [s + 1, r] }, x, y, ext: [r * 2 + 12, r * 2 + 20, r * 2 + 12, r * 2 + 12], pi }); return; }
+  if (k === 'stone') { const r = Math.max(6, Math.min(16, Math.round(p.r || 10))), s = (p.s || 1) % 8; put(I, { key: `rks:${r}:${s}`, recipe: { t: 'rk', k, a: [s + 1, r] }, x, y, ext: [r * 2 + 12, r * 2 + 20, r * 2 + 12, r * 2 + 12], pi }); return; }
   if (k === 'mist') { const w = q8(p.w, 200), d = q8(p.d, 80), s = (p.s || 1) % 4; put(I, { key: `rkm:${w}:${d}:${s}`, recipe: { t: 'rk', k, a: [w, d, s] }, x, y, ext: [w / 2 + 4, d / 2 + 70, w / 2 + 4, d / 2 + 4], pi }); return; }
   if (k === 'foam') { const w = q8(p.w, 64), d = q8(p.d, 40), s = (p.s || 1) % 4; put(I, { key: `rkw:${w}:${d}:${s}`, recipe: { t: 'rk', k, a: [w, d, s] }, x, y, ext: [w / 2 + 4, d / 2 + 10, w / 2 + 4, d / 2 + 4], pi }); return; }
   if (k === 'ray') { const w = q8(p.w, 70), h = q8(p.h, 260), s = (p.s || 1) % 4; put(I, { key: `rkr:${w}:${h}:${s}`, recipe: { t: 'rk', k, a: [w, h, s] }, x, y, ext: [w + h * 0.6 + 8, h + 8, w + 8, 12], pi }); }

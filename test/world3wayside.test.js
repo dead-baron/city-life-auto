@@ -188,8 +188,13 @@ test('a woods creek: from a spring in the woods downhill to the lake, one water,
     assert.equal(inIt.length, 0, `${c.name}: ${inIt.length} trees standing in it`);
     // a stepping stone is on a deck tile
     const stones = m.props.filter((p) => p && p.t === 'rk' && p.k === 'stone' && L.some(([x, y]) => Math.hypot(p.x - x, p.y - y) < 110));
-    assert.ok(r.crossings === 0 || stones.length >= 3, `${c.name}: ${r.crossings} crossings, ${stones.length} stones`);
-    for (const p of stones) assert.equal(tAt(p.x, p.y - 6), T.BRIDGE, `${c.name}: a stone at ${Math.round(p.x / TILE)}, ${Math.round(p.y / TILE)} with nothing to stand on`);
+    assert.ok(r.kinds.stones === 0 || stones.length >= 3, `${c.name}: ${r.kinds.stones} stone crossings, ${stones.length} stones`);
+    assert.equal(r.kinds.stones + r.kinds.log, r.crossings, `${c.name}: every crossing has its way over`);
+    // (most stones stand on a deck tile - a small one beside may be in the water - and they are not all one stone)
+    const on = stones.filter((p) => tAt(p.x, p.y - 6) === T.BRIDGE).length;
+    assert.ok(stones.length === 0 || on / stones.length >= 0.7, `${c.name}: ${on} of ${stones.length} stones on a deck tile`);
+    const nr = new Set(stones.map((p) => p.r)).size, ns = new Set(stones.map((p) => p.s)).size;
+    assert.ok(stones.length < 4 || (nr >= 2 && ns >= 2 && (stones.length < 8 || nr + ns >= 6)), `${c.name}: the stones differ (${stones.length} stones: ${nr} sizes, ${ns} shapes)`);
     assert.equal(r.long, 0, `${c.name}: ${r.long} places where it runs along a path`);
   }
 });

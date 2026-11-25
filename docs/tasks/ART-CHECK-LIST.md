@@ -17,9 +17,16 @@ added as the work goes; a line he has checked is marked with his word and the da
 
 - [x] **"The lake a perfect oval"** (his note of 11-23): answered 11-24 18:13 - Mirage Lake, the one in the
   cinematics.
-- [ ] **Mirage Lake's new shore** - a bay in the west shore, a sandy point south-west, a cove south-east; the beach,
-  palms and jetty follow it. Picture: `report-23-mirage`. Judge: does it read as a natural lake; enough, or more.
-  Its cinematics are reshot at the end of the art pass.
+- [x] **Mirage Lake's new shore** (the owner, 11-24 21:40: "The lake looks better like this so this would be
+  acceptable"). An offshoot cove on its west side added at his suggestion: picture `report-27-mirage-cove`. Judge
+  the cove: keep, smaller, or out. Its cinematics are reshot at the end of the art pass.
+- [ ] **The plants' dark undersides: pick B, C or D** (`report-26`). His note of 22:23; measured: 102 of 121 plant
+  kinds over 15% near-black at noon. On his pick: a floor under a leaf's painted shade (re-bake) and light that wraps
+  round leaves (the light pass, no re-bake), the lifted tones pulled to the plant's own green.
+- [ ] **The banks** - any wild river, creek or lake: grown over to the water, an earth lip, shingle or a dirt bar by
+  turns, not one brown outline. Picture: `report-28-banks`. Judge: the mix; shingle and dirt wide enough to read.
+- [ ] **The bake's code budget** - at 1,080 of 1,080 KB. The fern kit (about 6 KB), the shade floor and a stick
+  bridge need room: raise it (to 1,100?) or say what to trim.
 - [ ] **The sample creek: is this the creek the redwoods should have many of?** Fernwater Creek, laid by rule down
   the land from the woods west of the Giants Loop to the lake (283 tiles; riffles, 7 pools, stepping stones where a
   path crosses). Pictures: `report-20-creek`. Judge: its width, how many boulders, the pools (big enough to read as

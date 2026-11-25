@@ -27302,3 +27302,28 @@ the white beach, the jetty and its rowboat follow the new shore by the same rule
 Not done: the other near-ovals counted on 11-24 are the city parks' ornamental ponds (Westport's, the Stadium's two,
 Northgate's basin) - theirs with the districts. The cinematics that show the lake want reshooting (they are reshot at
 the end of the art pass). Seen: one offline render at half size. A world change: with the nature batch.
+
+## 2026-11-24 · Banks in a natural mix, stones that differ, a log for a crossing, Mirage Lake's cove - on branch `fable-art-1124`
+The owner's notes of 21:40 on the sample creek and the lake (docs/DECISIONS.md).
+- **Banks.** Every soft bank had one look: a brown earth lip on the land and a brown face on the water side - an
+  outline round all inland water. `groundbake.js` `bankKind`: along a wild shore (meadow, dry and alpine grass,
+  forest floor, pasture, dirt) the bank is, by a slow noise, grown over to the water (43% of the shore: no lip, no
+  face), an earth lip as before (18%), shingle (18%: the wash's pale gravel, 7 to 29 px wide, bare of ground cover)
+  or a bar of dirt with wet sand at its edge (21%); a change of kind about every 150 px. Lawns, parks, golf and the
+  beaches keep what they had. A class change for every wild river, creek, lake and pond: an art change, with the
+  re-bake. `test/groundedges.test.js`.
+- **Stones.** `water.js` `steppingStone`: each seed its own - long or round, turned any way, low or proud, four in
+  ten capped with moss; eight shapes (were four), sizes 7 to 16 (the creek's were 11 to 13), a small one beside a
+  small one now and then.
+- **Crossings.** `world3-creeks.js`: a real crossing has the path's ground on both banks; a path only clipped by the
+  creek keeps its ground (stones where the creek's own run lies on it). A path under two tiles wide crossing no more
+  than seven may take a fallen log (the 'logbridge' piece; `footbridges3` carries it to its banks and links its
+  ends), half the time; else stepping stones. The sample's one crossing (the Mast Ridge Trail's) stays stones.
+- **Mirage Lake.** An offshoot off its west shore (`MIRAGE3.arm`): a short neck out to a round cove, the beach
+  following it. Its shore against its oval: sd 0.187 (was 0.083; 0.042 before today).
+- The bake's code is at its budget to the byte (1,080.50 KB gzipped): five of today's comments were cut down to make
+  room. The fern kit, a stick bridge or the plants' shade floor will not fit without the owner raising it.
+Also `tools/nature/sprites.mjs`: LEAF_WRAP / LEAF_SKY to try the leaf light's numbers (the plants' dark undersides:
+measured, variants with the owner - nothing of it in the game's code yet).
+Seen: offline renders (the crossing, a stretch, the creek's mouth, the lake at half size). Not seen: a running game;
+other rivers and lakes with the new banks; shingle at full size. The whole suite has not been run.

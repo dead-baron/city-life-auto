@@ -883,13 +883,16 @@ export function culvert(len = 180, roadW = 96, faceH = 26, r = 15, o = {}) {
   m.faceH = faceH; m.roadW = roadW; m.front = d; m.deckD = d;
   return m;
 }
-// a flat-topped stepping stone
+// a flat-topped stepping stone, each seed its own (shape, turn, height, some mossy)
 export function steppingStone(seed = 1, r = 9) {
-  const m = new Vox(r * 2 + 4, r * 2 + 4, 8);
-  const st = m.mat({ ramp: ROCKG, k: 3, shade: (x, y, z) => (z > 4 ? 0.7 : -0.2) + (hash(Math.round(x / 2), Math.round(y / 2), seed) - 0.5) * 0.8 });
-  const wet = m.mat({ ramp: R('#4a4a46', 6, 3), k: 2 });
-  const c = r + 2;
-  m.fill((x, y, z) => { const a = Math.atan2(y - c, x - c), wob = 1 + Math.sin(a * 3 + seed) * 0.12 + Math.sin(a * 5 + seed * 2) * 0.07; const q = ((x - c) / (r * wob)) ** 2 + ((y - c) / (r * 0.8 * wob)) ** 2; if (q > 1 || z > 6 - q * 3) return -1; return z < 1.5 ? wet : st; });
+  const m = new Vox(r * 2 + 4, r * 2 + 4, 9), c = r + 2, e = 0.6 + hash(seed, 1, 7) * 0.32, ca = Math.cos(hash(seed, 2, 7) * 3.1), sa = Math.sin(hash(seed, 2, 7) * 3.1), top = 5 + hash(seed, 4, 7) * 2.4, mossy = hash(seed, 3, 7) < 0.4;
+  const st = m.mat({ ramp: ROCKG, k: 3, shade: (x, y, z) => (z > top - 2 ? 0.7 : -0.2) + (hash(Math.round(x / 2), Math.round(y / 2), seed) - 0.5) * 0.8 });
+  const wet = m.mat({ ramp: R('#4a4a46', 6, 3), k: 2 }), ms = m.mat({ ramp: MOSS, k: 3, shade: (x, y) => (hash(Math.round(x), Math.round(y), seed + 3) - 0.5) * 1.2 });
+  m.fill((x, y, z) => {
+    const u = (x - c) * ca + (y - c) * sa, v = -(x - c) * sa + (y - c) * ca, a = Math.atan2(v, u), wob = 1 + Math.sin(a * 3 + seed) * 0.16 + Math.sin(a * 5 + seed * 2) * 0.09, q = (u / (r * wob)) ** 2 + (v / (r * e * wob)) ** 2;
+    if (q > 1 || z > top - q * 3) return -1;
+    return z < 1.5 ? wet : mossy && z > top - 2.5 && vnoise(x, y, 4, seed) > 0.5 ? ms : st;
+  });
   m.smooth = 2;
   return m;
 }
@@ -1545,11 +1548,8 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     let kc = r < w00 ? k00 : r < w00 + w10 ? k00 + 1 : r < w00 + w10 + w01 ? k00 + TN : k00 + TN + 1;
     if (!F.k[kc]) kc = ti;
     if (F.k[kc]) { k = F.k[kc]; st = F.st[kc]; cst = F.cst[kc]; }
-    // (the water pass, 11-24 - the owner, 11-23: "underwater details with a hard edge". Out at sea the depth and the look
-    // (one coast's water or another's) were read off the nearest land tile, so the sea was cut into cells with ruled
-    // edges where the nearest land changed - a square of dark harbour water in a turquoise bay. The sea reads them a
-    // little way off now, by a slow noise (up to two tiles), and dithers the looks over a wider band: the edges wander.
-    // Within the window's margin of whole tiles: TP 4, PAD 48 px - groundbake.js.)
+    // (11-24, DEVLOG "The water pass, 2": the sea reads its depth and look a little way off by a slow noise and
+    // dithers them wider, so no ruled cells where the nearest land changes. Within the window's margin: TP 4, PAD 48.)
     let kw = k00, vxw = vx, vyw = vy;
     if (k === WK.SEA) {
       const ox = (vnc(X, Y, 211, seed + 401) - 0.5) * 3.2 + (vnc(X, Y, 67, seed + 403) - 0.5), oy = (vnc(X, Y, 211, seed + 405) - 0.5) * 3.2 + (vnc(X, Y, 67, seed + 407) - 0.5);

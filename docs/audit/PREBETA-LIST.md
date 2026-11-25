@@ -465,3 +465,17 @@ bus stop, then they should go flying off while the bench or object they're on ge
   Station Road, ...)" - the stations' roads count as tracks there. It fails the same on branch `fable-art-1124` before
   its world change (commit bef7671), so it comes from the world batch, not the art. Not checked on `main` itself.
 - Cars jammed nose to tail on Coral Cay's jungle track (seen twice in the water recorder's films of the rainforest).
+
+## Vehicles in shallow water (owner, 11-24 21:40 - noted for the pre-beta; a game rule, not art)
+"I've noticed that when vehicles hit water they instantly sink ... it would be a better experience if vehicles can hit
+shallow water and manage to move a bit in the shallow water before breaking down, or going into deeper water and then
+sinking beyond any return, or just splashing a bit in very shallow water but it doesn't slow them down a bit ... it
+shouldn't just instantly sink in any depth of water and lose your vehicle. So if we do have these natural bridges
+across paths I dont want vehicles (especially offroad vehicles) to instantly sink and become un-usable."
+To build (server physics, with a splash on the page): depth bands from the water's own depth (the art already has
+one: client/art2/water.js depthOf; the server needs its own from tiles - distance to the bank, creek / pool / lake) -
+very shallow: splashes, no slowing; shallow: slowed, a spray, the engine holds for a while and stalls if it stays in,
+restartable out of the water; deep: sinks, as now. Off-road vehicles ford deeper than road cars. A creek's stepping
+stones and log crossings (bridge tiles) are walked, not driven: a car meets the creek beside them - so a woods creek
+(shared/world3-creeks.js) must be fordable by this rule before the creek network goes live. Guide entry and a
+first-time moment with it (CLAUDE.md "teach the new thing").

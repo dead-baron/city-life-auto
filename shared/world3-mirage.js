@@ -17,6 +17,9 @@ export const MIRAGE3 = {
   belt: 3,         // the green belt: tiles from the water (north and east)
   beach: 3,        // the white beach: tiles from the water (south and west)
   // the shore's features: [bearing from the lake's middle (0 east, pi/2 south), how far out (+) or in (-), how wide]
+  // the offshoot (the owner, 11-24 21:40: "a little offshoot cove on the lake comes out the left side"): rounds of
+  // water [x, y in the lake's radii from its middle, radius in tiles] - a short neck out of the west shore to a cove
+  arm: [[-0.98, -0.3, 2.1], [-1.2, -0.27, 1.8], [-1.42, -0.2, 2.0], [-1.66, -0.1, 3.1]],
   shore: [[3.05, -0.36, 0.3], [2.2, 0.26, 0.2], [0.85, -0.3, 0.26], [0.1, 0.18, 0.4], [-2.25, -0.2, 0.25]],
 };
 
@@ -59,6 +62,14 @@ export function mirageByHand3(m, H3) {
     const i = idx(x, y), r = rim(x, y);
     if (r <= 1 && !water.has(i) && plain(i)) { m.tiles[i] = T.WATER; m.land[i] = 0; if (m.lake) m.lake[i] = lake0; if (m.river) m.river[i] = 0; m.dist[i] = dist0; if (m.zone) m.zone[i] = zone0; m.reserve[i] |= RES; water.add(i); changed.add(i); out.added++; }
     else if (r > 1.08 && water.has(i) && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP)) { m.tiles[i] = T.SAND; m.land[i] = 1; if (m.lake) m.lake[i] = 0; if (m.river) m.river[i] = 0; m.reserve[i] |= RES; water.delete(i); changed.add(i); out.removed++; }
+  }
+  for (const [k, [ax, ay, ar]] of M.arm.entries()) {
+    const ox = cx + ax * rx, oy = cy + ay * ry;
+    for (let y = Math.floor(oy - ar - 2); y <= oy + ar + 2; y++) for (let x = Math.floor(ox - ar - 2); x <= ox + ar + 2; x++) {
+      if (!inF(x, y)) continue;
+      const i = idx(x, y), d = Math.hypot(x + 0.5 - ox, y + 0.5 - oy) / (ar * (0.86 + 0.28 * hh(x >> 1, y >> 1, 1110 + k)));
+      if (d <= 1 && !water.has(i) && plain(i)) { m.tiles[i] = T.WATER; m.land[i] = 0; if (m.lake) m.lake[i] = lake0; if (m.river) m.river[i] = 0; m.dist[i] = dist0; if (m.zone) m.zone[i] = zone0; m.reserve[i] |= RES; water.add(i); changed.add(i); out.added++; out.arm = (out.arm || 0) + 1; }
+    }
   }
   // the shores: distance from the water over the land round it
   const dist = new Map(), bq = [];

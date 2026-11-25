@@ -32,6 +32,8 @@ export const CREEKS3 = {
   pool: [86, 62],   // px: a pool's half axes (its middle deep)
   road: 14,         // tiles: a spring rises no nearer a road, a lot or a building than this
   stones: 14,       // a crossing of more path tiles than this is reported, not laid
+  log: [2, 7, 0.5], // a path narrower than this (tiles), crossing no further than this bank to bank, takes a fallen log
+                    // this often; else, and a wider path or a longer way over, stepping stones
 };
 
 // the line a creek takes from (tx, ty): down the smoothed heights, never back up, to the first water - or null
@@ -147,12 +149,49 @@ export function woodsCreeks3(m, H3) {
       if (!g) groups.push((g = []));
       g.push([i, tx, ty, k]);
     }
-    let crossings = 0, long = 0;
+    // (a narrow path: a fallen log laid across as a bridge - shared/world3-footbridges.js carries it to its banks and
+    // links its ends; a wide trail: stepping stones, each its own size and shape, not one a tile; where the creek
+    // only clipped a path's edge the path keeps its ground)
+    let crossings = 0, long = 0, clips = 0;
+    const kinds = { stones: 0, log: 0 };
+    groups.sort((p, q) => p[0][3] - q[0][3]);
     for (const g of groups) {
       if (g.length > G.stones) { long++; continue; }
-      for (const [i, tx, ty] of g) {
-        m.tiles[i] = T.BRIDGE; m.reserve[i] |= RES | 4; tiles--;
-        C.prop('rk', (tx + 0.5) * TILE + (hh(tx, ty, 81) - 0.5) * 8, (ty + 0.5) * TILE + 6 + (hh(tx, ty, 82) - 0.5) * 6, 0, { k: 'stone', r: 11 + ((tx + ty) % 3), s: (tx * 3 + ty) % 4 });
+      // the path's own ground beside these tiles, by the bank it is on
+      const A = [], B = [], own = new Set(g.map((q) => q[0]));
+      for (const [, tx, ty, k] of g) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const X = tx + dx, Y = ty + dy;
+        if (!C.inF(X, Y) || own.has(C.idx(X, Y)) || m.tiles[C.idx(X, Y)] !== T.DIRT) continue;
+        const [ax, ay] = line[Math.max(0, k - 2)], [bx, by] = line[Math.min(n - 1, k + 2)], cr = (bx - ax) * ((Y + 0.5) * TILE - line[k][1]) - (by - ay) * ((X + 0.5) * TILE - line[k][0]);
+        (cr < 0 ? A : B).push([X + 0.5, Y + 0.5]);
+      }
+      if (!A.length || !B.length) {
+        // (the creek only clipped the path's edge: no crossing - the path keeps its ground; where the creek's own run
+        // lies on it, stones)
+        for (const [i, tx, ty, k] of g) {
+          let d = 1e9;
+          for (let q = Math.max(0, k - 8); q <= Math.min(n - 1, k + 8); q++) d = Math.min(d, Math.hypot((tx + 0.5) * TILE - line[q][0], (ty + 0.5) * TILE - line[q][1]));
+          tiles--;
+          if (d > 24) C.ground(i, T.DIRT);
+          else { m.tiles[i] = T.BRIDGE; m.reserve[i] |= RES | 4; C.prop('rk', (tx + 0.5) * TILE + (hh(tx, ty, 81) - 0.5) * 12, (ty + 0.5) * TILE + 6, 0, { k: 'stone', r: 9 + Math.round(hh(tx, ty, 83) * 7), s: Math.floor(hh(tx, ty, 84) * 8) }); }
+        }
+        clips++;
+        continue;
+      }
+      for (const [i] of g) { m.tiles[i] = T.BRIDGE; m.reserve[i] |= RES | 4; tiles--; }
+      const cen = (P) => [P.reduce((a, q) => a + q[0], 0) / P.length, P.reduce((a, q) => a + q[1], 0) / P.length], [x0, y0] = cen(A), [x1, y1] = cen(B);
+      const span = Math.hypot(x1 - x0, y1 - y0) || 1, ux = (x1 - x0) / span, uy = (y1 - y0) / span, mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+      let w0 = 0, w1 = 0; for (const q of g) { const d = -(q[1] + 0.5 - mx) * uy + (q[2] + 0.5 - my) * ux; w0 = Math.min(w0, d); w1 = Math.max(w1, d); }
+      if (w1 - w0 < G.log[0] && span <= G.log[1] && hh(Math.round(mx), Math.round(my), 89) < G.log[2]) {
+        C.prop('logbridge', mx * TILE, my * TILE, 0, { len: Math.round((span * TILE + 16) / 8) * 8, a: Math.round(Math.atan2(uy, ux) * 1000) / 1000 });
+        kinds.log++;
+      } else {
+        for (const [, tx, ty] of g) {
+          const u = hh(tx, ty, 81), big = 9 + Math.round(hh(tx, ty, 83) * 7);
+          C.prop('rk', (tx + 0.5) * TILE + (u - 0.5) * 12, (ty + 0.5) * TILE + 6 + (hh(tx, ty, 82) - 0.5) * 10, 0, { k: 'stone', r: big, s: Math.floor(hh(tx, ty, 84) * 8) });
+          if (big <= 11 && hh(tx, ty, 85) < 0.6) C.prop('rk', (tx + 0.5) * TILE + (u < 0.5 ? 11 : -11), (ty + 0.5) * TILE + 6 + (hh(tx, ty, 86) - 0.5) * 14, 0, { k: 'stone', r: 7 + Math.round(hh(tx, ty, 87) * 2), s: Math.floor(hh(tx, ty, 88) * 8) });
+        }
+        kinds.stones++;
       }
       crossings++;
     }
@@ -167,7 +206,7 @@ export function woodsCreeks3(m, H3) {
     C.flush();
     m.waters.ch.push({ k: 'creek', w: Math.round(G.hw[1] * 2 / TILE * 10) / 10, t: 'forest', v: 0.55, hand: 1, pts: line.filter((_, k) => k % 3 === 0 || k === n - 1).map(([x, y]) => [Math.round(x / TILE * 10) / 10, Math.round(y / TILE * 10) / 10]), ...(pools.length ? { p: pools } : {}), ...(rap.length ? { r: rap.map(([a, b, s]) => [Math.round(a / 3), Math.round(b / 3), s]) } : {}) });
     (m.natureSites ||= []).push({ kind: 'woodscreek', name: S.name, x: Math.round(line[0][0]), y: Math.round(line[0][1]), mouth: [Math.round(line[n - 1][0]), Math.round(line[n - 1][1])], len: Math.round(n * TILE * G.step / 6 / TILE), pools: pools.map((p) => [Math.round(p[0] * TILE), Math.round(p[1] * TILE)]), line: line.filter((_, k) => k % 6 === 0 || k === n - 1).map(([x, y]) => [Math.round(x), Math.round(y)]) });
-    out.creeks.push({ name: S.name, tiles: Math.round(n * G.step / 6), water: tiles, pools: pools.length, riffles: rap.length, crossings, long, fall: Math.round((tr[0][2] - tr[tr.length - 1][2]) * 10) / 10 });
+    out.creeks.push({ name: S.name, tiles: Math.round(n * G.step / 6), water: tiles, pools: pools.length, riffles: rap.length, crossings, kinds, clips, long, fall: Math.round((tr[0][2] - tr[tr.length - 1][2]) * 10) / 10 });
   }
   return out;
 }

@@ -305,6 +305,29 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
     form over paths: boughs from 0.76 of its height, fullness 0.5); C a small crown higher still (0.82, 0.45, 0.7 as
     wide); D smaller again (0.86, 0.4, 0.55). The rest of the overhaul (crossings, water, ferns, finds, places) does
     not wait on it.
+- The water's bank (the owner, 11-24 21:40: "The ridge along the river is a little too uniform like just a brown
+  outline to the river edge ... it can blend in with the water in some places, it can be a rocky/stone beach, it can
+  be dirt and sand beach, it can just blend in with the vegetation into the water, it should be a good natural mix
+  just line in nature but not just this perfect brown outline between the land and water"): wild banks vary along
+  the shore by rule (groundbake.js `bankKind`); designed ground (lawns, parks, golf) keeps its lip.
+- Crossings (the owner, 11-24 21:40: "The stones in the water between trails is a great detail. All the stones look
+  about the same so some variation in the stone would be good ... it doesnt just have to be stones that connect paths
+  it can be some fallen logs or makeshift log/stick/natural bridges"): stones vary; a narrow path may take a fallen
+  log; a makeshift stick bridge is a piece still to draw.
+- Vehicles in water (the owner, 11-24 21:40): never an instant loss in shallow water - splash, slow, stall, and sink
+  only in deep water; off-road vehicles ford deeper. Logged for the pre-beta (`docs/audit/PREBETA-LIST.md`); not built
+  in the art pass.
+- Natural lakes get natural shapes (the owner, 11-24 21:40: "The lake looks better like this so this would be
+  acceptable ... For these natural lakes like this some natural shape looks better"); Mirage Lake's offshoot cove on
+  its west side added at his suggestion.
+- The dark on plants (the owner, 11-24 22:23: "Its not an outline ... Its the dark/basically black shading on the
+  underside of this art that makes it stick out ... These should be reacting to global lighting"): measured - 102 of
+  121 plant kinds have over 15% of their pixels near-black when lit at noon, painted dark and turned from the sun at
+  once. The fix proposed (a floor under a leaf's painted shade; light that wraps round leaves in the light pass) is
+  his pick from `report-26` (B, C, D). OPEN. Brought forward from the plan's "11-23, across biomes" line; before the
+  pre-beta.
+- WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
+  the consoles we are aiming for").
 - The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was
   mirage lake that was very oval in shape yes. It's one that shows up in the cinematics"): its shore to be reshaped
   (`shared/world3-mirage.js`, a hand-made place), its beach, palms and jetty kept right, the cinematics that show it
