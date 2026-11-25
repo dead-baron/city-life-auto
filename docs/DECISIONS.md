@@ -435,6 +435,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   it out").
 - The shark gets another pass (the owner, 11-25 15:10: "The shark could use another pass on it let's try to make it
   look better").
+- The cats' nose is a light pink (the owner, 11-25 15:42: "slightly more light pink, right now its too dark red").
 - The cats, settled for now (the owner, 11-25 15:26, on the first try): "the before cats looked better but can we keep
   them like that in the face and snout but just add a little nose to them? And make the tail a little thinner and
   longer like a cats tail (or variations if we have a long hair cat in the mix vs a short haired cat)" - done so: the

@@ -27655,4 +27655,23 @@ The owner, 13:33 and 13:35, on the mountain streams' pictures (his words in DECI
   (ginger, calico) or out low with the tip curled up (`tailLow`: black, tabby); the long-haired white cat keeps its
   plume. The calico's patches are laid from where the model's origin was (her tail's room moved it and with it her
   patches). Picture: `report-56`.
+- **The cats' nose a light pink** (the owner, 15:42: "right now its too dark red"): a feature pixel takes the ramp's
+  darker step - (244, 45, 129) for this pink; a cat's nose takes the ramp's middle tone, its own colour (246, 173, 187).
+
+## 2026-11-25 · Cloud shadows - page code, on branch `fable-art-1124`
+The owner, 15:10, on the still of 11-25 (`report-43`): "I think the cloud looks okay let's try it out."
+client/art2/game/lightgame.js `CLOUD`: big soft shadows drifting over the land by day. They are the sun's: the light
+pass's sun visibility is multiplied by a slow two-octave noise anchored to the world (cells 1,500 px across, drifting
+9 px a second east-south-east), so a shadow dims the sun's direct light and takes the shade's cool tint, and lies on
+ground, roofs, crowns and water alike. How much of the sun a cloud takes is a preset's number, blended with the day
+like the rest: noon and afternoon 0.36, morning 0.3, golden 0.28, dawn 0.2, sunset 0.18, rain's overcast 0.1; night,
+dusk, storm, fog and indoors none (the default). From the noise worked out again in the test: 31.5% of the land is
+touched by a shadow at a time, 18.6% at half strength or more. A switch in the debug menu ("Cloud shadows", your
+screen, reloads; `cla.clouds`).
+- Cost: eight hashes and two smoothsteps a lit pixel, beside the sun's own ray march (to 110 steps): not measured on
+  a phone. No new texture, no extra pass. Page code: no re-bake.
+- Seen in a local game at noon, switched off and on in the same frame (`report-58`: under the redwoods, where the
+  canopy's own shade hides most of it - it will read plainer on open ground, which was not photographed).
+- test/cloudshadow.test.js (the presets by day only, the shader's rule from the source, the land's share, the
+  switch); the lighting tests and test/perf.test.js pass.
 

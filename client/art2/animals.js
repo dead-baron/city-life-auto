@@ -42,11 +42,11 @@ export const ANIMALS = {
   chihuahua: { len: 12, h: 10, w: 6.5, coat: '#e0a050', belly: '#f0d8a8', ears: 'big', tail: 'curl', snout: 2, head: 4.2, collar: '#c83030' },
   terrier: { len: 17, h: 13.5, w: 8.5, coat: '#7a7c84', muzzle: '#b4b6bc', ears: 'flop', tail: 'up', tailN: 7, snout: 3.2, head: 4.6, fluffy: 1, beard: 1, collar: '#3a8a46', tongue: 1 },
   dalmatian: { len: 25, h: 20, w: 10, coat: '#f2f0ec', patch: '#26262c', pattern: 'dots', earC: '#26262c', ears: 'flop', tail: 'down', snout: 4, head: 5, collar: '#c83030', tongue: 1 },
-  catBlack: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f0aab6', coat: '#302e38', eye: '#e8c83a', ears: 'cat', tail: 'cat', tailLow: 1, snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
-  catTabby: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#e8c440', coat: '#8a8c90', patch: '#4a4c52', pattern: 'tabby', muzzle: '#d8d8d4', ears: 'cat', tail: 'cat', tailLow: 1, tailBands: '#4a4c52', snout: 0.9, head: 4.5, cat: 1, collar: '#3a8a46' },
-  catGinger: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#e08a3a', patch: '#b85a20', pattern: 'tabby', belly: '#f4dcb8', muzzle: '#f4e4cc', ears: 'cat', tail: 'cat', tailBands: '#b85a20', snout: 0.9, head: 4.5, cat: 1, collar: '#3a6ab0' },
-  catCalico: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#f2ece2', patch: '#d8783a', patch2: '#2a2830', pattern: 'calico', headC: '#d8783a', muzzle: '#f4f0ea', blaze: '#f4f0ea', ears: 'cat', tail: 'cat', tailC: '#d8783a', snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
-  catWhite: { len: 18, h: 11.5, w: 8.5, legK: 0.85, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#4a9ad0', coat: '#f2eee8', ears: 'cat', tail: 'feather', snout: 0.9, head: 4.7, cat: 1, fluffy: 1, collar: '#b04a9a' },
+  catBlack: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f6adbb', coat: '#302e38', eye: '#e8c83a', ears: 'cat', tail: 'cat', tailLow: 1, snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
+  catTabby: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f6adbb', eye: '#e8c440', coat: '#8a8c90', patch: '#4a4c52', pattern: 'tabby', muzzle: '#d8d8d4', ears: 'cat', tail: 'cat', tailLow: 1, tailBands: '#4a4c52', snout: 0.9, head: 4.5, cat: 1, collar: '#3a8a46' },
+  catGinger: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f6adbb', eye: '#5a9a3a', coat: '#e08a3a', patch: '#b85a20', pattern: 'tabby', belly: '#f4dcb8', muzzle: '#f4e4cc', ears: 'cat', tail: 'cat', tailBands: '#b85a20', snout: 0.9, head: 4.5, cat: 1, collar: '#3a6ab0' },
+  catCalico: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f6adbb', eye: '#5a9a3a', coat: '#f2ece2', patch: '#d8783a', patch2: '#2a2830', pattern: 'calico', headC: '#d8783a', muzzle: '#f4f0ea', blaze: '#f4f0ea', ears: 'cat', tail: 'cat', tailC: '#d8783a', snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
+  catWhite: { len: 18, h: 11.5, w: 8.5, legK: 0.85, catFace: 1, hup: 0.7, nose: '#f6adbb', eye: '#4a9ad0', coat: '#f2eee8', ears: 'cat', tail: 'feather', snout: 0.9, head: 4.7, cat: 1, fluffy: 1, collar: '#b04a9a' },
   cow: { len: 48, h: 31, w: 19, coat: '#f2f0ec', patch: '#26262c', pattern: 'spots', ears: 'side', earC: '#26262c', tail: 'thin', snout: 6, head: 8, hup: 0.5, muzzle: '#e8b4ac', nose: '#b87878', horns: 'short', udder: 1 },
   horse: { len: 50, h: 36, w: 14, coat: '#8a4a26', belly: '#8a4a26', mane: '#2a1e1a', ears: 'up', tail: 'long', snout: 9, head: 6, neck: 18, socks: '#f2eee8' },
   sheep: { len: 27, h: 19, w: 15, coat: '#ece2c8', headC: '#34303a', muzzle: '#34303a', legC: '#34303a', earC: '#34303a', eye: '#e8e0c8', ears: 'side', tail: 'stub', snout: 3, head: 5.2, hup: 0.5, fluffy: 2 },
@@ -205,7 +205,9 @@ export function animalModel(kind, o = {}) {
   const dark = m.mat({ ramp: ramp(darkC, 5, 2), k: 1 }), hoofM = m.mat({ ramp: ramp(darkC, 5, 2), k: 1, limb: 1, thin: 1 });
   // (the features: each its own material, a pixel each in the game's picture - drawn over `as`, the coat under it)
   const feat = (c, flat = 1, x = null) => m.mat({ ramp: ramp(c, 5, 2), k: 1, feat: 1, flat, as: base, ...x });
-  const nose = feat(A.nose || darkC, 1, { min: 1, name: 'nose' }), eyeC = A.legend ? '#6a6a7a' : A.eye || '#1c161c', eyeMin = A.head < 3.6 ? 1 : 2, eyes = [feat(eyeC, A.eye ? 2 : 1, { name: 'eyeL', side: -1, min: eyeMin }), feat(eyeC, A.eye ? 2 : 1, { name: 'eyeR', side: 1, min: eyeMin })];   // (a small head's eye: whatever shows of it)
+  // (a cat's nose: its own light pink - the ramp's middle tone, not the darker step every other nose takes, which came out
+  // a dark red; the owner, 11-25 15:42: "slightly more light pink, right now its too dark red")
+  const nose = feat(A.nose || darkC, A.catFace ? 2 : 1, { min: 1, name: 'nose' }), eyeC = A.legend ? '#6a6a7a' : A.eye || '#1c161c', eyeMin = A.head < 3.6 ? 1 : 2, eyes = [feat(eyeC, A.eye ? 2 : 1, { name: 'eyeL', side: -1, min: eyeMin }), feat(eyeC, A.eye ? 2 : 1, { name: 'eyeR', side: 1, min: eyeMin })];   // (a small head's eye: whatever shows of it)
   const limbOf = new Map(), asLimb = (mt) => { if (!limbOf.has(mt)) limbOf.set(mt, m.mat({ ...m.mats[mt], ...LIMB })); return limbOf.get(mt); };
   const thinOf = new Map(), asThin = (mt) => { if (!thinOf.has(mt)) thinOf.set(mt, m.mat({ ...m.mats[mt], ...THIN })); return thinOf.get(mt); };
   const face = A.face ? R(A.face) : A.mask ? R(A.mask) : base;

@@ -556,6 +556,7 @@ export class Art2Engine {
     this.pDecal = glProgram(gl, DECAL_VS, DECAL_FS, ['c', 'iA', 'iSrc', 'iSz', 'iPar'], { tA: 3 });
     this.pPresent = glProgram(gl, TRI_VS, PRESENT_FS, ['p'], { tF: 0 });
     this.pXray = glProgram(gl, XRAY_VS, XRAY_FS, IA, { tA: 3, tB: 4, tS: 6 });
+    this.clouds = true; try { this.clouds = localStorage.getItem('cla.clouds') !== '0'; } catch { /* blocked: on */ }
     this.light = new LightGame(gl, this.vaoTri); this.light.ap = this.ap; this.light.setTier(this.q); this.light.warm();
     this.tCan = null; this._upCanopy();
     this.slots = []; this.chunks = new Map();
@@ -1001,6 +1002,7 @@ export class Art2Engine {
     const LS = this.LS;
     LS.A = this.tA; LS.B = this.tB; LS.C = this.tC; LS.w = this.SW; LS.h = this.SH; LS.preset = this.P;
     LS.wet = this.wet; LS.time = this.time; LS.flash = this.flash; LS.fog = this.fog;
+    LS.clouds = this.clouds;   // (cloud shadows: on unless the debug menu switched them off on this screen - lightgame.js CLOUD)
     const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind; LS.air = this.air; LS.bio = this.bio;
     LS.can = this._canopyInView() ? this.canopy : null; LS.canTex = this.tCan;
     LS.nL = this._packLights(); LS.ubo = this.uboBuf; LS.out = this.fbOut; LS.mark = this.profile ? this._mark : null;

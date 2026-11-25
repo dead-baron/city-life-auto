@@ -37,7 +37,12 @@ export const PRESET_DEFAULTS = {
   shadowLen: 0, bands: 5, bandMix: 0, wet: 0, emiK: 1, bloomThr: 0.7, leafGlow: 0, bloomK: 0.8,
   haze: 0, hazeCol: [0.5, 0.5, 0.55], vign: 0.5, sat: 1, contrast: 1, lift: [0, 0, 0], gain: [1, 1, 1], reflK: 0, lampsOn: 0,
   rain: 0, skyRefl: 0.35, fog: 0, fogCol: [0.7, 0.7, 0.75], fogH: 80, shafts: 0, flash: 0, flashCol: [0.75, 0.82, 1.0], motes: 0,
+  cloud: 0,   // (how much of the sun a passing cloud's shadow takes: the day's presets below; none at night or indoors)
 };
+// Cloud shadows (the owner, 11-25, on the still: "I think the cloud looks okay let's try it out"): big soft shadows
+// drifting over the land by day. size: world px across one cell of the noise they are cut from; speed: world px a
+// second, along dir; lo, hi: the noise's levels between which a shadow comes in (higher: fewer, smaller clouds)
+export const CLOUD = { size: 1500, speed: 9, dir: [0.94, 0.34], lo: 0.56, hi: 0.74 };
 const mk = (o) => ({ ...PRESET_DEFAULTS, ...o });
 export const PRESETS_GAME = {
   // before sunrise: the sky paling, no sun yet (a faint cold glow), the lamps still on, a breath of mist
@@ -45,25 +50,25 @@ export const PRESETS_GAME = {
     emiK: 1.12, bloomThr: 0.56, bloomK: 1.15, haze: 0.06, hazeCol: [0.32, 0.26, 0.44], vign: 0.66, sat: 1.06, contrast: 1.08,
     lift: [0.01, 0.004, 0.03], gain: [1.05, 0.99, 0.99], reflK: 0.5, lampsOn: 1, skyRefl: 0.25, fog: 0.06, fogCol: [0.62, 0.56, 0.72], fogH: 70 }),
   // first light: a low rose-gold sun from the east-north-east, violet shade, a little mist
-  dawn: mk({ sunDir: [0.74, -0.34, 0.3], sunCol: [1.5, 1.08, 0.86], ambSky: [0.32, 0.33, 0.47], ambGround: [0.28, 0.24, 0.25], shadowTint: [0.84, 0.86, 1.12],
+  dawn: mk({ cloud: 0.2, sunDir: [0.74, -0.34, 0.3], sunCol: [1.5, 1.08, 0.86], ambSky: [0.32, 0.33, 0.47], ambGround: [0.28, 0.24, 0.25], shadowTint: [0.84, 0.86, 1.12],
     shadowLen: 300, bands: 5, bandMix: 0.8, emiK: 0.8, bloomThr: 0.75, leafGlow: 0.45, bloomK: 0.8, haze: 0.06, hazeCol: [1.0, 0.76, 0.64], vign: 0.55,
     sat: 1.1, contrast: 1.08, lift: [0.02, 0.008, 0.03], gain: [1.04, 0.98, 0.95], lampsOn: 0.4, fog: 0.12, fogCol: [0.9, 0.8, 0.78], fogH: 70, shafts: 0.3 }),
-  morning: mk({ sunDir: [0.55, -0.36, 0.68], sunCol: [1.4, 1.3, 1.1], ambSky: [0.4, 0.47, 0.62], ambGround: [0.36, 0.34, 0.31], shadowTint: [0.84, 0.9, 1.12],
+  morning: mk({ cloud: 0.3, sunDir: [0.55, -0.36, 0.68], sunCol: [1.4, 1.3, 1.1], ambSky: [0.4, 0.47, 0.62], ambGround: [0.36, 0.34, 0.31], shadowTint: [0.84, 0.9, 1.12],
     shadowLen: 200, bands: 5, bandMix: 0.85, emiK: 0.3, bloomThr: 0.85, leafGlow: 0.2, bloomK: 0.45, haze: 0.04, hazeCol: [0.85, 0.9, 1.0], vign: 0.35,
     sat: 1.16, contrast: 1.08, lift: [0.005, 0.005, 0.01], gain: [1.02, 1.0, 0.95], shafts: 0.1 }),
   // R1-B: a neutral white key from high in the north-west, short shadows, sky-blue fill
-  noon: mk({ sunDir: [-0.42, -0.3, 0.86], sunCol: [1.3, 1.25, 1.12], ambSky: [0.46, 0.53, 0.68], ambGround: [0.44, 0.42, 0.38], shadowTint: [0.85, 0.9, 1.15],
+  noon: mk({ cloud: 0.36, sunDir: [-0.42, -0.3, 0.86], sunCol: [1.3, 1.25, 1.12], ambSky: [0.46, 0.53, 0.68], ambGround: [0.44, 0.42, 0.38], shadowTint: [0.85, 0.9, 1.15],
     shadowLen: 120, bands: 5, bandMix: 0.85, emiK: 0.25, bloomThr: 0.9, leafGlow: 0.1, bloomK: 0.3, haze: 0.02, hazeCol: [0.8, 0.88, 1.0], vign: 0.25,
     sat: 1.2, contrast: 1.1, gain: [1.02, 1.01, 0.97] }),
-  afternoon: mk({ sunDir: [-0.62, -0.3, 0.7], sunCol: [1.42, 1.27, 0.98], ambSky: [0.38, 0.44, 0.6], ambGround: [0.4, 0.36, 0.3], shadowTint: [0.82, 0.88, 1.14],
+  afternoon: mk({ cloud: 0.36, sunDir: [-0.62, -0.3, 0.7], sunCol: [1.42, 1.27, 0.98], ambSky: [0.38, 0.44, 0.6], ambGround: [0.4, 0.36, 0.3], shadowTint: [0.82, 0.88, 1.14],
     shadowLen: 200, bands: 5, bandMix: 0.85, emiK: 0.35, bloomThr: 0.85, leafGlow: 0.3, bloomK: 0.45, haze: 0.04, hazeCol: [0.95, 0.85, 0.7], vign: 0.35,
     sat: 1.18, contrast: 1.1, lift: [0.01, 0, 0.01], gain: [1.03, 0.99, 0.93], shafts: 0.1 }),
   // R1-A: a warm orange key low in the west-north-west, long deep warm shadows with a violet cast
-  golden: mk({ sunDir: [-0.72, -0.24, 0.46], sunCol: [1.85, 1.3, 0.66], ambSky: [0.22, 0.22, 0.34], ambGround: [0.28, 0.22, 0.2], shadowTint: [0.92, 0.88, 1.05],
+  golden: mk({ cloud: 0.28, sunDir: [-0.72, -0.24, 0.46], sunCol: [1.85, 1.3, 0.66], ambSky: [0.22, 0.22, 0.34], ambGround: [0.28, 0.22, 0.2], shadowTint: [0.92, 0.88, 1.05],
     shadowLen: 300, bands: 5, bandMix: 0.8, emiK: 1.0, bloomThr: 0.75, leafGlow: 0.6, bloomK: 0.85, haze: 0.06, hazeCol: [1.0, 0.62, 0.32], vign: 0.55,
     sat: 1.15, contrast: 1.12, lift: [0.02, 0.005, 0.025], gain: [1.04, 0.95, 0.84], lampsOn: 0.6, shafts: 0.35 }),
   // the sun on the horizon: a deep orange-red key from the far west, the longest shadows, a violet-rose sky
-  sunset: mk({ sunDir: [-0.9, -0.2, 0.24], sunCol: [1.5, 0.74, 0.42], ambSky: [0.19, 0.16, 0.29], ambGround: [0.21, 0.15, 0.16], shadowTint: [0.95, 0.86, 1.08],
+  sunset: mk({ cloud: 0.18, sunDir: [-0.9, -0.2, 0.24], sunCol: [1.5, 0.74, 0.42], ambSky: [0.19, 0.16, 0.29], ambGround: [0.21, 0.15, 0.16], shadowTint: [0.95, 0.86, 1.08],
     shadowLen: 300, bandMix: 0.75, emiK: 1.02, bloomThr: 0.7, leafGlow: 0.55, bloomK: 0.95, haze: 0.07, hazeCol: [0.95, 0.42, 0.38], vign: 0.58,
     sat: 1.15, contrast: 1.1, lift: [0.02, 0, 0.03], gain: [1.05, 0.93, 0.88], wet: 0.1, reflK: 0.3, lampsOn: 0.85, skyRefl: 0.3, shafts: 0.3 }),
   // AT1-A blue hour: the sun just gone, a pink rim from the west, indigo shade, lamps and windows on
@@ -75,7 +80,7 @@ export const PRESETS_GAME = {
   night: mk({ sunDir: [-0.45, -0.25, 0.86], sunCol: [0.019, 0.026, 0.072], ambSky: [0.018, 0.024, 0.076], ambGround: [0.012, 0.014, 0.04], emiK: 1.25, bloomThr: 0.5,
     bloomK: 1.35, haze: 0.04, hazeCol: [0.04, 0.05, 0.14], vign: 0.72, sat: 1.24, contrast: 1.12, lift: [0.002, 0.003, 0.022], gain: [1.08, 0.99, 0.95], reflK: 0.7, lampsOn: 1, skyRefl: 0.2 }),
   // overcast daytime rain: flat grey-blue light, faint shadows, everything wet
-  rain: mk({ sunDir: [-0.45, -0.3, 0.84], sunCol: [0.42, 0.44, 0.5], ambSky: [0.44, 0.48, 0.58], ambGround: [0.3, 0.31, 0.35], shadowTint: [0.95, 0.97, 1.05],
+  rain: mk({ cloud: 0.1, sunDir: [-0.45, -0.3, 0.84], sunCol: [0.42, 0.44, 0.5], ambSky: [0.44, 0.48, 0.58], ambGround: [0.3, 0.31, 0.35], shadowTint: [0.95, 0.97, 1.05],
     shadowLen: 60, emiK: 0.8, bloomThr: 0.7, bloomK: 0.7, haze: 0.05, hazeCol: [0.5, 0.55, 0.64], vign: 0.55, sat: 1.04, contrast: 1.1,
     lift: [0, 0.003, 0.012], gain: [0.98, 1.0, 1.03], wet: 1, reflK: 1.0, rain: 1, lampsOn: 0.6, skyRefl: 0.35, fog: 0.05, fogCol: [0.5, 0.54, 0.6], fogH: 90 }),
   // AT1-B: night storm, soaked streets mirroring every light; set .flash for lightning
@@ -271,6 +276,7 @@ uniform highp usampler2D tTiles;   // per ${TILE} px tile: count, then up to ${T
 uniform vec2 worg;                 // the world px of scene texel (0, 0): water and rain are anchored to the world
 uniform vec4 wind4;                // the wind: strength, gustiness, direction x, y (render/flora/wind.js)
 uniform vec2 bio;                  // the sea's sparkle tonight: strength (0 most nights), the night's seed (atmos.js bioAt)
+uniform vec3 cloud;                // cloud shadows: how much of the sun one takes (0: none), their drift (world px)
 vec3 bioGlow = vec3(0.0);          // (waterSurf: the sparkle here, light of its own - added after the light)
 struct Light { vec4 pos; vec4 col; vec4 cone; };
 layout(std140) uniform Lights { Light L[MAXL]; };
@@ -462,6 +468,11 @@ float rainMarks(vec2 w, bool water, float up){
 // reach: how far above P's own height a caster still counts; tmax: how far the march goes. Open water takes shadows only from what
 // floats on it, close: a hull, a swimmer - not a bridge deck or a car on it far above, a mast, a leaping fish, which threw
 // long shadows across it (the owner, 11-23; WATER_REACH / WATER_TMAX)
+// a cloud's shadow at world point w (CLOUD): two octaves of a slow noise anchored to the world, drifting
+float cloudN(vec2 p){ ivec2 i = ivec2(floor(p)); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash2(i), hash2(i + ivec2(1, 0)), f.x), mix(hash2(i + ivec2(0, 1)), hash2(i + ivec2(1, 1)), f.x), f.y); }
+float cloudVis(vec2 w){ vec2 p = (w + cloud.yz) / ${CLOUD.size.toFixed(1)};
+  return 1.0 - cloud.x * smoothstep(${CLOUD.lo}, ${CLOUD.hi}, cloudN(p) * 0.65 + cloudN(p * 2.7 + 13.7) * 0.35); }
 float sunVis(vec3 P, ivec2 wq, float reach, float tmax){
   float sh = 1.0;
 #if RAYS > 0
@@ -503,7 +514,8 @@ float sunVis(vec3 P, ivec2 wq, float reach, float tmax){
   }
   sh = 1.0 - occ * 0.8;
 #endif
-  return canH > 0.0 && sh > 0.0 ? sh * canopyVis(P) : sh;
+  if (canH > 0.0 && sh > 0.0) sh *= canopyVis(P);
+  return cloud.x > 0.0 && sh > 0.0 ? sh * cloudVis(worg + P.xy) : sh;
 }
 // the point and cone lights of this pixel's tile reaching P; on wet ground (wg) also the wobbling
 // streak each light leaves below its foot
@@ -940,6 +952,7 @@ export class LightGame {
     if (u.worg) gl.uniform2f(u.worg, S.worg ? S.worg[0] : 0, S.worg ? S.worg[1] : 0);
     if (u.wind4) { const W = S.wind; gl.uniform4f(u.wind4, W ? W[0] : 0.1, W ? W[1] : 0.3, W ? W[2] : 1, W ? W[3] : 0); }
     if (u.bio) gl.uniform2f(u.bio, S.bio ? S.bio[0] : 0, S.bio ? S.bio[1] : 0);
+    if (u.cloud) { const d = (S.time * CLOUD.speed) % 1048576; gl.uniform3f(u.cloud, S.clouds === false ? 0 : pv(P, 'cloud'), d * CLOUD.dir[0], d * CLOUD.dir[1]); }
     this.canUniforms(u, S.can, S.air);
   }
   canUniforms(u, c, air) {
