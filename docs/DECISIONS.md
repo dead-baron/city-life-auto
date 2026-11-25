@@ -326,6 +326,19 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   once. The fix proposed (a floor under a leaf's painted shade; light that wraps round leaves in the light pass) is
   his pick from `report-26` (B, C, D). OPEN. Brought forward from the plan's "11-23, across biomes" line; before the
   pre-beta.
+  - The owner, 11-24 23:06, on B/C/D: "looks better between B and C but its not right yet, it seems drawn differently
+    than other art in the game, can we compare this to the style anchors ... it might be taking a concept too literally
+    ... look at the original fern in A and however this was created I think is how the world art is being created to
+    react to the lighting in-game better?" Compared and measured: he is right on both counts. (1) The concept sheet
+    NK1-M's plants go to black (38 to 55% of a plant under 50/255; its darkest tenth is 3, 5, 8) and the plants copied
+    that; the style anchor R1-D's darkest green is 25, 57, 45 - never black, and green, where the plants' darks lean
+    blue. The anchor rules (DECISIONS: colours game-wide from R1-D), so the concept was taken too literally. (2) The
+    sword fern has its form painted and every leaf pixel facing up, so the game's light falls on it evenly (9% under
+    50); the other plants carry rounded surface directions, so the light shades them a second time on top of the
+    paint. Proposed (`report-30`, `report-31`; E, F, G): every plant made as the fern is - leaf surfaces turned up
+    (three quarters, or fully), the form left to the paint - and no leaf tone below the anchor's dark green, pulled to
+    its hue. Near-black falls from 27% of a plant to 15% (E), 8% (F), 7% (G); kinds over 15%: 102 -> 58 / 18 / 16.
+    Cast shadows, time of day and weather still fall on plants as on everything. OPEN: his pick of E, F or G.
 - WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
   the consoles we are aiming for").
 - The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was
