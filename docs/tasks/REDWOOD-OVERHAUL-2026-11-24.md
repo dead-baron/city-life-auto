@@ -93,3 +93,8 @@ other pieces (stepping stones, a ford) - these come with the new creeks of step 
 stepping stones at 2 paths. The network waits on his look at it. Then: ponds where a creek ends in a hollow (half of
 all test springs do), a culvert where one meets a road, small falls where the land steps down facing the camera, and
 gravel bars. The giants' tops are still his pick (forms A to J; reports 13 to 19).
+
+## 8. Step 4 started (11-24, 20:50): the fern kit drawn
+`client/art2/ferns.js`, nine kinds (DEVLOG "The fern kit"); the sheet is with the owner. Not in the bake, not planted.
+Next on his word: into the plant table (a budget decision: the bake's code is at its limit) and laid in drifts by
+wetness - which the creeks of step 3 give a measure of (distance to water, the land's hollows).

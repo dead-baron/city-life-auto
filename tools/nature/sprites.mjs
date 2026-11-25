@@ -37,7 +37,8 @@ const res = [];
 const { readFileSync } = await import('node:fs');
 const items = list.startsWith('@') ? JSON.parse(readFileSync(list.slice(1), 'utf8')) : list.split(',').map((item) => { const [sp, seed = '1', k = '1.35', c = '0'] = item.split(':'); return { name: sp, r: { t: 'f', sp, s: +seed, k: +k, c: +c } }; });
 for (const { name: sp, r } of items) {
-  const G = ST.makeStatic(r);
+  // (an item { name, mod, fn, a } draws a maker that is not a world plant yet: mod's export fn called with a)
+  const G = r && r.mod ? (await import(R + '/' + r.mod))[r.fn](...(r.a || [])) : ST.makeStatic(r);
   if (!G || !G.w) { console.log('nothing for', sp); continue; }
   let w, h, px;
   if (G.ap2) {

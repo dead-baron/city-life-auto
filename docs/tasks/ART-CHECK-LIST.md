@@ -21,6 +21,10 @@ added as the work goes; a line he has checked is marked with his word and the da
   the land from the woods west of the Giants Loop to the lake (283 tiles; riffles, 7 pools, stepping stones where a
   path crosses). Pictures: `report-20-creek`. Judge: its width, how many boulders, the pools (big enough to read as
   pools, to fish), the stones. On his word the same rule lays a network, with ponds in the hollows.
+- [ ] **The fern kit: which kinds, and is this the look.** Nine kinds drawn, none planted yet: sword, an old
+  tussock, lady, maidenhair, bracken (green and gold), deer, chain, fiddleheads, licorice. Pictures: `report-21`
+  (the sheet, four shapes a kind, beside today's three) and `report-22` (a mock-up of a bed: today's ferns, the
+  kit's). Judge: any kind to drop or redraw (the bracken and the licorice fern are the weakest); how much gold.
 - [ ] **The giant redwoods' tops: pick one.** The trunks-only look was rejected on sight (11-24 18:47). Forms of the
   same tree shown since, none in the code: A as now; B crown carried high; C a small crown higher still; D smaller
   again (`report-13`, `report-14`); E, F, G the small high crown with half, a little and no taper; H today's crown,

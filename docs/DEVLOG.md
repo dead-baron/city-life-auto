@@ -27262,3 +27262,19 @@ and pools, 2 path crossings. Counted for a network: of 2,956 test springs on a 2
 it, every stone is on a deck tile; and no trail's line anywhere runs over open water.
 Seen: offline renders of four stretches. Not seen: in a running game (the water's motion, the fish, walking the
 stones); its mouth at the lake; night. The whole test suite has not been run. A world change: with the nature batch.
+
+## 2026-11-24 · The fern kit: nine kinds, drawn, not yet planted (the redwood overhaul, step 4) - on branch `fable-art-1124`
+The owner: "I'd really love to improve the ferns and make a lot of variety of ferns". The woods had two ferns (flora.js
+`fern`, also as bracken; redwoods.js `swordFernArt`): every bed was one plant repeated. `client/art2/ferns.js` draws
+nine kinds from one frond painter (a midrib that rises and arches, leaflets in pairs by a length profile, lacy or
+plain; thin stems drawn after the outline so they keep their one pixel), all at the art pixel: sword (and a small
+one), an old tussock of several crowns, lady (a vase of plumes), maidenhair (fans on black wiry stems), bracken (a
+triangle of a frond on a stalk; green, and gone gold), deer (a flat combed rosette, thin fertile fronds standing in
+it), chain (the giant, coarse and dark), fiddleheads (coiled croziers), licorice (a one-sided tuft for a log or a
+rock). `test/ferns.test.js`: each draws inside its canvas on its foot, no black, twelve seeds twelve plants differing
+in size and fullness, and the kinds differ in build (the test caught the lady fern and the bracken cut by their
+canvas at some seeds). `tools/nature/sprites.mjs` draws a maker that is not a world plant yet ({ mod, fn, a }).
+NOT in the bake (statics.js SPECIES) and not planted: the sheet is with the owner first. To come on his word: the
+kinds into the plant table (the bake's code is at its budget - 1,080 of 1,080 KB - so that is a budget decision or a
+trim), laid in drifts by how wet the ground is (thick and mixed along creeks and in hollows, bracken on dry ground).
+Seen: the sheet lit at noon, and a mock-up bed composed from the sprites - not the game's own floor.
