@@ -27515,3 +27515,59 @@ highway/bridge transparency not sure that's right yet, maybe we leave that alone
 false: the El's pieces and the highway decks carry no fade ids, the rule and its test stay. "Build the summit from
 plans"; "Creek looks good let's go with it" - next. His question about snowfields: none is drawn (10-17: the ground
 above the snow line is pale cut granite and scree) - Claude's earlier wording was wrong; corrected in DECISIONS.
+
+## 2026-11-25 · The summits built as knobs of rock; the relief's bytes reach the mountains' top - on branch `fable-art-1124`
+The owner, 09:03: "Build the summit from plans" (docs/tasks/MOUNTAIN-LOOK-2026-11-25.md).
+- **Found on the way - the relief layer ran out of room.** `m.relief` is a byte of metres per tile and Granite Peaks
+  stands to 363 m: 132,603 land tiles (23.2% of the district) read 255 - level to everything that reads the layer, no
+  slope shaded, no ledge drawn on the highest quarter of the mountains, and nothing could be raised there. Now a
+  metre a byte up to 160 m and 0.4 of a byte per metre above (shared/mapcore.js `RELIEF`, `reliefByte`,
+  `reliefMetres`); nothing under 160 m changes. Read back as metres by the ground bake (the hillshade, the ledges, the
+  talus), the trails' router, the rapids, the waysides' and the meadows' level-ground checks. 0 land tiles at the
+  ceiling (test/world3relief.test.js). What changes that he has not seen: the high mountains now show their slopes
+  and ledges (look B, as approved, where it was flat by this fault); the alpine meadows and the Summit Trail are
+  chosen and routed on true heights (the same five meadows by name; the trail 204 tiles, was 240).
+- **A summit is a top of the land**: chosen by the relief's own height (300 m and up, the ones standing highest over
+  the ground round them first), the knob having to fit. The land has two such tops clear of roads and places: Eagle
+  Knob (358 m with its knob; the Summit Trail's, the telescope now here) and Windy Col (340 m). Cairn Peak stays where
+  it was, by the old rule - it lies on a spur at 106 m, not a mountain top (it had the telescope).
+- **The knob** (shared/world3-peaks.js `PEAKS3.knob`): a level shelf 10 x 8 tiles for the cairn, the bench and the
+  telescope; solid rock round it - a ring 3 tiles thick on the north half, a block on the south half that ends in a
+  straight foot 5 tiles south of the shelf (the west half a tile shorter); the relief raised 16 m; a cliff wall (the
+  crag look) on each half of the foot; between them a cleft 3 tiles wide with stone steps (props-wild.js
+  `cliffStairs`'s new stone kind: granite treads, no posts or rope); the Summit Trail's router finds the cleft by
+  itself (rock is closed to it). Built three times before it read as a rock top: as a round, its south edge curved,
+  the walls came out two thin pillars and it looked like a disc of paving with a wooden ladder across it; then the
+  west wall was missing (a face 5 tiles deep is drawn over 7 rows - onto the shelf - so it was not put: `deep` 2).
+- **The ground**: a new ground, the walked granite (ground.js `granite`, groundbake.js `GRANITE`): worn smooth and
+  gritty, a crack wandering over it, a tuft by a crack - not a crag's slabs, which are the rock that stops you. On a
+  summit's shelf and its way up (the summit's own numbers, carried on its site), and in patches above the old snow
+  line where the quarry's cut slabs were (none within 17 tiles of a summit: the knob's outline stays its own).
+  Nothing grows on the shelf or the steps (reserve bits 192, statics.js `coverAt`). No snow anywhere.
+- Tests: test/world3peaks.test.js (each knob: its crown, its walls, the steps, the rise over the ground round it, the
+  walk up from the south to the cairn never through rock, the bench and telescope on open ground; two summits on real
+  tops), test/world3relief.test.js (the ceiling; bytes and metres agree), test/crags.test.js (the walked granite),
+  test/cliffs.test.js, test/world3rapids.test.js, test/world3wayside.test.js pass. The bake's code: 1,096 of 1,100 KB.
+- **The shade**: seen on the steepest ground over 270 m (86 m of fall in 44 tiles), half the scree came out under 50
+  of 255 once the slope was shaded. groundbake.js `LEDGE.shade` 0.64: the darkest a slope turned from the light is
+  shaded (was 0.55, everywhere - the steepest shaded slopes of every hill are a little lighter); `LEDGE.dark` 0.45: a
+  ledge's face on such a slope no darker than that of the rock's colour. There: 19.8% under 50 before these two, 8.2%
+  after (the style anchor: 10.6%). Not raised as a budget: two looks' numbers, tested in test/crags.test.js.
+- `tools/nature/darkscan.mjs --steep m` finds the steepest high ground to look at; the tool is in tools/nature/README.md.
+- Not done from the plan: switchbacks (the cleft is straight, 6 tiles of steps); the bench is not turned to the
+  longest view. Not seen in a running game. The whole suite not run.
+
+## 2026-11-25 · The woods' creek network - on branch `fable-art-1124`
+The owner, 09:03: "Creek looks good let's go with it." shared/world3-creeks.js `CREEKS3.net`: after Fernwater Creek
+(unchanged: 283 tiles, 7 pools, the same crossing) seven more by the same rule - springs tried on a 56-tile grid over
+Highland Woods, the highest first, 110 tiles apart, each run down the land to the first water (the river, the lake, a
+creek laid before it: Thimbleberry Run joins Salamander Creek, Huckleberry Run joins Dipper Creek's pond) or to a
+hollow, where it ends in a pond (three: Mossy Fork, Owl Hollow Creek, Dipper Creek). A creek goes round rock, is not
+laid along a path, through a lot, a field or a building, and would pass a road in a culvert (the road's tiles stay
+road) - none of the seven meets a road, so no culvert is laid and that part is untested in the world. From the data:
+8 creeks, 1,418 tiles of run, 3,345 tiles of water, 36 pools, 2 path crossings (stepping stones), 3 ponds; 9 springs
+tried, 2 with no way down. First try wound round a hollow's floor for 500 tiles (a scribble): a trace that gets no
+further than 12 tiles in 12 steps has reached the floor - the pond goes where that began. test/world3wayside.test.js
+(each creek downhill, one water along its own run, a way over at every path, a culvert wherever road lies under its
+line, its pond, names and springs apart). A car driven into a creek is in water as in any river (the shallow-water
+work is on the pre-beta list). Not seen in a running game.

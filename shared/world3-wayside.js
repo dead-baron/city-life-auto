@@ -14,7 +14,7 @@
 // For the whole-world build only (shared/world3-world.js, after the places made by hand, so a find keeps off them all).
 // Deterministic: integer hashes; Math's trig only inside generateCity (withDeterministicMath).
 import { TILE, T } from './constants.js';
-import { terrainAt } from './mapcore.js';
+import { terrainAt, reliefMetres } from './mapcore.js';
 
 const RES = 32;
 const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -70,7 +70,7 @@ export function buildWayside3(m, H3) {
       if (HARD.has(t)) return false;
       if (Math.abs(dx) > R || Math.abs(dy) > R) continue;
       if (m.dist[i] !== d || t !== T.GRASS || !m.land[i] || (m.reserve[i] & ~128) || (m.bld && m.bld[i] >= 0)) return false;
-      if (m.relief) { const r = m.relief[i]; if (r < lo) lo = r; if (r > hi) hi = r; }
+      if (m.relief) { const r = reliefMetres(m.relief[i]); if (r < lo) lo = r; if (r > hi) hi = r; }
     }
     if (m.relief && hi - lo > 8) return false;   // (level ground: a wall, a bench, a fire ring)
     if (madeNear((tx + 0.5) * TILE, (ty + 0.5) * TILE, (R + 4) * TILE)) return false;

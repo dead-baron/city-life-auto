@@ -547,3 +547,11 @@ export const inCanyonRock = (x, y) => CANYON.shapes.some((s) => inPoly(s.poly, x
   for (let y = 0; y < CANYON.h; y++) { let r = ''; for (let x = 0; x < CANYON.w; x++) r += inCanyonRock(x + 0.5, y + 0.5) ? '#' : 's'; rows.push(r); }
   if (SCENE_MASKS.canyon) SCENE_MASKS.canyon = { w: CANYON.w, h: CANYON.h, rows };
 }
+
+// The relief layer's bytes (m.relief, World v3 8.22): a metre each up to RELIEF.knee, RELIEF.high of a byte per metre
+// above it. Granite Peaks stands to 363 m: a byte of plain metres left its highest quarter at 255 - level to
+// everything that reads it, no slope shaded, no ledge drawn (found 11-25, building the summits). Each byte is
+// dithered (4 x 4): a 4 x 4 mean, then reliefMetres, gives the height back to a fraction of a metre.
+export const RELIEF = { knee: 160, high: 0.4 };
+export const reliefByte = (h) => (h <= RELIEF.knee ? h : RELIEF.knee + (h - RELIEF.knee) * RELIEF.high);
+export const reliefMetres = (v) => (v <= RELIEF.knee ? v : RELIEF.knee + (v - RELIEF.knee) / RELIEF.high);

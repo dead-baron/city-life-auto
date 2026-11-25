@@ -47,7 +47,7 @@ import { GSHADE, GS, gsReset, coverSprite, turfGround, turfFlat, cloverAt, hh, v
 import { edgeCovers } from '../../../shared/covers.js';
 import { WATER, waterTiles, waterPx, waterAt, waterOff, WK } from '../water.js';
 import { T, TILE } from '../../../shared/constants.js';
-import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome, deckOnDry } from '../../../shared/mapcore.js';
+import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome, deckOnDry, reliefMetres } from '../../../shared/mapcore.js';
 import { Z } from '../../../shared/layoutcore.js';
 import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roadcore.js';
 import { drawText } from '../font.js';
@@ -105,6 +105,7 @@ mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('CRAG', 'crag',
 mat('BALLAST', 'ballastStone', 1); mat('PLATFORM', 'slabPlaza', 1); mat('RAILDECK', 'planksX', 1);
 mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2); mat('SPRING', '', 2);
 mat('SNOW', 'snowfield', 0);   // (World v3's summits: terrain class 9, shared/world3-biomes.js)
+mat('GRANITE', 'granite', 0);   // (the summits' open rock, walked on: the ground above the old snow line and a summit's knob - ground.js granite)
 mat('ORCHARD', 'orchardGrass', 0);   // (World v3's orchards: m.orchards - mown between the rows)
 mat('STUB', 'cropStubble', 1); mat('STUBV', 'cropStubbleV', 1);   // (a wheat field's harvested part: m.fields[f].cut - world3-countyroad.js)
 mat('FLAGS', 'flagstone', 4);   // (the hot springs' paths: granite flagstones - Granite Hot Springs, the owner 11-14)
@@ -249,7 +250,7 @@ export const fieldKindAt = (f, seed) => FIELD_KINDS[Math.floor(hh(f, 0, seed + 9
 function tileFacts(C) {
   const { M, b, TX0, TY0, seed } = C;
   const { cls, cw } = M.terrainCls;
-  const dryV = (M.countyRoads || []).map((q) => q.dry).filter(Boolean), fields = M.fields || [], paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
+  const dryV = (M.countyRoads || []).map((q) => q.dry).filter(Boolean), fields = M.fields || [], tops = (M.natureSites || []).filter((q) => q.kind === 'summit' && q.knob && Math.abs(q.x - (TX0 + TN / 2) * TILE) < (TN / 2 + SUMMIT_R) * TILE && Math.abs(q.y - (TY0 + TN / 2) * TILE) < (TN / 2 + SUMMIT_R) * TILE).map((q) => ({ x: q.x, y: q.y, sx: q.knob.shelf[0] + 1.6, sy: q.knob.shelf[1] + 1.6, rw: q.knob.ramp + 1.6, ft: q.knob.foot + 1 })), paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
   // a golf course laid out by the map (M.golf): greens and tees, the striped fairways, the rough round them
   const golf = M.golf || null, golfAt = (X, Y) => {
     if (!golf) return M_.GOLF;
@@ -332,7 +333,8 @@ function tileFacts(C) {
       else if (b.tres[k] & 2) m = M_.GRAVEL;
       else if (!wild && DRY_D.has(b.td[k])) m = tabs && tabs.length ? tabMat(tx, ty, M_.DESERT) : M_.DESERT;   // (a desert town's beds and yards: the desert's sand and gravel - the Strip's gardens)
       else if (!wild) m = (D.tier === 'industrial' || D.tier === 'rough') ? M_.GRAVEL : M_.DIRT;
-      else if (bio === 9) m = vnc(tx, ty, 9, 9101) > 0.58 ? M_.QUARRY : M_.SCREE;   // (the summits: bare granite and scree, no snow - the owner, 10-16)
+      else if (tops.length && tops.some((q) => { const dx = (X - q.x) / TILE, dy = (Y - q.y) / TILE; return (dx / q.sx) ** 2 + (dy / q.sy) ** 2 < 1 || (Math.abs(dx) < q.rw && dy > 0 && dy < q.ft); })) m = M_.GRANITE;   // (a summit's knob: its shelf and the way up)
+      else if (bio === 9) m = vnc(tx, ty, 9, 9101) > 0.58 && !tops.some((q) => (X - q.x) ** 2 + (Y - q.y) ** 2 < (TILE * 17) ** 2) ? M_.GRANITE : M_.SCREE;   // (the summits: bare granite and scree, no snow - the owner, 10-16; natural slabs, not the quarry's cut ones - 11-25)
       else if (bio === 3 || st === 'desert') m = nearCanyon(X, Y) ? canyonRock(tx, ty, M_.DESERT) : tabs && tabs.length ? tabMat(tx, ty, M_.DESERT) : M_.DESERT;
       else if (bio === 4) m = b.tz[k] === Z.EAST && st !== 'rural' ? M_.REDROCK : st === 'rural' ? M_.DIRT : M_.SCREE;
       else if (bio === 2) m = (b.tres[k] & 32) ? M_.DIRT : M_.FORESTDIRT;   // (32: a designed place's trails and clearings - packed earth, paler than the duff round them)
@@ -445,7 +447,7 @@ export function tinaPx(list, X, Y, seed) {
 // narrow ride), ragged shoulders; over its last TRACK_FADE px it narrows and thins to nothing.
 export const TRACK_FADE = 96, SINGLE_HW = 26;
 const DRYTRACK = new Uint8Array(MATS.length);
-for (const k of ['DESERT', 'DUNE', 'REDROCK', 'CRACKED', 'BEACH', 'SCREE', 'WASH', 'SHINGLE', 'QUARRY', 'TRACKD']) DRYTRACK[M_[k]] = 1;
+for (const k of ['DESERT', 'DUNE', 'REDROCK', 'CRACKED', 'BEACH', 'SCREE', 'WASH', 'SHINGLE', 'QUARRY', 'GRANITE', 'TRACKD']) DRYTRACK[M_[k]] = 1;
 function rutPx(list, X, Y, seed, onDirt) {
   for (const r of list) {
     const own = r.px || r.ride;
@@ -518,6 +520,7 @@ function farmRects(M) {
   return out;
 }
 const inRect = (r, X, Y) => r && X >= r.x && X < r.x + r.w && Y >= r.y && Y < r.y + r.h;
+export const SUMMIT_R = 12;   // (tiles round a summit's cairn a chunk looks for its knob - shared/world3-peaks.js PEAKS3.knob: the shelf and the way up are granite)
 const inRects = (list, X, Y, key) => list.some((r) => (!key || r.key === key) && inRect(r, X, Y));
 
 // ---- 2. roads as distance fields ------------------------------------------------------------------------------
@@ -1123,7 +1126,7 @@ function paint(C, G) {
     }
   }
 }
-export const LEDGE = { step: 4, slope: 0.12, rib: 0.4, soft: 0.45 };   // (metres of height between a crag's ledges; the slope, m a tile, under which rock lies flat)
+export const LEDGE = { step: 4, slope: 0.12, rib: 0.4, soft: 0.45, dark: 0.45, shade: 0.64 };   // (dark: a ledge's face on a slope already in shade is no darker than this of the rock's own colour - the two together went to a third, near black, on the high mountains' steepest ground; shade: the darkest a slope turned from the light is shaded - was 0.55: half the scree on the steepest ground came out under 50 of 255)   // (metres of height between a crag's ledges; the slope, m a tile, under which rock lies flat)
 // 9. the land's relief (World v3 8.22: shared/world3-relief.js, M.relief - metres per tile, dithered): the ground
 // shaded by its slope under a light from the north-west, a touch lighter the higher it stands; per tile from a 4 x 4
 // box of heights either side (the box undoes the dithering), bilinear per pixel; the water left as it is
@@ -1142,14 +1145,14 @@ export function shadeRelief(M, cx, cy, G, under) {
 function reliefOn(C, G, under) {
   const { M, b, TX0, TY0, WY0, WX0 } = C, R = M.relief;
   if (!R) return;
-  const zb = (tx, ty) => { let s = 0; for (let dy = -2; dy < 2; dy++) for (let dx = -2; dx < 2; dx++) { const x = tx + dx, y = ty + dy; if (M.inside(x, y)) s += R[M.row(y) + M.col(x)]; } return s / 16; };
+  const zb = (tx, ty) => { let s = 0; for (let dy = -2; dy < 2; dy++) for (let dx = -2; dx < 2; dx++) { const x = tx + dx, y = ty + dy; if (M.inside(x, y)) s += R[M.row(y) + M.col(x)]; } return reliefMetres(s / 16); };
   const sh = b.tsh, zt = b.tzt || (b.tzt = new Float32Array(TN * TN)), gt = b.tgt || (b.tgt = new Float32Array(TN * TN * 2));   // (the heights and slopes the rock's ledges are drawn from)
   for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, ty = TY0 + j, h = zb(tx, ty);
     { zt[j * TN + i] = h; gt[(j * TN + i) * 2] = (zb(tx + 2, ty) - zb(tx - 2, ty)) / 4; gt[(j * TN + i) * 2 + 1] = (zb(tx, ty + 2) - zb(tx, ty - 2)) / 4; }
     const gx = (zb(tx + 3, ty) - zb(tx - 3, ty)) / 6, gy = (zb(tx, ty + 3) - zb(tx, ty - 3)) / 6;
     const k = (0.42 * gx + 0.5 * gy + 0.76) / Math.sqrt(gx * gx + gy * gy + 1) / 0.76;
-    sh[j * TN + i] = Math.max(0.55, Math.min(1.3, 1 + (k - 1) * 1.4 + (h - 30) * 0.0007));
+    sh[j * TN + i] = Math.max(LEDGE.shade, Math.min(1.3, 1 + (k - 1) * 1.4 + (h - 30) * 0.0007));
   }
   const col = G.col, fl = G.flag;
   for (let y = 0; y < CHUNK; y++) {
@@ -1160,7 +1163,7 @@ function reliefOn(C, G, under) {
       const fx = (WX0 + x + PAD) / TILE - 0.5 - TX0, i0 = Math.floor(fx), vx = fx - i0, k0 = j0 * TN + i0;
       let k = (sh[k0] * (1 - vx) + sh[k0 + 1] * vx) * (1 - vy) + (sh[k0 + TN] * (1 - vx) + sh[k0 + TN + 1] * vx) * vy;
       const mt = b.mat[(y + PAD) * WN + x + PAD];
-      if (mt === M_.CRAG || mt === M_.SCREE) {
+      if (mt === M_.CRAG || mt === M_.SCREE || mt === M_.GRANITE) {
         // rock rises in benches (the owner's pick "B", 11-25): at every LEDGE.step metres of the land's height a ledge - its
         // face where the ground falls toward you, a light lip above it; the benches follow the land's own contours. The
         // mountains' open ground (scree) shows them too where it is steep (LEDGE.rib), fainter (LEDGE.soft): a slope reads
@@ -1171,7 +1174,7 @@ function reliefOn(C, G, under) {
         const rk = mt === M_.CRAG ? 1 : LEDGE.soft;
         if (sl > (rk === 1 ? LEDGE.slope : LEDGE.rib)) { const STEP = LEDGE.step, f = hgt / STEP, fr = f - Math.floor(f), sp = STEP / sl * TILE, px = fr * sp, south = -gy / sl;   // (px: how far up from the ledge's foot, along the slope)
           const face = Math.min(26, sp * 0.4) * Math.max(0.25, south);
-          if (px < face) k *= 1 - (1 - (south > 0 ? 0.62 + 0.12 * (px / face) - (hh(X, 0, 7815) > 0.7 ? 0.05 : 0) : 0.86)) * rk; else if (px < face + 3) k *= 1 + 0.2 * rk; }
+          if (px < face) k = Math.max(LEDGE.dark, k * (1 - (1 - (south > 0 ? 0.62 + 0.12 * (px / face) - (hh(X, 0, 7815) > 0.7 ? 0.05 : 0) : 0.86)) * rk)); else if (px < face + 3) k *= 1 + 0.2 * rk; }
       }
       if (k > 0.995 && k < 1.005) continue;
       const j = gi * 4;
@@ -1902,6 +1905,7 @@ cov('DESERT', [['pebble', 6, 0.05], ['tuftDry', 8, 0.035], ['scrub', 6, 0.012], 
 cov('CRACKED', [['tuftDry', 8, 0.02], ['pebble', 6, 0.03]]);
 cov('REDROCK', [['redStone', 6, 0.06], ['tuftDry', 8, 0.05], ['scrub', 6, 0.015]]);
 cov('SCREE', [['rock', 6, 0.05], ['tuftAlp', 6, 0.05]]);
+cov('GRANITE', [['rock', 6, 0.03], ['pebble', 6, 0.04], ['tuftAlp', 6, 0.03]]);
 cov('GRAVEL', [['weed', 4, 0.03], ['tuftDry', 8, 0.012]]);
 cov('BEACH', [['shell', 4, 0.02], ['pebble', 6, 0.03], ['starfish', 1, 0.002], ['seaweed', 4, 0.004]]);
 cov('SHINGLE', [['seaweed', 4, 0.01], ['shell', 4, 0.006], ['rock', 3, 0.01]]);
@@ -1925,13 +1929,13 @@ function talus(C, G) {
   for (let i = 0; i < WA; i += 5) if (Mt[i] === M_.CRAG) { any = true; break; }
   if (!any || !SHADER[M_.WASH]) return;
   const far = TALUS.reach + TALUS.vary, Mp = C.M, R = Mp.relief;
-  const zAtPx = (qx, qy) => { if (!R) return 0; const tx = Math.floor((WX0 + qx) / TILE), ty = Math.floor((WY0 + qy) / TILE); return Mp.inside(tx, ty) ? R[Mp.row(ty) + Mp.col(tx)] : 0; };
+  const zAtPx = (qx, qy) => { if (!R) return 0; const tx = Math.floor((WX0 + qx) / TILE), ty = Math.floor((WY0 + qy) / TILE); return Mp.inside(tx, ty) ? reliefMetres(R[Mp.row(ty) + Mp.col(tx)]) : 0; };
   for (let px = 0; px < WN; px++) {
     let d = 255, hc = 0;
     for (let py = 0; py < WN; py++) {
       const i = py * WN + px, m = Mt[i];
       if (m === M_.CRAG) { if (d !== 0) hc = 0; d = 0; if (R && (py & 15) === 0) hc = Math.max(hc, zAtPx(px, py - 2 * TILE)); continue; }
-      if (!WILD_BANK.has(m) && m !== M_.SCREE) { d = 255; continue; }   // (a road, water, a yard: the apron ends there)
+      if (!WILD_BANK.has(m) && m !== M_.SCREE && m !== M_.GRANITE) { d = 255; continue; }   // (a road, water, a yard: the apron ends there)
       if (d < 255) d++;
       if (d > far) continue;
       const x = px - PAD, y = py - PAD, X = WX0 + (A2 ? (x & ~1) + PAD : px), Y = WY0 + (A2 ? (y & ~1) + PAD : py);

@@ -630,16 +630,17 @@ export function driftShade(w = 70, d = 50) {
 }
 // wooden steps up the face of a cliff (len deep, rising h to the top at the north end), on two stringers, with a
 // post every few steps and a rope rail either side
-export function cliffStairs(len = 120, h = 80, w = 28) {
+export function cliffStairs(len = 120, h = 80, w = 28, stone = 0) {   // (stone: a summit's steps - granite treads, no posts, no rope)
   const m = new Vox(w + 6, len + 4, h + 26);
-  const tread = m.mat({ ramp: MAT.woodDock, k: 3, shade: (x, y) => (Math.round(y) % 9 === 0 ? -1.2 : 0) + (hash(Math.floor(y / 9), Math.round(x / 8), 6) - 0.5) * 0.6 });
-  const str = m.mat({ ramp: MAT.woodDark, k: 3 }), post = m.mat({ ramp: MAT.woodDark, k: 3, flag: F_THIN }), rope = m.mat({ ramp: R('#d8c49a'), k: 3, flag: F_THIN });
+  const tread = m.mat({ ramp: stone ? MAT.stone : MAT.woodDock, k: 3, shade: (x, y) => (Math.round(y) % 9 === 0 ? -1.2 : 0) + (hash(Math.floor(y / 9), Math.round(x / 8), 6) - 0.5) * 0.6 });
+  const str = m.mat({ ramp: stone ? MAT.stone : MAT.woodDark, k: stone ? 1 : 3 }), post = m.mat({ ramp: MAT.woodDark, k: 3, flag: F_THIN }), rope = m.mat({ ramp: R('#d8c49a'), k: 3, flag: F_THIN });
   const zAt = (y) => Math.max(0, (len - y) / len * h);                                    // y 0 = the top (north), len = the foot
   for (let y = 0; y < len; y++) {
     const z = Math.floor(zAt(y) / 6) * 6;                                                 // 6 px risers
     m.box(3, y + 2, Math.max(0, z - 2), w + 3, y + 3, z + 2, tread);
     m.box(1, y + 2, Math.max(0, zAt(y) - 6), 3, y + 3, zAt(y) + 2, str); m.box(w + 3, y + 2, Math.max(0, zAt(y) - 6), w + 5, y + 3, zAt(y) + 2, str);
   }
+  if (stone) return m;
   for (let y = 4; y < len; y += 22) for (const x of [1, w + 3]) m.box(x, y, zAt(y), x + 2, y + 2, zAt(y) + 20, post);
   for (const x of [1.5, w + 3.5]) for (let y = 4; y < len - 1; y++) { const k = ((y - 4) % 22) / 22, sag = Math.sin(k * Math.PI) * 3; m.box(x, y, zAt(y) + 17 - sag, x + 1, y + 1, zAt(y) + 18.4 - sag, rope); }
   return m;

@@ -48,7 +48,16 @@ go with the summits' build.
   is steeper than 0.4 m a tile, at under half strength (`LEDGE.rib`, `LEDGE.soft`).
 - **Short runs**: a cliff piece under five tiles wide keeps its own height (half as tall again it stood like a pillar).
 
-## The summits as knobs - a plan, not built (item 3: it changes what is solid, so it waits for his word)
+## The summits as knobs - BUILT 11-25 (his word, 09:03: "Build the summit from plans")
+What stands (shared/world3-peaks.js `PEAKS3.knob`; the DEVLOG's entry of 11-25 has the numbers): a level shelf for the
+cairn, the bench and the telescope; solid rock round it, raised 16 m; a straight foot on the south with a crag wall on
+each half and stone steps in a cleft between them; the walked granite on the shelf and the steps; the Summit Trail
+routed to the cleft. A summit is now chosen as a top of the land's own relief: Eagle Knob (358 m, the trail's, with the
+telescope) and Windy Col (340 m) are; Cairn Peak stays on its spur at 106 m. Found on the way: the relief layer had
+no room over 255 m (a quarter of Granite Peaks was flat to the art) - mended (mapcore.js `RELIEF`). Not built from the
+plan below: the switchbacks (a straight cleft), the bench turned to the longest view. Pictures: `report-46`, `-47`, `-49`.
+
+### The plan as written (for the record)
 Today Cairn Peak, Eagle Knob and Windy Col are level ground with a cairn, a bench and (the highest) a telescope
 (shared/world3-peaks.js `summits`): nothing says "top". Proposed, for the batched world rebuild:
 1. **A knob of rock at each**: the relief raised 14-20 m over a round of about 14 tiles (the search's own `knob`

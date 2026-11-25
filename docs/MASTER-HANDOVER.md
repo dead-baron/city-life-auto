@@ -107,7 +107,7 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 Chats that can run side by side: 4 with any other; nothing else safely.
 
 ## 6. Where things stand (2026-11-24, 09:00 PST - the Opus part of the pre-beta is done)
-**The art pass, 2026-11-25 07:00 PST (the Fable 5.2 chat; branch `fable-art-1124`, pushed; the DEVLOG's 11-24 and 11-25
+**The art pass, 2026-11-25 12:00 PST (the Fable 5.2 chat; branch `fable-art-1124`, pushed; the DEVLOG's 11-24 and 11-25
 entries have each piece):**
 - **Live:** PR #48 (11-25 01:35, his word) - the buildings over your street, sidewalk or alley go see-through; PR #49
   (09:10, his word) - they fade all but clear, and emotes run through their frames.
@@ -123,16 +123,26 @@ entries have each piece):**
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all
   but clear, emotes run through their frames.
-- **Waiting on him:** re-bake now or after more of the art (asked 09:15); the cloud-shadow still (`report-43`); the
-  redwoods stood apart; the banks.
-- **Next in the plan:** talus at the crags' feet, summits as knobs (a world change), alpine ledges, mountain water; then desert, coast and jungle, the water's edges (creek riffles' white is still painted), rocks; parts B, C.
+- **Decided 11-25 09:30:** "Let's rebake after the summits and Creek work" - both are now on the branch (below): the
+  branch goes to `main` in ONE re-bake (~5 h) once the gate is clean - the whole suite (never run on this branch:
+  456 files, 54 of them a World v3 build of ~5 min each, one at a time) and a look in a running World v3 game.
+- **Built 11-25 09:30-12:00 (his words of 09:03), on the branch, baked:** the summits as knobs of rock (Eagle Knob 358 m
+  with the telescope and the Summit Trail, Windy Col 340 m, Cairn Peak on its spur at 106 m: a shelf, solid rock round
+  it, two crag walls and stone steps in a cleft between them; the walked granite ground); **the relief layer's bytes
+  reach the mountains' top** (mapcore.js `RELIEF`: 23.2% of Granite Peaks read 255 - flat, unshaded; now shaded and
+  ledged, a look he first sees in `report-49`); the hill's darkest shade 0.64 (was 0.55); **the creek network** (8
+  creeks, 1,418 tiles, 36 pools, 3 ponds; no creek meets a road, so the culvert rule is laid but unseen). Pictures
+  sent: `report-46` to `report-49`.
+- **Waiting on him:** the cloud-shadow still (`report-43`); the redwoods stood apart; the banks; anything he says to
+  the four pictures above before the re-bake.
+- **Next in the plan:** the gate and the re-bake; then mountain water (tarns and falls set into rock), desert, coast and jungle, the water's edges (creek riffles' white is still painted), rocks; parts B, C. Not done from the summit plan: switchbacks, the bench turned to the view.
 - **Tools made:** `tools/nature/darkscan.mjs` (the near-black census over the baked world; `--who`, `--place`, `--prop`,
   `--seabridge`), `tools/nature/paintscan.mjs`, `tools/causeways.mjs`; a running-game picture recipe in
   `tools/nature/README.md` (v3 needs the server started first, ~4 min).
 - **Not done / not verified:** the whole suite was not run. Some 300 tests round the changes pass, and a wider batch
   ran 11-25 morning (core, biz, calmstreets, custodyride, contacts2w3, ftue, guide, dmath, mapwindow, firstcar: 108
   pass, 1 fail - calmstreets' Midtown test under load; it passes run alone; world3wayside, world3server, cliffs pass);
-  the bake's code stands at 1,094 of 1,100 KB; nothing baked was seen in a running
+  the bake's code stands at 1,096 of 1,100 KB; nothing baked was seen in a running
   game; the El's fade only by unit test; PR #48's deploy was never confirmed from the live site.
 - **His PDF of play notes (11-25):** `claude/prebeta-notes-2026-11-25.md` - art ones taken in, game-rule ones logged.
 

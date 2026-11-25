@@ -159,26 +159,47 @@ test('every footbridge: a deck under it, its ends on the banks, its path at them
 
 // The woods' creeks (shared/world3-creeks.js; the redwood overhaul's water, 11-24): laid by the land's own heights
 // from a spring in the woods down to water that was there, with riffles and pools; a path goes over on stepping
-// stones; nothing stands in it. One for now - the sample.
-test('a woods creek: from a spring in the woods downhill to the lake, one water, pools, stones where a path crosses', () => {
+// stones; nothing stands in it. The first is the sample the owner looked at (Fernwater Creek); the network (11-25,
+// his word "Creek looks good let's go with it") is laid by the same rule from springs found on the woods' high ground:
+// each to the first water or to a pond in a hollow, under a road in a culvert, never along a path.
+test('the woods\' creeks: each from a spring in the woods downhill to water or a pond, one water, a way over at every path, a culvert under every road', () => {
   const R = m.world3.woodsCreeks, creeks = (m.natureSites || []).filter((s) => s.kind === 'woodscreek');
   console.log('woods creeks', JSON.stringify(R));
   assert.equal(R.unlaid.length, 0, `creeks that could not be laid: ${R.unlaid}`);
-  assert.equal(creeks.length, CREEKS3.springs.length);
+  assert.equal(creeks.length, R.creeks.length);
+  const NET = CREEKS3.net, netN = R.creeks.filter((r) => r.net).length;
+  assert.equal(R.creeks.length - netN, CREEKS3.springs.length, 'the named springs\' creeks');
+  assert.ok(netN >= 3 && netN <= NET.n && netN === R.net.laid, `the network: ${netN} creeks of ${NET.n} at most (tried ${R.net.tried}, not laid ${JSON.stringify(R.net.why)})`);
+  assert.equal(new Set(creeks.map((c) => c.name)).size, creeks.length, 'each creek its own name');
+  for (const [a, c] of creeks.entries()) for (const d of creeks.slice(a + 1)) assert.ok(Math.hypot(c.x - d.x, c.y - d.y) >= NET.apart * TILE * 0.5, `${c.name} and ${d.name}: springs apart`);
+  let culverts = 0, ponds = 0;
   const wet = (t) => t === T.WATER || t === T.DEEP, tT = (tx, ty) => (m.inside(tx, ty) ? m.tiles[m.idx(tx, ty)] : -1), tAt = (x, y) => tT(Math.floor(x / TILE), Math.floor(y / TILE));
   const sm = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); let a = 0, c = 0; for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (m.inside(tx + dx, ty + dy)) { a += m.relief[m.idx(tx + dx, ty + dy)]; c++; } return a / c; };
   for (const [ci, c] of creeks.entries()) {
     const r = R.creeks[ci], L = c.line;
-    assert.ok(r.tiles >= 100 && r.pools >= 3 && r.riffles >= 3, `${c.name}: ${r.tiles} tiles long, ${r.pools} pools, ${r.riffles} riffles`);
+    if (!r.net) assert.ok(r.tiles >= 100 && r.pools >= 3 && r.riffles >= 3, `${c.name}: ${r.tiles} tiles long, ${r.pools} pools, ${r.riffles} riffles`);
+    else assert.ok(r.tiles >= NET.min, `${c.name}: ${r.tiles} tiles long`);
+    // (under a road: the road's own tiles, a culvert's - the tiles of its line that are road, and the ones beside them)
+    const pipe = new Set();
+    for (const [x, y] of L) if (tAt(x, y) === T.ROAD) { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (tT(tx + dx, ty + dy) === T.ROAD) pipe.add((tx + dx) + ',' + (ty + dy)); }
+    assert.ok(pipe.size === 0 || r.culverts >= 1, `${c.name}: road under its line and no culvert`);
+    if (r.culverts) {
+      const got = m.props.filter((p) => p && p.t === 'culvert' && L.some(([x, y]) => Math.hypot(p.x - x, p.y - y) < 4 * TILE)).length;
+      assert.ok(got >= r.culverts, `${c.name}: ${got} culverts for ${r.culverts} roads`);
+      culverts += r.culverts;
+      assert.ok(pipe.size <= r.culverts * (NET.culvert + 4) * 5, `${c.name}: a short way under the road (${pipe.size} tiles)`);
+    }
     // downhill: never higher further on than it was (a point of slack for the smoothing), and well lower at its mouth
     let top = sm(L[0][0], L[0][1]);
     for (const [x, y] of L) { const h = sm(x, y); assert.ok(h <= top + 1, `${c.name}: runs uphill at ${Math.round(x / TILE)}, ${Math.round(y / TILE)} (${h.toFixed(1)} after ${top.toFixed(1)})`); top = Math.min(top, h); }
-    assert.ok(sm(L[0][0], L[0][1]) - sm(c.mouth[0], c.mouth[1]) >= 5, `${c.name}: falls from spring to mouth`);
+    assert.ok(sm(L[0][0], L[0][1]) - sm(c.mouth[0], c.mouth[1]) >= (r.net ? 1.5 : 5), `${c.name}: falls from spring to mouth`);
     // water all along it, and one water from the spring to the mouth
-    for (const [x, y] of L) { const t = tAt(x, y); assert.ok(wet(t) || t === T.BRIDGE, `${c.name}: dry at ${Math.round(x / TILE)}, ${Math.round(y / TILE)}`); }
+    for (const [x, y] of L) { const t = tAt(x, y); assert.ok(wet(t) || t === T.BRIDGE || (t === T.ROAD && r.culverts), `${c.name}: dry at ${Math.round(x / TILE)}, ${Math.round(y / TILE)}`); }
     const s0 = [Math.floor(L[0][0] / TILE), Math.floor(L[0][1] / TILE)], goal = Math.floor(c.mouth[0] / TILE) + ',' + Math.floor(c.mouth[1] / TILE), seen = new Set([s0.join()]), q = [s0];
+    // (along its own run: within 6 tiles of its line - the lake or the river it joins is not searched)
+    const near = new Set(); for (const [x, y] of L) { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) near.add((tx + dx) + ',' + (ty + dy)); }
     let hit = false;
-    while (q.length && !hit && seen.size < 60000) { const [x, y] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy), t = tT(x + dx, y + dy); if (seen.has(k) || !(wet(t) || t === T.BRIDGE)) continue; if (k === goal) { hit = true; break; } seen.add(k); q.push([x + dx, y + dy]); } }
+    while (q.length && !hit && seen.size < 60000) { const [x, y] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy), t = tT(x + dx, y + dy); if (seen.has(k) || !near.has(k) || !(wet(t) || t === T.BRIDGE || pipe.has(k))) continue; if (k === goal) { hit = true; break; } seen.add(k); q.push([x + dx, y + dy]); } }
     assert.ok(hit, `${c.name}: its water is one from spring to mouth`);
     // the spring in the woods
     const [sx, sy] = s0;
@@ -196,7 +217,17 @@ test('a woods creek: from a spring in the woods downhill to the lake, one water,
     const nr = new Set(stones.map((p) => p.r)).size, ns = new Set(stones.map((p) => p.s)).size;
     assert.ok(stones.length < 4 || (nr >= 2 && ns >= 2 && (stones.length < 8 || nr + ns >= 6)), `${c.name}: the stones differ (${stones.length} stones: ${nr} sizes, ${ns} shapes)`);
     assert.equal(r.long, 0, `${c.name}: ${r.long} places where it runs along a path`);
+    // a pond where it ends in a hollow: water round its mouth
+    if (r.pond) {
+      ponds++;
+      const tx = Math.floor(c.mouth[0] / TILE), ty = Math.floor(c.mouth[1] / TILE);
+      let w = 0, deep = 0; for (let dy = -4; dy <= 4; dy++) for (let dx = -5; dx <= 5; dx++) { const t = tT(tx + dx, ty + dy); if (wet(t)) w++; if (t === T.DEEP) deep++; }
+      assert.ok(w >= 24 && deep >= 4, `${c.name}: its pond (${w} tiles of water, ${deep} deep)`);
+    }
   }
+  console.log('woods creeks: the network', JSON.stringify({ creeks: creeks.length, tiles: R.creeks.reduce((a, r) => a + r.tiles, 0), water: R.creeks.reduce((a, r) => a + r.water, 0), pools: R.creeks.reduce((a, r) => a + r.pools, 0), crossings: R.creeks.reduce((a, r) => a + r.crossings, 0), culverts, ponds }));
+  // no creek's water on a road, a lot or a building's ground (a car on the road never meets it)
+  for (const c of creeks) for (const [x, y] of c.line) { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); assert.ok(!(m.bld && m.bld[m.idx(tx, ty)] >= 0) && tT(tx, ty) !== T.LOT, `${c.name}: through a lot or a building at ${tx}, ${ty}`); }
 });
 test('no trail runs into open water: every wet stretch of a trail has a deck or stones under it', () => {
   const wet = (t) => t === T.WATER || t === T.DEEP;

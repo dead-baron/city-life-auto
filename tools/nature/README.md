@@ -34,3 +34,11 @@ and wait about four minutes for "listening"), then the steps: wait for "Play as"
 wait for the chunks, and before `shot:` an `eval:` that hides the first-time dialog - find the smallest visible
 element whose text has "WHAT BRINGS YOU" (or "Where to"), walk up to its panel (under 700 px wide) and set
 `style.display = 'none'`. `__S.art2` is the art host (its `fades`, `chunkState`, `map`).
+- `darkscan.mjs --rect x0,y0,x1,y1 [--out f.png] ...` (11-25): one world build; bakes the chunks over each rectangle
+  of tiles with the page's own bake and lights them at the game's noon; writes `f.png` (pixels under 50 of 255 in
+  magenta) and `f-lit.png` (the picture as lit), and prints the dark share. The way to look at a place of World v3
+  without starting the game. Also `--place "Name[:w,h]"` (a landmark, part of its name will do), `--find regex`
+  (lists landmarks), `--prop type@x0,y0,x1,y1[:w,h]` (where most props of a type stand), `--seabridge n` (the n-th
+  longest bridge over open water), `--steep m` (the 44 x 32 tiles of land over m metres that fall the most - the
+  high mountains' slopes), `--s N` (scale). `ROOT=/path/to/other/checkout` builds and bakes another tree (a before
+  and after).

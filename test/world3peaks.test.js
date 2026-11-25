@@ -11,7 +11,7 @@ import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { PEAKS3 } from '../shared/world3-peaks.js';
 import { TARN3 } from '../shared/world3-tarn.js';
 import { peakHeight, SNOW_LINE, SNOW_CLS } from '../shared/world3-biomes.js';
-import { terrainAt } from '../shared/mapcore.js';
+import { terrainAt, reliefMetres } from '../shared/mapcore.js';
 import { prepare } from '../tools/world3-build.mjs';
 
 test('World v3: Granite Peaks\' alpine meadows, the stone hut and its spring, the summits\' cairns, the Summit Trail', { timeout: 400000 }, () => {
@@ -53,6 +53,40 @@ test('World v3: Granite Peaks\' alpine meadows, the stone hut and its spring, th
     assert.ok(q.h >= PEAKS3.summits.h[0] - 0.001, `${q.name}: high (${q.h})`);
     assert.ok(m.landmarks.some((l) => l.name === q.name && l.type === 'summit'), `${q.name} on the map`);
   });
+  // each summit a knob of rock (the owner, 11-25 09:03: "Build the summit from plans"): a level shelf with the cairn on
+  // it, a crown of solid rock round it with cliff walls on its south faces, stone steps up a ramp from the south -
+  // and you can walk up it: from open ground south of the knob to the foot of the cairn, never through rock
+  const KN = PEAKS3.knob, blocked = (i) => { const t = m.tiles[i]; return t === T.WALL || t === T.WATER || t === T.DEEP || t === T.BUILDING; };
+  let knobs = 0;
+  for (const q of P.summits) {
+    if (!q.knob) continue;
+    knobs++;
+    const tx = Math.floor(q.x / TILE), ty = Math.floor(q.y / TILE), RM = Math.max(...KN.shelf) + Math.max(...KN.crown) + 4;
+    let rock = 0, shelfRock = 0;
+    for (let dy = -RM; dy <= RM; dy++) for (let dx = -RM; dx <= RM; dx++) { const i = (ty + dy) * W + tx + dx; if (m.tiles[i] === T.WALL && (m.reserve[i] & 32)) { rock++; if (Math.abs(dx) <= 2 && Math.abs(dy) <= 2) shelfRock++; } }
+    assert.ok(rock >= 60 && q.knob.crown >= 60, `${q.name}: a crown of rock (${rock} tiles)`);
+    assert.equal(shelfRock, 0, `${q.name}: the shelf round the cairn is open ground`);
+    assert.ok(q.knob.faces >= 2 && m.props.filter((p) => p && p.t === 'cliff' && p.relief && Math.hypot(p.x - q.x, p.y - q.y) < RM * TILE).length >= 2, `${q.name}: cliff walls on its south faces (${q.knob.faces})`);
+    assert.ok(near('stairs', q.x, q.y + (KN.shelf[1] + KN.crown[1]) * TILE, 5 * TILE).length >= 1, `${q.name}: steps up the ramp`);
+    // the rise: the shelf stands KN.rise metres over the ground outside the knob (m.relief, a 3 x 3 mean)
+    const z = (x, y) => { let sum = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) sum += m.relief[(y + dy) * W + x + dx]; return reliefMetres(sum / 9); };
+    // (over the ground round it: the middle one of eight heights on a ring outside the knob - a summit on a spur has higher ground on one side)
+    const ring = [0, 1, 2, 3, 4, 5, 6, 7].map((k) => z(Math.round(tx + Math.cos(k * Math.PI / 4) * (RM + 4)), Math.round(ty + Math.sin(k * Math.PI / 4) * (RM + 4)))).sort((a, b) => a - b), round = (ring[3] + ring[4]) / 2;
+    assert.ok(z(tx, ty) - round >= KN.rise * 0.6, `${q.name}: it stands over the ground round it (${(z(tx, ty) - round).toFixed(1)} m)`);
+    // the walk up: breadth-first from 6 tiles south of the knob's foot to the tile south of the cairn
+    const start = (ty + RM + 6) * W + tx, goal = (ty + 1) * W + tx, seen = new Set([start]), queue = [start];
+    let ok = false;
+    for (let h = 0; h < queue.length && !ok; h++) { const i = queue[h]; if (i === goal) { ok = true; break; } for (const j of [i - 1, i + 1, i - W, i + W]) { const x = j % W, y = (j / W) | 0; if (Math.abs(x - tx) > RM + 12 || Math.abs(y - ty) > RM + 12 || seen.has(j) || blocked(j)) continue; seen.add(j); queue.push(j); } }
+    assert.ok(ok, `${q.name}: walked up from the south to the cairn`);
+    // the bench (and the telescope) stand on open ground
+    for (const p of [...near('pbench', q.x, q.y, 4 * TILE), ...near('scope', q.x, q.y, 4 * TILE)]) assert.ok(!blocked(at(p.x, p.y)), `${q.name}: its ${p.t} on the shelf`);
+  }
+  assert.ok(knobs >= 2, `summits built as knobs: ${knobs} of ${P.summits.length}`);
+  // a summit is a top of the land (11-25: "Cairn Peak" lay on a foothill at 92 m, the telescope on it): at least two of
+  // them PEAKS3.summits.z metres up in the land's own relief, the first - the Summit Trail's, with the telescope - one
+  const zOf = (q) => { const tx = Math.floor(q.x / TILE), ty = Math.floor(q.y / TILE); let a = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) a += m.relief[(ty + dy) * W + tx + dx]; return reliefMetres(a / 25); };
+  console.log('summits up', JSON.stringify(P.summits.map((q) => [q.name, Math.round(zOf(q))])));
+  assert.ok(P.summits.filter((q) => zOf(q) >= PEAKS3.summits.z).length >= 2 && zOf(P.summits[0]) >= PEAKS3.summits.z, 'two summits on the mountains\' real tops, the first of them one');
   // no snow on the designed places up there (the Ridge Trail Hunting Camp sat in it)
   for (const nm of ['Ridge Trail Hunting Camp', 'Ridge Fire Lookout']) {
     const l = m.landmarks.find((q) => q.name === nm);

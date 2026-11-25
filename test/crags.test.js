@@ -41,6 +41,8 @@ test('the rock behind a crag: big light slabs, the same grey as the wall\'s top'
 
 test('ledges every few metres of height; no snow painted on them, no trial switch left', () => {
   assert.ok(LEDGE.step >= 3 && LEDGE.step <= 8 && LEDGE.slope > 0.05 && LEDGE.slope < 0.4);
+  assert.ok(LEDGE.shade >= 0.6 && LEDGE.shade <= 0.75 && !/Math\.max\(0\.55, Math\.min\(1\.3/.test(readFileSync(new URL('../client/art2/game/groundbake.js', import.meta.url), 'utf8')), 'the hill\'s darkest shade keeps the ground over the dark floor');
+  assert.ok(LEDGE.dark >= 0.42 && LEDGE.dark <= 0.6 && /k = Math\.max\(LEDGE\.dark, k \*/.test(readFileSync(new URL('../client/art2/game/groundbake.js', import.meta.url), 'utf8')), 'a ledge\'s face in the hill\'s shade keeps the floor');
   for (const f of ['client/art2/game/groundbake.js', 'client/art2/game/statics.js', 'client/art2/ground.js']) {
     const src = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
     assert.ok(!/__CRAG/.test(src), `${f}: the trial switch is gone`);
@@ -58,4 +60,30 @@ test('talus at a wall\'s foot and fainter ledges on steep open ground: the numbe
   assert.ok(LEDGE.rib > LEDGE.slope && LEDGE.soft > 0.2 && LEDGE.soft < 0.7, 'open ground: only where steep, and fainter than rock');
   const src = readFileSync(new URL('../client/art2/game/groundbake.js', import.meta.url), 'utf8');
   assert.ok(/\['edges', edges\], \['talus', talus\], \['decor', decor\]/.test(src), 'the talus is laid before the decor strews its stones');
+});
+
+// The summits' open rock (11-25, "Build the summit from plans"): the ground above the old snow line, and a summit's
+// knob, is natural granite you walk on - broad low slabs with grit in the joints (ground.js granite) - not the
+// quarry's cut slabs it was, and not the crag's rock, which is the rock that stops you: it is darker and lies flat.
+test('the walked granite: its own ground, darker and flatter than a crag, no cut slabs above the snow line, ledges and talus know it', async () => {
+  const { GS } = await import('../client/art2/ground.js');
+  const lum = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  let g = 0, c = 0, gh = 0, ch = 0, n = 0, dark = 0;
+  for (let y = 0; y < 240; y += 3) for (let x = 0; x < 240; x += 3) {
+    const a = lum(GSHADE.granite(x, y, 5)); gh = Math.max(gh, GS.h || 0); GS.h = 0;
+    const b = lum(GSHADE.crag(x, y, 5)); ch = Math.max(ch, GS.h || 0); GS.h = 0;
+    g += a; c += b; n++; if (a < 46) dark++;
+  }
+  assert.ok(g / n < c / n - 8, `the walked granite is darker than the crag (${(g / n).toFixed(0)} against ${(c / n).toFixed(0)})`);
+  assert.ok(gh <= 2 && ch >= 8, `it lies flat, the crag stands up (${gh} px against ${ch})`);
+  assert.equal(dark, 0, 'nothing in it under the dark floor');
+  const src = readFileSync(new URL('../client/art2/game/groundbake.js', import.meta.url), 'utf8');
+  assert.ok(/bio === 9\) m = [^;]*M_\.GRANITE : M_\.SCREE/.test(src) && !/bio === 9\) m = [^;]*QUARRY/.test(src), 'above the old snow line: granite and scree, no quarry slabs');
+  assert.ok(/mt === M_\.CRAG \|\| mt === M_\.SCREE \|\| mt === M_\.GRANITE/.test(src), 'the ledges are drawn on it');
+  assert.ok(/m !== M_\.SCREE && m !== M_\.GRANITE/.test(src), 'a crag\'s talus lies on it');
+  const { SUMMIT_R } = await import('../client/art2/game/groundbake.js');
+  const { PEAKS3 } = await import('../shared/world3-peaks.js');
+  const K = PEAKS3.knob;
+  assert.ok(SUMMIT_R >= Math.max(...K.shelf) + Math.max(...K.crown) && SUMMIT_R <= Math.max(...K.shelf) + Math.max(...K.crown) + K.apron + 2, `the granite round a summit covers its knob (${SUMMIT_R} tiles)`);
+  assert.ok(!/snowfield|M_\.SNOW\b/.test(src.replace(/mat\('SNOW'[^\n]*\n/, '')), 'no ground is painted as snow');
 });

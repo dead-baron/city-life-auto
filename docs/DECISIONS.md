@@ -424,6 +424,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   docs/tasks/MOUNTAIN-LOOK-2026-11-25.md).
 - The redwoods get a network of creeks like Fernwater Creek (the owner, 11-25 09:03: "Creek looks good let's go with
   it").
+- The re-bake comes after the summits and the creek network are in (the owner, 11-25 09:30: "Let's rebake after the
+  summits and Creek work"): the art branch goes out then, in one re-bake - not before, and not held for the rest of
+  the art polish.
 - Live 11-25 09:10 (PR #49, his word "Push the transparent buildings and emotes"): faded buildings all but clear;
   emotes run through their frames.
 - WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on

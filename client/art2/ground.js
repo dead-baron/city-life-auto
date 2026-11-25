@@ -953,6 +953,13 @@ export const GSHADE = {
     if (vnc(x, y, 7, s + 55) > 0.82 && hh(x, y, s + 57) > 0.3) return at(G_ALP, 5);   // (lichen)
     return sd(SCREE, 0.78 + (h - 0.5) * 0.2 - (edge < 3 ? 0.1 : 0) + (vnc(x, y, 5, s + 59) - 0.5) * 0.1 + (vnc(x, y, 60, s + 61) - 0.5) * 0.14, x, y, 0.4);
   },
+  granite(x, y, s) {                                         // the summits' open rock, the rock you walk on (11-25: was the quarry's cut slabs): granite worn smooth and gritty, a crack wandering over it, a tuft by a crack - not a crag's slabs (the rock that stops you: lighter, blocky, standing up)
+    const v = vnc(x, y, 46, s + 71), c = Math.abs(v - 0.5);
+    GS.nx = GS.ny = GS.h = 0;
+    if (c < 0.012) return at(SCREE, 2);
+    if (c < 0.06 && vnc(x, y, 9, s + 73) > 0.8) return at(G_ALP, 3);
+    return sd(SCREE, 0.56 + (v - 0.5) * 0.3 + (hh(x, y, s + 75) - 0.5) * 0.16, x, y, 0.5);
+  },
   snowfield(x, y, s) {                                       // the summits' snowfields (World v3: Granite Peaks above the snow line): wind-packed snow, blue in its hollows, a rock through it here and there
     const p = stone(x, y, 23, s + 41, 0.12);
     if (p >= 0 && WC.h < 0.4) return sd(SCREE, p * 0.7 + 0.25, x, y, 0.35);
