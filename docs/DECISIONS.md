@@ -339,6 +339,22 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
     (three quarters, or fully), the form left to the paint - and no leaf tone below the anchor's dark green, pulled to
     its hue. Near-black falls from 27% of a plant to 15% (E), 8% (F), 7% (G); kinds over 15%: 102 -> 58 / 18 / 16.
     Cast shadows, time of day and weather still fall on plants as on everything. OPEN: his pick of E, F or G.
+- Banks, again (the owner, 11-24 23:18: "I do like the 'after banks' work here but that harder edge from before i
+  called the brown outline could still be a good detail in some areas ... Lets try blending the surface and underwater
+  art between land and water, some more stones on land, some less stones in water, a few harder edges, some softer
+  transition between land and water, a good blend of things ... apply this logic across rivers/streams/creeks and
+  land"): built the same hour (groundbake.js: the bank going under in tongues, stones on banks; fewer rocks in running
+  water); the earth lip kept on about a fifth of a wild shore.
+- Review pictures are at the game's pixel (the owner, 11-24 23:26 / 23:31, on seeing two pixel sizes in close-ups
+  rendered at the world pixel): from here every picture for him is rendered at 1 art pixel and enlarged whole.
+  Whether the ground - painted finer and halved by the bake - reads soft beside plants drawn at the art pixel is to
+  be judged in a running game; redrawing the ground materials at the art pixel would be its own piece of work.
+- Wild flowers (the owner, 11-24 23:37, on the lupines / foxgloves: "all the stems are so straight it kind of feels
+  out of place in the world (unless its part of a garden or flower pot)"): the spike flowers get natural variation -
+  leaning, curved, uneven stems, leaves at the foot - and a wider variety; the straight form stays for gardens and
+  pots. Not built yet (the bake's code budget).
+- The project to go private before marketing (the owner, 11-24 23:40): logged with a plan in
+  `docs/audit/PREBETA-LIST.md`; his to schedule - not art.
 - WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
   the consoles we are aiming for").
 - The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was

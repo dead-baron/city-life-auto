@@ -479,3 +479,31 @@ restartable out of the water; deep: sinks, as now. Off-road vehicles ford deeper
 stones and log crossings (bridge tiles) are walked, not driven: a car meets the creek beside them - so a woods creek
 (shared/world3-creeks.js) must be fordable by this rule before the creek network goes live. Guide entry and a
 first-time moment with it (CLAUDE.md "teach the new thing").
+
+## Keep the development project private; publish only what a player needs (owner, 11-24 23:40 - before marketing)
+The owner asked whether to do anything, before posting and bringing in a beta crowd, to make the game harder to clone
+(a note from another assistant he had look at the site). Checked in the code on 11-24 (not tested against the live site):
+- The repository `dead-baron/city-life-auto` is public: the server, the tools, every design and decision document, the
+  concepts and the unreleased branches can be downloaded by anyone. There is no project license (only the fonts',
+  icons' and prompt glyphs' own).
+- The game server sends its own source to any browser: `server/index.js` `STATIC_ROOTS = ['client/', 'shared/',
+  'assets/', 'server/']` (all of `server/` but `server/config*`, `server/auth*` and `chatwords.json`), kept for the
+  offline practice worker - which is switched off (CLAUDE.md "Offline practice is paused").
+- No secrets were found tracked: `server/config.js` reads them from the environment or `data/secret.key`, and `data/`
+  is ignored. Not a full audit - the history was not searched.
+- `docs/` (DECISIONS, the handover, the plans) is public with the repo; GitHub Pages serves the page from the repo
+  root (docs/DEPLOY.md), and the Oracle updater pulls `main` from it.
+To do, in this order (each step tested before the next):
+1. Stop serving `server/` to browsers (and leave the practice worker out) - with a test that no `/server/...` path
+   answers. `shared/` stays: the page needs the map's runtime; consider serving only the runtime files.
+2. A player-only build: a folder (or a small public repo) with exactly what the page loads - index.html, version.json,
+   `client/`, the `shared/` runtime, `assets/` - made by a script, with a test listing what may be in it. GitHub
+   Pages (or the Oracle server itself) publishes that, not the development repo.
+3. Give the Oracle updater read access to the private repo (a deploy key), check a deploy and a rollback.
+4. Then make the development repo private. On GitHub Free that unpublishes its Pages site, so step 2 comes first.
+   Copies and forks made before stay public.
+5. A copyright line on the page and in the build; the owner to decide on a license text with a lawyer if he wants
+   one (not a decision for Claude).
+What this cannot do: a browser game must send its page code and its art to players, so those can always be copied;
+ideas and mechanics are free to imitate. What it keeps private: the authoritative simulation, the world generator,
+the tools, the plans and everything unreleased.
