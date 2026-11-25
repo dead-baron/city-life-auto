@@ -2328,10 +2328,10 @@ function makeFlora(r) {
   const sp = SPECIES[r.sp];
   if (!sp) return EMPTY;
   const k = r.k || 1, mk = () => (r.bare ? FL.floraBare(() => sp[0](r.s)) : sp[0](r.s));
-  if (!OWN_ART_FLORA.has(r.sp)) return FL.floraArt(k, mk, r.c || 0);   // (made at the art pixel: flora.js floraArt)
+  if (!OWN_ART_FLORA.has(r.sp)) return FL.leafLight(FL.floraArt(k, mk, r.c || 0));   // (made at the art pixel: flora.js floraArt)
   let G = k !== 1 && FL.floraScale ? FL.floraScale(k, mk) : mk();
   if (G && G.render) G = G.render(0);
-  return G;
+  return FL.leafLight(G);
 }
 // the colour of a stand's flowers or berries (flora.js tc): one colour over a drift some nine tiles across - a slanted
 // grid, so the drifts' edges don't run with the streets - with one plant in five a stray of another

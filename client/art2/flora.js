@@ -74,10 +74,9 @@ export function floraBare(fn) { const o = BARE; BARE = true; try { return fn(); 
 let CAN = false;
 // VARY: each shape of a plant its own build - on for the plants the world plants (floraArt), off for a maker called on
 // its own (the kit sheets keep the sheet's proportions). bv: a factor round 1 from the plant's seed (i: which measure,
-// amt: how far either way); bu: 0..1 from the seed, or -1 with VARY off. The owner, 2026-11-21: "a lot of variety
-// throughout the world in nature" - more shapes of one build (the same height, the same lean) didn't read as variety.
+// amt: how far either way); bu: 0..1 from the seed, or -1 with VARY off.
 let VARY = false, TINT = 0;
-const SIDE = 0;   // (how much of the painted light comes from the upper left, 0..1: none - the side light is the game's sun alone, the owner 11-22; DECISIONS, Art direction)
+const SIDE = 0;   // (painted side light, 0..1: none - the game's sun alone, 11-22)
 // tc: the colour of a plant's flowers or berries - the first of the list for a maker called on its own, else the one the
 // stand it grows in has (floraArt's tint: statics.js gives a drift of flowers one colour, with a few strays). All of
 // them the palette's own reds, oranges, yellows, pinks, purples, blues and whites.
@@ -93,16 +92,29 @@ const ds = (fn, ...a) => { const c = CAN; CAN = false; try { return fn(...a); } 
 const nu = (n, k = 0.6) => (U === 1 ? n : Math.max(1, Math.round(n * k)));
 const CQ = () => Math.pow(U, 0.4), zu = (o) => (o && o.z > 0 ? { ...o, z: Math.max(1, o.z * U) } : o);
 const sq = () => Math.sqrt(SIZE), tk = () => Math.pow(SIZE, 0.8), uq = () => Math.sqrt(U);   // (uq: what a leaf cluster shrinks by at the art pixel - less than the plant, so its clumps stay readable)
-// floraArt(k, fn): a plant made at the art pixel (docs/art-v2/SPEC.md "Scale": 1 art pixel = 2 world px), as the giant
-// redwoods are (redwoods.js giantRedwoodArt). The maker runs at half the asked size and comes back marked ap2 = 2: the
-// chunk bake lays each of its pixels over 2 x 2 world px, its heights doubled (chunkbake.js compositeDepth2), on the art
-// grid - so the game shows the picture as it was painted, its clumps of leaves lit on top and dark underneath, a stem
-// one art pixel wide, where a world-px picture halved kept one texel of four (speckle).
+// floraArt(k, fn): a plant made at the art pixel (docs/art-v2/SPEC.md "Scale": 1 art pixel = 2 world px). The maker
+// runs at half the asked size - every size of a plant is drawn, never resampled - and comes back marked ap2 = 2: the
+// chunk bake lays each pixel over 2 x 2 world px on the art grid (chunkbake.js compositeDepth2).
 export function floraArt(k, fn, tint = 0) {
   const u0 = U, v0 = VARY, t0 = TINT; U = 0.5; VARY = true; TINT = tint | 0;
   let G;
   try { G = floraScale(k * 0.5, fn); if (G && G.render) G = G.render(0); } finally { U = u0; VARY = v0; TINT = t0; }
   if (G && G.w && !G.ap2) { G.ax = (G.ax || 0) * 2; G.ay = (G.ay || 0) * 2; G.ap2 = 2; }
+  return G;
+}
+// Leaves lit evenly, never black (11-25): leaf pixels turned up, as the sword fern's; tones under `knee` pressed
+// up to `dark` and pulled to `tone` (the style anchor's dark green).
+export const LEAF_LOOK = { flat: 0.75, dark: 46, knee: 72, tone: [22, 50, 38] };
+export function leafLight(G) {
+  if (!G || !G.col || G.lit) return G;
+  const { flat: K, dark: F, knee: T, tone: D } = LEAF_LOOK, lD = D[0] * 0.3 + D[1] * 0.59 + D[2] * 0.11, c = G.col, n = G.nrm;
+  for (let i = 0, j = 0; i < G.w * G.h; i++, j += 4) {
+    if (!c[j + 3] || !(G.flag[i] & F_LEAF)) continue;
+    if (n[j + 3]) { const x = (n[j] / 127.5 - 1) * (1 - K), y = (n[j + 1] / 127.5 - 1) * (1 - K) + 0.3 * K, z = (n[j + 2] / 127.5 - 1) * (1 - K) + 0.95 * K, l = Math.hypot(x, y, z) || 1; n[j] = (x / l + 1) * 127.5; n[j + 1] = (y / l + 1) * 127.5; n[j + 2] = (z / l + 1) * 127.5; }
+    const l = c[j] * 0.3 + c[j + 1] * 0.59 + c[j + 2] * 0.11;
+    if (l < T) { const l2 = F + l * (T - F) / T, w = 1 - l / T, k = l2 / Math.max(l, 4); for (let q = 0; q < 3; q++) c[j + q] = Math.min(255, c[j + q] * k * (1 - w) + D[q] * (l2 / lD) * w); }
+  }
+  G.lit = 1;
   return G;
 }
 // an ap2 sprite spread out to world px (the kit sheets and the tools, which lay sprites down 1 : 1)
@@ -126,11 +138,8 @@ export function artDouble(G) {
 
 // ---- canvas, pixels, finishing -------------------------------------------------------------------------
 // a sprite canvas: foot (anchor) at the middle of the bottom, `below` rows left under it for bases
-// The canvas a maker asks for, with room round it it doesn't know of - ROOM_X a side, ROOM_Y over the top (G.ox, G.oy:
-// pxn and has() shift by them, done() folds them into the anchor and crops to what was drawn, so the room costs
-// nothing kept). Without it 41 of the plants were drawn past their canvas and cut off flat there - the sunflowers'
-// heads, the tops of the hibiscus, the salal, the hedges (the owner, 11-23: "sunflowers cut at the top"). A maker's own
-// coordinates are as they were: a plant that fitted its canvas comes out pixel for pixel the same.
+// (hidden room round a maker's canvas - ROOM_X a side, ROOM_Y on top; G.ox, G.oy - so nothing drawn past it is cut
+// off flat: 41 plants were, 11-24, test/floraclip.test.js. done() crops it away.)
 const ROOM_X = 24, ROOM_Y = 40;
 function sprite(w, h, below = 4) {
   const w0 = Math.ceil(uu(w)), h0 = Math.ceil(uu(h)), mx = Math.ceil(uu(ROOM_X)), my = Math.ceil(uu(ROOM_Y));
@@ -181,8 +190,7 @@ function outline(G, dark) {
 function done(G, ol = 0.42) {
   if (G.du) { G.ax = Math.round(G.ax * G.du); G.ay = Math.round(G.ay * G.du); G.du = 0; }
   if (G.ox) { G.ax += G.ox; G.ay += G.oy; G.ox = 0; G.oy = 0; }
-  // (a plant drawn past its canvas is cut off flat there - the sunflowers' heads, the owner, 11-23: "sunflowers cut at
-  // the top". test/floraclip.test.js counts the pixels on the canvas's top row and side columns before the crop)
+  // (test/floraclip.test.js counts what touches the canvas's top row and side columns before the crop)
   if (globalThis.__FLORA_CLIP) { let t = 0, sd = 0; for (let x = 0; x < G.w; x++) if (G.col[x * 4 + 3]) t++; for (let y = 0; y < G.h; y++) { if (G.col[y * G.w * 4 + 3]) sd++; if (G.col[(y * G.w + G.w - 1) * 4 + 3]) sd++; } globalThis.__FLORA_CLIP(t, sd, G); }
   if (ol) outline(G, ol);
   const n = G.w * G.h;
@@ -569,9 +577,7 @@ function litter(G, cx, foot, r, cols, seed, n = 30) {
 export function conifer(seed = 1, o = {}) {
   if (!CAN) return cv(conifer, seed, o);
   const rnd = mulberry32(seed * 3301 + (o.k || 0) * 7 + 9);
-  // (with VARY a shape is one of four builds, so two of a kind side by side read as two trees - the owner, 11-21: a
-  // young one, short and slim; an old one, its lower trunk bare and its top thin; a ragged one, gaps in its boughs
-  // and off the plumb; the tree as it was)
+  // (with VARY one of four builds, 11-21: young - short and slim; old - bare below, thin on top; ragged; as it was)
   const cls = bu(seed, 6), young = cls >= 0 && cls < 0.2, old = cls >= 0.2 && cls < 0.38, ragged = cls >= 0.38 && cls < 0.54;
   const h = (o.h ?? 120) * SIZE * bv(seed, 1, 0.15) * (young ? 0.72 : 1), r = (o.r ?? 30) * SIZE * bv(seed, 2, 0.16) * (young ? 0.84 : 1), form = o.form || 'cone', R = o.R || FOL('#33663a'), B = o.B || BARK;
   const G = sprite(r * 2 + 30, h + 16, 5), cx = G.ax, foot = G.ay, top = foot - h, tw = (o.tw ?? 2.6) * tk() * (young ? 0.8 : 1);

@@ -20,13 +20,13 @@ added as the work goes; a line he has checked is marked with his word and the da
 - [x] **Mirage Lake's new shore** (the owner, 11-24 21:40: "The lake looks better like this so this would be
   acceptable"). An offshoot cove on its west side added at his suggestion: picture `report-27-mirage-cove`. Judge
   the cove: keep, smaller, or out. Its cinematics are reshot at the end of the art pass.
-- [ ] **The plants' dark undersides: pick E, F or G** (`report-30`, `report-31`). His notes of 22:23 and 23:06
-  ("between B and C but its not right yet ... compare this to the style anchors ... the original fern"). Found: the
-  concept sheet's plants go to black and the plants copied it, where the style anchor's darkest green is 25, 57, 45;
-  and the fern is lit evenly where the others are shaded twice. E, F, G make every plant as the fern is, its darkest
-  tone the anchor's green. One place for all plants; a re-bake. (B, C, D of `report-26` are superseded.)
-- [ ] **The banks** - any wild river, creek or lake: grown over to the water, an earth lip, shingle or a dirt bar by
-  turns, not one brown outline. Picture: `report-28-banks`. Judge: the mix; shingle and dirt wide enough to read.
+- [ ] **The plants' dark undersides - built (variant F)** on his word of 11-25 00:04. Every plant kind: leaves lit
+  evenly, no leaf tone under the style anchor's dark green. Pictures: `report-34` (the creek, before and after, at
+  the game's pixel). Judge in the game: enough, or a step lighter (`flora.js` `LEAF_LOOK`); the trunks' and cacti's
+  shaded sides, which were left.
+- [ ] **The banks** - any wild river, creek or lake: grown over and going under the water in tongues, an earth lip
+  (about a fifth), shingle or a dirt bar by turns; stones along the banks, fewer in the water. Pictures:
+  `report-32`, `report-34`. Judge: the mix; whether the damp band reads as bank or as a smear.
 - [ ] **The bake's code budget** - at 1,080 of 1,080 KB. The fern kit (about 6 KB), the shade floor and a stick
   bridge need room: raise it (to 1,100?) or say what to trim.
 - [ ] **The sample creek: is this the creek the redwoods should have many of?** Fernwater Creek, laid by rule down

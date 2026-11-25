@@ -507,3 +507,44 @@ To do, in this order (each step tested before the next):
 What this cannot do: a browser game must send its page code and its art to players, so those can always be copied;
 ideas and mechanics are free to imitate. What it keeps private: the authoritative simulation, the world generator,
 the tools, the plans and everything unreleased.
+
+## The owner's notes while playing the live build (11-25 00:22 - 00:33) - logged, not acted on in the art pass
+- **A hop at a shop's doorway** (the gun shop / hardware pair, a walk-in front): "it looks like i have to jump across
+  something underneath the doorway here, my player pauses and hops over something underneath the entry sign so I dont
+  know what it is thats under there." To find: what solid or step lies under the fascia at a walk-in's door (a kerb, a
+  planter's or a rail's solid, the room's threshold) - a class check over every walk-in door: nothing solid and no step
+  on the line from the pavement through the door.
+- **Shop name signs** (same picture): "like how these signs show up they're nice and easy to read and might make a good
+  standard sign angle and size and visibility, but it covers you walking through the door, or at least the overhang
+  does" - keep that legibility as the standard (angle, size, contrast), in styles that fit the district, the building
+  and its purpose, with variety; and never hide the player going through the door (the sign or its overhang fades or
+  sits above the door's opening). For part B's shared kit (shopfronts and signs) - with the standing rules "no big
+  overhangs over entrances" and "nothing meant to be seen is hidden".
+- **NPC behaviour** (00:33): "more animated and complex ... not just automatically attack (right now it seems like an
+  instant pull out weapon and shoot reaction) ... sometimes take cover, react not with violence first, react scared
+  and run off, react cautious, react professional and skilled ... interactions and violence and fighting and driving
+  and being police or on the job". Server-side (the AI systems); a design first: temperaments by role and district,
+  a reaction ladder (notice, warn, flee / call / draw, take cover, fight), skill tiers for police and guards.
+- **Pets and wildlife**: the same variety of behaviour where it fits - but nothing that works on purpose may break:
+  "I love the details like the quail family sticks together ... I wouldn't want to break any carefully crafted systems
+  ... we accidentally over-randomize the individual animal behavior and they all react differently and break up the
+  group". Rule for that work: group behaviours (families, flocks, herds) are decided for the group, variation is
+  between groups and kinds, and each existing behaviour gets a test before anything round it changes.
+- **Dogs at the dog run and in the city** (00:47): "The dog run area doesnt have any dogs or NPCs walkings dogs or
+  playing fetch with dogs ... I dont see a lot of dogs or cats or NPCs walking dogs in the cities either. Are these
+  already in the game and just need to be spawned in more places". Checked: they are in the game - a dog walker with
+  three dogs on leads is one of the street personalities (`server/systems/personas.js` `dogs`, capped at one at a
+  time), lost pets (`pets.js`), police dogs (`k9.js`), a hunter's dog (`activities.js`). Nothing is spawned AT a dog
+  run (the world marks them: `shared/world3-fenceexits.js` 'dogrun'), there is no fetch, and no cats walk the
+  streets. To build: an activity at every dog run (owners on the benches, dogs off the lead, fetch), more walkers by
+  district, cats on stoops and in alleys.
+- **Vehicles take damage from what they smash** (01:00, an ambulance through a planted median): "you can run over
+  infinite things apparently ... things are destructible and vehicles aren't super fragile, but after running through
+  enough destructible objects (judging on the size and impact ... crashing into a tree vs. driving over a garbage
+  bag) the damage would be comparable." With the 11-23 "vehicles smash things" item: each knockable kind a weight
+  (a bag nothing, a planter or a sign a little, a lamp post or a tree a real hit and a stop), damage by weight and
+  speed, in `shared/rules.js`.
+- **The playtest tool cannot photograph World v3 in the running game** (found 11-25): `tools/playtest.py` gives up
+  waiting before the v3 server is up (220 s) and does not get past the first-time question ("What brings you to
+  town?"), so the art pass's pictures are offline renders. A dev switch to skip the first-time flow and a longer
+  server wait would give real game pictures of any place.

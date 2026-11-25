@@ -355,6 +355,20 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   pots. Not built yet (the bake's code budget).
 - The project to go private before marketing (the owner, 11-24 23:40): logged with a plan in
   `docs/audit/PREBETA-LIST.md`; his to schedule - not art.
+- Plants lit evenly, never black - built (the owner, 11-25 00:04: "you can still see many plants with the dark
+  shadow on it ... Can we identify these and others across the entire environment/nature art packs and make sure
+  they dont have these hard shadows baked into them?"): `flora.js` `leafLight` on every plant the world places
+  (variant F of `report-30`: leaf pixels turned three quarters up, no leaf tone under the style anchor's dark green);
+  `test/leaflight.test.js` holds all 121 kinds. The lighting standard for nature art from here: the form is in the
+  paint within the anchor's range, leaf surfaces face up, the game's light does the rest.
+- One pixel size, and sizes are drawn, not resampled (the owner, 11-25 00:04: "when you resize and flip horizontally
+  ... is that where pixel size lost consistency? ... Can different variations/sizes be redrawn with the right pixel
+  size?"): checked - every plant kind is made at the art pixel at each of its sizes (floraArt runs the maker at the
+  size; a mirror is exact), tested (test/floraart.test.js). What differs is how finely a plant is drawn on that grid
+  (a fir in clumps of two or three pixels, a fern in single pixels) and that the ground and the voxel props are made
+  at the world pixel and halved by the bake.
+- NPC and wildlife behaviour, the shop door's hop and the shop signs (the owner, 11-25 00:22 / 00:33): logged in
+  `docs/audit/PREBETA-LIST.md`; the quail family rule - group behaviours stay whole - recorded with it.
 - WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
   the consoles we are aiming for").
 - The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was

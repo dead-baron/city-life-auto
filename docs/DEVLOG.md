@@ -27327,3 +27327,26 @@ Also `tools/nature/sprites.mjs`: LEAF_WRAP / LEAF_SKY to try the leaf light's nu
 measured, variants with the owner - nothing of it in the game's code yet).
 Seen: offline renders (the crossing, a stretch, the creek's mouth, the lake at half size). Not seen: a running game;
 other rivers and lakes with the new banks; shingle at full size. The whole suite has not been run.
+
+## 2026-11-25 · Plants lit evenly, never black; soft banks blended into the water - on branch `fable-art-1124`
+**The dark on plants** (the owner, 11-24 22:23 to 11-25 00:04: "the dark/basically black shading on the underside of
+this art ... Can we identify these and others across the entire environment/nature art packs"). Measured over all 121
+plant kinds, lit as the game lights them at noon: 102 had over 15% of their pixels near-black. Two causes at once: the
+paint went to black (after the concept sheet NK1-M, whose plants are 38-55% under 50/255; the style anchor R1-D's
+darkest green is 25, 57, 45), and the leaf pixels carried rounded surface directions, so the light pass shaded the
+underside again. The sword fern, which he pointed to as right, has its form in its paint and every pixel facing up.
+`flora.js` `leafLight` (called for every plant the world places: statics.js makeFlora) makes all of them so: leaf
+normals turned three quarters toward up, and leaf tones under 72 pressed up to 46 and pulled to the anchor's dark
+green (`LEAF_LOOK`, four numbers). The outline on leaves becomes that dark green too. Leaves near-black at noon: 0%
+in every kind (`test/leaflight.test.js`); kinds over 15% near-black: 102 -> 18, and those by their bark, cones,
+twigs, stones or cactus skin (pinned). Cast shadows, the hour and the weather still fall on plants as on everything.
+Not done: bark and cactus skin (the giants' trunks are 18-26% near-black on their shaded side) - to judge in the game.
+**Pixel size** (his question of 00:04): every plant kind is made at the art pixel at each of its sizes (the maker is
+run at the size, never resampled; a mirror is exact) - checked, test/floraart.test.js. The close-ups shown on 11-24
+were rendered at the world pixel, twice as fine as the game draws: pictures for him are at the art pixel from now.
+**Banks** (his note of 23:18): `groundbake.js` - a soft wild bank goes damp, then under the water, in tongues
+(`BANK_IN` 13 px of water show the bank through); pebbles and rocks stamped along banks; `water.js` fewer boulders
+standing in creeks and rivers; the sample creek's own moved to its banks. The earth lip stays on about a fifth.
+The bake's code budget: still 1,080 KB - twelve comments from this pass cut down to fit. Not raised.
+Seen: plant sheets with the game's noon light; offline renders at the art pixel. NOT seen in the running game: five
+tries to photograph World v3 in the local game failed on the tool (PREBETA-LIST). The whole suite has not been run.

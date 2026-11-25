@@ -484,8 +484,7 @@ export function missionRuins() {
 // its faces pitted, lichen on the weather side, moss at the foot; a flat one (h small) is the altar or a fallen stone
 export function standingStone(w = 16, d = 9, h = 48, seed = 1, lean = 0) {
   const W = Math.ceil(w + Math.abs(lean) * h + 6), m = new Vox(W, d + 6, h + 2);
-  // (dark weathered granite, banded and pitted, darker toward its foot: the first stone was the scree's own pale grey
-  // and was lost on it - the nature status of 11-21, "standing stones barely read")
+  // (dark weathered granite: the first was the scree's pale grey and lost on it, 11-21)
   const st = m.mat({ ramp: R('#63666c', 7, 3), k: 3.4, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2) + Math.round(y / 2), seed) - 0.5) * 1.3 + (hash(Math.round(x / 6), Math.round(z / 5), seed + 1) - 0.5) * 1.0 - (z < h * 0.3 ? (1 - z / (h * 0.3)) * 1.2 : 0) + (z > h * 0.8 ? 0.5 : 0) });
   const lichen = m.mat({ ramp: R('#b8b878'), k: 3 }), moss = m.mat({ ramp: R('#5a7a34'), k: 3, flag: F_LEAF });
   const x0 = 3 + Math.max(0, -lean * h);
