@@ -1115,28 +1115,36 @@ export const huckleberry = (seed = 1) => shrub(seed, { w: 24, h: 28, R: FOL('#4a
 export const wildBerry = (seed = 1) => shrub(seed, { w: 24, h: 30, R: FOL('#4a7c2c'), cs: 2.8, fruit: { R: RR(tc(['#c8282a', '#3a2a5a', '#e8882a']), 5, 2, { light: 0.6 }), n: 14, r: 1.2 }, flowers: { R: RR('#f4f0e8', 5, 3, { dark: 0.3 }), k: 0.05, kind: 'star' }, k: 4 });
 // tall flower spikes over a basal rosette: foxglove, lupine, paintbrush. o: n, h, R (flower ramp), kind
 // ('bells' | 'pea' | 'brush'), L (leaf ramp), leaves ('broad' | 'palm' | 'fine'), rocks, w
+export const SPIKE_WILD = { fan: 0.2, own: 0.26, max: 0.3, nod: 0.16, short: 0.25 };   // (lean in px per px of height: out from the clump, its own; the tip's nod; how many are short)
 export function spikes(seed = 1, o = {}) {
   const rnd = mulberry32(seed * 151 + (o.k || 0)), w = (o.w ?? 16) * bv(seed, 1, 0.15), G = sprite(w * 2 + 18, (o.h ?? 30) * (VARY ? 1.15 : 1) + 18, 5), cx = G.ax, foot = G.ay;
   const L = o.L || FOL('#3e7a2a'), P = o.R;
   if (o.leaves === 'broad') for (let i = 0; i < 9; i++) { const a = -PI / 2 + (i / 8 - 0.5) * 2.8; bigLeaf(G, cx + Math.cos(a) * 3, foot - 2, a, 9 + rnd() * 4, 2.6, L, { shape: 'lance', droop: 0.06, seed, vein: 2.4 }); }
   else { const cls = massEll([{ x: cx, y: foot - 5, r: w * 0.85, ry: 5.5 }], rnd, o.leaves === 'fine' ? 2.2 : 2.8, 1.5); paintClusters(G, cls, { R: L, seed, leaf: o.leaves === 'palm' ? 'maple' : o.leaves === 'fine' ? 'fine' : 'round', core: true }); }
   const n = Math.max(2, Math.round((o.n ?? 5) * bv(seed, 2, 0.3))), sp = [], hS = bv(seed, 3, 0.14);
-  for (let i = 0; i < n; i++) sp.push({ x: cx + (i / Math.max(1, n - 1) * 2 - 1) * w * 0.72 + (rnd() - 0.5) * w * 0.3, h: (o.h ?? 30) * hS * (0.55 + rnd() * 0.5), y: foot - 2 - rnd() * 6 });
+  // (the owner, 11-24 23:37: "really vertical, all the stems are so straight it kind of feels out of place in the world
+  // (unless its part of a garden or flower pot)". A wild stand grows as it will - SPIKE_WILD: each stem leans out from
+  // the clump and its own way, bows, nods at the tip, and one in four is a short one; o.straight keeps a bed's rows.)
+  for (let i = 0; i < n; i++) {
+    const u = n > 1 ? i / (n - 1) * 2 - 1 : 0, short = !o.straight && rnd() < SPIKE_WILD.short, h = (o.h ?? 30) * hS * (short ? 0.3 + rnd() * 0.2 : 0.55 + rnd() * 0.5);
+    const lean = o.straight ? 0 : clamp(u * SPIKE_WILD.fan + (rnd() - 0.5) * SPIKE_WILD.own, -SPIKE_WILD.max, SPIKE_WILD.max), nod = o.straight ? 0 : (rnd() - 0.3) * SPIKE_WILD.nod * Math.sign(lean || rnd() - 0.5);
+    sp.push({ x: cx + u * w * 0.72 + (rnd() - 0.5) * w * 0.3, h, y: foot - 2 - rnd() * 6, lean, nod });
+  }
   sp.sort((a, b) => a.y - b.y);
   for (const s of sp) {
-    const top = s.y - s.h, R = pickR(P, rnd);
-    stem(G, s.x, s.y, s.x, top + 2, L, 0.4);
+    const top = s.y - s.h, R = pickR(P, rnd), xo = (v) => s.lean * v + s.nod * (v / s.h) * (v / s.h) * s.h;   // (v: px above the stem's foot)
+    for (let v = 0; v < s.h - 2; v++) px(G, s.x + xo(v), s.y - v, step(L, 0.4 + v / s.h * 0.15, Math.round(s.x + xo(v)), Math.round(s.y - v), 0.3), [-0.3, 0.5, 0.6], F_LEAF);
     const len = o.kind === 'brush' ? s.h * 0.35 : s.h * 0.55;
     for (let k = 0; k < len; k++) {
-      const Y = top + k, t = k / len, wd = o.kind === 'brush' ? 1.6 + t * 1.2 : (o.kind === 'pea' ? 0.6 + t * 1.8 : 1.2 + t * 1.6);
+      const Y = top + k, t = k / len, wd = o.kind === 'brush' ? 1.6 + t * 1.2 : (o.kind === 'pea' ? 0.6 + t * 1.8 : 1.2 + t * 1.6), sx = s.x + xo(s.h - k);
       for (let q = -Math.ceil(wd); q <= wd; q++) {
         if (o.kind === 'bells' && (k % 3 === 2 || (Math.abs(q) > wd - 0.8 && k % 3 === 0))) continue;
         if (o.kind === 'brush' && hash(q, k, seed) < 0.15) continue;
         const sh = 0.62 - q / (wd + 1) * 0.3 + (k % 2 && o.kind === 'pea' ? -0.15 : 0) + (o.kind === 'bells' && k % 3 === 1 ? -0.25 : 0) - (o.kind === 'pea' ? t * 0.2 : 0) + (k < 2 ? 0.1 : 0);
-        px(G, s.x + q, Y, step(R, sh, s.x + q | 0, Y, 0.2), sN(q / (wd + 1), 0.2, 0.9));
+        px(G, sx + q, Y, step(R, sh, sx + q | 0, Y, 0.2), sN(q / (wd + 1), 0.2, 0.9));
       }
     }
-    if (o.kind === 'pea' || o.kind === 'bells') px(G, s.x, top - 1, step(L, 0.6, 0, 0, 0), [0, 0, 1]);
+    if (o.kind === 'pea' || o.kind === 'bells') px(G, s.x + xo(s.h), top - 1, step(L, 0.6, 0, 0, 0), [0, 0, 1]);
   }
   if (o.rocks) pebbles(G, cx, foot, o.rocks, w, seed);
   return done(G);

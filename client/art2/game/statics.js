@@ -2311,14 +2311,14 @@ const SPECIES = {
   // shrubs, bushes and flowers
   hedge: [FL.hedge, 38, 51], topBall: [FL.topiaryBall, 20, 57], topCone: [FL.topiaryCone, 17, 66], rose: [FL.roseBush, 24, 41], hydrangea: [FL.hydrangea, 27, 41], lavender: [FL.lavender, 28, 45],
   tulips: [FL.tulipPlanter, 26, 41], daffodils: [FL.daffodilPlanter, 27, 41], boxStone: [(s) => FL.flowerBox(s, 'stone'), 34, 41], boxIron: [(s) => FL.flowerBox(s, 'iron'), 33, 38], pampas: [FL.pampasGrass, 56, 89],
-  fern: [FL.swordFern, 38, 40], bracken: [FL.deadBracken, 36, 38], salal: [FL.salal, 33, 44], huckle: [FL.huckleberry, 32, 43], berry: [FL.wildBerry, 30, 45], foxglove: [FL.foxglove, 21, 63],
+  fern: [FL.swordFern, 38, 40], bracken: [FL.deadBracken, 36, 38], salal: [FL.salal, 33, 44], huckle: [FL.huckleberry, 32, 43], berry: [FL.wildBerry, 30, 45], foxglove: [FL.foxglove, 30, 63],
   creosote: [FL.creosote, 39, 56], sage: [FL.sagebrush, 34, 48], brittle: [FL.brittlebush, 35, 48], bursage: [FL.whiteBursage, 35, 44], dPoppies: [FL.desertPoppies, 35, 30], dFlowers: [FL.desertFlowers, 36, 48],
   dryGrass: [FL.dryGrass, 28, 38], tumble: [FL.tumbleweed, 18, 32], agave: [FL.agave, 29, 39], yucca: [FL.yucca, 33, 62], pear: [FL.pricklyPear, 46, 57], barrel: [FL.barrelCacti, 23, 36], cholla: [FL.cholla, 36, 52],
   ocotillo: [FL.ocotillo, 36, 93], saguaroBig: [(s) => FL.saguaro(s, 128), 34, 140], saguaroMid: [FL.saguaroMid, 18, 80], saguaroSmall: [FL.saguaroSmall, 12, 52],
   hibiscus: [FL.hibiscus, 41, 58], bougain: [FL.bougainvillea, 41, 74], monstera: [FL.monstera, 35, 58], elephant: [FL.elephantEar, 33, 51], bird: [FL.birdOfParadise, 45, 83],
-  duneGrass: [FL.duneGrass, 48, 61], beachGrass: [FL.beachGrass, 46, 45], icePlant: [FL.icePlant, 56, 33], flHedge: [FL.floweringHedge, 62, 55], poppies: [FL.poppies, 33, 45], lupines: [FL.lupines, 27, 64],
+  duneGrass: [FL.duneGrass, 48, 61], beachGrass: [FL.beachGrass, 46, 45], icePlant: [FL.icePlant, 56, 33], flHedge: [FL.floweringHedge, 62, 55], poppies: [FL.poppies, 33, 45], lupines: [FL.lupines, 31, 64],
   daisies: [FL.daisies, 35, 37], tallGrass: [FL.tallGrass, 51, 57], cattails: [FL.cattails, 27, 69], reeds: [FL.reeds, 26, 70], juniper: [FL.juniperMat, 63, 53], twisted: [FL.twistedShrub, 56, 73],
-  berryShrub: [FL.berryShrub, 40, 56], aLupine: [FL.alpineLupine, 27, 60], paintbrush: [FL.paintbrush, 27, 51], heather: [FL.heather, 31, 36], aDaisies: [FL.alpineDaisies, 31, 33],
+  berryShrub: [FL.berryShrub, 40, 56], aLupine: [FL.alpineLupine, 31, 60], paintbrush: [FL.paintbrush, 31, 51], heather: [FL.heather, 31, 36], aDaisies: [FL.alpineDaisies, 31, 33],
   weed: [FL.weedTuft, 31, 36], dryTuft: [(s) => FL.dryGrass(s, 0.6), 34, 31],
   sunflowers: [FL.sunflowers, 35, 69], wildflowers: [(s) => FL.wildflowerLawn(s), 68, 47],
   // the forest floor and the meadows' small things, drawn for the kit sheets (E3b, E3e, E3f) and never planted till the

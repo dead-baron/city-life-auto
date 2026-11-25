@@ -27433,3 +27433,11 @@ groundbake.js `reliefOn` drawing ledges on rock along the land's contours (every
 toward the viewer) and, at 3, snow on the benches above 150 m. docs/tasks/MOUNTAIN-LOOK-2026-11-25.md has the three
 pictures' account and what a pick leads to. tools/nature/darkscan.mjs: `--prop type@box` finds where a kind of prop
 stands thickest; `CRAG=n`.
+
+## 2026-11-25 · Wild spike flowers grow as they will - on branch `fable-art-1124`
+The owner, 11-24 23:37, of the purple spike flowers: "really vertical, all the stems are so straight it kind of feels
+out of place in the world (unless its part of a garden or flower pot) ... Can give a more natural version of these
+flowers". flora.js `spikes` (foxglove, lupines, alpine lupine, paintbrush): each stem leans out from the clump and
+its own way (`SPIKE_WILD`: up to 0.3 px a px of height), bows, nods at the tip, and one in four is a short one; the
+flower follows its stem. `o.straight` keeps a bed's rows upright for a garden. Their items claim the wider room
+(statics.js SPECIES; test/floraart.test.js caught the foxglove 4 px out of its room). Picture: report-40.
