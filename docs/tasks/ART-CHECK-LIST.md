@@ -15,9 +15,12 @@ added as the work goes; a line he has checked is marked with his word and the da
   and whether the deep grove should open further, which would mean more high crowns there (his 11-21 call was high
   crowns over paths, creeks and roads, a mix deeper in).
 
-- [ ] **"The lake a perfect oval"** (his note of 11-23): which lake? The most oval are the city parks' ponds
-  (Westport's long one with the footbridge, the Stadium's two, Northgate's paved basin) and Mirage Lake in the desert.
-  Picture: `report-11-oval-ponds`. Summit Tarn and the farm ponds already have wavering shores.
+- [x] **"The lake a perfect oval"** (his note of 11-23): answered 11-24 18:13 - Mirage Lake, the one in the
+  cinematics. Its shore is to be reshaped; a new line goes here when it is.
+- [ ] **The giant redwoods' tops: pick one.** The trunks-only look was rejected on sight (11-24 18:47). Four forms of
+  the same tree, pictures `report-13` (in the forest: A now, C) and `report-14` (the four side by side): A as now;
+  B crown carried high; C a small crown higher still; D smaller again. Judge: which reads as a really tall redwood and
+  leaves enough of the floor in view.
 
 **In the game, when the batch is live**
 Water

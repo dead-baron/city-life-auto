@@ -66,3 +66,17 @@ cliff pieces on flat ground, plants lit by the game's sun.
 About four to six working days at this pass's pace: the tree variants and the fade, one day; crossings and trails,
 one; water, one; the fern kit and its drifts, one; the finds and the places, one to two. A world change and a
 re-bake: it goes with the nature batch, or as its own, on the owner's word.
+
+## 5. What happened to step 1 (11-24, evening)
+Approved as a whole at 18:13; the first step - the giants as trunks - was built two ways (a cut top; a top thinned out
+upward) and rejected by the owner on sight at 18:47: "not looking good compared to what we have already". Neither was
+committed. A trunk that ends in mid-air has no good ending; the giants keep their tops. What is offered instead, all
+from the tree as it is: the crown carried higher and made smaller (variants B, C, D on the check list), so the column
+reads as tall and less of the floor is under leaves. Steps 2 to 6 stand and do not wait on the pick.
+
+Counted for step 2 from the built world (seed 1337): Highland Woods (district 47) is 1,807,156 land tiles with 1,248
+tiles of water and three footbridges - Redwood Creek's (square to the water, dirt at both ends), the Giants Loop's
+(1644, 1406: square, both ends on grass - the trail does not reach it) and one on Highland Way (1076, 1243: 26 degrees
+off square, deck tiles off its line, a giant standing at its south end). No trail line runs over open water. So the
+bridges are few and two of three are wrong; and the forest has very little water for its size - step 3 is mostly new
+creeks, not repairs.

@@ -2293,10 +2293,10 @@ const SPECIES = {
   coconut: [FL.coconutPalm, 76, 151], cocoUp: [FL.cityCoconut, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
   smallPalm: [FL.smallFanPalm, 36, 76], coastCypress: [FL.coastalCypress, 90, 98], banana: [FL.banana, 60, 99],
   // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
-  giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
-  giantLH: [(s) => RW.giantRedwoodArt(s, 720, 70, HIGH_CROWN), 250, 770], giantH: [(s) => RW.giantRedwoodArt(s, 620, 54, HIGH_CROWN), 210, 660], giantSH: [(s) => RW.giantRedwoodArt(s, 520, 40, HIGH_CROWN), 175, 555],   // (the same giants, their crowns carried high: over a trail, a creek, a road - crownOver)
+  giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770, 92], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660, 76], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
+  giantLH: [(s) => RW.giantRedwoodArt(s, 720, 70, HIGH_CROWN), 250, 770, 92], giantH: [(s) => RW.giantRedwoodArt(s, 620, 54, HIGH_CROWN), 210, 660, 76], giantSH: [(s) => RW.giantRedwoodArt(s, 520, 40, HIGH_CROWN), 175, 555],   // (the same giants, their crowns carried high: over a trail, a creek, a road - crownOver)
   redwoodB: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.48, cone: 1 }), 110, 405], redwoodC: [(s) => RW.giantRedwoodArt(s, 380, 20, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 110, 405],   // (11-21: the common redwood's two higher crowns - redwoodAt picks among the three by where the tree stands)
-  redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 100, 365], redwood2H: [(s) => RW.giantRedwoodArt(s, 340, 18, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 100, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
+  redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 112, 365], redwood2H: [(s) => RW.giantRedwoodArt(s, 340, 18, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 116, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
   gate: [(s) => RW.giantRedwoodArt(s, 760, 78, { tunnel: { w: 46, h: 60 } }), 270, 815],   // (Giant's Gate, the drive-through: shared/world3-drivetree.js)
   fernR: [(s) => RW.swordFernArt(s, 78 + (s % 3) * 8), 52, 64],
   // shrubs, bushes and flowers
@@ -2480,6 +2480,9 @@ const PLANTS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_
 // trunk (or the sprays just round it) covers you fades - fbox, narrower than the picture - not every crown nearby.
 export const TREE_FADE = 1e6;
 const RW_R = { giantL: 70, giant: 54, giantS: 40, redwood2: 16, gate: 78 };
+// the room a redwood's picture takes round its foot (left, up, right, down - px; a giant's roots reach further below it
+// than the 60 px all of them claimed, 11-24): test/redwood-art.test.js holds the art to it
+export const redwoodRoom = (art) => { const A = SPECIES[art]; return [A[1], A[2], A[1], A[3] || 60]; };
 // Which of a species' pictures the plant at (x, y) is, laid out so the same one never stands close by (the owner,
 // 11-21: "the same tree used multiple times near each other" - picked by chance, two trees in three had their twin
 // within five tiles). A lattice over 32 px cells: cell (ix, iy) takes (ix + a * iy) mod m, a chosen for each m so the
@@ -2531,7 +2534,7 @@ function propItems(c, p, pi, I) {
     const sp = SPECIES[p.sp] ? p.sp : 'giant', S = SPECIES[sp], v = shapeAt(sp, x, y, NV(sp)), tr = RW_R[sp] || 20, rr = tr * 1.35, fw = tr * 1.5 + 24;
     // (the owner, 11-21 15:39: a giant whose boughs would hang over a trail, a clearing, a creek or a road carries them high)
     const art = SPECIES[sp + 'H'] && crownOver(c, x, y, Math.floor(S[2] * (sp === 'redwood2' ? 0.2 : 0.4) / TILE), Math.ceil(S[2] / TILE), Math.ceil(S[1] * 0.55 / TILE)) ? sp + 'H' : sp;
-    put(I, { key: `f:${art}:${v}:1`, recipe: { t: 'f', sp: art, s: 1000 + v * 37 + sp.length * 7, k: 1 }, x, y, ext: [S[1], S[2], S[1], 60], fbox: [fw, S[2], fw, 60], pi, fade: 1, b: TREE_FADE + pi, fp: [x + rr, y - rr * 0.5, x - rr, y + rr * 0.5] });   // (x0 > x1: an ellipse, engine.js STATIC_FS)
+    put(I, { key: `f:${art}:${v}:1`, recipe: { t: 'f', sp: art, s: 1000 + v * 37 + sp.length * 7, k: 1 }, x, y, ext: redwoodRoom(art), fbox: [fw, S[2], fw, 60], pi, fade: 1, b: TREE_FADE + pi, fp: [x + rr, y - rr * 0.5, x - rr, y + rr * 0.5] });   // (x0 > x1: an ellipse, engine.js STATIC_FS)
     return;
   }
   if (t === 'rk') { rkItem(I, p, pi); return; }

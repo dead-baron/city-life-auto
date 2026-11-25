@@ -294,7 +294,21 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   polishing and maybe overhauling the redwood area let me know"): an overhaul, proposed in
   `docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md` - the giants as trunks with no crown in the walking view, crossings
   square to the water, a fern kit, finds placed by hand rules and never hidden. It would replace his crown mix of
-  11-21 15:39; the tree treatment is his pick from variants before it is rolled out. OPEN until he picks.
+  11-21 15:39; the tree treatment is his pick from variants before it is rolled out.
+  - The owner, 11-24 18:13: "I want to go with your suggestion for the redwood area. Let's power through this area." -
+    the overhaul is approved as a whole.
+  - The giants as trunks: REJECTED on sight (the owner, 11-24 18:47: "I don't think the disolve looks good ... what I
+    see is not looking good compared to what we have already"). Built two ways (a cut top; a top thinned out upward),
+    neither committed. The giants keep their tops. The lesson kept: a new look goes to him as variants first, even
+    after "go with your suggestion".
+  - OPEN, his pick from `report-13` / `report-14`: A the trees as they are; B every giant's crown carried high (today's
+    form over paths: boughs from 0.76 of its height, fullness 0.5); C a small crown higher still (0.82, 0.45, 0.7 as
+    wide); D smaller again (0.86, 0.4, 0.55). The rest of the overhaul (crossings, water, ferns, finds, places) does
+    not wait on it.
+- The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was
+  mirage lake that was very oval in shape yes. It's one that shows up in the cinematics"): its shore to be reshaped
+  (`shared/world3-mirage.js`, a hand-made place), its beach, palms and jetty kept right, the cinematics that show it
+  reshot after.
 - The art pass's checks (the owner, 11-24 14:35: "Keep a list of things to check and I will check them when we push
   everything live, but since a lot of this is a world art update i think we should wait until we get all the art done
   first, or at least a large chunk"): what wants his eye is kept in `docs/tasks/ART-CHECK-LIST.md` (project copy

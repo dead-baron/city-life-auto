@@ -45,3 +45,17 @@ test('no grey cone on top: the crown closes over the trunk\'s tip', () => {
     assert.ok(greyN <= 2, `${sp} ${t}: no grey spike on top (${greyN} grey pixels; a stray one off a bough is fine)`);
   }
 });
+
+// A redwood's item claims the room its picture takes (statics.js redwoodRoom: half width, height, and the roots below
+// its foot) - a picture beyond its room is cut off at a chunk's edge. (11-24: a giant's roots reached 86 px below a
+// foot that claimed 60, and the second growth's widest crowns 110 px out of 100.)
+test('a redwood\'s picture is inside the room its item claims', async () => {
+  const { makeStatic, redwoodRoom } = await import('../client/art2/game/statics.js');
+  // (the pictures natureItems places: a giant, its high-crowned form, the gate, the second growth and its high form)
+  for (const [sp, art] of [['giantL', 'giantL'], ['giant', 'giant'], ['giantS', 'giantS'], ['giantL', 'giantLH'], ['giant', 'giantH'], ['giantS', 'giantSH'], ['gate', 'gate'], ['redwood2', 'redwood2'], ['redwood2', 'redwood2H']]) for (let v = 0; v < 12; v++) {
+    const G = makeStatic({ t: 'f', sp: art, s: 1000 + v * 37 + sp.length * 7, k: 1 }), k = G.ap2 || 1, e = redwoodRoom(art);
+    let L = 0, R = 0, U = 0, D = 0;
+    for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) if (G.col[(y * G.w + x) * 4 + 3]) { L = Math.max(L, G.ax - x * k); R = Math.max(R, (x + 1) * k - G.ax); U = Math.max(U, G.ay - y * k); D = Math.max(D, (y + 1) * k - G.ay); }
+    assert.ok(L <= e[0] && U <= e[1] && R <= e[2] && D <= e[3], `${art} ${v}: L${L}/${e[0]} U${U}/${e[1]} R${R}/${e[2]} D${D}/${e[3]}`);
+  }
+});

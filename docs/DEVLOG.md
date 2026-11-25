@@ -27206,3 +27206,20 @@ is a hand-made place with its rails, reeds and bridges set on its ellipse - the 
 owner says which lake he meant (on the check list).
 Paused here on the owner's word of 18:00: the redwood forest first (docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md).
 
+
+## 2026-11-24 · The redwoods' rooms; the trunks-only look tried and dropped - on branch `fable-art-1124`
+The overhaul's first step (the giants as trunks with no crown, approved with the whole proposal at 18:13) was built two
+ways - a cut top with a few boughs hanging in, then a top outlined whole and thinned out upward by an ordered dither -
+rendered in the grove, the Giants Loop and at Giant's Gate, and dropped on the owner's word at 18:47 ("I don't think
+the disolve looks good ... not looking good compared to what we have already"). Nothing of it is in the code. Variants
+of the tree as it is (the crown higher and smaller) are with him to pick from: docs/DECISIONS.md, the check list.
+
+Kept from it, because the measuring found them in today's trees:
+- **A redwood's picture inside its room.** A giant's roots reach 86 px below its foot (the middle size 68) and every
+  redwood's item claimed 60; the second growth's widest crowns reach 110 px out of a claimed 100. A picture beyond its
+  room is cut at a chunk's edge. `statics.js` `redwoodRoom(art)` (the species' fourth number: the roots' reach) is what
+  the item claims now; `test/redwood-art.test.js` holds all nine placed pictures, twelve shapes each, to it.
+- Counted, for the crossings and the water (docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md part 5): three footbridges in
+  Highland Woods, two of them wrong; 1,248 tiles of water in 1.8 million of land.
+
+Not run: the whole test suite (the redwood, fade, flora and budget tests pass). Not seen in a running game.
