@@ -27637,3 +27637,16 @@ The owner, 13:33 and 13:35, on the mountain streams' pictures (his words in DECI
   in water, not in nothing. The cascade on down the rock band stays off.
 - Tests: test/world3peaks.test.js (the cirque's rock and walls, the camp and the cabin open, the pool),
   test/world3wayside.test.js (two rails for every road passed), test/cliffs.test.js pass. Not seen in a running game.
+
+## 2026-11-25 · The shark reshaped; the cats' nose, head and tail - page code, on branch `fable-art-1124`
+- **The shark** (the owner, 15:10: "could use another pass on it let's try to make it look better"): it swam as a
+  dark torpedo with a stub of a tail. client/art2/animals.js `sharkModel`: a pointed snout, widest at the shoulders, a
+  long taper to a narrow tail stock; broad swept pectoral fins and small pelvic fins; its back a tone lighter along
+  the middle, where it lies just under the surface; a taller dorsal fin, a small second one aft; the tail's upper
+  lobe a tall blade swept back. The bite of this morning is kept (its test passes). Picture: `report-54`.
+- **The cats** (the owner, 15:22: "a longer cat like tail and a cuter face ... the dog ... has a nose"): a small pink
+  nose low on the face under the eyes (on 11-21 a nose level with an eye read as a second eye and was taken off), the
+  head a size bigger, the tail half as long again, up behind and hooked. A first try for his eye: `report-55`, the
+  cats before and after beside two dogs. They are 17 art pixels tall: a face is two eyes and a nose.
+- Page code: no re-bake. test/animalart.test.js and test/perf.test.js (the page's budget) pass. Not seen in a game.
+

@@ -142,5 +142,6 @@ last leap over the top of a falls; the other fish's leaps.
   where its outflow ended. Picture: `report-52`. Judge: the wall's height and reach; Eagle Crag moved 5 tiles.
 - [x] **The road over a creek** (the owner, 11-25 14:52: "looks good how it is now except the railings should be a
   little longer and connected to the street" - done, `report-52`).
-- [ ] **The cats** (his question of 15:10): as they are since 11-21 - `report-53`. Judge: anything still off.
-- [ ] **The shark**: another pass asked 15:10 - to do.
+- [ ] **The cats** (the owner, 11-25 15:22: "a longer cat like tail and a cuter face"): a first try - a nose, a
+  bigger head, a longer tail. Picture: `report-55`. Judge: cute enough, still a cat.
+- [ ] **The shark**: reshaped 11-25 (his ask of 15:10). Picture: `report-54`. Judge in the water, in the game.

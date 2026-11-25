@@ -435,6 +435,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   it out").
 - The shark gets another pass (the owner, 11-25 15:10: "The shark could use another pass on it let's try to make it
   look better").
+- The cats, again (the owner, 11-25 15:22, on their sheet): "the cat could be better with a longer cat like tail and
+  a cuter face. The dog looks really good in game and I think it has a nose and a bit more detailed, can we try to
+  match the cuteness with the cat but make sure it looks like a cat?" - a first try shown the same hour (`report-55`).
 - The cats (his question of 11-25 15:10, "Did we already fix the cats ... faces and tail were off"): yes - redrawn
   twice on 11-21 after his notes of 09:27 and 09:55 (a flat wide face that is its eyes, ears set wide, a thin tail up
   behind with a hooked tip), live since the 11-22 merge; shown to him again 11-25 (`report-53`).
