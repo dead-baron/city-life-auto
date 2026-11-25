@@ -27402,3 +27402,13 @@ small cluster where a noise runs high, else one frond in twenty-five. `floraExt`
 kind needs (the tussock and the chain fern hang 40 px under theirs). test/ferns.test.js: the rule (gold never on wet
 or shaded ground, under 5% of ferns, every kind grows somewhere) and each kind's picture inside its room. The bake's
 code: 1,089 of 1,100 KB.
+
+## 2026-11-25 · A fork's centre lines no longer run side by side - on branch `fable-art-1124`
+The owner's note (PDF, a desert road by the Eastern Desert First Aid Station): "What is up with this double yellow lane
+merge on this street? Does not look right". Two roads leaving a junction some 25 degrees apart each painted its
+double yellow up to the junction's trim, so for the length their pavements overlap the two ran side by side into one.
+groundbake.js `forkTrim`: at a junction of three or more roads, a road within 60 degrees of another starts its lines
+where its middle comes out of the other's pavement (the other's half width over the sine of the angle, at most 480
+px) - unless it is the one that carries straight on through the junction, which keeps them. Every fork in the world,
+not this one. test/groundedges.test.js (a Y, a T, a crossroads, a symmetric Y, a very sharp fork); seen at the first
+aid station's fork. Ground paint: with the re-bake.

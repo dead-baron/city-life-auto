@@ -123,3 +123,25 @@ test('a soft bank goes under the water in tongues; fewer rocks stand in a creek 
   const wsrc = (await import('node:fs')).readFileSync(new URL('../client/art2/water.js', import.meta.url), 'utf8'), B = wsrc.match(/BOULDER = \[([^\]]+)\]/)[1].split(',').map(Number);
   assert.ok(B[W.WK.CREEK] <= 0.1 && B[W.WK.RIVER] <= 0.05 && B[W.WK.CREEK] > 0.04, `rocks in running water (${B[W.WK.CREEK]}, ${B[W.WK.RIVER]}): fewer, not none`);
 });
+
+// A fork's centre lines (the owner, 11-25, a desert road by a hospital: "this double yellow lane merge ... Does not
+// look right"): two roads leaving a junction 25 degrees apart ran their double yellows side by side into it. The one
+// that carries straight on keeps its lines; the one joining starts its own where it comes out of the other's pavement.
+test('at a fork the joining road\'s centre line starts clear of the through road\'s pavement', async () => {
+  const { forkTrim, FORK } = await import('../client/art2/game/groundbake.js');
+  const rad = (d) => d * Math.PI / 180;
+  // a Y: the stem comes in from the south (dir 90), the through road leaves north (dir -90), a branch leaves 25 degrees off it
+  const n = { edges: [0, 1, 2], dirs: { 0: rad(90), 1: rad(-90), 2: rad(-65) } };
+  const M = { edges: [{ id: 0, hw: 40 }, { id: 1, hw: 40 }, { id: 2, hw: 40 }] };
+  assert.equal(forkTrim(M, M.edges[1], n), 0, 'the road that carries straight on keeps its lines');
+  assert.equal(forkTrim(M, M.edges[0], n), 0, 'the stem too');
+  const t = forkTrim(M, M.edges[2], n);
+  assert.ok(Math.abs(t - (40 / Math.sin(rad(25)) + FORK.pad)) < 1, `the branch's lines start ${t.toFixed(0)} px out: where its middle leaves the other's pavement`);
+  // a plain crossroads and a T are untouched; a symmetric Y trims one of the two, not both
+  assert.equal(forkTrim(M, M.edges[1], { edges: [0, 1, 2], dirs: { 0: rad(90), 1: rad(-90), 2: 0 } }), 0);
+  assert.equal(forkTrim(M, M.edges[2], { edges: [0, 1, 2], dirs: { 0: rad(90), 1: rad(-90), 2: 0 } }), 0);
+  const y = { edges: [0, 1, 2], dirs: { 0: rad(90), 1: rad(-110), 2: rad(-70) } };
+  assert.equal([1, 2].filter((id) => forkTrim(M, M.edges[id], y) > 0).length, 1);
+  // a very sharp fork is capped
+  assert.ok(forkTrim(M, M.edges[2], { edges: [0, 1, 2], dirs: { 0: rad(90), 1: rad(-90), 2: rad(-88) } }) <= FORK.max);
+});

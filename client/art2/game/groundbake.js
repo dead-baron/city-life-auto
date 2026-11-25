@@ -515,6 +515,28 @@ const inRect = (r, X, Y) => r && X >= r.x && X < r.x + r.w && Y >= r.y && Y < r.
 const inRects = (list, X, Y, key) => list.some((r) => (!key || r.key === key) && inRect(r, X, Y));
 
 // ---- 2. roads as distance fields ------------------------------------------------------------------------------
+// A fork (the owner, 11-25: "What is up with this double yellow lane merge on this street?"): where a road leaves a
+// junction at a sharp angle to another, its centre line lies inside the other's pavement for a way, and both roads'
+// double yellows ran side by side into the junction. The road that carries straight on through the junction keeps
+// its lines; the one joining it starts its own where its middle comes out of the other's pavement.
+export const FORK = { cos: 0.5, pad: 10, max: 480 };   // (under 60 degrees apart; px past the other's kerb; at most)
+export function forkTrim(M, e, n) {
+  if (!n || !n.edges || n.edges.length < 3 || !n.dirs) return 0;
+  const ids = n.edges.filter((id) => M.edges[id] && n.dirs[id] !== undefined), my = n.dirs[e.id];
+  if (my === undefined) return 0;
+  // how straight a road carries on: the most nearly opposite of the others (1: dead straight through)
+  const thru = (id) => Math.max(...ids.filter((o) => o !== id).map((o) => -Math.cos(n.dirs[o] - n.dirs[id])));
+  let trim = 0;
+  for (const o of ids) {
+    if (o === e.id) continue;
+    const c = Math.cos(n.dirs[o] - my);
+    if (c < FORK.cos) continue;
+    const a = thru(e.id), b = thru(o);
+    if (a > b + 1e-6 || (Math.abs(a - b) <= 1e-6 && e.id < o)) continue;   // (this one carries on: its lines stay)
+    trim = Math.max(trim, Math.min(M.edges[o].hw / Math.sqrt(Math.max(0.02, 1 - c * c)) + FORK.pad, FORK.max));
+  }
+  return trim;
+}
 function edgeInfo(M, e) {
   if (e._gb) return e._gb;
   const P = e.pts;
@@ -526,7 +548,7 @@ function edgeInfo(M, e) {
   // a little wider on curves where the tile raster steps out past the smooth kerb line
   const city = CITY.has(e.kind), walk = city ? (e.walk ?? 2 * TILE) + (aligned ? 0 : 0.6 * TILE) : e.kind === 'rural' ? 18 : 0;
   const L = P[P.length - 1].s, na = M.nodes[e.a], nb = M.nodes[e.b];
-  const t0 = ((na && na.trim[e.id]) || 0) + 6, t1 = L - ((nb && nb.trim[e.id]) || 0) - 6;
+  const t0 = Math.max(((na && na.trim[e.id]) || 0) + 6, forkTrim(M, e, na)), t1 = L - Math.max(((nb && nb.trim[e.id]) || 0) + 6, forkTrim(M, e, nb));
   const linked = na && nb && na.edges.length >= 3 && nb.edges.length >= 3 && t1 - t0 < 138 && e.kind !== 'hwy';
   // bridge spans: where the centre line runs over water, with a short run onto each bank
   const wet = [];

@@ -10,13 +10,13 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 const ROOT = process.env.ROOT ? process.env.ROOT.replace(/\/?$/, '/') : fileURLToPath(new URL('../..', import.meta.url)), imp = (f) => import(pathToFileURL(join(ROOT, f)).href);
 const shots = []; let sites = false, find = null, who = false;
-for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i], v = process.argv[i + 1]; if (a === '--rect') shots.push({ rect: v.split(',').map(Number), out: null }); else if (a === '--out' && shots.length) shots[shots.length - 1].out = v; else if (a === '--sites') sites = true; else if (a === '--who') who = true; else if (a === '--find') find = new RegExp(v, 'i'); else if (a === '--place') shots.push({ place: v, out: null }); }
+for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i], v = process.argv[i + 1]; if (a === '--rect') shots.push({ rect: v.split(',').map(Number), out: null }); else if (a === '--out' && shots.length) shots[shots.length - 1].out = v; else if (a === '--sites') sites = true; else if (a === '--s' && shots.length) shots[shots.length - 1].s = +v; else if (a === '--who') who = true; else if (a === '--find') find = new RegExp(v, 'i'); else if (a === '--place') shots.push({ place: v, out: null }); }
 const { buildWorld3 } = await imp('server/world3.js');
 const { TILE, CHUNK_TILES } = await imp('shared/constants.js');
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const PL = (M.landmarks || []).map((l) => ({ name: l.name || l.type, type: l.type, x0: l.x / TILE, y0: l.y / TILE, x1: (l.x + (l.w || 0)) / TILE, y1: (l.y + (l.h || 0)) / TILE }));   // (the map's landmarks, in tiles)
 if (find) console.log(PL.filter((p) => find.test(p.name) || find.test(p.type || '')).map((p) => `${p.name} @ ${Math.round((p.x0 + p.x1) / 2)},${Math.round((p.y0 + p.y1) / 2)} (${p.x1 - p.x0} x ${p.y1 - p.y0})`).join('\n') || 'no place matches', '| places:', PL.length);
-for (const sh of shots) if (sh.place) { const [nm, sz = '40,30'] = sh.place.split(':'), p = PL.find((q) => q.name === nm) || PL.find((q) => q.type === nm), [w, h] = sz.split(',').map(Number); if (!p) throw new Error('no place ' + nm); const cx = Math.round((p.x0 + p.x1) / 2), cy = Math.round((p.y0 + p.y1) / 2); sh.rect = [cx - (w >> 1), cy - (h >> 1), cx + (w >> 1), cy + (h >> 1)]; }
+for (const sh of shots) if (sh.place) { const [nm, sz = '40,30'] = sh.place.split(':'), p = PL.find((q) => q.name === nm) || PL.find((q) => q.type === nm) || PL.find((q) => (q.name || '').includes(nm)), [w, h] = sz.split(',').map(Number); if (!p) throw new Error('no place ' + nm); const cx = Math.round((p.x0 + p.x1) / 2), cy = Math.round((p.y0 + p.y1) / 2); sh.rect = [cx - (w >> 1), cy - (h >> 1), cx + (w >> 1), cy + (h >> 1)]; }
 const { bakeChunk, loadProviders, SpriteCache, providers } = await imp('client/art2/game/chunkbake.js');
 const ST = await imp('client/art2/game/statics.js');
 const { F_WATER, F_LEAF } = await imp('client/art2/gbuf.js');
@@ -26,7 +26,7 @@ const P = PRESETS_GAME.noon, sl = Math.hypot(...P.sunDir), sun = P.sunDir.map((v
 const cache = new SpriteCache(300e6), opt = { quality: 1, seed: 1337, lowMem: false, artPx: 2, scratch: false }, CHP = CHUNK_TILES * TILE;
 const GAM = new Float32Array(256); for (let i = 0; i < 256; i++) GAM[i] = Math.pow(i / 255, 2.2);
 for (const sh of shots) {
-  const [x0, y0, x1, y1] = sh.rect.map((v) => v * TILE), S = 2, GW = Math.ceil((x1 - x0) / S), GH = Math.ceil((y1 - y0) / S), img = Buffer.alloc(GW * GH * 3), plain = Buffer.alloc(GW * GH * 3);
+  const [x0, y0, x1, y1] = sh.rect.map((v) => v * TILE), S = sh.s || 2, GW = Math.ceil((x1 - x0) / S), GH = Math.ceil((y1 - y0) / S), img = Buffer.alloc(GW * GH * 3), plain = Buffer.alloc(GW * GH * 3);
   let n = 0, dark = 0, leafN = 0, leafD = 0, upN = 0, upD = 0, black = 0;
   for (let cy = Math.floor(y0 / CHP); cy <= Math.floor((y1 - 1) / CHP); cy++) for (let cx = Math.floor(x0 / CHP); cx <= Math.floor((x1 - 1) / CHP); cx++) {
     const g = bakeChunk(M, cx, cy, opt, cache, providers).g, ox = cx * CHP, oy = cy * CHP;
