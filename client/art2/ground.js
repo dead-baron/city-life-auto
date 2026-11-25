@@ -945,8 +945,10 @@ export const GSHADE = {
   },
   crag(x, y, s) {                                            // bare rock (the owner, 10-21: rock you couldn't see) - a crag's, a cliff band's top, a rock rib: granite slabs split by dark cracks, each slab tilted to the light its own way, lichen on them
     // (raised: each slab stands 8-16 px up, the cracks lower - so the rock casts its shadow and reads as rock, not paving)
-    const w = worley(x + 0.5, y + 0.5, 30, s + 51, 0.95), edge = w.d2 - w.d1, h = w.h, g = hh(w.gx, w.gy, s + 53);
-    if (edge < 1.6) { GS.nx = GS.ny = 0; GS.h = 4; return at(SCREE, edge < 0.8 ? 0 : 1); }   // (the cracks between the slabs)
+    const CV = globalThis.__CRAG | 0;   // (TRIAL: CRAG - bigger slabs, lighter, finer cracks)
+    const w = worley(x + 0.5, (y + 0.5) * (CV ? 1.5 : 1), CV ? 58 : 30, s + 51, 0.95), edge = w.d2 - w.d1, h = w.h, g = hh(w.gx, w.gy, s + 53);
+    if (edge < (CV ? 1.1 : 1.6)) { GS.nx = GS.ny = 0; GS.h = 4; return at(SCREE, edge < 0.8 ? (CV ? 1 : 0) : (CV ? 2 : 1)); }   // (the cracks between the slabs)
+    if (CV) { GS.nx = (h - 0.5) * 0.5; GS.ny = (g - 0.5) * 0.5; GS.h = 8 + Math.round(h * 6); if (vnc(x, y, 7, s + 55) > 0.82 && hh(x, y, s + 57) > 0.3) return at(G_ALP, 5); return sd(SCREE, 0.78 + (h - 0.5) * 0.2 - (edge < 3 ? 0.1 : 0) + (vnc(x, y, 5, s + 59) - 0.5) * 0.1 + (vnc(x, y, 60, s + 61) - 0.5) * 0.14, x, y, 0.4); }
     GS.nx = (h - 0.5) * 1.1 + w.dx / 60; GS.ny = (g - 0.5) * 1.1 + w.dy / 60; GS.h = 8 + Math.round(h * 8) - (edge < 4 ? 2 : 0);
     if (vnc(x, y, 7, s + 55) > 0.8 && hh(x, y, s + 57) > 0.3) return at(G_ALP, 5 + (hh(x, y, s) > 0.5 ? 1 : 0));   // (lichen)
     return sd(SCREE, 0.52 + (h - 0.5) * 0.3 - (edge < 4 ? 0.14 : 0) - (w.dx + w.dy) / 90 + (vnc(x, y, 5, s + 59) - 0.5) * 0.12, x, y, 0.4);

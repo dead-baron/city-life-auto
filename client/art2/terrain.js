@@ -36,6 +36,7 @@ export const ROCK = {
   redrock: { id: 0, face: [RO('#cc5a30', { shift: 0.3 }), RO('#b04428', { dark: 0.58, shift: 0.3 }), RO('#dc7438', { shift: 0.3 }), RO('#c25232', { shift: 0.3 })], top: RO('#c86c3c', { light: 0.3, shift: 0.3 }), jag: 6, block: 12, blocky: 0.9, fine: 1.2 },   // (the red rock desert's bright orange-red: concepts N4, NT1-B, SC3-F)
   sandstone: { id: 0, face: [RO('#b05238'), RO('#923c34', { dark: 0.62 }), RO('#c06c46'), RO('#a04a3a')], top: RO('#a45a40', { light: 0.36 }), jag: 9, block: 13, blocky: 0.75, fine: 1.5 },
   granite: { id: 1, face: [RO('#a39b92', { shift: 0.2 }), RO('#8f8a86', { shift: 0.2 }), RO('#b0a796', { shift: 0.2 })], top: RO('#aca598', { shift: 0.2 }), jag: 10, block: 18, blocky: 0.45, fine: 1.5 },
+  crag: { id: 1, face: [RO('#9a958e', { shift: 0.2 }), RO('#868380', { shift: 0.2 }), RO('#a39c90', { shift: 0.2 })], top: RO('#8c8e8e', { shift: 0.2, light: 0.34 }), jag: 10, block: 18, blocky: 0.45, fine: 1.5, bare: 1 },   // (a mountain crag's face: its top the grey of the rock behind it - ground.js crag)
   basalt: { id: 2, face: [RO('#5e5248', { shift: 0.28 }), RO('#4e4744', { shift: 0.28 }), RO('#6a5c4c', { shift: 0.28 })], top: RO('#5c5046', { shift: 0.28 }), jag: 6, block: 9, blocky: 0.5, fine: 1.2 },
   lava: { id: 2, face: [RO('#3e3c42', { shift: 0.2, light: 0.56 }), RO('#2e2d33', { shift: 0.2, light: 0.56 }), RO('#4a474c', { shift: 0.2, light: 0.56 })], top: RO('#45424a', { shift: 0.2, light: 0.5 }), jag: 6, block: 8, blocky: 0.72, fine: 1.2 },   // (the tropics' black volcanic rock: shared/world3-tropic.js)
   cave: { id: 3, face: [RO('#786a74', { dark: 0.68 }), RO('#665a68', { dark: 0.68 }), RO('#847466', { dark: 0.68 })], top: RO('#6e6270', { dark: 0.7 }), jag: 12, block: 11, blocky: 0.25, fine: 2 },
@@ -324,7 +325,8 @@ export class Terrain {
       const me = y + 2 * z[i];
       for (const k of [i - w, i - 1, i + 1]) if (col[k * 4 + 3] && me - ((k / w | 0) + 2 * z[k]) > 9) { add.push(i); break; }
     }
-    for (const i of add) { const j = i * 4, o = OUTC([col[j], col[j + 1], col[j + 2]]); col[j] = o[0]; col[j + 1] = o[1]; col[j + 2] = o[2]; }
+    const soft = this.ops.some((q) => q.st && q.st.bare);   // (a crag's wall: its clefts a tone deeper, not a drawn line)
+    for (const i of add) { const j = i * 4, o = soft ? [col[j] * 0.72, col[j + 1] * 0.72, col[j + 2] * 0.76] : OUTC([col[j], col[j + 1], col[j + 2]]); col[j] = o[0]; col[j + 1] = o[1]; col[j + 2] = o[2]; }
   }
   _face(G, op, X, Y, s, z, h0, h1, ox, oy) {
     const r = rockFace(this, op, X, Y, z, h0, h1);
@@ -384,7 +386,7 @@ function rockTop(st, op, kind, x, y, e) {
       t = 0.55 + (C.id - 0.5) * 0.18 - TR.nx * 0.18 - TR.ny * 0.12 + (h > 0.9 ? 0.18 : h < 0.07 ? -0.2 : 0);
       if (crack) t = 0.14;
       const li = vnoise(x, y, 5, seed + 9);
-      if (!crack && li > 0.74) { TR.c = pickR(li > 0.86 ? LICHEN2 : LICHEN, 0.45 + (h - 0.5) * 0.4, x, y); return TR; }
+      if (!crack && li > (st.bare ? 0.9 : 0.74)) { TR.c = pickR(li > 0.86 && !st.bare ? LICHEN2 : LICHEN, 0.45 + (h - 0.5) * 0.4, x, y); return TR; }
       break;
     }
     case 2: { // basalt: lumpy dark rock, barnacles and mussels

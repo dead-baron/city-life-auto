@@ -101,3 +101,12 @@ last leap over the top of a falls; the other fish's leaps.
   docs/tasks/NATURE-REDRAW-2026-11-25.md. For his eye: before / after of the spot he circled, Pine Lake, Coral Cay
   Falls. Live with the re-bake.
 - **The giants' tops**: a mix of three, his pick of 03:20 - in.
+
+- **The mountains' look** (his note in the PDF of 11-25): three variants of a Granite Peaks crag for his pick -
+  A as it is, B one cliff wall with the rock behind rising in ledges, C the same with snow on the high benches
+  (docs/tasks/MOUNTAIN-LOOK-2026-11-25.md, report-38.png). The game draws A until he picks.
+- **See under the El and the highway decks** (his note): in, by the buildings' rule; with the re-bake.
+- **A fork's double yellow lines** (his note): fixed for every fork; with the re-bake.
+- **The fern kit**: planted (ten kinds by wetness, gold bracken under 5% and only in sunlit gaps); with the re-bake.
+- **Still to do from his notes**: the shore's static white marks (animate or remove), a road bridge's hard edge
+  against the water, the shark's head, faceplant and lying down, cloud shadows (a still first).

@@ -10,13 +10,18 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 const ROOT = process.env.ROOT ? process.env.ROOT.replace(/\/?$/, '/') : fileURLToPath(new URL('../..', import.meta.url)), imp = (f) => import(pathToFileURL(join(ROOT, f)).href);
 const shots = []; let sites = false, find = null, who = false;
-for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i], v = process.argv[i + 1]; if (a === '--rect') shots.push({ rect: v.split(',').map(Number), out: null }); else if (a === '--out' && shots.length) shots[shots.length - 1].out = v; else if (a === '--sites') sites = true; else if (a === '--s' && shots.length) shots[shots.length - 1].s = +v; else if (a === '--who') who = true; else if (a === '--find') find = new RegExp(v, 'i'); else if (a === '--place') shots.push({ place: v, out: null }); }
+for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i], v = process.argv[i + 1]; if (a === '--rect') shots.push({ rect: v.split(',').map(Number), out: null }); else if (a === '--out' && shots.length) shots[shots.length - 1].out = v; else if (a === '--sites') sites = true; else if (a === '--s' && shots.length) shots[shots.length - 1].s = +v; else if (a === '--who') who = true; else if (a === '--find') find = new RegExp(v, 'i'); else if (a === '--place') shots.push({ place: v, out: null }); else if (a === '--prop') shots.push({ prop: v, out: null }); }
+if (process.env.CRAG) globalThis.__CRAG = +process.env.CRAG;   // (a look on trial: the mountain crags - 1 walls and ledges, 2 taller, 3 snow on the high benches)
 const { buildWorld3 } = await imp('server/world3.js');
 const { TILE, CHUNK_TILES } = await imp('shared/constants.js');
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const PL = (M.landmarks || []).map((l) => ({ name: l.name || l.type, type: l.type, x0: l.x / TILE, y0: l.y / TILE, x1: (l.x + (l.w || 0)) / TILE, y1: (l.y + (l.h || 0)) / TILE }));   // (the map's landmarks, in tiles)
 if (find) console.log(PL.filter((p) => find.test(p.name) || find.test(p.type || '')).map((p) => `${p.name} @ ${Math.round((p.x0 + p.x1) / 2)},${Math.round((p.y0 + p.y1) / 2)} (${p.x1 - p.x0} x ${p.y1 - p.y0})`).join('\n') || 'no place matches', '| places:', PL.length);
 for (const sh of shots) if (sh.place) { const [nm, sz = '40,30'] = sh.place.split(':'), p = PL.find((q) => q.name === nm) || PL.find((q) => q.type === nm) || PL.find((q) => (q.name || '').includes(nm)), [w, h] = sz.split(',').map(Number); if (!p) throw new Error('no place ' + nm); const cx = Math.round((p.x0 + p.x1) / 2), cy = Math.round((p.y0 + p.y1) / 2); sh.rect = [cx - (w >> 1), cy - (h >> 1), cx + (w >> 1), cy + (h >> 1)]; }
+// (--prop type@x0,y0,x1,y1[:w,h]: where the most props of a type stand together inside a box of tiles)
+for (const sh of shots) if (sh.prop) { const [spec, sz = '60,44'] = sh.prop.split(':'), [type, box] = spec.split('@'), B = box.split(',').map(Number), [w, h] = sz.split(',').map(Number), cnt = new Map(); let best = null, bn = 0;
+  for (const p of M.props) { if (!p || (p.t || p.type) !== type) continue; const tx = p.x / TILE, ty = p.y / TILE; if (tx < B[0] || ty < B[1] || tx > B[2] || ty > B[3]) continue; const k = Math.floor(tx / 24) + ',' + Math.floor(ty / 24), n = (cnt.get(k) || 0) + 1; cnt.set(k, n); if (n > bn) { bn = n; best = k; } }
+  if (!best) throw new Error('no prop ' + type); const [gx, gy] = best.split(',').map(Number), cx = gx * 24 + 12, cy = gy * 24 + 12; sh.rect = [cx - (w >> 1), cy - (h >> 1), cx + (w >> 1), cy + (h >> 1)]; console.log(`${type}: ${bn} together round tile ${cx},${cy} (${[...cnt.values()].reduce((a, b) => a + b, 0)} in the box)`); }
 const { bakeChunk, loadProviders, SpriteCache, providers } = await imp('client/art2/game/chunkbake.js');
 const ST = await imp('client/art2/game/statics.js');
 const { F_WATER, F_LEAF } = await imp('client/art2/gbuf.js');

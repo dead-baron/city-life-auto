@@ -27423,3 +27423,13 @@ along it by the same open-ground rule (host.js `_fades`), clear round you, their
 Up on the deck or a platform (`UP_Z`) or riding the train, it stays under you. A deck fades as a building does, not
 as a thin mast. test/alleyfade.test.js; seen in a local game under a highway deck (today's world has no El: the El
 itself is untested in a running game). Baked: with the re-bake.
+
+## 2026-11-25 · The mountains' look: three variants on trial - on branch `fable-art-1124`
+The owner's note: a crag reads as "a group of 4 similar shaped rocks stacked in a row". Why: each run of a cliff band
+got a stepped lump of its own, and the solid rock behind was flat cobbles. On trial behind a switch only the picture
+tool sets (`globalThis.__CRAG`; the game draws what it drew): statics.js `cliff` as a sheer wall (terrain.js style
+`crag`: its top the grey of the rock behind, its clefts a tone deeper - `bare`), ground.js `crag` in big light slabs,
+groundbake.js `reliefOn` drawing ledges on rock along the land's contours (every 4 m, the face where the ground falls
+toward the viewer) and, at 3, snow on the benches above 150 m. docs/tasks/MOUNTAIN-LOOK-2026-11-25.md has the three
+pictures' account and what a pick leads to. tools/nature/darkscan.mjs: `--prop type@box` finds where a kind of prop
+stands thickest; `CRAG=n`.

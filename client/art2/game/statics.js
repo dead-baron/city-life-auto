@@ -366,8 +366,8 @@ export function makeStatic(r) {
       // the outline: a squashed superellipse, ragged, its south side flattened where the adit is (the face) - the
       // shape the world build makes solid under it (shared/cliffshape.js: the rock drawn is the rock you can't walk into)
       const W = r.w, D = r.d, pad = CLIFF_PAD, poly = cliffOutline(W, D, r.s || 1).map(([x, y]) => [x + W / 2 + pad, y + D + 6]);
-      const ss = r.st === 'sandstone';
-      return rockSprite(W + pad * 2, D + 16, r.h + 6, (Tr) => Tr.plateau({ poly }, { style: ss ? 'sandstone' : r.st === 'basalt' ? 'basalt' : 'granite', tiers: cliffTiers(D, r.h), veg: ss ? { kind: 'sage', density: 0.05, band: 2 } : { kind: 'grass', density: 0.1, band: 2 }, hang: ss ? null : { kind: 'moss', amount: 0.35 }, moss: ss ? 0 : 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
+      const ss = r.st === 'sandstone', CV = globalThis.__CRAG | 0, ch = CV >= 2 && !ss ? Math.round(r.h * 1.5) : r.h;   // (TRIAL: CRAG)
+      return rockSprite(W + pad * 2, D + 16, ch + 6, (Tr) => Tr.plateau({ poly }, { style: ss ? 'sandstone' : r.st === 'basalt' ? 'basalt' : CV ? 'crag' : 'granite', tiers: CV && !ss ? [[0, ch * 0.88], [5, ch]] : cliffTiers(D, r.h), veg: ss ? { kind: 'sage', density: 0.05, band: 2 } : { kind: 'grass', density: CV ? 0.05 : 0.1, band: 2 }, hang: ss ? null : { kind: 'moss', amount: CV ? 0.2 : 0.35 }, moss: ss ? 0 : CV ? 0.05 : 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
     }
     case 'crystal': {
       const G = crystals(r.s || 1, r.size || 20, '#5ac8ff');
