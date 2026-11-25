@@ -397,6 +397,11 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   alley you stand on fades (host.js `_fades`; `FADE_REACH` 20 tiles along, `FADE_ACROSS` 7 up and down). A building
   faced from its own street keeps its front; opening the alley behind it from the street would ghost the shopfronts
   and is his call.
+- A faded building is all but clear (the owner, 11-25 03:05, on the live see-through streets: "we need the buildings
+  to be totally transparent like as transparent as it is around my character. Maybe a little bit of gradient or
+  dissolve around the edges"; 09:03: "Push the transparent buildings and emotes"): engine.js `GHOST` 0.94 with a rim
+  that dissolves in over 12 px. This replaces the 10-23 "a ghost, not the whole of it at once"; a thin thing (a
+  mast's hut, a tree) keeps its lighter ghost.
 
 ## Vehicles and the car
 - Things a vehicle hits react, for the pre-beta (11-23 20:10, "anything that a vehicle can knock over or drive through or

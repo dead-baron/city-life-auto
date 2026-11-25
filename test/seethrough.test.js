@@ -61,7 +61,9 @@ test('a thin one (a hut by its mast) fades less: a negative fade, the lighter gh
   const h = host([HUT]);
   step(h, 2030, 960, 10);
   assert.ok(h.fades.get(8) < -0.9, `thin (${h.fades.get(8)})`);
-  assert.ok(GHOST_THIN < GHOST && GHOST < 0.7, 'semi-transparent, never gone');
+  // (11-25, the owner: a faded building all but clear - "totally transparent ... a little bit of gradient or dissolve
+  // around the edges"; a thin one keeps its lighter ghost so a mast or a tree doesn't vanish)
+  assert.ok(GHOST_THIN < 0.5 && GHOST >= 0.9 && GHOST < 1, 'a building all but clear; a thin one a ghost');
 });
 
 test('the ghost: fully clear only round you (and the players near you), the edge soft', () => {
@@ -73,13 +75,17 @@ test('the ghost: fully clear only round you (and the players near you), the edge
   assert.equal(C[10], 0, 'not round a passer-by');
   assert.ok(seeThrough(f, 1200, 778, C) > 0.95, 'clear where you stand');
   const ghost = seeThrough(f, 1100, 650, C);
-  assert.ok(ghost > 0.5 && ghost < 0.7, `a ghost elsewhere (${ghost}): its shape kept, the street through it`);
+  assert.ok(ghost >= 0.9 && ghost < 1, `all but clear elsewhere (${ghost}): the street through it`);
+  const rim = seeThrough(f, 1100, 650, C, 1), half = seeThrough(f, 1100, 650, C, 0.5);
+  assert.ok(rim > 0.4 && rim < 0.6 && half > rim && half < ghost, `its rim dissolves in (${rim}, ${half}): the shape stays readable`);
   // the edge feathered: from clear to the ghost over a wide band, never a step
   let prev = 1, maxStep = 0;
   for (let d = 0; d <= CLR_FOOT + 4; d += 4) { const v = seeThrough(f, 1200 + d, 778, C); maxStep = Math.max(maxStep, prev - v); prev = v; }
   assert.ok(maxStep < 0.06, `no hard edge (largest step over 4 px: ${maxStep})`);
   const edge = seeThrough(f, 1200 + CLR_FOOT * 0.7, 778, C);
-  assert.ok(edge > ghost + 0.05 && edge < 0.95, `a soft edge (${edge})`);
+  assert.ok(edge > ghost && edge < 1, `a soft edge (${edge}): between the all-but-clear building and the clear space`);
+  const eThin = seeThrough(-f, 1200 + CLR_FOOT * 0.7, 778, C), gThin = seeThrough(-f, 1100, 650, C);
+  assert.ok(eThin > gThin + 0.05 && eThin < 0.95, `and through a thin one's ghost a wide soft edge (${eThin})`);
   assert.ok(seeThrough(-f, 1100, 650, C) < ghost, 'a thin one: lighter still');
 });
 

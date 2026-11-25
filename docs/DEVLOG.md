@@ -27001,3 +27001,17 @@ local game (today's world): at ground under a building's picture that building a
 ground fade, no frame errors. NOT run to the end: the whole suite - on the build machine it did not finish in half an
 hour; three tests that failed under that load (biz, core, calmstreets) pass alone; custodyride, cliffs and
 contacts2w3 timed out unrun (server and world tests; nothing in server/ or shared/ loads host.js).
+
+## 2026-11-25 · Faded buildings all but clear; emotes run through their frames (page code, live on the owner's word)
+The owner, 11-25 09:03: "Push the transparent buildings and emotes".
+- **See-through** (his word of 03:05: "we need the buildings to be totally transparent like as transparent as it is
+  around my character. Maybe a little bit of gradient or dissolve around the edges"): engine.js `GHOST` 0.6 -> 0.94,
+  and a rim that dissolves in over 12 px along the outline and the footprint of what fades (`GHOST_EDGE`, `EDGE_PX`).
+  This replaces the 10-23 "a ghost, not the whole of it at once"; thin things keep their lighter ghost.
+  test/seethrough.test.js.
+- **Emotes** (his note: a faceplant "just leans forward but not falling flat", lying down and sleeping the same):
+  art2/game/peds.js loaded art2/poses.js only while the emotes' table was empty, and the emote wheel's portraits
+  (client/portrait.js) fill that table on their own - so the page never had the frame timing, and every emote stood
+  on its first frame. The poses are now asked for until this module has them. test/emotes.test.js (in a process of
+  its own; fails on the old code). Seen in a local game: flat on the face; lying flat.
+No re-bake (version.json's world and art hashes unchanged), no server restart.
