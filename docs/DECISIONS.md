@@ -390,6 +390,14 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   whenever the mouse had moved, 11-13 to 11-23). The owner, 11-23 21:37: "You used to only hold up the weapon when you
   were aiming ... hold right click and that's when you would aim". (11-23)
 
+- The open ground round you is never hidden (the owner, 11-25 01:13: "Could we have more buildings go transparent
+  when they're blocking an alley or street"; 01:24: "when you're on the street you can still see behind the buildings
+  so nobody can hide ... it would be good to see the entire street and sidewalk from anywhere in the street here, or
+  a wider range"; 01:35: "Id like this to go out"): every building whose picture lies over the street, sidewalk or
+  alley you stand on fades (host.js `_fades`; `FADE_REACH` 20 tiles along, `FADE_ACROSS` 7 up and down). A building
+  faced from its own street keeps its front; opening the alley behind it from the street would ghost the shopfronts
+  and is his call.
+
 ## Vehicles and the car
 - Things a vehicle hits react, for the pre-beta (11-23 20:10, "anything that a vehicle can knock over or drive through or
   destroy should have a visible reaction not just disappear"): fences - chain-link, wooden, the rest - are knocked flat or

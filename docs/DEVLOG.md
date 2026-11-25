@@ -26983,3 +26983,21 @@ phone on 4G. tools/perf.mjs; DECISIONS (performance budgets).
 - The audit's 1: pay unchanged until the first test weekend's money data (DECISIONS).
 No world or art change: the hashes are as before, so the P5 re-bake runs on. Tests: hidden, races, goals, ftue,
 guide, perf, phones, world3rapids, world3marsh, world3woods, riders, activities.
+
+## 2026-11-25 · The open ground round you is never hidden (see-through buildings along your street or alley)
+The owner's two screenshots from the live build: an Old Town alley with the one building over him a ghost and its
+neighbours solid; a street at night with the far sidewalk under the roofs of the row to its south ("see the entire
+street and sidewalk from anywhere in the street ... so nobody can hide"). `host.js` `_fades` had one rule - the
+building whose picture covers your own figure fades. Added: the ground you stand on is followed out from your tile (a
+flood over tiles that are not a building or a wall: `FADE_REACH` 20 tiles either way along, `FADE_ACROSS` 7 up and
+down), and every building whose picture lies over two or more tiles of it, north of its own foot, fades. So the row
+whose roofs hang over the street you are on goes see-through for the length of the block, and a whole alley opens when
+you step into it; a building faced from its own street lies over none of your ground and keeps its front (the alley
+behind it stays hidden until you step in). Worked out when you change tile, and now and then as chunks arrive - not
+every frame. Page-side only: no world or art change, no re-bake, no server restart. `test/alleyfade.test.js`.
+Live on the owner's word (11-25 01:35: "Id like this to go out"). Tuning: the two numbers.
+Tested: the 33 test files that load host.js, the budgets, the map-window and determinism checks (192 pass); run in a
+local game (today's world): at ground under a building's picture that building and its neighbour over the same
+ground fade, no frame errors. NOT run to the end: the whole suite - on the build machine it did not finish in half an
+hour; three tests that failed under that load (biz, core, calmstreets) pass alone; custodyride, cliffs and
+contacts2w3 timed out unrun (server and world tests; nothing in server/ or shared/ loads host.js).
