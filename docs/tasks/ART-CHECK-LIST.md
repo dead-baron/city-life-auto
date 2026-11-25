@@ -36,14 +36,14 @@ added as the work goes; a line he has checked is marked with his word and the da
   the land from the woods west of the Giants Loop to the lake (283 tiles; riffles, 7 pools, stepping stones where a
   path crosses). Pictures: `report-20-creek`. Judge: its width, how many boulders, the pools (big enough to read as
   pools, to fish), the stones. On his word the same rule lays a network, with ponds in the hollows.
-- [ ] **The summits** (built 11-25 on his word "Build the summit from plans") - Eagle Knob (the Summit Trail's end,
+- [x] **The summits** (the owner, 11-25 11:57: "This looks good"; built 11-25 on his word "Build the summit from plans") - Eagle Knob (the Summit Trail's end,
   the telescope), Windy Col, Cairn Peak: a rock top with a level shelf, a crag wall either side of stone steps.
   Pictures: `report-46` (before and after), `report-47`. Judge: does it read as a top; the steps' width; whether
   Cairn Peak - on a spur at 106 m, not a mountain top - should move or be renamed.
-- [ ] **The high mountains show their slopes** (found 11-25: over 255 m the land was flat to the art - 23.2% of
+- [x] **The high mountains show their slopes** (the owner, 11-25 11:57: "This looks good"; found 11-25: over 255 m the land was flat to the art - 23.2% of
   Granite Peaks). Picture: `report-49` (before and after on the steepest ground). Judge: the ledges' closeness on
   steep rock (`groundbake.js` `LEDGE.step`), the shade (`LEDGE.shade` 0.64, was 0.55 everywhere).
-- [ ] **The creek network** (laid 11-25 on his word "Creek looks good let's go with it") - eight creeks in Highland
+- [x] **The creek network** (the owner, 11-25 11:57: "This looks good"; laid 11-25 on his word "Creek looks good let's go with it") - eight creeks in Highland
   Woods; two join others, three end in ponds. Picture: `report-48`. Judge: how many; the ponds' size (about 9 by 7
   tiles). A car driven into a creek is in the water, as in a river.
 - [x] **The El and the highway decks see-through**: off (the owner, 11-25 09:03).

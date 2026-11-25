@@ -424,6 +424,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   docs/tasks/MOUNTAIN-LOOK-2026-11-25.md).
 - The redwoods get a network of creeks like Fernwater Creek (the owner, 11-25 09:03: "Creek looks good let's go with
   it").
+- The summits as built, the high mountains' shading and the creek network are good (the owner, 11-25 11:57, on
+  `report-46` to `report-49`: "This looks good lets keep moving forward"). The whole suite and the re-bake: asked by
+  him whether now or after more art - Claude's answer: art while he is here, the gate when he stops for the day; no
+  merge before his word on that.
 - The re-bake comes after the summits and the creek network are in (the owner, 11-25 09:30: "Let's rebake after the
   summits and Creek work"): the art branch goes out then, in one re-bake - not before, and not held for the rest of
   the art polish.
