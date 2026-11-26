@@ -150,9 +150,15 @@ entries have each piece):**
   what the re-bake would take. After it, page-side only: painted lips hold their place over a walk (`report-79`;
   found for his eye: the eyes' own spacing varies a pixel); **clothing pictures on the Inventory's tiles** (part C3,
   `client/piecepic.js`, `report-80`, `report-81-all-pieces`; 334 of 390 pieces) - both touch `people.js`, which is in
-  the art hash, so they ride with the re-bake; their own tests pass, the suite's run does not cover them. Next in
-  hand: the UI style pass's pick sheet (C2: one screen with today's frames and icons, with hard pixel frames, with
-  pixel icons - his pick before every screen). The bake's code: 1,106 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
+  the art hash, so they ride with the re-bake; their own tests pass, the suite's run does not cover them.
+  **Three picks wait on him, nothing changed in the game for any:** the UI's look - A today, B hard pixel frames,
+  C hard frames and pixel icons (`report-82` to `84`; `tools/uistyle/`, `tools/uishots.py` `UISHOT_JS`); a soft lip
+  colour A-D (`report-85`, `tools/lipsheet.mjs`); the eyes' spacing over a walk. **Part B step 1 is written:**
+  `docs/tasks/SHARED-KIT-AUDIT-2026-11-26.md` - what of the shared kit is built (signs by trade, banks' porticos,
+  interiors), what is there and not measured (roofs, murals, paving, window goods), what is not (picture signs,
+  night signs, lit rooms, the lint's `lobbyDoor` 161 and `signCovered` 158) and a proposed order. A process left
+  running does not live past the end of a turn here: the suite only moves while a turn is open (found 00:37).
+  The bake's code: 1,106 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all
