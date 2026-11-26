@@ -222,6 +222,9 @@ last leap over the top of a falls; the other fish's leaps.
   with the line icons kept, C hard pixel frames with pixel icons: `report-82-ui-pick-inventory`,
   `report-83-ui-pick-settings`, `report-84-ui-pick-close`. Nothing in the game is changed yet. Say A, B or C (or
   what to mix), and every screen follows with a lint.
+- [ ] **YOUR PICK: a soft lip colour** (11-26; your note of 11-25 01:34). The starting looks' heads four ways - A
+  none (today), B faint one pixel, C faint two pixels, D soft two pixels: `report-85-soft-lips-pick`. Say which, and
+  whether it is everyone's or a choice in the look screen. Nothing is changed yet.
 - [ ] **YOUR CALL: a pool and stream above Coral Cay Falls** (the plan's jungle item). Not built: the spine above the
   falls is tall rock drawn up the screen, so water on the ground there is hidden, and the concept shows no stream
   above the fall either. If you want it, it is a new piece - a pool drawn into the top of a rock.

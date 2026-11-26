@@ -28017,3 +28017,12 @@ line icons). Nothing in the game's CSS is changed by this.
 After his pick: the look goes into `style.css` by its variables, every screen shot at four sizes, and a lint so a
 soft frame or an off-face font cannot come back.
 
+## 2026-11-26 · A soft lip colour: the pick sheet - on branch `fable-art-1124`
+The owner, 11-25 01:34: painted lips work as they are; "add a very soft lip colour" - a default or a choice, his pick
+from a sheet. `tools/lipsheet.mjs` + `lipsheet.py` draw the twelve starting looks' heads at 8x, facing the camera and
+turned a little, four ways: A none (today: the small faces have no mouth, DECISIONS 11-19), B faint and one pixel,
+C faint and two pixels, D soft and two pixels - the lip's colour taken 62% (B, C) or 40% (D) of the way to the skin's
+lit tone; a man's from the skin's own shadow. Painted lips are untouched in all four. The variants live in the tool:
+nothing in the game is changed. Picture: `report-85-soft-lips-pick`. After his pick it is one number in
+`peoplepolish.js` (and, if a choice, a row in the look screen); the mouth in emotes and the idle comes after it.
+
