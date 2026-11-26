@@ -825,6 +825,7 @@ const YARDC = RP('#3a3d44 #4b4f56 #5d626b #6f747e #80858f #9096a0 #a0a6b0');
 const WOOD = RP('#2e2420 #40322a #544234 #68523e #7a624a #8c7256 #9e8466');
 const WOODG = RP('#3a3836 #4e4a46 #625c56 #766e66 #8a8076 #9c9286 #aea496');
 const SCREE = NP('#2a2c32 #3a3c42 #4c4e52 #5e6064 #727476 #868886 #9a9a98');
+const BASALT = RP('#1e1c1f #29272a #343134 #403c3d #4c4745 #58524e'), WEED = RP('#2e3018 #44441c #5a5822');   // (a tidepool shelf: the coast's dark basalt - terrain.js ROCK.basalt -, rockweed on it: NR1-C)
 const FLAGS = RP('#3e3a36 #4c4741 #5b554d #6a6359 #797165 #887f71 #978d7d');   // (warm granite flagstones: the hot springs' paths)
 const SNOWR = RP('#7c8ca6 #98a8c0 #b4c2d4 #ccd6e4 #dfe6ef #edf1f6 #f8fafc');
 const QUAR = RP('#575a5c #6b6e6f #7f8181 #939494 #a5a6a5 #b4b6b3 #c4c4c2');
@@ -982,6 +983,15 @@ export const GSHADE = {
     if (p >= 0) return sd(PEBG, p * 0.8, x, y, 0.4);
     GS.nx = GS.ny = 0;
     return vnc(x, y, 9, s + 45) > 0.68 ? at(MOSS, 1 + (hh(x, y, s) > 0.5 ? 1 : 0)) : at(SCREE, hh(x, y, s) > 0.6 ? 1 : 0);
+  },
+  basaltShelf(x, y, s) {                                     // a tidepool shelf (NR1-C, NS1-F): flat blocks of dark basalt, wet joints, rockweed, a barnacle
+    const w = worley(x + 0.5, y + 0.5, 13, s + 47, 0.8), e = w.d2 - w.d1, h = hh(x, y, s + 3);
+    GS.nx = GS.ny = 0;
+    if (e < 1.1) return at(BASALT, 0);
+    if (h > 0.988) return at(PEBG, 4);
+    if (vnc(x, y, 12, s + 49) + (w.h - 0.5) * 0.2 > 0.76) return at(WEED, h > 0.85 ? 2 : h > 0.3 ? 1 : 0);
+    GS.nx = w.dx / 70; GS.ny = w.dy / 70;
+    return sd(BASALT, 0.55 + (w.h - 0.5) * 0.35 + (e < 2 ? -0.1 : 0) + (vnc(x, y, 5, s) - 0.5) * 0.16, x, y, 0.5);
   },
   dirtTrack(x, y, s) {                                       // a desert two-track's bed: packed sand a shade lighter than the ground round it
     const h = hh(x, y, s);
@@ -1214,7 +1224,7 @@ export function coverSprite(kind, v = 0, art = false) {
   if (!g) { g = makeCover(kind, v, art); COVERS.set(key, g); }
   return g;
 }
-export const COVER_KINDS = ['turf', 'tuft', 'tuftTall', 'tuftDry', 'tuftAlp', 'seed', 'wheat', 'corn', 'flower', 'fern', 'reed', 'duneGrass', 'weed', 'pebble', 'rock', 'redStone', 'cone', 'twig', 'shell', 'starfish', 'leaf', 'seaweed', 'mushroom', 'scrub', 'lily', 'clod'];
+export const COVER_KINDS = ['turf', 'tuft', 'tuftTall', 'tuftDry', 'tuftAlp', 'seed', 'wheat', 'corn', 'flower', 'fern', 'reed', 'duneGrass', 'weed', 'pebble', 'rock', 'redStone', 'cone', 'twig', 'shell', 'starfish', 'leaf', 'seaweed', 'mushroom', 'scrub', 'lily', 'clod', 'wrack'];
 // turf palettes: lawn, park, meadow, dry, alpine, tall meadow - the last two steps are the sunlit blade tips
 const TURF = [
   RP('#132a1a #1a3c21 #234c27 #2e5c2b #3d6d30 #4e7e35 #819d41 #b0b851'),
@@ -1357,6 +1367,11 @@ function makeCover(kind, v, art = false) {
     case 'seaweed': {
       const R = NP('#1e2a1c #2e3c22 #46502a'), L = 5 + (r() * 5 | 0); let x = 0;
       for (let k = 0; k < L; k++) { x += (r() - 0.5) * 1.6; put(S.ax + x, S.ay - k * 0.5, R[(k & 1) + (k > L / 2 ? 1 : 0)], 0, 0, 0, 0); }
+      break;
+    }
+    case 'wrack': {                                         // a heap of kelp the tide left on the sand: tangled strands, dark olive and brown, lying along the shore (NS1-F)
+      const R = NP('#1c2016 #2c301a #42401e #5a5024'), L = 5 + (r() * 6 | 0);
+      for (let k = 0; k < L; k++) { const n = 1 + (r() * 2.2 | 0), y0 = r() < 0.3 ? 1 : 0; for (let j = 0; j < n; j++) put(S.ax + k - L / 2 + (r() - 0.5), S.ay - y0 - j, R[Math.min(3, (r() * 3 | 0) + (j ? 1 : 0))], 0, 0, j, 0); }
       break;
     }
     case 'mushroom': {

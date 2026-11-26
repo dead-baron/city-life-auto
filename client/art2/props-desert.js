@@ -59,21 +59,35 @@ export function redCairn(k = 4, seed = 1) {
   for (let i = 0; i < k; i++) { const r = 6.5 - i * 1.1, hz = 2.6 + (k - i) * 0.25, ox = (hash(i, 1, seed) - 0.5) * 2, oy = (hash(i, 2, seed) - 0.5) * 2; m.ell(8 + ox, 8 + oy, z + hz, r, r * 0.85, hz, st); z += hz * 1.7; }
   return m;
 }
-// a hoodoo (NR1-B, NS1-C; 11-25 - a tall thin outcrop drew a dark spire): a column of banded sandstone, waisted
-// under a wide flat cap of harder rock, a skirt of fallen rock at its foot; h px tall
-export function hoodoo(h = 80, seed = 1) {   // (h: art px; a voxel is a world px, half of one - K)
-  const K = 2, H = h * K, W = 48 * K, D = 40 * K, m = new Vox(W, D, H + 8), cx = W / 2, cy = D / 2, hw = (k) => hash(k, seed, 77);
-  const sh = (x, y, z) => (hash(Math.round(x / 6), Math.round(y / 6), Math.round(z / 4) + seed) - 0.5) * 0.3;
-  const band = ['#c8643c', '#e6a878', '#a84a30', '#d88450'].map((c) => m.mat({ ramp: R(c), k: 3, shade: sh })), cap = m.mat({ ramp: R('#b85c3a'), k: 2, shade: sh });
-  const capZ = H - 10 * K;
-  m.ell(cx, cy, 0, 16 * K, 11 * K, 6 * K, band[2]);
-  let b = 0, next = 0, ox = 0, oy = 0;
-  for (let z = 2 * K; z < capZ + 2 * K; z++) {   // (slice by slice: each band a few px thick, a little off the last)
-    if (z >= next) { b = (b + 1 + Math.floor(hw(z) * 2)) % 4; next = z + (5 + hw(z + 1) * 6) * K; ox = (hw(z + 2) - 0.5) * 2 * K; oy = (hw(z + 3) - 0.5) * 1.4 * K; }
-    const r = (13.5 - 6 * Math.sin(Math.min(1, z / capZ * 1.1) * Math.PI * 0.5) + (b === 1 ? -0.9 : b === 2 ? 0.8 : 0)) * K;
-    m.ell(cx + ox, cy + oy, z, r, r * 0.72, 1.2, band[b]);
+// a hoodoo (NR1-B, NS1-C): a weathered column of sandstone, no two alike - the owner, 11-25 18:14, of the first ones
+// (lathe-turned columns under round flat caps, all one size): "very unnatural ... vary the stacks more naturally like
+// natural formations and vary the sizes ... not all so uniform and perfectly flat and round". So: built of stacked
+// beds of rock, each its own lumpy outline, thickness, tone and a little off the last; the whole leaning; thick or
+// thin by its seed; and its top one of four - a tilted slab, a boulder left balanced, a stepped pair of slabs, or no
+// cap at all (a spire worn to a point). h: art px to the top (a voxel is a world px, half of one - K).
+export const HOODOO = { w: 172, d: 120, kinds: 4 };
+export function hoodoo(h = 80, seed = 1) {
+  const K = 2, H = Math.round(h * K), W = HOODOO.w, D = HOODOO.d, m = new Vox(W, D, H + 12), cx = W / 2, cy = D / 2 + 6, hw = (k, a = 77) => hash(Math.round(k), seed, a);
+  const sh = (x, y, z) => (hash(Math.round(x / 5), Math.round(y / 5), Math.round(z / 3) + seed) - 0.5) * 0.45;
+  const tone = ['#c06038', '#cc7444', '#a84c30', '#b65836', '#dc9a68'].map((c) => m.mat({ ramp: R(c), k: 3, shade: sh }));
+  const kind = Math.floor(hw(2) * HOODOO.kinds), g = 0.72 + hw(1) * 0.62, capH = kind === 2 ? 0 : (6 + hw(3) * 5) * K, top = H - capH;
+  const lx = (hw(4) - 0.5) * 12 * K, ly = (hw(5) - 0.5) * 4 * K, base = (13 + hw(6) * 6) * g, neck = (6 + hw(7) * 4) * g, bAt = 0.25 + hw(8) * 0.35, bulge = hw(9) * 3.5 * g;
+  const prof = (t) => (neck + (base - neck) * (1 - t) ** 1.6 + bulge * Math.exp(-(((t - bAt) / 0.18) ** 2))) * (kind === 2 ? 1 - 0.55 * t ** 2.2 : 1);
+  const lump = (a, p, n) => 1 + 0.17 * Math.sin(2 * a + p[0]) + 0.11 * Math.sin(3 * a + p[1]) + n * Math.sin(5 * a + p[2]);
+  for (let z = 0; z < top;) {   // (bed on bed)
+    const z0 = z, z1 = Math.min(top, z + (3.5 + hw(z + 11) * 9) * K), p = [hw(z + 12) * 6.283, hw(z + 13) * 6.283, hw(z + 14) * 6.283], ox = (hw(z + 15) - 0.5) * 3.4 * K, oy = (hw(z + 16) - 0.5) * 2 * K, sc = 0.88 + hw(z + 17) * 0.28, mat = tone[hw(z + 18) < 0.16 ? 4 : Math.floor(hw(z + 19) * 4)];
+    m.fill((x, y, zz) => { const t = zz / top, X = x - cx - lx * t - ox, Y = (y - cy - ly * t - oy) / 0.74, r = prof(t) * K * sc * lump(Math.atan2(Y, X), p, 0.07) - (zz - z0 < 1.6 || z1 - zz < 1.6 ? K * 0.7 : 0); return X * X + Y * Y < r * r ? mat : -1; }, 0, 0, Math.floor(z0), W, D, Math.ceil(z1));
+    z = z1;
   }
-  for (let z = capZ + 2 * K; z < H - K; z++) { const q = Math.abs(z - capZ - 5 * K) / K; m.ell(cx + K, cy, z, (18 - q * 0.3) * K, (9.5 - q * 0.2) * K, 1.2, z < capZ + 4 * K ? band[2] : cap); }   // (the cap: a flat slab, its underside dark)
+  for (let k = 0; k < 3 + Math.floor(hw(30) * 3); k++) { const a = hw(31 + k) * 6.283, d = base * K * (0.9 + hw(35 + k) * 0.5), r = (2 + hw(40 + k) * 3.5) * K; m.ell(cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.7, 0, r, r * 0.8, r * 0.8, tone[2 + (k & 1)]); }   // (fallen rock at its foot)
+  if (kind !== 2) {
+    const slabs = kind === 3 ? 2 : 1;
+    for (let q = 0; q < slabs; q++) {
+      const cw = (kind === 1 ? 11 + hw(20) * 4 : 15 + hw(20) * 8) * g * K * (q ? 0.62 : 1), cd = cw * (kind === 1 ? 0.82 : 0.6), tilt = (hw(21 + q) - 0.5) * (kind === 1 ? 0.1 : 0.42), cox = lx + (hw(22 + q) - 0.5) * 7 * K, coy = ly + (hw(23 + q) - 0.5) * 2 * K, p = [hw(24 + q) * 6.283, hw(25 + q) * 6.283, hw(26 + q) * 6.283];
+      const zb0 = top - 1 + (q ? capH * 0.55 : 0), th = capH * (q ? 0.5 : kind === 3 ? 0.6 : 1), cm = tone[q ? 1 : hw(27) < 0.5 ? 3 : 0];
+      m.fill((x, y, zz) => { const X = x - cx - cox, Y = y - cy - coy, k = lump(Math.atan2(Y / cd, X / cw), p, 0.09), e = Math.hypot(X / (cw * k), Y / (cd * k)); if (e > 1) return -1; const lo = zb0 + X * tilt * 0.6 + (1 - e) * -1.5 * K, hi = zb0 + X * tilt + th * (kind === 1 ? 0.35 + Math.sqrt(1 - e * e) : 1 - 0.3 * e * e * e); return zz >= lo && zz < hi ? (zz < lo + 1.6 * K && e > 0.45 ? tone[2] : cm) : -1; }, 0, 0, Math.floor(top - 8 * K), W, D, H + 12);
+    }
+  }
   return m;
 }
 // a tin shack (NS1-C): weathered plank walls under a gable of rust-streaked corrugated iron, a lean-to porch on posts

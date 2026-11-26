@@ -109,6 +109,7 @@ mat('GRANITE', 'granite', 0);   // (the summits' open rock, walked on: the groun
 mat('ORCHARD', 'orchardGrass', 0);   // (World v3's orchards: m.orchards - mown between the rows)
 mat('STUB', 'cropStubble', 1); mat('STUBV', 'cropStubbleV', 1);   // (a wheat field's harvested part: m.fields[f].cut - world3-countyroad.js)
 mat('FLAGS', 'flagstone', 4);   // (the hot springs' paths: granite flagstones - Granite Hot Springs, the owner 11-14)
+mat('BASALT', 'basaltShelf', 0);   // (a tidepool shelf's dark basalt, 11-25 - added last: the others' numbers as they were)
 const NM = MATS.length;
 const KIND = new Uint8Array(NM), SHADER = [];
 for (let i = 0; i < NM; i++) { KIND[i] = MATS[i][1]; SHADER[i] = GSHADE[MATS[i][0]] || null; }
@@ -341,7 +342,7 @@ function tileFacts(C) {
       else m = M_.DIRT;
     } else if (t === T.SAND) {
       // wild coasts by their land: rock shores below mountains, shingle under the forests, sand elsewhere
-      if ((b.tres[k] & 192) === 192) m = M_.ROCKSHORE;          // (a tidepool shelf's basalt: shared/world3-coast.js)
+      if ((b.tres[k] & 192) === 192) m = M_.BASALT;             // (a tidepool shelf's basalt: shared/world3-coast.js - 11-25: it was the rocky shore's pale rounded cobbles)
       else if (b.tres[k] & 128) m = M_.SHINGLE;                 // (a river's gravel bars)
       else if ((b.tres[k] & 36) === 36) m = M_.BEACH;            // (a designed beach - the cove's sand - whatever the coast round it)
       else if (inRects(paint, X, Y, 'canyon')) m = M_.SHINGLE;    // (a dry wash's gravel and cobbles)
@@ -1068,7 +1069,7 @@ function shoreDistance(C) {
 // 191 + px out into the sea or a lake (to 47), 191 - px up a beach (to 30), 255 elsewhere. The alpha is still
 // coverage (above a half: drawn), so nothing else changes. Runs last, over the decorations too.
 const SURF_LAND = new Uint8Array(NM);
-for (const k of ['BEACH', 'WETSAND', 'SHINGLE', 'DUNE', 'ROCKSHORE']) SURF_LAND[M_[k]] = 1;
+for (const k of ['BEACH', 'WETSAND', 'SHINGLE', 'DUNE', 'ROCKSHORE', 'BASALT']) SURF_LAND[M_[k]] = 1;
 // A river's water (M.flow: which way it runs, sixteenths of a turn) takes 239 + that instead: the lighting runs its
 // ripples and foam downstream.
 function surf(C, G) {
@@ -1826,7 +1827,7 @@ function edges(C, G) {
       const d = b.dist[i] / 10;
       if (d < 30) {
         if (m === M_.BEACH || m === M_.DUNE) { if (d < 7 + vnc(X, Y, 9, seed) * 5) setC(G, gi, GSHADE.sandWet(X, Y, seed)); }
-        else if (m === M_.ROCKSHORE || m === M_.SHINGLE) { if (d < 6) darken(G, gi, 0.72 + d * 0.04); }
+        else if (m === M_.ROCKSHORE || m === M_.SHINGLE || m === M_.BASALT) { if (d < 6) darken(G, gi, 0.72 + d * 0.04); }
         else {
           const bk = bankKind(m, X, Y, seed);
           if (bk === 1) { if (tongue(X, Y, seed) < 0.82 - d * 0.085) { darken(G, gi, 0.72); G.col[gi * 4 + 2] += 14; } }   // (damp)
@@ -1907,7 +1908,13 @@ cov('REDROCK', [['redStone', 6, 0.06], ['tuftDry', 8, 0.05], ['scrub', 6, 0.015]
 cov('SCREE', [['rock', 6, 0.05], ['tuftAlp', 6, 0.05]]);
 cov('GRANITE', [['rock', 6, 0.03], ['pebble', 6, 0.04], ['tuftAlp', 6, 0.03]]);
 cov('GRAVEL', [['weed', 4, 0.03], ['tuftDry', 8, 0.012]]);
-cov('BEACH', [['shell', 4, 0.02], ['pebble', 6, 0.03], ['starfish', 1, 0.002], ['seaweed', 4, 0.004]]);
+cov('BEACH', [['shell', 4, 0.007], ['pebble', 6, 0.02], ['starfish', 1, 0.002], ['seaweed', 4, 0.004]]);   // (shells a third of what they were: the owner, 11-23 - "shells too thick")
+cov('BASALT', [['starfish', 1, 0.012], ['seaweed', 4, 0.03], ['shell', 4, 0.008]]);
+// The tideline (11-25; NS1-F, the plan's "kelp wrack and seaweed on the tideline"): on a sea beach the last high
+// tide's line - seaweed thick along a band `w` px wide that wanders `wander` px about `at` px up the sand from the
+// water (above the swash's reach, lightgame.js: 30), a shell among it. wrackW: how much of it at nd px from the shore.
+export const WRACK = { at: 34, wander: 12, w: 4.5, fill: 0.85, shell: 0.1, sea: 20 };
+export const wrackW = (nd, X, Y, seed) => { const w = Math.abs(nd - (WRACK.at + (vnc(X, Y, 70, seed + 221) - 0.5) * WRACK.wander)); return w < WRACK.w ? 1 - w / WRACK.w : 0; };
 cov('SHINGLE', [['seaweed', 4, 0.01], ['shell', 4, 0.006], ['rock', 3, 0.01]]);
 cov('ROCKSHORE', [['rock', 6, 0.04], ['seaweed', 4, 0.012], ['tuftAlp', 6, 0.02]]);
 cov('DUNE', [['duneGrass', 6, 0.03], ['pebble', 6, 0.006], ['tuftDry', 8, 0.01]]);
@@ -1982,6 +1989,7 @@ function decor(C, G) {
       const nd = b.dist[i] / 10, bk = nd < 30 ? bankKind(m, X, Y, seed) : 0;
       if (WILD_BANK.has(m) && nd < 18 && h0 > 1 - (bk > 1 ? 0.3 : 0.18) * dens) { stamp(C, G, cover(C, h0 > 0.94 ? 'rock' : 'pebble', (hh(cx, cy, seed + 97) * 6) | 0), X, Y, b.zb[i]); continue; }
       if (bk > 1 && nd < beachW(X, Y, seed)) continue;
+      if (m === M_.BEACH && nd < 60 && M.distSea) { const ww = wrackW(nd, X, Y, seed), tx = Math.floor(X / TILE), ty = Math.floor(Y / TILE); if (ww > 0 && M.inside(tx, ty) && M.distSea[M.idx(tx, ty)] < WRACK.sea && h0 < WRACK.fill * dens * ww) { stamp(C, G, cover(C, hh(cx, cy, seed + 223) < WRACK.shell ? 'shell' : hh(cx, cy, seed + 225) < 0.7 ? 'wrack' : 'seaweed', (hh(cx, cy, seed + 97) * 6) | 0), X, Y, b.zb[i]); continue; } }
       let acc = 0;
       for (const [kind, nv, p] of list) {
         acc += p * dens;

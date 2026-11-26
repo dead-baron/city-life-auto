@@ -27769,3 +27769,41 @@ Hollow's street; the desert highway's saw-toothed edge.
   today's world: twice the size is 49 M voxels in one sprite - a step of its own, with a look at the bake's time);
   a seep's square-cornered pool (every small pond's shore: the water's-edges step of the plan).
 
+## 2026-11-25 · The coast, first pass: a tideline, basalt tide-pool shelves; hoodoos as natural rock - on branch `fable-art-1124`
+
+**The hoodoos again** (the owner, 18:14, on a screenshot of a stand: "very unnatural ... vary the sizes ... not all so
+uniform and perfectly flat and round"). The first ones were a column turned on a lathe under a disc, four tones in
+even bands, four seeds, all near one size. `props-desert.js hoodoo(h, seed)` now builds each of beds of rock stacked
+one on another - each bed its own lumpy outline (three waves round its edge), thickness (3.5 to 12.5 px), tone and a
+little off the last -, the whole leaning up to 6 px, thick or thin (girth 0.72 to 1.34), and topped one of four ways:
+a tilted slab, a boulder left balanced, a stepped pair of slabs, or nothing (a spire). Twelve seeds, heights 30 to
+120 px in steps of 6. A found stand is 3 to 5 of them - one tall (84-114), the rest 36 to 78 - standing irregularly,
+no two the same picture (`world3-wayside.js`). `test/desertflora.test.js`: every height and seed its own picture,
+some capped and some spires, most lopsided, thick and thin, some leaning. DECISIONS has the rule for every rock
+formation drawn by code.
+
+**The coast and jungle, counted first** (one world build): sand by district - Sandpiper Coast 100,876 tiles, Egret
+Coast 62,725, Northshore Beaches 50,321, Willow Valley 36,014, Highland Woods 27,918, Gull Harbor 26,895, Coral Cay
+12,817; jungle floor 18,484 tiles on Coral Cay (22,853 with its coves); tide-pool shelf 1,932 tiles on Coral Cay,
+405 Granite Peaks, 233 Highland Woods, 222 the desert's coast; 17 sea stacks, 408 column stacks, 363 mangroves, 54
+hammocks, 48 pieces of driftwood, 22 coast falls; places: Coral Cay Falls, Macaw Cove, Mangrove Inlet, North Cape's
+and Redwood Cove's tide pools, the sea cave, Egret Marsh's boardwalk, Wreck and Bonfire beaches. Twelve places baked
+and lit beside NS1-F, NS1-G, NR1-C: Coral Cay's falls, Macaw Cove, Mangrove Inlet, the marsh and Wreck Beach stand
+up well. What was wrong, by class, and what is fixed here (baked art: with the re-bake):
+
+- **A wild beach was bare sand to the water.** The tideline (`groundbake.js WRACK`, `wrackW`): on sand within reach
+  of the sea, a band 9 px wide wandering between 24 and 44 px up from the water - above the swash - where the decals
+  pass lays heaps of kelp (`ground.js` cover `wrack`, new), a strand of seaweed, a shell in ten.
+- **"Shells too thick"** (the owner, 11-23): a beach's shells 0.02 -> 0.007 a cell, pebbles 0.03 -> 0.02.
+- **A tide-pool shelf was the rocky shore's pale rounded cobbles** with the pools as pale blobs on it: its own
+  ground `BASALT` (`ground.js basaltShelf`: flat blocks of dark basalt, wet joints, rockweed in patches, a
+  barnacle), starfish and weed on it; the pools now read as water in dark rock (NR1-C, NS1-F). The material is added
+  last so the others keep their numbers.
+- **Reeds on the sea's shingle** (the pebble beach by the sea cave): no shore plants on a gravel bar within four
+  tiles of the sea.
+
+`test/coastart.test.js` (new). Seen and not yet fixed (ART-CHECK-LIST): the sea cave's rock is a round drum of
+stepped rings; three sea stacks stand in a line off Redwood Cove and all stacks are thin; North Cape's bluffs are
+square grass-topped blocks; no cypress knees in the marsh; no rock fishing spot's gear. Logged for part B: hammocks
+standing free on a lawn.
+

@@ -197,9 +197,10 @@ export function buildWayside3(m, H3) {
         for (let k = 0; k < 3; k++) { const a = h(3) * 6.283 + k * 2.3 + 1; P('boulder', X + Math.cos(a) * 116, Y + Math.sin(a) * 100, 9, { s: 12 + Math.round(h(16 + k) * 8) }); }
         break;
       }
-      case 'hoodoos': {   // (NR1-B: a stand of hoodoos - banded columns under their caps, props-desert.js -, as the five by the arch: world3-desert.js)
-        const n = 3 + Math.floor(h(1) * 2);
-        for (let k = 0; k < n; k++) { const x = X - 70 + k * (140 / (n - 1)) + (h(10 + k) - 0.5) * 22, y = Y - 20 + (k % 2 ? 34 : 0) + (h(14 + k) - 0.5) * 16; P('hoodoo', x, y, 13, { h: 60 + Math.round(h(18 + k) * 4) * 10, s: k + Math.floor(h(22 + k) * 4) }); }
+      case 'hoodoos': {   // (NR1-B: a stand of hoodoos - props-desert.js, each its own shape -, as the five by the arch: world3-desert.js. The owner, 11-25 18:14: "vary the sizes ... not all so uniform": one tall, the rest from knee-high lumps up, standing where they fell out, not in rows)
+        const n = 3 + Math.floor(h(1) * 3), pts = [];
+        for (let q = 0; pts.length < n && q < 40; q++) { const a = h(50 + q) * 6.283, d = Math.sqrt(h(90 + q)) * 84, x = X + Math.cos(a) * d * 1.1, y = Y - 10 + Math.sin(a) * d * 0.6; if (pts.every((u) => Math.hypot(u[0] - x, (u[1] - y) * 1.6) > 44)) pts.push([x, y]); }
+        pts.forEach(([x, y], k) => P('hoodoo', x, y, 15, { h: k === 0 ? 84 + Math.round(h(18) * 5) * 6 : 36 + Math.round(h(18 + k) * 7) * 6, s: Math.floor(h(22 + k) * 12) }));
         for (let k = 0; k < 4; k++) P('boulder', X - 96 + k * 64 + (h(30 + k) - 0.5) * 20, Y + 76 + (h(34 + k) - 0.5) * 20, 9, { s: 12 + Math.round(h(38 + k) * 10) });
         for (let k = 0; k < 3; k++) P('shrub_a', X - 90 + k * 90 + (h(40 + k) - 0.5) * 20, Y - 84 + (h(43 + k) - 0.5) * 14, 0, { sp: k === 1 ? 'brittle' : 'sage', k: 1 });
         break;

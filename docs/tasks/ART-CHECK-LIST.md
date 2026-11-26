@@ -160,10 +160,20 @@ last leap over the top of a falls; the other fish's leaps.
   today's world and doubling it is heavy); a seep's square pool (with the water's edges).
 - [ ] **The desert's found places** (11-25): 30 by rule, 6 each - a cracked playa with a dead snag, a stand of
   hoodoos, saguaros round a rock pile, joshua trees among boulders, a tin shack with a rusted pickup (`report-69`).
-  Picture: `report-66`; the hoodoos redrawn as
-  banded columns under a cap, `report-67` (they were thin dark spires - the five by the arch too). The playa's pan
-  is small (4-7 tiles across).
+  Picture: `report-66`. The playa's pan is small (4-7 tiles across).
+- [ ] **The hoodoos** (the owner, 11-25 18:14: "very unnatural ... vary the sizes ... not all so uniform and
+  perfectly flat and round"): redrawn as weathered rock - stacked lumpy beds, leaning, thick and thin, a tilted
+  slab or a balanced boulder on top or worn to a spire, mixed heights in a stand. Picture: `report-70`. Judge: do
+  they read as natural rock now.
 - [ ] **The arch by the lookout** (Red Rock Desert): it was the sea's arch - grey rock, turf on top; now red
   sandstone, bare. Picture: `report-68`.
 - [x] **The bake's code budget 1,150 KB** (the owner, 11-25 16:51: "lets raise the bake limit").
+- [ ] **The tideline** (11-25): wild sea beaches were bare sand; a wandering line of kelp heaps, seaweed and a shell
+  now lies above the swash; shells on the open sand a third of what they were (your note of 11-23). Picture:
+  `report-71`. Judge: enough, too much.
+- [ ] **Tide-pool shelves** (North Cape, Redwood Cove, Coral Cay's): dark basalt with rockweed, the pools reading
+  as water (they were pale cobbles with pale blobs). Picture: `report-71`.
+- [ ] **The coast, left to do** (11-25): the sea cave's rock (a round drum of stepped rings - to be a rough headland
+  with the cave in it); sea stacks (three in a line off Redwood Cove; all thin - NR1-C's are chunky with rocks at
+  the foot); North Cape's bluffs (square grass-topped blocks); cypress knees in the marsh; a rock fishing spot.
 

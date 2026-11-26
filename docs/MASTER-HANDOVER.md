@@ -129,8 +129,13 @@ entries have each piece):**
   **Decided 17:18:** the tables' cliff faces stay A, stepped (B, one wall, not built). 17:10: 28 found places by rule in the desert (playa, hoodoos, saguaros, joshua trees -
   `report-66`; a world change). 17:30: the hoodoo drawn as a banded column under a cap (12 places), the desert's arch red
   sandstone. 18:10: the tin shack and rusted pickup, a fifth found place (30 in the desert).
-  Left: the mission ruin's size (a step of its own), a seep's square pool (with the water's edges). Next: coast
-  and jungle. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
+  Left: the mission ruin's size (a step of its own), a seep's square pool (with the water's edges). **18:14, his
+  note:** the hoodoos looked unnatural - redrawn as weathered rock, mixed sizes (DECISIONS: the rule for every rock
+  formation drawn by code).
+- **The coast and jungle, begun 11-25 18:00 (baked, with the re-bake):** a tideline of wrack on wild sea beaches,
+  shells thinned, tide-pool shelves in dark basalt, no reeds on the sea's shingle (`test/coastart.test.js`). Left
+  (ART-CHECK-LIST): the sea cave's rock, the sea stacks (in a line, thin), North Cape's square bluffs, cypress
+  knees, a rock fishing spot. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all

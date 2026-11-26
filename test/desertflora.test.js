@@ -28,7 +28,7 @@ test('bloom is a rare patch: few flower beds among the scrub, brittlebush first'
 
 test('gravel and the river strip in the desert and its towns: scrub and rushes, no reeds in a street, no meadow flowers', () => {
   assert.match(SRC, /const dry = M\.dist\[i\] === 50 \|\| \(DISTRICTS\[M\.dist\[i\]\] \|\| \{\}\)\.isl === 'Red Rock Desert' \|\| \(\(M\.reserve\[i\] & 128\) && \[\[5, 0\], \[-5, 0\], \[0, 5\], \[0, -5\]\]\.some\(/, "the desert, its towns, and a bank whose land five tiles off is the desert's (a river's bank is the water's district: 13 at the dam's wash)");
-  assert.match(SRC, /if \(t === T\.SAND\) return h < 0\.07 \? \[pickW\(dry \? NAT_SP\.desert : NAT_SP\.shore, h2\), 1\] : null/);
+  assert.match(SRC, /if \(t === T\.SAND\) return h < 0\.07 && [^?]*\? \[pickW\(dry \? NAT_SP\.desert : NAT_SP\.shore, h2\), 1\] : null/);
   assert.match(SRC, /if \(dry\) return h < 0\.3 \? \[pickW\(NAT_SP\.desertBank, h2\), 1\] : null;[^\n]*\n\s*if \(pa > 0\.6 && h < 0\.34\)/, 'the dry rule comes before the meadow drifts');
   const bank = SRC.match(/desertBank: (\[\[.*?\]\]),/)[1];
   assert.ok(!/lupines|poppies|daisies|fern|berry|foxglove/.test(bank), `no meadow or forest plants on a desert bank (${bank})`);
@@ -42,22 +42,27 @@ test("a seep's ring is the desert's cracked mud, a tinaja's bowl its red rock", 
   assert.equal(tinaPx([{ x: 0, y: 0, r: 60, ring: 50, k: 1 }], 400, 0, 5), -1, 'nothing far from the water');
 });
 
-test('a hoodoo: a column that narrows to a neck under a cap wider than it, banded, each seed its own', () => {
-  const sigs = new Set();
-  for (const h of [60, 80, 100]) for (const sd of [1, 2, 3, 4]) {
-    const G = makeStatic({ t: 'v', m: 'hoodoo', a: [h, sd], hd: 0 }), wide = [];
+test('hoodoos: natural columns, no two alike - thick and thin, leaning, capped by a slab or a boulder or worn to a spire', () => {
+  // (the owner, 11-25 18:14, of the first ones: "very unnatural ... not all so uniform and perfectly flat and round")
+  const sigs = new Set(), girth = [], lean = []; let capped = 0, spire = 0, lopsided = 0, n = 0;
+  for (const h of [42, 72, 102]) for (let sd = 1; sd <= 12; sd++) {
+    const G = makeStatic({ t: 'v', m: 'hoodoo', a: [h, sd], hd: 0 }), rows = [];
     let y0 = -1, y1 = -1, sig = 0;
-    for (let y = 0; y < G.h; y++) { let a = -1, b = -1; for (let x = 0; x < G.w; x++) if (G.col[(y * G.w + x) * 4 + 3]) { if (a < 0) a = x; b = x; sig = (Math.imul(sig, 31) + G.col[(y * G.w + x) * 4] + x) | 0; } wide.push(a < 0 ? 0 : b - a + 1); if (a >= 0) { if (y0 < 0) y0 = y; y1 = y; } }
-    const H = y1 - y0 + 1, cap = Math.max(...wide.slice(y0, y0 + Math.ceil(H * 0.2))), neck = Math.min(...wide.slice(y0 + Math.ceil(H * 0.25), y0 + Math.ceil(H * 0.55))), foot = Math.max(...wide.slice(y1 - Math.ceil(H * 0.15), y1 + 1));
-    assert.ok(H >= h * 2 && H <= h * 3, `h ${h} seed ${sd}: its height with its foot, in world px - twice the art's (${H})`);
-    assert.ok(cap >= neck * 1.6, `h ${h} seed ${sd}: the cap overhangs the neck (${cap} over ${neck})`);
-    assert.ok(foot >= neck * 1.4, `h ${h} seed ${sd}: it flares at the foot (${foot} over ${neck})`);
-    // bands: the column's middle shows light and dark rows (their mean red apart)
-    const rows = []; for (let y = y0 + Math.ceil(H * 0.3); y < y1 - Math.ceil(H * 0.15); y++) { let n = 0, r = 0; for (let x = 0; x < G.w; x++) { const j = (y * G.w + x) * 4; if (G.col[j + 3]) { n++; r += G.col[j] + G.col[j + 1] + G.col[j + 2]; } } if (n) rows.push(r / n); }
-    assert.ok(Math.max(...rows) - Math.min(...rows) > 60, `h ${h} seed ${sd}: banded (${Math.round(Math.min(...rows))} to ${Math.round(Math.max(...rows))})`);
-    sigs.add(sig);
+    for (let y = 0; y < G.h; y++) { let a = -1, b = -1; for (let x = 0; x < G.w; x++) if (G.col[(y * G.w + x) * 4 + 3]) { if (a < 0) a = x; b = x; sig = (Math.imul(sig, 31) + G.col[(y * G.w + x) * 4] + x) | 0; } rows.push(a < 0 ? null : [a, b]); if (a >= 0) { if (y0 < 0) y0 = y; y1 = y; } }
+    const H = y1 - y0 + 1, wAt = (f0, f1, fn) => fn(...rows.slice(y0 + Math.floor(H * f0), y0 + Math.ceil(H * f1)).filter(Boolean).map(([a, b]) => b - a + 1));
+    const top = wAt(0, 0.22, Math.max), neck = wAt(0.28, 0.6, Math.min), foot = wAt(0.8, 1, Math.max), mid = (f) => { const r = rows[y0 + Math.floor(H * f)]; return r ? (r[0] + r[1]) / 2 : 0; };
+    assert.ok(H >= h * 1.6 && H <= h * 2 + 80, `h ${h} seed ${sd}: its height in world px, with its foot and cap (${H})`);
+    assert.ok(foot >= neck, `h ${h} seed ${sd}: it stands on a foot at least as wide as its neck (${foot}, ${neck})`);
+    n++; sigs.add(sig); girth.push(foot / H * (h / 72)); lean.push(Math.abs(mid(0.3) - mid(0.9)));
+    if (top >= neck * 1.5) capped++; else if (top <= neck * 1.1) spire++;
+    // lopsided: its outline's two sides are not mirror images about its foot's middle
+    const c = mid(0.95); let off = 0, m = 0; for (let y = y0; y <= y1; y++) { const r = rows[y]; if (!r) continue; m++; if (Math.abs((c - r[0]) - (r[1] - c)) > 3) off++; } if (off / m > 0.3) lopsided++;
   }
-  assert.ok(sigs.size >= 10, `each height and seed its own picture (${sigs.size} of 12)`);
+  assert.equal(sigs.size, n, `each height and seed its own picture (${sigs.size} of ${n})`);
+  assert.ok(capped >= n * 0.3 && spire >= 3, `some capped, some worn to a spire (${capped} capped, ${spire} spires of ${n})`);
+  assert.ok(lopsided >= n * 0.6, `most are lopsided, none turned on a lathe (${lopsided} of ${n})`);
+  assert.ok(Math.max(...girth) > Math.min(...girth) * 1.5, `thick and thin (${Math.min(...girth).toFixed(2)} to ${Math.max(...girth).toFixed(2)})`);
+  assert.ok(Math.max(...lean) > 6, `some lean (${Math.max(...lean).toFixed(1)} px)`);
 });
 
 test("an arch in the desert is red sandstone, bare; the sea's keeps its dark rock and turf", () => {

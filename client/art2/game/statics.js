@@ -1895,7 +1895,7 @@ const EMPTY_VOX = () => new Vox(1, 1, 1);
 function vdim(m, a) {
   switch (m) {
     case 'elPier': return [18, (a[1] || 300) + 26, (a[0] || 128) - 18]; case 'elStairs': return [(a[0] || 150) + 20, 44, (a[1] || 128) + 40]; case 'stationBridge': return [a[0] || 280, 36, (a[1] || 88) + 30];
-    case 'ranchGate': return [(a[0] || 120) + (a[1] || 90) * 2 + 12, 30, 84]; case 'ramada': return [(a[0] || 120) + 8, (a[1] || 80) + 8, (a[2] || 56) + 14]; case 'redCairn': return [16, 16, 6 + (a[0] || 4) * 5]; case 'hoodoo': return [96, 80, (a[0] || 80) * 2 + 8]; case 'tinShack': return [146, 101, 101]; case 'rustPickup': return [94, 42, 44]; case 'hawkShadow': return [(a[0] || 54) + 4, (a[0] || 54) * 0.6 + 4, 2]; case 'groundShadow': return [(a[0] || 200) + 2, (a[1] || 70) + 2, 2];
+    case 'ranchGate': return [(a[0] || 120) + (a[1] || 90) * 2 + 12, 30, 84]; case 'ramada': return [(a[0] || 120) + 8, (a[1] || 80) + 8, (a[2] || 56) + 14]; case 'redCairn': return [16, 16, 6 + (a[0] || 4) * 5]; case 'hoodoo': return [DZ.HOODOO.w, DZ.HOODOO.d, (a[0] || 80) * 2 + 12]; case 'tinShack': return [146, 101, 101]; case 'rustPickup': return [94, 42, 44]; case 'hawkShadow': return [(a[0] || 54) + 4, (a[0] || 54) * 0.6 + 4, 2]; case 'groundShadow': return [(a[0] || 200) + 2, (a[1] || 70) + 2, 2];
     case 'roadrunner': return [30, 8, 22]; case 'lizard': return [34, 14, 6]; case 'deadTree': return [(a[1] || 70) + 10, 10, (a[1] || 70) + 8];
     case 'gnawStump': return [30, 30, a[0] ? 64 : 26]; case 'gnawLog': return [(a[0] || 90) + 14, 26, 16]; case 'hideRack': return [40, 16, 44];
     case 'alley': return AL.dim(a[0]);
@@ -2871,7 +2871,7 @@ function propItems(c, p, pi, I) {
     case 'rcairn': V(`rcairn:${p.k || 4}:${(p.v || 0) % 3}`, 'redCairn', [p.k || 4, (p.v || 0) % 3 + 1]); return;
     case 'tinshack': V(`tshack:${(p.s || 0) % 3}`, 'tinShack', [(p.s || 0) % 3 + 1]); return;   // (the desert's found places: props-desert.js, world3-wayside.js)
     case 'rustpickup': { const hd = qa(p.a || 0, 16); V(`rpick:${hd.toFixed(2)}`, 'rustPickup', [1], hd); return; }
-    case 'hoodoo': { const h = Math.round((p.h || 110) / 10) * 10; V(`hoodoo:${h}:${(p.s || 0) % 4}`, 'hoodoo', [h, (p.s || 0) % 4 + 1]); return; }   // (a banded column under its cap: props-desert.js)
+    case 'hoodoo': { const h = Math.max(30, Math.min(120, Math.round((p.h || 80) / 6) * 6)); V(`hoodoo:${h}:${(p.s || 0) % 12}`, 'hoodoo', [h, (p.s || 0) % 12 + 1]); return; }   // (a banded column under its cap: props-desert.js)
     case 'hawkshadow': V('hawksh', 'hawkShadow', [54]); return;
     case 'gshadow': V(`gsh:${p.w || 200}:${p.h || 70}`, 'groundShadow', [p.w || 200, p.h || 70]); return;
     case 'roadrunner': V(`rrun:${qa(p.a || 0, 8).toFixed(2)}`, 'roadrunner', [], qa(p.a || 0, 8)); return;
@@ -4341,7 +4341,7 @@ function coverAt(c, tx, ty, x, y) {
   const dry = M.dist[i] === 50 || (DISTRICTS[M.dist[i]] || {}).isl === 'Red Rock Desert' || ((M.reserve[i] & 128) && [[5, 0], [-5, 0], [0, 5], [0, -5]].some(([a, b]) => M.inside(tx + a, ty + b) && M.dist[M.idx(tx + a, ty + b)] === 50));   // (the desert, its towns, and a river's bank beside it - the bank's tiles are the water's district)
   if (M.reserve[i] & 128) {
     const h = hash(tx, ty, 7141), pb = vnoise(x, y, 80, 7143), pa = vnoise(x, y, 160, 7147), h2 = vnoise(x, y, 60, 7145) * 0.7 + hash(tx, ty, 7149) * 0.3;
-    if (t === T.SAND) return h < 0.07 ? [pickW(dry ? NAT_SP.desert : NAT_SP.shore, h2), 1] : null;   // (a few on the gravel bars; the desert's dry washes, tracks and the ghost town's street: desert scrub - reeds stood in Dusty Hollow's street)
+    if (t === T.SAND) return h < 0.07 && !(M.distSea && M.distSea[i] < 16 && !dry) ? [pickW(dry ? NAT_SP.desert : NAT_SP.shore, h2), 1] : null;   // (a few on the gravel bars; the desert's dry washes, tracks and the ghost town's street: desert scrub - reeds stood in Dusty Hollow's street)
     const d = M.distRiver ? M.distRiver[i] : 99;
     if (d > 0 && d <= 6) return pb > 0.3 && h < 0.85 ? [pickW(NAT_SP.shore, h2), 1 + (h < 0.3 ? 0.15 : 0)] : null;
     if (dry) return h < 0.3 ? [pickW(NAT_SP.desertBank, h2), 1] : null;   // (a desert river's green strip: rushes and grasses, no meadow flowers)
