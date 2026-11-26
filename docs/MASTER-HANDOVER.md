@@ -147,7 +147,12 @@ entries have each piece):**
   call (ART-CHECK-LIST): the mission ruin bigger (its voxel model's memory), The Palace as a second cinema.
   From 23:20 the whole suite runs on commit 033be77 in a separate copy (`/tmp/wt-before`, results
   `/tmp/ww/suite-results.txt`, about five hours); while it runs only page-side art is worked on, so that commit is
-  what the re-bake would take. The bake's code: 1,106 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
+  what the re-bake would take. After it, page-side only: painted lips hold their place over a walk (`report-79`;
+  found for his eye: the eyes' own spacing varies a pixel); **clothing pictures on the Inventory's tiles** (part C3,
+  `client/piecepic.js`, `report-80`, `report-81-all-pieces`; 352 of 390 pieces) - both touch `people.js`, which is in
+  the art hash, so they ride with the re-bake; their own tests pass, the suite's run does not cover them. Next in
+  hand: the UI style pass's pick sheet (C2: one screen with today's frames and icons, with hard pixel frames, with
+  pixel icons - his pick before every screen). The bake's code: 1,106 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all
