@@ -158,7 +158,13 @@ entries have each piece):**
   interiors), what is there and not measured (roofs, murals, paving, window goods), what is not (picture signs,
   night signs, lit rooms, the lint's `lobbyDoor` 161 and `signCovered` 158) and a proposed order. A process left
   running does not live past the end of a turn here: the suite only moves while a turn is open (found 00:37).
-  The bake's code: 1,106 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
+  **The suite finished 04:27** (`docs/tasks/ARTPASS-TESTS-2026-11-26.txt`): 452 of 460 files clean. Two failures
+  were the night's own and are fixed on the head (the hollow giants painted near black - `leaflight`; LIVE blades on
+  playhouses - the lint's `bladeBiz`); `firefighter` passes alone; `gridlock`, `scenes` 8, `world3mesa`,
+  `world3wild` and `visaudit` fail on main too - but `visaudit` has ONE DOOR MORE hidden under a tree than main's
+  record (4 against 3; which is new is not determined). Main (PR #49) is merged into the branch, every conflict to
+  the branch's side. **What is left of the gate:** a look in a running World v3 game; then his word, the PR, the
+  re-bake (~5 h). The bake's code: 1,106 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all
