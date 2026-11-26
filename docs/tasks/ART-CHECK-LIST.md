@@ -147,3 +147,15 @@ last leap over the top of a falls; the other fish's leaps.
   done so, the nose a light pink (15:42), centred under the eyes from the front (15:48), the grey cat's pink and
   the black cat's black (15:52 - faint on a black face), no pale row above a nose (16:00), one pixel again (16:18). Picture: `report-62`. Judge in the game.
 - [ ] **The shark**: reshaped 11-25 (his ask of 15:10). Picture: `report-54`. Judge in the water, in the game.
+- [ ] **The desert's plants** (11-25): flower beds were 39% of its small plants, now 4.4% - scrub, cacti, a rare
+  patch of bloom with the yellow brittlebush first. Picture: `report-63` (before, after). Judge: is a rare patch
+  right, or none at all.
+- [ ] **The desert's water** (11-25): a seep's ring is pale cracked mud (was dark mud with blue puddles); the green
+  strip along the desert's river grows rushes and grass (was lupines, foxgloves, berries); cracked earth is flat
+  plates (was cobble-like - it is the tables' tops too). Picture: `report-64`. Left: a seep's pool is square-cornered.
+- [ ] **PICK: the tables' cliff faces** (11-25). A, as now: each piece a stack of stepped rings. B: one sheer wall
+  with a flat cap, as the mountains' crags (your B of 07:19) but in sandstone. Picture: `report-65` (A left, B
+  right, the same edge). B is not built in: on your word. If B: its cap takes the red rock's colour behind it.
+- [ ] **The desert, left to do** (11-25): the mission ruin (3 x 4 tiles - a real ruin with walls and a yard), a cracked
+  playa, the tin shack with a rusted pickup (NS1-C), hoodoos and balanced rocks beyond the five at the arch.
+

@@ -107,7 +107,7 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 Chats that can run side by side: 4 with any other; nothing else safely.
 
 ## 6. Where things stand (2026-11-24, 09:00 PST - the Opus part of the pre-beta is done)
-**The art pass, 2026-11-25 15:30 PST (the Fable 5.2 chat; branch `fable-art-1124`, pushed; the DEVLOG's 11-24 and 11-25
+**The art pass, 2026-11-25 16:40 PST (the Fable 5.2 chat; branch `fable-art-1124`, pushed; the DEVLOG's 11-24 and 11-25
 entries have each piece):**
 - **Live:** PR #48 (11-25 01:35, his word) - the buildings over your street, sidewalk or alley go see-through; PR #49
   (09:10, his word) - they fade all but clear, and emotes run through their frames.
@@ -118,7 +118,17 @@ entries have each piece):**
   redraw, do not correct afterwards); the fern kit planted (`fernKind`), wild spike flowers leaning, the giants'
   tops a mix of three, a stick bridge; a fork's centre lines; the El and highway decks fade from the ground; bridges
   on piers; no painted white at the sea's edge.
-- **On the branch, page code - no re-bake, live on his word:** the shark's bite redrawn.
+- **On the branch, page code - no re-bake, live on his word:** the shark's bite redrawn; the shark reshaped; the
+  cats (the face as before, a one-pixel nose - light pink, the black cat's black -, thin long tails; his words of
+  15:26-16:18 in DECISIONS); cloud shadows by day with a debug switch. As a PR from a branch off `main` with only
+  those files (`client/art2/animals.js`, `lightgame.js`, `engine.js`, `devcats.js`, `devmenu.js`); the
+  art hash does not move with them (checked: the same from c08e750 to 4a41a9a - `animals.js` counts in the bake's
+  code size only).
+- **The desert, begun 11-25 16:30 (baked, with the re-bake):** bloom a rare patch, reeds out of the ghost town's
+  street, a desert river's strip in rushes, a seep's ring and cracked earth as dry mud (`test/desertflora.test.js`).
+  **Waiting on him:** the tables' cliff faces, A (stepped rings, now) or B (one wall, flat cap) - `report-65`, in
+  ART-CHECK-LIST. Left: the mission, a playa, the tin shack. **The bake's code is at 1,098.1 of 1,100 KB:** the
+  next addition of any size needs his word on the budget (or code taken out).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all
