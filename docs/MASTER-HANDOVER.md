@@ -127,8 +127,9 @@ entries have each piece):**
 - **The desert, begun 11-25 16:30 (baked, with the re-bake):** bloom a rare patch, reeds out of the ghost town's
   street, a desert river's strip in rushes, a seep's ring and cracked earth as dry mud (`test/desertflora.test.js`).
   **Waiting on him:** the tables' cliff faces, A (stepped rings, now) or B (one wall, flat cap) - `report-65`, in
-  ART-CHECK-LIST. Left: the mission, a playa, the tin shack. **The bake's code is at 1,098.1 of 1,100 KB:** the
-  next addition of any size needs his word on the budget (or code taken out).
+  ART-CHECK-LIST. 17:10: 28 found places by rule in the desert (playa, hoodoos, saguaros, joshua trees -
+  `report-66`; a world change). Left: the mission, the tin shack and rusted pickup (new art), a hoodoo drawn with
+  its cap. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all
@@ -167,7 +168,7 @@ entries have each piece):**
 - **Not done / not verified:** the whole suite was not run. Some 300 tests round the changes pass, and a wider batch
   ran 11-25 morning (core, biz, calmstreets, custodyride, contacts2w3, ftue, guide, dmath, mapwindow, firstcar: 108
   pass, 1 fail - calmstreets' Midtown test under load; it passes run alone; world3wayside, world3server, cliffs pass);
-  the bake's code stands at 1,098.1 of 1,100 KB; nothing baked was seen in a running
+  the bake's code stands at 1,098.1 of 1,150 KB; nothing baked was seen in a running
   game; the El's fade only by unit test; PR #48's deploy was never confirmed from the live site.
 - **His PDF of play notes (11-25):** `claude/prebeta-notes-2026-11-25.md` - art ones taken in, game-rule ones logged.
 

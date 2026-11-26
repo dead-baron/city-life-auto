@@ -158,4 +158,9 @@ last leap over the top of a falls; the other fish's leaps.
   right, the same edge). B is not built in: on your word. If B: its cap takes the red rock's colour behind it.
 - [ ] **The desert, left to do** (11-25): the mission ruin (3 x 4 tiles - a real ruin with walls and a yard), a cracked
   playa, the tin shack with a rusted pickup (NS1-C), hoodoos and balanced rocks beyond the five at the arch.
+- [ ] **The desert's found places** (11-25): 28 by rule, 7 each - a cracked playa with a dead snag, a stand of
+  hoodoos, saguaros round a rock pile, joshua trees among boulders. Picture: `report-66`. Claude's own look: the
+  saguaros and the joshua trees read; the playa's pan is small (4-7 tiles across); the hoodoos are thin dark spires
+  (the look of the five by the arch) and want a banded column with a cap, as NR1-B - new art, to draw.
+- [x] **The bake's code budget 1,150 KB** (the owner, 11-25 16:51: "lets raise the bake limit").
 
