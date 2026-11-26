@@ -27982,10 +27982,10 @@ every tile showed one line glyph for its slot with a colour dot.
   same figure wearing the piece, from the front; what the piece put on the figure - a pixel that differs, in a
   colour the bare figure has nowhere - is its picture. In the colours it is worn in. Two bare figures (a light skin
   in dark underwear, a dark skin in light; the second drawn only when the first shows little) so a cream top or a
-  brown boot is not lost on a skin of its own tone. **352 of 390 pieces have a picture**: every top (but the bare
-  chest), jacket, bottoms, set, hat, pair of glasses, mask, underwear and socks; 18 of 45 pieces of jewellery and
-  24 of 32 bags and hand things - a thin chain, earrings, a watch, a backpack seen from the front put nothing of
-  their own on the figure and keep their slot's glyph.
+  brown boot is not lost on a skin of its own tone. **334 of 390 pieces have a picture**: every top (but the bare
+  chest), jacket, bottoms, set, hat, pair of glasses, mask, underwear and socks; a bag worn on the back is drawn
+  from behind (17 of 32 bags and hand things); of the jewellery 7 of 45 - a thin chain, ear studs, a watch, a pair
+  of bangles are a few pixels at the game's size and keep their slot's glyph (a picture needs 16 pixels there).
 - **`client/bag.js`**: a tile is the picture at a whole number of the game's pixels (two to one on the figure's
   slots, inside its box in the grid), a hard one-pixel cream rim round it (black jeans on the navy tile were not to
   be seen - looked at in the page), drawn one at a time in the page's idle time; the glyph with its dot until then
@@ -27997,8 +27997,8 @@ every tile showed one line glyph for its slot with a colour dot.
 Looked at in the real page (`tools/uishots.py`, the Inventory at desk, phone landscape and portrait, before and
 after: the audit's counts are the same - no new overlap or small target). `uishots.py` takes `UISHOT_WAIT`.
 **Not known:** how long a picture takes on a real phone. In the test browser (no graphics card, the suite running
-beside it) they came in one after another over several seconds. The shops' and the wardrobe's rows do not use the
-pictures yet. `people.js` is in the art hash: with the re-bake.
+beside it) they came in one after another over several seconds. The shops' rows already show each piece on your own figure (`creator.js th`):
+nothing to add there. `people.js` is in the art hash: with the re-bake.
 
 ## 2026-11-26 · The UI style pass: the pick sheet (part C2) - on branch `fable-art-1124`
 The owner, 11-24: "Some UI still looks overly polished and not that 16-bit SNES style we want (like frames and some

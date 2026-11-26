@@ -5,33 +5,37 @@
 // that place, in a colour the bare figure has nowhere (skin that only shows differently - a bikini smaller than the
 // underwear, a hat's shade - is not the piece). Two bare figures are there to try - a light skin in dark underwear, a
 // dark skin in light: a cream top is lost on the first, a brown boot on the second; the second is drawn only when the
-// first shows little. A piece that puts nothing of its own on the figure from the front (a bare chest, a backpack, a
-// thin chain) has no picture: its tile keeps the slot's glyph.
+// first shows little. A bag or a thing worn that does not show from the front (a backpack) is drawn from behind. A
+// piece that puts next to nothing of its own on the figure (a bare chest, a thin chain, ear studs) has no picture:
+// its tile keeps the slot's glyph.
 // Pure (no page): client/bag.js makes the tiles of it, tools/piecesheet.mjs the review sheet.
 import { person, polishOn } from './art2/people.js';
 import { packGBuf, downsample2 } from './art2/gbuf.js';
 import { PIECES, emptyLook, validLook, lookArt, byName } from '../shared/lookcore.js';
 
-export const PIECEPIC = { figs: [{ skin: 1, under: 5 }, { skin: 13, under: 0 }], min: 6, few: 14 };
+// (min: the pixels a picture needs to be one; small: more for the small things worn or carried - two dots for a pair
+// of bangles say less than the slot's glyph)
+export const PIECEPIC = { figs: [{ skin: 1, under: 5 }, { skin: 13, under: 0 }], min: 6, small: 16, few: 14 };
 const UNDER = { f: 'Bra and briefs', m: 'Briefs' };
+const BACK = new Set(['bag', 'jewel']);
 const BARE = new Map();   // the bare figures, drawn once each
-function bare(base, k, slot, opt) {
-  const key = `${base}${k}${slot === 'under' ? 'u' : ''}${opt && opt.res || 1}${polishOn() ? 'p' : ''}`;
+function bare(base, k, slot, opt, dir = 0) {
+  const key = `${base}${k}${slot === 'under' ? 'u' : ''}${opt && opt.res || 1}${polishOn() ? 'p' : ''}${dir}`;
   let B = BARE.get(key);
   if (!B) {
     const L = emptyLook(base), F = PIECEPIC.figs[k]; L.body.build = 1; L.body.skin = F.skin; L.hair.style = 0;
     if (slot !== 'under') { const id = byName(UNDER[base]); if (id) L.outfit.under = { id, c: F.under, t: F.under, p: 0 }; }
-    const pic = draw(L, opt), own = new Set();
+    const pic = draw(L, opt, dir), own = new Set();
     for (let o = 0; o < pic.w * pic.h; o++) if (pic.p0[o * 4 + 3]) own.add((pic.p0[o * 4] << 16) | (pic.p0[o * 4 + 1] << 8) | pic.p0[o * 4 + 2]);
     BARE.set(key, (B = { L, pic, own }));
   }
   return B;
 }
-const draw = (L, opt) => downsample2(packGBuf(person(lookArt(validLook(structuredClone(L))), 0, 'idle', 0, opt && opt.res > 1 ? { res: opt.res, closeFace: opt.closeFace } : {})));
-function tryOn(P, it, k, opt) {
-  const A0 = bare(P.b === 'm' ? 'm' : 'f', k, P.slot, opt), A = A0.pic, L1 = structuredClone(A0.L);
+const draw = (L, opt, dir = 0) => downsample2(packGBuf(person(lookArt(validLook(structuredClone(L))), dir, 'idle', 0, opt && opt.res > 1 ? { res: opt.res, closeFace: opt.closeFace } : {})));
+function tryOn(P, it, k, opt, dir = 0) {
+  const A0 = bare(P.b === 'm' ? 'm' : 'f', k, P.slot, opt, dir), A = A0.pic, L1 = structuredClone(A0.L);
   L1.outfit[P.slot] = { id: it.id, c: it.c ?? P.c, t: it.t ?? P.t, p: it.p || P.d.p || 0 };
-  const B = draw(L1, opt), ox = Math.round(B.ax - A.ax), oy = Math.round(B.ay - A.ay), keep = new Uint8Array(B.w * B.h);
+  const B = draw(L1, opt, dir), ox = Math.round(B.ax - A.ax), oy = Math.round(B.ay - A.ay), keep = new Uint8Array(B.w * B.h);
   let x0 = B.w, x1 = -1, y0 = B.h, y1 = -1, n = 0;
   for (let y = 0; y < B.h; y++) for (let x = 0; x < B.w; x++) {
     const o = y * B.w + x; if (!B.p0[o * 4 + 3]) continue;
@@ -49,7 +53,10 @@ export function piecePixels(it, opt = null) {
   if (!P) return null;
   let t = tryOn(P, it, 0, opt);
   if (t.n < PIECEPIC.few) { const u = tryOn(P, it, 1, opt); if (u.n > t.n) t = u; }
-  if (t.n < PIECEPIC.min) return null;
+  // (worn on the back - a backpack, a guitar case: nothing of it shows from the front, so from behind)
+  const min = BACK.has(P.slot) ? PIECEPIC.small : PIECEPIC.min;
+  if (t.n < min && BACK.has(P.slot)) { t = tryOn(P, it, 0, opt, 4); if (t.n < PIECEPIC.few) { const u = tryOn(P, it, 1, opt, 4); if (u.n > t.n) t = u; } }
+  if (t.n < min) return null;
   const { B, keep, n, x0, y0 } = t, w = t.x1 - x0 + 1, h = t.y1 - y0 + 1, px = new Uint8ClampedArray(w * h * 4);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const o = (y + y0) * B.w + x + x0; if (keep[o]) for (let k = 0; k < 4; k++) px[(y * w + x) * 4 + k] = B.p0[o * 4 + k]; }
   return { w, h, n, px };

@@ -30,19 +30,22 @@ test('in the colours it is worn in; what puts nothing on the figure has no pictu
     const red = mean(pic('Plain tee', 'red')), blue = mean(pic('Plain tee', 'royal blue'));
     assert.ok(red[0] > red[2] + 50 && blue[2] > blue[0] + 30, `a red tee red, a blue one blue (${red.map(Math.round)} / ${blue.map(Math.round)})`);
     assert.equal(pic('Bare chest'), null); assert.equal(pic('Barefoot'), null);
+    assert.equal(pic('Bangles'), null, 'two dots are not a picture: the glyph');
+    const pack = pic('Backpack'); assert.ok(pack && pack.n >= 40, `a backpack, from behind (${pack && pack.n})`);
     assert.equal(piecePixels({ id: 99999 }), null); assert.equal(piecePixels(null), null);
     // a cream top on a light skin, a dark one on a dark skin: both drawn whole (the two bare figures)
     assert.ok(pic('Plain tee', 'cream').n >= 60 && pic('Plain tee', 'black').n >= 60);
   } finally { setPolish(null); }
 });
 
-test('nine pieces in ten have a picture of their own; every slot of clothes has them', () => {
+test('every slot of clothes has its pictures; the small things worn or carried only where they read', () => {
   setPolish(POLISH);
   try {
     const by = {}; let have = 0, all = 0;
     for (const P of PIECES) { if (!P) continue; all++; const R = piecePixels({ id: P.i }); (by[P.slot] ||= [0, 0])[1]++; if (R) { have++; by[P.slot][0]++; assert.ok(R.w <= 40 && R.h <= 52, `${P.name}: within the figure (${R.w} x ${R.h})`); } }
     console.log('piece pictures', have, 'of', all, JSON.stringify(by));
-    assert.ok(have >= all * 0.88, `pieces with a picture: ${have} of ${all}`);
+    assert.ok(have >= all * 0.84, `pieces with a picture: ${have} of ${all}`);
+    assert.ok(by.glasses[0] === by.glasses[1] && by.socks[0] === by.socks[1] && by.bag[0] >= 14 && by.jewel[0] >= 5);
     for (const s of ['top', 'jacket', 'bottoms', 'set', 'shoes', 'hat', 'under']) assert.ok(by[s][0] >= by[s][1] - 2, `${s}: ${by[s][0]} of ${by[s][1]}`);
   } finally { setPolish(null); }
 });

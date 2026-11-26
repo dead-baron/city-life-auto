@@ -214,9 +214,10 @@ last leap over the top of a falls; the other fish's leaps.
   frames and four in others (each is rounded on its own). Fixing it changes every figure a little. Say if you want
   a before/after sheet first.
 - [ ] **Clothing pictures in the Inventory** (11-26, part C3): a tile shows the piece itself, in its worn colours,
-  drawn by the game's own people art - 352 of 390 pieces (thin jewellery and backpacks keep the glyph). Pictures:
+  drawn by the game's own people art - 334 of 390 pieces (thin jewellery and small hand things keep the glyph). Pictures:
   `report-80` (the Inventory before and after), `report-81-all-pieces` (every piece). Judge on your phone: do the
-  pictures read, and how fast do they come in when the Inventory opens. Not yet in the shops' and the wardrobe's rows.
+  pictures read, and how fast do they come in when the Inventory opens. (The shops already show each piece on your
+  own figure.)
 - [ ] **YOUR PICK: the UI's look** (11-26, part C2). The same screens three ways - A today, B hard pixel frames
   with the line icons kept, C hard pixel frames with pixel icons: `report-82-ui-pick-inventory`,
   `report-83-ui-pick-settings`, `report-84-ui-pick-close`. Nothing in the game is changed yet. Say A, B or C (or
