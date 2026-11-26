@@ -11,6 +11,8 @@ import { TILE, T } from '../shared/constants.js';
 import { WAYSIDE } from '../shared/world3-wayside.js';
 import { STACKS3, inLine3, KNEES3 } from '../shared/world3-coast.js';
 import { FEET3 } from '../shared/world3-falls.js';
+import { DEADFALL } from '../shared/world3-deadfall.js';
+import { HOLLOW, ROOTCAVES } from '../shared/world3-redwoods.js';
 import { FOOTBRIDGE } from '../shared/world3-footbridges.js';
 import { CREEKS3 } from '../shared/world3-creeks.js';
 import { COVER, TREE_COVER } from '../shared/world3-clearings.js';
@@ -315,5 +317,53 @@ test('a fall lands in water: no strip of dry grass or sand between its foot and 
   // (the gorge's own: its fall's foot is wet now - the salmon's climb starts in water)
   const gorge = m.natureSites.find((s) => s.kind === 'gorge');
   if (gorge && gorge.falls) { const gx = Math.floor(gorge.falls.x / TILE), gy = Math.floor(gorge.falls.y / TILE); let ok = false; for (let d = 0; d <= 3; d++) if (wet(gx, gy + d)) ok = true; assert.ok(ok, `Fern Gorge's fall has water within three tiles of its lip (${gx}, ${gy})`); }
+});
+
+test("the woods' deadfall: fallen logs among the trees by rule, off every path and water, none on top of another thing", () => {
+  const R = m.world3.deadfall, logs = m.props.filter((p) => p && p.t === 'log' && p.wild);
+  console.log('deadfall', JSON.stringify(R));
+  assert.ok(logs.length <= R.logs && logs.length >= R.logs - 5, `the logs laid are in the world (${logs.length} of ${R.logs}; a later pass may take one off a path it lays)`);
+  assert.ok(logs.length >= 150 && logs.length <= 500, `fallen logs laid (${logs.length}; the world had 13 wild ones)`);
+  assert.ok((R.by[47] || 0) >= 120 && (R.by[48] || 0) >= 8, `in Highland Woods and in Granite Peaks (${JSON.stringify(R.by)})`);
+  const trees = new Map(); for (const p of m.props) if (p && /^tree_/.test(p.t)) { const k = Math.floor(p.x / 96) * 65536 + Math.floor(p.y / 96); (trees.get(k) || trees.set(k, []).get(k)).push(p); }
+  const bad = [];
+  for (const p of logs) {
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE), at = `${tx}, ${ty}`;
+    if (!DEADFALL.by[m.dist[m.idx(tx, ty)]]) bad.push(`${at}: outside the woods`);
+    for (let dy = -DEADFALL.off; dy <= DEADFALL.off; dy++) for (let dx = -DEADFALL.off; dx <= DEADFALL.off; dx++) { const t = m.tiles[m.idx(tx + dx, ty + dy)]; if (t !== T.GRASS && !(t === T.SAND && (Math.abs(dx) > 1 || Math.abs(dy) > 1))) { bad.push(`${at}: a path, a road, water or rock within ${DEADFALL.off} tiles`); dy = 9; break; } }
+    let near = false; for (let gy = Math.floor((p.y - 96) / 96); gy <= Math.floor((p.y + 96) / 96) && !near; gy++) for (let gx = Math.floor((p.x - 96) / 96); gx <= Math.floor((p.x + 96) / 96); gx++) if ((trees.get(gx * 65536 + gy) || []).some((q) => Math.abs(q.x - p.x) < DEADFALL.tree * TILE && Math.abs(q.y - p.y) < DEADFALL.tree * TILE)) { near = true; break; }
+    if (!near) bad.push(`${at}: no tree by it`);
+    { const half = Math.abs(Math.cos(p.a)) * p.len / 2; let hid = false; for (let gy = Math.floor(p.y / 96); gy <= Math.floor((p.y + DEADFALL.crown) / 96) && !hid; gy++) for (let gx = Math.floor((p.x - half - DEADFALL.side) / 96); gx <= Math.floor((p.x + half + DEADFALL.side) / 96); gx++) if ((trees.get(gx * 65536 + gy) || []).some((q) => q.y > p.y + 4 && q.y < p.y + DEADFALL.crown && Math.abs(q.x - p.x) < half + DEADFALL.side)) { hid = true; break; } if (hid) bad.push(`${at}: under a tree's crown`); }
+    assert.ok(p.len >= 120 && p.len <= 220 && p.moss === 1);
+  }
+  for (let i = 0; i < logs.length; i++) for (let j = i + 1; j < logs.length; j++) if (Math.abs(logs[i].x - logs[j].x) < DEADFALL.apart * TILE && Math.abs(logs[i].y - logs[j].y) < DEADFALL.apart * TILE) bad.push(`two logs close: ${Math.floor(logs[i].x / TILE)}, ${Math.floor(logs[i].y / TILE)}`);
+  assert.equal(bad.length, 0, bad.slice(0, 8).join('; '));
+  assert.ok(new Set(logs.map((p) => p.a)).size >= 40 && new Set(logs.map((p) => p.len)).size >= 4, 'at every angle, in several lengths');
+  // (the world's rocks come in many sizes - the rock rule's "sizes mixed": counted here, drawn in test/rockart.test.js)
+  const oc = m.props.filter((p) => p && p.t === 'outcrop'), bo = m.props.filter((p) => p && p.t === 'boulder');
+  assert.ok(new Set(oc.map((p) => `${p.w}x${p.d}x${p.h}`)).size >= 150 && new Set(bo.map((p) => p.s)).size >= 30, 'outcrops and boulders in many sizes');
+});
+
+test("the redwoods' found things (NS1-A): hollow giants where their foot shows, root caves on open ground among the trees", () => {
+  const H = m.world3.hollows, RC = m.world3.rootCaves;
+  console.log('hollows', JSON.stringify(H), 'root caves', JSON.stringify(RC));
+  const hol = m.props.filter((p) => p && p.t === 'redwood' && p.hollow), rw = m.props.filter((p) => p && (p.t === 'redwood' || /^tree_/.test(p.t)));
+  assert.ok(H.giants > 3000 && hol.length >= 40 && hol.length <= H.giants / HOLLOW.one * 1.2, `hollow giants (${hol.length} of ${H.giants} big ones)`);
+  for (const p of hol) {
+    assert.ok(HOLLOW.sp.includes(p.sp), `a big giant (${p.sp})`);
+    const front = rw.filter((q) => q !== p && q.y > p.y && q.y < p.y + HOLLOW.front && Math.abs(q.x - p.x) < HOLLOW.side);
+    assert.equal(front.length, 0, `nothing stands in front of the hollow at ${Math.floor(p.x / TILE)}, ${Math.floor(p.y / TILE)}`);
+  }
+  for (let i = 0; i < hol.length; i++) for (let j = i + 1; j < hol.length; j++) assert.ok(Math.abs(hol[i].x - hol[j].x) >= HOLLOW.apart * TILE || Math.abs(hol[i].y - hol[j].y) >= HOLLOW.apart * TILE, 'no two hollows side by side');
+  const caves = m.props.filter((p) => p && p.t === 'rootcave');
+  assert.ok(caves.length <= RC.caves && caves.length >= RC.caves - 2);
+  assert.ok(caves.length >= 6 && caves.length <= 60, `root caves (${caves.length})`);
+  for (const p of caves) {
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    for (let dy = -ROOTCAVES.off; dy <= ROOTCAVES.off; dy++) for (let dx = -ROOTCAVES.off; dx <= ROOTCAVES.off; dx++) assert.equal(m.tiles[m.idx(tx + dx, ty + dy)], T.GRASS, `open grass round the root cave at ${tx}, ${ty}`);
+    assert.ok(m.props.filter((q) => q && q.t === 'redwood' && Math.abs(q.x - p.x) < ROOTCAVES.reach * TILE && Math.abs(q.y - p.y) < ROOTCAVES.reach * TILE).length >= ROOTCAVES.near, 'among the redwoods');
+    assert.equal(m.props.filter((q) => q && q.t === 'redwood' && q.y > p.y && q.y < p.y + 260 && Math.abs(q.x - p.x) < 90).length, 0, 'no trunk in front of its way in');
+  }
+  assert.ok(new Set(caves.map((p) => p.s)).size >= 3, 'in several shapes');
 });
 

@@ -511,3 +511,76 @@ export function thinRedwoods3(m, H3) {
   return out;
 }
 
+// The hollow trunks (the art pass, 2026-11-25; concept NS1-A's first set piece, the plan's "a walk-in hollow trunk"):
+// an old giant with a fire hollow burnt into its foot, black inside, toward the viewer. redwoods.js had drawn the scar
+// since the first giants and no tree carried it. One big giant in `one` (25; by its place's hash) is hollow, where its
+// foot can be seen - no tree or giant standing within `front` px south of it - and no two within `apart` tiles: a
+// thing come across, not a pattern. The prop's `hollow`; statics.js draws the same tree with the hollow.
+//   hollowGiants3(m) -> { giants, hollow }
+export const HOLLOW = { one: 25, sp: ['giantL', 'giant'], front: 150, side: 56, apart: 14 };
+export function hollowGiants3(m) {
+  const out = { giants: 0, hollow: 0 };
+  const hq = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const G = 5 * TILE, grid = new Map(), big = [];
+  for (const p of m.props) {
+    if (!p || !/^(redwood|tree_)/.test(p.t)) continue;
+    const k = Math.floor(p.x / G) * 65536 + Math.floor(p.y / G); let a = grid.get(k); if (!a) grid.set(k, (a = [])); a.push(p);
+    if (p.t === 'redwood' && HOLLOW.sp.includes(p.sp)) big.push(p);
+  }
+  out.giants = big.length;
+  const got = [];
+  for (const p of big) {
+    if (hq(Math.round(p.x), Math.round(p.y), 9201) >= 1 / HOLLOW.one) continue;
+    let hid = false;
+    for (let cy = Math.floor(p.y / G); cy <= Math.floor((p.y + HOLLOW.front) / G) && !hid; cy++) for (let cx = Math.floor((p.x - HOLLOW.side) / G); cx <= Math.floor((p.x + HOLLOW.side) / G) && !hid; cx++)
+      for (const q of grid.get(cx * 65536 + cy) || []) if (q !== p && q.y > p.y && q.y < p.y + HOLLOW.front && Math.abs(q.x - p.x) < HOLLOW.side) { hid = true; break; }
+    if (hid || got.some((q) => Math.abs(q.x - p.x) < HOLLOW.apart * TILE && Math.abs(q.y - p.y) < HOLLOW.apart * TILE)) continue;
+    p.hollow = 1; got.push(p); out.hollow++;
+  }
+  return out;
+}
+
+// The root caves (the art pass, 2026-11-25; NS1-A, the plan's "a root cave"): the torn-up root mass of a fallen giant,
+// grown over, a dark way in at its foot (client/art2/redwoods.js rootCave; prop 'rootcave'). One to a cell of `cell`
+// tiles of the grove at most, by chance `p`: on open grass among the redwoods (at least `near` of them within `reach`
+// tiles), nothing standing where it stands or in front of its way in, off every path, road and water; a fern at each
+// shoulder. Solid by three circles along its width.
+//   rootCaves3(m, H3) -> { caves, cells }
+export const ROOTCAVES = { cell: 36, p: 0.08, near: 4, reach: 9, off: 3, tries: 60, w: 200 };
+export function rootCaves3(m, H3) {
+  const out = { caves: 0, cells: 0 };
+  if (!H3 || !H3.addProp) return out;
+  const S = ROOTCAVES, W = m.w, HH = m.h, C = S.cell, inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH;
+  const hq = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const G = 64, grid = new Map(), cells = new Map();
+  for (const p of m.props) {
+    if (!p || p.t === 'painted') continue;
+    const k = Math.floor(p.x / G) * 65536 + Math.floor(p.y / G); let a = grid.get(k); if (!a) grid.set(k, (a = [])); a.push(p);
+    if (p.t === 'redwood') { const ck = Math.floor(p.x / TILE / C) * 65536 + Math.floor(p.y / TILE / C); let c = cells.get(ck); if (!c) cells.set(ck, (c = [])); c.push(p); }
+  }
+  const taken = (x0, y0, x1, y1) => { for (let gy = Math.floor(y0 / G); gy <= Math.floor(y1 / G); gy++) for (let gx = Math.floor(x0 / G); gx <= Math.floor(x1 / G); gx++) for (const p of grid.get(gx * 65536 + gy) || []) if (p.x > x0 && p.x < x1 && p.y > y0 && p.y < y1) return true; return false; };
+  const trunk = (x0, y0, x1, y1) => { for (let gy = Math.floor(y0 / G); gy <= Math.floor(y1 / G); gy++) for (let gx = Math.floor(x0 / G); gx <= Math.floor(x1 / G); gx++) for (const p of grid.get(gx * 65536 + gy) || []) if (/^(redwood|tree_)/.test(p.t) && p.x > x0 && p.x < x1 && p.y > y0 && p.y < y1) return true; return false; };   // (any cell's tree: the first run looked at its own cell's and one stood in front from the next)
+  const open = (tx, ty) => { for (let dy = -S.off; dy <= S.off; dy++) for (let dx = -S.off - 1; dx <= S.off + 1; dx++) { if (!inF(tx + dx, ty + dy)) return false; const i = (ty + dy) * W + tx + dx; if (m.tiles[i] !== T.GRASS || !m.land[i] || m.reserve[i] || (m.bld && m.bld[i] >= 0)) return false; } return true; };
+  for (const [ck, rw] of [...cells.entries()].sort((a, b) => a[0] - b[0])) {
+    if (rw.length < S.near * 3) continue;
+    out.cells++;
+    const cx = Math.floor(ck / 65536), cy = ck % 65536;
+    if (hq(cx, cy, 9301) >= S.p) continue;
+    for (let k = 0; k < S.tries; k++) {
+      const tx = cx * C + Math.floor(hq(cx * 37 + k, cy, 9303) * C), ty = cy * C + Math.floor(hq(cx, cy * 37 + k, 9305) * C);
+      if (!open(tx, ty)) continue;
+      const X = tx * TILE + 16, Y = ty * TILE + 16;
+      if (rw.filter((p) => Math.abs(p.x - X) < S.reach * TILE && Math.abs(p.y - Y) < S.reach * TILE).length < S.near) continue;
+      // (nothing where it stands - its width, its height up the screen - nor a trunk in front of its way in)
+      if (taken(X - S.w / 2 - 20, Y - 150, X + S.w / 2 + 20, Y + 30) || trunk(X - 90, Y, X + 90, Y + 260)) continue;
+      const p = H3.addProp(m, 'rootcave', X, Y, 0, { s: Math.floor(hq(tx, ty, 9307) * 6) });
+      { const gk = Math.floor(X / G) * 65536 + Math.floor(Y / G); let ga = grid.get(gk); if (!ga) grid.set(gk, (ga = [])); ga.push(p || { x: X, y: Y }); }
+      if (m.addSolidProp) for (const q of [-0.3, 0, 0.3]) m.addSolidProp(Math.round(X + S.w * q), Y - 14, 26);
+      for (const sd of [-1, 1]) H3.addProp(m, 'shrub_a', X + sd * (S.w / 2 + 14), Y + 6 + (sd > 0 ? 8 : 0), 0, { sp: 'fern', k: 1.05 });
+      out.caves++;
+      break;
+    }
+  }
+  return out;
+}
+

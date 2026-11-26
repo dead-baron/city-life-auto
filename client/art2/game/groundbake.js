@@ -444,6 +444,21 @@ export function tinaPx(list, X, Y, seed) {
   }
   return -1;
 }
+// A desert pool's own outline (11-25, the water's edges: a seep two tiles across came out as a square with eased
+// corners, a tile's shape): water past the pool's rim - its radius lobed by the angle, never a circle - is drawn as
+// the ring's ground. The material, or -1 (not one of these pools' water, or inside its rim).
+export const TINA_RIM = { at: 0.98, lobe: 0.1, reach: 1.7 };
+export function tinaTrim(list, X, Y, seed) {
+  for (const e of list) {
+    if (!e.r) continue;
+    const dx = X - e.x, dy = Y - e.y, d2 = dx * dx + dy * dy, far = e.r * TINA_RIM.reach;
+    if (d2 > far * far) continue;
+    const a = Math.atan2(dy, dx), ph = ((e.x * 7 + e.y * 13) % 628) / 100;
+    const rim = e.r * (TINA_RIM.at + TINA_RIM.lobe * (Math.sin(a * 2 + ph) * 0.6 + Math.sin(a * 3 + ph * 1.7) * 0.4)) + (vnc(X, Y, 9, seed + 81) - 0.5) * 5;
+    return d2 > rim * rim ? (e.k ? M_.CRACKED : M_.REDROCK) : -1;
+  }
+  return -1;
+}
 // a two-rut track's ruts (shared/naturesites.js: the canyon's, the trailhead's): two lines either side of its middle
 // (0 off it, 1 the track, 2 a rut; a track drawn per pixel - r.px - is all its own, else only its ruts on its dirt tiles).
 // A track of its own (11-24, DEVLOG "Fields with edges ..."): two worn ruts and a crown between (one rut for a
@@ -932,6 +947,7 @@ function classify(C) {
           }
         }
       }
+      if (C.tina && C.tina.length && isWater(m)) { const q = tinaTrim(C.tina, X, Y, seed); if (q >= 0) m = q; }   // (a desert pool's own lobed rim)
       // --- lawn against paving: threshold the blurred softness
       if (fl & 2 && (isSoft(m) || b.tso[ti] === 0) && t !== T.WATER && t !== T.DEEP) {
         const sv = (b.tsf[k00] * (1 - vx) + b.tsf[k00 + 1] * vx) * (1 - vy) + (b.tsf[k00 + TN] * (1 - vx) + b.tsf[k00 + TN + 1] * vx) * vy;

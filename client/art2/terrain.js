@@ -609,19 +609,48 @@ export function rockSprite(w, d, maxH, fn, ax = w / 2, ay = d / 2, seed = 1) {
   G.ax = ax; G.ay = ay + oy;
   return G;
 }
-// a chunky boulder: a faceted dome in one of the rock styles
+// a chunky boulder: faceted domes in one of the rock styles. By its seed one of BOULDER.kinds builds (11-25, the
+// rock rule - "no lathe-turned shape, no perfect disc, sizes mixed"; it was one dome with a smaller one always at its
+// right shoulder): a lone lump, a lump with a shoulder (either side, front or back), a long low slab, a split pair,
+// a tall tooth with a low one against it - each lump's own length, depth and height drawn from the seed.
+export const BOULDER = { kinds: 5 };
 export function boulder(seed = 1, size = 24, style = 'granite', o = {}) {
-  const w = Math.ceil(size * 1.4) + 6, d = Math.ceil(size) + 6, h = Math.round(size * (o.tall ?? 0.55));
-  return rockSprite(w, d, h + 4, (T) => {
-    T.dome(w / 2, d / 2, size * 0.62, size * 0.42, h, { style, seed, top: 'rock', moss: o.moss || 0, barnacles: o.barnacles || 0, snowTop: o.snow || 0, hang: o.hang, veg: o.veg, wob: 0.22 });
-    if (o.cluster !== false && size > 16) T.dome(w / 2 + size * 0.38, d / 2 + size * 0.12, size * 0.3, size * 0.22, h * 0.55, { style, seed: seed + 5, top: 'rock', moss: o.moss || 0, barnacles: o.barnacles || 0 });
+  const w = Math.ceil(size * 1.4) + 6, d = Math.ceil(size) + 6, tall = o.tall ?? 0.55, Hb = (k) => hash(seed, k, 53);
+  const kind = o.cluster === false || size <= 16 ? 0 : Math.floor(Hb(1) * BOULDER.kinds), sd = Hb(2) < 0.5 ? -1 : 1;
+  const hTop = Math.round(size * tall * (kind === 2 ? 0.62 : kind === 4 ? 1.25 : 0.85 + Hb(3) * 0.3));
+  return rockSprite(w, d, Math.round(size * tall * 1.3) + 5, (T) => {
+    const cx = w / 2, cy = d / 2, lump = (x, y, rx, ry, hh, k, main) => T.dome(x, y, rx, ry, hh, { style, seed: seed + k * 5, top: 'rock', moss: o.moss || 0, barnacles: o.barnacles || 0, ...(main ? { snowTop: o.snow || 0, hang: o.hang, veg: o.veg, wob: 0.22 + Hb(4) * 0.12 } : {}) });
+    if (kind === 0) lump(cx + (Hb(5) - 0.5) * size * 0.1, cy, size * (0.56 + Hb(6) * 0.1), size * (0.36 + Hb(7) * 0.08), hTop, 0, 1);
+    else if (kind === 1) { lump(cx - sd * size * 0.08, cy, size * 0.58, size * 0.4, hTop, 0, 1); const a = Hb(8); lump(cx + sd * size * (0.3 + a * 0.12), cy + (Hb(9) - 0.35) * size * 0.3, size * (0.24 + a * 0.1), size * (0.18 + a * 0.06), hTop * (0.4 + Hb(10) * 0.25), 1, 0); }
+    else if (kind === 2) { lump(cx, cy, size * 0.66, size * 0.34, hTop, 0, 1); lump(cx + sd * size * 0.3, cy - size * 0.06, size * 0.3, size * 0.22, hTop * 1.25, 1, 0); }
+    else if (kind === 3) { lump(cx - sd * size * 0.24, cy - size * 0.04, size * 0.4, size * 0.34, hTop, 0, 1); lump(cx + sd * size * 0.3, cy + size * 0.06, size * 0.32, size * 0.28, hTop * (0.6 + Hb(8) * 0.3), 1, 0); }
+    else { lump(cx - sd * size * 0.1, cy, size * 0.4, size * 0.34, hTop, 0, 1); lump(cx + sd * size * 0.34, cy + size * 0.08, size * 0.3, size * 0.24, hTop * 0.38, 1, 0); if (Hb(9) < 0.5) lump(cx - sd * size * 0.46, cy + size * 0.12, size * 0.16, size * 0.13, hTop * 0.22, 2, 0); }
   }, w / 2, d / 2 + size * 0.2, seed);
 }
-// a stepped outcrop: a small plateau with ledges
+// an outcrop: bedrock standing out of the ground. By its seed one of OUTCROP.kinds builds (11-25, the rock rule; it
+// was one blob stepped in three rings each inside the last - a tiered cake, every outcrop of the world's 1,481 the
+// same but for its size): each a low apron on the old outline (so what the map holds solid is still under rock) with
+// masses set on it off its middle - a head at one end with a shoulder, a long ridge with a notch, two heads and a
+// saddle, a fin with fallen blocks, a broad table with one corner up - and a few loose rocks at its foot. A mass
+// has one step or two, never three even ones. o.tiers (a recipe's own steps: the jungle's black rock) keeps the one
+// stepped mass.
+export const OUTCROP = { kinds: 5, tall: 2 };
 export function outcrop(seed = 1, w = 60, d = 40, h = 40, style = 'granite', o = {}) {
-  const W = w + 16, D = d + 16;
+  const W = w + 16, D = d + 16, cx = W / 2, cy = D / 2, Ho = (k) => hash(seed, k, 47);
   return rockSprite(W, D, h + 6, (T) => {
-    T.plateau({ blob: { cx: W / 2, cy: D / 2, rx: w / 2, ry: d / 2, seed, wob: 0.2 } }, { style, seed, tiers: o.tiers || [[0, h * 0.55], [Math.min(w, d) * 0.18, h * 0.8], [Math.min(w, d) * 0.32, h]], top: o.top || 'rock', veg: o.veg, hang: o.hang, moss: o.moss || 0, barnacles: o.barnacles || 0, wet: o.wet || 0, snowTop: o.snow || 0, jag: o.jag });
+    const com = { style, top: o.top || 'rock', veg: o.veg, hang: o.hang, moss: o.moss || 0, barnacles: o.barnacles || 0, wet: o.wet || 0, snowTop: o.snow || 0, jag: o.jag };
+    if (o.tiers) { T.plateau({ blob: { cx, cy, rx: w / 2, ry: d / 2, seed, wob: 0.2 } }, { ...com, seed, tiers: o.tiers }); return; }
+    const kind = Math.floor(Ho(1) * OUTCROP.kinds), sd = Ho(2) < 0.5 ? -1 : 1, rx = w / 2, ry = d / 2;
+    // (a mass: its own ragged outline; one step, or a second set in by a share of its width - never the same share twice)
+    // No mass stands taller than OUTCROP.tall times its own width: a thin tall one reads as a chimney, not bedrock.
+    const mass = (x, y, mx, my, hh0, k, step, hh = Math.min(hh0, Math.max(mx, my) * OUTCROP.tall)) => T.plateau({ blob: { cx: x, cy: y, rx: Math.max(3, mx), ry: Math.max(2.5, my), seed: seed + k * 17, wob: 0.26 + Ho(60 + k) * 0.1 } }, { ...com, seed: seed + k * 13, tiers: step ? [[0, hh * (0.5 + Ho(70 + k) * 0.25)], [Math.min(mx, my) * (0.22 + Ho(80 + k) * 0.3), hh]] : [[0, hh]] });
+    T.plateau({ blob: { cx, cy, rx, ry, seed, wob: 0.22 } }, { ...com, seed, tiers: [[0, h * (0.16 + Ho(3) * 0.1)]] });   // the apron
+    if (kind === 0) { mass(cx - sd * rx * 0.3, cy - ry * 0.1, rx * 0.56, ry * 0.7, h, 1, 1); mass(cx + sd * rx * 0.38, cy + ry * 0.05, rx * 0.42, ry * 0.55, h * (0.45 + Ho(4) * 0.2), 2, 0); }
+    else if (kind === 1) { mass(cx - sd * rx * 0.42, cy, rx * 0.44, ry * 0.66, h * (0.7 + Ho(4) * 0.3), 1, 0); mass(cx + sd * rx * 0.02, cy - ry * 0.06, rx * 0.3, ry * 0.52, h * 0.42, 2, 0); mass(cx + sd * rx * 0.46, cy + ry * 0.04, rx * 0.4, ry * 0.6, h, 3, 1); }
+    else if (kind === 2) { mass(cx - sd * rx * 0.36, cy + ry * 0.05, rx * 0.46, ry * 0.6, h, 1, 0); mass(cx + sd * rx * 0.4, cy - ry * 0.12, rx * 0.38, ry * 0.5, h * (0.6 + Ho(4) * 0.25), 2, 1); mass(cx, cy + ry * 0.3, rx * 0.34, ry * 0.3, h * 0.3, 3, 0); }
+    else if (kind === 3) { mass(cx + sd * rx * 0.12, cy - ry * 0.15, rx * 0.4, ry * 0.62, h, 1, 0); mass(cx - sd * rx * 0.34, cy + ry * 0.1, rx * 0.36, ry * 0.42, h * 0.4, 2, 0); mass(cx + sd * rx * 0.52, cy + ry * 0.2, rx * 0.26, ry * 0.3, h * 0.28, 3, 0); }
+    else { mass(cx, cy, rx * 0.78, ry * 0.74, h * (0.55 + Ho(4) * 0.15), 1, 0); mass(cx + sd * rx * 0.34, cy - ry * 0.22, rx * 0.36, ry * 0.4, h, 2, 0); }
+    for (let k = 0, n = 2 + Math.floor(Ho(5) * 4); k < n; k++) { const a = Ho(10 + k) * 6.283, q = 0.82 + Ho(20 + k) * 0.22; T.dome(cx + Math.cos(a) * rx * q, cy + Math.abs(Math.sin(a)) * ry * q * 0.9, 2.5 + Ho(30 + k) * 4, 2 + Ho(34 + k) * 2.6, 3 + Ho(38 + k) * 5, { style, seed: seed + k, moss: o.moss || 0 }); }
   }, W / 2, D / 2 + d * 0.3, seed);
 }
 // a red sandstone stack (concepts N4, NT1-B, SC3-F): a cluster of square-ish blocks of banded orange-red rock, each

@@ -188,6 +188,21 @@ last leap over the top of a falls; the other fish's leaps.
   two of the Redwood River's 32, a ledge fall at Macaw Cove 128 px of beach from the sea - the water now comes up to
   each one's foot (the beach one as a rill across the sand). Picture: `report-75`. Judge in the game: the gorge's
   salmon now climb from water.
+- [ ] **Boulders and outcrops** (11-25, your rock rule): every outcrop was the same three-ring cake, every boulder
+  one dome with a small one at its right. Now five builds each, eight pictures a size, masses off the middle, no
+  chimney, the desert's stone without green turf. Picture: `report-76`. Judge in the game: a rock field in Granite
+  Peaks and one in the desert.
+- [ ] **Desert pools and riffles** (11-25): a seep's pool is round and lobed, not a square; a riffle's white is
+  broken, not flat blobs. Picture: `report-76`.
+- [ ] **Fallen logs in the woods** (11-25): the world had 13 wild ones. Now 215 among Highland Woods' and Granite
+  Peaks' trees, mossy, with ferns and toadstools along them, none under a tree's crown. Judge in the game: walk
+  the woods off a trail.
+- [ ] **The redwoods' hollow trunks and root caves** (11-25, NS1-A): one old giant in 25 carries a black fire hollow
+  at its foot (241); 28 root caves - a fallen giant's root mass with a dark way in. Picture: `report-77`. Neither
+  is walk-in: they are things to find. Say if you want an inside.
+- [ ] **YOUR CALL: the mission ruin bigger.** Not built: at a church's size its one voxel model needs about 425 MB
+  while its chunk bakes (104 MB today, already the game's largest). Two ways: split the model in two, or change the
+  voxel kit to keep less per voxel. Either is a half day; say if you want it.
 - [ ] **YOUR CALL: a pool and stream above Coral Cay Falls** (the plan's jungle item). Not built: the spine above the
   falls is tall rock drawn up the screen, so water on the ground there is hidden, and the concept shows no stream
   above the fall either. If you want it, it is a new piece - a pool drawn into the top of a rock.

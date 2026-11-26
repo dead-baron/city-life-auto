@@ -53,7 +53,8 @@ import { coastByHand3, stacksApart3, marshKnees3 } from './world3-coast.js';
 import { tropic3 } from './world3-tropic.js';   // (the nature showcase: Coral Cay's east lobe as NA1-E, Macaw Cove as SC3-H)
 import { mirageByHand3 } from './world3-mirage.js';
 import { fallsInView3, fallsFeet3 } from './world3-falls.js';
-import { redwoodsByHand3, thinRedwoods3 } from './world3-redwoods.js';
+import { deadfall3 } from './world3-deadfall.js';
+import { redwoodsByHand3, thinRedwoods3, hollowGiants3, rootCaves3 } from './world3-redwoods.js';
 import { ledgeFalls3 } from './world3-ledgefalls.js';
 import { beachCamps3 } from './world3-camps.js';
 import { driveTree3 } from './world3-drivetree.js';
@@ -341,9 +342,12 @@ export function worldOpts(asked) {
       m.world3.peakCreeks = peakCreeks3(m, H3);   // (the mountains' streams and tarns by the creeks' rule, Summit Tarn's outflow run on down - world3-creeks.js CREEKS3.alp, 11-25)
       m.world3.redrock = desertKit3(m, H3);   // (the red rock desert by hand - the nature showcase, 10-31: every tinaja a waterhole in a dry wash, the trailhead on the highway, the pull-offs, the Red Rock Trail's start, Mirage Camp and the arch dressed from the kit - redrock.js)
       m.world3.redwoodThin = thinRedwoods3(m, H3);   // (the art pass, 11-24: no redwood's trunk right behind another's - world3-redwoods.js)
+      m.world3.hollows = hollowGiants3(m);   // (NS1-A's hollow trunk: one old giant in twenty-five carries a fire hollow at its foot - world3-redwoods.js, 11-25)
       m.world3.wayside = buildWayside3(m, H3);   // (the art pass, 11-24: the woods' and the meadows' found places - ruins, an oak with a bench, a fire ring, a dry-stone wall and its gate, an oak with a swing: world3-wayside.js; after every place made by hand)
       m.world3.fallsView = fallsInView3(m, H3);   // (the falls chain, part 1: no tree standing where it would hide a fall - world3-falls.js)
       m.world3.fallsFeet = fallsFeet3(m, H3);   // (the falls chain, part 2: a fall lands in water, not on a strip of bank - world3-falls.js, 11-25)
+      m.world3.deadfall = deadfall3(m, H3);   // (the woods' fallen logs by rule - the world had 13 wild ones: world3-deadfall.js, 11-25)
+      m.world3.rootCaves = rootCaves3(m, H3);   // (NS1-A's root cave: a fallen giant's root mass with a dark way in, a few to the grove - world3-redwoods.js, 11-25)
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)
       m.world3.footbridges = footbridges3(m, H3);   // (the redwood overhaul, 11-24: every footbridge decked, on its banks, met by its path and in sight - world3-footbridges.js)
       m.world3.wrecks = sunkenWrecks3(m);   // (sunken boats on the bed where the water's clear: rowboats in the lakes, a skiff and a sloop in the sea's shallows - world3-wrecks.js)

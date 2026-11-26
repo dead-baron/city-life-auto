@@ -341,7 +341,7 @@ export function makeStatic(r) {
     case 'v': { const m = voxModel(r.m, r.a || []); return m && typeof m.prepare !== 'function' && m.col ? m : voxSprite(m, r.hd || 0, r.pv || null); }   // (a few props come drawn already: the greenhouse's glass over its plants)
     case 'va': return artRock(voxSprite(artVox(r.m, r.a || []), r.hd || 0));   // (a voxel model built at the art pixel: one voxel 2 x 2 px - props-rural.js's meadow and woods pieces)
     case 'f': return makeFlora(r);
-    case 'rw': return r.k === 'stump' ? RW.oldStump(11 + r.s * 7, 26) : RW.nurseLog(5 + r.s * 13, r.len || 200, 18, r.flip);   // (redwoods.js: an old stump, a fallen giant)
+    case 'rw': return r.k === 'stump' ? RW.oldStump(11 + r.s * 7, 26) : r.k === 'rootcave' ? RW.rootCave(3 + r.s * 11) : RW.nurseLog(5 + r.s * 13, r.len || 200, 18, r.flip);   // (redwoods.js: an old stump, a fallen giant)
     case 'deck': return makeDeck(r);
     case 'el': return makeEl(r);
     case 'sg': return makeSignal(r);
@@ -411,7 +411,7 @@ export function makeStatic(r) {
     case 'court': return makeCourt(r);
     case 'skatepad': return makeSkatePad(r);
     case 'hbox': return GD.hedgeBox(r.w, r.d, r.h, { seed: r.s || 1, R: FL.FOL(r.c || '#3a7226'), flowers: r.fl ? ramp(r.fl, 6, 3, { light: 0.6 }) : null, fk: 0.1, ragged: 1 });
-    case 'outcrop': { const w = r.w / 2, d = r.d / 2, h = r.h / 2; return artRock(outcrop(r.s + 7, w, d, h, r.style || 'granite', r.j ? { veg: { kind: 'shrub', density: 0.1, band: 1 }, hang: { kind: 'vine', amount: 0.4 }, moss: 0.18, wet: 3, tiers: [[0, h * 0.78], [Math.min(w, d) * 0.16, h]] } : { veg: { kind: 'grass', density: 0.06, band: 1 }, moss: 0.1 })); }   // (j: a jungle's black rock - vines down its faces, shrubs on its ledges: shared/world3-tropic.js)
+    case 'outcrop': { const w = r.w / 2, d = r.d / 2, h = r.h / 2; return artRock(outcrop(r.s + 7, w, d, h, r.style || 'granite', r.j ? { veg: { kind: 'shrub', density: 0.1, band: 1 }, hang: { kind: 'vine', amount: 0.4 }, moss: 0.18, wet: 3, tiers: [[0, h * 0.78], [Math.min(w, d) * 0.16, h]] } : DRY_ROCK.has(r.style || 'granite') ? { veg: { kind: 'dry', density: 0.025, band: 1 } } : { veg: { kind: 'grass', density: 0.035, band: 1 }, moss: 0.1 })); }   // (j: a jungle's black rock - vines down its faces, shrubs on its ledges: shared/world3-tropic.js)
     case 'towel': return makeTowel(r);
     case 'blanket': return makeBlanket(r);
     case 'stack': return artRock(seaStack(r.s || 1, (r.r || 26) / 2, (r.h || 150) / 2, 'basalt', { hang: { kind: 'kelp', amount: 0.14 }, veg: { kind: 'grass', density: 0.05, band: 1 } }));   // (11-25: less weed and turf - with more faces to hang on, the rock went under it)
@@ -2315,6 +2315,11 @@ const SPECIES = {
   // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
   giantL: [giantOf(720, 70), 250, 770, 92], giant: [giantOf(620, 54), 210, 660, 76], giantS: [giantOf(520, 40), 175, 562],
   giantLH: [giantOf(720, 70, HIGH_CROWN), 250, 770, 92], giantH: [giantOf(620, 54, HIGH_CROWN), 210, 660, 76], giantSH: [giantOf(520, 40, HIGH_CROWN), 175, 562],   // (the same giants, their crowns carried high: over a trail, a creek, a road - crownOver)
+  // (11-25, NS1-A's hollow trunk: the same giants with a fire hollow burnt into the foot, toward the viewer - a redwood
+  // prop's `hollow`, shared/world3-redwoods.js hollowGiants3; redwoods.js had drawn the scar since the first giants and
+  // no tree carried it)
+  giantLF: [giantOf(720, 70, { scar: 1 }), 250, 770, 92], giantF: [giantOf(620, 54, { scar: 1 }), 210, 660, 76],
+  giantLHF: [giantOf(720, 70, { ...HIGH_CROWN, scar: 1 }), 250, 770, 92], giantHF: [giantOf(620, 54, { ...HIGH_CROWN, scar: 1 }), 210, 660, 76],
   redwoodB: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.48, cone: 1 }), 110, 405], redwoodC: [(s) => RW.giantRedwoodArt(s, 380, 20, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 110, 405],   // (11-21: the common redwood's two higher crowns - redwoodAt picks among the three by where the tree stands)
   redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 112, 365], redwood2H: [(s) => RW.giantRedwoodArt(s, 340, 18, { flare: 0.5, crown: 0.85, low: 0.62, cone: 1 }), 116, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
   gate: [(s) => RW.giantRedwoodArt(s, 760, 78, { tunnel: { w: 46, h: 60 } }), 270, 815],   // (Giant's Gate, the drive-through: shared/world3-drivetree.js)
@@ -2556,7 +2561,8 @@ function propItems(c, p, pi, I) {
   if (t === 'redwood') {
     const sp = SPECIES[p.sp] ? p.sp : 'giant', S = SPECIES[sp], v = shapeAt(sp, x, y, NV(sp)), tr = RW_R[sp] || 20, rr = tr * 1.35, fw = tr * 1.5 + 24;
     // (the owner, 11-21 15:39: a giant whose boughs would hang over a trail, a clearing, a creek or a road carries them high)
-    const art = SPECIES[sp + 'H'] && crownOver(c, x, y, Math.floor(S[2] * (sp === 'redwood2' ? 0.2 : 0.4) / TILE), Math.ceil(S[2] / TILE), Math.ceil(S[1] * 0.55 / TILE)) ? sp + 'H' : sp;
+    const art0 = SPECIES[sp + 'H'] && crownOver(c, x, y, Math.floor(S[2] * (sp === 'redwood2' ? 0.2 : 0.4) / TILE), Math.ceil(S[2] / TILE), Math.ceil(S[1] * 0.55 / TILE)) ? sp + 'H' : sp;
+    const art = p.hollow && SPECIES[art0 + 'F'] ? art0 + 'F' : art0;
     put(I, { key: `f:${art}:${v}:1`, recipe: { t: 'f', sp: art, s: 1000 + v * 37 + sp.length * 7, k: 1 }, x, y, ext: redwoodRoom(art), fbox: [fw, S[2], fw, 60], pi, fade: 1, b: TREE_FADE + pi, fp: [x + rr, y - rr * 0.5, x - rr, y + rr * 0.5] });   // (x0 > x1: an ellipse, engine.js STATIC_FS)
     return;
   }
@@ -2695,7 +2701,7 @@ function propItems(c, p, pi, I) {
       const bio = c.biome(x, y), st = c.dist(x, y).style, size = p.s || [20, 26, 34][Math.floor(hh(x, y, 17) * 3)]; // (p.s: an outcrop)
       if (!WILDS.has(st) && !p.rock) { V(`bld:${size}:${seed % 5}`, 'boulder', [seed % 5 + 1, size - 4, pick(['#8a8478', '#7a7068', '#9a9488'], seed / 6)]); return; }
       const isle = SEA_ISLES.has(c.di(x, y)), style = p.style || (isle ? 'basalt' : bio === 3 || st === 'desert' ? 'sandstone' : bio === 5 ? 'basalt' : 'granite'), moss = p.moss || bio === 2 ? 1 : 0, barn = p.barn ? 1 : 0;
-      put(I, { key: `rk:${style}:${size}:${seed % 4}:${moss}:${barn}`, recipe: { t: 'rock', style, size, s: seed % 4, moss: moss ? 0.5 : 0, barn }, x, y, ext: [size * 1.4 + 16, size * 1.8 + 24, size * 1.4 + 16, size + 14], pi });
+      put(I, { key: `rk:${style}:${size}:${seed % ROCK_SEEDS}:${moss}:${barn}`, recipe: { t: 'rock', style, size, s: seed % ROCK_SEEDS, moss: moss ? 0.5 : 0, barn }, x, y, ext: [size * 1.4 + 16, size * 1.8 + 24, size * 1.4 + 16, size + 14], pi });
       return;
     }
     case 'mapboard': V('mapb', 'mapBoard', []); return;
@@ -2865,7 +2871,7 @@ function propItems(c, p, pi, I) {
     case 'stairs': V(`cstairs:${p.len || 120}:${p.h || 80}:${p.k || ''}`, 'cliffStairs', [p.len || 120, p.h || 80, p.w || 28, p.k === 'stone' ? 1 : 0], 0, [((p.w || 28) + 6) / 2, (p.len || 120) + 2]); return;
     case 'logcabin': V('lcab', 'logCabin', [96, 60, 0.6]); lightAt(I, x, y + 8, 22, 120, [1, 0.78, 0.46], 1.4, 'window'); return;
     case 'lookout': { const h = p.h || 110; V(h === 110 ? 'lkout' : `lkout:${h}`, 'lookout', [h, 0.6]); lightAt(I, x, y, h + 20, 140, [1, 0.82, 0.5], 1.2, 'window'); return; }   // (p.h: a taller tower - the woods' fire lookout over the redwoods)
-    case 'outcrop': put(I, { key: `oc:${p.style || 'granite'}:${p.w || 80}:${p.d || 50}:${p.h || 46}:${(p.s || 1) % 4}${p.j ? ':j' : ''}`, recipe: { t: 'outcrop', style: p.style || 'granite', w: p.w || 80, d: p.d || 50, h: p.h || 46, s: (p.s || 1) % 4, j: p.j ? 1 : 0 }, x, y, ext: [(p.w || 80) / 2 + 16, (p.h || 46) + (p.d || 50) / 2 + 20, (p.w || 80) / 2 + 16, (p.d || 50) / 2 + 16], pi }); return;
+    case 'outcrop': put(I, { key: `oc:${p.style || 'granite'}:${p.w || 80}:${p.d || 50}:${p.h || 46}:${(p.s || 1) % ROCK_SEEDS}${p.j ? ':j' : ''}`, recipe: { t: 'outcrop', style: p.style || 'granite', w: p.w || 80, d: p.d || 50, h: p.h || 46, s: (p.s || 1) % ROCK_SEEDS, j: p.j ? 1 : 0 }, x, y, ext: [(p.w || 80) / 2 + 16, (p.h || 46) + (p.d || 50) / 2 + 20, (p.w || 80) / 2 + 16, (p.d || 50) / 2 + 16], pi }); return;
     case 'rail': fenceLine(I, 'rail', x, y, x + (p.tx || 0), y + (p.ty || 0), {}, '', pi); return;
     case 'chair': V(`chr:${p.v || 0}:${qa(p.a || 0, 8).toFixed(2)}`, 'chair', [p.v || 0], qa(p.a || 0, 8)); return;
     case 'cooler': V(`col:${p.v || 0}`, 'cooler', [p.v || 0], qa(u * TAU, 4)); return;
@@ -2944,10 +2950,13 @@ function propItems(c, p, pi, I) {
     case 'sealrock': put(I, { key: `srock:${p.w || 120}:${p.d || 70}`, recipe: { t: 'sealrock', w: p.w || 120, d: p.d || 70, h: 26, s: 3 }, x, y, ext: [(p.w || 120) / 2 + 16, 80, (p.w || 120) / 2 + 16, (p.d || 70) / 2 + 20], pi }); return;
     case 'lantern': V('lant', 'lantern', ['post', 1]); lightAt(I, x, y, 30, 110, [1, 0.78, 0.46], 1.4, 'lamp'); return;
     case 'log': { // a fallen log at the edge of a grove (mossy in the woods)
-      const len = clamp(Math.round((p.len || 110) / 20) * 20, 80, 160), hd = qa(p.a || 0, 8), mossy = p.moss || c.biome(x, y) === 2 ? 1 : 0;
-      V(`log:${len}:${hd.toFixed(2)}:${mossy}:${seed % 2}`, 'fallenLog', [len, 11, 1 + (seed % 2), mossy], hd);
+      // (p.wild: the woods' deadfall, shared/world3-deadfall.js - a fallen forest tree, longer and thicker than a seat by a
+      // fire: at a seat's size it was lost in the undergrowth, seen 11-25)
+      const len = clamp(Math.round((p.len || 110) / 20) * 20, 80, p.wild ? 220 : 160), hd = qa(p.a || 0, 8), mossy = p.moss || c.biome(x, y) === 2 ? 1 : 0, rad = p.wild ? 15 : 11;
+      V(`log:${len}:${hd.toFixed(2)}:${mossy}:${seed % 2}${p.wild ? ':w' : ''}`, 'fallenLog', [len, rad, 1 + (seed % 2), mossy], hd);
       return;
     }
+    case 'rootcave': { const v = (p.s || 0) % RW.ROOTCAVE.kinds; put(I, { key: `rootcave:${v}`, recipe: { t: 'rw', k: 'rootcave', s: v }, x, y, ext: [130, 220, 130, 40], pi }); return; }   // (NS1-A: the upturned root mass of a fallen giant, a dark way in - shared/world3-redwoods.js rootCaves3)
     case 'rwstump': { const v = seed % 3; put(I, { key: `rwstump:${v}`, recipe: { t: 'rw', k: 'stump', s: v }, x, y, ext: [40, 50, 40, 30], pi }); return; }   // (an old-growth stump: the heart of a fairy ring)
     case 'rwlog': { const len = clamp(Math.round((p.len || 200) / 24) * 24, 120, 320), v = seed % 2; put(I, { key: `rwlog:${len}:${v}:${p.flip ? 1 : 0}`, recipe: { t: 'rw', k: 'log', s: v, len, flip: p.flip ? 1 : 0 }, x, y, ext: [len / 2 + 40, 80, len / 2 + 40, 20], pi }); return; }   // (a fallen giant)
     case 'cart': case 'stall': case 'produce_a': case 'produce_b': V(`stl:${seed % 3}`, 'umbrella', ['#f0ece4', pick(['#c8343a', '#2f7a5c', '#e8c040'], seed / 6)]); return;
@@ -3061,6 +3070,11 @@ function artVox(m, a) {
   }
 }
 const artRock = (G) => { G.ax *= 2; G.ay *= 2; G.ap2 = 2; return G; };
+// (the desert's stone grows dry tufts, thin, and no moss - 11-25: every outcrop wore the same green turf on each ledge)
+const DRY_ROCK = new Set(['sandstone', 'redrock']);
+// how many pictures a wild boulder or an outcrop of one size and stone draws on (11-25: 4 -> 8; with terrain.js
+// BOULDER.kinds / OUTCROP.kinds builds a field of rocks is not one rock repeated - test/rockart.test.js)
+export const ROCK_SEEDS = 8;
 function makeRock(r) {
   const z = r.size * 0.5;
   return artRock(r.style === 'sandstone' && r.size > 28 ? outcrop(r.s + 3, z * 1.6, z * 1.1, z * 0.9, 'sandstone', {})

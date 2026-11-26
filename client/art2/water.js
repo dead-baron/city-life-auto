@@ -98,6 +98,8 @@ function cellPer(s, v, sz, per, seed) {
   return Math.sqrt(b2) - Math.sqrt(b);
 }
 // one pixel of moving water. dd: depth 0 (edge) .. 1 (deep); s, v: along / across the flow (px);
+// the share of a rapid's churn that shows paled water, not foam (the bake: waterPixel's rapids)
+export const RAPID_BREAK = 0.38;
 // cur: current strength 0..1; rap: whitewater 0..1; phase: animation 0..1 (loops)
 function streamPx(x, y, dd, s, v, cur, rap, phase, seed, pal = WATER.river) {
   const big = vnoise(x, y, 37, seed + 3), fine = vnoise(x, y, 7, seed + 5);
@@ -1642,7 +1644,10 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     // (the churn's patches are laid by the place, not by the reach's own along-and-across: those jump where reaches
     // meet. And never a flat white sheet: broken all through - foam, paler foam, the water between)
     const ww = vnc(X * 0.8, Y, 26, seed + 241) - 0.82 + rp * 0.32, bit = vnc(X, Y, 4, seed + 231);
-    if (ww > 0 && bit > Math.max(0.36, 0.62 - ww * 1.6)) c = sd(FOAM, (hh(x >> 1, y >> 1, seed + 243) > 0.45 ? 0.62 : 0.36) + fine * 0.25 - (bit < 0.5 ? 0.14 : 0), x, y, 0.4);
+    // (11-25, the water's edges: at the art pixel a riffle's churn still came out as flat white blobs ten pixels across -
+    // paint on the creek. RAPID_BREAK of a churn's pixels, in short dashes along the row, show the water paled with
+    // air instead of foam: white water broken by the water it is made of)
+    if (ww > 0 && bit > Math.max(0.36, 0.62 - ww * 1.6)) { const fm = sd(FOAM, (hh(x >> 1, y >> 1, seed + 243) > 0.45 ? 0.62 : 0.36) + fine * 0.25 - (bit < 0.5 ? 0.14 : 0), x, y, 0.4); c = hh(x >> 2, y >> 1, seed + 245) < RAPID_BREAK ? mixTo(MIX, c, fm, 0.4) : fm; }
     else if (chan && ww > -0.12 && Math.sin(sa * 0.3 + Math.sin(su * 0.045 + seed) * 1.4 + big * 2.5) > 0.93 && hh(x >> 1, y >> 1, seed + 235) > 0.3) c = sd(FOAM, 0.38 + fine * 0.2, x, y, 0.4);
     else if (chan && vnc(sa * 0.1, su * 1.1, 6, seed + 233) > 0.88 - rp * 0.1) c = mixTo(MIX, c, WET, 0.2 + 0.2 * rp);
     else c = mixTo(MIX, c, WET, 0.2 * rp);

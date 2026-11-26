@@ -27870,3 +27870,63 @@ standing free on a lawn.
   first panel) shows the fall coming over the rock with jungle above and no stream either. It wants a piece of its
   own - a pool drawn into a rock's top - if he wants it; logged in ART-CHECK-LIST.
 
+## 2026-11-25 · Wild rock under the rock rule; a desert pool's rim; riffles broken - on branch `fable-art-1124`
+The plan's A3 ("rocks ... brought under the variety test") and the rest of the water's edges. The owner's rock rule
+(DECISIONS 11-25 18:14) set against every rock drawn by code.
+- **Counted:** the world holds 6,322 boulders (56 sizes) and 1,482 outcrops (241 sizes; 743 granite, 488 sandstone,
+  202 lava, 49 basalt). A boulder was one dome with a smaller one always at its right shoulder, four pictures a size;
+  an outcrop one blob stepped in three rings each inside the last - a tiered cake, and a sandstone boulder over 28 px
+  the same cake; every ledge of every outcrop wore the same green turf, red rock too.
+- **`terrain.js boulder`** (`BOULDER.kinds` 5): by its seed a lone lump, a lump with a shoulder on either side, a
+  long low slab, a split pair, a tall tooth with a low one against it - each lump's size from the seed.
+- **`terrain.js outcrop`** (`OUTCROP` kinds 5, tall 2): a low apron on the old outline (what the map holds solid is
+  still under rock) with masses set off its middle - a head with a shoulder, a ridge with a notch, two heads and a
+  saddle, a fin with fallen blocks, a table with one corner up - and loose rocks at its foot; a mass has one step
+  or two, and stands no taller than twice its width (the first sheet had chimneys). A recipe's own steps (the
+  jungle's black rock) keep the one mass.
+- `statics.js`: `ROCK_SEEDS` 4 -> 8 pictures a size; the desert's stone (`DRY_ROCK`) wears thin dry tufts and no
+  moss, the rest thinner turf (0.06 -> 0.035).
+- **A desert pool's rim** (`groundbake.js tinaTrim`, `TINA_RIM`): a seep two tiles across was a square with eased
+  corners; water past the pool's lobed rim is drawn as its ring's ground (cracked mud, slickrock). Seven pools.
+- **Riffles** (`water.js RAPID_BREAK` 0.38): at the art pixel a riffle's churn was flat white blobs ten pixels
+  across; 38% of a churn's pixels, in short dashes, now show the water paled with air.
+- `test/rockart.test.js` (new: every seed its own rock, squat and upright, lopsided, tops left and right; outcrops'
+  high points off the middle; no three-ring cake; dry stone without green; the riffles' break),
+  `test/desertwaters.test.js` (the rim: corners trimmed, lobed, a playa untouched).
+Looked at: sheets of 16 boulders and 8 outcrops a stone before and after; a seep, a tinaja, two riffles and three
+rock fields in a baked render. Bake code 1,106 KB of 1,150. Baked: with the re-bake. Not seen in a running game.
+
+## 2026-11-25 · The woods' deadfall; the redwoods' hollow trunks and root caves - on branch `fable-art-1124`
+The plan's A3 ("the wild logs: 13 in the whole world") and the redwoods' two missing set pieces (NS1-A).
+- **Counted:** 110 fallen logs in the world, 97 of them a made place's seats; Highland Woods' 33,000 pines, firs,
+  cedars and oaks and Granite Peaks' 3,400 mountain trees over a floor with no fallen wood. A hundred tiles of
+  woods hold 5 to 20 trees.
+- **`shared/world3-deadfall.js deadfall3`** (new; `DEADFALL`): about one log to forty trees by cells of ten tiles,
+  on open grass with a tree close by, off every path, road and water, no two within nine tiles - and none where a
+  tree to its south would be drawn over it (the first run laid 253 and a render showed none: they lay under the
+  firs' boughs). 215 laid (206 in Highland Woods, 9 in Granite Peaks), mossy, 120 to 220 px long, thicker than a
+  camp's seat (`statics.js` `p.wild`), solid. The ground bake already grows ferns, toadstools and the licorice fern
+  along a log: `test/undergrowth.test.js` now runs its log rule for the first time (150 looked at, 143 with
+  undergrowth along them).
+- **Hollow trunks** (`world3-redwoods.js hollowGiants3`, `HOLLOW`; `statics.js` species `giantLF`, `giantF` and
+  their high-crowned twins): `redwoods.js` had drawn a fire scar since the first giants and no tree carried it. One
+  big giant in 25 where its foot shows (nothing standing within 150 px south of it), no two within 14 tiles: 241 of
+  6,964. The scar redrawn - it read as a flat grey tent: a ragged lip, a rim of charred wood, near black inside, no
+  root across its mouth.
+- **Root caves** (`redwoods.js rootCave`, `ROOTCAVE`; prop `rootcave`; `world3-redwoods.js rootCaves3`): the
+  torn-up root mass of a fallen giant grown over - a lopsided mound of packed earth, seven to ten thick roots
+  bending out from round a dark way in, a few broken ends standing over it, moss and sprays on its shoulders. Six
+  shapes. 28 in the groves (one cell of 36 tiles in twelve at most), on open grass among at least four redwoods, no trunk in
+  front of the way in, a fern at each shoulder; solid. The first version was a striped fan (a disc); the second a
+  porcupine of straight spikes.
+- `test/world3wayside.test.js` (deadfall: off paths, a tree by it, in sight, apart; hollows: a big giant, nothing
+  in front, apart; root caves: open grass, among redwoods, in sight, several shapes), `test/rockart.test.js` (the
+  root cave's dark way in and lopsided mound; the hollow's dark at the foot of the same tree).
+**Not built, and why - the mission ruin made bigger:** its voxel model is 236 x 196 x 132; a voxel model's normals
+take 17 bytes a voxel while its chunk bakes - 104 MB today, the largest in the game. At 1.6 times the size (a church
+beside the tin shack) that is 425 MB in a page that bakes for itself. It wants either the model split in two (the
+front and gable; the walls and cloister - about 180 MB) or the voxel kit keeping normals for surface voxels only.
+Logged in the check list as his call.
+Looked at: sheets of the hollows and six root caves; two root caves, two hollow giants and two logs in a baked
+render. Baked: with the re-bake. Not seen in a running game.
+
