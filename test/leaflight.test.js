@@ -42,7 +42,7 @@ test('no leaf is painted darker than the style anchor\'s dark green, and leaves 
 });
 
 test('lit at noon, no plant is a near-black mass: its leaves under 6% near-black, a whole kind seldom over 15%', () => {
-  const over = [];
+  const over = [], share = new Map();
   let worst = 0, worstSp = '';
   for (const sp of kinds) {
     let n = 0, dark = 0, ln = 0, ldark = 0;
@@ -51,6 +51,11 @@ test('lit at noon, no plant is a near-black mass: its leaves under 6% near-black
       for (let i = 0; i < G.w * G.h; i++) { if (!G.col[i * 4 + 3]) continue; const d = lit(G, i) < 50; n++; if (d) dark++; if (G.flag[i] & F_LEAF) { ln++; if (d) ldark++; } }
     }
     if (ln >= 120) { assert.ok(ldark / ln < 0.12, `${sp}: ${(ldark / ln * 100).toFixed(1)}% of its leaves near-black at noon`); if (ldark / ln > worst) { worst = ldark / ln; worstSp = sp; } }
+    share.set(sp, dark / n);
+    // (a hollow giant - 11-25, statics.js giantLF and its like - is the same giant with a fire hollow burnt in its
+    // foot: counted with its own kind, and held to no more than five points over it - a hollow is dark)
+    const base = /^giant.*F$/.test(sp) ? sp.slice(0, -1) : null;
+    if (base && share.has(base)) { assert.ok(dark / n <= share.get(base) + 0.05, `${sp}: ${(dark / n * 100).toFixed(0)}% near-black to its own kind's ${(share.get(base) * 100).toFixed(0)}%`); continue; }
     if (dark / n > 0.15) over.push(`${sp} ${Math.round(dark / n * 100)}%`);
   }
   // (what is left is not leaf: bark, cones, stones in the ambient light of a face turned from the noon sun - since

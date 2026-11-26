@@ -28026,3 +28026,11 @@ lit tone; a man's from the skin's own shadow. Painted lips are untouched in all 
 nothing in the game is changed. Picture: `report-85-soft-lips-pick`. After his pick it is one number in
 `peoplepolish.js` (and, if a choice, a row in the look screen); the mouth in emotes and the idle comes after it.
 
+## 2026-11-26 · The hollow's dark lifted to the plants' floor (found by the suite) - on branch `fable-art-1124`
+The whole suite, run on the night's commit, failed `test/leaflight.test.js`: "giantLF 0: a pixel painted at 13". The
+hollow giants' inside was painted [16, 12, 14] - against the owner's rule of 11-25 that no plant is painted near
+black. The hollow is now the darkest brown the floor allows ([72, 47, 41], luminance 54), its charred rim a step
+lighter; in `report-77` it is still black. A root cave's way in is a hole in the ground, not a plant's wood: a
+cave's dark (`CAVE_DARK`), as the rock caves have. The near-black count at noon takes a hollow giant with its own
+kind, held to five points over it (`leaflight.test.js`); `rockart.test.js` counts the hollow by its own colour.
+

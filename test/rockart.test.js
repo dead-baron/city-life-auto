@@ -65,9 +65,14 @@ test("a riffle's white water is broken by the water it is made of - no flat whit
 });
 
 test("the redwoods' hollow trunk and root cave (NS1-A): a dark way in, a ragged rim; every root cave its own shape", async () => {
-  const dark = (G, y0 = 0) => { let n = 0; for (let y = y0; y < G.h; y++) for (let x = 0; x < G.w; x++) { const i = (y * G.w + x) * 4; if (G.col[i + 3] && G.col[i] < 30 && G.col[i + 1] < 26 && G.col[i + 2] < 30) n++; } return n; };
-  const { ROOTCAVE } = await import('../client/art2/redwoods.js');
-  const S = []; for (let s = 0; s < ROOTCAVE.kinds; s++) { const G = makeStatic({ t: 'rw', k: 'rootcave', s }); S.push({ ...shape(G), dark: dark(G) }); }
+  // (the dark of a hollow: the darkest brown a plant's wood may be - never black, test/leaflight.test.js - counted by
+  // its own colour)
+  const { ROOTCAVE, HOLLOW_DARK: HD } = await import('../client/art2/redwoods.js');
+  assert.ok(HD[0] * 0.3 + HD[1] * 0.59 + HD[2] * 0.11 >= 50, `the hollow's dark is over the floor (${HD})`);
+  const dark = (G, y0 = 0) => { let n = 0; for (let y = y0; y < G.h; y++) for (let x = 0; x < G.w; x++) { const i = (y * G.w + x) * 4; if (G.col[i + 3] && G.col[i] === HD[0] && G.col[i + 1] === HD[1] && G.col[i + 2] === HD[2]) n++; } return n; };
+  const { CAVE_DARK: CD } = await import('../client/art2/redwoods.js');
+  const cave = (G) => { let n = 0; for (let i = 0; i < G.w * G.h; i++) if (G.col[i * 4 + 3] && G.col[i * 4] === CD[0] && G.col[i * 4 + 1] === CD[1] && G.col[i * 4 + 2] === CD[2]) n++; return n; };
+  const S = []; for (let s = 0; s < ROOTCAVE.kinds; s++) { const G = makeStatic({ t: 'rw', k: 'rootcave', s }); S.push({ ...shape(G), dark: cave(G) }); }
   assert.equal(new Set(S.map((q) => q.sig)).size, ROOTCAVE.kinds, 'every root cave its own picture');
   for (const q of S) assert.ok(q.dark > 250 && q.dark < q.n * 0.2 && q.w >= 90, `a way in a person could duck into, in a mass of roots (${q.dark} dark of ${q.n} px, ${q.w} wide)`);
   assert.ok(S.filter((q) => q.odd > 0.4).length >= ROOTCAVE.kinds - 1, `lopsided mounds - no disc (${S.map((q) => q.odd.toFixed(2))})`);

@@ -13,7 +13,7 @@
 //   nurseLog(seed, len, r)        a fallen giant lying east-west, mossed over, ferns and seedlings growing on it
 //   sorrel(seed, w)               a patch of redwood sorrel: clover leaves carpeting the floor, a few pale flowers
 import { GBuf, F_LEAF, F_GROUND, hash, vnoise, bayer, mulberry32 } from './gbuf.js';
-import { natRamp as ramp } from './palette.js';   // (nature's ramps: no near-black shade - palette.js NAT)
+import { natRamp as ramp, lumFloor } from './palette.js';   // (nature's ramps: no near-black shade - palette.js NAT)
 import { FOL } from './flora.js';
 
 const PI = Math.PI;
@@ -24,7 +24,14 @@ const nrm = (x, y, z) => { const l = Math.hypot(x, y, z) || 1; return [x / l, y 
 // cinnamon-red bark (fibrous, deep vertical furrows), charcoal for old fire scars, the moss and the sprays
 const BARK = ramp('#8a4428', 8, 3, { dark: 0.72, light: 0.52, shift: 0.24 });
 const CHAR = ramp('#3a2a26', 5, 2, { dark: 0.5, light: 0.35 });
-const HOLLOW_DARK = [16, 12, 14];   // (the inside of a burnt hollow)
+// (the inside of a burnt hollow, a root cave's way in. Not black: no wood of a plant is painted under the floor - the
+// owner, 11-25, "plants lit evenly, never black"; test/leaflight.test.js caught the first version's [16, 12, 14] on the
+// hollow giants. The darkest brown the floor allows, and the charred rim a step lighter than it.)
+const HOLLOW_FLOOR = 54, dk = (c) => lumFloor(c, HOLLOW_FLOOR);
+export const HOLLOW_DARK = lumFloor([46, 30, 26], HOLLOW_FLOOR);
+// (a root cave is a hole in the ground, not a plant's wood: its way in is a cave's dark - terrain.js VOID's - or it is a
+// brown patch on a brown mound, seen 11-26)
+export const CAVE_DARK = [22, 17, 20];
 const MOSS = FOL('#5a8a2a');
 const SPRAY = FOL('#5c9428'), SPRAY_DK = FOL('#3f7430'), SPRAY_SUN = FOL('#7aa62a');
 const PUNK = ramp('#a86a3e', 6, 3, { dark: 0.6, light: 0.45 });
@@ -151,7 +158,7 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
       // (11-25, NS1-A: it read as a flat grey tent. A ragged edge - the burn's lip wanders by the height -, a rim of
       // charred wood a few pixels deep, and inside it the dark of the hollow, near black)
       const sw = scar ? scarW * (1 + (vnoise(zEst * 0.9, seed, 5, seed + 61) - 0.5) * 0.34) : 0, sIn = scar && Math.abs(u) < sw ? scarH * (1 - (Math.abs(u) / sw) ** 2) - zEst : -1;
-      if (sIn > 0) { const edge = Math.min(sIn, (sw - Math.abs(u)) * rr * 1.2); c = edge < 2.6 ? pick(CHAR, 0.55 + (hash(x, y, seed) - 0.5) * 0.4, x, y, 0.5) : edge < 6 ? pick(CHAR, 0.2 + (hash(x, y, seed) - 0.5) * 0.2, x, y, 0.5) : HOLLOW_DARK; nx *= 0.3; nz = 0.6; }
+      if (sIn > 0) { const edge = Math.min(sIn, (sw - Math.abs(u)) * rr * 1.2); c = edge < 2.6 ? dk(pick(CHAR, 0.9 + (hash(x, y, seed) - 0.5) * 0.2, x, y, 0.5)) : edge < 6 ? dk(pick(CHAR, 0.6 + (hash(x, y, seed) - 0.5) * 0.2, x, y, 0.5)) : HOLLOW_DARK; nx *= 0.3; nz = 0.6; }
       else {
         // moss low down, more on the shaded right flank
         const mz = hw * 1.8 * (0.6 + vnoise(phi * 9, 0, 3, seed) * 0.8) * (u > 0 ? 1.3 : 0.75);
@@ -323,7 +330,7 @@ export function rootCave(seed = 1, w = ROOTCAVE.w) {
     const xo = x + 0.5 - mx, y = Math.round(foot - zE);
     if (!G.inside(x, y) || !arch(xo, zE, (vnoise(zE * 0.5, x * 0.5, 5, seed + 83) - 0.5) * 5)) continue;
     const e = Math.min((1 - Math.abs(xo / mw)) * mw, mh * Math.sqrt(Math.max(0, 1 - (xo / mw) ** 2)) + 2 - zE);
-    G.put(x, y, e < 3.5 ? pick(EARTH, 0.16 + (hash(x, y, seed) - 0.5) * 0.2, x, y) : HOLLOW_DARK, nrm(0, 0.8, 0.6), Math.round(zE), null, 0);
+    G.put(x, y, e < 3.5 ? dk(pick(EARTH, 0.3 + (hash(x, y, seed) - 0.5) * 0.2, x, y)) : CAVE_DARK, nrm(0, 0.8, 0.6), Math.round(zE), null, 0);
   }
   draw(mx - mw * 1.25, mh * 0.72, 0.28 + (Hr(8) - 0.5) * 0.2, mw * 2.5, 4.5, (Hr(9) - 0.5) * 0.9, 99);
   // 4. moss and ferns on its shoulders and top (more on the shaded right), roots running out over the floor

@@ -197,8 +197,8 @@ last leap over the top of a falls; the other fish's leaps.
 - [ ] **Fallen logs in the woods** (11-25): the world had 13 wild ones. Now 215 among Highland Woods' and Granite
   Peaks' trees, mossy, with ferns and toadstools along them, none under a tree's crown. Judge in the game: walk
   the woods off a trail.
-- [ ] **The redwoods' hollow trunks and root caves** (11-25, NS1-A): one old giant in 25 carries a black fire hollow
-  at its foot (241); 28 root caves - a fallen giant's root mass with a dark way in. Picture: `report-77`. Neither
+- [ ] **The redwoods' hollow trunks and root caves** (11-25, NS1-A): one old giant in 25 carries a fire hollow
+  at its foot (241; since 11-26 a dark brown, not black - the plants' never-black rule; `report-77` shows the black); 28 root caves - a fallen giant's root mass with a dark way in. Picture: `report-77`. Neither
   is walk-in: they are things to find. Say if you want an inside.
 - [ ] **YOUR CALL: the mission ruin bigger.** Not built: at a church's size its one voxel model needs about 425 MB
   while its chunk bakes (104 MB today, already the game's largest). Two ways: split the model in two, or change the
