@@ -138,7 +138,16 @@ entries have each piece):**
   fishing rocks' gear. 19:35: the sea stacks re-sited by rule (no three in a line, mixed sizes, twelve shapes) and
   the sea cave's rock a headland of crags (`report-72`). 20:30: North Cape's bluff a scarp of basalt, the Egret
   coves' horns rough headlands, knees along the marsh's edge (`report-73`). Left on the coast: Coral Cay's pool
-  and stream above the falls. The bake's code: 1,104.0 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
+  and stream above the falls (not built: the spine above the falls is tall rock, water there would be hidden).
+  **Overnight 11-25 to 11-26 (his word 20:54: "keep on moving through as much art polish as we can tonight ... I
+  will check in in about 8 hours"; read as: art goes on, nothing to `main` without his word):** a fall lands in
+  water (`fallsFeet3`, `report-75`); boulders and outcrops under his rock rule, a desert pool's lobed rim, riffles
+  broken (`report-76`); 215 fallen logs in the woods by rule, hollow giants and root caves in the redwoods
+  (`report-77`); **the cinema rebuilt** - a compact inside at the door, four screens (`report-78`). Not built, his
+  call (ART-CHECK-LIST): the mission ruin bigger (its voxel model's memory), The Palace as a second cinema.
+  From 23:20 the whole suite runs on commit 033be77 in a separate copy (`/tmp/wt-before`, results
+  `/tmp/ww/suite-results.txt`, about five hours); while it runs only page-side art is worked on, so that commit is
+  what the re-bake would take. The bake's code: 1,106 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all

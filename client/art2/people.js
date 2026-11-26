@@ -2321,7 +2321,7 @@ function render(fig, P, S, X, D, A, opt) {
     } else { gc[o] = 24 + CR[j] * 0.12; gc[o + 1] = 16 + CG[j] * 0.09; gc[o + 2] = 26 + CB[j] * 0.13; gf[i] = F_CHAR | FL[j]; }
   }
   // (opt.info, for the tools and the layering test: what each pixel is - its material's number, its part's group, 1 where it's outline)
-  if (opt.info) { const mtl = MTL.slice(0, n), grp = new Uint8Array(n), ol = new Uint8Array(n), ln = new Uint8Array(n), part = new Array(n).fill(''); for (let i = 0; i < n; i++) { if (OL && OL[i]) { ol[i] = 1; mtl[i] = 0; } else if (PID[i] < 0) mtl[i] = 0; else { grp[i] = PID[i] >= prims.length ? GR.ITEM : prims[PID[i]].g; part[i] = PID[i] >= prims.length ? 'item' : prims[PID[i]].seat ? 'seat' : prims[PID[i]].part; ln[i] = LN[i]; } } G.info = { mtl, grp, ol, part, ln, D }; }
+  if (opt.info) { const mtl = MTL.slice(0, n), grp = new Uint8Array(n), ol = new Uint8Array(n), ln = new Uint8Array(n), part = new Array(n).fill(''); for (let i = 0; i < n; i++) { if (OL && OL[i]) { ol[i] = 1; mtl[i] = 0; } else if (PID[i] < 0) mtl[i] = 0; else { grp[i] = PID[i] >= prims.length ? GR.ITEM : prims[PID[i]].g; part[i] = PID[i] >= prims.length ? 'item' : prims[PID[i]].seat ? 'seat' : prims[PID[i]].part; ln[i] = LN[i]; } } G.info = { mtl, grp, ol, part, ln, D, face: fig.faceProbe || null }; }
   return opt.tight ? crop(G) : G;
 }
 function crop(G) {
@@ -2335,7 +2335,7 @@ function crop(G) {
     O.col.set(G.col.subarray(si * 4, (si + w) * 4), di * 4); O.nrm.set(G.nrm.subarray(si * 4, (si + w) * 4), di * 4); O.emi.set(G.emi.subarray(si * 4, (si + w) * 4), di * 4);
     O.z.set(G.z.subarray(si, si + w), di); O.flag.set(G.flag.subarray(si, si + w), di);
   }
-  if (G.info) { O.info = {}; for (const k in G.info) { const s = G.info[k]; if (k === 'D') { O.info.D = s; continue; } const d = O.info[k] = s.slice(0, w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) d[y * w + x] = s[(y + y0) * G.w + x0 + x]; } }
+  if (G.info) { O.info = {}; for (const k in G.info) { const s = G.info[k]; if (k === 'D' || k === 'face') { O.info[k] = s; continue; } const d = O.info[k] = s.slice(0, w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) d[y * w + x] = s[(y + y0) * G.w + x0 + x]; } }
   return O;
 }
 // a held item: items.js draws it flat along the item's axis; its plane is turned toward the camera when it would be
@@ -2384,7 +2384,7 @@ function face(fig, P, A, D, w, h, AX, AY) {
     const nx = M[0] * l0 / r[0] + M[1] * l1 / r[1] + M[2] * l2 / r[2], ny = M[3] * l0 / r[0] + M[4] * l1 / r[1] + M[5] * l2 / r[2], nz = M[6] * l0 / r[0] + M[7] * l1 / r[1] + M[8] * l2 / r[2];
     const nl = Math.hypot(nx, ny, nz) || 1, x = Math.floor(AX + X), y = Math.floor(AY + Y * SA - Z * CA);
     // (the art pixel it falls in: its top-left world px)
-    return { x, y, bx: AX + 2 * Math.floor((x - AX) / 2), by: AY + 2 * Math.floor((y - AY) / 2), fc: (ny * CA + nz * SA) / nl };
+    return { x, y, yf: AY + Y * SA - Z * CA, bx: AX + 2 * Math.floor((x - AX) / 2), by: AY + 2 * Math.floor((y - AY) / 2), fc: (ny * CA + nz * SA) / nl };
   };
   const JAW = K + 1, SNP = PL && A.fmask ? (pk) => pk >= 0 && pk < fig.prims.length && fig.prims[pk].part === 'snout' : null;   // (the polish pass: an animal mask's muzzle is face too - its nose and mouth are stamped on it)
   const onHead = (x, y) => x >= 0 && y >= 0 && x < w && y < h && (PID[y * w + x] === K || PID[y * w + x] === JAW || (SNP !== null && SNP(PID[y * w + x])));
@@ -2515,6 +2515,15 @@ function face(fig, P, A, D, w, h, AX, AY) {
   if (!covered) {
     const am = near * turn * 0.25, m = at(Math.sin(am), Math.cos(am) * 0.9, -0.58);
     if (m.fc > 0.3 && onHead(m.x, m.y)) {
+      // (11-25, the faces' look - the owner, 11-23: painted lips "in the run cycle ... jump about the face". Measured:
+      // facing the camera the mouth sat a pixel left or right of the eyes' middle and two or three rows under them
+      // from frame to frame of one walk - the eyes and the mouth were each rounded to the pixel grid on their own.
+      // With both eyes showing the mouth goes by the eyes: under their middle (of two middle columns the left), the
+      // rows between them rounded once from the head's own measure, two or three.)
+      if (eyes.length === 2 && Number.isFinite(e0.yf)) {
+        const mid = ((eyes[0].p.bx + eyes[1].p.bx) / 2 - AX) / 2, gap = Math.max(2, Math.min(3, Math.round((m.yf - e0.yf) / 2)));
+        m.bx = AX + 2 * (cx ? Math.ceil(mid) : Math.floor(mid)); m.by = e0.by + 2 * gap; m.x = m.bx; m.y = m.by;   // (the polish pass's lips are two pixels: this one and the one to its left)
+      }
       const mc = fm === 'clown' ? hexRgb(A.fmask.t) : mk && mk.color && (mk.kind === 'lipstick' || mk.kind === 'glam') ? hexRgb(mk.color) : mk && mk.kind === 'goth' ? [34, 22, 34] : null;
       const lip = mc || (D.fem ? [Math.round(skin[1][0] * 0.9 + 26), Math.round(skin[1][1] * 0.72), Math.round(skin[1][2] * 0.78)] : skin[1]);
       // (on the eyes' row or right under it - a very short face - it moves down one)
@@ -2522,6 +2531,8 @@ function face(fig, P, A, D, w, h, AX, AY) {
       if (fm === 'skull') { put(m, [40, 34, 30], -1, my); put(m, [40, 34, 30], 1, my); }   // (the teeth between two gaps)
       else if (cx) PL.mouth(cx, m, lip, L5, my);
       else stamp(m, LIP_ST[L5], { a: lip, t: mixC(lip, skin[0], 0.5), b: lit(lip, 0.3), c: mixC(lip, skin[3], 0.5) }, 1, my);   // (medium, thin a dark line, full two pixels, wide three, a bow's lit top, small a faint dot)
+      // (for tools/bodycheck.mjs' face rule: where the eyes and the mouth were stamped, in art pixels from the figure's anchor)
+      fig.faceProbe = { eyes: eyes.map((e) => [(e.p.bx - AX) / 2, (e.p.by - AY) / 2]), mouth: [(m.bx - AX) / 2, (m.by - AY) / 2 + my], lips: L5, painted: !!mc };
     }
   }
   if (cx && PL.masks && e0) PL.masks({ ...cx, fm, fwd: M[1] > 0 ? 1 : -1 });   // (the polish pass: masks as small pictures in art pixels, over all of the above)

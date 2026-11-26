@@ -27958,3 +27958,20 @@ field - a district matter (Fountain Square), with part B's "no huge plain buildi
 Looked at: the cut-away before and after from the page's own chunk bake (`tools/area-shot.mjs --cut`). Not seen in
 a running game; no film watched on the new screens.
 
+## 2026-11-25 · Painted lips hold their place over a walk (the faces' look) - on branch `fable-art-1124`
+Part C1, a look only (the owner, 11-25 12:45: "be careful not to try to over fix"; his note of 11-23: painted lips
+"in the run cycle ... jump about the face").
+- **Measured** (a probe in `people.js face()`, `info.face`: where the eyes and the mouth were stamped): on a figure
+  with lipstick facing the camera, over one walk the mouth sat a pixel left or right of the eyes' middle and two or
+  three rows under them from frame to frame - the eyes and the mouth were each rounded to the pixel grid on their own.
+- **Fixed, that fault only:** with both eyes showing the mouth goes by the eyes - under their middle (of two middle
+  columns the left), the rows between rounded once from the head's own measure. In profile (one eye) as it was.
+- **Isolated** (his rule of 11-20 16:51): the twelve starting looks, eight directions, idle and the four walks -
+  2,688 frames against the commit before: 55 changed, all the one figure's with painted lips, about 3 px each; the
+  eleven without make-up not a pixel. `test/facehold.test.js` (new).
+- **Found, not touched - for his eye:** the two eyes are each rounded on their own too, so facing the camera they
+  stand three columns apart in some frames of a walk and four in others. Tying one eye to the other would change
+  every figure in the game: shown to him first (`report-79` shows the heads at 10x).
+`people.js` is in the art hash (the bake draws people too - checked by stamping: the hash moved), so this goes
+with the re-bake. The people's tests pass (74). Not seen in a running game.
+

@@ -207,6 +207,12 @@ last leap over the top of a falls; the other fish's leaps.
   carpet. Now a compact cinema at the door - lobby with the counter, benches and ropes, a hall, four screens showing
   four films. Picture: `report-78`. Judge in the game: walk in, buy a ticket, sit in a near screen and a far one.
   Left for your word: The Palace as a second cinema; the building's huge plain outside.
+- [ ] **Painted lips over the run** (11-25, a look only): the mouth jumped a pixel about the face from frame to
+  frame; it now sits under the middle of the eyes in every frame. Only figures with lipstick changed (55 of 2,688
+  frames checked). Picture: `report-79`. Goes with the re-bake (the people's art is in the art hash).
+- [ ] **YOUR CALL: the eyes' spacing over a walk.** Facing the camera the two eyes stand three pixels apart in some
+  frames and four in others (each is rounded on its own). Fixing it changes every figure a little. Say if you want
+  a before/after sheet first.
 - [ ] **YOUR CALL: a pool and stream above Coral Cay Falls** (the plan's jungle item). Not built: the spine above the
   falls is tall rock drawn up the screen, so water on the ground there is hidden, and the concept shows no stream
   above the fall either. If you want it, it is a new piece - a pool drawn into the top of a rock.
