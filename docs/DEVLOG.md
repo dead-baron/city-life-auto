@@ -27846,3 +27846,27 @@ standing free on a lawn.
 - Tests: `test/world3wayside.test.js` (knees by water and by their cypress; no wall piece left on the west coast;
   seven rough headlands; the cape's scarp of mixed pieces), `test/coastart.test.js` (the knees' art).
 
+## 2026-11-25 · A fall lands in water (the water's edges, begun) - on branch `fable-art-1124`
+
+- **Counted** over the world's 49 falls (a scan south from each one's foot): 20 stood 8 px or more from water. Of
+  those, the ledge falls' 8-40 px is their own rock lip; Granite Hot Springs' three cascades fall onto its flagged
+  paths; one small fall by a footbridge has its creek beside it, not below. The class that reads wrong - open grass
+  or sand between the foot and the water it falls toward: Fern Gorge 52 px (the strip of dry bank seen on 11-24; its
+  salmon could only leap and fall back), Macaw Falls 28, the Redwood River's two end falls 32, a ledge fall at
+  Macaw Cove 128 px of beach from the sea. (A sixth, the water park's little fall on its pool's palm island, is a
+  built basin's: the first run cut a murky channel through the island - seen in the render - so a swimming pool's
+  water is left out of the rule.)
+- **`world3-falls.js fallsFeet3`** (`FEET3`; the falls chain, part 2): for every fall prop, past up to two tiles of
+  its own rock, grass or sand and then water within six tiles becomes that water - as wide as the fall, one tile wide
+  where it is more than two tiles (a rill across the beach), three tiles at least under a fall a tile wide (one
+  tile of water is drawn as mostly bank: the gorge's first render still showed shingle under the foam) - taking the
+  pool's own kind (lake, river or sea) and its pond's box; what grew there goes. Dirt, roads, decks and rock are
+  never flooded. Result: 34 fall props looked at, 5 short, 14 tiles to water.
+- `test/world3wayside.test.js`: no fall with dry grass or sand before its water; the gorge's fall has water within
+  three tiles of its lip.
+- **Not done, and why - Coral Cay's pool and stream above the falls** (the plan's jungle item): above the falls
+  stands the island's spine, rock masses 50 to 214 px tall drawn up the screen; water laid on the ground between
+  them is hidden behind the rock south of it, and the game has no water surface at height. The concept (NS1-G's
+  first panel) shows the fall coming over the rock with jungle above and no stream either. It wants a piece of its
+  own - a pool drawn into a rock's top - if he wants it; logged in ART-CHECK-LIST.
+

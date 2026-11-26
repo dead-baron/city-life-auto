@@ -184,4 +184,10 @@ last leap over the top of a falls; the other fish's leaps.
 - [ ] **Knees in the marsh** (11-25): huddles of cypress knees here and there along Egret Marsh's water's edge
   (drawn on 11-21, never planted till now). Judge: do they read at the game's size; the marsh has no swamp
   cypress tree of its own to stand over them.
-- [ ] **The coast, left to do** (11-25): Coral Cay's pool and stream above the falls (the jungle).
+- [ ] **A fall lands in water** (11-25): Fern Gorge's fall stood 52 px of grass short of its pond, Macaw Falls 28,
+  two of the Redwood River's 32, a ledge fall at Macaw Cove 128 px of beach from the sea - the water now comes up to
+  each one's foot (the beach one as a rill across the sand). Picture: `report-75`. Judge in the game: the gorge's
+  salmon now climb from water.
+- [ ] **YOUR CALL: a pool and stream above Coral Cay Falls** (the plan's jungle item). Not built: the spine above the
+  falls is tall rock drawn up the screen, so water on the ground there is hidden, and the concept shows no stream
+  above the fall either. If you want it, it is a new piece - a pool drawn into the top of a rock.

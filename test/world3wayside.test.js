@@ -10,6 +10,7 @@ import { buildWorld3 } from '../server/world3.js';
 import { TILE, T } from '../shared/constants.js';
 import { WAYSIDE } from '../shared/world3-wayside.js';
 import { STACKS3, inLine3, KNEES3 } from '../shared/world3-coast.js';
+import { FEET3 } from '../shared/world3-falls.js';
 import { FOOTBRIDGE } from '../shared/world3-footbridges.js';
 import { CREEKS3 } from '../shared/world3-creeks.js';
 import { COVER, TREE_COVER } from '../shared/world3-clearings.js';
@@ -292,5 +293,27 @@ test('the coast by rule: knees along the marsh\'s water; a scarp of basalt along
   const scarp = m.props.filter((p) => p && (p.t === 'boulder' || p.t === 'outcrop') && p.style === 'basalt' && Math.abs(p.x / TILE - 478) < 30 && Math.abs(p.y / TILE - 830) < 28);
   assert.ok(scarp.length >= 18 && scarp.some((p) => p.t === 'boulder') && scarp.some((p) => p.t === 'outcrop'), `North Cape's scarp: boulders and outcrops along the band (${scarp.length})`);
   { const bs = scarp.filter((p) => p.t === 'boulder').map((p) => p.s), ow = scarp.filter((p) => p.t === 'outcrop').map((p) => p.w); assert.ok(Math.max(...bs) - Math.min(...bs) >= 14 && Math.max(...ow) - Math.min(...ow) >= 30, `of mixed sizes (boulders ${Math.min(...bs)}-${Math.max(...bs)}, outcrops ${Math.min(...ow)}-${Math.max(...ow)} px wide)`); }
+});
+
+test('a fall lands in water: no strip of dry grass or sand between its foot and the water it falls toward', () => {
+  const R = m.world3.fallsFeet, falls = m.props.filter((p) => p && FEET3.re.test(p.t));
+  console.log('falls feet', JSON.stringify(R));
+  assert.ok(falls.length >= 30 && R.falls === falls.length, `every fall looked at (${R.falls} of ${falls.length})`);
+  assert.ok(R.short >= 4 && R.flooded >= R.short, `the short ones brought to water (${R.short}, ${R.flooded} tiles)`);
+  const wet = (x, y) => m.tiles[m.idx(x, y)] === T.WATER || m.tiles[m.idx(x, y)] === T.DEEP, soft = (x, y) => { const t = m.tiles[m.idx(x, y)]; return t === T.GRASS || t === T.SAND; };
+  const short = [];
+  for (const p of falls) {
+    const tx = Math.floor(p.x / TILE); let ty = Math.floor(p.y / TILE), lip = 0;
+    if (wet(tx, ty)) continue;
+    while (lip < FEET3.lip && m.tiles[m.idx(tx, ty)] === T.WALL) { ty++; lip++; }
+    let y1 = ty; while (y1 - ty < FEET3.reach && soft(tx, y1)) y1++;
+    const X = (tx + 0.5) * TILE, Y = (y1 + 0.5) * TILE;
+    if ((m.pools || []).some((r) => (r.ring ? Math.abs(Math.hypot((X - r.ring.cx) / r.ring.rx, (Y - r.ring.cy) / r.ring.ry) - 1) * Math.min(r.ring.rx, r.ring.ry) < r.ring.hw + 16 : X >= r.x - 16 && X < r.x + r.w + 16 && Y >= r.y - 16 && Y < r.y + r.h + 16))) continue;   // (a swimming pool's own little fall)
+    if (y1 > ty && wet(tx, y1) && y1 * TILE - p.y >= FEET3.min) short.push(`${p.t} at ${tx}, ${Math.floor(p.y / TILE)}: ${y1 * TILE - p.y} px dry`);
+  }
+  assert.equal(short.length, 0, `falls that land short of their water: ${short.join('; ')}`);
+  // (the gorge's own: its fall's foot is wet now - the salmon's climb starts in water)
+  const gorge = m.natureSites.find((s) => s.kind === 'gorge');
+  if (gorge && gorge.falls) { const gx = Math.floor(gorge.falls.x / TILE), gy = Math.floor(gorge.falls.y / TILE); let ok = false; for (let d = 0; d <= 3; d++) if (wet(gx, gy + d)) ok = true; assert.ok(ok, `Fern Gorge's fall has water within three tiles of its lip (${gx}, ${gy})`); }
 });
 
