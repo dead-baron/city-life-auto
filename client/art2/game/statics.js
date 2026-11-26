@@ -674,27 +674,45 @@ function layout(w, d, rnd, m, avoid = []) {
 }
 // the kit for a flat roof by archetype (counts grow with the roof's area): { kit, pads }
 // plain: a plain building's roof (no sign, no hand look: map.js roofOne's) - a big one gets more on it (below)
-function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false) {
+// A roof's character (11-26, the shared kit's audit #3 - counted first: a row of AC units stood on 77% of the world's
+// 5,462 flat roofs, on every strip and 93% of the walk-ups): 'row' the block of units with its walkway; 'few' one or
+// two small ones, apart; 'none' no units - what else a roof of its kind carries (skylights, a washing line, planters,
+// solar panels, pipes). Along a street the characters go by ROOF_CYCLE (roofRanks: no two neighbours share one); a big
+// building with plant to house keeps its row for 'few' too.
+export const ROOF_CYCLE = ['none', 'row', 'none', 'few', 'none', 'row', 'few'];
+const PLANT_ROOFS = new Set(['glass', 'office', 'terminal', 'hotel', 'hospital', 'police', 'fire', 'school', 'bank', 'court', 'cityhall', 'civicblock', 'theatre']);
+const HOME_ROOFS = new Set(['walkup', 'rough', 'oldrow', 'townhouse', 'mixed', 'condo', 'beachblock', 'villa']);
+function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false, how = null) {
   if (w < 64 || d < 56) return { kit: [], pads: [] };
   const area = w * d - (avoid ? avoid[2] * avoid[3] : 0), n = clamp(Math.round(area / 15000), 1, plain && area > 100000 ? 9 : 6), r = rnd, big = area > 40000, rough = tier === 'rough';
   const L = layout(w, d, r, (spec.rimW || 4) + 6, avoid ? [avoid] : []);
+  const ch0 = how || ROOF_CYCLE[Math.floor(hh(spec.seed | 0, 91, 5) * ROOF_CYCLE.length)], ch = ch0 === 'few' && PLANT_ROOFS.has(A) ? 'row' : ch0;
+  const units = (k, m, rot = false) => {
+    if (ch === 'row') return L.row(k, m, rot);
+    if (ch === 'few') return L.free('acs', m > 2 ? 2 : 1);
+    const v = r();
+    if (HOME_ROOFS.has(A)) { if (v < 0.3) L.free('sky', 1 + (m > 2 ? 1 : 0)); else if (v < 0.5) L.free('line', 1, false, 0.5); else if (v < 0.72) L.edge('plant', 2 + (m >> 1)); else if (v < 0.86) L.grid('solar', 2, 1); else L.free('pipe', 2); }
+    else if (PLANT_ROOFS.has(A)) { if (v < 0.4) L.grid('skyL', 2, 1, 8); else if (v < 0.75) L.grid('solar', 2 + (m > 2 ? 1 : 0), 2); else L.free('cool', 1, true); }
+    else { if (v < 0.4) L.free('sky', 1 + (m > 2 ? 1 : 0)); else if (v < 0.7) L.grid('solar', 2, 1 + (m > 3 ? 1 : 0)); else if (v < 0.85) L.free('skyL', 1); else L.free('pipe', 2); }
+    return L;
+  };
   // (a roof garden - spec.garden, World v3's handcrafted districts, or a 'green' roof: its beds and furniture go round
   // the roof's own kit, laid after it: gardenKit)
   switch (A) {
     case 'glass': case 'office': case 'hotel': case 'terminal':
       if (area > 200000 && A !== 'hotel' && r() < 0.3) L.free('heli', 1);   // (a helipad on a big roof only - not on every mid-rise office: the owner's 11-14 pass)
       L.corner('hut'); if (big && r() < 0.5) L.free('cool', 1 + (r() < 0.4 ? 1 : 0), true);
-      L.row('ac', n + 1, r() < 0.3); if (big) L.row('hvac', 1 + (r() < 0.5 ? 1 : 0), true);
+      units('ac', n + 1, r() < 0.3); if (big) L.row('hvac', 1 + (r() < 0.5 ? 1 : 0), true);
       if (r() < 0.35) L.free('ant', 1, true); if (r() < 0.4) L.free('dish', 1);
       L.free('vent', 2 + (n >> 1)); L.free('pipe', 2); if (r() < 0.5) L.free('skyL', 1 + (r() < 0.5 ? 1 : 0));
       if (A === 'hotel' && r() < 0.5) L.front(`neon|${clean(spec.signText || 'HOTEL', 10)}|${(spec.seed >> 3) % 7}`);
       if (A === 'hotel' && r() < 0.6) { L.edge('plant', 3); L.free('umb', 2); L.free('lounge', 2, false, 0.5); if (r() < 0.5) L.free('string', 1); }
       break;
-    case 'hospital': L.free('heli', 1); L.row('hvac', 2); L.row('ac', n); L.corner('hut'); L.free('vent', 3); break;
-    case 'police': case 'fire': L.free('ant', 1, true); L.free('dish', 2); L.row('ac', n); L.corner('hut'); L.free('vent', 2); break;
+    case 'hospital': L.free('heli', 1); L.row('hvac', 2); units('ac', n); L.corner('hut'); L.free('vent', 3); break;
+    case 'police': case 'fire': L.free('ant', 1, true); L.free('dish', 2); units('ac', n); L.corner('hut'); L.free('vent', 2); break;
     case 'walkup': case 'rough':
       if (r() < 0.55) L.free('tank', 1, true); if (r() < 0.4) L.corner('hut'); else L.free('hatch', 1);
-      L.edge('chim', 1 + (r() * 3 | 0)); L.row('acs', Math.max(1, n - 1)); L.free('vent', 2); L.free('pipe', 1 + (r() < 0.5 ? 1 : 0));
+      L.edge('chim', 1 + (r() * 3 | 0)); units('acs', Math.max(1, n - 1)); L.free('vent', 2); L.free('pipe', 1 + (r() < 0.5 ? 1 : 0));
       if (rough || A === 'rough' || r() < 0.3) L.free('dish', 1 + (r() < 0.4 ? 1 : 0));
       if (r() < (A === 'rough' ? 0.55 : 0.35)) L.free('line', 1, false, 0.5);
       if (r() < 0.3) L.edge('plant', 2);
@@ -702,10 +720,10 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false) {
     case 'condo': case 'beachblock': case 'villa':
       L.edge('plant', 2 + (n >> 1)); L.free('palm', 1 + (n >> 2));
       if (r() < 0.6) { L.free('umb', 1 + (r() < 0.5 ? 1 : 0)); L.free('lounge', 2, false, 0.5); L.free('table', 1); if (r() < 0.35) L.free('string', 1); }
-      L.row('acs', Math.max(1, n >> 1)); if (r() < 0.5) L.corner('hut'); if (r() < 0.4) L.free('skyL', 1);
+      units('acs', Math.max(1, n >> 1)); if (r() < 0.5) L.corner('hut'); if (r() < 0.4) L.free('skyL', 1);
       break;
     case 'oldrow': case 'townhouse':
-      if (r() < 0.35) L.free('tank', 1, true); L.edge('chim', 1 + (r() * 2 | 0)); L.edge('plant', 1 + (r() < 0.5 ? 1 : 0)); L.row('acs', n); L.free('vent', 1);
+      if (r() < 0.35) L.free('tank', 1, true); L.edge('chim', 1 + (r() * 2 | 0)); L.edge('plant', 1 + (r() < 0.5 ? 1 : 0)); units('acs', n); L.free('vent', 1);
       if (r() < 0.25) L.free('line', 1, false, 0.5); L.free('hatch', 1);
       break;
     case 'warehouse': case 'factory': case 'shed': case 'hangar': case 'pits':
@@ -714,18 +732,18 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false) {
       L.row('vent', Math.min(6, n + 2), false, 18); L.row('hvac', 1);
       if (A === 'factory') { if (r() < 0.5) L.free('tank', 1); L.free('duct', 1 + (r() < 0.5 ? 1 : 0), false, 0.5); }
       break;
-    case 'school': L.grid('solar', 3, 2); L.row('ac', n); L.free('vent', 2); L.corner('hut'); break;
+    case 'school': L.grid('solar', 3, 2); units('ac', n); L.free('vent', 2); L.corner('hut'); break;
     case 'bank': case 'court': case 'cityhall': case 'civicblock': case 'theatre':
-      L.row('hvac', 1); L.row('ac', n); if (r() < 0.5) L.free('skyL', 2); L.corner('hut'); L.free('vent', 2); if (r() < 0.5) L.edge('plant', 2);
+      L.row('hvac', 1); units('ac', n); if (r() < 0.5) L.free('skyL', 2); L.corner('hut'); L.free('vent', 2); if (r() < 0.5) L.edge('plant', 2);
       break;
     case 'nightrow': case 'club': case 'arcade': case 'tattoo':
       if (r() < 0.45) L.front(`neon|${pick(['BAR', 'LIVE', 'DANCE', 'COCKTAILS', 'CLUB', 'KARAOKE', 'LOUNGE', 'MOTEL'], r())}|${Math.floor(r() * 7)}`);
-      L.row('ac', n); L.free('vent', 2);
+      units('ac', n); L.free('vent', 2);
       if (r() < 0.5) { L.free('umb', 2); L.free('table', 2); L.edge('plant', 2); L.free('string', 1 + (r() < 0.5 ? 1 : 0), false, 0.5); }
       if (r() < 0.5) L.free('dish', 1); L.free('hatch', 1);
       break;
     case 'garage': case 'yardoffice': case 'den': case 'block': case 'hut': case 'siteoffice': case 'poolhouse':
-      L.row('acs', Math.min(2, n)); L.free('vent', 1 + (n >> 1)); if (rough && r() < 0.5) L.free('dish', 1);
+      units('acs', Math.min(2, n)); L.free('vent', 1 + (n >> 1)); if (rough && r() < 0.5) L.free('dish', 1);
       break;
     case 'grandstand': L.free('vent', 2); break;
     case 'house': case 'cottage':                          // a sun deck over the garage
@@ -733,14 +751,14 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false) {
       break;
     default:                                               // shops, mixed blocks and strips
       if (A === 'mixed' && w >= 150 && r() < 0.18) L.free('bill', 1, true);
-      if (big && r() < 0.5) L.row('hvac', 1); L.row('ac', n, r() < 0.3); L.free('acs', n >> 1); L.free('vent', 1 + (n >> 1)); if (r() < 0.3) L.free('sky', 1);
+      if (big && r() < 0.5) L.row('hvac', 1); units('ac', n, r() < 0.3); if (ch !== 'none') L.free('acs', n >> 1); L.free('vent', 1 + (n >> 1)); if (r() < 0.3) L.free('sky', 1);
       if (r() < 0.15) L.grid('solar', 2 + (r() * 3 | 0), 2); if (A === 'mixed' && r() < 0.2) L.free('tank', 1, true); L.free('hatch', 1); if (r() < 0.2) L.edge('plant', 2);
   }
   // (the owner, 2026-11-03: "Huge, plain buildings ... add nothing": a big plain roof is dressed as the buildings kit's
   // roofs are - the sheds' and works' solar arrays and plant, the blocks' water tower, skylight rows, more units)
   if (plain && area > 100000) {
     if (A === 'warehouse' || A === 'factory' || A === 'shed' || A === 'hangar') { L.grid('solar', 2 + (r() * 3 | 0), 2); L.row('hvac', 1, true); if (r() < 0.5) L.free('duct', 1, false, 0.5); }
-    else { if (r() < 0.6) L.corner('tank'); L.grid('skyL', 2 + (r() < 0.5 ? 1 : 0), 1, 8); L.row('acs', 2); if (r() < 0.4) L.free('dish', 1); }
+    else { if (r() < 0.6) L.corner('tank'); L.grid('skyL', 2 + (r() < 0.5 ? 1 : 0), 1, 8); units('acs', 2); if (r() < 0.4) L.free('dish', 1); }
   }
   // (the owner, 11-14: a big roof that stays "one huge flat grey roof with a row of AC units" gets what else stands on a
   // city's roofs - two of a water tank, a stairwell hut, skylights, solar panels, a billboard, a terrace, a dish; the
@@ -1607,7 +1625,7 @@ function specOf(c, b, A, s, D) {
     gardenRoof(spec, w, d, !!(ART && ART.kit) || !!b.lookW);
     up = ART ? (ART.up ? upperArt(ART.up, A, D, rnd, spec, w, d) : null) : b.look || b.fl ? null : upperOf(A, D, rnd, spec, w, d);
     if (up && (capped || upBlocks(c, b, s, roofDeckZ(spec) + buildingH(up.spec)))) up = null;   // (lowered over the street, or its setback storeys would cover it: none on top - streetCap)
-    const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null, b.kind === 'roof' && !b.art && !b.hero && !(b.signs && b.signs.length));   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
+    const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null, b.kind === 'roof' && !b.art && !b.hero && !(b.signs && b.signs.length), s.rr === undefined ? null : ROOF_CYCLE[s.rr]);   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
     // (a walk-in that opens on its north side, the side this camera doesn't see - the Strip's resorts south of the
     // boulevard, Old Downtown's casinos on the south of the covered street: a lit sign with its name at the roof's north
@@ -1797,16 +1815,64 @@ export function clearRoofSigns(all) {
   return { seen, cut };
 }
 
+// Roofs side by side along a street (11-26: of 2,391 pairs of neighbours 171 had the same deck and the same kinds of kit
+// on it). NEIGHBOUR: two sections of different buildings are neighbours when their south edges are on one row of tiles
+// and no more than `gap` tiles lie between them.
+export const ROOF_NEIGHBOUR = { gap: 1 };
+export const roofRuns = (list) => {   // (list: [{ tx, ty, tw, th, ... }] -> runs of neighbours, west to east)
+  const rows = new Map(), runs = [];
+  for (const q of list) { const y = q.ty + q.th; let l = rows.get(y); if (!l) rows.set(y, (l = [])); l.push(q); }
+  for (const l of rows.values()) {
+    l.sort((a, b) => a.tx - b.tx || (a.k | 0) - (b.k | 0));
+    let run = null;
+    for (const q of l) { const p = run && run[run.length - 1]; if (p && q.tx >= p.tx + p.tw && q.tx - (p.tx + p.tw) <= ROOF_NEIGHBOUR.gap) run.push(q); else runs.push((run = [q])); }
+  }
+  return runs;
+};
+// each section's place in ROOF_CYCLE: neighbours take the cycle's next, a run starts where its place says
+function roofRanks(all) {
+  const N = ROOF_CYCLE.length;
+  for (const run of roofRuns(all.flatMap((q) => q.secs))) { const a = Math.floor(hh(run[0].tx, run[0].ty + run[0].th, 311) * N); run.forEach((s, i) => { s.rr = (a + i) % N; }); }
+}
+// a roof as its neighbours see it: its deck, the kinds of kit on it, and whether units stand in a row
+export const roofLook = (mat, kit) => {
+  const ks = new Set(), ys = new Map(); let row = false;
+  for (const [k, , y] of kit || []) { const b = kitBase(k); ks.add(b); if (b === 'ac' || b === 'acs') { const t = Math.round(y / 6), n = (ys.get(t) || 0) + 1; ys.set(t, n); if (n > 1) row = true; } }
+  return `${mat}|${row ? 'row' : '-'}|${[...ks].sort().join(',')}`;
+};
+// a deck beside one that looks the same takes another common deck of its kind (a garden's deck, a shed's metal, a
+// stand's seats stay): [the decks that may be swapped among themselves]
+const DECK_SWAP = [['gravel', 'tar', 'membrane'], ['rubber', 'tar'], ['paver', 'deck', 'membrane']];
+function varyDecks(all) {
+  const secs = [];
+  for (const { b, bi, A, built } of all) for (const r of built) {
+    const s = r.s, sp = r.spec;
+    if (sp.pitch || s.vox || s.frame || s.tw * TILE < 64 || s.th * TILE < 56) continue;
+    secs.push({ bi, A, k: s.k, tx: s.tx, ty: s.ty, tw: s.tw, th: s.th, r, own: !!sp.garden });
+  }
+  let swapped = 0;
+  for (const run of roofRuns(secs)) for (let i = 1; i < run.length; i++) {
+    const p = run[i - 1], q = run[i], sp = q.r.spec;
+    if (p.bi === q.bi || q.own || roofLook(p.r.spec.roofMat, p.r.kit) !== roofLook(sp.roofMat, q.r.kit)) continue;
+    const set = DECK_SWAP.find((l) => l.includes(sp.roofMat)), nx = run[i + 1];
+    const to = set && set.find((m) => m !== sp.roofMat && !(nx && nx.bi !== q.bi && roofLook(nx.r.spec.roofMat, nx.r.kit) === roofLook(m, q.r.kit)));
+    if (to) { sp.roofMat = to; swapped++; }
+  }
+  return { swapped, list: secs.map((q) => [q.bi, q.tx, q.ty, q.tw, q.th, roofLook(q.r.spec.roofMat, q.r.kit), q.A]) };
+}
+
 function addBuildings(c, I) {
   const M = c.M, all = [];
   M.buildings.forEach((b, bi) => {
     if (!b || b.gone || b.kind === 'motorpool') return;
     const A = archOf(c, b);
     const D = c.dist((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE);
-    const secs = sectionsOf(c, b, A);
-    all.push({ b, bi, A, D, built: oneNameAcross(secs.map((s) => ({ s, ...specOf(c, b, A, s, D) }))) });   // (one name along a front, however many sections it's drawn in)
+    all.push({ b, bi, A, D, secs: sectionsOf(c, b, A) });
   });
+  roofRanks(all);   // (before any roof is dressed: each section's place along its street - kitFor's character)
+  for (const q of all) q.built = oneNameAcross(q.secs.map((s) => ({ s, ...specOf(c, q.b, q.A, s, q.D) })));   // (one name along a front, however many sections it's drawn in)
   I.roofSigns = clearRoofSigns(all);   // (once every building's height is known: no sign on a roof with its foot hidden)
+  I.roofs = varyDecks(all);   // (then: no two neighbours' decks and kit alike)
   for (const { b, bi, A, D, built } of all) {
     for (const { s, spec, kit, lights, up } of built) {
       const x0 = s.tx * TILE, y1 = (s.ty + s.th) * TILE, w = s.tw * TILE, d = s.th * TILE;

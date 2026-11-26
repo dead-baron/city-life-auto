@@ -28247,3 +28247,21 @@ Gulch's - a row of liquor bottles.
   under 40%), a row of any AC on 81% (walk-ups 93%, strips 100%); a water tank on 57% of walk-ups; of 2,391 pairs of
   neighbours on a street 266 carry the same kinds of kit and 162 the same counts (Southside 58, the nightlife rows
   44, the airport 30 of 32). The decks' materials are still to be read (the count took the wrong field).
+
+## 2026-11-26 · Roofs: fewer AC rows, no two neighbours alike (part B, the audit's #3) - on branch `fable-art-1124`
+Counted first over the world's 5,462 flat roofs: a row of AC units on 77% (every strip, 93% of walk-ups, 95% of mixed
+blocks); of 2,391 pairs of neighbours along a street 171 had the same deck and the same kinds of kit.
+- **A roof's character** (`statics.js` `ROOF_CYCLE`, `kitFor`): 'row' the block of units, 'few' one or two small ones
+  apart, 'none' no units - skylights, a washing line, planters, solar panels or pipes instead. Neighbours along a
+  street take the cycle's next (`roofRanks`), so no two share one; big buildings with plant to house keep a row more
+  often. **A row now stands on 1,471 roofs, 26.9%** (walk-ups 28%, mixed 31%, strips 31%, offices 53%).
+- **Decks** (`varyDecks`, `roofLook`): a roof that still looks like its neighbour takes another common deck of its
+  kind (gravel / tar / membrane; rubber / tar; paver / deck / membrane) - 32 swapped.
+- **The lint** (`tools/placementlint.mjs` row `roofTwin`, held at 4; 171 before): two neighbours with the same deck,
+  kit kinds and row. A yard's metal sheds are alike by nature and counted apart (78). Its own check wants a row on
+  15-40% of roofs.
+- Run: placementlint 47/47. **NOT LOOKED AT**: no roof was rendered after this change (the Fable chat's weekly usage
+  ran out at this point) - the first look is owed before the batch goes live: `node tools/nature/darkscan.mjs --rect
+  3050,1670,3080,1682 --out a.png --rect 3255,1836,3286,1846 --out b.png` (tiles) and read `a-lit.png`. No test file of
+  its own beyond the lint row. Not run after it: perf (the bake's code grew by about 3 KB from 1,126 of 1,150),
+  roofsigns, signclear. Water towers, gardens and billboards are as they were (tanks on 57% of walk-ups).

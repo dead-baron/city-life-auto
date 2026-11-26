@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-26 13:45 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-26 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -107,6 +107,21 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 Chats that can run side by side: 4 with any other; nothing else safely.
 
 ## 6. Where things stand (2026-11-24, 09:00 PST - the Opus part of the pre-beta is done)
+**TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of
+13:31: "I'd like to push all the art we have now live". Everything is on branch `fable-art-1124`, pushed, tree clean.
+To put it live, in this order: (1) `node tools/nature/darkscan.mjs` on two streets and LOOK at the roofs (the last
+commit, "Roofs", was never rendered - if it looks wrong, `git revert` that one commit); run `test/perf.test.js`,
+`roofsigns`, `signclear`; (2) merge `main` into the branch if it moved; (3) the whole suite, one heavy file at a time
+(`docs/tasks/ARTPASS-TESTS-2026-11-26.txt` is the last full run, on 033be77: compare failures with it and with "Known
+failing on main too" below; `visaudit`'s one extra door under a tree is undetermined); (4) a look in a running World
+v3 game (`tools/nature/README.md` has the recipe) - streets, a shop window, a roof, the menus in look C, a phone
+size; (5) tell him what failed and what was not seen, then open the PR to `main` and merge it (his word is given, for
+the art as it stands after the gate); the server re-bakes for about five hours and players get a short reconnect.
+The page-code items (shark, cats, cloud shadows, UI look C) ride in the same merge. **Left for Fable next week, not
+for now:** night signs and lit rooms (a new look: variants for his pick first), the districts' waves, ATMs' booths,
+murals, paving, vehicles, the cinematics reshot. Rule-led rows Opus can take from `docs/tasks/SHARED-KIT-AUDIT-2026-11-26.md`
+if he asks: the lint's open rows (`signCovered` 68, `atmStray` 52). The project copy of this file is one edit
+behind (it lacks this block and the roofs line).
 **The art pass, 2026-11-25 16:40 PST (the Fable 5.2 chat; branch `fable-art-1124`, pushed; the DEVLOG's 11-24 and 11-25
 entries have each piece):**
 - **Live:** PR #48 (11-25 01:35, his word) - the buildings over your street, sidewalk or alley go see-through; PR #49
