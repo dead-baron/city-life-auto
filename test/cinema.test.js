@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
 import { T, TILE } from '../shared/constants.js';
-import { CINE, FILMS, roomAt } from '../shared/cinema.js';
+import { CINE, FILMS, roomAt, filmFor, cinemaBox, cinemaLayout, buildCinema } from '../shared/cinema.js';
 import * as economy from '../server/systems/economy.js';
 import * as cinema from '../server/systems/cinema.js';
 import { nearTargets } from '../server/dev.js';
@@ -23,7 +23,7 @@ test('The Grand Theater on the map: a walk-in cinema - the counter in the lobby,
   assert.equal(m.tileAtPx(C.counter.x, C.counter.y), T.FLOOR, 'in front of the counter');
   const nt = nearTargets(m, 'cinema');
   assert.ok(nt.length === 1 && Math.hypot(nt[0].x - C.counter.x, nt[0].y - C.counter.y) < 1, 'the dev `near` command takes you to the counter');
-  assert.equal(C.rooms.length, 2, 'two screens');
+  assert.ok(C.rooms.length === 2 || C.rooms.length === 4, `two screens, or four where the building has the room (${C.rooms.length})`);
   // every seat can be walked to from the counter (through the corridor and the room's door), and walls part the rooms
   const key = (tx, ty) => ty * 100000 + tx, seen = new Set(), q = [[Math.floor(C.counter.x / TILE), Math.floor(C.counter.y / TILE)]];
   seen.add(key(...q[0]));
@@ -118,3 +118,57 @@ test('getting up or walking out ends the film for you; a few NPCs watch while yo
   run(w, 1.5);
   assert.equal(w.cine.rooms.reduce((n, r) => n + r.npcs.length, 0), 0, 'the audience gone when nobody is near');
 });
+
+test('a big building holds a compact cinema at its door: four screens off a hall, a lobby of seven rows - not fifty rows of floor', () => {
+  // (World v3's Grand Theater is 40 x 59 tiles - counted 11-24: two screens across its back, the rest lobby)
+  const TW = 80, TH = 90, grid = new Uint8Array(TW * TH).fill(T.BUILDING);
+  for (const south of [true, false]) {
+    grid.fill(T.BUILDING);
+    const b = { id: 0, tx: 20, ty: 15, tw: 40, th: 59, prefab: 0, signs: [] };
+    const m = { pois: [{ id: 7, label: CINE.NAME, b: 0, x: 0, y: 0 }], buildings: [b], prefabs: [{ rot: south ? 0 : 2 }], walkIns: [], dist: new Uint8Array(TW * TH), idx: (x, y) => y * TW + x, set: (x, y, t) => { grid[y * TW + x] = t; } };
+    buildCinema(m, { T, DISTRICTS: [{ name: 'Midtown' }] });
+    const C = m.cinema, box = cinemaBox(b, south);
+    assert.ok(C && C.rooms.length === 4 && C.tiers === 2, 'four screens');
+    assert.equal(box.x1 - box.x0 + 1, CINE.MAX_W, 'the inside as wide as it needs');
+    assert.equal(box.y1 - box.y0 + 1, 2 * CINE.ROOM_T + 1 + 1 + CINE.LOBBY_T, 'and as deep: two pairs of screens, the wall between, the poster wall, the lobby');
+    assert.equal(south ? box.y1 : box.y0, south ? b.ty + b.th - 2 : b.ty + 1, 'at the door');
+    let floor = 0; for (let i = 0; i < grid.length; i++) if (grid[i] === T.FLOOR || grid[i] === T.COUNTER) floor++;
+    assert.ok(floor < 23 * 19 + 4 && floor > 300, `a compact floor (${floor} tiles; the building's inside is ${38 * 57})`);
+    // from the door: the counter, and every seat of every screen
+    const fy = south ? b.ty + b.th - 1 : b.ty, dc = Math.floor((b.tx + 1 + b.tx + b.tw - 2) / 2);
+    assert.equal(grid[fy * TW + dc], T.FLOOR, 'the door');
+    const seen = new Set([fy * TW + dc]), q = [[dc, fy]];
+    while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const i = (y + dy) * TW + x + dx; if (!seen.has(i) && grid[i] === T.FLOOR) { seen.add(i); q.push([x + dx, y + dy]); } } }
+    assert.ok(seen.has(Math.floor(C.counter.y / TILE) * TW + Math.floor(C.counter.x / TILE)), 'the counter from the door');
+    for (const R of C.rooms) {
+      assert.ok(R.seats.length >= 40, `screen ${R.i + 1}: ${R.seats.length} seats`);
+      for (const st of R.seats) { assert.equal(roomAt(C, st.x, st.y), R.i); assert.ok(seen.has(Math.floor(st.y / TILE) * TW + Math.floor(st.x / TILE)), `screen ${R.i + 1}: a seat you can walk to`); }
+      // its screen hangs on a wall (the building's own back, or the wall between the pairs)
+      const wy = Math.floor(R.backEdge / TILE) - (south ? 1 : 0);
+      assert.notEqual(grid[wy * TW + R.tx0 + 2], T.FLOOR, `screen ${R.i + 1}: a wall behind its screen`);
+    }
+    assert.equal(C.tierWalls.length, 1);
+    assert.equal(grid[C.tierWalls[0] * TW + C.cc], T.FLOOR, 'the hall runs through the wall between the pairs');
+    assert.equal(grid[C.tierWalls[0] * TW + C.cc - 3], T.WALL);
+    // the far pair is rooms 0 and 1 (as the two screens always were): farther from the door than rooms 2 and 3
+    const far = (R) => Math.abs((R.y0 + R.y1) / 2 - fy * TILE);
+    assert.ok(far(C.rooms[0]) > far(C.rooms[2]) && far(C.rooms[1]) > far(C.rooms[3]));
+  }
+  // four screens, four films at once
+  assert.equal(new Set([0, 1, 2, 3].map((r) => filmFor(r, 0))).size, 4);
+  assert.deepEqual([filmFor(0, 0), filmFor(1, 0)], [0, 2], 'the two screens of a small cinema show what they always did');
+  // a small building (the first city's): its whole inside, two screens
+  const small = cinemaBox({ tx: 5, ty: 5, tw: 13, th: 14 }, true);
+  assert.deepEqual([small.x0, small.x1, small.y0, small.y1, small.tiers], [6, 16, 6, 17, 1]);
+  assert.equal(cinemaLayout({ south: true, ...small }).rooms.length, 2);
+});
+
+test('a sign names what is behind it: CINEMA over the building with the screens only', async () => {
+  const { theatreBlade } = await import('../client/art2/game/statics.js');
+  const M = { cinema: { b: 12 } };
+  assert.equal(theatreBlade(M, { id: 12, name: 'The Grand Theater' }, 'THE GRAND THEATER'), 'CINEMA');
+  assert.equal(theatreBlade(M, { id: 13, name: 'The Palace' }, 'THE PALACE'), 'LIVE');
+  assert.equal(theatreBlade(M, { id: 14, name: 'Velvet Cabaret' }, null), 'CABARET');
+  assert.equal(theatreBlade({}, { id: 12, name: 'The Grand Theater' }, null), 'LIVE', 'no cinema on the map, no CINEMA sign');
+});
+

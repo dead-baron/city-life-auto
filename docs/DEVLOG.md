@@ -27930,3 +27930,31 @@ Logged in the check list as his call.
 Looked at: sheets of the hollows and six root caves; two root caves, two hollow giants and two logs in a baked
 render. Baked: with the re-bake. Not seen in a running game.
 
+## 2026-11-25 · The cinema rebuilt: a compact inside at the door, four screens - on branch `fable-art-1124`
+Part B's first place (the owner, 11-24: "before the beta"; the pick agreed in the art pass plan, from IN14).
+- **What was there** (counted, World v3): The Grand Theater on Fountain Square is 40 x 59 tiles; its whole inside
+  was floor - two screens five tiles deep across the back and fifty rows of red carpet between them and the door
+  (2,166 tiles; picture `report-78`, left).
+- **`shared/cinema.js`**: `cinemaBox` - the inside is the whole of a small building (the first city's, unchanged:
+  two screens) and in a big one a box at the door, 23 tiles wide about the door and 19 deep. `cinemaLayout` takes
+  `tiers`: with the room, four screens - two a side of the hall, the far pair behind the near pair, a wall between
+  with the hall through it; each screen's door at its own walkway row. Rooms 0 and 1 stay the far pair. `filmFor`:
+  four screens start on four films (the first two as before). `CINE.LOBBY_T` 7 rows of lobby. 379 tiles of floor (it was 2,166);
+  228 seats. The rest of the building stays shut.
+- **`statics.js`**: each screen's own wall on the hall's side; the wall between the pairs; posters on the counter's
+  side of the poster wall too; the lobby's things from IN14 where it has three rows past the counter - brass posts
+  with velvet ropes before the counter, two benches across from it, a plant either side of the hall's mouth
+  (drawn only); what is cut open beside the box drawn as the dark of shut rooms, not a grey floor.
+- **A sign names what is behind it** (`theatreBlade`): every `theatre` building wore a CINEMA blade and one has
+  screens (11 theatre buildings in World v3). CINEMA over the cinema only; a cabaret says CABARET; the rest LIVE.
+- The server (`server/systems/cinema.js`) and the page's film (`client/cinema.js`) already went by the rooms'
+  list: no change.
+- `test/cinema.test.js`: a 40 x 59 building, door south and north - four screens, the box's size, at the door,
+  every seat walked to from the door, a wall behind every screen, the hall through the wall between; four films;
+  a small building keeps its whole inside and two screens; the blade's words.
+**Left:** The Palace as a second cinema from the same layout (the plan's ripple) - the server holds one cinema
+(`m.cinema`); it wants a list. The Grand Theater's outside: a 40 x 59-tile box with a gravel roof the size of a
+field - a district matter (Fountain Square), with part B's "no huge plain buildings".
+Looked at: the cut-away before and after from the page's own chunk bake (`tools/area-shot.mjs --cut`). Not seen in
+a running game; no film watched on the new screens.
+

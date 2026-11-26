@@ -203,6 +203,10 @@ last leap over the top of a falls; the other fish's leaps.
 - [ ] **YOUR CALL: the mission ruin bigger.** Not built: at a church's size its one voxel model needs about 425 MB
   while its chunk bakes (104 MB today, already the game's largest). Two ways: split the model in two, or change the
   voxel kit to keep less per voxel. Either is a half day; say if you want it.
+- [ ] **The cinema** (11-25, before the beta): The Grand Theater's inside was two screens and fifty rows of empty
+  carpet. Now a compact cinema at the door - lobby with the counter, benches and ropes, a hall, four screens showing
+  four films. Picture: `report-78`. Judge in the game: walk in, buy a ticket, sit in a near screen and a far one.
+  Left for your word: The Palace as a second cinema; the building's huge plain outside.
 - [ ] **YOUR CALL: a pool and stream above Coral Cay Falls** (the plan's jungle item). Not built: the spine above the
   falls is tall rock drawn up the screen, so water on the ground there is hidden, and the concept shows no stream
   above the fall either. If you want it, it is a new piece - a pool drawn into the top of a rock.
