@@ -43,6 +43,7 @@ import { ITEMS, drawItem, itemSpan } from './items.js';
 import { CLUBS } from '../../shared/clubs.js';   // (the biker clubs' patches: task #366)
 let PL = null;   // (the staged polish pass, off: peoplepolish.js, docs/characters/NOTES.md)
 export function setPolish(p) { PL = p || null; }
+export const polishOn = () => !!PL;   // (client/piecepic.js keeps its bare figures by it: a figure drawn before the polish pass loads is not one drawn after)
 
 
 // ---- camera, light, poses -------------------------------------------------------------------------------------

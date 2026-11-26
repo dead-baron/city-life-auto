@@ -25,6 +25,7 @@ import { INSTRUMENTS } from '../shared/music.js';
 import { person } from './art2/people.js';
 import { packGBuf, downsample2 } from './art2/gbuf.js';
 import { itemIcon, weaponIcon } from './itemart.js';
+import { piecePixels } from './piecepic.js';
 
 // a weapon's picture in a tile: its class's line icon (pistol, rifle, knife, bat...: the touch buttons' family,
 // client/touchicons.js) - the top-down sprites are thin bars or blocks at this size and read as broken art (11-04 review)
@@ -217,7 +218,46 @@ addGlyphs({
 const SLOT_GLYPH = { top: 'shirt', jacket: 'jacket', bottoms: 'pants', set: 'dress', shoes: 'footprints', hat: 'cap', glasses: 'glasses', jewel: 'gem', bag: 'backpack', under: 'shirt', socks: 'footprints' };
 const freePiece = (P) => !!P && P.price === 0 && !P.d.issued && !P.d.gift;   // (shared/wardrobe.js free: everyone's)
 const hexOf = (c) => (CLOTH[c] || CLOTH[0])[0];
-const pieceTile = (it, px) => `${glyph(SLOT_GLYPH[PIECES[it.id].slot] || 'shirt', px)}<i class="iv-dot" style="--c:${hexOf(it.c)};--t:${hexOf(it.t)}"></i>`;
+// A piece's tile: the piece itself (concept UIC-19; the art pass, 11-25), drawn by the game's own people art in the
+// colours it is worn in - client/piecepic.js - at a whole number of the game's pixels. Drawn one at a time off the
+// frame the Inventory opens in (a queue; a tile shows its slot's glyph with the colour dot until its picture is there,
+// and for good where the piece has no picture of its own: a bare chest, a backpack seen from the front, a thin chain).
+const PP = new Map(), PPQ = [];
+// (PP_FIT: on the figure's slots a picture may stand a quarter over its glyph's box - the button round it has the room -
+// so a tee is two pixels to the game's one, not one; in the grid it keeps to its box, the name is under it. PP_RIM: one hard pixel of cream round the piece, as a sticker's edge: black
+// jeans on the navy tile were not to be seen - looked at in the page, 11-25)
+export const PP_FIT = 1.25, PP_RIM = [232, 220, 192, 255];
+export function ppRim(R) {
+  const w = R.w + 2, h = R.h + 2, px = new Uint8ClampedArray(w * h * 4), on = (x, y) => x >= 0 && y >= 0 && x < R.w && y < R.h && R.px[(y * R.w + x) * 4 + 3] > 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const o = (y * w + x) * 4, sx = x - 1, sy = y - 1;
+    if (on(sx, sy)) { const i = (sy * R.w + sx) * 4; px[o] = R.px[i]; px[o + 1] = R.px[i + 1]; px[o + 2] = R.px[i + 2]; px[o + 3] = 255; }
+    else if (on(sx - 1, sy) || on(sx + 1, sy) || on(sx, sy - 1) || on(sx, sy + 1)) { px[o] = PP_RIM[0]; px[o + 1] = PP_RIM[1]; px[o + 2] = PP_RIM[2]; px[o + 3] = PP_RIM[3]; }
+  }
+  return { w, h, px };
+}
+const ppLater = () => (typeof requestIdleCallback === 'function' ? requestIdleCallback(ppNext, { timeout: 150 }) : setTimeout(ppNext, 30));   // (between the page's own work: a picture is a figure drawn twice)
+const ppImg = (u, px) => { const k = Math.max(1, Math.floor(px / Math.max(u.w, u.h))); return `<img class="iv-pp" alt="" src="${u.url}" width="${u.w * k}" height="${u.h * k}" style="image-rendering:pixelated">`; };
+function ppNext() {
+  const q = PPQ[0];
+  if (!q) return;
+  let u = null;
+  try {
+    const R = piecePixels(q.it);
+    if (R) { const Q = ppRim(R), cv = document.createElement('canvas'); cv.width = Q.w; cv.height = Q.h; const g = cv.getContext('2d'), id = g.createImageData(Q.w, Q.h); id.data.set(Q.px); g.putImageData(id, 0, 0); u = { url: cv.toDataURL(), w: Q.w, h: Q.h }; }
+  } catch (e) { console.warn('[inventory] piece picture', e); }
+  PP.set(q.k, u); PPQ.shift();
+  if (u) for (const el of document.querySelectorAll(`[data-pp="${q.k}"]`)) el.outerHTML = ppImg(u, +el.dataset.px || 26);
+  if (PPQ.length) ppLater();
+}
+const pieceGlyph = (it, px) => `${glyph(SLOT_GLYPH[PIECES[it.id].slot] || 'shirt', px)}<i class="iv-dot" style="--c:${hexOf(it.c)};--t:${hexOf(it.t)}"></i>`;
+const pieceTile = (it, px0, fit = 1) => {
+  const px = Math.round(px0 * fit), k = `${it.id}:${it.c | 0}:${it.t | 0}:${it.p | 0}`, u = PP.get(k);
+  if (u) return ppImg(u, px);
+  if (u === null) return pieceGlyph(it, px0);
+  if (!PPQ.some((q) => q.k === k)) { PPQ.push({ k, it: { id: it.id, c: it.c, t: it.t, p: it.p } }); if (PPQ.length === 1) ppLater(); }
+  return `<span style="display:contents" data-pp="${k}" data-px="${px}">${pieceGlyph(it, px0)}</span>`;
+};
 
 // the figure: your look as the city draws it (person() at the game's size, put on the art grid), one canvas a pose, kept
 const SPR = new Map();
@@ -450,7 +490,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
       cols[ci].innerHTML = col.map(([s, label]) => {
         const it = O && (s === 'top' && O.set ? O.set : O[s]), P = it && PIECES[it.id], under = s === 'bottoms' && O && O.set;
         return `<div class="iv-slot${it ? '' : ' empty'}${it && sel === 'p:' + it.id ? ' sel' : ''}" data-s="${s}"><small>${s === 'top' && O && O.set ? 'OUTFIT' : label}</small>`
-          + (it ? `<button class="iv-sb" data-k="p:${it.id}" title="${esc(P.name)}" aria-label="${esc(P.name)}">${pieceTile(it, 26)}</button><button class="iv-off" data-off="${O.set && s === 'top' ? 'set' : s}" aria-label="Take off the ${esc(P.name)}"${s === 'under' ? ' title="At home, a bathhouse or a shower"' : ''}>✕</button>`
+          + (it ? `<button class="iv-sb" data-k="p:${it.id}" title="${esc(P.name)}" aria-label="${esc(P.name)}">${pieceTile(it, 26, PP_FIT)}</button><button class="iv-off" data-off="${O.set && s === 'top' ? 'set' : s}" aria-label="Take off the ${esc(P.name)}"${s === 'under' ? ' title="At home, a bathhouse or a shower"' : ''}>✕</button>`
             : `<button class="iv-sb" data-k="" disabled aria-label="${label}: nothing">${under ? '<em>with the outfit</em>' : glyph(SLOT_GLYPH[s], 22)}</button>`) + '</div>';
       }).join('');
     });

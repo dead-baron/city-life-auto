@@ -213,6 +213,10 @@ last leap over the top of a falls; the other fish's leaps.
 - [ ] **YOUR CALL: the eyes' spacing over a walk.** Facing the camera the two eyes stand three pixels apart in some
   frames and four in others (each is rounded on its own). Fixing it changes every figure a little. Say if you want
   a before/after sheet first.
+- [ ] **Clothing pictures in the Inventory** (11-26, part C3): a tile shows the piece itself, in its worn colours,
+  drawn by the game's own people art - 352 of 390 pieces (thin jewellery and backpacks keep the glyph). Pictures:
+  `report-80` (the Inventory before and after), `report-81-all-pieces` (every piece). Judge on your phone: do the
+  pictures read, and how fast do they come in when the Inventory opens. Not yet in the shops' and the wardrobe's rows.
 - [ ] **YOUR CALL: a pool and stream above Coral Cay Falls** (the plan's jungle item). Not built: the spine above the
   falls is tall rock drawn up the screen, so water on the ground there is hidden, and the concept shows no stream
   above the fall either. If you want it, it is a new piece - a pool drawn into the top of a rock.

@@ -27975,3 +27975,28 @@ Part C1, a look only (the owner, 11-25 12:45: "be careful not to try to over fix
 `people.js` is in the art hash (the bake draws people too - checked by stamping: the hash moved), so this goes
 with the re-bake. The people's tests pass (74). Not seen in a running game.
 
+## 2026-11-26 · Clothing pictures on the Inventory's tiles (part C3) - on branch `fable-art-1124`
+The art pass plan's C3 (concept UIC-19: a tile shows the piece itself). Counted: 390 pieces in 11 slots, 40 colours;
+every tile showed one line glyph for its slot with a colour dot.
+- **`client/piecepic.js`** (new; `piecePixels`): no drawn set. The game's own people art draws a bare figure and the
+  same figure wearing the piece, from the front; what the piece put on the figure - a pixel that differs, in a
+  colour the bare figure has nowhere - is its picture. In the colours it is worn in. Two bare figures (a light skin
+  in dark underwear, a dark skin in light; the second drawn only when the first shows little) so a cream top or a
+  brown boot is not lost on a skin of its own tone. **352 of 390 pieces have a picture**: every top (but the bare
+  chest), jacket, bottoms, set, hat, pair of glasses, mask, underwear and socks; 18 of 45 pieces of jewellery and
+  24 of 32 bags and hand things - a thin chain, earrings, a watch, a backpack seen from the front put nothing of
+  their own on the figure and keep their slot's glyph.
+- **`client/bag.js`**: a tile is the picture at a whole number of the game's pixels (two to one on the figure's
+  slots, inside its box in the grid), a hard one-pixel cream rim round it (black jeans on the navy tile were not to
+  be seen - looked at in the page), drawn one at a time in the page's idle time; the glyph with its dot until then
+  and where there is no picture. `people.js polishOn`: the bare figures are kept by it.
+- `tools/piecesheet.mjs` + `piecesheet.py`: the sheet of every piece, from the same maker (`RES=3` draws from the
+  close-up figure, for a big tile some day).
+- `test/piecepic.test.js` (new): a tee, jeans, shoes, a hat as pictures that fit a tile; red is red; nothing for a
+  bare chest; nine pieces in ten have one; the tile's rules. The page's budgets hold (`test/perf.test.js`).
+Looked at in the real page (`tools/uishots.py`, the Inventory at desk, phone landscape and portrait, before and
+after: the audit's counts are the same - no new overlap or small target). `uishots.py` takes `UISHOT_WAIT`.
+**Not known:** how long a picture takes on a real phone. In the test browser (no graphics card, the suite running
+beside it) they came in one after another over several seconds. The shops' and the wardrobe's rows do not use the
+pictures yet. `people.js` is in the art hash: with the re-bake.
+
