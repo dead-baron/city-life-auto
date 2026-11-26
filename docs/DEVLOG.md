@@ -28176,3 +28176,29 @@ The owner, 11-26 11:00: "Buttons over street should get pixel icons yes" (and lo
 - `test/uitokens.test.js`: no rule shows the line of a glyph that has its pixels; the sizes over the street are
   multiples of 12. Looked at: the HUD at desktop, phone upright and sideways - 0 line icons, the press audit as before.
 
+## 2026-11-26 · Picture signs hung over some shops (part B; the concept BF2) - on branch `fable-art-1124`
+The audit's largest open gap: BF2's row of shops each under a big picture - a book, a cup, a record, a barber's pole.
+Shown to the owner as one Midtown street three ways (`report-92`: A today's name board with a small trade mark, B a
+picture sign hung out over each shop, C the picture large in a crest over the board; B and C mock-ups over a render).
+His word, 11:02: "I think a combination of A and B is good, not every shop in the world needs the sign, but it looks
+good when some do."
+- **The pictures** (`client/art2/signfont.js` `PICS`, `PIC_PAL`, `PIC_OF`; made by `tools/signpics.py`): 21, each
+  14 x 14 at the art pixel on its own ground - book, cup, burger, the pawnbroker's three balls, record, washer,
+  barber's pole, bottle, cocktail glass, apple, plate and cutlery, dress, hammer, palette, flower, pretzel, green
+  cross, sight, shopping bag, fish, ring - for 23 trades.
+- **The sign** (`buildings.js` `picSign`): an iron bar off the wall, two hangers, a square board 18 art px a side with
+  a gold line inside its frame; lit a little after dark. Not drawn on a front whose name went up onto a canopy.
+- **Which fronts** (`statics.js` `PIC_SIGNS`): one in three of the fronts it suits - a trade with a picture, two
+  floors or more of wall to hang it on, 4 tiles wide or more, no blade sign and no big neon name already there - at
+  the end of the front away from the door, clear of a fire escape, 4 art px over the name board, under the wall's
+  top (chosen after the street caps the building's height: ten stood over the top before that). **234 of the 1,731
+  fronts with a name board.** The name boards and their small trade marks are as they were.
+- **The lint** (`tools/placementlint.mjs` row `picSign`, held at 0): a picture sign off its wall, on its own board
+  or beside a blade sign; its own check wants more than 60 signs and fewer than four fronts in ten.
+  `test/picsigns.test.js` (every picture 14 x 14, in the palette, its own drawing, one for each trade named; on a
+  front only the sign's box changes and the picture's colours are in it; none when the name moved).
+- Run: placementlint 45/45, picsigns, signs, signclear, roofsigns, perf, flatdoors, doors 31/31, walkinfront,
+  doorsbake, cinema 9/9. Bake code 1,122 of 1,150 KB. A bake change: with the branch's re-bake. Picture: `report-93`.
+- Not done of the audit's row: picture signs on one-storey shops (no wall above the board to hang one on), the
+  window goods for seven more trades (pharmacy, gun shop, hardware, barber, sports, tackle, bakery).
+

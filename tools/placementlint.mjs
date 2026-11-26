@@ -73,7 +73,8 @@ import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy, parkExempt } from '../shared/parkcheck.js';
 import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
 import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf, roofSigns } from '../client/art2/game/statics.js';
-import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
+import { makeBuilding, buildingH, plaqueBox, bladeBox, picSignBox, signLift } from '../client/art2/buildings.js';
+import { PICS } from '../client/art2/signfont.js';
 import { textAudit } from './textaudit.mjs';
 import { WALK_IN } from '../shared/map.js';
 import { auditRows } from './audit/worldrows.mjs';
@@ -113,6 +114,7 @@ export const LINT_ALLOW = {
   // badge of a place at a wall over its window's OPEN
   signCovered: 68,   // (11-22: egret's 159, one fewer with the walkways cleared; 11-26: 157 -> the hotels' names up on their canopies, a moved sign not painted behind, the cones out from the boards, the OPEN and the board clear of phone boxes and forecourts)
   roofSignCut: 0,     // a sign on a roof with part of its board hidden (the owner, 11-22, N23; 28 of 664 when the row was made 11-26: taken off where its foot is hidden - statics.js clearRoofSigns)
+  picSign: 0,         // a hanging picture sign off its wall, on its own board or beside a blade sign (11-26: the picture signs - statics.js PIC_SIGNS)
   // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
   // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
   // the most part (West Hills', Southside's, Old Town's lots)
@@ -168,7 +170,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { doorBlocked: [], boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [], signCovered: [], roofSignCut: [], doorOnGrass: [], wallOnly: [] };
+  const rows = { doorBlocked: [], boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [], signCovered: [], roofSignCut: [], picSign: [], doorOnGrass: [], wallOnly: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -390,6 +392,17 @@ function artRows(M, rows, seen) {
         for (const q of textAudit({ ...sp, night: 1 })) rows.textClipped.push({ what: `${b.name || b.kind}'s ${q.k} "${q.t}"`, x: it.x + sp.w / 2, y: it.y, why: q.why });
       }
       const H = buildingH(sp), bx = [], at = (r) => [it.x + r[0], it.y - r[3], it.x + r[2], it.y - r[1]];
+      // a picture sign hung out over the shop (statics.js PIC_SIGNS, buildings.js picSign): on the wall, over its board,
+      // on no front that carries a blade sign or whose name went up onto a canopy
+      if (sp.shop && sp.shop.sign && sp.shop.sign.text && !sp.shop.sign.moved) {
+        seen.signFronts = (seen.signFronts || 0) + 1;
+        if (sp.picSign) {
+          seen.picSigns = (seen.picSigns || 0) + 1;
+          const r = picSignBox(sp.picSign), top = 48 + signLift(sp) + 22;
+          const why = r[3] > H - 4 ? 'over the wall\'s top' : r[0] < 0 || r[2] > sp.w ? 'off the front' : r[1] < top + 4 ? 'on its own board' : sp.blades && sp.blades.length ? 'beside a blade sign' : !PICS[sp.picSign.pic] ? 'no such picture' : null;
+          if (why) rows.picSign.push({ what: `${b.name || b.kind}'s picture sign (${sp.picSign.pic})`, x: it.x + sp.w / 2, y: it.y, why });
+        }
+      }
       for (const p of sp.plaques || []) if (p && p.text && p.v !== undefined) bx.push({ t: p.text, r: at(plaqueBox(p, sp.w)) });
       for (const q of sp.blades || []) { const r = bladeBox(q, H); if (r) bx.push({ t: q.text, r: at(r), blade: true }); }
       const sgn = sp.shop && sp.shop.sign && sp.shop.sign.text && !sp.shop.sign.moved ? sp.shop.sign : null;   // (a sign moved up onto what stands in front - a false front, a porte-cochere: statics.js)

@@ -30,7 +30,7 @@ world has not been set against the concept audit's own test (claude/concept-audi
 ## Not built (no trace in the code)
 | Item (audit gap) | Note |
 |---|---|
-| **Picture signs** (gap 4; the audit's #2: BF2's twelve - book, cup, ring, pole, wrench, record, washer, pretzel, burger, neon hand ...) | No `picsigns.js`; no picture-sign code under any name. The icon tile beside a name (Wave A1) is the nearest thing. |
+| **Picture signs** (gap 4; the audit's #2: BF2's twelve - book, cup, ring, pole, wrench, record, washer, pretzel, burger, neon hand ...) | **Built 11-26** on his pick (A and B together, some shops): 21 pictures, 234 hanging signs (`signfont.js` `PICS`, `buildings.js` `picSign`, `statics.js` `PIC_SIGNS`). Not on one-storey shops. |
 | **Night signs** (gap 14) | Neon exists for the night districts (`neonsigns.js`); nothing that lights an ordinary shop's sign after dark by rule. |
 | **Lit rooms in windows** | Nothing. |
 | **A taller neighbour fading while you are in a room** (25 places) | Nothing; the fading of buildings round a player outside is live (PR #49). |

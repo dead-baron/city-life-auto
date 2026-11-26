@@ -26,7 +26,7 @@
 import { MAT, ramp as ramp0 } from './palette.js';
 import { GBuf, hash, vnoise, bayer, step, F_GLASS, F_LEAF } from './gbuf.js';
 import { drawText, textWidth } from './font.js';
-import { layoutSign, paintBoard, paintLine, lineMask, palOf, legible, boardFor } from './signfont.js';
+import { layoutSign, paintBoard, paintLine, lineMask, palOf, legible, boardFor, picBitmap } from './signfont.js';
 import { DOOR_COLS } from '../../shared/doors.js';
 import { dressFacade } from './facadedress.js';
 
@@ -397,6 +397,7 @@ export function makeBuilding(spec) {
   for (const a of spec.arches || []) arch(G, a, d + H, night, seed);
   if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
   for (const bl of spec.blades || []) blade(G, bl, d + H, night, H);
+  if (spec.picSign && !(spec.shop && spec.shop.sign && spec.shop.sign.moved)) picSign(G, spec.picSign, d + H, night);   // (a picture sign hung out over the shop)
   if (spec.cross) medSign(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night, spec.cross.k);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
   // (the boards with words last: never cut by a cross, a cup, a blade - textClipped)
@@ -1388,6 +1389,28 @@ function blade(G, b, yG, night, H = 999) {
   for (let n = 0; n < t.length; n++) {
     const M = lineMask(t[n], 'civic'), lx = x0 + 2 * Math.floor((wA - M.w) / 2), ly = y0 + 2 * (3 + n * 8);
     paintLine((x, y, c, e) => facePx(G, x, y, c, e), t[n], 'civic', lx, ly, { 1: b.paint ? fg : hot }, b.paint ? {} : { 1: [...col, 170 + Math.round(night * 30)] });
+  }
+}
+
+// A picture sign hung out over a shop (the owner, 11-26, of report-92: "a combination of A and B is good, not every shop
+// in the world needs the sign, but it looks good when some do"; signfont.js PICS, statics.js says which fronts): an
+// iron bar off the wall, two hangers, a square board in the picture's ground with a gold line inside its frame, the
+// trade's picture on it at the art pixel. ps: { pic, x (the board's left, facade px), v (its foot's height) }. Lit a
+// little after dark, as a painted sign under a street's light is.
+export const PICSIGN = { s: 18, hang: 2 };   // (the board's side and its hangers' length, art px)
+export function picSignBox(ps) { const x0 = Math.floor(ps.x / 2) * 2; return [x0 - 2, ps.v, x0 + PICSIGN.s * 2 + 2, ps.v + (PICSIGN.s + PICSIGN.hang) * 2]; }
+function picSign(G, ps, yG, night) {
+  const B = picBitmap(ps.pic);
+  if (!B) return;
+  const S = PICSIGN.s, x0 = Math.floor(ps.x / 2) * 2, y0 = Math.floor((yG - ps.v - S * 2) / 2) * 2, ink = MAT.metalDark[2], gold = [226, 189, 87];
+  const cell = (ax, ay, c, e) => { for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) facePx(G, x0 + ax * 2 + i, y0 + ay * 2 + j, c, e); };
+  for (let ax = -1; ax <= S; ax++) cell(ax, -PICSIGN.hang, MAT.metalDark[1], null);                     // the bar
+  for (const ax of [3, S - 4]) for (let ay = -PICSIGN.hang + 1; ay < 0; ay++) cell(ax, ay, MAT.metalDark[1], null);   // the hangers
+  const glowOf = (c) => [c[0], c[1], c[2], 26 + Math.round(night * 64)];
+  for (let ay = 0; ay < S; ay++) for (let ax = 0; ax < S; ax++) {
+    const edge = ax === 0 || ay === 0 || ax === S - 1 || ay === S - 1, line = ax === 1 || ay === 1 || ax === S - 2 || ay === S - 2;
+    const px = !edge && !line ? B.rows[ay - 2] && B.rows[ay - 2][ax - 2] : null, c = edge ? ink : line ? gold : px || B.ground;
+    cell(ax, ay, c, edge ? null : glowOf(c));
   }
 }
 

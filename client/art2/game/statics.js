@@ -9,8 +9,8 @@
 // worker caches sprites by key.
 import { GBuf, toppleGBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
-import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW, flatPier, shopSignFits } from '../buildings.js';
-import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, boardFor, paintBoard, paintLine, lineMask, rgbOf, TRADES } from '../signfont.js';   // (wave A1: the sign faces, by trade)
+import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW, flatPier, shopSignFits, PICSIGN } from '../buildings.js';
+import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, boardFor, paintBoard, paintLine, lineMask, rgbOf, TRADES, PIC_OF, PICS } from '../signfont.js';   // (wave A1: the sign faces, by trade)
 import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
 import * as P from '../props.js';
@@ -1580,6 +1580,19 @@ function specOf(c, b, A, s, D) {
   if (spec.plaques) for (const pq of spec.plaques) stylePlaque(pq, A, (b.id * 7 + s.k) | 0);
   unstackSigns(spec);   // (no board over another on the front: buildings.js)
   const capped = streetCap(c, b, s, spec, pitched, lights);
+  // (a picture sign hung out over some shops - the owner, 11-26, of report-92: "not every shop in the world needs the
+  // sign, but it looks good when some do": one front in PIC_SIGNS.one of those it suits - a trade with a picture, two
+  // floors or more for the wall to hang it on, wide enough, no blade sign or big neon name already there - at the end
+  // of the front away from the door, clear of a fire escape, a little over the name board; chosen last, once the building's height is settled)
+  if (spec.shop && s.south && !s.frame && !s.vox && !pitched && !s.turned) {
+    const sh = spec.shop, sg = sh.sign, pk = sg && sg.text ? PIC_OF[sg.trade] || PIC_OF[sh.kind] : null, P = PIC_SIGNS, side = PICSIGN.s * 2;
+    if (pk && PICS[pk] && (spec.floors || 1) >= 2 && w >= P.minW && !(spec.blades && spec.blades.length) && !spec.neonSigns && !spec.neon && hh(b.id, s.k, 733) < 1 / P.one) {
+      const v = 48 + signLift(spec) + 22 + P.gap, doorLeft = typeof sh.door === 'number' ? sh.door < w / 2 : sh.door === 'left';
+      const fe = spec.fireEscape ? [spec.fireEscape[0] - 6, spec.fireEscape[0] + 56] : null, clear = (x) => !fe || x + side + 4 <= fe[0] || x - 4 >= fe[1];
+      const x = [doorLeft ? w - side - P.edge : P.edge, doorLeft ? P.edge : w - side - P.edge].find(clear);
+      if (x !== undefined && v + side + PICSIGN.hang * 2 + 6 <= buildingH(spec) - 8) spec.picSign = { pic: pk, x, v };
+    }
+  }
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
     roofOf(A, D, rnd, spec);
@@ -4183,6 +4196,7 @@ function bayIn(M, x, y, w, h) {
   const inBox = (px, py, m = 48) => px > x - m && px < x + w + m && py > y - m && py < y + h + m;
   return (M.loadBays || []).some((b) => inBox(b.pick.x, b.pick.y, 160) || inBox(b.bay.x, b.bay.y, 160) || b.route.some(([tx, ty]) => inBox((tx + 0.5) * TILE, (ty + 0.5) * TILE)));
 }
+export const PIC_SIGNS = { one: 3, minW: 128, edge: 12, gap: 8 };   // (one front in three of those a picture sign suits; the narrowest front; in from the front's end; over the board)
 // a front's sign that is no name of its own: only the words any such place carries (a motel's OFFICE, a town's HOTEL,
 // an airport's DEPARTURES - ARRIVALS)
 const NAMELESS = new Set(['OFFICE', 'HOTEL', 'MOTEL', 'INN', 'LOBBY', 'DEPARTURES', 'ARRIVALS', 'RECEPTION']);

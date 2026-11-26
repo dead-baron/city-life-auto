@@ -218,6 +218,11 @@ last leap over the top of a falls; the other fish's leaps.
   it on the canopy's front edge (16 places); an OFFICE, a plain HOTEL, an airport's DEPARTURES keep the board on the
   wall over a plain, lower canopy (35). Pictures: `report-87`, `report-88`. Judge in the game: The Bridgeview in
   Midtown, the Pink Mile's motels, the Grand Neon Hotel.
+- [ ] **Picture signs** (11-26; your pick of 11:02 on `report-92`: "a combination of A and B ... not every shop in the
+  world needs the sign"): 234 of 1,731 shops with a name board also carry a picture sign hung out over the front - a
+  book, a cup, a burger, three gold balls, a record, a barber's pole ... 21 pictures. Picture: `report-93`. Judge in
+  the game: how many (one in three of the fronts it suits today), the pictures that read badly, whether one-storey
+  shops should get one too (they have no wall above the board).
 - [ ] **Signs on roofs** (11-26; your note of 11-22: "cut off through the roof"): 28 of 664 roof billboards and neon
   names had part of the board hidden - on a pitched roof, behind a smokestack or a tank, behind a taller building.
   A roof sign whose foot would be hidden is taken off (45; 619 stand). Judge in the game: Old Town's tiled roofs, the
