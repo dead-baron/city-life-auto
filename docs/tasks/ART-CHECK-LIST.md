@@ -178,5 +178,10 @@ last leap over the top of a falls; the other fish's leaps.
   shoulder, broad blocks, twins - with rocks at the foot. Picture: `report-72`.
 - [ ] **The sea cave's rock**: a headland of crags with the cave in its tallest face (it was a round drum of
   stepped rings). Picture: `report-72`.
-- [ ] **The coast, left to do** (11-25): the bluffs at North Cape and at the Egret coves' horns (square grass-topped
-  wall pieces - `world3-west.js`, a step of its own); cypress knees in the marsh; the fishing rocks' gear.
+- [ ] **The bluffs** (11-25): North Cape's column of square turf-topped blocks is a scarp of basalt boulders and
+  outcrops along the shore; the Egret coves' horns are rough headlands (they were one straight wall piece each).
+  Picture: `report-73`.
+- [ ] **Knees in the marsh** (11-25): huddles of cypress knees here and there along Egret Marsh's water's edge
+  (drawn on 11-21, never planted till now). Judge: do they read at the game's size; the marsh has no swamp
+  cypress tree of its own to stand over them.
+- [ ] **The coast, left to do** (11-25): Coral Cay's pool and stream above the falls (the jungle).

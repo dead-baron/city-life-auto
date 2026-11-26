@@ -414,6 +414,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   ... lets get a list and redraw all of them and just let me know what needed the redraw"). So: the palettes' shade
   tones and the painters' shading are what change; no lift of the finished picture; a census over the baked world
   (tools/nature/darkscan.mjs) and a list of what was redrawn.
+- Knees do not grow by swimming pools (the owner, 11-25 20:20: "Knees showing up in pools? ... just wanted to point
+  that out"). The rule that put them there - round any `cypress` by water; the world's cypress is the garden's
+  Italian one - was withdrawn before it was pushed; knees grow along Egret Marsh's own water's edge only.
 - Hoodoos are natural formations, no two alike (the owner, 11-25 18:14, on a screenshot of a found stand - four banded
   columns under round flat caps: "there very unnatural and look odd. I'm not totally sure what they are but we should
   make these look a lot more natural and very the stacks more naturally like natural formations and vary the sizes

@@ -362,3 +362,29 @@ export function stacksApart3(m, H3) {
   return out;
 }
 
+// ---- Knees in the marsh (the art pass, 2026-11-25; N7 "wetlands", NK1-D; the plan: "cypress knees in the marsh") ---
+// The knees were drawn on 11-21 (client/art2/flora.js cypressKnees) and never planted. Along the marsh's own water's
+// edge - inside its landmark's box, a land tile with water beside it, nothing standing there already - a huddle of
+// knees on one tile in `one` (eight: a huddle here and there - a plant: shrub_a, species `knees`; not solid). (The world's 'cypress' trees are Italian
+// cypresses in gardens: a first rule that gave knees to every cypress by water put them round swimming pools.)
+export const KNEES3 = { one: 8, pad: 4 };
+export function marshKnees3(m, H3) {
+  const out = { edge: 0, knees: 0 };
+  if (!H3 || !H3.addProp) return out;
+  const W = m.w, HH = m.h, wet = (x, y) => x >= 0 && y >= 0 && x < W && y < HH && (m.tiles[y * W + x] === T.WATER || m.tiles[y * W + x] === T.DEEP);
+  for (const L of (m.landmarks || []).filter((l) => l.type === 'marsh')) {
+    const x0 = Math.floor(L.x / TILE) - KNEES3.pad, y0 = Math.floor(L.y / TILE) - KNEES3.pad, x1 = Math.ceil((L.x + L.w) / TILE) + KNEES3.pad, y1 = Math.ceil((L.y + L.h) / TILE) + KNEES3.pad;
+    const taken = new Set(); for (const p of m.props) if (p && p.x >= x0 * TILE && p.x < x1 * TILE && p.y >= y0 * TILE && p.y < y1 * TILE) taken.add(Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE));
+    for (let y = Math.max(1, y0); y < Math.min(HH - 1, y1); y++) for (let x = Math.max(1, x0); x < Math.min(W - 1, x1); x++) {
+      const i = y * W + x, t = m.tiles[i];
+      if ((t !== T.GRASS && t !== T.DIRT) || !m.land[i] || taken.has(i) || (m.bld && m.bld[i] >= 0)) continue;
+      const wx = wet(x - 1, y) ? -1 : wet(x + 1, y) ? 1 : 0, wy = wet(x, y + 1) ? 1 : wet(x, y - 1) ? -1 : 0;
+      if (!wx && !wy) continue;
+      out.edge++;
+      if (hs(x, y, 7801) * KNEES3.one >= 1) continue;
+      H3.addProp(m, 'shrub_a', Math.round((x + 0.5 + wx * 0.3) * TILE), Math.round((y + 0.5 + wy * 0.3) * TILE), 0, { sp: 'knees', k: 1 });
+      out.knees++;
+    }
+  }
+  return out;
+}

@@ -62,4 +62,3 @@ test("a rock standing alone - the sea cave's - is a headland of crags, not a dru
   assert.match(GB, /const darkRock = propsNear\(C, 340\)\.filter\(\(p\) => p\.t === 'cliff' && \(p\.st === 'basalt' \|\| p\.st === 'lava'\)\);/, 'the ground under a dark rock is dark basalt, not the crags\' pale slabs');
   assert.match(GB, /darkRock\.some\([^\n]*\? M_\.BASALT : M_\.CRAG\)/);
 });
-

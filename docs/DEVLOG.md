@@ -27829,4 +27829,20 @@ standing free on a lawn.
 - Not done on the coast: North Cape's bluffs (`world3-west.js`: a west-facing shore dressed with south-facing wall
   pieces every six rows - a column of square blocks; it wants the bluff drawn another way, a step of its own);
   cypress knees; the fishing rocks' gear.
+- **The west coast's bluffs** (19:50; counted: 27 `cliffwall` pieces in the world - 10 at the Redwood River's falls
+  and 2 on the relief, which face south as a wall should and stay; 9 at North Cape and 6 at the Egret coves' horns).
+  North Cape's shore runs north to south, and its rock band was dressed with south-facing wall pieces six tiles
+  long, one every six rows: a column of square turf-topped blocks. `world3-west.js`: a scarp along the band itself
+  - a basalt boulder or an outcrop every other row, each its own size, a little off the line (25 pieces; the
+  stairs' gap as before). The coves' horns - one straight twelve-tile wall piece each - are `cliff` props drawn
+  rough (the sea cave's recipe), solid where they stand (`cliffshape.js cliffSolid`).
+- **Knees in the marsh** (N7, NK1-D; the plan's "cypress knees in the marsh"): the knees were drawn on 11-21
+  (`flora.js cypressKnees`) and never planted. `world3-coast.js marshKnees3`: along the marsh's own water's edge
+  (inside its landmark's box, a land tile beside water with nothing on it) a huddle on one tile in eight - a plant,
+  species `knees` (statics.js). **A wrong first rule, caught in the baked picture:** knees round every `cypress`
+  within two tiles of water - but the world's `cypress` is the Italian cypress of gardens, and 166 of them stand by
+  swimming pools; the rule and a voxel model made for it are gone.
+- **The fishing rocks' gear** was there already (rods and a cooler at both points: world3-coast.js) - off the list.
+- Tests: `test/world3wayside.test.js` (knees by water and by their cypress; no wall piece left on the west coast;
+  seven rough headlands; the cape's scarp of mixed pieces), `test/coastart.test.js` (the knees' art).
 

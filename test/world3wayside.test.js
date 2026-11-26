@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { buildWorld3 } from '../server/world3.js';
 import { TILE, T } from '../shared/constants.js';
 import { WAYSIDE } from '../shared/world3-wayside.js';
-import { STACKS3, inLine3 } from '../shared/world3-coast.js';
+import { STACKS3, inLine3, KNEES3 } from '../shared/world3-coast.js';
 import { FOOTBRIDGE } from '../shared/world3-footbridges.js';
 import { CREEKS3 } from '../shared/world3-creeks.js';
 import { COVER, TREE_COVER } from '../shared/world3-clearings.js';
@@ -274,5 +274,23 @@ test('sea stacks stand as the sea left them: in open sea, apart, no three in a l
   assert.ok(new Set(S.map((p) => p.s)).size >= 6, `shapes used (${new Set(S.map((p) => p.s)).size})`);
   const onStack = m.props.filter((g) => g && g.t === 'gull' && S.some((p) => Math.abs(p.x - g.x) < 2 * TILE && Math.abs(p.y - g.y) < 2 * TILE)).length;
   assert.ok(onStack >= m.world3.stacks.gulls, `the gulls that stood on stacks still have a stack under them (${onStack} of ${m.world3.stacks.gulls})`);
+});
+
+test('the coast by rule: knees along the marsh\'s water; a scarp of basalt along North Cape, the cove horns as headlands', () => {
+  const K = m.props.filter((p) => p && p.t === 'shrub_a' && p.sp === 'knees'), marsh = (m.landmarks || []).filter((l) => l.type === 'marsh');
+  const wetBy = (p) => { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0, 0]]) { const t = m.tiles[m.idx(tx + dx, ty + dy)]; if (t === T.WATER || t === T.DEEP) return true; } return false; };
+  console.log('marsh knees', JSON.stringify(m.world3.knees), 'marshes', marsh.length);
+  assert.ok(marsh.length >= 1 && K.length >= 20 && K.length === m.world3.knees.knees, `knees along the marsh's edge (${K.length} on ${m.world3.knees.edge} edge tiles)`);
+  assert.ok(K.length <= m.world3.knees.edge / (KNEES3.one - 1.5), 'a huddle here and there, not a fence of them');
+  for (const k of K) { assert.ok(wetBy(k), `knees at ${Math.floor(k.x / TILE)}, ${Math.floor(k.y / TILE)}: at the water's edge`); assert.ok(marsh.some((l) => k.x > l.x - 6 * TILE && k.x < l.x + l.w + 6 * TILE && k.y > l.y - 6 * TILE && k.y < l.y + l.h + 6 * TILE), 'in the marsh, not by a garden pool'); }
+  assert.ok(FLORA_SPECIES.includes('knees'), 'the species the page draws');
+  // (the west coast's rock, 11-25: no wall piece left on the cape's shore band or at the Egret coves' horns)
+  const walls = m.props.filter((p) => p && p.t === 'cliffwall' && !p.relief), west = walls.filter((p) => p.x / TILE < 760);
+  assert.equal(west.length, 0, `no straight wall pieces on the west coast (${west.map((p) => [Math.floor(p.x / TILE), Math.floor(p.y / TILE)])})`);
+  const horns = m.props.filter((p) => p && p.t === 'cliff' && p.rough && p.st === 'basalt' && p.x / TILE < 760);
+  assert.equal(horns.length, 7, `the six cove horns and the sea cave's rock are rough headlands (${horns.length})`);
+  const scarp = m.props.filter((p) => p && (p.t === 'boulder' || p.t === 'outcrop') && p.style === 'basalt' && Math.abs(p.x / TILE - 478) < 30 && Math.abs(p.y / TILE - 830) < 28);
+  assert.ok(scarp.length >= 18 && scarp.some((p) => p.t === 'boulder') && scarp.some((p) => p.t === 'outcrop'), `North Cape's scarp: boulders and outcrops along the band (${scarp.length})`);
+  { const bs = scarp.filter((p) => p.t === 'boulder').map((p) => p.s), ow = scarp.filter((p) => p.t === 'outcrop').map((p) => p.w); assert.ok(Math.max(...bs) - Math.min(...bs) >= 14 && Math.max(...ow) - Math.min(...ow) >= 30, `of mixed sizes (boulders ${Math.min(...bs)}-${Math.max(...bs)}, outcrops ${Math.min(...ow)}-${Math.max(...ow)} px wide)`); }
 });
 
