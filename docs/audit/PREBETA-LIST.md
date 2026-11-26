@@ -11,8 +11,8 @@ Status from the DEVLOG and the branches; the sections below hold each item's det
 here: the pre-beta art and UI and batch 1 of the 11-22 notes (live 11-22), the new people, your music, the quick bar,
 rooms lit at night, the console's Status tab (live 11-23).
 1. **The world batch** (section A, `prebeta-world2`) - ready apart from the Old Downtown casino fronts (in hand); then
-   your word to put it live (one re-bake, ~5 h - watch it on the Status tab). For Fable after it: lobbyDoor,
-   signCovered, the ATM booths, roof billboards cut off, ATMs under awnings, the boardwalk bends, a taller neighbour drawn
+   your word to put it live (one re-bake, ~5 h - watch it on the Status tab). For Fable after it: lobbyDoor (done 11-26 on
+   `fable-art-1124`: a door of its own for each flat over a shop, 0), signCovered, the ATM booths, roof billboards cut off, ATMs under awnings, the boardwalk bends, a taller neighbour drawn
    over a room you're in (the renderer), rail bridges.
 2. **Server and loading** (F) - the art kept across restarts (check on the Status tab at the next restart: it should
    stay "Up to date"); phones drawing missing art themselves during a redraw (the stutter); a "Server updating"

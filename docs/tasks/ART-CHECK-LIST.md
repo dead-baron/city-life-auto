@@ -207,6 +207,11 @@ last leap over the top of a falls; the other fish's leaps.
   carpet. Now a compact cinema at the door - lobby with the counter, benches and ropes, a hall, four screens showing
   four films. Picture: `report-78`. Judge in the game: walk in, buy a ticket, sit in a near screen and a far one.
   Left for your word: The Palace as a second cinema; the building's huge plain outside.
+- [ ] **A flat over a shop has its own door** (11-26, part B's first row): 391 shop fronts had a flat's spot on the
+  shop's window with no door drawn ("Midtown Apt #32's lobby door at THE TRESTLE TAP"). Each now has a short pier of
+  the building's wall at one end of the front with a painted door in it; the shop's window, awning and sign keep to
+  the shop (382 doors; 9 are apartment lobbies and stay). Picture: `report-86`. Judge in the game: Trestle Street in
+  Midtown, the Arts District's galleries - stand at the flat's door: the prompt is the flat's, the shop's door its own.
 - [ ] **Painted lips over the run** (11-25, a look only): the mouth jumped a pixel about the face from frame to
   frame; it now sits under the middle of the eyes in every frame. Only figures with lipstick changed (55 of 2,688
   frames checked). Picture: `report-79`. Goes with the re-bake (the people's art is in the art hash).

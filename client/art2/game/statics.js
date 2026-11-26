@@ -9,7 +9,7 @@
 // worker caches sprites by key.
 import { GBuf, toppleGBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
-import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW } from '../buildings.js';
+import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW, flatPier, shopSignFits } from '../buildings.js';
 import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, paintBoard, paintLine, lineMask, rgbOf, TRADES } from '../signfont.js';   // (wave A1: the sign faces, by trade)
 import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
@@ -56,6 +56,7 @@ import { casinoRoom } from '../../../shared/casinorooms.js';
 import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome, crossingGate, CANYON } from '../../../shared/mapcore.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
 import { festoonSag, FESTOON } from '../../../shared/festoon.js';   // (a run's slack: the world build's and the lint's look - the owner, 11-16)
+import { FLATDOOR } from '../../../shared/world3-flatdoors.js';   // (a flat's own door at a shop front: the world build's and the lint's)
 import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
 
 export const STATIC_CHUNK = 768;
@@ -1515,6 +1516,18 @@ function specOf(c, b, A, s, D) {
   }
   // (a walk-in turned round, its doorway on the north - sectionsOf: its south wall a plain back, no shopfront and no
   // door on it that looks like the way in, whatever its trade or its hand plan draws there)
+  // (a flat over the shop: its own door in a pier at the end of the front - shared/world3-flatdoors.js says where along
+  // the building; here along this section's front, and the window's OPEN sign kept off it)
+  if (spec.shop && spec.shop.flat) {
+    const fx = b.tx * TILE + spec.shop.flat.x - s.tx * TILE;
+    if (s.south && fx >= 4 && fx + FLATDOOR.w <= w - 4) {
+      spec.shop.flat = { x: fx, w: FLATDOOR.w, h: FLATDOOR.h, pier: FLATDOOR.pier };
+      const [p0, p1] = flatPier(spec.shop, w), sg = spec.shop.sign;
+      spec.shop.avoid = [...(spec.shop.avoid || []), [p0, p1]];
+      // (the shop's board over the shop, not over the flat's door - where its words fit the shorter board as they stand)
+      if (sg && sg.text && sg.x === undefined && sg.w === undefined) { const nx = p0 === 0 ? p1 + 2 : 4, nw = (p0 === 0 ? w - 4 : p0 - 2) - nx; if (shopSignFits(sg, w - 8, nw)) spec.shop.sign = { ...sg, x: nx, w: nw }; }
+    } else delete spec.shop.flat;
+  }
   if (s.turned) { delete spec.shop; delete spec.portico; Object.assign(spec, { blank: true, doors: [], plaques: [] }); }
   // (one name on a front: a hand plan's shop sign says the building's name, so the trade's own name plaque - a clinic's,
   // a police station's, painted over the door - goes; the owner, 11-12: "OLD TOWN INFIRMARY" twice, one under the other)
@@ -1723,6 +1736,7 @@ function liveDoors(spec, s, bi, x0, y1, w, A) {
     if (dw < 12) return null;
     sh.live = unitDoor(u, sh.kind); sh.doorC = c;
     out.push([x0 + dx + 2, y1, dw - 4, 48, sh.live === 'slide' ? 1 : 0, c, bi]);
+    if (sh.flat) { sh.flat.c = (c + 3) % DOOR_COLS.length; out.push([x0 + sh.flat.x + 2, y1, sh.flat.w - 4, sh.flat.h - 2, 0, sh.flat.c, bi]); }   // (the flat's own door beside the shop's: hinged, another paint)
   } else for (const q of spec.doors || []) {
     if (q.kind !== 'door' || (q.w || 18) < 12) continue;
     q.live = u ? unitDoor(u) : CIVIC_SLIDE.has(A) ? 'slide' : 'hinge'; q.c = c;

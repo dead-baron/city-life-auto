@@ -67,6 +67,7 @@ import { badBays3 } from './parkcheck.js';
 import { clearDoorSteps3 } from './world3-doorsteps.js';
 import { cropScraps3, farmsOffBeach3, stripsOffShore3 } from './world3-croptidy.js';
 import { frontNames3 } from './world3-signfix.js';
+import { flatDoors3 } from './world3-flatdoors.js';
 import { festoonThin3 } from './world3-festoons.js';
 import { deckRoots3 } from './world3-deckroots.js';
 import { plazaFill3 } from './world3-plazafill.js';
@@ -384,6 +385,7 @@ export function worldOpts(asked) {
       m.world3.stripsOffShore = stripsOffShore3(m);   // (the art pass, 11-24: no planted row on the sand or at the sea's edge - world3-croptidy.js)
       m.world3.cropScraps = cropScraps3(m);   // (no stray crop scrap in a town or by a beach - the audit's cropInTown: world3-croptidy.js)
       m.world3.frontNames = frontNames3(m);   // (a shop's sign names what's behind it - the audit's frontNames: world3-signfix.js)
+      m.world3.flatDoors = flatDoors3(m);   // (a flat over a shop: its own door in a pier at the end of the front, the home's spot at it - the audit's lobbyDoor: world3-flatdoors.js)
       m.world3.festoonThin = festoonThin3(m);   // (no curtain of hanging lights - the audit's festoonDensity: world3-festoons.js)
       m.world3.deckRoots = deckRoots3(m);   // (a pier's root on dry land, no sliver of sea on the grass - the audit's beachWater: world3-deckroots.js)
       m.world3.plazaFill = plazaFill3(m, H3);   // (no oversized empty plazas - the audit's bigEmptyPlaza: world3-plazafill.js)

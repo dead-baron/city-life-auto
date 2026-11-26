@@ -838,9 +838,12 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   const shop = spec.shop, y0 = d + H;
   const winTop = fy(gH - signLift(spec) - 18), winBot = y0 - 7;
   const doorW = shop.doorW || (shop.kind === 'arcade' ? 30 : 22), doorX = shop.door === 'right' ? w - doorW - 10 : shop.door === 'left' ? 10 : (shop.door | 0);
+  // (a flat over the shop - shop.flat { x, w, h, pier }: a pier of the building's own wall at that end of the front, the
+  // flat's painted door in it; the shop's glass, its people, its riser and its awning keep to the shop's side of it)
+  const [p0, p1] = flatPier(shop, w), pier = (x) => x >= p0 && x < p1;
   // windows with the interior
   for (let y = winTop; y < winBot; y++) for (let x = 4; x < w - 4; x++) {
-    if (x >= doorX - 2 && x < doorX + doorW + 2) continue;
+    if (x >= doorX - 2 && x < doorX + doorW + 2 || pier(x)) continue;
     const mull = (x - 4) % 30 === 0 || y === winTop || y === winBot - 1;
     if (mull) { setC(G, x, y, step(MAT.metalDark, y === winTop ? 0.25 : 0.55, x, y, 0)); continue; }
     const iy = y - winTop, H2 = winBot - winTop;
@@ -934,13 +937,14 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   }
   // security grille over the glass (bars), and a neon OPEN sign in the window
   if (shop.grille) for (let y = winTop; y < winBot; y++) for (let x = 4; x < w - 4; x++) {
-    if (x >= doorX - 2 && x < doorX + doorW + 2) continue;
+    if (x >= doorX - 2 && x < doorX + doorW + 2 || pier(x)) continue;
     if ((x - 4) % 5 === 0 || (y - winTop) % 15 === 0) setC(G, x, y, step(MAT.metalDark, (x - 4) % 5 === 0 ? 0.55 : 0.75, x, y, 0));
   }
   // people inside the windows (busts), and the clerk at the counter
   const people = shop.people ?? (shop.kind === 'diner' ? 4 : 0);
-  for (let i = 0; i < people; i++) { const px = 16 + ((i * 37 + seed * 11) % Math.max(20, w - 40)); if (px > doorX - 12 && px < doorX + doorW + 12) continue; bust(G, px, winTop + 10, [ [180, 60, 60], [60, 110, 180], [230, 200, 80], [90, 150, 90] ][i % 4], seed + i * 3, 0.8); }
-  if (shop.clerk !== false && shop.kind !== 'diner') bust(G, shop.door === 'right' ? doorX - 30 : doorX + doorW + 30, winTop + 9, shop.clerkShirt || [40, 130, 110], seed + 99, 1);
+  for (let i = 0; i < people; i++) { const px = 16 + ((i * 37 + seed * 11) % Math.max(20, w - 40)); if (px > doorX - 12 && px < doorX + doorW + 12 || pier(px - 8) || pier(px + 8)) continue; bust(G, px, winTop + 10, [ [180, 60, 60], [60, 110, 180], [230, 200, 80], [90, 150, 90] ][i % 4], seed + i * 3, 0.8); }
+  const clerkX = shop.door === 'right' ? doorX - 30 : doorX + doorW + 30;
+  if (shop.clerk !== false && shop.kind !== 'diner' && !pier(clerkX - 8) && !pier(clerkX + 8)) bust(G, clerkX, winTop + 9, shop.clerkShirt || [40, 130, 110], seed + 99, 1);
   const L = shop.openSign && OPEN_L(), oxAt = openSignX(shop, w);   // (only where it fits beside the door: a kiosk's cut it in half - 11-14)
   if (L && oxAt !== null) {   // a neon OPEN in the window
     const col = shop.openSign.col || [255, 60, 70];
@@ -950,10 +954,11 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, ox, oy, { lit: 'neon', night });
   }
   // stall riser under the windows
-  for (let y = winBot; y < y0; y++) for (let x = 2; x < w - 2; x++) if (!(x >= doorX && x < doorX + doorW)) setC(G, x, y, step(shop.kind === 'diner' ? MAT.dinerRed : MAT.stone, 0.4 + (y === winBot ? 0.35 : 0), x, y, 0.4));
+  for (let y = winBot; y < y0; y++) for (let x = 2; x < w - 2; x++) if (!(x >= doorX && x < doorX + doorW) && !pier(x)) setC(G, x, y, step(shop.kind === 'diner' ? MAT.dinerRed : MAT.stone, 0.4 + (y === winBot ? 0.35 : 0), x, y, 0.4));
   if (shop.live) liveDoor(G, doorX, y0 - 50, doorW, 50, shop.live, night, shop.doorC | 0);
   else door(G, doorX, y0 - 50, doorW, 50, shop.open !== false, night, seed);
   if (shop.kind === 'arcade') arcadeDoor(G, doorX, y0, doorW, night);
+  if (shop.flat) flatDoor(G, shop.flat, y0, winTop, night, seed);
   // (the sign itself is painted by makeBuilding once the face is dressed: signBoard)
   // striped fascia band above the windows
   if (!(shop.sign && shop.sign.text) && shop.band) for (let y = winTop - 22; y < winTop - 2; y++) for (let x = 2; x < w - 2; x++) { const k = y - (winTop - 22); setC(G, x, y, k < 3 || k > 17 ? MAT.paintWhiteCar[k < 3 ? 4 : 2] : step(ramp(shop.band[Math.floor((k - 3) / 5) & 1], 5, 2), 0.6 - ((k - 3) % 5 === 4 ? 0.2 : 0), x, y, 0)); }
@@ -964,12 +969,37 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     // the pavement (so people under it are covered and it casts its shadow from the right height)
     const top = winTop - 2, depth = 13, vTop = y0 - top + 2;
     for (let y = 0; y < depth; y++) for (let x = 0; x < w; x++) {
+      if (pier(x)) continue;
       const Y = top + y, stripe = Math.floor(x / 6) % 2 === 1;
       G.put(x, Y, step(stripe ? cb : ca, 0.8 - y / depth * 0.4, x, Y, 0.5), [0, 0.6, 0.8], vTop - y * 0.3, null, 0);
     }
-    for (let x = 0; x < w; x++) { const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], vTop - depth * 0.3 - k, null, 0); } }
+    for (let x = 0; x < w; x++) { if (pier(x)) continue; const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], vTop - depth * 0.3 - k, null, 0); } }
   }
   return { winTop };
+}
+// A flat's own door at a shop front (shop.flat: shared/world3-flatdoors.js says which end, statics.js where along this
+// front). flatPier: the wall kept for it - from the door's pier to that end of the front - as [x0, x1), or [0, 0).
+export function flatPier(shop, w) {
+  const f = shop && shop.flat;
+  if (!f) return [0, 0];
+  const pr = f.pier ?? 6;
+  return f.x + f.w / 2 < w / 2 ? [0, f.x + f.w + pr] : [f.x - pr, w];
+}
+// does a shop's sign read the same on a board wNew px wide as on one wFull wide - the same face, lines and picture?
+export function shopSignFits(sign, wFull, wNew) {
+  const A = boardFor(sign, wFull), B = boardFor(sign, wNew);
+  return !B.cut && A.face === B.face && A.icon === B.icon && A.h === B.h && A.lines.join('|') === B.lines.join('|');
+}
+// the door itself: painted, hinged (liveDoor: the page opens it), a stone lintel over it, a lit number plate beside
+// its head on the shop's side, a stone step
+function flatDoor(G, f, y0, winTop, night, seed) {
+  const h = f.h || 46, top = y0 - h;
+  liveDoor(G, f.x, top, f.w, h, 'hinge', night, f.c | 0);
+  for (let k = 0; k < 3; k++) for (let x = f.x - 2; x < f.x + f.w + 2; x++) setC(G, x, top - 1 - k, step(MAT.stone, 0.85 - k * 0.2, x, k, 0.3));
+  for (let x = f.x - 1; x < f.x + f.w + 1; x++) setC(G, x, y0 - 1, step(MAT.stone, 0.7, x, y0, 0.3));
+  // a small lamp over the door: a brass shade, its glow after dark
+  const lx = f.x + (f.w >> 1) - 2, ly = Math.max(winTop + 1, top - 9);
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { setC(G, lx + x, ly + y, y === 0 ? [150, 118, 58] : [250, 226, 150]); if (y) glow(G, lx + x, ly + y, [255, 214, 130, 30 + night * 150]); }
 }
 const clampI = (v, a, b) => Math.max(a, Math.min(Math.max(a, b), v));
 const OPEN_L = () => layoutSign('OPEN', 27, { face: 'civic', lines: 1 });

@@ -131,7 +131,7 @@ export const LINT_ALLOW = {
   northDoor: 19,            // (21 at the audit; 19 with egret, 11-22) a business's entrance on its north wall
   interiorOverlap: 24,      // a walk-in's room under another building's footprint or its drawn front (11-23: Old Downtown's fronts before the casinos drawn low - world3-tidy.js lowBeforeCasinos3)
   frontNames: 0,            // a shop's sign naming none of its places, or another trade (11-22: renamed at the build - world3-signfix.js)
-  lobbyDoor: 161,           // an apartment's lobby door at a shop front
+  lobbyDoor: 0,             // a home at a shop front with no door of its own (161 by the old count, 391 by the rule now; 11-26: a pier and a door for each - shared/world3-flatdoors.js)
   rampCrossesRoad: 9,       // a ramp below deck height over a street that isn't its junction
   railOverWater: 0,       // a railing or fence run out over open water (11-22: moved back onto the shore or cut back - world3-railtrim.js; the rule: water under it and either side)
   dockOverlap: 5,           // boardwalks or piers over each other (the Egret Marsh boardwalk's bends)

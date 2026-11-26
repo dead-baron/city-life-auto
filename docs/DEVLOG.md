@@ -28036,3 +28036,31 @@ lighter; in `report-77` it is still black. A root cave's way in is a hole in the
 cave's dark (`CAVE_DARK`), as the rock caves have. The near-black count at noon takes a hollow giant with its own
 kind, held to five points over it (`leaflight.test.js`); `rockart.test.js` counts the hollow by its own colour.
 
+## 2026-11-26 · A flat over a shop has its own door (part B, the lint's `lobbyDoor`) - on branch `fable-art-1124`
+The lint held `lobbyDoor` at 161: "Midtown Apt #32's lobby door at THE TRESTLE TAP". The hand plans say "a flat
+over the shop, its own door at the other end of the front" (`world3-hand.js`), and only the home's spot was made -
+it stood on the shop's window, under the shop's sign, with no door drawn. The old row took only a front with a sign
+and no place it counted; by the rule itself there were **391** such fronts in World v3 (80 each in Midtown and the
+Arts District, 69 on the Neon Strip, 44 in Northgate, 36 in Old Town ...).
+- **The build** (`shared/world3-flatdoors.js` `flatDoors3`, in the done hook after the signs are named): each such
+  front gets `art.shop.flat` - a door 18 px wide, 7 px in from one end of the front - at the end nearest the spot
+  the plan gave when the shop's own doorway (a walk-in's, where the interiors cut it) and an ATM in the wall leave
+  it a pier and 4 px of window; else the other end (38 moved); else none (0). The home's spot and its record move to
+  the door. A lobby front with no business behind it, or one the homes are named for (Coral Court), is the flats' own
+  way in (9). Result: 382 doors, 9 lobbies, 0 without.
+- **The art** (`buildings.js` `storefront`, `flatPier`, `flatDoor`): from the door's pier to that end of the front
+  the building's own wall shows - no shop glass, people, riser, grille or awning - with a painted hinged door in it,
+  a stone lintel and step and a small lamp. The bake (`statics.js`) places it along the section, keeps the window's
+  OPEN sign off it, brings the door with the live ones (it opens as a walk-up's does; another paint than the
+  shop's), and keeps the shop's board over the shop where its words read the same on the shorter board
+  (`shopSignFits`: the same face, lines and picture - else the board stays the front's width).
+- **The lint** (`tools/audit/worldrows.mjs`) now uses the build's rule: a home at a shop front with no door of its
+  own, or with its spot beside a business's (the 24-7 Market's "Into Southside Apt #3173's lobby", 11-17). Held at
+  **0** (`tools/placementlint.mjs`; was 161).
+- `test/flatdoors.test.js` (the rule on one-building maps; the art: no glass in the pier, a door with its knob, the
+  shop's window unchanged; World v3: every front's door at an end, clear of the doorway and the ATMs, each home at
+  it, the lint's row empty; the bake brings the door, hinged, apart from the shop's). Also run on the change:
+  placementlint 43/43 (doorBlocked still 13, signCovered 157), doors, signs, signfix, shopmarks, doorsbake 15/15,
+  perf 6/6, walkinfront 2/2, world3doors and plainblocks 18/18, world3server and doorways 24/24.
+- A world change and a bake change: they ride with the branch's one rebuild and re-bake. Not seen in a running game.
+

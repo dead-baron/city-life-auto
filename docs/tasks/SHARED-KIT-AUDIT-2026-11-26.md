@@ -36,11 +36,11 @@ world has not been set against the concept audit's own test (claude/concept-audi
 | **A taller neighbour fading while you are in a room** (25 places) | Nothing; the fading of buildings round a player outside is live (PR #49). |
 | **The phone box**; **ATM booths** (52) and **ATMs under awnings** | Phone-box and ATM props exist; the plan's rows (a booth for the 52, none under an awning) have no rule. |
 | **Clinics and hospitals outside** (gap 9; N20's 31 medical places) | The emblem and the canopies are built; the fronts by N20 have not been set beside it in this chat. |
-| **The lint's open rows**: `lobbyDoor` 161 (an apartment's lobby door at a shop front), `signCovered` 158, roof billboards cut off | Held at their counts in `tools/placementlint.mjs`; the classes are not fixed. |
+| **The lint's open rows**: `signCovered` 157, roof billboards cut off | Held at their counts in `tools/placementlint.mjs`; the classes are not fixed. (`lobbyDoor`: **done 11-26** - 391 fronts by the rule, a pier and a door of its own for each flat over a shop, held at 0: `shared/world3-flatdoors.js`.) |
 
 ## Proposed order (for his word; each a class fix with its lint row, one re-bake for the kit)
-1. **The lint's open rows** - `lobbyDoor` 161, `signCovered` 158, roof billboards cut off. They are faults a player
-   sees today, already counted, and each ends at zero.
+1. **The lint's open rows** - ~~`lobbyDoor` 161~~ (done 11-26, 0), `signCovered` 157, roof billboards cut off. They
+   are faults a player sees today, already counted, and each ends at zero.
 2. **Picture signs and window goods by trade** - the audit's largest gap still open, on screen in every district.
    A new look: BF2 beside two or three variants of one street for his pick first.
 3. **Roofs** - count first (AC rows, neighbours alike), then the kit's shares.
