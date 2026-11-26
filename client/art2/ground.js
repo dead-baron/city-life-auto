@@ -927,12 +927,12 @@ export const GSHADE = {
     const big = vnc(x, y, 33, s), f = vnc(x, y, 5, s + 2), h = hh(x, y, s + 3);
     return sd(REDS, 0.5 + (big - 0.5) * 0.35 + (f - 0.5) * 0.25 + (h > 0.92 ? 0.15 : h < 0.07 ? -0.18 : 0), x, y, 0.7);
   },
-  earthCracked(x, y, s) {
-    const w = worley(x + 0.5, y + 0.5, 19, s + 25, 0.75), e = w.d2 - w.d1;
-    if (e < 1.3) return at(CRACK, e < 0.7 ? 0 : 1);
-    GS.nx = w.dx / 34; GS.ny = w.dy / 34;
+  earthCracked(x, y, s) {                                    // dry mud: flat plates, thin cracks (NS1-C; domed, it read as cobbles)
+    const w = worley(x + 0.5, y + 0.5, 23, s + 25, 0.75), e = w.d2 - w.d1;
+    GS.nx = GS.ny = 0;
+    if (e < 0.8) return at(CRACK, 1);
     if (hh(x, y, s + 5) > 0.996) return at(PEBG, 2);
-    return sd(CRACK, 0.62 + (w.h - 0.5) * 0.2 - (w.dx + w.dy) / 70 + (e < 1.8 ? -0.1 : 0) + (vnc(x, y, 4, s) - 0.5) * 0.18, x, y, 0.5);
+    return sd(CRACK, 0.66 + (w.h - 0.5) * 0.12 + (e < 1.7 ? -0.07 : 0) + (vnc(x, y, 4, s) - 0.5) * 0.12, x, y, 0.5);
   },
   scree(x, y, s) {                                           // mountain ground: grey soil, stones of all sizes, lichen
     let p = stone(x, y, 17, s + 29, 0.3);

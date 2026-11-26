@@ -27690,3 +27690,38 @@ screen, reloads; `cla.clouds`).
   nose's top now takes the head's colour (`animalModel`, after the snout), so the nose stands alone as on the white
   cat. Tried and not kept: a wider muzzle for pale pads either side of the nose (a four-pixel pale band, a wide
   mouth). The black cat's nose stays as it is. Picture: `report-61`.
+- **The cats, 16:18** (the owner: "go back to having one pixel for the cat's nose"): the nose of 15:48 took both
+  middle pixels under the eyes; it is one again - the left of the two, never one further out, which is what had
+  read as off-centre. Picture: `report-62`.
+
+
+## 2026-11-25 · The desert, first pass: bloom a rare patch, dry mud flat, no reeds in a street - on branch `fable-art-1124`
+
+The plan's next biome (ART-PASS-PLAN part A). Counted from the built world first: the Red Rock Desert and its towns
+are 3,065,627 tiles (dirt 1.89 M, sand sheets 0.77 M, rock 170,049, of it 168,934 relief cliff), relief to 90 m, 130
+tables, 2,380 cliff faces, 22,713 props (2,198 mesquite, 1,009 palo verde, 250 joshua trees, 3,035 cacti of nine
+kinds, 1,138 boulders, 487 outcrops), 29 places (the oasis, Mirage Lake, the mission, 5 tinajas, 2 seeps, 6 stock
+tanks, the trail). Twelve places baked and lit (`tools/nature/darkscan.mjs`) beside NR1-B, NS1-C, SC3-F: none dark
+(0.8-8.7% under 50). What was wrong, by class, and what is fixed here (all baked art: with the re-bake):
+
+- **Flower beds everywhere.** The bake's rule made 22.8% of the desert a bloom patch with a plant on 30% of its
+  tiles, four in five of them a flower bed: 39% of the desert's small plants (68 of 176 per 1,000 tiles). The concepts
+  show scrub with a rare yellow bush. Now `DESERT_BLOOM { zone: 0.84, share: 0.2 }` (`statics.js desertCover`): a
+  patch is about 7% of the desert, brittlebush first, the many-coloured bed the rarest - beds 4.4% of the plants.
+- **Reeds in Dusty Hollow's street** and on the jeep tracks' gravel: gravel took desert scrub only in district 50;
+  now in the desert's towns too (`dry`).
+- **A desert river's green strip grew lupines, foxgloves and berry shrubs** (the bank's tiles are the water's
+  district, 13): beside the desert it grows rushes, tall grass, reeds, dry grass (`NAT_SP.desertBank`). The strip
+  stays green - "lush even in dry country" is the banks' rule.
+- **A seep's ring was the marsh's dark mud with blue puddles** (a stain round the pool): the desert's cracked mud, as
+  `world3-tinajas.js` always said.
+- **Cracked earth read as cobblestones** (domed plates, heavy shade - on the tables' tops it looked paved): flat
+  plates with thin cracks (`ground.js earthCracked`), as NS1-C's playa.
+
+`test/desertflora.test.js` (new: the bloom's share by counting over the desert's box, the gravel and bank rules, the
+seep's ring). The bake's code is 1,098.1 of 1,100 KB after this (the cats' work took 1.2 KB of it: `animals.js` is
+in the bake's closure) - the next addition of any size needs the owner's word on the budget.
+Not done, listed in `docs/tasks/ART-CHECK-LIST.md`: the tables' cliff faces (a look for him to pick), the mission
+(small), the playa, the tin shack, a seep's square pool. Logged for part B: a concrete door path across Dusty
+Hollow's street; the desert highway's saw-toothed edge.
+

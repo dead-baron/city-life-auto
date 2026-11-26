@@ -630,3 +630,12 @@ its something that can wait lets make note of it and revisit at the right time."
   mouths, the town creeks' and county roads' culverts. The creeks' own crossings are a bridge deck now (11-25); the
   rest in part B (transit) with the same rule: what goes in is seen to go under.
 
+### 11-25, seen during the desert pass (the art pass; logged, not acted on)
+- **Dusty Hollow: a concrete door path laid across the ghost town's gravel street** (a grey slab strip from a door to
+  the far side, tiles 5342-5343 x 1807-1810) and big plain brown roofs. Part B (buildings, door paths).
+- **The desert highway's edge is saw-toothed** (`asphalt_worn`: blue-grey triangles along both edges, seen at tiles
+  5078-5122 x 1984-2016). Part B (roads).
+- **The scrub's plant pick leans to the list's middle**: `pickW` on a clumping noise takes brittlebush (2 of 15 by
+  weight) four times as often as creosote (4 of 15) - 17,853 to 4,335 in a count over the desert. Every weighted list
+  drawn this way does the same. Nature, with the variety pass (part A 3).
+

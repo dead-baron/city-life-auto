@@ -9,7 +9,7 @@ import { tinaPx, MATERIALS as M_ } from '../client/art2/game/groundbake.js';
 test('a tinaja\'s slickrock and a seep\'s damp mud round their water: round, ragged, nothing past them', () => {
   const list = [{ x: 1000, y: 1000, r: 70, ring: 77, k: 0 }, { x: 3000, y: 1000, r: 60, ring: 51, k: 1 }];
   for (const e of list) {
-    const want = e.k ? M_.MUD : M_.REDROCK;
+    const want = e.k ? M_.CRACKED : M_.REDROCK;   // (a seep's ring: the desert's cracked mud, 11-25 - test/desertflora.test.js)
     let inner = 0, edge = new Set(), far = 0;
     for (let a = 0; a < 64; a++) {
       const c = Math.cos(a / 64 * Math.PI * 2), s = Math.sin(a / 64 * Math.PI * 2);

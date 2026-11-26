@@ -437,7 +437,7 @@ export function tinaPx(list, X, Y, seed) {
     const dx = X - e.x, dy = Y - e.y, d2 = dx * dx + dy * dy, far = e.r * 1.3 + e.ring * 1.3;
     if (d2 > far * far) continue;
     const lim = e.r * 1.1 + e.ring * (0.7 + 0.6 * vnc(X, Y, 34, seed + 77)) + (vnc(X, Y, 9, seed + 79) - 0.5) * 8;
-    if (d2 < lim * lim) return e.k ? M_.MUD : M_.REDROCK;
+    if (d2 < lim * lim) return e.k ? M_.CRACKED : M_.REDROCK;   // (a seep's ring: the desert's cracked mud, SC3-F - the marsh's dark mud with its blue puddles read as a stain)
   }
   return -1;
 }

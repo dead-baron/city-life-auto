@@ -4276,7 +4276,8 @@ const NAT_SP = {
   meadowE: [['daisies', 3], ['buttercups', 2], ['clover', 1]], meadowF: [['clover', 3], ['buttercups', 1], ['strawberries', 1], ['tallGrass', 1]],
   meadowGrass: [['tallGrass', 5], ['berryShrub', 1], ['pampas', 1], ['clover', 1]],
   desert: [['creosote', 4], ['bursage', 3], ['brittle', 2], ['dryGrass', 3], ['sage', 2], ['tumble', 1]],
-  desertBloom: [['dFlowers', 2], ['dPoppies', 2], ['brittle', 1]],
+  desertBloom: [['brittle', 3], ['dPoppies', 2], ['dFlowers', 1]],
+  desertBank: [['rushes', 3], ['tallGrass', 3], ['reeds', 2], ['dryGrass', 2], ['pampas', 1]],
   desertCacti: [['barrel', 2], ['pear', 2], ['agave', 2], ['cholla', 1], ['saguaroSmall', 1], ['yucca', 1]],
   alpine: [['heather', 4], ['juniper', 1], ['aDaisies', 3], ['aLupine', 2], ['paintbrush', 1], ['twisted', 1], ['columbine', 2], ['buttercups', 1]],
   dune: [['duneGrass', 4], ['beachGrass', 3], ['icePlant', 1]],
@@ -4319,6 +4320,11 @@ function fernAt(c, tx, ty, x, y, base) {
 }
 // what a wild tile grows, or null: [species, scale]
 const inWashBed = (list, x, y) => { let best = 0; for (const e of list) { if (x < e.bb[0] || x > e.bb[2] || y < e.bb[1] || y > e.bb[3]) continue; const P = e.pts, r2 = e.hw * e.hw * 0.7, b2 = e.bank ? e.hw * e.hw * e.bank * e.bank : 0; for (let k = 1; k < P.length; k++) { const ax = P[k - 1][0], ay = P[k - 1][1], dx = P[k][0] - ax, dy = P[k][1] - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)), qx = x - ax - dx * t, qy = y - ay - dy * t, q = qx * qx + qy * qy; if (q < r2) return 2; if (q < b2) best = 1; } } return best; };   // (2 in a wash's bed, 1 on its banks)
+// The desert's small plants (concepts NA1-C, NS1-C, SC3-F: dry scrub, a cactus here and there, bloom a rare patch -
+// brittlebush's yellow first). 11-25: a bloom patch was 22.8% of the desert and 39% of its small plants were flower
+// beds; now a patch is `zone` of a slow noise and `share` of its tiles carry a plant.
+export const DESERT_BLOOM = { zone: 0.84, share: 0.2 };
+export const desertCover = (pa, pb, h, h2) => (pa > DESERT_BLOOM.zone && h < DESERT_BLOOM.share ? [pickW(NAT_SP.desertBloom, h2), 1] : pb > 0.7 && h < 0.08 ? [pickW(NAT_SP.desertCacti, h2), 1] : h < 0.1 + pb * 0.08 ? [pickW(NAT_SP.desert, h2), 1] : null);
 function coverAt(c, tx, ty, x, y) {
   const M = c.M, i = M.idx(tx, ty), t = M.tiles[i];
   if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) return null;
@@ -4329,11 +4335,13 @@ function coverAt(c, tx, ty, x, y) {
     const h = hash(tx, ty, 7121);
     return h < 0.8 ? [pickW(NAT_SP.jungle, vnoise(x, y, 50, 7123) * 0.7 + hash(tx, ty, 7125) * 0.3), 1 + (h < 0.2 ? 0.2 : 0)] : null;
   }
+  const dry = M.dist[i] === 50 || (DISTRICTS[M.dist[i]] || {}).isl === 'Red Rock Desert' || ((M.reserve[i] & 128) && [[5, 0], [-5, 0], [0, 5], [0, -5]].some(([a, b]) => M.inside(tx + a, ty + b) && M.dist[M.idx(tx + a, ty + b)] === 50));   // (the desert, its towns, and a river's bank beside it - the bank's tiles are the water's district)
   if (M.reserve[i] & 128) {
     const h = hash(tx, ty, 7141), pb = vnoise(x, y, 80, 7143), pa = vnoise(x, y, 160, 7147), h2 = vnoise(x, y, 60, 7145) * 0.7 + hash(tx, ty, 7149) * 0.3;
-    if (t === T.SAND) return h < 0.07 ? [pickW(M.dist[i] === 50 ? NAT_SP.desert : NAT_SP.shore, h2), 1] : null;   // (a few on the gravel bars; World v3's dry washes: desert scrub)
+    if (t === T.SAND) return h < 0.07 ? [pickW(dry ? NAT_SP.desert : NAT_SP.shore, h2), 1] : null;   // (a few on the gravel bars; the desert's dry washes, tracks and the ghost town's street: desert scrub - reeds stood in Dusty Hollow's street)
     const d = M.distRiver ? M.distRiver[i] : 99;
     if (d > 0 && d <= 6) return pb > 0.3 && h < 0.85 ? [pickW(NAT_SP.shore, h2), 1 + (h < 0.3 ? 0.15 : 0)] : null;
+    if (dry) return h < 0.3 ? [pickW(NAT_SP.desertBank, h2), 1] : null;   // (a desert river's green strip: rushes and grasses, no meadow flowers)
     if (pa > 0.6 && h < 0.34) return [pickW([NAT_SP.meadowA, NAT_SP.meadowB, NAT_SP.meadowD, NAT_SP.meadowE][Math.floor(vnoise(x, y, 400, 7151) * 4) % 4], h2), 1];
     return h < 0.14 ? [pickW(NAT_SP.meadowGrass, h2), 1] : null;
   }
@@ -4349,7 +4357,7 @@ function coverAt(c, tx, ty, x, y) {
   // water's edge: reeds and cattails in clumps along lakes and rivers (not the sea)
   const nearFresh = (M.distRiver && M.distRiver[i] > 0 && M.distRiver[i] <= 8) || (M.lake && (M.lake[M.idx(tx - 1, ty)] || M.lake[M.idx(tx + 1, ty)] || M.lake[M.idx(tx, ty - 1)] || M.lake[M.idx(tx, ty + 1)]));
   if (nearFresh && t !== T.SAND) return pb > 0.42 && h < 0.75 ? [pickW(NAT_SP.shore, h2), 1] : null;
-  if (t === T.SAND && M.dist[i] === 50) return h < 0.04 ? [pickW(NAT_SP.desert, h2), 1] : null;   // (World v3's desert sand sheets: sparse dry scrub, no dune grass)
+  if (t === T.SAND && dry) return h < 0.04 ? [pickW(NAT_SP.desert, h2), 1] : null;   // (World v3's desert sand sheets: sparse dry scrub, no dune grass)
   if (t === T.SAND || bio === 5) {
     const back = M.distSea ? M.distSea[i] : 99;   // (quarter tiles) dune grass only behind the wet sand
     return back > 14 && pa > 0.45 && h < 0.35 ? [pickW(NAT_SP.dune, h2), 1] : null;
@@ -4366,9 +4374,7 @@ function coverAt(c, tx, ty, x, y) {
     return [pickW(c.di(x, y) === 29 ? NAT_SP.redwood : NAT_SP.forest, h2), 1 + (hash(tx, ty, 7109) > 0.6 ? 0.2 : 0)];
   }
   if ((bio === 3 && !SEA_ISLES.has(M.dist[i])) || st === 'desert') {
-    if (pa > 0.68 && h < 0.3) return [pickW(NAT_SP.desertBloom, h2), 1];   // after the rains: a bloom
-    if (pb > 0.7 && h < 0.08) return [pickW(NAT_SP.desertCacti, h2), 1];
-    return h < 0.1 + pb * 0.08 ? [pickW(NAT_SP.desert, h2), 1] : null;
+    return desertCover(pa, pb, h, h2);
   }
   if (bio === 4) return pb > 0.5 && h < 0.2 ? [pickW(NAT_SP.alpine, h2), 1] : h < 0.03 ? [pickW(NAT_SP.alpine, h2), 1] : null;
   // meadows: a drift of one flower, tall grass between, plain grass most of the way
