@@ -435,6 +435,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   it out").
 - The shark gets another pass (the owner, 11-25 15:10: "The shark could use another pass on it let's try to make it
   look better").
+- A cat's nose sits where the white cat's does - a clear row under the eyes, nothing pale above it (the owner, 11-25
+  16:00: "dont think the pink nose showed up in the right place for the grey cat (looks right on the white cat).
+  Black cat cant see the nose, not sure if it wont work to have a black nose on black fur though so if its not going
+  to work dont worry about it"). The black cat keeps its faint black nose; no more is done to it.
 - The grey cat's nose is pink and the black cat's black (the owner, 11-25 15:52, after seeing the black cat with none
   and the grey with a black one: "lets give the grey cat a pink nose and the black cat an actual black nose"). This
   replaces the noses of the line below; its centring stands.

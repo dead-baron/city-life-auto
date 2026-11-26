@@ -27684,3 +27684,9 @@ screen, reloads; `cla.clouds`).
   in the code, unused). On a black face it is two pixels a little darker than the fur round them - there, but faint
   at the game's size. Picture: `report-60`.
 
+- **The cats, 16:00** (the owner: the grey cat's pink nose not "in the right place ... looks right on the white cat"):
+  every cat's nose is two rows under the eyes, but on the cats with a pale muzzle (tabby, ginger, calico) the muzzle's
+  top showed as a pale row between the eyes and the nose - a white nose with pink under it. A cat's muzzle above its
+  nose's top now takes the head's colour (`animalModel`, after the snout), so the nose stands alone as on the white
+  cat. Tried and not kept: a wider muzzle for pale pads either side of the nose (a four-pixel pale band, a wide
+  mouth). The black cat's nose stays as it is. Picture: `report-61`.

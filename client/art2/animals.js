@@ -310,6 +310,10 @@ export function animalModel(kind, o = {}) {
   // snout and nose (a moose's long drooping one; a bear's paler muzzle)
   const sx = hx + HD * 0.7, sz = hz - HD * 0.25 - (A.droop ? 1.6 : 0);
   m.ell(sx + A.snout * 0.5, cy, sz, A.snout * 0.7 + 1, HD * (A.droop ? 0.62 : 0.5), HD * (A.droop ? 0.55 : 0.42), A.muzzle ? R(A.muzzle) : A.mask ? R('#d8d4d0') : A.belly && !A.cat && !A.legend ? belly : coat(sx, cy, sz));
+  // (a cat's pale muzzle stays beside and under its nose: seen from the front its top showed as a pale row between
+  // the eyes and the nose, which read as a white nose with the pink under it - 11-25, the owner, of the grey cat: "dont
+  // think the pink nose showed up in the right place ... looks right on the white cat", whose muzzle is its coat's white)
+  if (A.catFace && A.muzzle) { const mz = R(A.muzzle), hc = A.headC ? R(A.headC) : coat(hx, cy, hz + 4); m.fill((x, y, z) => (z >= sz - 0.4 && m.get(x | 0, y | 0, z | 0) === mz ? hc : -1), Math.floor(sx - 2), Math.floor(cy - HD - 1), Math.floor(sz - 1), Math.ceil(sx + A.snout + 3), Math.ceil(cy + HD + 1), Math.ceil(sz + HD)); }
   if (!A.catFace) m.box(sx + A.snout + 0.5, cy - 1, sz, sx + A.snout + 1.8, cy + 1, sz + 1.5, nose);
   else if (!A.noNose) m.box(sx + A.snout + 0.3, cy - 0.7, sz - 1.5, sx + A.snout + 1.3, cy + 0.7, sz - 0.4, nose);   // (a cat's: small, pink, low on the face under the eyes - 11-25, the owner: "a cuter face ... the dog ... has a nose"; on 11-21 one level with an eye read as a second eye)
   if (eatfish) {   // (AN5: the fish crosswise in its jaws, silver, the tail fin out to one side, a bite gone - wag: the chewing)
