@@ -55,6 +55,24 @@ for (let i = 0; i < hits.length; i++) for (let j = i + 1; j < hits.length; j++) 
   const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
   if (ox > 4 && oy > 4) out.overlap.push([name(hits[i]), name(hits[j]), Math.round(ox), Math.round(oy)]);
 }
+/* the look (the owner's pick of 11-26: C - hard pixel frames, pixel icons): what on this screen is still soft - a rounded
+   corner that isn't a full round, a blurred shadow, a gradient fill, a line icon - by element, largest first */
+out.style = { soft: [], blur: [], grad: [], line: 0, frames: {} };
+for (const e of document.querySelectorAll('body *')) {
+  if (!vis(e) || e.closest('canvas')) continue;
+  const s = getComputedStyle(e), r = e.getBoundingClientRect(), big = Math.round(r.width * r.height);
+  if (e.matches('svg.gl')) { const ln = e.querySelector('.ln'), inPlay = !!e.closest('#hud, #touch, #wheel'); if (ln && getComputedStyle(ln).display !== 'none' && !inPlay) out.style.line++; const w = parseFloat(s.width) || r.width; /* (its own size: a screen scaled to fit the window scales its icons with it) */ if (!inPlay && Math.abs(w / 12 - Math.round(w / 12)) > 0.01) out.style.soft.push([name(e.parentElement || e).slice(0, 50) + ' icon', w, big]); continue; }
+  if (e.closest('svg')) continue;
+  const rad = [s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius, s.borderBottomLeftRadius].map((v) => parseFloat(v) || 0), m = Math.min(r.width, r.height);
+  const painted = s.backgroundColor !== 'rgba(0, 0, 0, 0)' || s.backgroundImage !== 'none' || parseFloat(s.borderTopWidth) > 0 || s.boxShadow !== 'none';
+  if (painted && rad.some((v) => v > 0.5 && v < m / 2 - 0.5)) out.style.soft.push([name(e).slice(0, 60), Math.max(...rad), big]);
+  const blurOf = (v) => { let b = 0; for (const part of v.replace(/rgba?\([^)]*\)/g, 'c').split(',')) { const n = part.replace('inset', '').trim().split(/\s+/).filter((q) => /px$/.test(q)).map(parseFloat); if (n.length >= 3) b = Math.max(b, n[2]); } return b; };
+  if (s.boxShadow !== 'none' && blurOf(s.boxShadow) > 0.5) out.style.blur.push([name(e).slice(0, 60), 'box ' + blurOf(s.boxShadow), big]);
+  if (s.textShadow !== 'none' && blurOf(s.textShadow) > 0.5 && e.childNodes.length && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) out.style.blur.push([name(e).slice(0, 60), 'text ' + blurOf(s.textShadow), big]);
+  if (/gradient\(/.test(s.backgroundImage)) out.style.grad.push([name(e).slice(0, 60), s.backgroundImage.slice(0, 60), big]);
+  if (painted && parseFloat(s.borderTopWidth) >= 2 && r.width >= 40 && r.height >= 24) { const k = name(e).replace(/ ".*$/, '').slice(0, 40); out.style.frames[k] = (out.style.frames[k] || 0) + 1; }
+}
+for (const k of ['soft', 'blur', 'grad']) { out.style[k].sort((a, b) => b[2] - a[2]); out.style['n' + k] = out.style[k].length; out.style[k] = out.style[k].slice(0, 30); }
 out.n = { small: out.small.length, clipped: out.clipped.length, overlap: out.overlap.length, covered: out.offscreen.length }; out.offscreen = out.offscreen.slice(0, 20);
 out.small = out.small.slice(0, 25); out.clipped = out.clipped.slice(0, 15); out.overlap = out.overlap.slice(0, 15);
 return out;

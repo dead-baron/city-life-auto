@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-26 10:40 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-26 12:10 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -165,7 +165,10 @@ entries have each piece):**
   **His words of 11-26 09:00 (DECISIONS):** the merge and re-bake WAIT for more of the city; **the UI's look is C**
   (hard pixel frames and pixel icons - to build into every screen with a lint; not started); lips stay A; the
   canopies a mix - a named hotel's name on its canopy, an OFFICE or a plain HOTEL on the wall over a low plain one
-  (`report-88`). Next: the UI's look C into the game (page code, its own PR), and in the city the picture signs and
+  (`report-88`). **11-26 midday: the UI's look C is built** (page code, commit "The UI's look C": `style.css` tokens
+  and notches, pixel icons for all 160 glyphs in the menus, the lint in `test/uitokens.test.js`, `report-89` to `91`;
+  the HUD's and touch buttons' line icons unchanged). **Asked, open:** look C live now as its own PR (it must be
+  split from the branch's other page changes first) or with the art batch. Next in the city: the picture signs and
   window goods (variants for his pick first), roofs, night signs. A process left
   running does not live past the end of a turn here: the suite only moves while a turn is open (found 00:37).
   **The suite finished 04:27** (`docs/tasks/ARTPASS-TESTS-2026-11-26.txt`): 452 of 460 files clean. Two failures

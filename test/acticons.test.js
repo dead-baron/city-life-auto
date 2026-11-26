@@ -144,7 +144,7 @@ test('every weapon has its own glyph; no two guns share one; no stand-ins', () =
   assert.ok(guns.length >= 10 && new Set(guns).size === guns.length, `the guns: ${guns}`);
   assert.deepEqual(['pistol', 'smg', 'rifle'].map((id) => glyphOfWeapon(id, 'gun')), ['pistol', 'smg', 'rifle']);
   // and different drawings, not one picture under three names
-  const d = (n) => glyph(n).match(/<path d="([^"]+)"/)[1];
+  const d = (n) => glyph(n).match(/<path class="ln" d="([^"]+)"/)[1];
   assert.equal(new Set([...by.keys()].map(d)).size, by.size, 'every weapon glyph a drawing of its own');
   assert.equal(glyphOfWeapon(undefined, undefined), 'fist', 'bare hands');
   assert.equal(glyphOfWeapon('newgun', 'gun'), 'pistol', 'a weapon yet to come: its class');

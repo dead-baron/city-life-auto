@@ -15,7 +15,7 @@ const root = /:root \{([\s\S]*?)\n\}/.exec(CSS)[1];
 
 test('UIK-00 1: the swatches - the navy plate at 85%, the panel\'s gradient, gold, cream, dim, money, danger, info, heat, steel', () => {
   assert.match(root, /--plate: rgba\(15, 24, 48, \.85\);/, 'navy plate #0F1830 at 85%');
-  assert.match(root, /--panel-bg: linear-gradient\(180deg, #15223f, #0d162d\);/, 'the panel #15223F -> #0D162D');
+  assert.match(root, /--panel-bg: #111b38;/, 'the panel a flat navy (look C, the owner\'s pick of 11-26; it was #15223F -> #0D162D)');
   for (const [k, v] of Object.entries({ gold: '#e2bd57', cream: '#f3ead2', dim: '#a6aec4', money: '#6cd06c', danger: '#ff6b5a', info: '#5ab0ff', heat: '#ffa63d', steel: '#4f86c6' })) assert.match(root, new RegExp(`--${k}: ${v};`), k);
   assert.match(root, /--plate-rim: var\(--gold\);/, 'the plates\' gold rim');
   assert.match(root, /--fs-1: 12px; --fs-2: 14px; --fs-3: 16px; --fs-4: 20px; --fs-5: 28px; --fs-6: 40px;/, 'UIK-00 2: the type scale');
@@ -88,7 +88,7 @@ test('the touch buttons: see-through discs with a colored ring, plain symbols an
   for (const n of GLYPH_NAMES) {
     const g = glyph(n);
     assert.match(g, new RegExp(`^<svg class="pi24 gl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${GLYPH_STROKE}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">`), n);
-    const d = g.match(/<path class="h" d="([^"]+)"\/><path d="([^"]+)"\/>/);
+    const d = g.match(/<path class="h" d="([^"]+)"\/><path class="ln" d="([^"]+)"\/>/);
     assert.ok(d && d[1] === d[2], `${n}: the line over its halo`);
   }
   for (const w of Object.values(WEAPONS)) assert.ok(GLYPH_NAMES.includes(glyphOfWeapon(w.id, w.type)), w.id);

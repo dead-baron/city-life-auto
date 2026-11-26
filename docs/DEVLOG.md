@@ -28127,3 +28127,41 @@ taller building to the south, 2 neon names behind the big neon name on their own
   signclear, flatdoors, perf, signs, doors 29/29, walkinfront, doorsbake, cinema, alleyfade, seethrough 18/18.
   Bake changes: with the branch's re-bake. Not seen in a running game.
 
+## 2026-11-26 · The UI's look C built into the game (part C2) - on branch `fable-art-1124`, page code
+The owner, 11-26 09:00, of A today / B hard frames / C hard frames and pixel icons: "I think C looks good for the UI."
+The preview (`tools/uistyle/hardpixel.js`) patched three screens from outside; this puts the look into the sheet and
+the icon set themselves, so every screen has it.
+- **Frames** (`client/style.css`): the tokens carry it - `--r1`, `--r2`, `--r4` are 0 (192 radius rules were already
+  on the tokens; a full round, `--r3`, stays for the round buttons, UIK-00 4D), `--shadow` and `--plate-sh` are hard
+  drops, `--panel-bg` a flat navy. A panel's corners are notched 4 px, a button's, a chip's and a cell's 2 px
+  (`--notch4`, `--notch2`). A notched box is cut to its shape, so what the kit drew round a box on hover or focus -
+  a ring, an outline - is drawn inside it (`--ring-in`, `--ring-in2`: the title's buttons, the looks screen's, a
+  drop target in the bag). The switch is square with a square knob. The phone full-screen on a phone has no notch.
+- **No blur, no soft fill**: 16 blurred shadows made hard (area names and warnings over the world take the ink halo
+  they already had; glows became rings), the bars a flat fill with a two-pixel lit edge, the looks screen's and the
+  Inventory's spotlights flat. Kept soft, each with its reason in the lint: scrims and vignettes over the world
+  (light, not a frame), the title's neon sign, the arrival board's LEDs, an arcade cabinet, a scroll edge's mask.
+- **Pixel icons** (`client/touchicons.js` `glyph`, `VP`; `client/bag.js`): all 160 line glyphs also as a 12 x 12
+  bitmap - two of the line set's units to a pixel, one pixel to a line - made from the paths by
+  `tools/uistyle/glyphgrid.py` (the browser's own path drawing read as coverage per cell, the half-pixel shift with
+  the fewest half-covered cells kept; `--write` puts them in the modules; a glyph redrawn by hand goes in its `OWN`).
+  One `<svg>` carries the line and the pixels; the sheet shows pixels in the menus and the line on the buttons over
+  the street (`#hud`, `#touch`, `#wheel`) - **the HUD's and the touch buttons' icons are unchanged**: he judged C
+  from the menus, and the line there was tuned over the street on 11-05. Menu icon sizes are multiples of 12 px.
+  No new file on the page's first load (86 of 86): the bitmaps sit in the two modules. Page code 541 -> 544 KB of 560.
+- **The lint** (`test/uitokens.test.js`, three new tests over every rule of the sheet and of the seven panels that
+  carry their own CSS): the radii; no blurred shadow, no gradient fill outside a list of allowances that must each
+  still match a rule; the notches and the inside rings; every glyph has a bitmap that is drawn, fills its box and
+  is no other glyph's; the menus' icon sizes. `tools/uishots.py` audits the same on the real page, per shot
+  (`style`: soft corners, blur, gradients, line icons left in a menu).
+- **Looked at** (the real page, headless): 13 screens at desktop, a phone upright and a phone sideways - 0 soft
+  corners, 0 blurred shadows, 0 line icons in a menu on every one; the press audit (too small, cut off, overlapping,
+  covered) is the same as before the change at all three sizes. Pictures: `report-89`, `report-90`, `report-91`.
+- **Not looked at** (the lint covers their rules; no picture taken): the title's buttons (no game server in the
+  title shot), shop menus, job cards, the arcade, the character creator past its first screen, the death map on a
+  phone sideways; a real phone. Some of the made icons are muddy at 12 px (the long guns, sparkles, dice): to redraw
+  by hand.
+- Run: uitokens 10/10, uikit 7/7, acticons 12/12 and the 30 other test files that touch the menus, icons or the
+  sheet - 216 of 217 (the miss, `music` "instruments: played out loud", passes alone and without the change). The
+  art hash does not move: no re-bake.
+
