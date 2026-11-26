@@ -26,8 +26,8 @@
 # rockart 5 of 5, leaflight 4 of 4, perf 6 of 6 (alone), alleyfade / emotes / seethrough 19 of 19 after main was merged in
 # (PR #49: every conflict to the branch's side, no file of the branch changed).
 # Not done: a look in a running World v3 game. Tried 04:50: a local World v3 server came up (224 s, 2.7 GB) and a
-# headless page joined it, but the server went down during the run (a tick of 11.9 s, then gone - memory, most
-# likely: the server and the test browser together on an 8 GB machine) before any teleport; no picture of the places.
+# headless page joined it, but the server was killed during the run for memory (the kernel log: out of memory, the server at 4 GB - with
+# the test browser beside it on an 8 GB machine) before any teleport; no picture of the places.
 # The UI's shots of the night were taken in a running game of today's small world (the Inventory, Settings, Pause).
 #
 # pass 2 # fail 0  test/acctdelete.test.js 6s rc=0
