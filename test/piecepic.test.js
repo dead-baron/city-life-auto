@@ -52,7 +52,7 @@ test('the Inventory: a tile is the picture, the glyph until it is drawn and wher
   assert.match(S, /import \{ piecePixels \} from '\.\/piecepic\.js';/);
   assert.match(S, /if \(u\) return ppImg\(u, px\);\n  if \(u === null\) return pieceGlyph\(it, px0\);/);
   assert.match(S, /image-rendering:pixelated/);
-  assert.match(S, /const k = Math\.max\(1, Math\.floor\(px \/ Math\.max\(u\.w, u\.h\)\)\);/, 'at a whole number of the game\'s pixels');
+  assert.match(S, /const k = Math\.max\(1, Math\.floor\(\(px \+ PP_OVER\) \/ Math\.max\(u\.w, u\.h\)\)\);/, 'at a whole number of the game\'s pixels');
   assert.match(S, /pieceTile\(it, 26, PP_FIT\)/, 'bigger on the figure\'s slots, inside its box in the grid');
-  assert.match(S, /export const PP_FIT = 1\.25, PP_RIM = \[232, 220, 192, 255\];/, 'a hard cream rim, so a dark piece shows on the navy tile');
+  assert.match(S, /export const PP_FIT = 1\.25, PP_OVER = 4, PP_RIM = \[232, 220, 192, 255\];/, 'a hard cream rim, so a dark piece shows on the navy tile');
 });

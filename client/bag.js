@@ -226,7 +226,7 @@ const PP = new Map(), PPQ = [];
 // (PP_FIT: on the figure's slots a picture may stand a quarter over its glyph's box - the button round it has the room -
 // so a tee is two pixels to the game's one, not one; in the grid it keeps to its box, the name is under it. PP_RIM: one hard pixel of cream round the piece, as a sticker's edge: black
 // jeans on the navy tile were not to be seen - looked at in the page, 11-25)
-export const PP_FIT = 1.25, PP_RIM = [232, 220, 192, 255];
+export const PP_FIT = 1.25, PP_OVER = 4, PP_RIM = [232, 220, 192, 255];   // (PP_OVER: px a picture may pass its box by, so a tee with its rim - 16 px - is still two to one in a box of 30)
 export function ppRim(R) {
   const w = R.w + 2, h = R.h + 2, px = new Uint8ClampedArray(w * h * 4), on = (x, y) => x >= 0 && y >= 0 && x < R.w && y < R.h && R.px[(y * R.w + x) * 4 + 3] > 0;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -236,8 +236,8 @@ export function ppRim(R) {
   }
   return { w, h, px };
 }
-const ppLater = () => (typeof requestIdleCallback === 'function' ? requestIdleCallback(ppNext, { timeout: 150 }) : setTimeout(ppNext, 30));   // (between the page's own work: a picture is a figure drawn twice)
-const ppImg = (u, px) => { const k = Math.max(1, Math.floor(px / Math.max(u.w, u.h))); return `<img class="iv-pp" alt="" src="${u.url}" width="${u.w * k}" height="${u.h * k}" style="image-rendering:pixelated">`; };
+const ppLater = () => setTimeout(ppNext, 30);   // (between the page's frames: a picture is a figure drawn twice. Not requestIdleCallback: with the game drawing behind the Inventory the page is seldom idle, and the pictures waited seconds - seen in the test browser)
+const ppImg = (u, px) => { const k = Math.max(1, Math.floor((px + PP_OVER) / Math.max(u.w, u.h))); return `<img class="iv-pp" alt="" src="${u.url}" width="${u.w * k}" height="${u.h * k}" style="image-rendering:pixelated">`; };
 function ppNext() {
   const q = PPQ[0];
   if (!q) return;
