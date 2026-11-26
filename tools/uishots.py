@@ -62,7 +62,10 @@ return out;
 
 
 def steps_for(size, screens, outdir):
-    shot = lambda n: [f'shot:{os.path.join(outdir, f"{size}-{n}.png")}', 'eval:' + AUDIT.replace('\n', ' ')]
+    # (UISHOT_JS: a file of JavaScript run in the page before each shot - a look tried on a screen without changing the
+    # game's own CSS: the UI style pass's pick sheets, tools/uistyle/)
+    pre = ['eval:' + ' '.join(l for l in open(os.environ['UISHOT_JS']).read().split('\n') if not l.strip().startswith('//')), 'wait:900'] if os.environ.get('UISHOT_JS') else []
+    shot = lambda n: pre + [f'shot:{os.path.join(outdir, f"{size}-{n}.png")}', 'eval:' + AUDIT.replace('\n', ' ')]
     st = [
         # past the first-time arrival: the station card, the arrival, the question (server/systems/ftue.js handle)
         # (a new character: the starting looks first - shot, then the first one played)

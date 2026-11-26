@@ -28000,3 +28000,20 @@ after: the audit's counts are the same - no new overlap or small target). `uisho
 beside it) they came in one after another over several seconds. The shops' and the wardrobe's rows do not use the
 pictures yet. `people.js` is in the art hash: with the re-bake.
 
+## 2026-11-26 · The UI style pass: the pick sheet (part C2) - on branch `fable-art-1124`
+The owner, 11-24: "Some UI still looks overly polished and not that 16-bit SNES style we want (like frames and some
+text and some icons)". The plan: one sheet for his pick before any screen is changed (DECISIONS 11-06 kept the clean
+line icons). Nothing in the game's CSS is changed by this.
+- **Counted** (`client/style.css`): 192 rounded corners through four radius variables (4 px, 10 px, a pill, 28 px),
+  153 shadows, 36 gradients; the type is CLA Pixel on every screen shot (the audit's fonts).
+- **Three looks of the same screens** (the Inventory, Settings, Pause; `tools/uishots.py` now runs a script in the
+  page before each shot - `UISHOT_JS` - so a look is tried without touching the game's CSS): **A** today; **B** hard
+  pixel frames (`tools/uistyle/hard.js`: square frames with a one-step notch out of each corner, a heavier gold
+  rim on the window, flat fills for gradients, a hard black drop for the soft shadows; round buttons and toggles
+  stay round as in UIK-00) with the line icons kept; **C** the same with pixel icons (`pixel.js`: every line glyph
+  redrawn on a grid of two screen pixels to one, one pixel to a line - a preview made from the line icons
+  themselves; the real set would be drawn by hand on that grid).
+- Pictures: `report-82-ui-pick-inventory`, `report-83-ui-pick-settings`, `report-84-ui-pick-close` (2x).
+After his pick: the look goes into `style.css` by its variables, every screen shot at four sizes, and a lint so a
+soft frame or an off-face font cannot come back.
+
