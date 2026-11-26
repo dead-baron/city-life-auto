@@ -679,10 +679,10 @@ export function shipwreck(L = 220, W = 64, Hh = 40, heel = 0.38) {
 }
 // a sea arch (along x): two rough legs of dark layered rock standing in the surf and the span between them, the
 // opening facing +y; barnacles and wet rock at the waterline, a cap of grass and thrift on top, a gull's perch
-export function seaArch(w = 150, d = 56, h = 96, seed = 3) {
+export function seaArch(w = 150, d = 56, h = 96, seed = 3, dry = 0) {   // (dry: the desert's arch - red sandstone, bare: no wet foot, barnacles or turf)
   const m = new Vox(w, d, h + 6);
-  const rock = m.mat({ ramp: R('#6a6260'), k: 3, shade: (x, y, z) => (Math.round(z + hash(Math.round(x / 9), 1, seed) * 3) % 7 === 0 ? -0.9 : 0) + (hash(Math.round(x / 3), Math.round(z / 2) + Math.round(y / 3), seed) - 0.5) * 0.7 });
-  const wet = m.mat({ ramp: R('#3e3a3a'), k: 2 }), barn = m.mat({ ramp: R('#cfc8b8'), k: 3 }), grass = m.mat({ ramp: R('#6a8a3a'), k: 3, flag: F_ROCKLEAF }), pink = m.mat({ ramp: R('#e890b0'), k: 3, flag: F_ROCKLEAF });   // (plants on the rock: gbuf.js)
+  const rock = m.mat({ ramp: R(dry ? '#c0603a' : '#6a6260'), k: 3, shade: (x, y, z) => (Math.round(z + hash(Math.round(x / 9), 1, seed) * 3) % 7 === 0 ? -0.9 : 0) + (hash(Math.round(x / 3), Math.round(z / 2) + Math.round(y / 3), seed) - 0.5) * 0.7 });
+  const cap = dry ? m.mat({ ramp: R('#cc7446'), k: 3 }) : 0, wet = dry ? rock : m.mat({ ramp: R('#3e3a3a'), k: 2 }), barn = dry ? rock : m.mat({ ramp: R('#cfc8b8'), k: 3 }), grass = dry ? cap : m.mat({ ramp: R('#6a8a3a'), k: 3, flag: F_ROCKLEAF }), pink = dry ? cap : m.mat({ ramp: R('#e890b0'), k: 3, flag: F_ROCKLEAF });   // (plants on the rock: gbuf.js)
   const cy = d / 2, open0 = w * 0.3, open1 = w * 0.7, archTop = h * 0.62;
   m.fill((x, y, z) => {
     const n = hash(Math.round(x / 4), Math.round(z / 4), seed + 1), n2 = hash(Math.round(x / 9), Math.round(y / 6), seed + 2);

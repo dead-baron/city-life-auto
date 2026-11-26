@@ -27739,4 +27739,18 @@ Hollow's street; the desert highway's saw-toothed edge.
   the coast and jungle still to draw. What it costs: a browser fetches the bake's code once per build, in a worker,
   after the first screen - 50 KB more is under 5% of it. The bake's time (`bakeX`) and a kept chunk's weight are
   budgets of their own and are untouched.
-
+- **A hoodoo drawn as one** (17:20; NR1-B, NS1-C): the five by the arch and the found places' stands were tall thin
+  `outcrop`s - dark spires. `props-desert.js hoodoo(h, seed)`: a voxel column of banded sandstone (four tones in
+  bands 5-11 px thick, each a little off the last), waisted to a neck under a flat slab cap of red rock, a skirt of
+  fallen rock at its foot; 60 to 100 px, four seeds. Prop `hoodoo` (statics.js), placed by `world3-desert.js` (5)
+  and `world3-wayside.js` (7 stands of 3-4). `test/desertflora.test.js`: the cap overhangs the neck, it flares at
+  the foot, it is banded, each height and seed its own picture. (First drawn at a voxel an art pixel: a voxel is a
+  world pixel, so it stood half size in the baked world - seen there, not on the sprite sheet; drawn at twice the
+  voxels.)
+- **The desert's arch is sandstone** (17:30; seen while looking at the hoodoos): the natural arch by the lookout is
+  the `seaarch` prop - dark layered rock, a wet foot, barnacles, turf and thrift on top - standing in the red
+  desert. The bake picks by where an arch stands (`statics.js`, as it does a boulder's stone): in the desert
+  `seaArch(..., dry)` - red sandstone, bare. One arch in the desert today; the sea's unchanged
+  (`test/desertflora.test.js`).
+- **The tables' cliff faces stay as built** (the owner, 17:18: A). Nothing to change; B's trial code was never in.
+  The bake's code after the hoodoo and the arch: 1,099.0 of 1,150 KB.

@@ -59,6 +59,23 @@ export function redCairn(k = 4, seed = 1) {
   for (let i = 0; i < k; i++) { const r = 6.5 - i * 1.1, hz = 2.6 + (k - i) * 0.25, ox = (hash(i, 1, seed) - 0.5) * 2, oy = (hash(i, 2, seed) - 0.5) * 2; m.ell(8 + ox, 8 + oy, z + hz, r, r * 0.85, hz, st); z += hz * 1.7; }
   return m;
 }
+// a hoodoo (NR1-B, NS1-C; 11-25 - a tall thin outcrop drew a dark spire): a column of banded sandstone, waisted
+// under a wide flat cap of harder rock, a skirt of fallen rock at its foot; h px tall
+export function hoodoo(h = 80, seed = 1) {   // (h: art px; a voxel is a world px, half of one - K)
+  const K = 2, H = h * K, W = 48 * K, D = 40 * K, m = new Vox(W, D, H + 8), cx = W / 2, cy = D / 2, hw = (k) => hash(k, seed, 77);
+  const sh = (x, y, z) => (hash(Math.round(x / 6), Math.round(y / 6), Math.round(z / 4) + seed) - 0.5) * 0.3;
+  const band = ['#c8643c', '#e6a878', '#a84a30', '#d88450'].map((c) => m.mat({ ramp: R(c), k: 3, shade: sh })), cap = m.mat({ ramp: R('#b85c3a'), k: 2, shade: sh });
+  const capZ = H - 10 * K;
+  m.ell(cx, cy, 0, 16 * K, 11 * K, 6 * K, band[2]);
+  let b = 0, next = 0, ox = 0, oy = 0;
+  for (let z = 2 * K; z < capZ + 2 * K; z++) {   // (slice by slice: each band a few px thick, a little off the last)
+    if (z >= next) { b = (b + 1 + Math.floor(hw(z) * 2)) % 4; next = z + (5 + hw(z + 1) * 6) * K; ox = (hw(z + 2) - 0.5) * 2 * K; oy = (hw(z + 3) - 0.5) * 1.4 * K; }
+    const r = (13.5 - 6 * Math.sin(Math.min(1, z / capZ * 1.1) * Math.PI * 0.5) + (b === 1 ? -0.9 : b === 2 ? 0.8 : 0)) * K;
+    m.ell(cx + ox, cy + oy, z, r, r * 0.72, 1.2, band[b]);
+  }
+  for (let z = capZ + 2 * K; z < H - K; z++) { const q = Math.abs(z - capZ - 5 * K) / K; m.ell(cx + K, cy, z, (18 - q * 0.3) * K, (9.5 - q * 0.2) * K, 1.2, z < capZ + 4 * K ? band[2] : cap); }   // (the cap: a flat slab, its underside dark)
+  return m;
+}
 // a hawk's shadow on the ground (sprite: soft, dark, flat - its wings spread, a little blurred), w px across
 export function hawkShadow(w = 54) {
   const H = Math.round(w * 0.55), G = new GBuf(w + 4, H + 4);
@@ -86,4 +103,4 @@ export function groundShadow(w = 200, h = 70) {
   }
   return G;
 }
-export const DESERT_PROPS = { ranchGate, ramada, redCairn, hawkShadow, groundShadow, MAT };
+export const DESERT_PROPS = { ranchGate, ramada, redCairn, hoodoo, hawkShadow, groundShadow, MAT };

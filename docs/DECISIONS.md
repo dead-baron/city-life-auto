@@ -414,6 +414,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   ... lets get a list and redraw all of them and just let me know what needed the redraw"). So: the palettes' shade
   tones and the painters' shading are what change; no lift of the finished picture; a census over the baked world
   (tools/nature/darkscan.mjs) and a list of what was redrawn.
+- The desert's tables keep their stepped cliff faces - look A (the owner, 11-25 17:18, of A as built and B one sheer
+  wall with a flat cap, `report-65`: "For table edge I think A does look better"). The mountains' B is granite's
+  only; B for sandstone is not built.
 - The mountains' crags are look B (the owner, 11-25 07:19, of three variants: "B for the mountain/cliffs is best, also
   were not doing snow yet so let's not do any snow for now"): a granite cliff one sheer wall half as tall again, its
   top the grey of the rock behind it, that rock in big light slabs rising in ledges along the land's contours. No

@@ -153,14 +153,16 @@ last leap over the top of a falls; the other fish's leaps.
 - [ ] **The desert's water** (11-25): a seep's ring is pale cracked mud (was dark mud with blue puddles); the green
   strip along the desert's river grows rushes and grass (was lupines, foxgloves, berries); cracked earth is flat
   plates (was cobble-like - it is the tables' tops too). Picture: `report-64`. Left: a seep's pool is square-cornered.
-- [ ] **PICK: the tables' cliff faces** (11-25). A, as now: each piece a stack of stepped rings. B: one sheer wall
-  with a flat cap, as the mountains' crags (your B of 07:19) but in sandstone. Picture: `report-65` (A left, B
-  right, the same edge). B is not built in: on your word. If B: its cap takes the red rock's colour behind it.
+- [x] **The tables' cliff faces: A** (the owner, 11-25 17:18: "For table edge I think A does look better"). A, as
+  built: each piece a stack of stepped rings. B, one sheer wall with a flat cap, was shown (`report-65`) and is not
+  built.
 - [ ] **The desert, left to do** (11-25): the mission ruin (3 x 4 tiles - a real ruin with walls and a yard), a cracked
-  playa, the tin shack with a rusted pickup (NS1-C), hoodoos and balanced rocks beyond the five at the arch.
+  tin shack with a rusted pickup (NS1-C), a seep's square pool.
 - [ ] **The desert's found places** (11-25): 28 by rule, 7 each - a cracked playa with a dead snag, a stand of
-  hoodoos, saguaros round a rock pile, joshua trees among boulders. Picture: `report-66`. Claude's own look: the
-  saguaros and the joshua trees read; the playa's pan is small (4-7 tiles across); the hoodoos are thin dark spires
-  (the look of the five by the arch) and want a banded column with a cap, as NR1-B - new art, to draw.
+  hoodoos, saguaros round a rock pile, joshua trees among boulders. Picture: `report-66`; the hoodoos redrawn as
+  banded columns under a cap, `report-67` (they were thin dark spires - the five by the arch too). The playa's pan
+  is small (4-7 tiles across).
+- [ ] **The arch by the lookout** (Red Rock Desert): it was the sea's arch - grey rock, turf on top; now red
+  sandstone, bare. Picture: `report-68`.
 - [x] **The bake's code budget 1,150 KB** (the owner, 11-25 16:51: "lets raise the bake limit").
 

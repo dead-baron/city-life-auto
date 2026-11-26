@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { DESERT_BLOOM, desertCover } from '../client/art2/game/statics.js';
+import { DESERT_BLOOM, desertCover, makeStatic } from '../client/art2/game/statics.js';
 import { tinaPx } from '../client/art2/game/groundbake.js';
 import { vnoise, hash } from '../client/art2/gbuf.js';
 
@@ -41,3 +41,31 @@ test("a seep's ring is the desert's cracked mud, a tinaja's bowl its red rock", 
   assert.ok(seep >= 0 && bowl >= 0 && seep !== bowl, 'both paint, each its own ground');
   assert.equal(tinaPx([{ x: 0, y: 0, r: 60, ring: 50, k: 1 }], 400, 0, 5), -1, 'nothing far from the water');
 });
+
+test('a hoodoo: a column that narrows to a neck under a cap wider than it, banded, each seed its own', () => {
+  const sigs = new Set();
+  for (const h of [60, 80, 100]) for (const sd of [1, 2, 3, 4]) {
+    const G = makeStatic({ t: 'v', m: 'hoodoo', a: [h, sd], hd: 0 }), wide = [];
+    let y0 = -1, y1 = -1, sig = 0;
+    for (let y = 0; y < G.h; y++) { let a = -1, b = -1; for (let x = 0; x < G.w; x++) if (G.col[(y * G.w + x) * 4 + 3]) { if (a < 0) a = x; b = x; sig = (Math.imul(sig, 31) + G.col[(y * G.w + x) * 4] + x) | 0; } wide.push(a < 0 ? 0 : b - a + 1); if (a >= 0) { if (y0 < 0) y0 = y; y1 = y; } }
+    const H = y1 - y0 + 1, cap = Math.max(...wide.slice(y0, y0 + Math.ceil(H * 0.2))), neck = Math.min(...wide.slice(y0 + Math.ceil(H * 0.25), y0 + Math.ceil(H * 0.55))), foot = Math.max(...wide.slice(y1 - Math.ceil(H * 0.15), y1 + 1));
+    assert.ok(H >= h * 2 && H <= h * 3, `h ${h} seed ${sd}: its height with its foot, in world px - twice the art's (${H})`);
+    assert.ok(cap >= neck * 1.6, `h ${h} seed ${sd}: the cap overhangs the neck (${cap} over ${neck})`);
+    assert.ok(foot >= neck * 1.4, `h ${h} seed ${sd}: it flares at the foot (${foot} over ${neck})`);
+    // bands: the column's middle shows light and dark rows (their mean red apart)
+    const rows = []; for (let y = y0 + Math.ceil(H * 0.3); y < y1 - Math.ceil(H * 0.15); y++) { let n = 0, r = 0; for (let x = 0; x < G.w; x++) { const j = (y * G.w + x) * 4; if (G.col[j + 3]) { n++; r += G.col[j] + G.col[j + 1] + G.col[j + 2]; } } if (n) rows.push(r / n); }
+    assert.ok(Math.max(...rows) - Math.min(...rows) > 60, `h ${h} seed ${sd}: banded (${Math.round(Math.min(...rows))} to ${Math.round(Math.max(...rows))})`);
+    sigs.add(sig);
+  }
+  assert.ok(sigs.size >= 10, `each height and seed its own picture (${sigs.size} of 12)`);
+});
+
+test("an arch in the desert is red sandstone, bare; the sea's keeps its dark rock and turf", () => {
+  const mean = (G) => { let n = 0, r = 0, g = 0, b = 0, green = 0; for (let i = 0; i < G.w * G.h; i++) { const j = i * 4; if (!G.col[j + 3]) continue; n++; r += G.col[j]; g += G.col[j + 1]; b += G.col[j + 2]; if (G.col[j + 1] > G.col[j] + 12 && G.col[j + 1] > G.col[j + 2]) green++; } return { r: r / n, g: g / n, b: b / n, green: green / n }; };
+  const sea = mean(makeStatic({ t: 'v', m: 'seaArch', a: [200, 64, 130, 3, 0], hd: 0 })), dry = mean(makeStatic({ t: 'v', m: 'seaArch', a: [200, 64, 130, 3, 1], hd: 0 }));
+  assert.ok(dry.r > dry.b * 1.5 && dry.r > dry.g * 1.25, `the desert's arch is red (${Math.round(dry.r)}, ${Math.round(dry.g)}, ${Math.round(dry.b)})`);
+  assert.ok(dry.green < 0.005, `nothing green on it (${(dry.green * 100).toFixed(1)}%)`);
+  assert.ok(sea.r < sea.b * 1.3 && sea.green > 0.02, `the sea's arch as before: grey rock, turf on top (${Math.round(sea.r)}, ${Math.round(sea.b)}; ${(sea.green * 100).toFixed(1)}% green)`);
+  assert.match(SRC, /const dry = c\.dist\(x, y\)\.style === 'desert' \|\| c\.biome\(x, y\) === 3 \? 1 : 0;/, 'the bake picks it by where the arch stands');
+});
+

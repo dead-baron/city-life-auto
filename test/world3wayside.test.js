@@ -66,7 +66,7 @@ test('each find has its pieces, and what should stop you is solid', () => {
       case 'windpump': has('windmill'); has('trough'); break;
       // the desert's (11-25): a pan of cracked mud the ground bake paints from the list a seep's ring is in, nothing growing on it
       case 'playa': { const e = (m.tinajas || []).find((q) => q.x === f.x && q.y === f.y); assert.ok(e && e.r === 0 && e.k === 1 && e.ring >= 2 * TILE && e.ring <= WAYSIDE.R * TILE / 1.3, `${at}: its pan, inside its own ground`); assert.ok(near(f, 'tree_a', R).some((p) => p.sp === 'deadSnag'), `${at}: the snag`); assert.equal(m.reserve[m.idx(Math.floor(f.x / TILE), Math.floor(f.y / TILE))] & 192, 192, `${at}: bare`); break; }
-      case 'hoodoos': assert.ok(near(f, 'outcrop', R).filter((p) => p.style === 'sandstone' && p.h >= 70).length >= 3, `${at}: three spires or more`); break;
+      case 'hoodoos': { const hs = near(f, 'hoodoo', R); assert.ok(hs.length >= 3 && hs.every((p) => p.h >= 60 && p.h <= 100), `${at}: three hoodoos or more, 60 to 100 px`); assert.ok(new Set(hs.map((p) => p.h + ':' + p.s % 4)).size >= 2, `${at}: not all one picture`); break; }
       case 'saguaros': has('outcrop'); assert.ok(near(f, 'cactus', R).filter((p) => /^saguaro/.test(p.sp)).length >= 3, `${at}: the saguaros`); break;
       case 'joshuas': assert.ok(near(f, 'tree_a', R).filter((p) => p.sp === 'joshua').length >= 2, `${at}: the joshua trees`); has('boulder', 3); break;
       default: assert.fail(`${at}: a kind the test doesn't know`);

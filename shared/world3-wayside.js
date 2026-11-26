@@ -197,9 +197,9 @@ export function buildWayside3(m, H3) {
         for (let k = 0; k < 3; k++) { const a = h(3) * 6.283 + k * 2.3 + 1; P('boulder', X + Math.cos(a) * 116, Y + Math.sin(a) * 100, 9, { s: 12 + Math.round(h(16 + k) * 8) }); }
         break;
       }
-      case 'hoodoos': {   // (NR1-B: a stand of sandstone spires, as the five by the arch - world3-desert.js)
+      case 'hoodoos': {   // (NR1-B: a stand of hoodoos - banded columns under their caps, props-desert.js -, as the five by the arch: world3-desert.js)
         const n = 3 + Math.floor(h(1) * 2);
-        for (let k = 0; k < n; k++) { const x = X - 70 + k * (140 / (n - 1)) + (h(10 + k) - 0.5) * 22, y = Y - 20 + (k % 2 ? 34 : 0) + (h(14 + k) - 0.5) * 16; P('outcrop', x, y, 14, { w: 34, d: 30, h: 70 + Math.round(h(18 + k) * 50), s: 60 + k * 7 + Math.floor(h(22 + k) * 40), style: 'sandstone' }); }
+        for (let k = 0; k < n; k++) { const x = X - 70 + k * (140 / (n - 1)) + (h(10 + k) - 0.5) * 22, y = Y - 20 + (k % 2 ? 34 : 0) + (h(14 + k) - 0.5) * 16; P('hoodoo', x, y, 13, { h: 60 + Math.round(h(18 + k) * 4) * 10, s: k + Math.floor(h(22 + k) * 4) }); }
         for (let k = 0; k < 4; k++) P('boulder', X - 96 + k * 64 + (h(30 + k) - 0.5) * 20, Y + 76 + (h(34 + k) - 0.5) * 20, 9, { s: 12 + Math.round(h(38 + k) * 10) });
         for (let k = 0; k < 3; k++) P('shrub_a', X - 90 + k * 90 + (h(40 + k) - 0.5) * 20, Y - 84 + (h(43 + k) - 0.5) * 14, 0, { sp: k === 1 ? 'brittle' : 'sage', k: 1 });
         break;

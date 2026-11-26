@@ -126,10 +126,9 @@ entries have each piece):**
   code size only).
 - **The desert, begun 11-25 16:30 (baked, with the re-bake):** bloom a rare patch, reeds out of the ghost town's
   street, a desert river's strip in rushes, a seep's ring and cracked earth as dry mud (`test/desertflora.test.js`).
-  **Waiting on him:** the tables' cliff faces, A (stepped rings, now) or B (one wall, flat cap) - `report-65`, in
-  ART-CHECK-LIST. 17:10: 28 found places by rule in the desert (playa, hoodoos, saguaros, joshua trees -
-  `report-66`; a world change). Left: the mission, the tin shack and rusted pickup (new art), a hoodoo drawn with
-  its cap. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
+  **Decided 17:18:** the tables' cliff faces stay A, stepped (B, one wall, not built). 17:10: 28 found places by rule in the desert (playa, hoodoos, saguaros, joshua trees -
+  `report-66`; a world change). 17:30: the hoodoo drawn as a banded column under a cap (12 places), the desert's arch red
+  sandstone. Left: the mission, the tin shack and rusted pickup (new art), a seep's square pool. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all

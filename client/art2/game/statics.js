@@ -1876,7 +1876,7 @@ function voxModel(m, a) {
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
     case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46); case 'delineator': return delineatorPost();
     case 'cottage': return WL.cottage(a[0] || 84, a[1] || 54, a[2] ?? 0.5, a[3] || 0); case 'seal': return WL.seal(a[0] || 0, ['#8a8a92', '#6e6e78', '#9a9088'][a[1] || 0]); case 'beacon': return WL.beacon(a[0] || 0, a[1] || 46, a[2] ?? 1); case 'headstone': return WL.headstone(a[0] || 0); case 'fishboat': return WL.fishboat(a[0] || 0); case 'netRack': return WL.netRack(a[0] || 60); case 'lobsterPots': return WL.lobsterPots(a[0] || 0); case 'gull': return WL.gull(false);
-    case 'crab': return WL.crab(); case 'blowhole': return WL.blowhole(a[0] || 64, a[1] || 48); case 'seaArch': return WL.seaArch(a[0] || 150, a[1] || 56, a[2] || 96, a[3] || 3); case 'driftwood': return WL.driftwood(a[0] || 50, a[1] || 1); case 'shipwreck': return WL.shipwreck(a[0] || 220, a[1] || 64, a[2] || 40);
+    case 'crab': return WL.crab(); case 'blowhole': return WL.blowhole(a[0] || 64, a[1] || 48); case 'seaArch': return WL.seaArch(a[0] || 150, a[1] || 56, a[2] || 96, a[3] || 3, a[4] || 0); case 'driftwood': return WL.driftwood(a[0] || 50, a[1] || 1); case 'shipwreck': return WL.shipwreck(a[0] || 220, a[1] || 64, a[2] || 40);
     case 'thatchBar': return TP.thatchBar(a[0] ?? 0.5); case 'stiltHut': return TP.stiltHut(a[0] || 64, a[1] || 52, a[2] || 22, a[3] || 0); case 'macaw': return TP.macaw(a[0] || 0, !!a[1]); case 'seaTurtle': return TP.seaTurtle(a[0] || 1); case 'snorkeler': return TP.snorkeler(a[0] || 0); case 'mangrove': return TP.mangrove(a[0] || 1, a[1] || 1, a[2] || 0); case 'redGinger': return TP.redGinger(a[0] || 1);
     case 'footbridge': return WT.footbridge(a[0] || 140, a[1] || 26, a[2] || 8);
     case 'mapBoard': return U.mapBoard();
@@ -1885,7 +1885,7 @@ function voxModel(m, a) {
     case 'cabbages': return K.cabbages(a[0] || 3, a[1] || 3); case 'cornRow': return U.cornField(120, 60, (a[0] || 0) + 1); case 'wheatRow': return K.wheatPatch(120, 50, (a[0] || 0) + 1); case 'ropeLine': return TW.ropeLine(a[0] || 60);
     case 'gnawStump': return GD.gnawedStump(a[0] || 0, a[1] || 1); case 'gnawLog': return GD.gnawedLog(a[0] || 90, a[1] || 2); case 'hideRack': return GD.hideRack(a[0] || 0);
     case 'alley': return AL.model(a[0], a[1] || 0);
-    case 'ranchGate': return DZ.ranchGate(a[0] || 120, a[1] || 90); case 'ramada': return DZ.ramada(a[0] || 120, a[1] || 80, a[2] || 56); case 'redCairn': return DZ.redCairn(a[0] || 4, a[1] || 1); case 'hawkShadow': return DZ.hawkShadow(a[0] || 54); case 'groundShadow': return DZ.groundShadow(a[0] || 200, a[1] || 70);
+    case 'ranchGate': return DZ.ranchGate(a[0] || 120, a[1] || 90); case 'ramada': return DZ.ramada(a[0] || 120, a[1] || 80, a[2] || 56); case 'redCairn': return DZ.redCairn(a[0] || 4, a[1] || 1); case 'hoodoo': return DZ.hoodoo(a[0] || 80, a[1] || 1); case 'hawkShadow': return DZ.hawkShadow(a[0] || 54); case 'groundShadow': return DZ.groundShadow(a[0] || 200, a[1] || 70);
     case 'roadrunner': return WL.roadrunner(); case 'lizard': return WL.lizard(a[0] || '#b8a070'); case 'deadTree': return WL.deadTree(a[0] || 1, a[1] || 70);
     default: return EMPTY_VOX();
   }
@@ -1895,7 +1895,7 @@ const EMPTY_VOX = () => new Vox(1, 1, 1);
 function vdim(m, a) {
   switch (m) {
     case 'elPier': return [18, (a[1] || 300) + 26, (a[0] || 128) - 18]; case 'elStairs': return [(a[0] || 150) + 20, 44, (a[1] || 128) + 40]; case 'stationBridge': return [a[0] || 280, 36, (a[1] || 88) + 30];
-    case 'ranchGate': return [(a[0] || 120) + (a[1] || 90) * 2 + 12, 30, 84]; case 'ramada': return [(a[0] || 120) + 8, (a[1] || 80) + 8, (a[2] || 56) + 14]; case 'redCairn': return [16, 16, 6 + (a[0] || 4) * 5]; case 'hawkShadow': return [(a[0] || 54) + 4, (a[0] || 54) * 0.6 + 4, 2]; case 'groundShadow': return [(a[0] || 200) + 2, (a[1] || 70) + 2, 2];
+    case 'ranchGate': return [(a[0] || 120) + (a[1] || 90) * 2 + 12, 30, 84]; case 'ramada': return [(a[0] || 120) + 8, (a[1] || 80) + 8, (a[2] || 56) + 14]; case 'redCairn': return [16, 16, 6 + (a[0] || 4) * 5]; case 'hoodoo': return [96, 80, (a[0] || 80) * 2 + 8]; case 'hawkShadow': return [(a[0] || 54) + 4, (a[0] || 54) * 0.6 + 4, 2]; case 'groundShadow': return [(a[0] || 200) + 2, (a[1] || 70) + 2, 2];
     case 'roadrunner': return [30, 8, 22]; case 'lizard': return [34, 14, 6]; case 'deadTree': return [(a[1] || 70) + 10, 10, (a[1] || 70) + 8];
     case 'gnawStump': return [30, 30, a[0] ? 64 : 26]; case 'gnawLog': return [(a[0] || 90) + 14, 26, 16]; case 'hideRack': return [40, 16, 44];
     case 'alley': return AL.dim(a[0]);
@@ -2801,7 +2801,7 @@ function propItems(c, p, pi, I) {
     case 'boxoffice': V('cont:office', 'container', ['#c8a040', 110]); lightAt(I, x, y + 30, 24, 80, [1, 0.85, 0.6], 0.9, 'window'); return;
     case 'storedplane': { const col = ['#c83a30', '#2a5aa8', '#2a8a6a', '#e8a030', '#7a3a8a'][(p.c || 0) % 5], st = (p.v || 0) % 6 + 1, hd = qa(p.a || 0, 16); V(`spl:${col}:${st}:${hd.toFixed(2)}`, 'airliner', [300, 270, col, st], hd); return; }
     case 'mstall': { const k = (p.v || 0) % 4, col = ['#c8343a', '#2f7a5c', '#2f6ab0', '#e8a030'][(p.c || 0) % 4], hd = qa(p.a || 0, 4); V(`mstall:${k}:${col}:${hd.toFixed(2)}`, 'marketStall', [k, col], hd); lightAt(I, x, y, 34, 110, [1, 0.78, 0.48], 1.1, 'lamp'); return; }   // (the bulb under its canopy, after dark)
-    case 'seaarch': V(`sarch:${p.w || 150}:${qa(p.a || 0, 8).toFixed(2)}`, 'seaArch', [p.w || 150, p.d || 56, p.h || 96, 3], qa(p.a || 0, 8)); return;
+    case 'seaarch': { const dry = c.dist(x, y).style === 'desert' || c.biome(x, y) === 3 ? 1 : 0; V(`sarch:${p.w || 150}:${qa(p.a || 0, 8).toFixed(2)}${dry ? ':d' : ''}`, 'seaArch', [p.w || 150, p.d || 56, p.h || 96, 3, dry], qa(p.a || 0, 8)); return; }   // (an arch in the desert is red sandstone, bare - 11-25: the one by the lookout was the sea's grey rock with turf on top)
     // the woods' and the meadows' found pieces (concepts NS1-B, NS1-E; shared/world3-wayside.js places them - their solid
     // parts are the world's own circles): models built at the art pixel (recipe 'va', props-rural.js)
     case 'ruins': { const sd = (p.v || 0) % 3 + 1; put(I, { key: `va:ruins:${sd}`, recipe: { t: 'va', m: 'ruins', a: [sd, RUINS_K] }, x, y, ext: [90, 140, 90, 64], pi }); return; }
@@ -2869,6 +2869,7 @@ function propItems(c, p, pi, I) {
     case 'rgate': V(`rgate:${p.w || 120}:${p.wing || 90}:${qa(p.a || 0, 4).toFixed(2)}`, 'ranchGate', [p.w || 120, p.wing || 90], qa(p.a || 0, 4)); return;
     case 'ramada': V(`ramada:${p.w || 120}:${p.d || 80}`, 'ramada', [p.w || 120, p.d || 80, 56]); return;
     case 'rcairn': V(`rcairn:${p.k || 4}:${(p.v || 0) % 3}`, 'redCairn', [p.k || 4, (p.v || 0) % 3 + 1]); return;
+    case 'hoodoo': { const h = Math.round((p.h || 110) / 10) * 10; V(`hoodoo:${h}:${(p.s || 0) % 4}`, 'hoodoo', [h, (p.s || 0) % 4 + 1]); return; }   // (a banded column under its cap: props-desert.js)
     case 'hawkshadow': V('hawksh', 'hawkShadow', [54]); return;
     case 'gshadow': V(`gsh:${p.w || 200}:${p.h || 70}`, 'groundShadow', [p.w || 200, p.h || 70]); return;
     case 'roadrunner': V(`rrun:${qa(p.a || 0, 8).toFixed(2)}`, 'roadrunner', [], qa(p.a || 0, 8)); return;
