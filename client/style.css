@@ -530,8 +530,8 @@ body:not(.touch) #weapon.compact { display: none; }   /* (the owner's minimal HU
 .touch #weapon { position: fixed; left: var(--sx); top: var(--sy); right: auto; bottom: auto; width: var(--sw); height: var(--sh); min-height: 0; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 2px; padding: 0 var(--s1); pointer-events: auto; cursor: pointer; touch-action: none; }
 .touch #weapon:not([data-slot]), .touch #w-name, .touch #weapon.compact #w-info { display: none; }
 .touch #w-icon { display: none; }   /* (the sprite: the desktop's card; on touch the glyph - the owner, 11-03) */
-.touch #w-glyph { display: grid; place-items: center; flex: none; color: var(--pad-cream); --ic: 30px; }
-.touch #weapon:has(#w-ammo:not(:empty)) #w-glyph { --ic: 22px; }
+.touch #w-glyph { display: grid; place-items: center; flex: none; color: var(--pad-cream); --ic: 24px; }
+.touch #weapon:has(#w-ammo:not(:empty)) #w-glyph { --ic: 24px; }
 .touch #weapon { overflow: hidden; background: var(--disc); }
 .touch #weapon:active { transform: scale(.94); }
 .touch #w-quick { display: none; }
@@ -707,7 +707,7 @@ body.portrait #zone-l { top: 50%; }
 #stick-l.active { opacity: 1; }
 .stick .knob { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: var(--r3); }
 #stick-l .knob { box-sizing: border-box; width: 44px; height: 44px; margin: -22px 0 0 -22px; border: 2px solid var(--stick-edge); background: var(--stick-knob); box-shadow: none; }
-#stick-r .knob { box-sizing: border-box; background: var(--stick-knob); border: 2px solid var(--stick-edge); box-shadow: none; color: var(--pad-cream); --ic: 26px; }
+#stick-r .knob { box-sizing: border-box; background: var(--stick-knob); border: 2px solid var(--stick-edge); box-shadow: none; color: var(--pad-cream); --ic: 24px; }
 #stick-r .knob .pi24 { opacity: .8; }
 #tbtns { position: absolute; inset: 0; pointer-events: none; }
 /* the aim stick (the owner, 2026-10-24: kept): drag to aim; pushed into its red ring it fires, while FIRE ON is on */
@@ -2182,14 +2182,15 @@ body:not(.touch) :is(#t-buttons, #t-row2) { width: min(560px, 90vw); }
 #hub-bar { border-bottom-width: 4px; }
 #hub * { text-shadow: none; }
 #hub-title, .bag h3 { text-shadow: 2px 2px 0 var(--ink); }
-/* the icons (client/touchicons.js glyph: the line and its pixel form in one box): pixels in the menus, the line on the
-   buttons over the street (the HUD, the touch controls, the weapon wheel). A pixel icon is 12 cells: shown at 12, 24,
-   36 or 48 px, whole pixels to a cell. */
+/* the icons (client/touchicons.js glyph: the line and its pixel form in one box): pixels everywhere - the menus, and
+   the buttons over the street too (the owner, 11-26 11:00: "Buttons over street should get pixel icons yes"). A pixel
+   icon is 12 cells: shown at 12, 24, 36 or 48 px, whole pixels to a cell. A glyph with no bitmap keeps its line. On
+   the aim stick's see-through knob the pixels take the dark edge the line had there. */
 .gl .px { display: none; }
-.gl:not(.nopx) .ln { display: none; }
+.gl:not(.nopx) .ln, .gl:not(.nopx) .h { display: none; }
 .gl:not(.nopx) .px { display: inline; }
-:is(#hud, #touch, #wheel) .gl .ln { display: inline; }
-:is(#hud, #touch, #wheel) .gl .px { display: none; }
+#stick-r .gl:not(.nopx) .h { display: none; }
+#stick-r .gl .px { filter: drop-shadow(2px 0 0 var(--gl-halo)) drop-shadow(-2px 0 0 var(--gl-halo)) drop-shadow(0 2px 0 var(--gl-halo)) drop-shadow(0 -2px 0 var(--gl-halo)); }
 /* (a notched box cuts off an outline drawn round it: where the kit showed focus or a drop target that way, inside instead) */
 #title .btn.pfocus, #title .btn:focus-visible, #creator :is(.btn, .chip).pfocus { outline: none; box-shadow: var(--ring-in2) !important; }
 .bag-seg .chip.drop { outline: none; box-shadow: var(--ring-in2) !important; }

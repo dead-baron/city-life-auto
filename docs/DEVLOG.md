@@ -28165,3 +28165,14 @@ the icon set themselves, so every screen has it.
   sheet - 216 of 217 (the miss, `music` "instruments: played out loud", passes alone and without the change). The
   art hash does not move: no re-bake.
 
+## 2026-11-26 · Pixel icons on the buttons over the street; the icons' dots - on branch `fable-art-1124`, page code
+The owner, 11-26 11:00: "Buttons over street should get pixel icons yes" (and look C goes live with the art batch).
+- `style.css`: the rule that kept the line inside `#hud`, `#touch` and `#wheel` is gone - one icon set everywhere. The
+  aim stick's see-through knob draws a dark edge round the pixels (four hard drop-shadows), as the line had its halo
+  there. The weapon plate's glyph and the knob's are 24 px (they were 30 / 22 and 26: not whole pixels to a cell).
+- `tools/uistyle/glyphgrid.py`: the line set draws a dot as a stroke of no length with a round cap, which the grid
+  lost - the smile had no face, the message bubble no dots, the phone no button. A dot is now a pixel of its own in
+  its cell (12 glyphs changed).
+- `test/uitokens.test.js`: no rule shows the line of a glyph that has its pixels; the sizes over the street are
+  multiples of 12. Looked at: the HUD at desktop, phone upright and sideways - 0 line icons, the press audit as before.
+

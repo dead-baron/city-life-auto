@@ -61,7 +61,7 @@ out.style = { soft: [], blur: [], grad: [], line: 0, frames: {} };
 for (const e of document.querySelectorAll('body *')) {
   if (!vis(e) || e.closest('canvas')) continue;
   const s = getComputedStyle(e), r = e.getBoundingClientRect(), big = Math.round(r.width * r.height);
-  if (e.matches('svg.gl')) { const ln = e.querySelector('.ln'), inPlay = !!e.closest('#hud, #touch, #wheel'); if (ln && getComputedStyle(ln).display !== 'none' && !inPlay) out.style.line++; const w = parseFloat(s.width) || r.width; /* (its own size: a screen scaled to fit the window scales its icons with it) */ if (!inPlay && Math.abs(w / 12 - Math.round(w / 12)) > 0.01) out.style.soft.push([name(e.parentElement || e).slice(0, 50) + ' icon', w, big]); continue; }
+  if (e.matches('svg.gl')) { const ln = e.querySelector('.ln'), inPlay = false; if (ln && getComputedStyle(ln).display !== 'none') out.style.line++; const w = parseFloat(s.width) || r.width; /* (its own size: a screen scaled to fit the window scales its icons with it) */ if (!inPlay && Math.abs(w / 12 - Math.round(w / 12)) > 0.01) out.style.soft.push([name(e.parentElement || e).slice(0, 50) + ' icon', w, big]); continue; }
   if (e.closest('svg')) continue;
   const rad = [s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius, s.borderBottomLeftRadius].map((v) => parseFloat(v) || 0), m = Math.min(r.width, r.height);
   const painted = s.backgroundColor !== 'rgba(0, 0, 0, 0)' || s.backgroundImage !== 'none' || parseFloat(s.borderTopWidth) > 0 || s.boxShadow !== 'none';

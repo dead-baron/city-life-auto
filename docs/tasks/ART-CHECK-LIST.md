@@ -234,10 +234,10 @@ last leap over the top of a falls; the other fish's leaps.
   pictures read, and how fast do they come in when the Inventory opens. (The shops already show each piece on your
   own figure.)
 - [ ] **The UI in look C** (11-26, built on your pick): every menu and panel has hard notched frames, hard shadows,
-  flat fills, square switches and pixel icons; the round buttons over the street and their line icons are as they
-  were. Pictures: `report-89` (pause, settings, phone), `report-90` (the Inventory before and after), `report-91`
+  flat fills, square switches and pixel icons; the buttons over the street stay round. Pictures: `report-89` (pause, settings, phone), `report-90` (the Inventory before and after), `report-91`
   (a phone upright). Judge on your phone: every menu; the icons that read badly at this size (say which - they can
-  be redrawn by hand); whether the buttons over the street should get pixel icons too.
+  be redrawn by hand). The buttons over the street have the pixel icons too (your word of 11:00); look C goes
+  live with the art batch.
 - [x] **YOUR PICK: the UI's look - C** (the owner, 11-26 09:00: "I think C looks good for the UI"; built 11-26 - the line above). It was (11-26, part C2): The same screens three ways - A today, B hard pixel frames
   with the line icons kept, C hard pixel frames with pixel icons: `report-82-ui-pick-inventory`,
   `report-83-ui-pick-settings`, `report-84-ui-pick-close`. Nothing in the game is changed yet. Say A, B or C (or

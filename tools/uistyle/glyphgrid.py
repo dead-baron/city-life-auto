@@ -5,7 +5,7 @@ Every line icon of the touch family (client/touchicons.js VG, client/bag.js addG
 drawn on a grid of 12 x 12 - two of the line set's units to a pixel, one pixel to a line - and written back beside its
 path as a bitmap (36 hex digits: 12 rows of 12 bits, the top row first). The picture is made by the browser's own path
 drawing, read as coverage per cell; of the four half-pixel shifts the one with the fewest half-covered cells is kept,
-so a line drawn on a cell's edge lands in one cell and not two. A glyph in OWN below is drawn by hand and kept as it is.
+so a line drawn on a cell's edge lands in one cell and not two; a dot (a stroke of no length) is a pixel of its own. A glyph in OWN below is drawn by hand and kept as it is.
 
   python3 tools/uistyle/glyphgrid.py OUT.json [SHEET.png]     # (reads the paths with node; needs playwright's Chromium)
   python3 tools/uistyle/glyphgrid.py OUT.json --write          # and writes the bitmaps into the two modules
@@ -32,6 +32,12 @@ RASTER = r"""
       g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, G * S, G * S);
       g.setTransform(S / 2, 0, 0, S / 2, ox * S / 2, oy * S / 2);
       g.lineWidth = 2; g.lineCap = 'butt'; g.lineJoin = 'miter'; g.strokeStyle = '#000'; g.stroke(new Path2D(d));
+      /* (a dot - the line set draws one as a stroke of no length with a round cap - is a pixel of its own) */
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      for (const m of [...d.matchAll(/M\s*(-?[\d.]+)[ ,]?(-?[\d.]+)\s*[hv]-?0?\.0+1(?![\d])/g), ...d.matchAll(/M\s*(-?[\d.]+)[ ,]?(-?[\d.]+)\s*L\s*-?[\d]+\.01[ ,]?-?[\d.]+/g)]) {
+        const cx = Math.max(0, Math.min(G - 1, Math.floor((+m[1] + ox - 0.5) / 2))), cy = Math.max(0, Math.min(G - 1, Math.floor((+m[2] + oy - 0.5) / 2)));
+        g.fillRect(cx * S, cy * S, S, S);
+      }
       const px = g.getImageData(0, 0, G * S, G * S).data, cov = [];
       let amb = 0, ink = 0;
       for (let cy = 0; cy < G; cy++) for (let cx = 0; cx < G; cx++) {

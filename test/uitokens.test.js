@@ -191,7 +191,7 @@ test('look C: the frames - notched panels and buttons, rings drawn inside a notc
   assert.match(CSS, /body\.touch #hub\[data-tab=phone\] \.hub-frame \{[^}]*clip-path: none; \}/, 'the phone full-screen on a phone: no rim, no notch');
 });
 
-test('look C: every glyph has its pixel form on a 12 grid; the menus show it, the buttons over the street the line', async () => {
+test('look C: every glyph has its pixel form on a 12 grid, shown everywhere', async () => {
   const T = await import('../client/touchicons.js');
   await import('../client/bag.js').catch(() => {});
   assert.ok(T.GLYPH_NAMES.length >= 150, `the family (${T.GLYPH_NAMES.length})`);
@@ -211,7 +211,12 @@ test('look C: every glyph has its pixel form on a 12 grid; the menus show it, th
   }
   // a row's run is one piece, two units to a pixel
   assert.equal(T.pxPath('fff' + '000'.repeat(10) + '801'), 'M0 0h24v2h-24zM0 22h2v2h-2zM22 22h2v2h-2z');
-  assert.match(CSS, /\.gl \.px \{ display: none; \}\n\.gl:not\(\.nopx\) \.ln \{ display: none; \}\n\.gl:not\(\.nopx\) \.px \{ display: inline; \}\n:is\(#hud, #touch, #wheel\) \.gl \.ln \{ display: inline; \}\n:is\(#hud, #touch, #wheel\) \.gl \.px \{ display: none; \}/);
+  // pixels everywhere - the buttons over the street too (the owner, 11-26 11:00) - and no rule brings the line back
+  assert.match(CSS, /\.gl \.px \{ display: none; \}\n\.gl:not\(\.nopx\) \.ln, \.gl:not\(\.nopx\) \.h \{ display: none; \}\n\.gl:not\(\.nopx\) \.px \{ display: inline; \}/);
+  assert.ok(!/\.gl \.ln \{ display: inline/.test(CSS), 'no place shows the line of a glyph that has its pixels');
+  assert.match(CSS, /#stick-r \.gl \.px \{ filter: drop-shadow\(2px 0 0 var\(--gl-halo\)\)/, 'the aim stick\'s see-through knob: a dark edge round the pixels');
+  // the sizes the sheet gives the icons over the street are whole pixels to a cell too
+  for (const m of CSS.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/(#w-glyph|#stick-r \.knob|#hud-btns|#w-swap)[^{}]*\{[^}]*--ic: (\d+)px/g)) assert.equal(+m[2] % 12, 0, `${m[1]}: ${m[2]} px`);
   // a pixel icon is shown at whole pixels to a cell: every size the sheet gives a menu's glyph is a multiple of 12
   for (const m of CSS.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]*\.gl) \{ width: (\d+)px; height: (\d+)px;/g)) { assert.equal(+m[2] % 12, 0, `${m[1].trim()}: ${m[2]} px`); assert.equal(m[2], m[3]); }
 });
