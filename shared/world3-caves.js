@@ -158,7 +158,7 @@ export function buildCaves3(m, H3) {
     }
     for (const [qx, qy] of rockT) { if (!inF(qx, qy)) continue; const i = idx(qx, qy), t = m.tiles[i]; if (t === T.GRASS || t === T.DIRT || t === T.SAND) { m.tiles[i] = T.WALL; m.reserve[i] |= RES; } }
     for (const [qx, qy] of rockT) if (inF(qx, qy)) dropNear((qx + 0.5) * TILE, (qy + 0.5) * TILE, 22);   // (what stood where the rock is - the fire ring moved out of it above)
-    P('cliff', MX, face, 0, { w: CW, d: CD, h: CH, s: CS, st: 'basalt' });
+    P('cliff', MX, face, 0, { w: CW, d: CD, h: CH, s: CS, st: 'basalt', rough: 1 });   // (rough: drawn as a headland of crags, not a drum of rings - statics.js, 11-25)
     P('cavemouth', MX, face + 2, 0, { w: 84, h: 64, style: 'sea', arch: 1 });
     // the tall trees in front of it in this view (the camera looks north: a redwood south of it hides it) taken off
     const VEG = /^(tree_|redwood|shrub_|bush_|rwstump|rwlog|fern)/;

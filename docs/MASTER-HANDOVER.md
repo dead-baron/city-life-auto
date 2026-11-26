@@ -134,8 +134,9 @@ entries have each piece):**
   formation drawn by code).
 - **The coast and jungle, begun 11-25 18:00 (baked, with the re-bake):** a tideline of wrack on wild sea beaches,
   shells thinned, tide-pool shelves in dark basalt, no reeds on the sea's shingle (`test/coastart.test.js`). Left
-  (ART-CHECK-LIST): the sea cave's rock, the sea stacks (in a line, thin), North Cape's square bluffs, cypress
-  knees, a rock fishing spot. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
+  (ART-CHECK-LIST): the bluffs at North Cape and the Egret coves (square wall pieces), cypress knees, the
+  fishing rocks' gear. 19:35: the sea stacks re-sited by rule (no three in a line, mixed sizes, twelve shapes) and
+  the sea cave's rock a headland of crags (`report-72`). The bake's code: 1,104.0 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all

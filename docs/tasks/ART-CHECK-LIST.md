@@ -173,7 +173,10 @@ last leap over the top of a falls; the other fish's leaps.
   `report-71`. Judge: enough, too much.
 - [ ] **Tide-pool shelves** (North Cape, Redwood Cove, Coral Cay's): dark basalt with rockweed, the pools reading
   as water (they were pale cobbles with pale blobs). Picture: `report-71`.
-- [ ] **The coast, left to do** (11-25): the sea cave's rock (a round drum of stepped rings - to be a rough headland
-  with the cave in it); sea stacks (three in a line off Redwood Cove; all thin - NR1-C's are chunky with rocks at
-  the foot); North Cape's bluffs (square grass-topped blocks); cypress knees in the marsh; a rock fishing spot.
-
+- [ ] **Sea stacks** (your notes of 11-23 "in a line" and 11-25 on rock drawn by code): no three in a line any more
+  (four off Redwood Cove stood on one column of tiles), each its own size and one of twelve shapes - towers with a
+  shoulder, broad blocks, twins - with rocks at the foot. Picture: `report-72`.
+- [ ] **The sea cave's rock**: a headland of crags with the cave in its tallest face (it was a round drum of
+  stepped rings). Picture: `report-72`.
+- [ ] **The coast, left to do** (11-25): the bluffs at North Cape and at the Egret coves' horns (square grass-topped
+  wall pieces - `world3-west.js`, a step of its own); cypress knees in the marsh; the fishing rocks' gear.

@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { WRACK, wrackW, MATERIALS as M_ } from '../client/art2/game/groundbake.js';
 import { groundPixel } from '../client/art2/ground.js';
+import { makeStatic } from '../client/art2/game/statics.js';
+import { STACKS3, inLine3 } from '../shared/world3-coast.js';
 
 const GB = readFileSync(new URL('../client/art2/game/groundbake.js', import.meta.url), 'utf8');
 const ST = readFileSync(new URL('../client/art2/game/statics.js', import.meta.url), 'utf8');
@@ -36,3 +38,28 @@ test('a tidepool shelf is dark basalt, the rocky shore keeps its cobbles; the ma
 test("no reeds on the sea's shingle", () => {
   assert.match(ST, /if \(t === T\.SAND\) return h < 0\.07 && !\(M\.distSea && M\.distSea\[i\] < 16 && !dry\) \?/);
 });
+
+test('sea stacks: three in a line is told from three that are not; each seed its own rock, broad and narrow', () => {
+  assert.equal(inLine3([491.5, 1095.5], [491.5, 1103.5], [491.5, 1117.5]), true, 'the four off Redwood Cove stood on one column of tiles');
+  assert.equal(inLine3([662, 2552], [658, 2565], [658, 2572]), true, 'the Egret coves\' three, 1.4 tiles off a line');
+  assert.equal(inLine3([490, 1095], [497, 1103], [488, 1112]), false);
+  assert.equal(inLine3([0, 0], [100, 0], [200, 0]), false, 'far apart is no line to the eye');
+  assert.ok(STACKS3.shapes >= 12 && STACKS3.r[1] / STACKS3.r[0] >= 1.6, 'sizes are mixed');
+  const sigs = new Set(), wide = [];
+  for (let sd = 1; sd <= 12; sd++) { const G = makeStatic({ t: 'stack', s: sd, r: 26, h: 150 }); let n = 0, sig = 0, x0 = 1e9, x1 = -1; for (let i = 0; i < G.w * G.h; i++) if (G.col[i * 4 + 3]) { n++; sig = (Math.imul(sig, 31) + i) | 0; const x = i % G.w; if (x < x0) x0 = x; if (x > x1) x1 = x; } assert.ok(n > 1500, `seed ${sd}: it draws (${n} px)`); sigs.add(sig); wide.push(x1 - x0 + 1); }
+  assert.equal(sigs.size, 12, 'twelve seeds, twelve rocks');
+  assert.ok(Math.max(...wide) >= Math.min(...wide) * 1.25, `broad and narrow at one size (${Math.min(...wide)} to ${Math.max(...wide)} px)`);
+});
+
+test("a rock standing alone - the sea cave's - is a headland of crags, not a drum of rings", () => {
+  const prof = (G) => { const top = []; for (let x = 0; x < G.w; x++) { let y = 0; while (y < G.h && !G.col[(y * G.w + x) * 4 + 3]) y++; top.push(y); } return top; };
+  const drum = prof(makeStatic({ t: 'cliff', w: 512, d: 224, h: 132, s: 37, st: 'basalt' })), crag = prof(makeStatic({ t: 'cliff', w: 512, d: 224, h: 132, s: 37, st: 'basalt', rg: 1 }));
+  const rough = (t) => { const mid = t.slice(Math.floor(t.length * 0.2), Math.floor(t.length * 0.8)); let s = 0; for (let i = 4; i < mid.length; i++) s += Math.abs(mid[i] - mid[i - 4]); return s / mid.length; };
+  assert.ok(rough(crag) > rough(drum) * 1.25, `its skyline goes up and down (${rough(crag).toFixed(2)} to the drum's ${rough(drum).toFixed(2)})`);
+  const cx = Math.floor(crag.length / 2), high = Math.min(...crag.slice(cx - 20, cx + 20)), side = Math.min(...crag.slice(10, 50));
+  assert.ok(high < side, 'its tallest crag at the middle of its front, where the way in is');
+  assert.match(readFileSync(new URL('../shared/world3-caves.js', import.meta.url), 'utf8'), /P\('cliff', MX, face, 0, \{ w: CW, d: CD, h: CH, s: CS, st: 'basalt', rough: 1 \}\)/);
+  assert.match(GB, /const darkRock = propsNear\(C, 340\)\.filter\(\(p\) => p\.t === 'cliff' && \(p\.st === 'basalt' \|\| p\.st === 'lava'\)\);/, 'the ground under a dark rock is dark basalt, not the crags\' pale slabs');
+  assert.match(GB, /darkRock\.some\([^\n]*\? M_\.BASALT : M_\.CRAG\)/);
+});
+

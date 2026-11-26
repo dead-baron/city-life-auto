@@ -27806,4 +27806,27 @@ up well. What was wrong, by class, and what is fixed here (baked art: with the r
 stepped rings; three sea stacks stand in a line off Redwood Cove and all stacks are thin; North Cape's bluffs are
 square grass-topped blocks; no cypress knees in the marsh; no rock fishing spot's gear. Logged for part B: hammocks
 standing free on a lawn.
+- **Sea stacks** (19:00; his notes of 11-23 "the sea stacks in a line" and 11-25 18:14 on rock drawn by code).
+  Counted: 17; the four off Redwood Cove stood on one column of tiles (x 491.5) and the Egret coast's three coves
+  each had the same three at the same offsets (two of those triples 1.4 tiles off a line). `world3-coast.js
+  stacksApart3` (`STACKS3`): after the coasts are built every stack is re-sited within 5 tiles of where it stood -
+  (to 11, only when two neighbours on one line leave it nowhere nearer: the cove's fourth went 8 tiles) -
+  open sea 2 tiles round it, 7 tiles from any other, never the third of a line (`inLine3`: three within 30 tiles
+  lying within 2.5 tiles of one line) - and takes its own radius (0.75-1.35 of what it had), height (0.6-1.15) and one
+  of twelve shapes; a gull standing on one moves with it. The rock itself (`terrain.js seaStack`): it was one thin
+  pillar stepped in four even rings; now by its seed a tower with a shoulder, a broad block with a horn, or twin
+  stacks on one foot, basalt broken into columns at the top, 4 to 7 rocks thrown down round its foot; kelp and turf
+  on it cut to a third (with more faces to hang on, the rock went under them).
+- **The sea cave's rock** (the Redwood Caverns' sea mouth; the plan's "sea cave placeholder"): one mass stepped in
+  even rings - a drum. A `cliff` prop with `rough` (world3-caves.js; statics.js recipe `rg`) is drawn as a headland:
+  a low apron on the same outline (so what is solid is as before), a tall crag at the middle of its front where the
+  way in is, five lesser crags of their own heights either side, boulders on the apron. The ground under a rock
+  of dark stone is dark basalt (`groundbake.js darkRock`): with the apron low, the crags' pale granite slabs showed
+  round the rock's back as a collar.
+- Tests: `test/world3wayside.test.js` (the stacks: in the sea, solid, apart, no three in a line, no two one size and
+  shape, a gull's stack under it), `test/coastart.test.js` (`inLine3` on the two layouts found; twelve seeds twelve
+  rocks, broad and narrow; the cave's skyline against the drum's, its tallest crag at the front's middle).
+- Not done on the coast: North Cape's bluffs (`world3-west.js`: a west-facing shore dressed with south-facing wall
+  pieces every six rows - a column of square blocks; it wants the bluff drawn another way, a step of its own);
+  cypress knees; the fishing rocks' gear.
 

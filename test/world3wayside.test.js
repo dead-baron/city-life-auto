@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { buildWorld3 } from '../server/world3.js';
 import { TILE, T } from '../shared/constants.js';
 import { WAYSIDE } from '../shared/world3-wayside.js';
+import { STACKS3, inLine3 } from '../shared/world3-coast.js';
 import { FOOTBRIDGE } from '../shared/world3-footbridges.js';
 import { CREEKS3 } from '../shared/world3-creeks.js';
 import { COVER, TREE_COVER } from '../shared/world3-clearings.js';
@@ -254,3 +255,24 @@ test('no trail runs into open water: every wet stretch of a trail has a deck or 
   }
   assert.ok(n >= 5, `trails with a line (${n})`);
 });
+
+test('sea stacks stand as the sea left them: in open sea, apart, no three in a line, no two one size and shape', () => {
+  const S = m.props.filter((p) => p && p.t === 'seastack'), P = S.map((p) => [p.x / TILE, p.y / TILE]);
+  console.log('sea stacks', S.length, JSON.stringify(m.world3.stacks));
+  assert.ok(S.length >= 15, `the stacks are all still there (${S.length})`);
+  assert.ok(!m.world3.stacks.stuck, `none left where the rule could not place it (${m.world3.stacks.stuck})`);
+  for (const p of S) {
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE), at = `stack at ${tx}, ${ty}`;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const t = m.tiles[m.idx(tx + dx, ty + dy)]; assert.ok(t === T.WATER || t === T.DEEP, `${at}: in the water (${dx}, ${dy})`); }
+    assert.ok((m.solidProps.get(m.idx(tx, ty)) || []).length >= 1, `${at}: solid`);
+  }
+  for (let a = 0; a < P.length; a++) for (let b = a + 1; b < P.length; b++) {
+    assert.ok(Math.hypot(P[a][0] - P[b][0], P[a][1] - P[b][1]) >= STACKS3.apart - 0.01, `two stacks apart (${P[a]} and ${P[b]})`);
+    for (let c = b + 1; c < P.length; c++) assert.ok(!inLine3(P[a], P[b], P[c]) && !inLine3(P[a], P[c], P[b]) && !inLine3(P[b], P[a], P[c]), `three in a line: ${P[a]}, ${P[b]}, ${P[c]}`);
+  }
+  assert.equal(new Set(S.map((p) => `${p.s}:${p.r}:${p.h}`)).size, S.length, 'no two one size and shape');
+  assert.ok(new Set(S.map((p) => p.s)).size >= 6, `shapes used (${new Set(S.map((p) => p.s)).size})`);
+  const onStack = m.props.filter((g) => g && g.t === 'gull' && S.some((p) => Math.abs(p.x - g.x) < 2 * TILE && Math.abs(p.y - g.y) < 2 * TILE)).length;
+  assert.ok(onStack >= m.world3.stacks.gulls, `the gulls that stood on stacks still have a stack under them (${onStack} of ${m.world3.stacks.gulls})`);
+});
+

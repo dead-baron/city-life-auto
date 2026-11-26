@@ -49,7 +49,7 @@ import { buildWayside3 } from './world3-wayside.js';
 import { footbridges3 } from './world3-footbridges.js';
 import { woodsCreeks3, peakCreeks3 } from './world3-creeks.js';
 import { buildPeaks3, THAW } from './world3-peaks.js';
-import { coastByHand3 } from './world3-coast.js';
+import { coastByHand3, stacksApart3 } from './world3-coast.js';
 import { tropic3 } from './world3-tropic.js';   // (the nature showcase: Coral Cay's east lobe as NA1-E, Macaw Cove as SC3-H)
 import { mirageByHand3 } from './world3-mirage.js';
 import { fallsInView3 } from './world3-falls.js';
@@ -322,6 +322,7 @@ export function worldOpts(asked) {
       m.world3.peaks = buildPeaks3(m, H3);   // (Granite Peaks by hand, part 1: the alpine meadows, the stone hut and its spring, the summits' cairns, the Summit Trail - world3-peaks.js)
       m.world3.tarn = tarnByHand3(m, H3);   // (Granite Peaks by hand, part 2: Summit Tarn's shore, beach and camp; Eagle Crag - world3-tarn.js)
       m.world3.coast = coastByHand3(m, H3);   // (the coasts by hand, part 1: North Cape's tidepool shelf, its blowhole and seal rock; Redwood Cove dug back into the woods, its horn's tidepools - world3-coast.js)
+      m.world3.stacks = stacksApart3(m, H3);   // (no three sea stacks in a line, each its own size: world3-coast.js, 11-25)
       m.world3.tropic = tropic3(m, H3);   // (the nature showcase, 2026-10-31: Coral Cay's wild east lobe after the owner's NA1-E and SC3-H - its black-rock spine and falls, the inner lagoon, the mangrove inlet, the beach bar, Macaw Cove, the islet - and the kit on Wreck Beach and Tiki Point: world3-tropic.js)
       m.world3.beachCamps = beachCamps3(m, H3);   // (secluded camps on the wild coasts' beaches, the few most out of the way - world3-camps.js)
       m.world3.mirage = mirageByHand3(m, H3);   // (the desert by hand, part 1: Mirage Lake's rim, its green belt and palms, its white beach and jetty - world3-mirage.js)

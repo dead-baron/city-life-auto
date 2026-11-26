@@ -644,11 +644,20 @@ export function redStack(seed = 1, w = 90, d = 60, h = 110, ledge = false) {
     for (let k = 0; k < 5; k++) { const a = 0.4 + H(k, 5) * 2.4, r = 0.46 + H(k, 6) * 0.08; T.dome(cx + Math.cos(a) * w * r, cy + Math.sin(a) * d * r, 4 + H(k, 7) * 5, 3 + H(k, 8) * 3, 6 + H(k, 9) * 8, { style: 'redrock', seed: seed + k }); }
   }, W / 2, D / 2 + d * 0.3, seed);
 }
-// a sea stack / pinnacle: a tall narrow pillar with a few shoulders
+// a sea stack (NR1-C; 11-25 - it was one thin pillar stepped in four even rings, every stack the same but for its
+// size; the owner that day, of rock drawn by code: "vary the sizes ... not all so uniform and perfectly flat and
+// round"): by its seed a tower with a shoulder against it, a broad block with a horn, or twin stacks on one foot -
+// each mass its own ragged outline and steps, basalt broken into columns at its top -, and the rocks the sea has
+// thrown down round its foot. r: the main mass's radius, h: its height (art px)
 export function seaStack(seed = 1, r = 26, h = 150, style = 'basalt', o = {}) {
-  const W = Math.ceil(r * 3), D = Math.ceil(r * 2.4);
+  const Hh = (k) => hash(seed, k, 31), W = Math.ceil(r * 4.4), D = Math.ceil(r * 3.2), cx = W / 2, cy = D / 2, kind = Math.floor(Hh(1) * 3);
   return rockSprite(W, D, h + 8, (T) => {
-    T.plateau({ blob: { cx: W / 2, cy: D / 2, rx: r * 1.25, ry: r * 0.95, seed, wob: 0.22 } }, { style, seed, tiers: [[0, h * 0.25], [r * 0.25, h * 0.6], [r * 0.5, h * 0.85], [r * 0.7, h]], top: 'rock', veg: o.veg, hang: o.hang, moss: o.moss || 0, wet: o.wet ?? 16, barnacles: o.barnacles ?? 0.6, jag: 5 });
+    const com = { style, top: 'rock', veg: o.veg, hang: o.hang, moss: o.moss || 0, wet: o.wet ?? 16, barnacles: o.barnacles ?? 0.6, jag: 6, cols: style === 'basalt' ? { s: 15, v: 0.07, gap: 1.1 } : undefined };
+    const mass = (x, y, rx, ry, hh, k, steps) => T.plateau({ blob: { cx: x, cy: y, rx, ry, seed: seed + k * 17, wob: 0.3 } }, { ...com, seed: seed + k * 13, tiers: steps === 1 ? [[0, hh]] : steps === 2 ? [[0, hh * (0.55 + Hh(k + 40) * 0.2)], [Math.min(rx, ry) * (0.3 + Hh(k + 41) * 0.2), hh]] : [[0, hh * 0.4], [Math.min(rx, ry) * 0.28, hh * 0.75], [Math.min(rx, ry) * 0.55, hh]] });
+    if (kind === 0) { mass(cx + (Hh(2) - 0.5) * r * 0.3, cy, r, r * 0.8, h, 0, 3); mass(cx + (Hh(3) < 0.5 ? -1 : 1) * r * 0.85, cy + r * 0.15, r * 0.6, r * 0.5, h * (0.35 + Hh(4) * 0.25), 1, 2); }
+    else if (kind === 1) { mass(cx, cy, r * 1.35, r * 0.9, h * 0.7, 0, 2); mass(cx + (Hh(2) - 0.5) * r, cy - r * 0.1, r * 0.7, r * 0.55, h, 1, 2); }
+    else { mass(cx - r * 0.6, cy, r * 0.75, r * 0.65, h, 0, 3); mass(cx + r * 0.7, cy + r * 0.1, r * 0.6, r * 0.55, h * (0.5 + Hh(5) * 0.3), 1, 2); mass(cx + r * 0.05, cy + r * 0.25, r * 0.5, r * 0.4, h * 0.25, 2, 1); }
+    for (let k = 0; k < 4 + Math.floor(Hh(6) * 4); k++) { const a = Hh(10 + k) * 6.283, d = 1.25 + Hh(20 + k) * 0.6; T.dome(cx + Math.cos(a) * r * d, cy + Math.sin(a) * r * d * 0.7, 2.5 + Hh(30 + k) * 4.5, 2 + Hh(34 + k) * 3, 3 + Hh(38 + k) * 6, { style, seed: seed + k, barnacles: 0.5 }); }
   }, W / 2, D / 2 + r * 0.6, seed);
 }
 

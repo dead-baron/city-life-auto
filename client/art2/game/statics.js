@@ -370,6 +370,18 @@ export function makeStatic(r) {
       // times the band's height, its top the grey of the rock behind it; the desert's sandstone and the coasts' basalt
       // keep their stepped pieces)
       const ss = r.st === 'sandstone', CV = isCrag(r), ch = cliffH(r);
+      // (rg, 11-25: a rock that stands alone on flat ground - the sea cave's - is a headland of crags on a low apron,
+      // no two masses one height, the tallest at the middle of its front where the way in is; its outline, so what is
+      // solid, as before. It was one mass stepped in even rings: a drum. The owner that day, of rock drawn by code:
+      // "not all so uniform and perfectly flat and round")
+      if (r.rg) return rockSprite(W + pad * 2, D + 16, ch + 6, (Tr) => {
+        const sd = r.s || 1, hq = (k) => hash(sd, k, 53), com = { style: r.st || 'granite', veg: { kind: 'grass', density: 0.07, band: 2 }, hang: { kind: 'moss', amount: 0.25 }, moss: 0.1, jag: 10, cols: r.st === 'basalt' ? { s: 15, v: 0.08, gap: 1.2 } : undefined };
+        Tr.plateau({ poly }, { ...com, seed: sd, tiers: [[0, ch * 0.14]] });
+        const mass = (x, y, rx, ry, hh, k) => Tr.plateau({ blob: { cx: x, cy: y, rx, ry, seed: sd + k * 17, wob: 0.3 } }, { ...com, seed: sd + k * 13, tiers: [[0, hh * (0.72 + hq(k + 40) * 0.16)], [Math.min(rx, ry) * (0.35 + hq(k + 41) * 0.25), hh]] });
+        mass(W / 2 + pad, D + 6 - D * 0.3, W * 0.2, D * 0.27, ch, 0);
+        for (let k = 1; k <= 5; k++) mass(pad + W * (0.13 + 0.74 * ((k - 0.5) / 5 + (hq(k) - 0.5) * 0.1)), 6 + D * (0.34 + hq(k + 10) * 0.36), W * (0.085 + hq(k + 20) * 0.05), D * (0.2 + hq(k + 30) * 0.08), ch * (0.5 + hq(k + 50) * 0.42), k);
+        for (let k = 0; k < 9; k++) Tr.dome(pad + W * (0.08 + hq(k + 60) * 0.84), 6 + D * (0.62 + hq(k + 70) * 0.3), 5 + hq(k + 80) * 8, 4 + hq(k + 84) * 5, ch * 0.14 + 5 + hq(k + 88) * 10, { style: com.style, seed: sd + k });
+      }, W / 2 + pad, D + 6, r.s || 1);
       return rockSprite(W + pad * 2, D + 16, ch + 6, (Tr) => Tr.plateau({ poly }, { style: ss ? 'sandstone' : r.st === 'basalt' ? 'basalt' : CV ? 'crag' : 'granite', tiers: CV ? [[0, ch * 0.88], [5, ch]] : cliffTiers(D, r.h), veg: ss ? { kind: 'sage', density: 0.05, band: 2 } : { kind: 'grass', density: CV ? 0.05 : 0.1, band: 2 }, hang: ss ? null : { kind: 'moss', amount: CV ? 0.2 : 0.35 }, moss: ss ? 0 : CV ? 0.05 : 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
     }
     case 'crystal': {
@@ -402,7 +414,7 @@ export function makeStatic(r) {
     case 'outcrop': { const w = r.w / 2, d = r.d / 2, h = r.h / 2; return artRock(outcrop(r.s + 7, w, d, h, r.style || 'granite', r.j ? { veg: { kind: 'shrub', density: 0.1, band: 1 }, hang: { kind: 'vine', amount: 0.4 }, moss: 0.18, wet: 3, tiers: [[0, h * 0.78], [Math.min(w, d) * 0.16, h]] } : { veg: { kind: 'grass', density: 0.06, band: 1 }, moss: 0.1 })); }   // (j: a jungle's black rock - vines down its faces, shrubs on its ledges: shared/world3-tropic.js)
     case 'towel': return makeTowel(r);
     case 'blanket': return makeBlanket(r);
-    case 'stack': return artRock(seaStack(r.s || 1, (r.r || 26) / 2, (r.h || 150) / 2, 'basalt', { hang: { kind: 'kelp', amount: 0.5 }, veg: { kind: 'grass', density: 0.1, band: 1 } }));
+    case 'stack': return artRock(seaStack(r.s || 1, (r.r || 26) / 2, (r.h || 150) / 2, 'basalt', { hang: { kind: 'kelp', amount: 0.14 }, veg: { kind: 'grass', density: 0.05, band: 1 } }));   // (11-25: less weed and turf - with more faces to hang on, the rock went under it)
     case 'sealrock': { const h = (r.h || 26) / 2; return artRock(outcrop(r.s || 3, (r.w || 120) / 2, (r.d || 70) / 2, h, 'basalt', { barnacles: 0.8, wet: 6, hang: { kind: 'kelp', amount: 0.6 }, tiers: [[0, h * 0.7], [4, h]] })); }
     case 'surf': return TP.surfBand(r.len, r.s, r.v, r.w);   // (the surf over a reef band, the white water at a falls' foot: shared/world3-tropic.js)
     case 'crit': return r.k === 'starfish' ? WL.starfish(r.col || '#d8583a', r.glow ? 6 : 5, r.s || 1, r.glow || 0) : r.k === 'urchin' ? WL.urchin(4, r.s || 1, r.col || '#3a2448') : WL.anemone(4, r.s || 1);
@@ -2690,7 +2702,7 @@ function propItems(c, p, pi, I) {
     case 'roadsign': { const k = p.k || 'arrow', hd = qa((p.a || 0) + PI / 2, 8); V(`rsign:${k}:${hd.toFixed(2)}`, 'roadSign', [k], hd); return; }
     case 'fingerpost': V('fpost', 'fingerPost', [], qa(u * PI, 4)); return;
     case 'stand': V('pstand', 'stand', []); return;
-    case 'cliff': put(I, { key: `cliff:${p.w}:${p.d}:${p.h}:${p.s || 1}${p.st ? ':' + p.st : ''}${p.relief ? ':r' : ''}`, recipe: { t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1, st: p.st, ...(p.relief && { rl: 1 }) }, x, y, ext: [p.w / 2 + 20, p.d + cliffH({ w: p.w, h: p.h, st: p.st, rl: p.relief }) + 30, p.w / 2 + 20, 20], pi }); return;
+    case 'cliff': put(I, { key: `cliff:${p.w}:${p.d}:${p.h}:${p.s || 1}${p.st ? ':' + p.st : ''}${p.relief ? ':r' : ''}${p.rough ? ':g' : ''}`, recipe: { t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1, st: p.st, ...(p.relief && { rl: 1 }), ...(p.rough && { rg: 1 }) }, x, y, ext: [p.w / 2 + 20, p.d + cliffH({ w: p.w, h: p.h, st: p.st, rl: p.relief }) + 30, p.w / 2 + 20, 20], pi }); return;
     case 'mineportal': V('mport', 'minePortal', []); lightAt(I, x, y + 6, 30, 90, [1, 0.75, 0.4], 0.8, 'lamp'); return;
     case 'minecart': V('mcart', 'mineCart', [], PI / 2); return;
     case 'barrel': V('mbarrel', 'mBarrel', []); return;
@@ -2927,7 +2939,7 @@ function propItems(c, p, pi, I) {
       if (glow) lightAt(I, x, y, 3, 64, [1, 0.82, 0.4], 1.3, 'sign');
       return;
     }
-    case 'seastack': put(I, { key: `stack:${p.s || 1}:${p.r || 26}:${p.h || 150}`, recipe: { t: 'stack', s: p.s || 1, r: p.r || 26, h: p.h || 150 }, x, y, ext: [(p.r || 26) * 1.6 + 10, (p.h || 150) + 40, (p.r || 26) * 1.6 + 10, (p.r || 26) + 20], pi }); return;
+    case 'seastack': put(I, { key: `stack:${p.s || 1}:${p.r || 26}:${p.h || 150}`, recipe: { t: 'stack', s: p.s || 1, r: p.r || 26, h: p.h || 150 }, x, y, ext: [(p.r || 26) * 2.3 + 10, (p.h || 150) + 40, (p.r || 26) * 2.3 + 10, (p.r || 26) * 1.7 + 20], pi }); return;
     case 'blowhole': V(`blow:${p.w || 64}:${p.d || 48}`, 'blowhole', [p.w || 64, p.d || 48]); return;   // (the coasts by hand: shared/world3-coast.js)
     case 'sealrock': put(I, { key: `srock:${p.w || 120}:${p.d || 70}`, recipe: { t: 'sealrock', w: p.w || 120, d: p.d || 70, h: 26, s: 3 }, x, y, ext: [(p.w || 120) / 2 + 16, 80, (p.w || 120) / 2 + 16, (p.d || 70) / 2 + 20], pi }); return;
     case 'lantern': V('lant', 'lantern', ['post', 1]); lightAt(I, x, y, 30, 110, [1, 0.78, 0.46], 1.4, 'lamp'); return;

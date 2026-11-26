@@ -276,6 +276,8 @@ function tileFacts(C) {
   C.ruts = tracks.filter((r) => r.ruts || r.ride);   // (a two-rut track's ruts, and the off-road rides - the Red Rock Trail, the Highland Enduro - drawn per pixel: rutPx)
   // (World v3 8.22, H50: the desert's tables - their tops' cap rock, the talus at their feet - and Red Rock Canyon's floor
   // as the desert round it, its rock at its walls; a map with relief only: today's bakes as before)
+  // (the ground under a rock of dark stone is dark: round the sea cave's basalt the crags' pale granite slabs showed as a rim, 11-25)
+  const darkRock = propsNear(C, 340).filter((p) => p.t === 'cliff' && (p.st === 'basalt' || p.st === 'lava'));
   const tabs = M.relief && M.tables ? M.tables.filter((t) => t.x + t.rx + 18 >= TX0 && t.x - t.rx - 18 <= TX0 + TN && t.y + t.ry + 18 >= TY0 && t.y - t.ry - 18 <= TY0 + TN) : null;
   const tabMat = (tx, ty, base) => {
     let e = 99, s = 0;
@@ -384,7 +386,7 @@ function tileFacts(C) {
     // building's foundation the city's walls stand on. Most rock has its cliff face drawn over it (a sprite on its
     // south edge); the rest - a band's top, its sides, a crag with no drop to the south - showed as plain ground you
     // walked into (the owner, 2026-10-21)
-    else if (t === T.WALL) { const r = b.tres[k]; m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (r & 32) || (!r && WILD_STYLES.has(st) && st !== 'airport') ? (st === 'desert' && !(r & ~32) ? M_.REDROCK : M_.CRAG) : M_.WALL; }   // (World v3 8.22: a desert table's cliff band, red rock)   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
+    else if (t === T.WALL) { const r = b.tres[k]; m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (r & 32) || (!r && WILD_STYLES.has(st) && st !== 'airport') ? (st === 'desert' && !(r & ~32) ? M_.REDROCK : darkRock.some((p) => Math.abs(X - p.x) < p.w / 2 + 24 && Y > p.y - p.d - (p.h || 0) - 40 && Y < p.y + 24) ? M_.BASALT : M_.CRAG) : M_.WALL; }   // (World v3 8.22: a desert table's cliff band, red rock)   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
     else if (t === T.FLOOR) { const bi = b.tbld[k], bd = bi >= 0 ? M.buildings[bi] : null; m = bd && /house|apt|home|shack|mansion|farm/.test(bd.kind) ? M_.FLOORW : M_.FLOOR; }
     else if (t === T.COUNTER) m = M_.COUNTER;
     else m = M_.FOUND;
