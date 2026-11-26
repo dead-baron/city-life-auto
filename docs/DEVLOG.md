@@ -27946,7 +27946,9 @@ Part B's first place (the owner, 11-24: "before the beta"; the pick agreed in th
   with velvet ropes before the counter, two benches across from it, a plant either side of the hall's mouth
   (drawn only); what is cut open beside the box drawn as the dark of shut rooms, not a grey floor.
 - **A sign names what is behind it** (`theatreBlade`): every `theatre` building wore a CINEMA blade and one has
-  screens (11 theatre buildings in World v3). CINEMA over the cinema only; a cabaret says CABARET; the rest LIVE.
+  screens (11 theatre buildings in World v3). CINEMA over the cinema only; a cabaret says CABARET, a playhouse SHOWS, a club's building LIVE (11-26: the
+  placement lint's `bladeBiz` row caught the first version's LIVE on six playhouses; its theatre words no longer
+  allow CINEMA).
 - The server (`server/systems/cinema.js`) and the page's film (`client/cinema.js`) already went by the rooms'
   list: no change.
 - `test/cinema.test.js`: a 40 x 59 building, door south and north - four screens, the box's size, at the door,

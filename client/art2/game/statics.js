@@ -1370,8 +1370,8 @@ function specOf(c, b, A, s, D) {
       shop('lobby', null, { awning: null, people: 3 });
       neon(named || 'THEATER', [255, 210, 120], 96); (spec.plaques ||= []).push({ text: 'TONIGHT', cx: w / 2, v: 128, bg: '#2a1e1a', fg: [255, 236, 190], lit: true, face: 'marquee', bulbs: true });
       // (a sign names what is behind it - 11-25: every theatre wore CINEMA and one has screens. CINEMA over the building
-      // shared/cinema.js made the cinema; a cabaret says so; the playhouses and a supper club's building say LIVE)
-      blade(theatreBlade(c.M, b, named), [255, 200, 90], 70);
+      // shared/cinema.js made the cinema; a cabaret says so, a playhouse SHOWS, a supper club's building LIVE)
+      blade(theatreBlade(c.M, b, named, poisOf(c.M, b).some((p) => p.kind === 'club')), [255, 200, 90], 70);
       break;
     }
     case 'bank': case 'court': case 'cityhall': {
@@ -2557,9 +2557,10 @@ function lampStyle(c, p) {
   if (st === 'commercial' || st === 'apartments') return 'green';
   return 'cobra';
 }
-export function theatreBlade(M, b, named) {
+export function theatreBlade(M, b, named, club = false) {
   if (M.cinema && M.cinema.b === b.id) return 'CINEMA';
-  return /CABARET/i.test(named || b.name || '') ? 'CABARET' : 'LIVE';
+  if (club || /CLUB/i.test(named || b.name || '')) return 'LIVE';   // (a supper club in a theatre's building)
+  return /CABARET/i.test(named || b.name || '') ? 'CABARET' : 'SHOWS';   // (a playhouse: tools/placementlint.mjs BLADE_WORDS.theatre)
 }
 function propItems(c, p, pi, I) {
   const t = p.t, x = p.x, y = p.y, u = hh(x, y, 7), seed = Math.floor(hh(x, y, 9) * 6);

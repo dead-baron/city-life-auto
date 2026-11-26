@@ -167,8 +167,11 @@ test('a sign names what is behind it: CINEMA over the building with the screens 
   const { theatreBlade } = await import('../client/art2/game/statics.js');
   const M = { cinema: { b: 12 } };
   assert.equal(theatreBlade(M, { id: 12, name: 'The Grand Theater' }, 'THE GRAND THEATER'), 'CINEMA');
-  assert.equal(theatreBlade(M, { id: 13, name: 'The Palace' }, 'THE PALACE'), 'LIVE');
+  assert.equal(theatreBlade(M, { id: 13, name: 'The Palace' }, 'THE PALACE'), 'SHOWS');
+  assert.equal(theatreBlade(M, { id: 15, name: 'The Palace' }, 'THE PALACE', true), 'LIVE', 'a club in the building');
   assert.equal(theatreBlade(M, { id: 14, name: 'Velvet Cabaret' }, null), 'CABARET');
-  assert.equal(theatreBlade({}, { id: 12, name: 'The Grand Theater' }, null), 'LIVE', 'no cinema on the map, no CINEMA sign');
+  assert.equal(theatreBlade({}, { id: 12, name: 'The Grand Theater' }, null), 'SHOWS', 'no cinema on the map, no CINEMA sign');
+  const { BLADE_WORDS } = await import('../tools/placementlint.mjs');
+  assert.ok(!/CINEMA/.test(BLADE_WORDS.theatre) && /SHOWS/.test(BLADE_WORDS.theatre) && /CINEMA/.test(BLADE_WORDS.cinema), 'the lint holds it: CINEMA on a theatre without screens is a fault');
 });
 

@@ -359,7 +359,7 @@ export const BLADE_WORDS = {
   hotel: 'HOTEL INN MOTEL', casino: 'CASINO', bar: 'BAR PUB LIVE JAZZ LOUNGE CLUB DANCE OPEN GIRLS POOL SALOON', club: 'CLUB DANCE LIVE OPEN BAR LOUNGE',
   arcade: 'ARCADE GAMES PLAY OPEN', diner: 'EAT DINER CAFE DELI FOOD NOODLES OYSTERS OPEN', cafe: 'CAFE COFFEE EAT', coffee: 'CAFE COFFEE EAT DINER DELI FOOD NOODLES OYSTERS OPEN',
   mart: 'DELI SHOP OPEN MART LIQUOR BEER WINE', convenience: 'DELI SHOP OPEN MART', liquor: 'LIQUOR BEER WINE OPEN DELI', gallery: 'ART PRINTS POTTERY', clothes: 'VINTAGE TAILOR SKATE SHOP',
-  clothing: 'VINTAGE TAILOR SKATE SHOP', salon: 'HAIR', barber: 'HAIR', laundry: 'WASH', books: 'BOOKS', florist: 'FLOWERS', pawn: 'PAWN ANTIQUES', theatre: 'CINEMA THEATER SHOWS',
+  clothing: 'VINTAGE TAILOR SKATE SHOP', salon: 'HAIR', barber: 'HAIR', laundry: 'WASH', books: 'BOOKS', florist: 'FLOWERS', pawn: 'PAWN ANTIQUES', theatre: 'THEATER SHOWS',   // (11-26: not CINEMA - only the building with the screens, whose place is a 'cinema', says so)
   cinema: 'CINEMA THEATER SHOWS', grandstand: 'GO', fishmarket: 'FISH', market: 'FISH', fence: 'CLUB', sports: 'SHOP',
 };
 const NOT_PLACES = new Set(['home', 'atm', 'vending', 'reception', 'evidence', 'delivery']);
