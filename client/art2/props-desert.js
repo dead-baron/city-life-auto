@@ -76,6 +76,39 @@ export function hoodoo(h = 80, seed = 1) {   // (h: art px; a voxel is a world p
   for (let z = capZ + 2 * K; z < H - K; z++) { const q = Math.abs(z - capZ - 5 * K) / K; m.ell(cx + K, cy, z, (18 - q * 0.3) * K, (9.5 - q * 0.2) * K, 1.2, z < capZ + 4 * K ? band[2] : cap); }   // (the cap: a flat slab, its underside dark)
   return m;
 }
+// a tin shack (NS1-C): weathered plank walls under a gable of rust-streaked corrugated iron, a lean-to porch on posts
+// at its east end, a door and a window on the front (+y), a stove pipe. A voxel is a world px.
+export function tinShack(seed = 1) {
+  const K = 1.3, q = (v) => Math.round(v * K), W = q(112), D = q(78), m = new Vox(W, D, q(78)), X0 = q(8), X1 = q(82), Y0 = q(12), Y1 = q(60), WH = q(40), RY = (Y0 + Y1) / 2;
+  const plank = m.mat({ ramp: R('#6a5644'), k: 3, shade: (x, y, z) => (Math.round(x + y) % 6 === 0 ? -1 : 0) + (hash(Math.floor((x + y) / 6), Math.round(z / 9), seed) - 0.5) * 0.9 });
+  const rusty = (x, y) => { const c = Math.floor(x / 4), t = Math.abs(y - RY) / (RY - Y0 + 5); return t < hash(c, 1, seed + 3) * 0.75 || 1 - t < hash(c, 2, seed + 4) * 0.5 || hash(Math.floor(x / 12), Math.floor(y / 10), seed + 5) > 0.8; };   // (streaks down from the ridge and up from the eaves, a patch here and there)
+  const tin = m.mat({ ramp: R('#7e8486'), k: 3, shade: (x) => (Math.round(x) % 4 < 2 ? 0.5 : -0.5) }), rust = m.mat({ ramp: ramp('#7a3c26', 6, 3), k: 3, shade: (x, y) => (Math.round(x) % 4 < 2 ? 0.4 : -0.6) + (hash(Math.round(x), Math.round(y), seed) - 0.5) * 0.5 });
+  const dark = m.mat({ ramp: R('#2a221e'), k: 2 }), pane = m.mat({ ramp: R('#39444c'), k: 2 }), post = m.mat({ ramp: LOGD, k: 3 }), pipe = m.mat({ ramp: PIPE, k: 3 });
+  const roofZ = (y) => WH + (RY - Y0 + 5 - Math.abs(y - RY)) * 0.72;
+  m.fill((x, y, z) => (z < roofZ(y) - 1 ? plank : -1), X0, Y0, 0, X1, Y1, q(70));                                  // (the walls, up into the gable ends)
+  m.fill((x, y, z) => { const t = roofZ(y); return z >= t - 1 && z < t + 2 ? (rusty(x, y) ? rust : tin) : -1; }, X0 - 5, Y0 - 6, WH - 8, X1 + 5, Y1 + 6, q(74));   // (the gable roof)
+  m.fill((x, y, z) => { const t = WH - 2 - (x - X1) * 0.42; return z >= t - 1 && z < t + 2 ? (rusty(x + 40, y) ? rust : tin) : -1; }, X1, Y0 + 4, q(20), W - 3, Y1 - 4, WH + 2);   // (the lean-to)
+  for (const y of [Y0 + 6, Y1 - 7]) m.cyl('z', W - 8, y, 0, 2.5, 0, WH - 15, post);
+  m.box(q(34), Y1, 0, q(46), Y1 + 1, q(27), dark); m.box(q(33), Y1, q(27), q(47), Y1 + 1, q(29), post);              // (the door, its lintel)
+  m.box(q(56), Y1, q(15), q(70), Y1 + 1, q(28), pane); m.box(q(62), Y1, q(15), q(64), Y1 + 1, q(28), post); m.box(q(55), Y1, q(13), q(71), Y1 + 1, q(15), post);   // (the window, its bar and sill)
+  m.cyl('z', q(22), RY - 10, 0, 3, 0, q(72), pipe);
+  return m;
+}
+// a rusted pickup left where it stopped (NS1-C): cab, bed and hood all rust, no glass, the tyres flat. Along x, nose +x.
+export function rustPickup(seed = 1) {
+  const L = 94, Wd = 42, m = new Vox(L, Wd, 44), y0 = 4, y1 = Wd - 4, cy = Wd / 2;
+  const sh = (x, y, z) => (hash(Math.round(x / 6), Math.round(y / 6) + Math.round(z / 5), seed) - 0.5) * 1.1 + (hash(Math.round(x), Math.round(y) + Math.round(z), seed + 2) > 0.92 ? -0.9 : 0);
+  const body = m.mat({ ramp: ramp('#74391f', 6, 3), k: 3, shade: sh }), top = m.mat({ ramp: ramp('#84452a', 6, 3), k: 3, shade: sh }), bed = m.mat({ ramp: ramp('#4a2c20', 6, 3), k: 2, shade: sh }),   // (rust on iron is made, not grown: the plain ramp - nature's lifts it to the desert's own orange)
+  dark = m.mat({ ramp: R('#1c1716'), k: 1 }), tyre = m.mat({ ramp: R('#34302e'), k: 2 }), rim = m.mat({ ramp: R('#6a4630'), k: 2 });
+  m.box(4, y0, 7, 46, y1, 21, body); m.box(7, y0 + 3, 12, 44, y1 - 3, 21, 0); m.box(7, y0 + 3, 11, 44, y1 - 3, 12, bed);   // (the bed, open, its floor in shade)
+  m.box(46, y0, 7, 68, y1, 24, body);                                                                                   // (the cab's lower half: the doors)
+  m.fill((x, y, z) => (Math.abs(y - cy) < (y1 - y0) / 2 - (z - 24) * 0.25 && x > 47 + (z - 24) * 0.2 && x < 67 - (z - 24) * 0.45 ? (z > 34 ? top : (x < 50 || x > 61 - (z - 24) * 0.45 || (Math.abs(y - cy) > 5 && Math.abs(y - cy) < 8 && x > 58)) ? body : dark) : -1), 46, y0, 24, 68, y1, 37);   // (the greenhouse: pillars, the dark where glass was, the roof)
+  m.fill((x, y, z) => { const hw = (y1 - y0) / 2 - 3 - Math.max(0, x - 82) * 0.5; return Math.abs(y - cy) < hw && z < 23 - Math.max(0, x - 80) * 0.35 ? top : -1; }, 68, y0, 7, L - 4, y1, 24);   // (the hood, narrowing and falling to the nose)
+  for (const sy of [-1, 1]) m.fill((x, y, z) => (Math.abs(y - (cy + sy * ((y1 - y0) / 2 - 2))) < 2.5 && z < 19 - ((x - 76) / 9) ** 2 * 5 ? body : -1), 66, y0 - 1, 7, L - 5, y1 + 1, 20);   // (the front wings)
+  m.box(L - 6, cy - 9, 10, L - 4, cy + 9, 18, dark); for (const sy of [-1, 1]) m.box(L - 7, cy + sy * 13 - 2, 13, L - 5, cy + sy * 13 + 2, 17, dark);   // (the grille, the empty lamp sockets)
+  for (const x of [20, L - 19]) for (const y of [y0 - 1, y1 - 4]) { m.cyl('y', x, 0, 6, 7, y, y + 5, tyre, 3, rim); m.box(x - 8, y, 0, x + 8, y + 5, 2, tyre); }   // (flat on their rims)
+  return m;
+}
 // a hawk's shadow on the ground (sprite: soft, dark, flat - its wings spread, a little blurred), w px across
 export function hawkShadow(w = 54) {
   const H = Math.round(w * 0.55), G = new GBuf(w + 4, H + 4);
@@ -103,4 +136,4 @@ export function groundShadow(w = 200, h = 70) {
   }
   return G;
 }
-export const DESERT_PROPS = { ranchGate, ramada, redCairn, hoodoo, hawkShadow, groundShadow, MAT };
+export const DESERT_PROPS = { ranchGate, ramada, redCairn, hoodoo, tinShack, rustPickup, hawkShadow, groundShadow, MAT };

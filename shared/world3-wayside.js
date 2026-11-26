@@ -9,7 +9,7 @@
 //                               trough.
 //   in the Red Rock Desert      (11-25, NS1-C and NR1-B "desert set pieces", "sandstone desert rocks") a cracked
 //                               playa with a dead snag, a stand of hoodoos, saguaros round a rock pile, joshua
-//                               trees among boulders. On its bare dirt (not the sand sheets), level, off the tables.
+//                               trees among boulders, a tin shack with a rusted pickup. On its bare dirt (not the sand sheets), level, off the tables.
 // The pieces drawn for them on 11-21 and never placed (client/art2/props-rural.js: dryStoneWall, fieldGate, stile,
 // ropeSwing, woodRuins) are world props here - 'ruins', 'drywall', 'fgate', 'stile', 'rswing' (statics.js draws them) -
 // solid by the world's own circles. (shared/naturesites.js waysideFinds did this for the first city's districts: its
@@ -29,7 +29,7 @@ export const WAYSIDE = {
   by: {               // district: how many, and what (in turn, so a district has each kind before a second of any)
     47: { n: 18, set: 'woods', kinds: ['ruins', 'oakbench', 'firering', 'mushlog'] },   // Highland Woods (Egret Coast has no pine and oak ground that fits: its own finds come with the coast)
     49: { n: 16, set: 'valley', kinds: ['drywall', 'oakswing', 'apiary', 'stilewall', 'windpump'] },   // Willow Valley
-    50: { n: 28, set: 'desert', kinds: ['playa', 'hoodoos', 'saguaros', 'joshuas'] },   // the Red Rock Desert
+    50: { n: 30, set: 'desert', kinds: ['playa', 'hoodoos', 'saguaros', 'joshuas', 'tinshack'] },   // the Red Rock Desert
   },
 };
 const VEG = /^(tree_|redwood|shrub_|bush_|flowers_|rwstump|rwlog|log$|fern|gnaw|boulder$|cactus$)/, TALL = /^(tree_|redwood)/;   // (what grows or lies wild: a find clears it from its ground)
@@ -216,6 +216,17 @@ export function buildWayside3(m, H3) {
         P('cactus', X + 10, Y + 22, 5, { sp: 'yucca', k: 1 });
         for (let k = 0; k < 3; k++) P('shrub_a', X - 100 + k * 96 + (h(20 + k) - 0.5) * 20, Y + 96 + (h(23 + k) - 0.5) * 12, 0, { sp: 'dryGrass', k: 1 });
         break;
+      case 'tinshack': {   // (NS1-C: a tin shack somebody left, a rusted pickup where it stopped, drums and tyres - props-desert.js)
+        const sx = X - 20, sy = Y - 30, a = (h(1) < 0.5 ? 0.5 : 2.7) + (h(2) - 0.5) * 0.5, px = X + 50, py = Y + 56, ca = Math.cos(a), sa = Math.sin(a);
+        P('tinshack', sx, sy, 0, { s: Math.floor(h(3) * 3) });
+        for (const ox of [-52, -34, -16, 2, 20]) for (const oy of [-24, -4, 16]) solid(sx + ox, sy + oy, 12);   // (its walls: the body stands west of the model's middle - x -62..34, y -34..28 of it -, the lean-to open)
+        P('rustpickup', px, py, 0, { a: Math.round(a * 100) / 100 });
+        for (const q of [-28, 0, 28]) solid(px + ca * q, py + sa * q, 15);
+        P('drum', X - 84, Y + 2, 7); P('drum', X - 96, Y + 16, 7); P('tires', X - 60, Y + 40, 8);
+        P('tree_a', X + 96, Y - 70, 8, { sp: 'deadSnag', k: 1 });
+        for (let k = 0; k < 3; k++) P('shrub_a', X - 100 + k * 60 + (h(10 + k) - 0.5) * 20, Y + 92 + (h(13 + k) - 0.5) * 12, 0, { sp: k === 1 ? 'tumble' : 'dryGrass', k: 1 });
+        break;
+      }
       case 'windpump':   // (NS1-E: a windmill over its trough, the ground trodden round it)
         earth(0, 1, 2);
         P('windmill', X - 20, Y - 16, 10);

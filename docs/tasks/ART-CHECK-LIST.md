@@ -156,10 +156,11 @@ last leap over the top of a falls; the other fish's leaps.
 - [x] **The tables' cliff faces: A** (the owner, 11-25 17:18: "For table edge I think A does look better"). A, as
   built: each piece a stack of stepped rings. B, one sheer wall with a flat cap, was shown (`report-65`) and is not
   built.
-- [ ] **The desert, left to do** (11-25): the mission ruin (3 x 4 tiles - a real ruin with walls and a yard), the
-  tin shack with a rusted pickup (NS1-C), a seep's square pool.
-- [ ] **The desert's found places** (11-25): 28 by rule, 7 each - a cracked playa with a dead snag, a stand of
-  hoodoos, saguaros round a rock pile, joshua trees among boulders. Picture: `report-66`; the hoodoos redrawn as
+- [ ] **The desert, left to do** (11-25): the mission ruin made bigger (a step of its own: its model is shared with
+  today's world and doubling it is heavy); a seep's square pool (with the water's edges).
+- [ ] **The desert's found places** (11-25): 30 by rule, 6 each - a cracked playa with a dead snag, a stand of
+  hoodoos, saguaros round a rock pile, joshua trees among boulders, a tin shack with a rusted pickup (`report-69`).
+  Picture: `report-66`; the hoodoos redrawn as
   banded columns under a cap, `report-67` (they were thin dark spires - the five by the arch too). The playa's pan
   is small (4-7 tiles across).
 - [ ] **The arch by the lookout** (Red Rock Desert): it was the sea's arch - grey rock, turf on top; now red

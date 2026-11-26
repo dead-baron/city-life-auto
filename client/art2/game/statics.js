@@ -1885,7 +1885,7 @@ function voxModel(m, a) {
     case 'cabbages': return K.cabbages(a[0] || 3, a[1] || 3); case 'cornRow': return U.cornField(120, 60, (a[0] || 0) + 1); case 'wheatRow': return K.wheatPatch(120, 50, (a[0] || 0) + 1); case 'ropeLine': return TW.ropeLine(a[0] || 60);
     case 'gnawStump': return GD.gnawedStump(a[0] || 0, a[1] || 1); case 'gnawLog': return GD.gnawedLog(a[0] || 90, a[1] || 2); case 'hideRack': return GD.hideRack(a[0] || 0);
     case 'alley': return AL.model(a[0], a[1] || 0);
-    case 'ranchGate': return DZ.ranchGate(a[0] || 120, a[1] || 90); case 'ramada': return DZ.ramada(a[0] || 120, a[1] || 80, a[2] || 56); case 'redCairn': return DZ.redCairn(a[0] || 4, a[1] || 1); case 'hoodoo': return DZ.hoodoo(a[0] || 80, a[1] || 1); case 'hawkShadow': return DZ.hawkShadow(a[0] || 54); case 'groundShadow': return DZ.groundShadow(a[0] || 200, a[1] || 70);
+    case 'ranchGate': return DZ.ranchGate(a[0] || 120, a[1] || 90); case 'ramada': return DZ.ramada(a[0] || 120, a[1] || 80, a[2] || 56); case 'redCairn': return DZ.redCairn(a[0] || 4, a[1] || 1); case 'hoodoo': return DZ.hoodoo(a[0] || 80, a[1] || 1); case 'tinShack': return DZ.tinShack(a[0] || 1); case 'rustPickup': return DZ.rustPickup(a[0] || 1); case 'hawkShadow': return DZ.hawkShadow(a[0] || 54); case 'groundShadow': return DZ.groundShadow(a[0] || 200, a[1] || 70);
     case 'roadrunner': return WL.roadrunner(); case 'lizard': return WL.lizard(a[0] || '#b8a070'); case 'deadTree': return WL.deadTree(a[0] || 1, a[1] || 70);
     default: return EMPTY_VOX();
   }
@@ -1895,7 +1895,7 @@ const EMPTY_VOX = () => new Vox(1, 1, 1);
 function vdim(m, a) {
   switch (m) {
     case 'elPier': return [18, (a[1] || 300) + 26, (a[0] || 128) - 18]; case 'elStairs': return [(a[0] || 150) + 20, 44, (a[1] || 128) + 40]; case 'stationBridge': return [a[0] || 280, 36, (a[1] || 88) + 30];
-    case 'ranchGate': return [(a[0] || 120) + (a[1] || 90) * 2 + 12, 30, 84]; case 'ramada': return [(a[0] || 120) + 8, (a[1] || 80) + 8, (a[2] || 56) + 14]; case 'redCairn': return [16, 16, 6 + (a[0] || 4) * 5]; case 'hoodoo': return [96, 80, (a[0] || 80) * 2 + 8]; case 'hawkShadow': return [(a[0] || 54) + 4, (a[0] || 54) * 0.6 + 4, 2]; case 'groundShadow': return [(a[0] || 200) + 2, (a[1] || 70) + 2, 2];
+    case 'ranchGate': return [(a[0] || 120) + (a[1] || 90) * 2 + 12, 30, 84]; case 'ramada': return [(a[0] || 120) + 8, (a[1] || 80) + 8, (a[2] || 56) + 14]; case 'redCairn': return [16, 16, 6 + (a[0] || 4) * 5]; case 'hoodoo': return [96, 80, (a[0] || 80) * 2 + 8]; case 'tinShack': return [146, 101, 101]; case 'rustPickup': return [94, 42, 44]; case 'hawkShadow': return [(a[0] || 54) + 4, (a[0] || 54) * 0.6 + 4, 2]; case 'groundShadow': return [(a[0] || 200) + 2, (a[1] || 70) + 2, 2];
     case 'roadrunner': return [30, 8, 22]; case 'lizard': return [34, 14, 6]; case 'deadTree': return [(a[1] || 70) + 10, 10, (a[1] || 70) + 8];
     case 'gnawStump': return [30, 30, a[0] ? 64 : 26]; case 'gnawLog': return [(a[0] || 90) + 14, 26, 16]; case 'hideRack': return [40, 16, 44];
     case 'alley': return AL.dim(a[0]);
@@ -2869,6 +2869,8 @@ function propItems(c, p, pi, I) {
     case 'rgate': V(`rgate:${p.w || 120}:${p.wing || 90}:${qa(p.a || 0, 4).toFixed(2)}`, 'ranchGate', [p.w || 120, p.wing || 90], qa(p.a || 0, 4)); return;
     case 'ramada': V(`ramada:${p.w || 120}:${p.d || 80}`, 'ramada', [p.w || 120, p.d || 80, 56]); return;
     case 'rcairn': V(`rcairn:${p.k || 4}:${(p.v || 0) % 3}`, 'redCairn', [p.k || 4, (p.v || 0) % 3 + 1]); return;
+    case 'tinshack': V(`tshack:${(p.s || 0) % 3}`, 'tinShack', [(p.s || 0) % 3 + 1]); return;   // (the desert's found places: props-desert.js, world3-wayside.js)
+    case 'rustpickup': { const hd = qa(p.a || 0, 16); V(`rpick:${hd.toFixed(2)}`, 'rustPickup', [1], hd); return; }
     case 'hoodoo': { const h = Math.round((p.h || 110) / 10) * 10; V(`hoodoo:${h}:${(p.s || 0) % 4}`, 'hoodoo', [h, (p.s || 0) % 4 + 1]); return; }   // (a banded column under its cap: props-desert.js)
     case 'hawkshadow': V('hawksh', 'hawkShadow', [54]); return;
     case 'gshadow': V(`gsh:${p.w || 200}:${p.h || 70}`, 'groundShadow', [p.w || 200, p.h || 70]); return;

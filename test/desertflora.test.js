@@ -69,3 +69,9 @@ test("an arch in the desert is red sandstone, bare; the sea's keeps its dark roc
   assert.match(SRC, /const dry = c\.dist\(x, y\)\.style === 'desert' \|\| c\.biome\(x, y\) === 3 \? 1 : 0;/, 'the bake picks it by where the arch stands');
 });
 
+test('the tin shack and the rusted pickup: drawn, rust and tin on the roof, the pickup darker than the ground it stands on', () => {
+  const stat = (G) => { let n = 0, r = 0, g = 0, b = 0, grey = 0, rust = 0; for (let i = 0; i < G.w * G.h; i++) { const j = i * 4; if (!G.col[j + 3]) continue; n++; r += G.col[j]; g += G.col[j + 1]; b += G.col[j + 2]; if (Math.abs(G.col[j] - G.col[j + 2]) < 26 && G.col[j] > 90) grey++; if (G.col[j] > G.col[j + 2] * 1.6 && G.col[j] > 80) rust++; } return { n, lum: (r + g + b) / 3 / n, grey: grey / n, rust: rust / n }; };
+  for (const sd of [1, 2, 3]) { const S = stat(makeStatic({ t: 'v', m: 'tinShack', a: [sd], hd: 0 })); assert.ok(S.n > 3000, `shack ${sd}: it draws (${S.n} px)`); assert.ok(S.grey > 0.04 && S.rust > 0.15, `shack ${sd}: bare tin and rust both show (${(S.grey * 100).toFixed(0)}% tin, ${(S.rust * 100).toFixed(0)}% rust)`); }
+  for (const hd of [0, 0.79, 2.75, 3.93]) { const P = stat(makeStatic({ t: 'v', m: 'rustPickup', a: [1], hd })); assert.ok(P.n > 1500, `pickup at ${hd}: it draws (${P.n} px)`); assert.ok(P.rust > 0.5 && P.lum < 125, `pickup at ${hd}: rust all over, darker than the desert's ground (${(P.rust * 100).toFixed(0)}%, ${Math.round(P.lum)})`); }
+});
+

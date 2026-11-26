@@ -27754,3 +27754,18 @@ Hollow's street; the desert highway's saw-toothed edge.
   (`test/desertflora.test.js`).
 - **The tables' cliff faces stay as built** (the owner, 17:18: A). Nothing to change; B's trial code was never in.
   The bake's code after the hoodoo and the arch: 1,099.0 of 1,150 KB.
+- **The tin shack and the rusted pickup** (17:40-18:10; NS1-C's fourth panel): a fifth desert found place, 6 of
+  each kind now (30 in the desert, 64 in the world). `props-desert.js tinShack(seed)` - plank walls under a gable of
+  corrugated iron, rust in streaks down from the ridge and up from the eaves with bare tin between, a lean-to on
+  posts, a door, a window, a stove pipe - and `rustPickup(seed)` - an open bed, a cab with the dark where its glass
+  was, a hood falling to the grille, flat tyres; rust on iron uses the plain ramp (nature's ramp lifts it to the
+  desert's own orange, and the pickup vanished into the ground). Props `tinshack`, `rustpickup` (statics.js; the
+  pickup at any of 16 headings). `world3-wayside.js` 'tinshack': the shack (its walls 15 solid circles), the pickup
+  at an angle before it (3), two drums, tyres, a dead snag. First baked at a cottage's footprint it read as a hut
+  beside the desert's plants; drawn a third bigger. Tests: `test/world3wayside.test.js` (its pieces, both solid,
+  the pickup clear of the shack), `test/desertflora.test.js` (tin and rust both show on the roof; the pickup rust
+  all over and darker than the ground).
+- **Not done in the desert, and why:** the mission ruin's size (its model is 236 x 196 x 132 voxels and shared with
+  today's world: twice the size is 49 M voxels in one sprite - a step of its own, with a look at the bake's time);
+  a seep's square-cornered pool (every small pond's shore: the water's-edges step of the plan).
+
