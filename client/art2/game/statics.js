@@ -9,7 +9,7 @@
 // worker caches sprites by key.
 import { GBuf, toppleGBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
-import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW, flatPier, shopSignFits, PICSIGN } from '../buildings.js';
+import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW, flatPier, shopSignFits, PICSIGN, goodsOf } from '../buildings.js';
 import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, boardFor, paintBoard, paintLine, lineMask, rgbOf, TRADES, PIC_OF, PICS } from '../signfont.js';   // (wave A1: the sign faces, by trade)
 import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
@@ -489,7 +489,7 @@ const SHOPNAMES = {
 // the shop a strip unit (or a generic ground floor) holds: storefront interior kind and invented name pool
 const UNIT = { convenience: ['mart', 'mart'], coffee: ['cafe', 'cafe'], clothing: ['lobby', 'shop'], barber: ['lobby', 'shop'], pharmacy: ['mart', 'shop'], pawn: ['pawn', 'pawn'], gunshop: ['pawn', 'shop'],
   sports: ['mart', 'shop'], hardware: ['mart', 'shop'], grocery: ['mart', 'mart'], fence: ['bar', 'bar'], club: ['bar', 'bar'], delivery: ['mart', 'shop'], fishmarket: ['mart', 'mart'], marina: ['mart', 'shop'], tackle: ['mart', 'shop'] };
-const shopKindOf = (name) => { const n = (name || '').toUpperCase(); return /PIZZA|BURGER|WOK|TACO|DINER|FORK|FOOD|GRILL|NOODLE/.test(n) ? 'diner' : /COFFEE|CAFE|BEAN|BREW|BISTRO|BAKERY/.test(n) ? 'cafe' : /BAR|LOUNGE|PUB/.test(n) ? 'bar' : /PAWN/.test(n) ? 'pawn' : /LIQUOR|SPIRITS/.test(n) ? 'liquor' : /ARCADE/.test(n) ? 'arcade' : /BOUTIQUE|FASHION|THREAD|WEAR|COUTURE|BOOKS|TECH|FLORIST/.test(n) ? 'lobby' : 'mart'; };
+const shopKindOf = (name) => { const n = (name || '').toUpperCase(); return /PIZZA|BURGER|WOK|TACO|DINER|FORK|FOOD|GRILL|NOODLE/.test(n) ? 'diner' : /COFFEE|CAFE|BEAN|BREW|BISTRO|BAKERY/.test(n) ? 'cafe' : /\bBAR\b|LOUNGE|\bPUB\b/.test(n) ? 'bar' : /PAWN/.test(n) ? 'pawn' : /LIQUOR|SPIRITS/.test(n) ? 'liquor' : /ARCADE/.test(n) ? 'arcade' : /BOUTIQUE|FASHION|THREAD|WEAR|COUTURE|BOOKS|TECH|FLORIST/.test(n) ? 'lobby' : 'mart'; };
 
 function archOf(c, b) {
   const D = c.dist((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE), st = D.style;
@@ -1077,7 +1077,10 @@ function signTrade(c, b, A, s, spec) {
   const sg = spec.shop.sign, u = s.walk, ps = poisOf(c.M, b).filter((p) => p.kind !== 'home' && p.kind !== 'atm');
   let p = u && u.poi !== undefined ? ps.find((q) => q.id === u.poi) : null;
   if (!p) p = ps.find((q) => clean(q.label, 30) === sg.text) || (ps.length === 1 ? ps[0] : null);
-  return spec.shop.trade || tradeOf({ name: sg.text, kind: p ? p.kind : u ? u.kind : null, store: (p && p.store) || (u && u.trade) || null, shop: spec.shop.kind, A });
+  // (the whole name's words, where the board had room for only part of it - 11-26: OVERTIME SPORTS GR, a grill, read as a
+  // sports shop - but not its branch after a dash: a district's name is no trade)
+  const whole = [p && p.label, b.name].map((t) => clean(t, 99).split(' - ')[0]).find((t) => t.length > sg.text.length && t.startsWith(sg.text));
+  return spec.shop.trade || tradeOf({ name: whole || sg.text, kind: p ? p.kind : u ? u.kind : null, store: (p && p.store) || (u && u.trade) || null, shop: spec.shop.kind, A });
 }
 // how a trade's board throws its light: [strength, z above its foot]
 const SIGN_LIGHT = { neon: 1.2, panel: 0.8, ink: 0.6, flood: 0.5 };
@@ -1096,6 +1099,8 @@ function styleSign(spec, c, b, A, s, named, lights, hand) {
     }
   }
   Object.assign(sg, { trade: st.trade, face: st.face, pal, icon: st.icon, glow: sg.lit === false ? undefined : st.lit, bulbs: st.bulbs });
+  // (the window is the trade's: buildings.js GOODS_OF - 11-26, a pharmacy showed a mart's shelves, a gun shop a pawnbroker's guitars)
+  { const g = goodsOf(st.trade, spec.shop.kind); if (g !== spec.shop.kind) spec.shop.goods = g; }
   delete sg.bg; delete sg.fg;
   const col = pal.neon ? pal.h : st.lit === 'panel' && contrast(pal.p, [0, 0, 0]) > 8 ? pal.p : pal.i;
   lights.push([spec.w / 2, 10, 60 + signLift(spec), 90, col.map((v) => 0.4 + (v / 255) * 0.6), SIGN_LIGHT[st.lit] || 0.5, 'sign']);

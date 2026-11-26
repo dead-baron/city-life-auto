@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-26 13:20 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-26 13:45 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -169,8 +169,14 @@ entries have each piece):**
   and notches, pixel icons for all 160 glyphs in the menus, the lint in `test/uitokens.test.js`, `report-89` to `91`;
   the buttons over the street have the pixel icons too - his word of 11:00). **Look C goes live with the art batch**
   (his word, 11:00): no PR of its own. **Picture signs built** (his pick of 11:02: A and B together, some shops -
-  234 hanging signs, 21 pictures; `report-92` the pick, `report-93` built). Next in the city: window goods for the
-  seven trades without them, roofs (count first), night signs and lit rooms (variants for his pick first). A process left
+  234 hanging signs, 21 pictures; `report-92` the pick, `report-93` built). **Shop windows by trade built** (nine
+  new rooms, a named shop shows its own trade's: `buildings.js` `GOODS_OF`, the lint's `windowTrade` 0; 33 boards
+  whose name was read as the wrong trade put right) and **no people painted in shop windows** (his word, 12:40: "We
+  shouldnt have just static humans in windows ... if we have humans in the window we want it to be actual NPCs
+  through the window" - the busts are gone, real NPCs through the glass logged for his call; `report-94`). Next in
+  the city: roofs - counted 11-26 (a row of big AC units on 42.5% of 5,462 flat roofs, any AC row on 81%; 266 of
+  2,391 neighbour pairs carry the same kinds of kit; the decks' materials still to be read - the count took
+  `spec.roof`, which is only flat or metal), then the fix; night signs and lit rooms (variants for his pick first). A process left
   running does not live past the end of a turn here: the suite only moves while a turn is open (found 00:37).
   **The suite finished 04:27** (`docs/tasks/ARTPASS-TESTS-2026-11-26.txt`): 452 of 460 files clean. Two failures
   were the night's own and are fixed on the head (the hollow giants painted near black - `leaflight`; LIVE blades on
@@ -178,7 +184,7 @@ entries have each piece):**
   `world3wild` and `visaudit` fail on main too - but `visaudit` has ONE DOOR MORE hidden under a tree than main's
   record (4 against 3; which is new is not determined). Main (PR #49) is merged into the branch, every conflict to
   the branch's side. **What is left of the gate:** a look in a running World v3 game; then his word, the PR, the
-  re-bake (~5 h). The bake's code: 1,106 of 1,150 KB. **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
+  re-bake (~5 h). The bake's code: 1,126 of 1,150 KB (11-26 13:45). **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
 - **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
 - **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
   with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all

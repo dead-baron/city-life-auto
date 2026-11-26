@@ -25,7 +25,7 @@ world has not been set against the concept audit's own test (claude/concept-audi
 | **Murals** (MU1-A..G) | `buildings.js` mural kinds (a sunset, a wave, flowers, chevrons, a tiger, a dusk skyline) used by six districts' files (Midtown, the Arts District, the Neon Strip, Northgate, the Pink Mile, Sunset Beach) | MU1's set beside them: which of its pieces are missing, and the districts with none. |
 | **Plazas and paving** (gap 15) | Paving kinds in the ground bake (herringbone and others); the empty-plaza rule | The paving patterns of the concepts by district; the 11-23 note "brick plazas too busy". |
 | **A-boards** | One in `statics.js`, `facadedress.js` | By trade, per the audit's #2. |
-| **Window goods by trade** (the audit's #2) | `buildings.js` draws a window's inside for eleven kinds (arcade, bar, books, cafe, clothes, diner, laundry, liquor, lobby, pawn, records) | The audit's table adds pharmacy, gun shop, hardware, barber, sports, tackle, bakery; a barber pole; LOANS neon. |
+| **Window goods by trade** (the audit's #2) | `buildings.js` draws a window's inside for eleven kinds (arcade, bar, books, cafe, clothes, diner, laundry, liquor, lobby, pawn, records) | **Built 11-26**: nine more (pharmacy, gun shop, hardware, barber with its pole, sports, tackle, bakery, clinic, jeweller), and a named shop shows its own trade's window (`GOODS_OF`; the lint's `windowTrade` 0; 256 fronts changed). No people painted in the glass (his word, 12:40). Left: LOANS neon, a grocer's and a restaurant's own window. |
 
 ## Not built (no trace in the code)
 | Item (audit gap) | Note |

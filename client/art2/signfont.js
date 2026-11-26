@@ -382,14 +382,15 @@ export function palOf(q, T = {}) {
 // (by its name's words first - the most telling - then the shop's POI kind, its store's trade, the window's kind, the
 // building's archetype)
 const WORDS = [
+  [/NAIL (BAR|SALON)/, 'salon'], [/JUICE|SMOOTHIE|MATCHA/, 'cafe'], [/(FISH|RAW) BAR/, 'restaurant'], [/\bCAR RENTAL|RIDE RENTALS/, 'office'], [/(SHOE|WATCH|CLOCK|PHONE) REPAIR|COBBLER|LOCKSMITH/, 'mart'],   // (11-26: a nail bar read as a hardware shop, a juice bar as a bar, a shoe repair as a garage)
   [/\bCLINIC|MEDICAL|URGENT CARE|HEALTH|INFIRMARY|WELLNESS/, 'clinic'], [/\bHOSPITAL/, 'hospital'], [/PHARMAC|\bDRUG|APOTHECAR|CHEMIST/, 'pharmacy'],
   [/LAUNDR|\bSUDS\b|\bWASH|CLEANERS/, 'laundromat'], [/\bPAWN|\bLOANS?\b|CASH 4/, 'pawn'], [/\bGUN|FIREARM|\bARMS\b|AMMO|\bSIGHTS\b|\bRANGE\b/, 'gunshop'],
-  [/HARDWARE|\bTOOL|\bNAIL\b|LUMBER/, 'hardware'], [/LIQUOR|SPIRITS|\bBEER WINE/, 'liquor'], [/\bMOTEL|MOTOR LODGE|MOTOR INN/, 'motel'],
+  [/HARDWARE|\bTOOL|LUMBER/, 'hardware'], [/LIQUOR|SPIRITS|\bBEER WINE/, 'liquor'], [/\bMOTEL|MOTOR LODGE|MOTOR INN/, 'motel'],
   [/SNACK|DINER|BURGER|\bGRILL|FRIES|HOT DOG|PIZZA|TACO|\bEATS?\b|BBQ|CHICKEN|SHACK/, 'diner'], [/ICE CREAM|SCOOP|FROZEN|GELATO|CREAMERY/, 'icecream'],
   [/NOODLE|\bWOK\b|SUSHI|RAMEN|DRAGON|BISTRO|TRATTORIA|KITCHEN|STEAK|OYSTER/, 'restaurant'], [/CINEMA|THEATER|THEATRE|PICTURE|DRIVE-IN|MOVIES/, 'cinema'],
   [/\bBOWL|\bLANES\b/, 'cinema'], [/ARCADE|\bGAMES\b/, 'arcade'], [/\bBANK|SAVINGS|\bTRUST\b|CREDIT UNION/, 'bank'], [/\bHOTEL|\bSUITES\b|\bINN\b/, 'hotel'],
-  [/TAVERN|\bPUB\b|\bALE\b|WINERY|WINE BAR|SALOON|BREWERY/, 'tavern'], [/TATTOO|\bINK\b/, 'tattoo'], [/RECORDS|VINYL|\bSPIN\b/, 'records'],
-  [/\bBAR\b|LOUNGE|\bTAP\b|COCKTAIL|KARAOKE|\bJAZZ/, 'bar'], [/\bCLUB\b|DISCO|NIGHTCLUB/, 'club'], [/BOUTIQUE|COUTURE|FASHION|VELVET|ATELIER/, 'boutique'],
+  [/TAVERN|\bPUB\b|\bALE\b|WINERY|WINE BAR|SALOON|BREWERY|BREWING/, 'tavern'], [/TATTOO/, 'tattoo'], [/RECORDS|VINYL|\bSPIN\b/, 'records'],
+  [/\bBAR\b|LOUNGE|\bTAP\b|COCKTAIL|KARAOKE|\bJAZZ/, 'bar'], [/\bCLUB\b|\bDISCO\b|NIGHTCLUB/, 'club'], [/BOUTIQUE|COUTURE|FASHION/, 'boutique'],
   [/BAKERY|\bBAKE|PASTRY|DONUT|BREAD|PRETZEL/, 'bakery'], [/CAFE|COFFEE|ESPRESSO|\bBEAN|\bBREW|ROAST|\bTEA\b/, 'cafe'],
   [/SALON|BEAUTY|\bNAILS\b|\bHAIR|SHEARS|\bSPA\b/, 'salon'], [/BARBER/, 'barber'], [/FLORIST|FLOWER|BLOOM|PETAL/, 'florist'], [/\bBOOK/, 'books'],
   [/JEWEL|DIAMOND|BRILLIANT|\bGOLD\b/, 'jeweller'], [/TACKLE|\bBAIT/, 'tackle'], [/\bSURF/, 'surf'], [/SKATE|KICKS|KICKFLIP|SNEAKER/, 'street'],
@@ -397,7 +398,7 @@ const WORDS = [
   [/GROCER|MARKET|PRODUCE|\bFARM\b|FISH/, 'grocer'], [/\bDELI\b|\bMART\b|BODEGA|QUICK|\bSTOP\b|24-7|GENERAL STORE|CONVENIENCE/, 'mart'],
   [/\bAUTO|MOTORS?\b|GARAGE|TIRE|REPAIR|PAINT|BODY SHOP|SALVAGE/, 'auto'], [/\bFUEL|\bGAS\b|PETROL|SERVICE STATION/, 'gas'], [/PARKING/, 'parking'],
   [/POLICE|SHERIFF|PRECINCT/, 'police'], [/\bFIRE\b/, 'fire'], [/SCHOOL|ACADEMY|COLLEGE/, 'school'], [/\bPOST OFFICE/, 'post'],
-  [/COURT|CITY HALL|MUSEUM|LIBRARY|ASSAY|TOWN HALL/, 'civic'], [/GALLERY|STUDIO/, 'gallery'], [/MARINA|CHARTER|RENTAL|BOATS?\b|DIVE\b/, 'marine'],
+  [/COURT|CITY HALL|MUSEUM|LIBRARY|ASSAY|TOWN HALL/, 'civic'], [/GALLERY/, 'gallery'], [/MARINA|CHARTER|RENTAL|BOATS?\b|DIVE\b/, 'marine'],
   [/\bLODGE\b/, 'hotel'],
 ];
 const KIND = { hospital: null, pharmacy: 'pharmacy', convenience: 'mart', grocery: 'grocer', market: 'grocer', fishmarket: 'grocer', farmstand: 'grocer', fruitstand: 'grocer',

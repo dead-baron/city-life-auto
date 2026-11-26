@@ -513,6 +513,15 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   goes live in large batches, not piece by piece. One exception proposed to him the same hour: a look that is baked in
   and that later work builds on (so far: the sea deeper blue offshore) is better judged from the pictures sent when it is
   made - changing it after a batch is live costs another re-bake.
+- No people painted in a shop's window (the owner, 11-26 12:40, of the busts in the glass - a clerk at each till,
+  diners in the booths: "We shouldnt have just static humans in windows, if its a mannequin for a clothing shop or
+  something thats cool, but if we have humans in the window we want it to be actual NPCs through the window, not
+  static images of humans"): the shop fronts paint none (`client/art2/buildings.js` `storefront`;
+  `test/shopwindows.test.js` holds it). A mannequin is goods and stays. People seen through a window are to be real
+  NPCs - not built: the street draws a shop's painted front, and the people inside a walk-in are seen only from in
+  the room (logged in `docs/audit/PREBETA-LIST.md`).
+- A shop's window shows its trade's goods (11-26, the shared kit's audit #2; built in the existing manner, no new
+  look): `buildings.js` `GOODS_OF`; the lint's `windowTrade` holds it at 0.
 - Outlines, one rule (11-21 11:11: "some have dark outlines and others dont"): everything that stands up - people, animals, vehicles, props, every plant - has the art spec's outline (one art pixel, a dark tone of the colour beside it, never black, none along the foot); the ground and what is strewn on it have none. No softer outline for one family of plants. (11-21 11:11; chat, DEVLOG 11-21)
 ## Music and sound
 - No soundtrack over play: music lives in the world (venues, shops, radios); only the main menu (maybe the tutorial) has soundtrack. (10-08; DEVLOG 10-08, chat)

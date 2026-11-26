@@ -223,6 +223,15 @@ last leap over the top of a falls; the other fish's leaps.
   book, a cup, a burger, three gold balls, a record, a barber's pole ... 21 pictures. Picture: `report-93`. Judge in
   the game: how many (one in three of the fronts it suits today), the pictures that read badly, whether one-storey
   shops should get one too (they have no wall above the board).
+- [ ] **Shop windows by trade** (11-26): nine new windows - pharmacy, gun shop, hardware, barber (with its pole),
+  sports, tackle, bakery, clinic, jeweller - and every named shop shows its own trade's (256 fronts changed; a
+  pharmacy showed a mart's shelves, a gun shop guitars, one clinic a row of bottles). 33 name boards change face
+  where the name was read as the wrong trade (a nail bar as a hardware shop, DISCOUNT stores as night clubs).
+  Pictures: `report-94`. Judge in the game: Pier Street Shops (gun shop, sports, hardware side by side), Net & Tackle
+  on the harbor, Brilliant & Co., any small-town clinic.
+- [ ] **No people painted in shop windows** (11-26; your word of 12:40): the clerk at every till and the busts in the
+  booths are gone from every shop front; mannequins stay. Judge in the game: any street - a window shows goods and
+  no one standing still in it. The stadium's stands still have painted spectators: say if those go too.
 - [ ] **Signs on roofs** (11-26; your note of 11-22: "cut off through the roof"): 28 of 664 roof billboards and neon
   names had part of the board hidden - on a pitched roof, behind a smokestack or a tank, behind a taller building.
   A roof sign whose foot would be hidden is taken off (45; 619 stand). Judge in the game: Old Town's tiled roofs, the

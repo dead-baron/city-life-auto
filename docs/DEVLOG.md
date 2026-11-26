@@ -28202,3 +28202,48 @@ good when some do."
 - Not done of the audit's row: picture signs on one-storey shops (no wall above the board to hang one on), the
   window goods for seven more trades (pharmacy, gun shop, hardware, barber, sports, tackle, bakery).
 
+
+## 2026-11-26 · Shop windows by trade; no people painted in the glass (part B) - on branch `fable-art-1124`
+The shared kit's audit #2, counted first from the world's 2,447 shop fronts (each front's trade - what its sign is
+styled as - against the window it drew): a pharmacy showed a mart's shelves (13 of 16), a gun shop a pawnbroker's
+guitars (28 of 34), a hardware shop a mart's (33 of 39), a bakery a cafe's booths (20 of 21), a barber a salon
+(12 of 16), tackle and sports a mart's (all), and 15 of 20 clinics a mart's shelves, a cafe's booths or - Copper
+Gulch's - a row of liquor bottles.
+- **Nine windows drawn** (`client/art2/buildings.js` `GOODS`, in the manner of the fourteen there): pharmacy (white
+  shelves of boxes, a green cross lit in each second pane), gun shop (long guns racked on the board, pistols on felt
+  in the counter), hardware (tools on a pegboard, tins of paint), barber (round-topped mirrors, red leather chairs,
+  the pole turning colours in the glass), sports (pennants, a rail of team shirts, balls), tackle (rods, a hung net,
+  floats, coolers), bakery (loaves on racks, cakes in the case), clinic (a waiting room: desk, chairs, a plant),
+  jeweller (dark velvet, busts with necklaces, rings under the spots). The seven the audit named, and two the count
+  added. Under an awning - which hides the top 12 px of the glass - each room is drawn in the 27 px that show
+  (`AWNING_HIDES`): seen in the first bake, the pharmacy's cross and the gun shop's rack were behind the cloth.
+- **The window is the trade's** (`GOODS_OF`, `goodsOf`; `statics.js` `styleSign` sets `shop.goods` once the sign's
+  trade is known): 32 trades, each with the windows that suit it - the first where the front's own is none of them.
+  Food and drink keep any of their three rooms as the front was planned (a tiki bar's counter). 256 fronts changed.
+  The front's `kind` is as it was (its door, its OPEN sign): the window, the red riser of a diner go by the goods.
+- **Names read as the wrong trade** (`client/art2/signfont.js` `WORDS`; found in the same count - these boards had
+  the wrong face already): a nail bar read as a hardware shop and the Rusty Nail too (`NAIL`), juice bars as bars,
+  three DISCOUNT stores as night clubs (`DISCO`), shoe and watch repairs as garages, Quill & Ink (books) as a tattoo
+  parlour, brewing companies as cafes, Velvet Bakery and four ateliers as boutiques, Crema Studio (coffee) and Sole
+  Studio (shoes) as galleries; a board's cut name was read instead of the whole one (OVERTIME SPORTS GR - a grill -
+  as a sports shop: `signTrade` now reads the whole name, not its branch after a dash). 33 boards change face.
+  `shopKindOf` took STEEL BARREL SUPPLY for a bar (`BAR`): whole words now.
+- **No people painted in the glass** (the owner, 12:40, seeing the busts in the first pictures: "We shouldnt have
+  just static humans in windows ... if we have humans in the window we want it to be actual NPCs through the window"):
+  `storefront` painted a clerk at every till and one to four busts in most windows; both are gone, and `bust` with
+  them. `shop.people`, `clerk`, `clerkShirt` stay in the plans (shared code: the world's hash is untouched) and draw
+  nothing. The clothes shop's mannequin stays. Real people seen through a window: not built, logged.
+- **The lint** (`tools/placementlint.mjs` row `windowTrade`, held at 0): a shop whose window is another trade's, or a
+  kind the painter doesn't draw; its own check wants 2,000 windows seen and each new kind in the world.
+  `test/shopwindows.test.js` (5: every window named is drawn and its own; the table names real trades and windows;
+  the cross, the pole and the stones glow after dark; the misread names; no person painted, whatever the plan asks).
+- Run: placementlint 46/46 (`windowTrade` 0; 2,447 windows seen, 1,218 with a trade in the table), shopwindows 5/5,
+  perf, signs, signfix, signclear, picsigns, roofsigns, shopmarks, facades, doors, doorsbake, flatdoors, walkinfront.
+  Bake code 1,126 of 1,150 KB (the nine rooms in, the busts' painter out). A bake change: with the branch's re-bake.
+  Looked at in a bake of seven street stretches (`report-94`); not seen in a running game.
+- Not done: a grocer still shows a mart's shelves (78 fronts - they read as groceries), a restaurant a diner's
+  booths (66), no LOANS neon; 674 fronts with no name board keep the window they were planned with.
+- Roofs, counted and not yet changed (5,462 flat roofs): a row of two or more big AC units on 42.5% (the audit wants
+  under 40%), a row of any AC on 81% (walk-ups 93%, strips 100%); a water tank on 57% of walk-ups; of 2,391 pairs of
+  neighbours on a street 266 carry the same kinds of kit and 162 the same counts (Southside 58, the nightlife rows
+  44, the airport 30 of 32). The decks' materials are still to be read (the count took the wrong field).

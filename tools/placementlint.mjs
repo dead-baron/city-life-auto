@@ -73,7 +73,7 @@ import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy, parkExempt } from '../shared/parkcheck.js';
 import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
 import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf, roofSigns } from '../client/art2/game/statics.js';
-import { makeBuilding, buildingH, plaqueBox, bladeBox, picSignBox, signLift } from '../client/art2/buildings.js';
+import { makeBuilding, buildingH, plaqueBox, bladeBox, picSignBox, signLift, GOODS_OF, WINDOWS } from '../client/art2/buildings.js';
 import { PICS } from '../client/art2/signfont.js';
 import { textAudit } from './textaudit.mjs';
 import { WALK_IN } from '../shared/map.js';
@@ -114,6 +114,7 @@ export const LINT_ALLOW = {
   // badge of a place at a wall over its window's OPEN
   signCovered: 68,   // (11-22: egret's 159, one fewer with the walkways cleared; 11-26: 157 -> the hotels' names up on their canopies, a moved sign not painted behind, the cones out from the boards, the OPEN and the board clear of phone boxes and forecourts)
   roofSignCut: 0,     // a sign on a roof with part of its board hidden (the owner, 11-22, N23; 28 of 664 when the row was made 11-26: taken off where its foot is hidden - statics.js clearRoofSigns)
+  windowTrade: 0,     // a shop whose window is another trade's, or a kind nothing draws (11-26: the windows by trade - buildings.js GOODS_OF; a pharmacy showed a mart's shelves, a clinic a row of bottles)
   picSign: 0,         // a hanging picture sign off its wall, on its own board or beside a blade sign (11-26: the picture signs - statics.js PIC_SIGNS)
   // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
   // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
@@ -170,7 +171,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { doorBlocked: [], boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [], signCovered: [], roofSignCut: [], picSign: [], doorOnGrass: [], wallOnly: [] };
+  const rows = { doorBlocked: [], boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [], signCovered: [], roofSignCut: [], picSign: [], windowTrade: [], doorOnGrass: [], wallOnly: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -392,6 +393,14 @@ function artRows(M, rows, seen) {
         for (const q of textAudit({ ...sp, night: 1 })) rows.textClipped.push({ what: `${b.name || b.kind}'s ${q.k} "${q.t}"`, x: it.x + sp.w / 2, y: it.y, why: q.why });
       }
       const H = buildingH(sp), bx = [], at = (r) => [it.x + r[0], it.y - r[3], it.x + r[2], it.y - r[1]];
+      // the window is the trade's (buildings.js GOODS_OF), and a kind the painter draws (WINDOWS)
+      if (sp.shop && !sp.vox && !sp.frame) {
+        const g = sp.shop.goods || sp.shop.kind, t = sp.shop.sign && sp.shop.sign.trade, ok = t && GOODS_OF[t];
+        seen.windows = (seen.windows || 0) + 1; if (ok) seen.tradeWindows = (seen.tradeWindows || 0) + 1;
+        (seen.windowKinds = seen.windowKinds || {})[g] = (seen.windowKinds[g] || 0) + 1;
+        const why = !WINDOWS.includes(g) ? `nothing draws a "${g}" window` : ok && !ok.includes(g) ? `a ${t} showing a ${g}'s window` : null;
+        if (why) rows.windowTrade.push({ what: `${b.name || b.kind}${sp.shop.sign && sp.shop.sign.text ? ` ("${sp.shop.sign.text}")` : ''}`, x: it.x + sp.w / 2, y: it.y, why });
+      }
       // a picture sign hung out over the shop (statics.js PIC_SIGNS, buildings.js picSign): on the wall, over its board,
       // on no front that carries a blade sign or whose name went up onto a canopy
       if (sp.shop && sp.shop.sign && sp.shop.sign.text && !sp.shop.sign.moved) {

@@ -641,3 +641,7 @@ its something that can wait lets make note of it and revisit at the right time."
 - **Hammocks standing free on a lawn** (West Hills' yards, tiles 1358-1402 x 2444-2476: 54 hammocks in the world, his
   11-23 note "hammocks too long"): a hammock wants two trees or posts. Part B (yards), with the hammock's length.
 
+- **People seen through shop windows** (the owner, 11-26 12:40: "if we have humans in the window we want it to be
+  actual NPCs through the window, not static images of humans"): the painted busts are gone (art pass, 11-26). Real
+  ones would want the street to draw the people inside a walk-in's room behind its glass - today they are drawn only
+  from in the room, and a shop that is no walk-in has nobody inside. For his call: wanted, and for which shops.
