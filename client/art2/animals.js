@@ -636,7 +636,7 @@ function renderArt(m, heading, opt) {
   // a cat's nose seen from the front sits midway under its eyes (11-25, the owner: "the nose on the black cat and the
   // grey cat seem off center from the front view" - a feature lands on the pixel its samples average to, which can
   // be a pixel to one side of the eyes' middle)
-  { const ns = put.find((q) => q[0].name === 'nose' && q[0].center); if (ns && eL && eR && eL[2] === eR[2] && Math.abs(eL[1] - eR[1]) >= 2 && Math.abs(ns[1] - (eL[1] + eR[1]) / 2) <= 1.5) { const mid = (eL[1] + eR[1]) / 2; ns[1] = Math.floor(mid); if (mid % 1) put.push([ns[0], Math.ceil(mid), ns[2]]); } }   // (the eyes an even gap apart: the middle is two pixels, the nose both)
+  { const ns = put.find((q) => q[0].name === 'nose' && q[0].center); if (ns && eL && eR && eL[2] === eR[2] && Math.abs(eL[1] - eR[1]) >= 2 && Math.abs(ns[1] - (eL[1] + eR[1]) / 2) <= 1.5) ns[1] = Math.floor((eL[1] + eR[1]) / 2); }   // (one pixel, the owner 11-25 16:18; the eyes stand an even gap apart, so the middle is two pixels: the nose takes the left of them, never one further out)
   for (const [M, qx, py] of put) {
     if (!on(qx, py)) continue;   // (only over the animal itself)
     const j = (py * G.w + qx) * 4, col = M.ramp[Math.min(M.ramp.length - 1, M.flat ?? 1)];

@@ -435,6 +435,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   it out").
 - The shark gets another pass (the owner, 11-25 15:10: "The shark could use another pass on it let's try to make it
   look better").
+- A cat's nose is one pixel (the owner, 11-25 16:18: "Can we go back to having one pixel for the cat's nose? I think it
+  became two wide with the last push"). It keeps to the middle under the eyes - the left of the two middle pixels,
+  the face being an even number of pixels wide.
 - A cat's nose sits where the white cat's does - a clear row under the eyes, nothing pale above it (the owner, 11-25
   16:00: "dont think the pink nose showed up in the right place for the grey cat (looks right on the white cat).
   Black cat cant see the nose, not sure if it wont work to have a black nose on black fur though so if its not going
