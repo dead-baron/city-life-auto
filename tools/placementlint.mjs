@@ -111,7 +111,7 @@ export const LINT_ALLOW = {
   // the street's furniture standing in front of a shop's words - an el's piers, a shelter's or a stall's canopy, a phone
   // booth, a porch's posts, a lamp, a flag or power pole, a run of lights (shared/festoon.js's lint is its own) - and the
   // badge of a place at a wall over its window's OPEN
-  signCovered: 158,   // (11-22: egret's 159, one fewer with the walkways cleared)
+  signCovered: 68,   // (11-22: egret's 159, one fewer with the walkways cleared; 11-26: 157 -> the hotels' names up on their canopies, a moved sign not painted behind, the cones out from the boards, the OPEN and the board clear of phone boxes and forecourts)
   // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
   // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
   // the most part (West Hills', Southside's, Old Town's lots)
@@ -472,7 +472,7 @@ function artRows(M, rows, seen) {
               const [X0, Y0, X1, Y1] = q.r;
               const n = pxOver(G, ox, oy, X0, Y0, X1, Y1);   // (art-pixel sprites too: pxOver)
               const id = `c|${f.bi}|${q.t}|${o.key}|${Math.round(o.x)}`;
-              if (n >= 6 && !hitOnce.has(id)) { hitOnce.add(id); rows.signCovered.push({ what: `${o.recipe.m || o.recipe.sp || o.recipe.t} in front of ${b.name || b.kind}'s ${q.k} "${q.t}"`, x: o.x, y: o.y, why: `${n} px over it` }); }
+              if (n >= 6 && !hitOnce.has(id)) { hitOnce.add(id); rows.signCovered.push({ what: `${o.recipe.m || o.recipe.sp || o.recipe.t} in front of ${b.name || b.kind}'s ${q.k} "${q.t}"`, x: o.x, y: o.y, why: `${n} px over it`, key: o.key, bi: f.bi }); }
             }
           }
         }

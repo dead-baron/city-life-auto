@@ -212,6 +212,10 @@ last leap over the top of a falls; the other fish's leaps.
   the building's wall at one end of the front with a painted door in it; the shop's window, awning and sign keep to
   the shop (382 doors; 9 are apartment lobbies and stay). Picture: `report-86`. Judge in the game: Trestle Street in
   Midtown, the Arts District's galleries - stand at the flat's door: the prompt is the flat's, the shop's door its own.
+- [ ] **Hotels' entrance canopies** (11-26): every hotel, motel office and airport concourse had the filling
+  stations' white slab standing over its own name. Now a cloth canopy in the front's colour, as wide as the name, the
+  name on its front edge (50 places). Picture: `report-87`. Judge in the game: The Bridgeview in Midtown, the Pink
+  Mile's motels, the Grand Neon Hotel. Say if you would rather the canopies plain and the names on the wall.
 - [ ] **Painted lips over the run** (11-25, a look only): the mouth jumped a pixel about the face from frame to
   frame; it now sits under the middle of the eyes in every frame. Only figures with lipstick changed (55 of 2,688
   frames checked). Picture: `report-79`. Goes with the re-bake (the people's art is in the art hash).

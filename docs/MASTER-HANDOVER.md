@@ -157,7 +157,11 @@ entries have each piece):**
   `docs/tasks/SHARED-KIT-AUDIT-2026-11-26.md` - what of the shared kit is built (signs by trade, banks' porticos,
   interiors), what is there and not measured (roofs, murals, paving, window goods), what is not (picture signs,
   night signs, lit rooms, the lint's `signCovered` 157) and a proposed order. **Its first row is done (11-26 morning):**
-  a flat over a shop has its own door - 391 fronts, `lobbyDoor` 161 -> 0 (`shared/world3-flatdoors.js`, `report-86`). A process left
+  a flat over a shop has its own door - 391 fronts, `lobbyDoor` 161 -> 0 (`shared/world3-flatdoors.js`, `report-86`).
+  Then `signCovered` 157 -> 68: a hotel's entrance canopy is cloth with its name on the front edge (it was the
+  forecourt's white slab over the name, 50 places), a moved sign is not painted behind, cones stand out from the
+  boards (`report-87`; the 68 left are listed in the DEVLOG). Next by the audit: roof billboards cut off, then the
+  picture signs and window goods (variants for his pick first). A process left
   running does not live past the end of a turn here: the suite only moves while a turn is open (found 00:37).
   **The suite finished 04:27** (`docs/tasks/ARTPASS-TESTS-2026-11-26.txt`): 452 of 460 files clean. Two failures
   were the night's own and are fixed on the head (the hollow giants painted near black - `leaflight`; LIVE blades on

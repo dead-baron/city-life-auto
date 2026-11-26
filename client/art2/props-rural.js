@@ -144,6 +144,26 @@ export function fuelPump(color = '#c8342e', on = 0) {
   m.box(0, 0, 0, 12, 10, 4, w); m.box(1, 1, 4, 11, 9, 30, b); m.box(1, 1, 30, 11, 9, 34, w); m.box(3, 9, 18, 9, 10, 26, s); m.box(10, 3, 12, 12, 5, 20, w);
   return m;
 }
+// A hotel's or a motel office's entrance canopy (the bake's own, statics.js addLots: until 11-26 the forecourt's white
+// slab stood there): cloth in the house's colour stretched flat from the wall out over the pavement, a little crowned
+// along its middle, a scalloped valance with a pale trim round the three open sides, two brass posts at the front
+// corners, a warm lamp under it. Its back edge is made fast to the wall: no posts there.
+export const ENTRY_COLS = ['#7a1e2a', '#1e3a5e', '#2a4a3a', '#3a2c4a', '#2a2c38'];
+export function entryCanopy(w = 96, d = 34, h = 46, col = ENTRY_COLS[0], on = 0) {
+  const m = new Vox(w, d, h + 6);
+  const cloth = m.mat({ ramp: R(col), k: 3, shade: (x, y) => (Math.round(x) % 12 === 0 ? -0.5 : 0) - Math.abs(y / d - 0.5) * 0.5 });
+  const val = m.mat({ ramp: R(col), k: 2 }), trim = m.mat({ ramp: R('#e8dcc0'), k: 4 }), brass = m.mat({ ramp: R('#b8904a'), k: 3, flag: F_THIN });
+  const lamp = m.mat({ ramp: R('#f4e2b0'), k: 4, emi: [255, 214, 140, 30 + on * 190], flag: F_NOCAST });
+  m.box(0, 0, h, w, d, h + 3, cloth);
+  m.box(2, Math.round(d * 0.3), h + 3, w - 2, Math.round(d * 0.7), h + 4, cloth);   // (the crown along its middle)
+  // the valance: down the front and the two sides, scalloped (every third tooth short), a pale trim along its foot
+  const tooth = (k) => (k % 6 < 5 ? 5 : 3);
+  for (let x = 0; x < w; x++) { m.box(x, d - 1, h - tooth(x), x + 1, d, h + 3, val); m.box(x, d - 1, h - tooth(x), x + 1, d, h - tooth(x) + 1, trim); }
+  for (let y = 0; y < d - 1; y++) for (const x of [0, w - 1]) { m.box(x, y, h - tooth(y), x + 1, y + 1, h + 3, val); m.box(x, y, h - tooth(y), x + 1, y + 1, h - tooth(y) + 1, trim); }
+  for (const x of [2, w - 4]) { m.box(x, d - 4, 0, x + 2, d - 2, h, brass); m.box(x - 1, d - 5, 0, x + 3, d - 1, 2, brass); }
+  m.box(Math.round(w / 2) - 5, Math.round(d * 0.4), h - 1, Math.round(w / 2) + 5, Math.round(d * 0.6), h, lamp);
+  return m;
+}
 // a forecourt canopy on four posts with a lit red band round the fascia
 export function fuelCanopy(w = 150, d = 80, h = 52, on = 0) {
   const m = new Vox(w, d, h + 10);

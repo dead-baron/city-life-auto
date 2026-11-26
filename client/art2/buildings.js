@@ -401,7 +401,9 @@ export function makeBuilding(spec) {
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
   // (the boards with words last: never cut by a cross, a cup, a blade - textClipped)
   // (a plaque where the shop's sign goes: up clear of it while there's room, else none)
-  const sgn = shopAt && spec.shop.sign && spec.shop.sign.text ? spec.shop.sign : null;
+  // (a sign moved up onto what stands in front of it - a false front, a porte-cochere, a canopy: statics.js - is not
+  // painted again on the wall behind)
+  const sgn = shopAt && spec.shop.sign && spec.shop.sign.text && !spec.shop.sign.moved ? spec.shop.sign : null;
   const sbox = sgn ? signBox(sgn, sgn.x ?? 4, shopAt.winTop - 2, sgn.w ?? w - 8) : null;
   for (const pq of spec.plaques || []) {
     if (!sbox || !pq || !pq.text) { plaque(G, pq, d + H, night); continue; }

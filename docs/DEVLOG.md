@@ -28064,3 +28064,32 @@ Arts District, 69 on the Neon Strip, 44 in Northgate, 36 in Old Town ...).
   perf 6/6, walkinfront 2/2, world3doors and plainblocks 18/18, world3server and doorways 24/24.
 - A world change and a bake change: they ride with the branch's one rebuild and re-bake. Not seen in a running game.
 
+## 2026-11-26 · A front's words kept clear (part B, the lint's `signCovered` 157 -> 68) - on branch `fable-art-1124`
+What covered what, counted from the lint's rows (157): a **hotel's own entrance canopy over its name** 50 (the bake
+stood the filling stations' white forecourt slab before every hotel, motel office and airport concourse), a topiary
+**cone** by a door 20, a sign **already moved** onto a false front or a porch and still painted behind it 10, the
+rest street furniture, trees and runs of lights.
+- **A hotel's entrance canopy** (`props-rural.js` `entryCanopy`, `statics.js` `addLots`, `HOTEL_CANOPY`): cloth in
+  the front's awning colour (else one of five house colours), a little crowned, a scalloped valance with a pale trim,
+  two brass posts at the front, a lamp under it. It is as wide as the hotel's name needs (96 to 300 px, within the
+  front) and the name stands on its front edge - the rule the casinos' porte-cocheres already had (`coverSign`, from
+  `coverFronts`). I picked this over lowering the slab: a canopy under the board would be lower than the door.
+- **A moved sign is not painted on the wall behind** (`buildings.js`): it was hidden there, or showed twice.
+- **A cone by a shop's door** stands 18 px out where the front has a board (`CONE_AT_BOARD`; 11 as the other pots
+  elsewhere): its box is 64 px tall and reached 5 px into the words.
+- **The window's OPEN and the shop's board keep clear of what stands tall before the front** (`frontTall`: a phone
+  box, a lamp post, a power pole, a forecourt's pumps; `clearStretch`): the OPEN goes to the door's other side or is
+  left out; the board takes the widest clear stretch of the front where its words read the same on the shorter board
+  (`shopSignFits`) - the same rule that keeps it off a flat's door. This helped little for the boards (1 phone box of
+  8): most names do not fit a shorter board as they stand, and I did not let a name change its lines or lose its
+  picture to dodge a pole.
+- **Left, 68** (`tools/placementlint.mjs`, held there): trees and palms 23, a run of lights across a board 9, phone
+  boxes 7, the el's piers 7, forecourt canopies and porches over an OPEN 9, lamps and poles 9, a place's badge over
+  an OPEN 3, a hospital's canopy 1. The trees are `sightlines3`'s leftovers (the world); the el's piers stand where
+  the el stands. The lint's rows now carry the covering item's key and the building.
+- `test/signclear.test.js` (a moved sign not painted; the canopy is cloth, not the pale slab - the old one is 84%
+  pale grey by the same count; the cone's tip under the board; `frontTall` and `clearStretch` on small maps). Run on
+  the change: placementlint 43/43, flatdoors 4/4, perf 6/6, signs, doors, signfix, shopmarks, foodrooms, smash 25/25,
+  binbags, townwork, world3clutter, world3desert, doorsbake 16/16, walkinfront 2/2.
+- A bake change: it rides with the branch's re-bake. Not seen in a running game. Pictures: `report-86`, `report-87`.
+

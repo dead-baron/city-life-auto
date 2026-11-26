@@ -10,7 +10,7 @@
 import { GBuf, toppleGBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
 import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW, flatPier, shopSignFits } from '../buildings.js';
-import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, paintBoard, paintLine, lineMask, rgbOf, TRADES } from '../signfont.js';   // (wave A1: the sign faces, by trade)
+import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, boardFor, paintBoard, paintLine, lineMask, rgbOf, TRADES } from '../signfont.js';   // (wave A1: the sign faces, by trade)
 import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
 import * as P from '../props.js';
@@ -1010,6 +1010,13 @@ function townKit(c, I, list) {
 // after, so it stays clear of the others); the shop's sign, which sits on the shopfront, goes up onto the cover itself -
 // a porte-cochere's name standing on its roof's front edge, as the casinos' have it - and the one behind is marked moved.
 const COVERS = new Set(['porte', 'canopy']);
+// the name up on a cover's front edge: the shop's sign in its own face and colours, standing z px up at x, y (the
+// cover's front edge), at most mw px wide; the one on the wall behind is marked moved (buildings.js doesn't paint it)
+function coverSign(I, sg, x, y, mw0, z) {
+  sg.moved = 'cover';
+  const mw = Math.round(mw0), key = `cvs:${sg.text}:${sg.face || 'civic'}:${sg.pal ? [sg.pal.p, sg.pal.i].join('/') : ''}:${mw}:${z}`;
+  put(I, { key, recipe: { t: 'sign', text: sg.text, face: sg.face || 'civic', pal: sg.pal || null, lit: sg.lit !== false, z, maxW: mw }, x: Math.round(x), y: Math.round(y), ext: [Math.ceil(mw / 2) + 4, z + 60, Math.ceil(mw / 2) + 4, 6] });
+}
 function coverFronts(c, I) {
   const M = c.M;
   for (const p of M.props) {
@@ -1030,9 +1037,7 @@ function coverFronts(c, I) {
       if (moved) unstackSigns(sp);
       const sg = sp.shop && sp.shop.sign;
       if (sg && sg.text && !sg.moved && vTop > 34 && p.x > it.x + 8 && p.x < it.x + sp.w - 8) {   // (its roof up over the sign's foot: the name onto its front edge)
-        sg.moved = 'cover';
-        const mw = Math.round(Math.min(w - 24, 300)), z = h + 2, key = `cvs:${sg.text}:${sg.face || 'civic'}:${sg.pal ? [sg.pal.p, sg.pal.i].join('/') : ''}:${mw}:${z}`;
-        put(I, { key, recipe: { t: 'sign', text: sg.text, face: sg.face || 'civic', pal: sg.pal || null, lit: sg.lit !== false, z, maxW: mw }, x: Math.round(p.x), y: Math.round(p.y + d / 2) + 1, ext: [Math.ceil(mw / 2) + 4, z + 60, Math.ceil(mw / 2) + 4, 6] });
+        coverSign(I, sg, p.x, p.y + d / 2 + 1, Math.min(w - 24, 300), h + 2);
       }
     }
   }
@@ -1166,6 +1171,35 @@ export function frontAtms(M, tx, footTy, tw) {
   const out = [], X0 = tx * TILE, X1 = (tx + tw) * TILE;
   for (const [x, hw] of I.get(footTy) || []) if (x > X0 - hw && x < X1 + hw) out.push([Math.round(x - X0 - hw), Math.round(x - X0 + hw)]);
   return out;
+}
+// The tall street furniture standing before a front (the map's props: a phone box, a lamp post, a power pole; a filling
+// station's pumps, for the canopy over them): by the row of the wall's foot -> [[x0, x1, top]...], its span in facade px
+// from the section's west edge and how far up the wall it reaches on screen (its height less how far out it stands).
+// open / board: the wall heights of the foot of a window's OPEN and of the shop's board; least: the shortest board kept.
+export const FRONT_TALL = { open: 24, board: 48, least: 56, kinds: { phonebox: [11, 58, 10], lamp: [3, 90, 0], plamp: [3, 90, 0], upole: [4, 116, 0] }, pump: [55, 66, -25] };   // (a kind: half its width, its height, half its depth - a box's top is drawn that much further up the wall)
+const TALL_ROWS = new WeakMap();
+export function frontTall(M, tx, footTy, tw) {
+  let I = TALL_ROWS.get(M);
+  if (!I) {
+    I = new Map();
+    const add = (x, hw, H, y) => { for (let ty = Math.floor((y - H) / TILE); ty <= Math.floor(y / TILE); ty++) { let l = I.get(ty); if (!l) I.set(ty, (l = [])); l.push([x, hw, H, y]); } };
+    for (const p of M.props || []) { const K = p && !p.wall && p.inside === undefined ? FRONT_TALL.kinds[p.t] : null; if (K) add(p.x, K[0], K[1] + K[2], p.y); }
+    for (const p of M.pumps || []) add(p.x, FRONT_TALL.pump[0], FRONT_TALL.pump[1], p.y + FRONT_TALL.pump[2]);
+    TALL_ROWS.set(M, I);
+  }
+  const out = [], X0 = tx * TILE, X1 = (tx + tw) * TILE, foot = footTy * TILE;
+  for (const [x, hw, H, y] of I.get(footTy) || []) {
+    const top = H - (y - foot);
+    if (y >= foot - 4 && top > 0 && x > X0 - hw && x < X1 + hw) out.push([Math.round(x - X0 - hw), Math.round(x - X0 + hw), Math.round(top)]);
+  }
+  return out;
+}
+// the widest stretch of [a, b] clear of the held spans: [x0, x1], or null
+export function clearStretch(held, a, b) {
+  const H = held.map(([x0, x1]) => [Math.max(a, x0), Math.min(b, x1)]).filter(([x0, x1]) => x1 > x0).sort((p, q) => p[0] - q[0]);
+  let best = null, at = a;
+  for (const [x0, x1] of [...H, [b, b]]) { if (x0 - at > (best ? best[1] - best[0] : 0)) best = [at, x0]; at = Math.max(at, x1); }
+  return best;
 }
 function specOf(c, b, A, s, D) {
   const rnd = rndOf(b.id * 31 + s.k, 911), w = s.tw * TILE, d = s.th * TILE, seed = ((b.id * 7919 + s.k * 131) >>> 0) % 100000 + 7;
@@ -1522,11 +1556,22 @@ function specOf(c, b, A, s, D) {
     const fx = b.tx * TILE + spec.shop.flat.x - s.tx * TILE;
     if (s.south && fx >= 4 && fx + FLATDOOR.w <= w - 4) {
       spec.shop.flat = { x: fx, w: FLATDOOR.w, h: FLATDOOR.h, pier: FLATDOOR.pier };
-      const [p0, p1] = flatPier(spec.shop, w), sg = spec.shop.sign;
-      spec.shop.avoid = [...(spec.shop.avoid || []), [p0, p1]];
-      // (the shop's board over the shop, not over the flat's door - where its words fit the shorter board as they stand)
-      if (sg && sg.text && sg.x === undefined && sg.w === undefined) { const nx = p0 === 0 ? p1 + 2 : 4, nw = (p0 === 0 ? w - 4 : p0 - 2) - nx; if (shopSignFits(sg, w - 8, nw)) spec.shop.sign = { ...sg, x: nx, w: nw }; }
+      spec.shop.avoid = [...(spec.shop.avoid || []), flatPier(spec.shop, w)];
     } else delete spec.shop.flat;
+  }
+  // (what stands tall on the pavement before this front - a phone box, a lamp, a pole, a forecourt's canopy: the
+  // window's OPEN not behind it, and the shop's board over the clear stretch of the front - beside the flat's door too -
+  // where its words read on the shorter board as they stand; the lint's signCovered)
+  if (spec.shop && s.south) {
+    const sh = spec.shop, sg = sh.sign, tall = frontTall(c.M, s.tx, s.ty + s.th, s.tw);
+    const low = tall.filter((q) => q[2] > FRONT_TALL.open).map((q) => [q[0], q[1]]);
+    if (low.length) sh.avoid = [...(sh.avoid || []), ...low];
+    const held = tall.filter((q) => q[2] > FRONT_TALL.board).map((q) => [q[0] - 2, q[1] + 2]);
+    if (sh.flat) held.push(flatPier(sh, w));
+    if (held.length && sg && sg.text && sg.x === undefined && sg.w === undefined) {
+      const g = clearStretch(held, 4, w - 4);
+      if (g && g[1] - g[0] < w - 8 && g[1] - g[0] >= FRONT_TALL.least && shopSignFits(sg, w - 8, g[1] - g[0] - 4)) sh.sign = { ...sg, x: g[0] + 2, w: g[1] - g[0] - 4 };
+    }
   }
   if (s.turned) { delete spec.shop; delete spec.portico; Object.assign(spec, { blank: true, doors: [], plaques: [] }); }
   // (one name on a front: a hand plan's shop sign says the building's name, so the trade's own name plaque - a clinic's,
@@ -1718,7 +1763,7 @@ function addBuildings(c, I) {
       for (const [dx, dy, z, r, col, k, kind] of lights) lightAt(I, x0 + dx, y1 + dy, z, r, col, k, kind, 1);
       // garage doors (the yard keeps their driveways clear), shopfronts (dressed later)
       for (const q of spec.doors || []) if (q.kind === 'garage' && s.south) { let l = I.garages.get(bi); if (!l) I.garages.set(bi, (l = [])); l.push([x0 + q.x - 10, x0 + q.x + q.w + 10]); }
-      if (spec.shop && s.south && !s.vox && !s.frame) { const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10; const ox = openSignX(sh, w); I.fronts.push({ x0, y1, w, dx, dw, kind: sh.kind, A, st: D.style, b: bi, open: ox === null ? null : [ox, ox + openSignW()] }); }
+      if (spec.shop && s.south && !s.vox && !s.frame) { const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10; const ox = openSignX(sh, w); I.fronts.push({ x0, y1, w, dx, dw, kind: sh.kind, A, st: D.style, b: bi, open: ox === null ? null : [ox, ox + openSignW()], board: !!(sh.sign && sh.sign.text) }); }
     }
   });
 }
@@ -1865,7 +1910,7 @@ function voxModel(m, a) {
     case 'picnic': return U.picnicTable(); case 'pumpJack': return U.pumpJack(a[0]); case 'turbine': return U.windTurbine(a[0], a[1], a[2]); case 'flare': return U.flareStack(a[0]);
     case 'tank': return X.storageTank(a[0], a[1], a[2]); case 'cellTower': return K.cellTower(a[0]); case 'screen': return K.outdoorScreen(a[0], a[1]); case 'solar': return TW.solarPanel(a[0], a[1]);
     case 'runwayLight': return RD.runwayLight(a[0]); case 'viewer': return D.viewer(); case 'wheelbarrow': return U.wheelbarrow(); case 'airliner': return RD.airliner(a[0], a[1], a[2], a[3] || 0);
-    case 'lighthouse': return WL.lighthouse(a[0], a[1]); case 'pillar': return RD.pillar(a[0], a[1], a[2]); case 'canopy': return U.fuelCanopy(a[0], a[1], a[2], a[3]); case 'fuelPump': return U.fuelPump(a[0], a[1]);
+    case 'lighthouse': return WL.lighthouse(a[0], a[1]); case 'pillar': return RD.pillar(a[0], a[1], a[2]); case 'canopy': return U.fuelCanopy(a[0], a[1], a[2], a[3]); case 'entryCanopy': return U.entryCanopy(a[0], a[1], a[2], a[3], a[4]); case 'fuelPump': return U.fuelPump(a[0], a[1]);
     case 'platformCanopy': return RD.platformCanopy(a[0], a[1], a[2]); case 'stationEntrance': return RD.stationEntrance(a[0], a[1]); case 'stationHouse': return RD.stationHouse(a[0], a[1]); case 'lifeguardTower': return RD.lifeguardTower(); case 'crossingSignal': return RD.crossingSignal(a[0], a[1]);
     case 'subwayKiosk': return RD.subwayKiosk(a[0], a[1]);   // (SU5-B: a subway stop's street entrance on its kiosk's footprint)
     case 'tPorch': return TN.porch(a[0], a[1], a[2], a[3], a[4]); case 'tAntlers': return TN.antlers(); case 'tLogs': return TN.logStack(a[0]); case 'tLoader': return TN.logLoader();   // (H40: World v3's towns' own models, props-towns.js)
@@ -1939,7 +1984,7 @@ function vdim(m, a) {
     case 'campfire': return [28, 28, 26]; case 'picnic': return [44, 36, 18]; case 'pumpJack': return [70, 20, 60]; case 'turbine': return [((a[1] || 80) * 2) + 8, 24, (a[0] || 260) + (a[1] || 80) + 6];
     case 'flare': return [14, 14, 90]; case 'tank': return [(a[0] || 44) * 2 + 4, (a[0] || 44) * 2 + 4, (a[1] || 120) + 26]; case 'cellTower': return [30, 30, (a[0] || 150) + 6]; case 'screen': return [(a[0] || 120) + 16, 12, (a[1] || 56) + 26];
     case 'solar': return [a[0] || 30, a[1] || 20, 8]; case 'runwayLight': return [4, 4, 6]; case 'viewer': return [14, 10, 40]; case 'wheelbarrow': return [30, 14, 14]; case 'airliner': return [a[0] || 460, a[1] || 420, 140];
-    case 'lighthouse': return [48, 48, (a[0] || 140) + 36]; case 'pillar': return [(a[1] || 30) + 4, a[2] || 90, a[0] || 90]; case 'canopy': return [a[0] || 150, a[1] || 80, (a[2] || 52) + 10]; case 'fuelPump': return [12, 10, 34];
+    case 'lighthouse': return [48, 48, (a[0] || 140) + 36]; case 'pillar': return [(a[1] || 30) + 4, a[2] || 90, a[0] || 90]; case 'canopy': return [a[0] || 150, a[1] || 80, (a[2] || 52) + 10]; case 'entryCanopy': return [a[0] || 96, a[1] || 34, (a[2] || 46) + 6]; case 'fuelPump': return [12, 10, 34];
     case 'jetBridge': return [a[0] || 180, 34, 62]; case 'bagCart': return [36, 24, 26]; case 'beltLoader': return [80, 26, 46]; case 'aircraftTug': return [56, 34, 22]; case 'approachBar': return [8, (a[0] || 5) * 10, 16];
     case 'platformCanopy': return [a[0] || 200, a[1] || 40, 62]; case 'stationEntrance': return [70, 44, 54]; case 'stationHouse': return [a[1] || 140, 92, 74]; case 'lifeguardTower': return [46, 70, 66]; case 'crossingSignal': return [24, 8, 70]; case 'controlTower': return [70, 70, (a[0] || 220) + 50];
     case 'subwayKiosk': return [128, 96, 64]; case 'erCanopy': return [120, 62, 60]; case 'routeBoard': return [46, 8, 52];
@@ -4060,6 +4105,7 @@ function bayIn(M, x, y, w, h) {
   const inBox = (px, py, m = 48) => px > x - m && px < x + w + m && py > y - m && py < y + h + m;
   return (M.loadBays || []).some((b) => inBox(b.pick.x, b.pick.y, 160) || inBox(b.bay.x, b.bay.y, 160) || b.route.some(([tx, ty]) => inBox((tx + 0.5) * TILE, (ty + 0.5) * TILE)));
 }
+export const HOTEL_CANOPY = { w: 96, d: 34, h: 46, max: 300, pad: 52 };   // (its least width, depth and height; the widest a long name may make it; the name's board and a margin over its words)
 function addLots(c, I) {
   const M = c.M;
   M.prefabs.forEach((p, pi) => {
@@ -4164,7 +4210,20 @@ function addLots(c, I) {
           }
         }
       }
-      if (key === 'hotel') { put(I, vitem('hcan:h', 'canopy', [96, 34, 46, 1], x0 + w / 2, by1 + 20, 0)); lightAt(I, x0 + w / 2, by1 + 20, 42, 140, [1, 0.85, 0.6], 1.6, 'lamp'); }
+      if (key === 'hotel') {
+        // its entrance canopy, in cloth (props-rural.js entryCanopy), standing before the hotel's own board: the name goes
+        // up on the canopy's front edge, as a casino's on its porte-cochere (coverFronts), and the canopy is as wide as
+        // the name needs, within the front (the lint's signCovered: 50 hotels' and motel offices' names behind a slab)
+        const cx = x0 + w / 2, cy = by1 + 20, HC = HOTEL_CANOPY, bi = M.buildings.findIndex((q) => q && q.prefab === pi);
+        const its = (bi >= 0 && I.byB.get(bi)) || [];
+        const it = its.filter((q) => q.recipe && q.recipe.spec && q.recipe.spec.shop && cx > q.x + 8 && cx < q.x + q.recipe.spec.w - 8).sort((a, q) => q.y - a.y)[0];
+        const sh = it ? it.recipe.spec.shop : null, sg = sh && sh.sign && sh.sign.text && !sh.sign.moved ? sh.sign : null;
+        const cw = sg ? clamp(boardFor(sg, HC.max - 24).cw * 2 + HC.pad, HC.w, Math.max(HC.w, Math.min(HC.max, it.recipe.spec.w - 16))) : HC.w;
+        const col = sh && sh.awning ? sh.awning[0] : U.ENTRY_COLS[(bi < 0 ? pi : bi) % U.ENTRY_COLS.length];
+        put(I, vitem(`hcan:h:${cw}:${col}`, 'entryCanopy', [cw, HC.d, HC.h, col, 1], cx, cy, 0));
+        if (sg) coverSign(I, sg, cx, cy + HC.d / 2 + 1, cw - 24, HC.h + 6 + 2);
+        lightAt(I, cx, cy, 42, 140, [1, 0.85, 0.6], 1.6, 'lamp');
+      }
     }
   });
 }
@@ -4228,6 +4287,7 @@ function addCameras(c, I) {
 }
 // shopfronts: pots either side of the door, a sandwich board, tables out front of cafes where the pavement is wide
 const POTS = { luxury: ['topBall', 'topCone'], towers: ['topCone', 'topBall'], oldtown: ['boxIron', 'lavender'], arts: ['boxIron', 'pot', 'lavender'], beach: ['pot', 'hibiscus'], nightlife: ['pot', 'topBall'], redlight: ['pot'], commercial: ['plg', 'boxStone', 'topBall'] };
+export const CONE_AT_BOARD = 18;   // (a topiary cone in its box by a shop's door stands 64 px tall and a board's foot is 48 px up the wall: 18 px out from the wall where there's a board - 11 elsewhere, as the other pots - its tip stays under the words)
 function addFrontage(c, I) {
   for (const f of I.fronts) {
     const { x0, y1, w, dx, dw, kind, st } = f, rnd = rndOf(x0, y1 + 7);
@@ -4240,7 +4300,7 @@ function addFrontage(c, I) {
       const k = pick(pool, rnd());
       if (k === 'pot') put(I, vitem('pot', 'pottedPalm', [], Math.round(px), y1 + 12));
       else if (k === 'plg') put(I, vitem('plg', 'planter', [true], Math.round(px), y1 + 9));
-      else flora1(I, k, 1, Math.round(px), y1 + 11);
+      else flora1(I, k, 1, Math.round(px), y1 + (k === 'topCone' && f.board ? CONE_AT_BOARD : 11));   // (a cone's tip under the shop's board, not over its words: the lint's signCovered)
     }
     const bx = x0 + dx + dw + 34;
     if ((kind === 'cafe' || kind === 'diner' || kind === 'bar' || kind === 'mart') && bx < x0 + w - 10 && paved(bx, 16) && rnd() < 0.55) put(I, vitem('chalk', 'chalkboard', [], Math.round(bx), y1 + 16));
