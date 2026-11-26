@@ -513,6 +513,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   goes live in large batches, not piece by piece. One exception proposed to him the same hour: a look that is baked in
   and that later work builds on (so far: the sea deeper blue offshore) is better judged from the pictures sent when it is
   made - changing it after a batch is live costs another re-bake.
+- The art batch goes live now (the owner, 11-26 13:31: "I'd like to push all the art we have now live"; it replaces
+  his 09:00 word that the merge waits for more of the city): branch `fable-art-1124` to `main` once the gate has run -
+  the whole suite and a look in a running game - by the next chat (Opus 5.5; his Fable 5.2 usage for the week is
+  spent). The steps: `docs/MASTER-HANDOVER.md` section 6, "TAKING THIS OVER".
 - No people painted in a shop's window (the owner, 11-26 12:40, of the busts in the glass - a clerk at each till,
   diners in the booths: "We shouldnt have just static humans in windows, if its a mannequin for a clothing shop or
   something thats cool, but if we have humans in the window we want it to be actual NPCs through the window, not
