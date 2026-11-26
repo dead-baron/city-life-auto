@@ -7,6 +7,9 @@
 //   in the valley's meadows     a run of dry-stone wall with a field gate, the same with a stile through it and berry
 //                               bushes, an oak with a rope swing, a row of beehives by sunflowers, a windmill and its
 //                               trough.
+//   in the Red Rock Desert      (11-25, NS1-C and NR1-B "desert set pieces", "sandstone desert rocks") a cracked
+//                               playa with a dead snag, a stand of hoodoos, saguaros round a rock pile, joshua
+//                               trees among boulders. On its bare dirt (not the sand sheets), level, off the tables.
 // The pieces drawn for them on 11-21 and never placed (client/art2/props-rural.js: dryStoneWall, fieldGate, stile,
 // ropeSwing, woodRuins) are world props here - 'ruins', 'drywall', 'fgate', 'stile', 'rswing' (statics.js draws them) -
 // solid by the world's own circles. (shared/naturesites.js waysideFinds did this for the first city's districts: its
@@ -26,9 +29,10 @@ export const WAYSIDE = {
   by: {               // district: how many, and what (in turn, so a district has each kind before a second of any)
     47: { n: 18, set: 'woods', kinds: ['ruins', 'oakbench', 'firering', 'mushlog'] },   // Highland Woods (Egret Coast has no pine and oak ground that fits: its own finds come with the coast)
     49: { n: 16, set: 'valley', kinds: ['drywall', 'oakswing', 'apiary', 'stilewall', 'windpump'] },   // Willow Valley
+    50: { n: 28, set: 'desert', kinds: ['playa', 'hoodoos', 'saguaros', 'joshuas'] },   // the Red Rock Desert
   },
 };
-const VEG = /^(tree_|redwood|shrub_|bush_|flowers_|rwstump|rwlog|log$|fern|gnaw|boulder$)/, TALL = /^(tree_|redwood)/;   // (what grows or lies wild: a find clears it from its ground)
+const VEG = /^(tree_|redwood|shrub_|bush_|flowers_|rwstump|rwlog|log$|fern|gnaw|boulder$|cactus$)/, TALL = /^(tree_|redwood)/;   // (what grows or lies wild: a find clears it from its ground)
 const HARD = new Set([T.ROAD, T.BRIDGE, T.LOT, T.BUILDING, T.WALL, T.WATER, T.DEEP, T.SIDEWALK, T.PLAZA, T.DOCK, T.FIELD]);
 
 export function buildWayside3(m, H3) {
@@ -69,13 +73,14 @@ export function buildWayside3(m, H3) {
       const i = idx(tx + dx, ty + dy), t = m.tiles[i];
       if (HARD.has(t)) return false;
       if (Math.abs(dx) > R || Math.abs(dy) > R) continue;
-      if (m.dist[i] !== d || t !== T.GRASS || !m.land[i] || (m.reserve[i] & ~128) || (m.bld && m.bld[i] >= 0)) return false;
+      if (m.dist[i] !== d || t !== (set === 'desert' ? T.DIRT : T.GRASS) || !m.land[i] || (m.reserve[i] & ~128) || (m.bld && m.bld[i] >= 0)) return false;
       if (m.relief) { const r = reliefMetres(m.relief[i]); if (r < lo) lo = r; if (r > hi) hi = r; }
     }
     if (m.relief && hi - lo > 8) return false;   // (level ground: a wall, a bench, a fire ring)
     if (madeNear((tx + 0.5) * TILE, (ty + 0.5) * TILE, (R + 4) * TILE)) return false;
     // (the ground that grows there - 1 grass, 2 forest: a wall and a windmill stand in open meadow, not in the valley's
     // thickets; the woods' finds under trees)
+    if (set === 'desert') return true;   // (bare dirt of the desert's own district: nothing more to ask)
     if (TC) for (const [dx, dy] of [[0, 0], [-R, -R], [R, -R], [-R, R], [R, R]]) if (terrainAt(TC.cls, TC.cw, tx + dx, ty + dy) !== (set === 'woods' ? 2 : 1)) return false;
     let trees = 0, red = 0;
     around((tx + 0.5) * TILE, (ty + 0.5) * TILE, 10 * TILE, (p) => { if (TALL.test(p.t)) { trees++; if (p.t === 'redwood' || /^(giant|redwood)/.test(p.sp || '')) red++; } });
@@ -85,7 +90,7 @@ export function buildWayside3(m, H3) {
   const cands = new Map();
   for (let ty = R + 4; ty < HH - R - 4; ty += WAYSIDE.step) for (let tx = R + 4; tx < W - R - 4; tx += WAYSIDE.step) {
     const jx = tx + Math.floor(hh(tx, ty, 9101) * 5) - 2, jy = ty + Math.floor(hh(tx, ty, 9102) * 5) - 2, d = m.dist[idx(jx, jy)], D = WAYSIDE.by[d];
-    if (!D || m.tiles[idx(jx, jy)] !== T.GRASS || kept(jx, jy)) continue;
+    if (!D || m.tiles[idx(jx, jy)] !== (D.set === 'desert' ? T.DIRT : T.GRASS) || kept(jx, jy)) continue;
     let a = cands.get(d); if (!a) cands.set(d, (a = []));
     a.push({ tx: jx, ty: jy, h: hh(jx, jy, 9103) });
   }
@@ -183,6 +188,33 @@ export function buildWayside3(m, H3) {
         for (let k = 0; k < 4; k++) P('flowers_a', X - 66 + k * 44, Y - 30, 0, { sp: 'sunflowers', k: 1 });
         P('fruitcrate', X + 84, Y + 18, 6);
         for (let k = 0; k < 3; k++) P('flowers_a', X - 80 + k * 80 + (h(10 + k) - 0.5) * 20, Y + 60 + (h(13 + k) - 0.5) * 16, 0, { sp: pick(['lupines', 'daisies', 'poppies'], 16 + k), k: 1 });
+        break;
+      case 'playa': {   // (NS1-C: a pan of cracked mud, a dead snag at its edge, tumbleweed blown onto it - the ground bake paints the pan from m.tinajas, as a seep's ring)
+        (m.tinajas ||= []).push({ x: Math.round(X), y: Math.round(Y), r: 0, ring: Math.round(2.9 * TILE), k: 1 });
+        for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) if (dx * dx + dy * dy <= 12) m.reserve[idx(tx + dx, ty + dy)] |= 192;   // (nothing grows on the pan)
+        P('tree_a', X - 100 + h(1) * 30, Y - 84, 8, { sp: 'deadSnag', k: 1.1 });
+        for (let k = 0; k < 3; k++) { const a = h(2) * 6.283 + k * 2.1; P('shrub_a', X + Math.cos(a) * (50 + h(10 + k) * 40), Y + Math.sin(a) * (40 + h(13 + k) * 30), 0, { sp: 'tumble', k: 1 }); }
+        for (let k = 0; k < 3; k++) { const a = h(3) * 6.283 + k * 2.3 + 1; P('boulder', X + Math.cos(a) * 116, Y + Math.sin(a) * 100, 9, { s: 12 + Math.round(h(16 + k) * 8) }); }
+        break;
+      }
+      case 'hoodoos': {   // (NR1-B: a stand of sandstone spires, as the five by the arch - world3-desert.js)
+        const n = 3 + Math.floor(h(1) * 2);
+        for (let k = 0; k < n; k++) { const x = X - 70 + k * (140 / (n - 1)) + (h(10 + k) - 0.5) * 22, y = Y - 20 + (k % 2 ? 34 : 0) + (h(14 + k) - 0.5) * 16; P('outcrop', x, y, 14, { w: 34, d: 30, h: 70 + Math.round(h(18 + k) * 50), s: 60 + k * 7 + Math.floor(h(22 + k) * 40), style: 'sandstone' }); }
+        for (let k = 0; k < 4; k++) P('boulder', X - 96 + k * 64 + (h(30 + k) - 0.5) * 20, Y + 76 + (h(34 + k) - 0.5) * 20, 9, { s: 12 + Math.round(h(38 + k) * 10) });
+        for (let k = 0; k < 3; k++) P('shrub_a', X - 90 + k * 90 + (h(40 + k) - 0.5) * 20, Y - 84 + (h(43 + k) - 0.5) * 14, 0, { sp: k === 1 ? 'brittle' : 'sage', k: 1 });
+        break;
+      }
+      case 'saguaros':   // (NS1-C: saguaros round a pile of rock, barrel cactus and prickly pear at its foot)
+        P('outcrop', X + 6, Y - 6, 22, { w: 64, d: 46, h: 34, s: 80 + Math.floor(h(1) * 60), style: 'sandstone' });
+        P('cactus', X - 76, Y - 30, 7, { sp: 'saguaroBig', k: 1.1 }); P('cactus', X + 84, Y - 12, 7, { sp: 'saguaroBig', k: 1 }); P('cactus', X - 58, Y + 44, 6, { sp: 'saguaroMid', k: 1 });
+        for (let k = 0; k < 3; k++) P('cactus', X - 30 + k * 44 + (h(10 + k) - 0.5) * 16, Y + 58 + (h(13 + k) - 0.5) * 14, 5, { sp: k === 1 ? 'pear' : 'barrel', k: 1 });
+        for (let k = 0; k < 2; k++) P('shrub_a', X - 100 + k * 196, Y + 84 + (h(20 + k) - 0.5) * 16, 0, { sp: 'dryGrass', k: 1 });
+        break;
+      case 'joshuas':   // (NS1-C: joshua trees among boulders, dry grass and a yucca)
+        P('tree_a', X - 56, Y - 34, 8, { sp: 'joshua', k: 1.3 }); P('tree_a', X + 60, Y - 8, 8, { sp: 'joshua', k: 1.1 }); if (h(1) < 0.6) P('tree_a', X - 4, Y - 78, 8, { sp: 'joshua', k: 0.95 });
+        for (let k = 0; k < 3; k++) P('boulder', X - 90 + k * 84 + (h(10 + k) - 0.5) * 26, Y + 50 + (h(13 + k) - 0.5) * 24, 10, { s: 14 + Math.round(h(16 + k) * 12) });
+        P('cactus', X + 10, Y + 22, 5, { sp: 'yucca', k: 1 });
+        for (let k = 0; k < 3; k++) P('shrub_a', X - 100 + k * 96 + (h(20 + k) - 0.5) * 20, Y + 96 + (h(23 + k) - 0.5) * 12, 0, { sp: 'dryGrass', k: 1 });
         break;
       case 'windpump':   // (NS1-E: a windmill over its trough, the ground trodden round it)
         earth(0, 1, 2);

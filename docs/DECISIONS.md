@@ -393,6 +393,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   dissolves in over 12 px along its outline and its footprint (`GHOST_EDGE`, `EDGE_PX`); the eased transition as it
   was (0.35 s in, 0.5 s out). This replaces the 10-23 "a ghost, not the whole of it at once"; a thin thing (a mast's
   hut, a tree) keeps its lighter ghost. On the branch; live on his word.
+- The bake's code budget 1,100 -> 1,150 KB (the owner, 11-25 16:51: "lets raise the bake limit. is that an issue?" -
+  Claude's answer: no; it is code a browser fetches once per build, in a worker, off the first screen; the bake's
+  time and a chunk's weight have their own budgets and do not move).
 - The bake's code budget 1,080 -> 1,100 KB (the owner, 11-25 03:05: "Yes raise the bake code limit as you need").
 - The fern kit approved (the owner, 11-25 03:05: "Fern looks good to me, I would go easy on the gold bracken and use
   it sparingly and in places that would make sense logically, and sometimes in little clusters but mostly just good

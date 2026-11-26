@@ -27725,3 +27725,18 @@ Not done, listed in `docs/tasks/ART-CHECK-LIST.md`: the tables' cliff faces (a l
 (small), the playa, the tin shack, a seep's square pool. Logged for part B: a concrete door path across Dusty
 Hollow's street; the desert highway's saw-toothed edge.
 
+## 2026-11-25 · The desert's found places; the bake's code budget 1,100 -> 1,150 KB - on branch `fable-art-1124`
+
+- **Found places in the Red Rock Desert** (the plan's step (d): small places of the biome's kit, spread by rule;
+  NS1-C, NR1-B). `shared/world3-wayside.js` knew the woods and the valley; district 50 is a third set on the desert's
+  bare dirt (not the sand sheets), level, off the tables' rock, 6 to 56 tiles off a road or trail: **28 places, 7
+  each** - a cracked playa with a dead snag and tumbleweed (the pan painted by the ground bake from `m.tinajas`,
+  the list a seep's ring is in: no new bake code), a stand of 3-4 hoodoos, saguaros round a rock pile, joshua trees
+  among boulders. 62 found places in the world now (34). A world change: with the batch.
+  `test/world3wayside.test.js` (its pieces by kind; the same ground, distance and nothing-in-front rules).
+- **The bake's code budget raised to 1,150 KB** (`tools/perf.mjs`; the owner, 16:51). Why: 1,098.1 of 1,100 after
+  the desert's first pass, with the desert's tin shack and rusted pickup (new art), cliff look B if he picks it, and
+  the coast and jungle still to draw. What it costs: a browser fetches the bake's code once per build, in a worker,
+  after the first screen - 50 KB more is under 5% of it. The bake's time (`bakeX`) and a kept chunk's weight are
+  budgets of their own and are untouched.
+

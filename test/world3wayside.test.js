@@ -24,7 +24,7 @@ test('the found places: enough of each kind, in their own districts, apart from 
   const by = {};
   for (const f of finds) by[f.type] = (by[f.type] || 0) + 1;
   console.log('found places', finds.length, JSON.stringify(by));
-  assert.ok(finds.length >= 28, `found places in the world (${finds.length})`);
+  assert.ok(finds.length >= 50, `found places in the world (${finds.length})`);
   for (const [d, D] of Object.entries(WAYSIDE.by)) {
     const mine = finds.filter((f) => f.d === +d);
     assert.ok(mine.length >= D.n * 0.75, `district ${d}: ${mine.length} of ${D.n}`);
@@ -64,6 +64,11 @@ test('each find has its pieces, and what should stop you is solid', () => {
       case 'oakswing': has('rswing'); assert.ok(near(f, 'tree_b', R).some((p) => p.sp === 'oak'), `${at}: the oak`); break;
       case 'apiary': has('beehive', 3); assert.ok(near(f, 'flowers_a', R).filter((p) => p.sp === 'sunflowers').length >= 3, `${at}: the sunflowers`); break;
       case 'windpump': has('windmill'); has('trough'); break;
+      // the desert's (11-25): a pan of cracked mud the ground bake paints from the list a seep's ring is in, nothing growing on it
+      case 'playa': { const e = (m.tinajas || []).find((q) => q.x === f.x && q.y === f.y); assert.ok(e && e.r === 0 && e.k === 1 && e.ring >= 2 * TILE && e.ring <= WAYSIDE.R * TILE / 1.3, `${at}: its pan, inside its own ground`); assert.ok(near(f, 'tree_a', R).some((p) => p.sp === 'deadSnag'), `${at}: the snag`); assert.equal(m.reserve[m.idx(Math.floor(f.x / TILE), Math.floor(f.y / TILE))] & 192, 192, `${at}: bare`); break; }
+      case 'hoodoos': assert.ok(near(f, 'outcrop', R).filter((p) => p.style === 'sandstone' && p.h >= 70).length >= 3, `${at}: three spires or more`); break;
+      case 'saguaros': has('outcrop'); assert.ok(near(f, 'cactus', R).filter((p) => /^saguaro/.test(p.sp)).length >= 3, `${at}: the saguaros`); break;
+      case 'joshuas': assert.ok(near(f, 'tree_a', R).filter((p) => p.sp === 'joshua').length >= 2, `${at}: the joshua trees`); has('boulder', 3); break;
       default: assert.fail(`${at}: a kind the test doesn't know`);
     }
     // (every plant a find sets is a species the art knows)
