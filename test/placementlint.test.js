@@ -40,5 +40,5 @@ for (const k of Object.keys(L.rows)) {
 }
 
 test('the lint looked at things (it isn\'t passing on an empty world)', () => {
-  assert.ok(L.seen.boats > 200 && L.seen.signs > 150 && L.seen.props > 20000 && L.seen.decks > 500 && L.seen.beachWaterOld > 5 && L.seen.skateKit > 5 && L.seen.fronts > 1500 && L.seen.paths > 2000 && L.seen.atms > 300 && L.seen.festoons > 300 && L.seen.texts > 500 && L.seen.doors > 4000 && L.seen.enter > 900, JSON.stringify(L.seen));
+  assert.ok(L.seen.boats > 200 && L.seen.signs > 150 && L.seen.props > 20000 && L.seen.decks > 500 && L.seen.beachWaterOld > 5 && L.seen.skateKit > 5 && L.seen.fronts > 1500 && L.seen.paths > 2000 && L.seen.roofSigns > 400 && L.seen.atms > 300 && L.seen.festoons > 300 && L.seen.texts > 500 && L.seen.doors > 4000 && L.seen.enter > 900, JSON.stringify(L.seen));
 });

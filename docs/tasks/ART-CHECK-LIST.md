@@ -212,10 +212,16 @@ last leap over the top of a falls; the other fish's leaps.
   the building's wall at one end of the front with a painted door in it; the shop's window, awning and sign keep to
   the shop (382 doors; 9 are apartment lobbies and stay). Picture: `report-86`. Judge in the game: Trestle Street in
   Midtown, the Arts District's galleries - stand at the flat's door: the prompt is the flat's, the shop's door its own.
-- [ ] **Hotels' entrance canopies** (11-26): every hotel, motel office and airport concourse had the filling
-  stations' white slab standing over its own name. Now a cloth canopy in the front's colour, as wide as the name, the
-  name on its front edge (50 places). Picture: `report-87`. Judge in the game: The Bridgeview in Midtown, the Pink
-  Mile's motels, the Grand Neon Hotel. Say if you would rather the canopies plain and the names on the wall.
+- [ ] **Hotels' entrance canopies** (11-26; your word of 09:00: "it's okay some signs are on the canopies, don't want
+  it to be all the canopies though"): every hotel, motel office and airport concourse had the filling stations' white
+  slab standing over its own name. Now a cloth canopy in the front's colour: a hotel with a name of its own carries
+  it on the canopy's front edge (16 places); an OFFICE, a plain HOTEL, an airport's DEPARTURES keep the board on the
+  wall over a plain, lower canopy (35). Pictures: `report-87`, `report-88`. Judge in the game: The Bridgeview in
+  Midtown, the Pink Mile's motels, the Grand Neon Hotel.
+- [ ] **Signs on roofs** (11-26; your note of 11-22: "cut off through the roof"): 28 of 664 roof billboards and neon
+  names had part of the board hidden - on a pitched roof, behind a smokestack or a tank, behind a taller building.
+  A roof sign whose foot would be hidden is taken off (45; 619 stand). Judge in the game: Old Town's tiled roofs, the
+  Neon Strip's roofs - no board standing out of a roof.
 - [ ] **Painted lips over the run** (11-25, a look only): the mouth jumped a pixel about the face from frame to
   frame; it now sits under the middle of the eyes in every frame. Only figures with lipstick changed (55 of 2,688
   frames checked). Picture: `report-79`. Goes with the re-bake (the people's art is in the art hash).
@@ -227,11 +233,11 @@ last leap over the top of a falls; the other fish's leaps.
   `report-80` (the Inventory before and after), `report-81-all-pieces` (every piece). Judge on your phone: do the
   pictures read, and how fast do they come in when the Inventory opens. (The shops already show each piece on your
   own figure.)
-- [ ] **YOUR PICK: the UI's look** (11-26, part C2). The same screens three ways - A today, B hard pixel frames
+- [x] **YOUR PICK: the UI's look - C** (the owner, 11-26 09:00: "I think C looks good for the UI"; to build into every screen). It was (11-26, part C2): The same screens three ways - A today, B hard pixel frames
   with the line icons kept, C hard pixel frames with pixel icons: `report-82-ui-pick-inventory`,
   `report-83-ui-pick-settings`, `report-84-ui-pick-close`. Nothing in the game is changed yet. Say A, B or C (or
   what to mix), and every screen follows with a lint.
-- [ ] **YOUR PICK: a soft lip colour** (11-26; your note of 11-25 01:34). The starting looks' heads four ways - A
+- [x] **YOUR PICK: a soft lip colour - A, none** (the owner, 11-26 09:00: "A was probably fine"; C if some get mouths later). It was (11-26; your note of 11-25 01:34): The starting looks' heads four ways - A
   none (today), B faint one pixel, C faint two pixels, D soft two pixels: `report-85-soft-lips-pick`. Say which, and
   whether it is everyone's or a choice in the look screen. Nothing is changed yet.
 - [ ] **YOUR CALL: a pool and stream above Coral Cay Falls** (the plan's jungle item). Not built: the spine above the

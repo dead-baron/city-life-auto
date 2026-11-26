@@ -28093,3 +28093,37 @@ rest street furniture, trees and runs of lights.
   binbags, townwork, world3clutter, world3desert, doorsbake 16/16, walkinfront 2/2.
 - A bake change: it rides with the branch's re-bake. Not seen in a running game. Pictures: `report-86`, `report-87`.
 
+## 2026-11-26 · A sign on a roof is seen whole or isn't there (N23) - on branch `fable-art-1124`
+The owner, 11-22: "These signs on the top of these buildings are cut off through the roof." The bake's rule is that the
+higher surface wins, so a billboard at the back of a roof whose foot is behind something taller showed as a strip of
+board standing out of it. Counted from the drawn pixels with a new lint row, `roofSignCut`: **28 of 664** roof signs
+(billboards 325, neon names 217, picture signs 122) - 18 billboards cut by their own roof (most on a roof that is
+pitched: the kit was laid for a flat deck; the rest behind a smokestack, a tank or another sign), 8 signs behind a
+taller building to the south, 2 neon names behind the big neon name on their own front.
+- **The build** (`statics.js` `clearRoofSigns`, in `addBuildings`, which now makes every building's spec and roof kit
+  before it puts any): a roof sign is taken off - a neon's glow with it - when its board's foot would be hidden by
+  its roof's pitch, its building's upper block, a taller piece of its own roof's kit in front, the big neon name on
+  its front, or another building in front. One line of arithmetic per volume (`hidesAt`: along a line of sight the
+  nearer surface is the higher one). It goes by each piece's box, so it is stricter than the drawing: 45 signs are
+  taken off (619 stand), and wherever it lets a sign stand none of the board is hidden.
+- **The lint** (`tools/placementlint.mjs` `roofSignRows`): each sign's board pixels against its own building's sprite
+  and every building item in front that rises over it. Held at **0**. `seen.roofSigns` is in the lint's own check.
+- I took signs off rather than move them: a billboard is one of several things a roof may carry, and moving one
+  means laying the roof out again round it.
+- `test/roofsigns.test.js` (the rule on small sets of buildings - a tank, a pitched roof, a taller neighbour south,
+  north and across a wide street, an upper block, a neon behind the front's name; in the drawn pixels: a smokestack
+  in front cuts the board, `roofSigns` says where each sign is drawn, and what the rule lets stand is whole).
+
+## 2026-11-26 · His words of 09:00: the canopies a mix, UI look C, lips A, the merge waits
+- **"It's okay some signs are on the canopies, don't want it to be all the canopies though."** A hotel with a name of
+  its own carries it on its canopy (16); an OFFICE, a plain HOTEL, an airport's DEPARTURES - ARRIVALS (35) keep the
+  board on the wall over a plain cloth canopy 38 px high, low enough to stand under the board (`ownNameless`,
+  `HOTEL_CANOPY.low`). `signCovered` stays 68. Picture: `report-88`.
+- **UI look C** (hard pixel frames, pixel icons): decided; to build into the game's CSS and icons, every screen, with
+  a lint. Not started.
+- **Lips: A stays** (no mouth); C if some figures get mouths later. Nothing changed.
+- **The merge and re-bake wait** for more of the city.
+- Run on both changes: placementlint 44/44 (`roofSignCut` 0, `signCovered` 68, `lobbyDoor` 0), roofsigns 3/3,
+  signclear, flatdoors, perf, signs, doors 29/29, walkinfront, doorsbake, cinema, alleyfade, seethrough 18/18.
+  Bake changes: with the branch's re-bake. Not seen in a running game.
+

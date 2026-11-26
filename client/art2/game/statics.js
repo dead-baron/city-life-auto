@@ -1721,14 +1721,75 @@ function addAlleys(c, I) {
   for (const it of streetGrit(c.M)) { const [w, h] = AL.decalSize(it.k); put(I, { key: `ad:${it.k}:${it.v}`, recipe: { t: 'adecal', k: it.k, v: it.v }, x: it.x, y: it.y, ext: [w / 2 + 2, h / 2 + 16, w / 2 + 2, h / 2 + 2] }); }
 }
 
+// A sign standing on a roof is seen whole or it isn't there (the owner, 11-22, N23: "These signs on the top of these
+// buildings are cut off through the roof"; the placement lint's roofSignCut). The bake's rule is that the higher surface
+// wins, so a billboard at the back of a roof with a stair hut or a tank in front of it, on a roof that is pitched, or
+// behind a taller building, showed as a strip of board standing out of whatever hid its foot. Once every building's
+// spec and roof kit are known, each roof sign whose board's foot would be hidden - by its own roof's pitch, by its
+// building's upper block, by a taller piece of its own roof's kit in front of it, by the big neon name on its own
+// front, or by another building in front -
+// is taken off (and a neon's glow with it). Along a line of sight the nearer surface is the higher one: a volume
+// [x0, x1] x [yn, yf] of height H hides a point at ground row Yg and height hz when it reaches south of the point and
+// max(yn - Yg, 0) + hz <= H.
+export const ROOF_SIGN = { bill: { hw: 60, foot: 30 }, neon: { hw: 55, foot: 22 }, npic: { hw: 55, foot: 14 }, hide: 3, lap: 4 };
+export const hidesAt = (V, xa, xb, Yg, hz) => Math.min(xb, V[1]) - Math.max(xa, V[0]) >= ROOF_SIGN.lap && V[3] > Yg + 1 && Math.max(V[2] - Yg, 0) + hz + ROOF_SIGN.hide <= V[4];
+export function clearRoofSigns(all) {
+  const vols = [];
+  for (const B of all) for (const q of B.built) {
+    const { s, spec, up } = q;
+    if (s.vox) continue;
+    const x0 = s.tx * TILE, yn = s.ty * TILE, w = s.tw * TILE, d = s.th * TILE;
+    vols.push([x0, x0 + w, yn, yn + d, s.frame ? (3 + (B.b.id % 3)) * 56 : buildingH(spec), q, 0]);
+    if (up && !s.frame) vols.push([x0 + up.x, x0 + up.x + up.spec.w, yn + up.y, yn + up.y + up.spec.d, roofDeckZ(spec) + buildingH(up.spec), q, 1]);
+    // (the big neon names on its front, which rise over the roof's line - neonsigns.js: a board on the front wall's plane)
+    if (!s.frame) for (const ns of spec.neonSigns || []) if (ns && ns.w && ns.h && ns.x !== undefined && ns.v !== undefined) vols.push([x0 + ns.x, x0 + ns.x + ns.w, yn + d - 1, yn + d, ns.v + ns.h, q, 2]);
+  }
+  let cut = 0, seen = 0;
+  for (const B of all) for (const q of B.built) {
+    const { s, spec, up, lights } = q;
+    if (s.vox || s.frame) continue;
+    const x0 = s.tx * TILE, yn = s.ty * TILE, d = s.th * TILE, zD = roofDeckZ(spec);
+    const decks = [[q.kit, 0, 0, zD, spec, 0]];
+    if (up) decks.push([up.kit, up.x, up.y, zD + roofDeckZ(up.spec), up.spec, 1]);
+    for (const [kit, ox, oy, z, sp, isUp] of decks) {
+      if (!kit) continue;
+      for (let i = kit.length - 1; i >= 0; i--) {
+        const [k, rx, ry] = kit[i], K = ROOF_SIGN[kitBase(k)];
+        if (!K || !K.hw) continue;
+        seen++;
+        const X = x0 + ox + rx, Yg = yn + oy + ry, xa = X - K.hw, xb = X + K.hw, hz = z + K.foot;
+        let hid = !!sp.pitch;
+        // the pieces of its own roof in front of it (their boxes about their ground points, turned ones the other way round)
+        for (let j = 0; j < kit.length && !hid; j++) {
+          if (j === i) continue;
+          const [k2, rx2, ry2] = kit[j], D2 = KITS[kitBase(k2)];
+          if (!D2) continue;
+          const rot = k2.endsWith('@'), kw = rot ? D2[1] : D2[0], kd = rot ? D2[0] : D2[1];
+          hid = hidesAt([x0 + ox + rx2 - kw / 2, x0 + ox + rx2 + kw / 2, yn + oy + ry2 - kd / 2, yn + oy + ry2 + kd / 2, z + D2[2]], xa, xb, Yg, hz);
+        }
+        for (let j = 0; j < vols.length && !hid; j++) { const V = vols[j]; if (V[5] === q && V[6] === isUp) continue; hid = hidesAt(V, xa, xb, Yg, hz); }
+        if (!hid) continue;
+        kit.splice(i, 1);
+        cut++;
+        const lx = ox + rx, ly = oy + ry - d + 6;
+        if (lights) for (let j = lights.length - 1; j >= 0; j--) if (lights[j][6] === 'neon' && lights[j][0] === lx && lights[j][1] === ly) lights.splice(j, 1);
+      }
+    }
+  }
+  return { seen, cut };
+}
+
 function addBuildings(c, I) {
-  const M = c.M;
+  const M = c.M, all = [];
   M.buildings.forEach((b, bi) => {
     if (!b || b.gone || b.kind === 'motorpool') return;
     const A = archOf(c, b);
     const D = c.dist((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE);
     const secs = sectionsOf(c, b, A);
-    const built = oneNameAcross(secs.map((s) => ({ s, ...specOf(c, b, A, s, D) })));   // (one name along a front, however many sections it's drawn in)
+    all.push({ b, bi, A, D, built: oneNameAcross(secs.map((s) => ({ s, ...specOf(c, b, A, s, D) }))) });   // (one name along a front, however many sections it's drawn in)
+  });
+  I.roofSigns = clearRoofSigns(all);   // (once every building's height is known: no sign on a roof with its foot hidden)
+  for (const { b, bi, A, D, built } of all) {
     for (const { s, spec, kit, lights, up } of built) {
       const x0 = s.tx * TILE, y1 = (s.ty + s.th) * TILE, w = s.tw * TILE, d = s.th * TILE;
       if (!s.vox && !s.frame && s.south) dressPlan(spec, { id: b.id, k: s.k, st: D.style, tier: D.tier, A, H: buildingH(spec), w, walkIn: !!s.walk });   // (the facade's dressing by the district: facadedress.js)
@@ -1765,7 +1826,7 @@ function addBuildings(c, I) {
       for (const q of spec.doors || []) if (q.kind === 'garage' && s.south) { let l = I.garages.get(bi); if (!l) I.garages.set(bi, (l = [])); l.push([x0 + q.x - 10, x0 + q.x + q.w + 10]); }
       if (spec.shop && s.south && !s.vox && !s.frame) { const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10; const ox = openSignX(sh, w); I.fronts.push({ x0, y1, w, dx, dw, kind: sh.kind, A, st: D.style, b: bi, open: ox === null ? null : [ox, ox + openSignW()], board: !!(sh.sign && sh.sign.text) }); }
     }
-  });
+  }
 }
 
 // The doors on a street front that open live (shared/doors.js; the owner's notes 2, p16): its shop's door or its own,
@@ -1833,11 +1894,28 @@ function adFace(w, h, ad, seed) {
   drawText((px, py, k) => G.put(px, py, k ? [20, 16, 24] : [255, 226, 140], [0, 1, 0.1], 0, k ? null : [255, 220, 140, 60], 0), l2, 6, Math.round(h * 0.55), { sx: 2, sy: 2, gap: 1, shadow: true });
   return G;
 }
+export const ROOF_BILL = { w: 120, h: 44, lift: 30 };   // (a roof billboard's face and how far its posts lift it off the deck)
 function billboardOnRoof(G, rx, ay, H, seed) {
-  const ad = ADS[seed % ADS.length], fw = 120, fh = 44, lift = 30;
+  const ad = ADS[seed % ADS.length], { w: fw, h: fh, lift } = ROOF_BILL;
   const frame = memo('bbframe:roof', () => voxSprite(TW.billboardFrame(fw, fh, lift)));
   zPut(G, frame, rx, ay, H);
   zPut(G, upright(adFace(fw, fh, ad, seed), lift), rx, ay + 2, H);
+}
+// The signs standing on a building's roof, as makeBld draws them (the placement lint's roofSignCut and the layout's
+// own check): [{ k, s (the sign's own sprite: a billboard's face; a neon or picture sign on its posts), rx, ry (its
+// ground point from the section's north-west corner), z (the deck it stands on), foot (the height its board starts
+// at, over its posts) }]. Its pixel (sx, sy) lands in the building's sprite G at (G.ax + rx - s.ax + sx,
+// G.ay - spec.d + ry - s.ay - z + sy), at height s.z + z.
+export function roofSigns(r) {
+  const out = [], zD = roofDeckZ(r.spec);
+  const add = (k, rx, ry, z) => {
+    const kb = kitBase(k);
+    if (kb === 'bill') out.push({ k, s: upright(adFace(ROOF_BILL.w, ROOF_BILL.h, ADS[r.spec.seed % ADS.length], r.spec.seed), ROOF_BILL.lift), rx, ry: ry + 2, z, foot: ROOF_BILL.lift });
+    else if (kb === 'neon' || kb === 'npic') out.push({ k, s: kitSprite(k), rx, ry, z, foot: kb === 'neon' ? 22 : 14 });
+  };
+  if (r.up) { const zU = zD + roofDeckZ(r.up.spec); for (const [k, rx, ry] of r.up.kit || []) add(k, r.up.x + rx, r.up.y + ry, zU); }
+  for (const [k, rx, ry] of r.kit || []) add(k, rx, ry, zD);
+  return out;
 }
 // stand a flat face upright: each row's height is its height above the ground point (plus lift), anchor at the
 // bottom middle of where it would meet the ground
@@ -4105,7 +4183,11 @@ function bayIn(M, x, y, w, h) {
   const inBox = (px, py, m = 48) => px > x - m && px < x + w + m && py > y - m && py < y + h + m;
   return (M.loadBays || []).some((b) => inBox(b.pick.x, b.pick.y, 160) || inBox(b.bay.x, b.bay.y, 160) || b.route.some(([tx, ty]) => inBox((tx + 0.5) * TILE, (ty + 0.5) * TILE)));
 }
-export const HOTEL_CANOPY = { w: 96, d: 34, h: 46, max: 300, pad: 52 };   // (its least width, depth and height; the widest a long name may make it; the name's board and a margin over its words)
+// a front's sign that is no name of its own: only the words any such place carries (a motel's OFFICE, a town's HOTEL,
+// an airport's DEPARTURES - ARRIVALS)
+const NAMELESS = new Set(['OFFICE', 'HOTEL', 'MOTEL', 'INN', 'LOBBY', 'DEPARTURES', 'ARRIVALS', 'RECEPTION']);
+export const ownNameless = (t) => String(t || '').toUpperCase().split(/[^A-Z0-9']+/).filter(Boolean).every((w) => NAMELESS.has(w));
+export const HOTEL_CANOPY = { w: 96, d: 34, h: 46, low: 38, max: 300, pad: 52 };   // (its least width, depth and height; the widest a long name may make it; the name's board and a margin over its words)
 function addLots(c, I) {
   const M = c.M;
   M.prefabs.forEach((p, pi) => {
@@ -4218,10 +4300,14 @@ function addLots(c, I) {
         const its = (bi >= 0 && I.byB.get(bi)) || [];
         const it = its.filter((q) => q.recipe && q.recipe.spec && q.recipe.spec.shop && cx > q.x + 8 && cx < q.x + q.recipe.spec.w - 8).sort((a, q) => q.y - a.y)[0];
         const sh = it ? it.recipe.spec.shop : null, sg = sh && sh.sign && sh.sign.text && !sh.sign.moved ? sh.sign : null;
-        const cw = sg ? clamp(boardFor(sg, HC.max - 24).cw * 2 + HC.pad, HC.w, Math.max(HC.w, Math.min(HC.max, it.recipe.spec.w - 16))) : HC.w;
-        const col = sh && sh.awning ? sh.awning[0] : U.ENTRY_COLS[(bi < 0 ? pi : bi) % U.ENTRY_COLS.length];
-        put(I, vitem(`hcan:h:${cw}:${col}`, 'entryCanopy', [cw, HC.d, HC.h, col, 1], cx, cy, 0));
-        if (sg) coverSign(I, sg, cx, cy + HC.d / 2 + 1, cw - 24, HC.h + 6 + 2);
+        // (the owner, 11-26 09:00: "it's okay some signs are on the canopies, don't want it to be all the canopies though" -
+        // a hotel with a name of its own carries it on its canopy; an OFFICE, a plain HOTEL, an airport's DEPARTURES keep
+        // the board on the wall over a plain canopy, low enough to stand under it)
+        const own = sg && !ownNameless(sg.text);
+        const cw = own ? clamp(boardFor(sg, HC.max - 24).cw * 2 + HC.pad, HC.w, Math.max(HC.w, Math.min(HC.max, it.recipe.spec.w - 16))) : HC.w;
+        const col = sh && sh.awning ? sh.awning[0] : U.ENTRY_COLS[(bi < 0 ? pi : bi) % U.ENTRY_COLS.length], ch = own ? HC.h : HC.low;
+        put(I, vitem(`hcan:h:${cw}:${ch}:${col}`, 'entryCanopy', [cw, HC.d, ch, col, 1], cx, cy, 0));
+        if (own) coverSign(I, sg, cx, cy + HC.d / 2 + 1, cw - 24, HC.h + 6 + 2);
         lightAt(I, cx, cy, 42, 140, [1, 0.85, 0.6], 1.6, 'lamp');
       }
     }

@@ -72,7 +72,7 @@ import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy, parkExempt } from '../shared/parkcheck.js';
 import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
-import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf } from '../client/art2/game/statics.js';
+import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf, roofSigns } from '../client/art2/game/statics.js';
 import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
 import { textAudit } from './textaudit.mjs';
 import { WALK_IN } from '../shared/map.js';
@@ -112,6 +112,7 @@ export const LINT_ALLOW = {
   // booth, a porch's posts, a lamp, a flag or power pole, a run of lights (shared/festoon.js's lint is its own) - and the
   // badge of a place at a wall over its window's OPEN
   signCovered: 68,   // (11-22: egret's 159, one fewer with the walkways cleared; 11-26: 157 -> the hotels' names up on their canopies, a moved sign not painted behind, the cones out from the boards, the OPEN and the board clear of phone boxes and forecourts)
+  roofSignCut: 0,     // a sign on a roof with part of its board hidden (the owner, 11-22, N23; 28 of 664 when the row was made 11-26: taken off where its foot is hidden - statics.js clearRoofSigns)
   // the doors with no path in reach that a straight one couldn't be laid to (shared/world3-doorpaths.js: something solid,
   // water, a field, a building or more than PATH_MAX tiles of lawn in the way; a courtyard's plaza closed in) - homes for
   // the most part (West Hills', Southside's, Old Town's lots)
@@ -167,7 +168,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { doorBlocked: [], boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [], signCovered: [], doorOnGrass: [], wallOnly: [] };
+  const rows = { doorBlocked: [], boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [], signCovered: [], roofSignCut: [], doorOnGrass: [], wallOnly: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -495,7 +496,86 @@ function artRows(M, rows, seen) {
       }
     }
   }
+  roofSignRows(M, I, rows, seen, spr);
   plantRows(M, I, rows, seen);
+}
+
+// roofSignCut (the owner, 11-22, N23: "These signs on the top of these buildings are cut off through the roof"): a
+// sign standing on a roof - a billboard, a neon name or a picture sign on posts - with part of its board hidden: by
+// something else on its own roof drawn over it, by the building's own upper block, or by another building's roof or
+// wall in front of it (the bake's rule is the higher surface wins, so a board behind a taller neighbour shows as a
+// strip sticking up out of that neighbour's roof). Counted from the drawn pixels: the board's (not its posts'), by
+// what the building's own sprite shows there and what every building item in reach draws higher.
+export const ROOFSIGN = { px: 24, share: 0.06 };   // (a row: this many of the board's pixels hidden, and this share of it)
+function roofSignRows(M, I, rows, seen, spr) {
+  rows.roofSignCut = rows.roofSignCut || [];
+  seen.roofSigns = 0;
+  const signs = [], chunks = new Map();
+  for (const [bi, items] of I.byB) for (const it of items) {
+    const r = it.recipe;
+    if (!r || r.t !== 'b' || !r.spec || r.frame || !((r.kit && r.kit.length) || (r.up && r.up.kit && r.up.kit.length))) continue;
+    const list = roofSigns(r);
+    if (!list.length) continue;
+    let G = null;
+    try { G = makeStatic(r); } catch { G = null; }   // (a building's sprite is large: made, read and let go - not kept in the lint's cache)
+    if (!G) continue;
+    for (const q of list) {
+      const s = q.s, gx = (G.ax || 0) + q.rx - s.ax, gy = G.ay - r.spec.d + q.ry - s.ay - q.z;   // (the sign's sprite's corner in G)
+      const px = [];   // (the board's pixels: [x, y in G, height])
+      let own = 0;
+      for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+        const i = y * s.w + x;
+        if (!s.col[i * 4 + 3] || s.z[i] < q.foot) continue;
+        const X = gx + x, Y = gy + y, z = s.z[i] + q.z;
+        if (X < 0 || Y < 0 || X >= G.w || Y >= G.h) { own++; px.push([X, Y, z, 1]); continue; }
+        const hid = G.z[Y * G.w + X] > z + 1;
+        if (hid) own++;
+        px.push([X, Y, z, hid ? 1 : 0]);
+      }
+      if (!px.length) continue;
+      seen.roofSigns++;
+      const wx0 = it.x - (G.ax || 0), wy0 = it.y - (it.z0 || 0) - G.ay;
+      const S = { it, bi, q, px, own, other: 0, wx0, wy0, box: [wx0 + gx, wy0 + gy, wx0 + gx + s.w, wy0 + gy + s.h], by: null, gy: it.y - r.spec.d + q.ry, z0: q.z + q.foot };   // (gy: its ground row; z0: its board's foot)
+      signs.push(S);
+      for (let cy = Math.floor(S.box[1] / STATIC_CHUNK); cy <= Math.floor((S.box[3] + 400) / STATIC_CHUNK); cy++) for (let cx = Math.floor(S.box[0] / STATIC_CHUNK); cx <= Math.floor(S.box[2] / STATIC_CHUNK); cx++) { const k = cy * 4096 + cx; let l = chunks.get(k); if (!l) chunks.set(k, (l = [])); l.push(S); }
+    }
+  }
+  // (only what stands in front of the sign and rises over its board's foot can hide any of it: the higher surface wins,
+  // and along a line of sight the higher is the nearer)
+  const done = new Set();
+  signs.forEach((S, i) => { S.i = i; });
+  for (const [k, list] of chunks) {
+    const local = new Map();
+    for (const o of staticItems(M, k % 4096, Math.floor(k / 4096), { noCover: true })) {
+      if (!o.recipe || o.recipe.t !== 'b' || o.b === undefined || !o.recipe.spec) continue;
+      const ob = [o.x - o.ext[0], o.y - (o.z0 || 0) - o.ext[1], o.x + o.ext[2], o.y - (o.z0 || 0) + o.ext[3]];
+      for (const S of list) {
+        if (o === S.it || o.y <= S.gy || S.box[0] >= ob[2] || ob[0] >= S.box[2] || S.box[1] >= ob[3] || ob[1] >= S.box[3]) continue;
+        if (buildingH(o.recipe.spec) + (o.recipe.up ? buildingH(o.recipe.up.spec) : 0) + 60 <= S.z0) continue;   // (60: the tallest roof kit - a tank, a billboard)
+        const id = `${S.i}|${o.key}|${o.x}|${o.y}`;
+        if (done.has(id)) continue;
+        done.add(id);
+        let Go = local.get(o);
+        if (Go === undefined) { try { Go = makeStatic(o.recipe); } catch { Go = null; } local.set(o, Go); }
+        if (!Go) continue;
+        const ox = o.x - (Go.ax || 0), oy = o.y - (o.z0 || 0) - Go.ay;
+        let n = 0;
+        for (const p of S.px) {
+          if (p[3]) continue;
+          const X = Math.round(S.wx0 + p[0] - ox), Y = Math.round(S.wy0 + p[1] - oy);
+          if (X < 0 || Y < 0 || X >= Go.w || Y >= Go.h || !Go.col[(Y * Go.w + X) * 4 + 3]) continue;
+          if (Go.z[Y * Go.w + X] + (o.z0 || 0) > p[2] + 1) { p[3] = 2; n++; }
+        }
+        if (n) { S.other += n; if (!S.by || n > S.by[1]) S.by = [M.buildings[o.b] ? M.buildings[o.b].name || M.buildings[o.b].kind : 'a building', n, o.b]; }
+      }
+    }
+  }
+  for (const S of signs) {
+    const hid = S.own + S.other, n = S.px.length;
+    if (hid < ROOFSIGN.px || hid < n * ROOFSIGN.share) continue;
+    const b = M.buildings[S.bi], kb = S.q.k.split('|')[0];
+    rows.roofSignCut.push({ what: `${kb === 'bill' ? 'a billboard' : kb === 'neon' ? `the neon "${S.q.k.split('|')[1]}"` : 'a picture sign'} on ${b ? b.name || b.kind : 'a building'}'s roof`, x: (S.box[0] + S.box[2]) / 2, y: S.it.y, why: `${hid} of ${n} px hidden: ${S.own} by its own roof${S.other ? `, ${S.other} by ${S.by[0]}` : ''}`, kind: kb, own: S.own, other: S.other, n, bi: S.bi, by: S.by ? S.by[2] : null });
+  }
 }
 
 // a house's path and driveway (shared/world3-tidy.js homePaths3: the strips from its door and its car's spot to the street)

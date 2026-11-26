@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-26 08:40 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-26 10:40 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -160,8 +160,13 @@ entries have each piece):**
   a flat over a shop has its own door - 391 fronts, `lobbyDoor` 161 -> 0 (`shared/world3-flatdoors.js`, `report-86`).
   Then `signCovered` 157 -> 68: a hotel's entrance canopy is cloth with its name on the front edge (it was the
   forecourt's white slab over the name, 50 places), a moved sign is not painted behind, cones stand out from the
-  boards (`report-87`; the 68 left are listed in the DEVLOG). Next by the audit: roof billboards cut off, then the
-  picture signs and window goods (variants for his pick first). A process left
+  boards (`report-87`; the 68 left are listed in the DEVLOG). Then N23: a sign on a roof is seen whole or is not
+  there (`clearRoofSigns`, the lint's `roofSignCut` 28 -> 0).
+  **His words of 11-26 09:00 (DECISIONS):** the merge and re-bake WAIT for more of the city; **the UI's look is C**
+  (hard pixel frames and pixel icons - to build into every screen with a lint; not started); lips stay A; the
+  canopies a mix - a named hotel's name on its canopy, an OFFICE or a plain HOTEL on the wall over a low plain one
+  (`report-88`). Next: the UI's look C into the game (page code, its own PR), and in the city the picture signs and
+  window goods (variants for his pick first), roofs, night signs. A process left
   running does not live past the end of a turn here: the suite only moves while a turn is open (found 00:37).
   **The suite finished 04:27** (`docs/tasks/ARTPASS-TESTS-2026-11-26.txt`): 452 of 460 files clean. Two failures
   were the night's own and are fixed on the head (the hollow giants painted near black - `leaflight`; LIVE blades on
@@ -200,7 +205,7 @@ entries have each piece):**
   mouths that do not line up.
 - **15:10, his word:** cloud shadows - yes, try it (to build: page code, the light pass); the shark - another pass (to
   do: page code); the cats - asked whether fixed: yes, 11-21, shown again (`report-53`).
-- **Waiting on him (11-26 04:50):** his word to merge and re-bake; the UI's look A / B / C; a soft lip colour A-D; the
+- **Waiting on him (11-26 10:40):** (the merge waits for more city art, his word of 09:00; the UI is C; lips A) the
   eyes' spacing; the mission ruin bigger; The Palace as a second cinema; a pool above Coral Cay Falls; the redwoods
   stood apart; the banks; whether the tideline wants to be heavier; the shark, cats and cloud shadows live (page code).
 - **Next in the plan:** a look in a running World v3 game, then on his word the PR and the re-bake; part B by

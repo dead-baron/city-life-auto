@@ -39,7 +39,7 @@ world has not been set against the concept audit's own test (claude/concept-audi
 | **The lint's open rows**: `signCovered` 68 (157 until 11-26: the hotels' names up on cloth canopies, cones, moved signs; left: trees 23, lights 9, phone boxes 7, the el's piers 7, forecourts and porches 9, lamps and poles 9, badges 3, one hospital canopy), roof billboards cut off | Held at their counts in `tools/placementlint.mjs`. (`lobbyDoor`: **done 11-26** - 391 fronts by the rule, a pier and a door of its own for each flat over a shop, held at 0: `shared/world3-flatdoors.js`.) |
 
 ## Proposed order (for his word; each a class fix with its lint row, one re-bake for the kit)
-1. **The lint's open rows** - ~~`lobbyDoor` 161~~ (done 11-26, 0), `signCovered` 157 -> 68 (11-26; what is left is listed above), roof billboards cut off. They
+1. **The lint's open rows** - ~~`lobbyDoor` 161~~ (done 11-26, 0), `signCovered` 157 -> 68 (11-26; what is left is listed above), ~~roof billboards cut off~~ (done 11-26: `roofSignCut` 28 -> 0). They
    are faults a player sees today, already counted, and each ends at zero.
 2. **Picture signs and window goods by trade** - the audit's largest gap still open, on screen in every district.
    A new look: BF2 beside two or three variants of one street for his pick first.
