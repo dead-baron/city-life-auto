@@ -135,9 +135,10 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
     check(U.veins.filter((v) => v.ug === UG.CAVE && caveOf(U, v.x, v.y) === K).length >= 10, `${mine.name}'s cave: its veins`);
   }
   if (U) { const rs = U.caves.map((c) => c.region); for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) { const a = rs[i], b = rs[j]; check(a.x0 + a.w < b.x0 || b.x0 + b.w < a.x0 || a.y0 + a.h < b.y0 || b.y0 + b.h < a.y0, `the caves apart (${U.caves[i].name}, ${U.caves[j].name})`); } }
-  // (H51) the tracks' edges flagged for the traffic to keep off - and only theirs
-  const trackNames = new Set(WILD_TRACKS.map((K) => K.name));
-  const flagged = m.edges.filter((e) => e.notraffic), unflagged = m.edges.filter((e) => trackNames.has(e.name) && e.kind === 'dirt' && !e.notraffic);
+  // (H51) the tracks' edges flagged for the traffic to keep off - and only theirs, and the stations' own roads (the
+  // decision of 11-06: no traffic into a station's forecourt loop - shared/world3-stations.js dropoff, roads.js)
+  const trackNames = new Set(WILD_TRACKS.map((K) => K.name)), station = (e) => / Station Road$/.test(e.name);
+  const flagged = m.edges.filter((e) => e.notraffic && !station(e)), unflagged = m.edges.filter((e) => trackNames.has(e.name) && e.kind === 'dirt' && !e.notraffic);
   check(flagged.length >= WILD_TRACKS.length && flagged.every((e) => trackNames.has(e.name)) && unflagged.length === 0, `the tracks flagged notraffic (${flagged.length}; others: ${flagged.filter((e) => !trackNames.has(e.name)).map((e) => e.name)}; missed: ${unflagged.map((e) => e.name)})`);
   // (H51) Granite Cove's bay open to Kestrel Lake (water all the way south from the beach), its water the lake's
   const gc = named('Granite Cove')[0];

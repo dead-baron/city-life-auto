@@ -293,7 +293,7 @@ function connect() {
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
   S.ws = ws;
-  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
+  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; S.updatingUntil = 0; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
     S.lastMsgAt = performance.now();   // (the probe after coming back into view: update.js onVisible)
     if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"spawnat"')) { spawnAt(ev.data); return; }   // (never held: the city waits for it)
@@ -365,25 +365,28 @@ function scheduleReconnect(why, toTitle = false) {
   S.ws = null;
   S.connectFailed = true;
   if (S.playing && S.everConnected && !S.lostAt) S.lostAt = performance.now();
-  if (!toTitle && S.playing && S.everConnected && performance.now() - S.lostAt < RECONNECT_IN_GAME_MS) reconnecting(true);
+  const updating = (S.updatingUntil || 0) > performance.now();   // (the server said it was restarting for an update: it's a few minutes, not lost)
+  if (!toTitle && S.playing && S.everConnected && (updating || performance.now() - S.lostAt < RECONNECT_IN_GAME_MS)) reconnecting(true, updating);
   else {
     reconnecting(false);
     $('title').classList.remove('hidden');
     $('hud').classList.add('hidden');
     $('t-resume').classList.add('hidden');
     $('play').disabled = true;
-    $('t-status').textContent = S.everConnected
+    $('t-status').textContent = updating ? 'The server is updating to a new version - back in a few minutes. Your progress is saved; you\'ll go straight back in.'
+      : S.everConnected
       ? `${why}. Retrying in ${Math.round(S.reconnectIn / 1000)}s... (if you were mid-fight you have 30s before your ghost drops loot)`
-      : `The online city isn't reachable right now (retrying every few seconds).${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
+      : `The online city isn't reachable right now - it may be updating (a few minutes). Retrying every few seconds.${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
   }
   clearTimeout(S.reconnectT);
   S.reconnectT = setTimeout(connect, retryDelay(S.reconnectIn, document.hidden, performance.now() - (S.visibleAt ?? -1e9)));
   S.reconnectIn = Math.min(15000, S.reconnectIn * 1.6);
 }
-function reconnecting(on) {
+function reconnecting(on, updating = false) {
   let el = document.getElementById('reconn');
   if (!on) { if (el) el.classList.add('hidden'); return; }
-  if (!el) { el = document.createElement('div'); el.id = 'reconn'; el.setAttribute('role', 'status'); el.textContent = 'Reconnecting...'; document.body.appendChild(el); }
+  if (!el) { el = document.createElement('div'); el.id = 'reconn'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = updating ? 'Server updating - back in a few minutes...' : 'Reconnecting...';
   el.classList.remove('hidden');
 }
 // The page going into the background (a phone switching apps, another tab): the server is told it's away - it sends
@@ -542,7 +545,8 @@ function onText(m) {
     case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.on('Transit', m); if (S.bigmap) mapwp.refreshLegend(); break;
     case 'logoff': onLogoff(m); break;   // (the pause list's LOG OFF: the server's count - UI-10)
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
-    case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; S.refusedWhy = m.reason; break;
+    case 'kicked': if (m.restart) { S.updatingUntil = performance.now() + (m.back || 300) * 1000; break; }   // (the server restarting for an update: keep reconnecting through it - scheduleReconnect)
+      S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; S.refusedWhy = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     case 'line': inLine(m); break;   // the city's full: waiting at the door, in at our turn (server/line.js)
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)

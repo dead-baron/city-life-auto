@@ -28351,3 +28351,22 @@ take the full stun every time. Test: `test/stunresist.test.js`.
   not the 6,500 tiles of open water under the elevated highway's decks - boats, their wakes and foam, and swimmers
   there were drawn over the deck. `mapcore.js underDeckAt` (a bridge tile, or water under `m.deck`), asked by
   `client/art2/game/host.js` for all four. Test: `test/underdeck.test.js`.
+
+## 2026-11-26 · "Server updating" through a restart; two World v3 tests brought up to the owner's rules; the doorway hop diagnosed - branch `rules-1126`
+- **A restart for an update** (pre-beta list F): the server says so as it shuts down (`server/index.js` shutdown: the
+  'kicked' message with `restart` and `back`, 330 s - World v3 builds in about four minutes); the page keeps
+  reconnecting through it with "Server updating - back in a few minutes..." over the city instead of dropping to the
+  title after a minute (`client/main.js` scheduleReconnect, reconnecting); a title that can't reach the city says it
+  may be updating.
+- **Tests that failed on main because the rules moved on, not the world:** `world3wild` - the stations' own roads are
+  kept off by the traffic on purpose (11-06: no traffic into a station's forecourt loop), so they are allowed among the
+  flagged roads; `world3mesa` - no porte-cochere over a resort's drive since the owner's 11-14 rule against overhangs over
+  entrances (`world3-strip.js` says so): the test now checks that rule instead of the old canopies.
+- **The hop at a walk-in's door** (the owner, 11-25 00:22, the gun shop / hardware pair): filmed in a running World v3
+  game (`/tmp/door` frames, not kept). The server's walk in is smooth (no fence, no ledge, no step: checked on all three
+  Pier Street doors - and only 11 of 6,025 doors in the world have any fence across the way out, none a shop); the baked
+  ground has no step either. What reads as a hop is the page: the doorway's tiles are floor, so the moment you step into
+  them you count as inside (`main.js` walkInAt), but until the shop's cut-away bake is ready the outside stays drawn and
+  you show as an x-ray silhouette up on its roof, above the sign - in the 3/4 view, a jump up and over the front. For
+  the renderer's work (logged in the pre-beta list): keep the walker drawn at the door, or the roof faded, until the
+  inside is ready - or start the cut-away bake sooner.

@@ -509,6 +509,8 @@ ideas and mechanics are free to imitate. What it keeps private: the authoritativ
 the tools, the plans and everything unreleased.
 
 ## The owner's notes while playing the live build (11-25 00:22 - 00:33) - logged, not acted on in the art pass
+- **DIAGNOSED 11-26 (Opus; DEVLOG):** not the world or the server - the page shows you as a silhouette on the shop's roof
+  between stepping onto the doorway's floor tiles and the cut-away inside being ready; for the renderer's work.
 - **A hop at a shop's doorway** (the gun shop / hardware pair, a walk-in front): "it looks like i have to jump across
   something underneath the doorway here, my player pauses and hops over something underneath the entry sign so I dont
   know what it is thats under there." To find: what solid or step lies under the fascia at a walk-in's door (a kerb, a
