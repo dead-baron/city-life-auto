@@ -5,7 +5,7 @@ import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_L
 import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, FENCE_PROPS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
-import { pedStep, vehStep, driveInput, setFences } from '../shared/physics.js';
+import { pedStep, vehStep, driveInput, setFences, wadeBand, WB } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
@@ -622,7 +622,7 @@ function reconcile(s) {
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
     if (def.kind === 'air' && !S.airMod) { S.pred = null; loadAir(); return; }   // (flying: predicted once render/aircraft.js is in)
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), ug: S.ugLayer || 0 };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), stalled: def.kind !== 'air' && !!(e.flags & VF.STALL), ug: S.ugLayer || 0 };
     S.pred = { kind, s: st, def, prev: null };
     if (def.kind === 'air') { Object.assign(st, { alt: s.self.rdy, vz: s.self.stamina, spool: s.self.rollT, bank: s.self.rdx, slip: 0, spin: 0, launch: 0 }); S.pred.air = true; }
     else if (def.horse) { const r = s.self.rdy; st.blown = r < -0.5; st.stam = st.blown ? -1 - r : r; }   // (a horse's wind, as the server has it: server/net.js)   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
@@ -4564,7 +4564,8 @@ function driverBlinks(v) { for (const p of S.ents.values()) if (p.kind === K.PED
 const vehSpeed = (v) => (v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x - v.buf[v.buf.length - 2].x, v.buf[v.buf.length - 1].y - v.buf[v.buf.length - 2].y) * 20 : 0);
 // (an aircraft only when it's down on the water - not every frame it flies over it at any height: the splashes and rings
 // under a helicopter at 31 m, the owner 11-06 - and a floatplane never; v._up: up in the air, no puddle splashes either)
-const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+// (a land vehicle only deeper than it can ford: shallower it splashes or wades through - shared/physics.js wade; v._wade the band)
+const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1 && (def.kind === 'air' || def.horse || (v._wade = wadeBand(S.map, v.rx, v.ry, def)) === WB.DEEP);
 const TRAIL = [];   // (trailSteps' points: reused every call)
 function vehVisual(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
@@ -4574,6 +4575,9 @@ function vehVisual(v, now, dt) {
   const sinking = vehSinking(v, def);
   v.sinkT = sinking ? (v.sinkT || 0) + dt : 0;
   if (sinking && Math.random() < 0.5) S.fx.splash(v.rx + (Math.random() - 0.5) * def.L * 0.6, v.ry + (Math.random() - 0.5) * def.W * 0.6, 1);
+  // splashing or wading through the shallows: spray off the wheels, more the faster it goes (none standing still)
+  else if (!sinking && v._wade && def.kind !== 'boat' && def.kind !== 'air' && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1) { const sp = vehSpeed(v); if (sp > 20 && Math.random() < Math.min(0.9, sp / 300)) for (const sg of [-1, 1]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, (Math.random() - 0.5) * def.L * 0.7, sg * def.W * 0.5); S.fx.splash(x, y, 1); } }
+  else v._wade = 0;
   // leaning out on corners (from how fast it turns at speed)
   const prevA = v.leanA ?? v.ra;
   let dA = v.ra - prevA; while (dA > Math.PI) dA -= Math.PI * 2; while (dA < -Math.PI) dA += Math.PI * 2;

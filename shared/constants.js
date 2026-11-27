@@ -81,6 +81,7 @@ export const VF = {
   HORN: 256, BLOODY: 512, DRIVER: 1024, OWNED: 2048, FLAT: 4096, DEAD: 8192, // DEAD: out of health, the engine cut out (it rolls to a stop, burns, explodes)
   BEACON: 16384, // the emergency lights flashing without the siren (an ambulance parked at a scene, a tow truck hooking up)
   ROTOR: 32768,  // an aircraft's engine turning: the rotor / propeller spinning (shared/flight.js)
+  STALL: 32768,  // a land vehicle's engine flooded in the water (shared/physics.js wade; server vehicles.js wade): ROTOR's bit, which only an aircraft uses
 };
 
 // Factions

@@ -28273,3 +28273,23 @@ files - 8 fail, all on main too, flaky or CPU timing under load (`docs/tasks/ART
 look in a running World v3 game at 1280x720 and 915x412 (a street at noon, a shop window, the menus and the
 Inventory in look C). Not seen in play: NPCs through a shop window, night, the shark, the cats, cloud shadows. The
 server re-bakes (~5 h); players get a short reconnect.
+
+## 2026-11-26 · Vehicles in shallow water: splash, wade, flood - sink only in deep water (the owner's 11-24 21:40 note) - branch `rules-1126`
+"it shouldn't just instantly sink in any depth of water and lose your vehicle" - and the creek network is live.
+- **The depth** (`shared/physics.js` `waterDepth`, `wadeBand`; numbers in `shared/rules-base.js` `WADE`): metres from the
+  distance to the bank by the kind of water, as the art measures it (`client/art2/water.js` depthOf) - a creek or river
+  0.25 m a tile (at most 3.4), a pond 0.55 (3.2), a lake 0.32, the sea 0.22 off sand and 0.55 off rock or grass; off a
+  quay, a dock, a seawall or a building deep at once (so a car driven off a pier still goes down, as `core.test.js`
+  has it); open deep water deep. Same answer on the server and the page (the page predicts its own car with it).
+- **Who fords what** (`fordOf`; a vehicle's own `def.ford` wins): a car 0.5 m, a truck (mass 2.4+) 0.7, a motorbike or
+  bicycle 0.35, boards and carts 0.15; off-road (`rough` 0.4 or less: the Trailcat 4x4, tractor, combine, tank, dirt
+  bike, mountain bike) 1 m.
+- **Bands:** splash (0.3 m or less): no slowing, spray off the wheels; wade: slower the deeper (an off-road vehicle
+  less so); the engine holds 8 s (30 s off-road), then floods and stalls where it is - no power, steam, never lost
+  (`VF.STALL`, ROTOR's bit, which only aircraft use; the page predicts no power) - and tries again after 15 s with 5 s
+  to get out; out of the water it dries. Deeper than its ford: sinks, as before.
+- Guide entry "Driving into water", a first-time moment `wade`. Tests: `test/wade.test.js` (5), the moment in
+  `ftue.test.js`. The code lives in physics.js, not a file of its own: the page's file count is at its budget (86).
+- **Cost of going live:** physics.js is read by the World v3 build, so the world3 / art3 hashes move (the world is the
+  same: pages fetch the city again, the server re-bakes and identical chunks carry over) - merged after the 11-26 art
+  re-bake has finished.

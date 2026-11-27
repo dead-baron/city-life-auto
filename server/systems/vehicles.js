@@ -8,6 +8,9 @@ import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput, horseWind } from 
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
 import { PED_BLOCK, WATER_T } from '../../shared/map.js';
 import { sameLevel, levelStep } from '../../shared/levels.js';
+import { wadeBand, offroad, WB } from '../../shared/physics.js';
+import { WADE } from '../../shared/rules-base.js';
+import * as ftue from './ftue.js';   // (the first time a player's car wades: its moment)
 
 export const SINK_S = 3.2; // a car that drove into the water sinks, then blows up underwater
 import * as combat from './combat.js';
@@ -41,7 +44,7 @@ export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHE
     v.x += v.vx * dt; v.y += v.vy * dt; v.a += (v.av || 0) * dt;
     return;
   }
-  if (v.dead) { const di = deadInput(v, v.input.steer || 0, v.input.hb); v.input.throttle = di.throttle; v.input.slide = false; } // (engine dead: it rolls to a stop)
+  if (v.dead || v.stalled) { const di = deadInput(v, v.input.steer || 0, v.input.hb); v.input.throttle = di.throttle; v.input.slide = false; } // (engine dead, or flooded in the water - wade(): it rolls to a stop)
   const pvx = v.vx, pvy = v.vy;   // (the way it was going: the end that hit the wall)
   // (a fence gone through fast: knocked flat - props.js breakProp, by whoever's driving)
   env.smash = (i, a, sp) => breakFence(world, i, Math.cos(a) * sp, Math.sin(a) * sp, v.seats[0] ? world.get(v.seats[0]) : null);
@@ -87,7 +90,11 @@ export function update(world, dt) {
     if (v.def.horse) horses.keepDry(world, v);   // (a horse: never in the water - horses.js)
     // land vehicles that end up in the water sink (not a car on a ferry's deck)
     if (v.def.kind !== 'boat' && !v.def.horse && !v.def.floats && !v.onDeck && !aircraft.inAir(v)) {   // (a horse never goes in: physics.js; the floatplane floats)
-      if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
+      // how deep the water under it is (shared/physics.js wade): deeper than it can ford it sinks; shallower it splashes through,
+      // or wades - and floods its engine if it stays in (wade below)
+      const band = (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)] ? wadeBand(world.map, v.x, v.y, v.def) : WB.DRY;
+      if (!v.sinkAt && band === WB.DEEP) startSink(world, v);
+      else if (!v.sinkAt) wade(world, v, band, dt, driver);
       if (v.sinkAt) {
         v.vx *= Math.exp(-2.5 * dt); v.vy *= Math.exp(-2.5 * dt);
         v.input.throttle = 0;
@@ -549,9 +556,31 @@ function blownOut(world, ped, v, attackerPed) {
   if (!ped.dead) { ped.bleeding = true; burning.ignite(world, ped, attackerPed); if (ped.player) world.notify(ped.player, 'Blown clear of the wreck - badly hurt. Heal up fast!', 'bad'); }
 }
 
+// In the shallows (the owner, 11-24 21:40: "move a bit in the shallow water before breaking down"): splashing through
+// costs nothing; wading wets the engine - holdS seconds of it (an off-road vehicle's offroadHoldS) and it floods and
+// stalls: no power, it rolls to a stop where it is, never lost. Stalled, it tries again after restartS with retryS
+// seconds in hand to get out; out of the water it dries. The page reads the stall from VF.STALL (it predicts no power).
+const wadeSay = (world, d, text, kind) => { if (d && d.player) world.notify(d.player, text, kind); };
+function wade(world, v, band, dt, driver) {
+  const W = WADE, hold = offroad(v.def) ? W.offroadHoldS : W.holdS;
+  if (band === WB.WADE) {
+    v.wetT = (v.wetT || 0) + dt;
+    if (driver && driver.player && !v.stalled) ftue.moment(world, driver.player, 'wade');
+    if (!v.stalled && v.wetT >= hold && !v.def.pedal) {
+      v.stalled = world.time || 1e-3; v.sirenOn = false;
+      world.emit(v.x, v.y, { e: 'splash', x: v.x, y: v.y, n: 14 });
+      wadeSay(world, driver, 'Water in the engine - it\'s flooded and stalled. Give it a moment, or wade out.', 'warn');
+    }
+  } else if (v.wetT) v.wetT = Math.max(0, v.wetT - dt * W.dryRate);
+  if (v.stalled && (band === WB.DRY || world.time - v.stalled >= W.restartS)) {
+    v.stalled = 0;
+    if (band !== WB.DRY) { v.wetT = Math.max(0, hold - W.retryS); wadeSay(world, driver, 'The engine coughs back to life - get it out of the water!', 'good'); }
+  }
+}
+
 // Drove off a dock or a bridge-less shore: everyone spills into the water and swims for it.
 function startSink(world, v) {
-  v.sinkAt = world.time;
+  v.sinkAt = world.time; v.stalled = 0;
   if (v.owner) insurance.wrecked(world, v, 'sunk');   // (insurance.js)
   v.sirenOn = false;
   world.emit(v.x, v.y, { e: 'splash', x: v.x, y: v.y, n: 30 });
@@ -801,6 +830,7 @@ export function vehFlags(world, v) {
   if ((v.burnUntil > world.time || (v.wreckAt && !v.def.pedal && world.time - v.wreckAt < 20)) && !v.def.horse) f |= VF.BURN;
   if ((v.hp < v.def.hp * 0.35 || v.dead) && !v.def.pedal && !v.def.horse) f |= VF.SMOKE;   // (a horse: no smoke)
   if (v.dead && !v.wreckAt) f |= VF.DEAD;
+  if (v.stalled && v.def.kind !== 'air') f |= VF.STALL | (v.def.pedal ? 0 : VF.SMOKE);   // (flooded: steam off the engine - wade())
   if (v.drift) f |= VF.DRIFT;
   if (v.hornUntil > world.time) f |= VF.HORN;
   if (v.bloody) f |= VF.BLOODY;

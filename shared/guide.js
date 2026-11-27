@@ -16,7 +16,7 @@ import {
   PICK_PRICES, ASSAY_PAYS, ARCADE, CRATE_PAY, EXTRACT, EVENTS, ARMORED_EVENT, DOCK_EVENT, GANGWAR_EVENT, CRACKDOWN_EVENT, RACENIGHT_EVENT, SOCCERCUP_EVENT,
   LENIENCY, COP_LEVEL, ESCAPE_LOW_MAX, BREAK_HEADSTART, BREAK_CAR, JAIL_S, BAIL_PER_STAR, PRISON, REPUTATION, CAREERS, GOALS, NEXT, POLICE_VEHICLE_RANK,
   UPKEEP, INSURANCE, COSMETICS, SEASON, SEASONS, TOW_FEE, FEES, CREW, HIDEOUT, HEIST_JOB, TRACK, BIZ_RANK, STAFF, PENTHOUSE, ARMOR, K9_UNIT, COMMERCIAL,
-  QUIT, ARMS, TRUNK, VALET, BUG_REPORT, STARTER_WARDROBE, FORAGE_FENCE_GHOSTGLASS,
+  QUIT, ARMS, TRUNK, VALET, BUG_REPORT, STARTER_WARDROBE, FORAGE_FENCE_GHOSTGLASS, WADE,
 } from './rules.js';
 import { GOLF_FEE, HOLE_IN_ONE_PRIZE, MAX_STROKES } from './golf.js';
 import { BOWL, BIG } from './bowling.js';
@@ -86,6 +86,7 @@ export function guideSections(map = null) {
     { id: 'around', title: 'Getting around', blurb: 'On foot, at the wheel, and the city\'s free transit.', entries: [
       { id: 'move', t: 'On foot', b: '[[move]] moves you; push all the way to run. [[sprint]] sprints and [[dive]] dives out of the way.' },
       { id: 'drive', t: 'Driving', b: `Walk up to any vehicle and press [[vehicle]] to get in. [[gas]] goes, [[brake]] brakes and reverses. Taking one that isn't yours is a crime if anyone sees it. Fast enough, a car goes through a fence, a bench or a bus shelter and knocks it flat (anyone sitting on it goes flying); at a crawl, a fence holds. Driving earns driving skill (up to ${drive.cap} xp a day).` },
+      { id: 'water', t: 'Driving into water', b: `Very shallow water you splash straight through. A bit deeper it slows you down, and if you stay in the engine floods and stalls (after ${WADE.holdS} seconds, ${WADE.offroadHoldS} in an off-road vehicle) - it tries again after ${WADE.restartS} seconds, so get it out then. Deeper than it can wade - about ${Math.round(WADE.ford.car * 100)} cm for a car, ${Math.round(WADE.ford.offroad * 100)} cm for a 4x4 or a tractor - or off a dock or a seawall, it sinks and it's gone.` },
       { id: 'arrive', t: 'Arriving', b: 'New in town, you pick the station your train comes in at - by Greenfield Park in the city, on the coast, in the desert or out in the country. A used lot and a back alley are a short walk from each. Every station\'s trains go everywhere else.' },
       { id: 'firstcar', t: 'Your first car', b: `Earned, your way. Honest work, the great outdoors and just roaming start you with ${$(FTUE.cash)} more: enough for a beater at the used lot by your station - a ${andList(Object.entries(FTUE.lot).map(([id, pr]) => `${VEHICLES[id].name} at ${$(pr)}`))}. A little hustle: ${$(FTUE.hustleCash)} of pocket money, and a car left in the alley by the station for you - walk up, [[vehicle]], gone. Nobody calls that first one in; after that, take a car with someone watching and it's theft. A YOUR CAR marker shows your first car until you've driven it, then a small plate when your car is near.` },
       { id: 'starter', t: 'A starter car', b: `Had one before the first car was earned? Your ${starter} stays yours, free. Lose it and another is free at any public garage - a station parking lot, a Fresh Coat Garage or a dealership - ${mins(STARTER.cooldownS)} later. Own a home with a garage and it lives there.` },

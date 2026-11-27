@@ -40,6 +40,7 @@ import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/const
 import { AIR_UP, washK } from '../../../shared/rules-page.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
+import { wadeBand, WB } from '../../../shared/physics.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
 import { BARRIER_PIECE } from '../../../shared/levels.js';
 import { pointAt } from '../../../shared/geom.js';
@@ -1994,7 +1995,7 @@ export class World2 {
     if (def && def.horse) { this._horse(v, now, me, def); return; }   // (a horse: the animal's own sprite, its rider up in the saddle - #325)
     if (!def || !A || !A.vehicleKey || !A.vehState) return;
     const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
-    const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
+    const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1 && wadeBand(this.map, v.rx, v.ry, def) === WB.DEEP, sk = Math.min(1, (v.sinkT || 0) / 3);   // (shallower than it can ford: wading, not sinking - shared/physics.js wade)
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase, v.hp, v.parent);   // (parent: its damage word - task #402)
     if (st.cut) { this._vehCut(v, now, me, st, hi, N); return; }   // (cut in two by a plasma blade)
     if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);

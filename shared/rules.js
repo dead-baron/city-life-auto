@@ -1509,3 +1509,5 @@ export const RACERS = {
 // car like a wall. keep: the share of its speed the car keeps going through.
 export const FENCE_SMASH = { low: 150, tall: 230, lowKeep: 0.85, tallKeep: 0.7 };
 
+
+export { WADE } from './rules-base.js';   // (vehicles in the water: shared/physics.js wade - its note is in rules-base.js)

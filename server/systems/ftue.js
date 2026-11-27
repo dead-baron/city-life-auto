@@ -75,7 +75,8 @@ export const MOMENTS = {
   night: { text: 'Night falls. A flashlight lights your way.', ctl: 'light', sec: 'items' },
   hurt: { text: 'Hurt? Hold for your quick wheel - a bandage patches you up.', ctl: 'use', sec: 'items' },
   chat: { text: 'Another player\'s near - say hi. Quick lines and emotes too, no typing needed.', ctl: 'chat', sec: 'activities' },
-  rod: { text: 'Take your rod out to fish - it\'s with your weapons.', ctl: 'nextw', sec: 'activities' },   // (by the water, a rod in the bag: players.js fishHere)
+  rod: { text: 'Take your rod out to fish - it\'s with your weapons.', ctl: 'nextw', sec: 'activities' },
+  wade: { text: 'Shallow water: you can drive through it, slowly. Stay in too long and the engine floods - deeper water sinks it.', sec: 'around' },   // (the first time your vehicle wades: vehicles.js wade, shared/physics.js wade)   // (by the water, a rod in the bag: players.js fishHere)
 };
 
 // The arrival stations' card: each region's name and its one line (World v3's regions: shared/world3-arrivals.js
