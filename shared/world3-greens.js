@@ -72,6 +72,8 @@ const blocks = (g, x, y) => {
   return null;
 };
 // every tree that stands in front of a storefront's sign: [{ p, s }] (test/world3server.test.js: none)
+// a test for later passes (world3-walks.js): is a tree standing at (x, y) in front of a storefront's sign?
+export function signBlocker(m) { const g = spanGrid(signSpans(m)); return (x, y) => !!blocks(g, x, y); }
 export function signsBlocked(m) {
   const g = spanGrid(signSpans(m)), out = [];
   for (const p of m.props) if (TREES.test(p.t)) { const s = blocks(g, p.x, p.y); if (s) out.push({ p, s }); }

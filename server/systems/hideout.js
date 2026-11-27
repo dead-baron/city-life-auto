@@ -51,6 +51,7 @@ export function rows(world, p, s, opts) {
   const h = hideoutFor(world, p);
   if (!h || h.s.id !== s.id) return;
   const S = stashOf(h.e), ped = p.ped, crate = ped && ped.carrying ? world.get(ped.carrying) : null;
+  opts.push({ id: 'stopen', label: 'Open your stash', note: 'items and weapons - the same as at home' });   // (your own stash, as at home: stash.js)
   S.cars.forEach((c, i) => opts.push({ id: `hdo:c:${i}`, label: `The stash: take out the ${(VEHICLES[c.model] || {}).name || 'car'}`, note: 'parked out front' }));
   S.crates.forEach((c, i) => opts.push({ id: `hdo:t:${i}`, label: `The stash: take out the ${TIER_WORD[c.t] || 'crate'}`, note: money(c.v), dis: !!(ped && ped.carrying) }));
   if (crate && crate.kind === K.CRATE && !crate.job) opts.push({ id: 'hdo:p', label: `The stash: put the ${TIER_WORD[crate.tier] || 'crate'} away`, note: `${S.crates.length}/${HIDEOUT.crates}`, dis: S.crates.length >= HIDEOUT.crates });

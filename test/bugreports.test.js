@@ -223,3 +223,28 @@ test('the staff page /admin/bugs: admins and up, the screenshot shown, mark done
   // the Ko-fi page (11-16): on by default, at the studio's page
   assert.equal(r.json().support, 'https://ko-fi.com/deadbaron');
 });
+
+// The review list (/admin/reviews; the owner, 11-23: "a way to check off things in the review list ... or save it as a bug
+// to review later"): each open entry checked off - Resolved, Not a problem, Bug for later - with the form's token, logged;
+// opened again; no account ids on the page.
+test('the review list: checked off three ways and opened again, with the form token, logged; no account ids shown', async () => {
+  const S = setup({ webhook: '' });
+  const admin = S.guest(); S.L.accounts.signIn('google', 'g-admin2', { linkPid: admin.p.pid }); S.L.accounts.setRole(admin.p.pid, 'admin');
+  const r1 = S.L.mod.review('econ', { id: 'acct-secret-1', n: 'Spender' }, 'earned a lot'), r2 = S.L.mod.review('rate', { id: 'acct-secret-2', n: 'Clicker' }, 'too fast');
+  const c = new URL(S.L.adminHttp.pageLink(admin.p.pid, 'reviews')).searchParams.get('c');
+  const ca = (await S.h({ url: `/admin/enter?c=${c}` })).headers['set-cookie'].match(/cla_admin=([^;]+)/)[1], ck = { cookie: `cla_admin=${ca}` };
+  let r = await S.h({ url: '/admin/reviews', headers: ck });
+  assert.equal(r.status, 200);
+  assert.match(r.body, /Spender[\s\S]*Not a problem[\s\S]*Bug for later/);
+  assert.doesNotMatch(r.body, /acct-secret/, 'no account ids on the page');
+  const csrf = r.body.match(/name="csrf" value="([^"]+)"/)[1], post = (id, a, tok = csrf) => S.h({ method: 'POST', url: '/admin/reviews', headers: { ...ck, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ csrf: tok, id, a }).toString() });
+  assert.equal((await post(r1.id, 'ok', 'wrong')).status, 403, 'not without the form token');
+  assert.equal((await post(r1.id, 'ok')).status, 303);
+  assert.equal((await post(r2.id, 'bug')).status, 303);
+  assert.equal(S.L.mod.reviews().find((q) => q.id === r1.id).done.how, 'ok');
+  assert.equal(S.L.mod.reviews().find((q) => q.id === r2.id).done.how, 'bug');
+  assert.match((await S.h({ url: '/admin/reviews', headers: ck })).body, /not a problem[\s\S]*Open again/);
+  assert.ok(S.L.adminLog.tail(10).some((x) => x.what === 'review-bug' && x.note === r2.id.slice(0, 24)));
+  assert.equal((await post(r1.id, 'open')).status, 303);
+  assert.ok(!S.L.mod.reviews().find((q) => q.id === r1.id).done, 'opened again');
+});

@@ -404,7 +404,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildBoatDocks(m); unpin();
   buildSignals(m);
   buildStreetAtms(m);
-  if (OPTS?.shops) { ATM_PG = propGrid(m); try { OPTS.shops(m, { addProp, removeProps, simpleBuilding, wallAtm: (b, x, look, loose) => wallAtm(m, b, x, look, false, loose) }); } finally { ATM_PG = null; } }   // (World v3: shops where you need them - shared/world3-shops.js)
+  if (OPTS?.shops) { ATM_PG = propGrid(m); try { OPTS.shops(m, { addProp, removeProps, simpleBuilding, walkInRoom, WALK_IN, wallAtm: (b, x, look, loose) => wallAtm(m, b, x, look, false, loose) }); } finally { ATM_PG = null; } }   // (World v3: shops where you need them - shared/world3-shops.js)
   m.atms = m.pois.filter((p) => p.kind === 'atm');
   if (WD) {
     const L = breakPlainBlocks(m);   // (World v3: no huge plain buildings - the owner, 11-03)
@@ -427,7 +427,7 @@ function buildCity(seed, opts = null, frame = null) {
   if (hosp || !(OPTS?.island || fb)) m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 }; else if (fb) m.spawns.hospital = fb;
   if (pd || !(OPTS?.island || fb)) m.spawns.police = { x: pd.x, y: pd.y + 44 }; else if (fb) m.spawns.police = fb;
   m.spawns.default = m.spawns.hospital;
-  if (OPTS?.done) OPTS.done(m, { removeProps, addProp, walkInRoom });   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js; the main line's dressing cleared)
+  if (OPTS?.done) OPTS.done(m, { removeProps, addProp, walkInRoom, WALK_IN });   // (walkInRoom: a hand-built block laid late gets its rooms - Greenfield Park's shops, 11-23)   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js; the main line's dressing cleared)
   naturalFinds(m);   // (Nature-D1: the wilds' finds - shared/foraging.js)
   buildLoadingBays(m);   // (the forklift yards' pallet rows and their marked loading bays across the yard - shared/loadbays.js: data only, no tile or prop)
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)
@@ -3149,8 +3149,12 @@ function forecourts(m) {
 // fades out over the room while you are inside (client). The place's interaction point moves in
 // front of its counter.
 export const WALK_IN = new Set(['club', 'convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle',
-  'barber', 'roadhouse']);   // (roadhouse: the Rusty Spur, countryside.js - task #366)
+  'barber', 'roadhouse', 'charter']);   // (roadhouse: the Rusty Spur, countryside.js - task #366; charter: a charter office's desk, 11-16)
 const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
+// places served at the wall that may share a row with walk-ins (a butcher's or a lodge's counter at the front, a snack
+// stand, the gang's contact, a hunt camp's desk): a closed storefront in the row, as a delivery front is - the walk-ins
+// beside them get their rooms (11-22: the audit's wallOnly - Timber Bend's and Sandpiper Bay's strips, the Copper Room)
+const WALL_POIS = new Set(['butcher', 'lodge', 'snack', 'gang', 'huntcamp']);
 // How deep a walk-in's room is (rows, the counter and the stock room behind it included): about as deep as the shop is
 // wide - roughly square to a modest rectangle - however deep the building is. A narrow shop thirty tiles deep (World v3's
 // hand plans: Midtown's long block) was one long empty corridor to a counter at the far end (the owner's 2026-10-17
@@ -3180,11 +3184,13 @@ function buildInteriors(m) {
   const bays = new Set((m.bays || []).map((bay) => m.bld[bay.ty * m.w + bay.tx]));
   for (const [bid, list] of byB) {
     const b = m.buildings[bid];
-    if (!b || b.gone || (b.prefab < 0 && !list.some((p) => p.casino)) || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
+    // (b.rooms: a hand-built village's business, no lot of its own - World v3's shared/world3-west.js Egret Point - walked
+    // into all the same: the owner, 11-16, "these places don't have interiors, they just have you interact at the wall")
+    if (!b || b.gone || (b.prefab < 0 && !b.rooms && !list.some((p) => p.casino)) || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
     // (p.walk: a hand plan's shop you can walk into - its counter by its trade, p.store; b.hand: a flat over the shop
     // has its own door beside it - shared/world3-hand.js)
-    const main = list.filter((p) => isWalk(p) || p.kind === 'delivery');
-    if (!main.some(isWalk) || list.some((p) => !isWalk(p) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery' && !(b.hand && p.kind === 'home'))) continue;
+    const main = list.filter((p) => isWalk(p) || p.kind === 'delivery' || WALL_POIS.has(p.kind));
+    if (!main.some(isWalk) || list.some((p) => !isWalk(p) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery' && !WALL_POIS.has(p.kind) && !(b.hand && p.kind === 'home'))) continue;
     walkInRoom(m, b, list, main, walkInSouth(m, b, b.tx + 1, b.tx + b.tw - 2));
   }
 }

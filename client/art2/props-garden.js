@@ -14,7 +14,7 @@
 // anchored at their foot (.ax, .ay).
 import { Vox } from './voxel.js';
 import { GBuf, F_WATER, F_NOCAST, F_LEAF, F_GLASS, F_GROUND, F_WET, F_THIN, hash, bayer, vnoise, mulberry32 } from './gbuf.js';
-import { MAT, ramp } from './palette.js';
+import { MAT, ramp, natRamp } from './palette.js';
 import * as F from './flora.js';
 
 const R = (c, n = 6, k) => ramp(c, n, k ?? Math.floor((n - 1) / 2));
@@ -857,6 +857,20 @@ export function logBridge(len = 140) {
   m.fill((x, y, z) => { const d = Math.hypot(y - cy, z - cz); if (d > r || z > cz + 6) return -1; if (z >= cz + 5) return top; return z < cz - 4 && hash(Math.round(x / 4), Math.round(y), 49) > 0.6 ? moss : bark; }, 0, 0, 0, len, 30, 18);
   for (let x = 4; x < len - 2; x += 32) m.box(x, 26, cz + 2, x + 2, 28, cz + 26, rail);
   m.box(0, 26, cz + 23, len, 28, cz + 25, rail);
+  return m;
+}
+// a stick bridge over a creek (the owner, 11-24 21:40: "some fallen logs or makeshift log/stick/natural bridges"):
+// six poles laid side by side along x, no two the same length or thickness, their ends ragged, lashed across in three
+// places with cord, a crooked one among them; no rail. s: which of its builds (0..2).
+export function stickBridge(len = 140, s = 0) {
+  const m = new Vox(len, 30, 12), cord = m.mat({ ramp: natRamp('#c2a878', 5, 2), k: 3 });
+  const tones = ['#7a5a3c', '#6a4c34', '#8a6a48', '#5e4630', '#806040', '#705238'];
+  for (let k = 0; k < 6; k++) {
+    const r = 1.9 + hash(k, s, 61) * 1.1, cy = 5 + k * 4 + (hash(k, s, 62) - 0.5) * 1.2, x0 = Math.round(hash(k, s, 63) * 7), x1 = len - Math.round(hash(k, s, 64) * 7), bow = (hash(k, s, 65) - 0.5) * (k === (s + 2) % 6 ? 5 : 1.6);
+    const mat = m.mat({ ramp: natRamp(tones[(k + s) % 6], 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 4), k, 66 + s) - 0.5) * 0.9 + (Math.round(x + k * 7) % 23 === 0 ? -0.7 : 0) });
+    m.fill((x, y, z) => { if (x < x0 || x >= x1) return -1; const t = (x - x0) / (x1 - x0), yy = cy + Math.sin(t * Math.PI) * bow, d = Math.hypot(y - yy, z - 3 - r * 0.2); return d <= r ? mat : -1; }, 0, 0, 0, len, 30, 9);
+  }
+  for (const f of [0.18, 0.5, 0.82]) { const x = Math.round(len * f + (hash(f * 100 | 0, s, 67) - 0.5) * 6); m.box(x, 3, 5, x + 2, 27, 6.4, cord); m.box(x, 3, 1, x + 2, 4.4, 6, cord); m.box(x, 25.6, 1, x + 2, 27, 6, cord); }
   return m;
 }
 // a rope bridge over a gorge: planks hung on ropes between timber posts at either end, sagging in the middle; the

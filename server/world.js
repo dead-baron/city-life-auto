@@ -382,14 +382,23 @@ export class World {
   // All entities within radius r of (x,y), optionally filtered by kind.
   query(x, y, r, kind = 0) {
     const out = [];
-    const cx0 = Math.floor((x - r) / CHUNK_PX), cx1 = Math.floor((x + r) / CHUNK_PX);
-    const cy0 = Math.floor((y - r) / CHUNK_PX), cy1 = Math.floor((y + r) / CHUNK_PX);
+    let cx0 = Math.floor((x - r) / CHUNK_PX), cx1 = Math.floor((x + r) / CHUNK_PX);
+    let cy0 = Math.floor((y - r) / CHUNK_PX), cy1 = Math.floor((y + r) / CHUNK_PX);
     const r2 = r * r;
-    for (const e of this.inChunks(cx0, cy0, cx1, cy1)) {
-      if (kind && e.kind !== kind) continue;
-      const dx = e.x - x, dy = e.y - y;
-      if (dx * dx + dy * dy <= r2) out.push(e);
-    }
+    // (inChunks' walk, written out: no generator - the systems ask this thousands of times a tick)
+    const X = this.chunksX - 1, Y = this.chunksY - 1;
+    cx0 = cx0 < 0 ? 0 : cx0 > X ? X : cx0; cx1 = cx1 < 0 ? 0 : cx1 > X ? X : cx1;
+    cy0 = cy0 < 0 ? 0 : cy0 > Y ? Y : cy0; cy1 = cy1 < 0 ? 0 : cy1 > Y ? Y : cy1;
+    for (let cy = cy0; cy <= cy1; cy++)
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const set = this.chunks.get(cy * this.chunksX + cx);
+        if (!set) continue;
+        for (const e of set) {
+          if (kind && e.kind !== kind) continue;
+          const dx = e.x - x, dy = e.y - y;
+          if (dx * dx + dy * dy <= r2) out.push(e);
+        }
+      }
     return out;
   }
   nearestPlayerDist2(x, y) {

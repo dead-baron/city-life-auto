@@ -5,7 +5,7 @@
      facings, &pose=walk), ?view=poses (one character, every pose x 8 facings x frames; &pose=walk2 for one pose, &dirs=...),
      ?view=crowd (40 server-like appearances through peds.js adaptApp, walking), ?view=weapons (every game weapon: rest,
      aim / swing frames), ?view=lineup (every server archetype x 6 seeds, adapted, facing SE), ?view=leisure (swimwear,
-     towels, undressed + censored), ?view=custody (the cuffed walk, face down, officers kneeling, the five-star crews),
+     towels, undressed under the mosaic), ?view=custody (the cuffed walk, face down, officers kneeling, the five-star crews),
      ?view=looks (the look system: the twelve starting looks, then a random look in each style, facing SW, then from
      behind; &hair=1 every hairstyle instead, SW, N and NE). &lit=golden|noon|night lights the sheet with the Lighter on paving; &z= zoom;
      &bake draws the game's bake (one art pixel = 2 x 2 world px, gbuf.js downsample2), as the live game shows them. -->
@@ -175,8 +175,8 @@ if (view === 'turn') {
     { skin: 1, hair: { style: 'curly', color: 1 }, top: { kind: 'none' }, bottom: { kind: 'none' }, shoeKind: 'barefoot' },
     { fem: true, skin: 2, hair: { style: 'wavy', color: 2 }, top: { kind: 'none' }, bottom: { kind: 'none' }, shoeKind: 'barefoot' },
   ];
-  [false, true].forEach((cen, r) => L.forEach((a, i) => [0, 1, 4].forEach((d, j) => add(person({ ...a, censored: cen }, d), 22 + (i * 3 + j) * 38 + i * 10, 50 + r * 56))));
-  label('uncensored (pixel blocks)', 2, 10); label('censored setting: swimwear', 2, 66);
+  L.forEach((a, i) => [0, 1, 4].forEach((d, j) => add(person(a, d), 22 + (i * 3 + j) * 38 + i * 10, 50)));
+  label('undressed: the mosaic (pixel blocks), always', 2, 10);
 } else {
   for (let r = 0; r < 4; r++) { const a = randomPerson(300 + r * 13); for (let f = 0; f < 6; f++) { add(person(a, 2, 'walk0', f), 22 + f * 40, 50 + r * 54); add(person(a, 0, 'walk0', f), 262 + f * 40, 50 + r * 54); } }
 }

@@ -222,6 +222,9 @@ class WorldMap {
     const cellsOf = (x0, y0, x1, y1, f) => { for (let yy = Math.floor(y0 / CELL); yy <= Math.floor(y1 / CELL); yy++) for (let xx = Math.floor(x0 / CELL); xx <= Math.floor(x1 / CELL); xx++) if (f(yy * 4096 + xx)) return true; return false; };
     const isFree = (b) => !cellsOf(b[0] + 2, b[1] + 2, b[2] - 2, b[3] - 2, (k) => occ.has(k));
     const claim = (b) => { cellsOf(b[0], b[1], b[2], b[3], (k) => { occ.add(k); return false; }); };
+    // what the caller lays over the map afterwards (opts.avoid: [world x, world y, r px] - the respawn map's numbered
+    // places): the names keep clear of it rather than sit under it (the owner, 11-22: "Civic Center and the '5' circle")
+    for (const [wx, wy, r] of opts.avoid || []) { const [x, y] = P(wx, wy); claim([x - r, y - r, x + r, y + r]); }
     const free = (x, y, tw, th) => { const b = [x - tw / 2 - 3, y - th / 2 - 2, x + tw / 2 + 3, y + th / 2 + 2]; if (!isFree(b)) return false; claim(b); return true; };
     // what the page lays over the map (the cash and the stars on a portrait phone) keeps its corner clear of names
     const cr = c.getBoundingClientRect();

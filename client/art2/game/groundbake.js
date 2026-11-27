@@ -47,7 +47,7 @@ import { GSHADE, GS, gsReset, coverSprite, turfGround, turfFlat, cloverAt, hh, v
 import { edgeCovers } from '../../../shared/covers.js';
 import { WATER, waterTiles, waterPx, waterAt, waterOff, WK } from '../water.js';
 import { T, TILE } from '../../../shared/constants.js';
-import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome, deckOnDry } from '../../../shared/mapcore.js';
+import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome, deckOnDry, reliefMetres } from '../../../shared/mapcore.js';
 import { Z } from '../../../shared/layoutcore.js';
 import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roadcore.js';
 import { drawText } from '../font.js';
@@ -58,7 +58,13 @@ const DRY_D = new Set(DISTRICTS.filter((d) => d.isl === 'Red Rock Desert' && !WI
 const PAD = 48, WN = CHUNK + PAD * 2, WA = WN * WN, TP = 4, TN = WN / TILE + TP * 2 + 1;
 const DECK_LIFT = 88;                                  // shared/levels.js: px per deck level (ramp heights)
 const DECK_FACE = 13, DECK_SHADE = 9;                  // a bridge's face over the water (slab and girders), the shade under it
-const DECK_LEE = 14;                                    // the shade east of a deck that runs north-south (the light is from the north-west)
+// A bridge stands on piers (the owner, 11-25: a bridge over open water read as a causeway - "it should be a bridge
+// that things can go under ... a passable channel underneath for boats and swimmers and fish and animals"): every
+// PIER.gap px along it a pier's nose shows `out` px beyond the deck's edge either side, `len` px long, and under an
+// east-west deck's face a pier's column stands down into the shade. No painted foam round them: the water moves.
+export const PIER = { gap: 192, len: 20, out: 7, z: 2 };
+export const pierNose = (along, r) => { const pm = ((along % PIER.gap) + PIER.gap) % PIER.gap; return pm < PIER.len && r >= 1 && r <= PIER.out; };
+const DECK_LEE = 30;                                    // the shade east of a deck that runs north-south (the light is from the north-west)
 const CITY = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
 // the boardwalks' leg tiles (m.walkways: shared/world3-marsh.js), as a set kept on the map (not sent)
 const walkways = (M) => M._walkways || Object.defineProperty(M, '_walkways', { value: new Set(M.walkways), enumerable: false, configurable: true })._walkways;
@@ -99,9 +105,11 @@ mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('CRAG', 'crag',
 mat('BALLAST', 'ballastStone', 1); mat('PLATFORM', 'slabPlaza', 1); mat('RAILDECK', 'planksX', 1);
 mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2); mat('SPRING', '', 2);
 mat('SNOW', 'snowfield', 0);   // (World v3's summits: terrain class 9, shared/world3-biomes.js)
+mat('GRANITE', 'granite', 0);   // (the summits' open rock, walked on: the ground above the old snow line and a summit's knob - ground.js granite)
 mat('ORCHARD', 'orchardGrass', 0);   // (World v3's orchards: m.orchards - mown between the rows)
 mat('STUB', 'cropStubble', 1); mat('STUBV', 'cropStubbleV', 1);   // (a wheat field's harvested part: m.fields[f].cut - world3-countyroad.js)
 mat('FLAGS', 'flagstone', 4);   // (the hot springs' paths: granite flagstones - Granite Hot Springs, the owner 11-14)
+mat('BASALT', 'basaltShelf', 0);   // (a tidepool shelf's dark basalt, 11-25 - added last: the others' numbers as they were)
 const NM = MATS.length;
 const KIND = new Uint8Array(NM), SHADER = [];
 for (let i = 0; i < NM; i++) { KIND[i] = MATS[i][1]; SHADER[i] = GSHADE[MATS[i][0]] || null; }
@@ -188,7 +196,7 @@ export function* groundSteps(M, cx, cy, opt = {}) {
   const G = opt.scratch ? scratchG() : new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
   const prof = opt.profile ? {} : null;
   C.prof = prof;
-  for (const [name, f] of [['tiles', tileFacts], ['roads', roadField], ['rail', railField], ['classify', classify], ['shore', shoreDistance], ['paint', paint], ['markings', markings], ['edges', edges], ['decor', decor], ['surf', surf], ['relief', relief]]) {
+  for (const [name, f] of [['tiles', tileFacts], ['roads', roadField], ['rail', railField], ['classify', classify], ['shore', shoreDistance], ['paint', paint], ['markings', markings], ['edges', edges], ['talus', talus], ['decor', decor], ['surf', surf], ['relief', relief]]) {
     const t0 = prof ? performance.now() : 0;
     f(C, G);
     if (prof) prof[name] = Math.round(performance.now() - t0);
@@ -243,7 +251,7 @@ export const fieldKindAt = (f, seed) => FIELD_KINDS[Math.floor(hh(f, 0, seed + 9
 function tileFacts(C) {
   const { M, b, TX0, TY0, seed } = C;
   const { cls, cw } = M.terrainCls;
-  const dryV = (M.countyRoads || []).map((q) => q.dry).filter(Boolean), fields = M.fields || [], paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
+  const dryV = (M.countyRoads || []).map((q) => q.dry).filter(Boolean), fields = M.fields || [], tops = (M.natureSites || []).filter((q) => q.kind === 'summit' && q.knob && Math.abs(q.x - (TX0 + TN / 2) * TILE) < (TN / 2 + SUMMIT_R) * TILE && Math.abs(q.y - (TY0 + TN / 2) * TILE) < (TN / 2 + SUMMIT_R) * TILE).map((q) => ({ x: q.x, y: q.y, sx: q.knob.shelf[0] + 1.6, sy: q.knob.shelf[1] + 1.6, rw: q.knob.ramp + 1.6, ft: q.knob.foot + 1 })), paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
   // a golf course laid out by the map (M.golf): greens and tees, the striped fairways, the rough round them
   const golf = M.golf || null, golfAt = (X, Y) => {
     if (!golf) return M_.GOLF;
@@ -265,9 +273,11 @@ function tileFacts(C) {
   C.wash = (M.washes || []).filter((e) => e.bb[2] >= TX0 * TILE - 64 && e.bb[0] <= (TX0 + TN) * TILE + 64 && e.bb[3] >= TY0 * TILE - 64 && e.bb[1] <= (TY0 + TN) * TILE + 64);
   const mazes = M.mazes || [];              // hedge mazes: the walls' tiles are lawn under the hedges, the paths gravel
   const tracks = (M.tracks || []).filter((r) => r.bb[2] >= TX0 * TILE - 64 && r.bb[0] <= (TX0 + TN) * TILE + 64 && r.bb[3] >= TY0 * TILE - 64 && r.bb[1] <= (TY0 + TN) * TILE + 64);   // dirt tracks off-road (Red Rock Canyon)
-  C.ruts = tracks.filter((r) => r.ruts);   // (a two-rut track's ruts: rutPx)
+  C.ruts = tracks.filter((r) => r.ruts || r.ride);   // (a two-rut track's ruts, and the off-road rides - the Red Rock Trail, the Highland Enduro - drawn per pixel: rutPx)
   // (World v3 8.22, H50: the desert's tables - their tops' cap rock, the talus at their feet - and Red Rock Canyon's floor
   // as the desert round it, its rock at its walls; a map with relief only: today's bakes as before)
+  // (the ground under a rock of dark stone is dark: round the sea cave's basalt the crags' pale granite slabs showed as a rim, 11-25)
+  const darkRock = propsNear(C, 340).filter((p) => p.t === 'cliff' && (p.st === 'basalt' || p.st === 'lava'));
   const tabs = M.relief && M.tables ? M.tables.filter((t) => t.x + t.rx + 18 >= TX0 && t.x - t.rx - 18 <= TX0 + TN && t.y + t.ry + 18 >= TY0 && t.y - t.ry - 18 <= TY0 + TN) : null;
   const tabMat = (tx, ty, base) => {
     let e = 99, s = 0;
@@ -288,7 +298,7 @@ function tileFacts(C) {
   // shared/world3-biomes.js m.orchards; a vineyard's rows run along x as the lavender's do)
   const orch = farmRects(M).filter((r) => r.x + r.w >= TX0 * TILE && r.x <= (TX0 + TN) * TILE && r.y + r.h >= TY0 * TILE && r.y <= (TY0 + TN) * TILE);
   const farmed = (X, Y) => { for (const r of orch) if (inRect(r, X, Y)) return r.k === 'orchard' ? M_.ORCHARD : M_.PLOW; return -1; };   // (the rows run along x: world3-biomes.js)
-  const onTrack = (X, Y) => tracks.some((r) => { if (r.px) return false; if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
+  const onTrack = (X, Y) => tracks.some((r) => { if (r.px || r.ride) return false; if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
   for (let j = 0; j < TN; j++) { const ty = TY0 + j, row = M.row(ty), rowIn = ty >= M.y0 && ty < M.y0 + M.h; for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, k = j * TN + i;
     if (!rowIn || tx < M.x0 || tx >= M.x0 + M.w) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
@@ -326,14 +336,15 @@ function tileFacts(C) {
       else if (b.tres[k] & 2) m = M_.GRAVEL;
       else if (!wild && DRY_D.has(b.td[k])) m = tabs && tabs.length ? tabMat(tx, ty, M_.DESERT) : M_.DESERT;   // (a desert town's beds and yards: the desert's sand and gravel - the Strip's gardens)
       else if (!wild) m = (D.tier === 'industrial' || D.tier === 'rough') ? M_.GRAVEL : M_.DIRT;
-      else if (bio === 9) m = vnc(tx, ty, 9, 9101) > 0.58 ? M_.QUARRY : M_.SCREE;   // (the summits: bare granite and scree, no snow - the owner, 10-16)
+      else if (tops.length && tops.some((q) => { const dx = (X - q.x) / TILE, dy = (Y - q.y) / TILE; return (dx / q.sx) ** 2 + (dy / q.sy) ** 2 < 1 || (Math.abs(dx) < q.rw && dy > 0 && dy < q.ft); })) m = M_.GRANITE;   // (a summit's knob: its shelf and the way up)
+      else if (bio === 9) m = vnc(tx, ty, 9, 9101) > 0.58 && !tops.some((q) => (X - q.x) ** 2 + (Y - q.y) ** 2 < (TILE * 17) ** 2) ? M_.GRANITE : M_.SCREE;   // (the summits: bare granite and scree, no snow - the owner, 10-16; natural slabs, not the quarry's cut ones - 11-25)
       else if (bio === 3 || st === 'desert') m = nearCanyon(X, Y) ? canyonRock(tx, ty, M_.DESERT) : tabs && tabs.length ? tabMat(tx, ty, M_.DESERT) : M_.DESERT;
       else if (bio === 4) m = b.tz[k] === Z.EAST && st !== 'rural' ? M_.REDROCK : st === 'rural' ? M_.DIRT : M_.SCREE;
       else if (bio === 2) m = (b.tres[k] & 32) ? M_.DIRT : M_.FORESTDIRT;   // (32: a designed place's trails and clearings - packed earth, paler than the duff round them)
       else m = M_.DIRT;
     } else if (t === T.SAND) {
       // wild coasts by their land: rock shores below mountains, shingle under the forests, sand elsewhere
-      if ((b.tres[k] & 192) === 192) m = M_.ROCKSHORE;          // (a tidepool shelf's basalt: shared/world3-coast.js)
+      if ((b.tres[k] & 192) === 192) m = M_.BASALT;             // (a tidepool shelf's basalt: shared/world3-coast.js - 11-25: it was the rocky shore's pale rounded cobbles)
       else if (b.tres[k] & 128) m = M_.SHINGLE;                 // (a river's gravel bars)
       else if ((b.tres[k] & 36) === 36) m = M_.BEACH;            // (a designed beach - the cove's sand - whatever the coast round it)
       else if (inRects(paint, X, Y, 'canyon')) m = M_.SHINGLE;    // (a dry wash's gravel and cobbles)
@@ -375,7 +386,7 @@ function tileFacts(C) {
     // building's foundation the city's walls stand on. Most rock has its cliff face drawn over it (a sprite on its
     // south edge); the rest - a band's top, its sides, a crag with no drop to the south - showed as plain ground you
     // walked into (the owner, 2026-10-21)
-    else if (t === T.WALL) { const r = b.tres[k]; m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (r & 32) || (!r && WILD_STYLES.has(st) && st !== 'airport') ? (st === 'desert' && !(r & ~32) ? M_.REDROCK : M_.CRAG) : M_.WALL; }   // (World v3 8.22: a desert table's cliff band, red rock)   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
+    else if (t === T.WALL) { const r = b.tres[k]; m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (r & 32) || (!r && WILD_STYLES.has(st) && st !== 'airport') ? (st === 'desert' && !(r & ~32) ? M_.REDROCK : darkRock.some((p) => Math.abs(X - p.x) < p.w / 2 + 24 && Y > p.y - p.d - (p.h || 0) - 40 && Y < p.y + 24) ? M_.BASALT : M_.CRAG) : M_.WALL; }   // (World v3 8.22: a desert table's cliff band, red rock)   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
     else if (t === T.FLOOR) { const bi = b.tbld[k], bd = bi >= 0 ? M.buildings[bi] : null; m = bd && /house|apt|home|shack|mansion|farm/.test(bd.kind) ? M_.FLOORW : M_.FLOOR; }
     else if (t === T.COUNTER) m = M_.COUNTER;
     else m = M_.FOUND;
@@ -429,26 +440,55 @@ export function tinaPx(list, X, Y, seed) {
     const dx = X - e.x, dy = Y - e.y, d2 = dx * dx + dy * dy, far = e.r * 1.3 + e.ring * 1.3;
     if (d2 > far * far) continue;
     const lim = e.r * 1.1 + e.ring * (0.7 + 0.6 * vnc(X, Y, 34, seed + 77)) + (vnc(X, Y, 9, seed + 79) - 0.5) * 8;
-    if (d2 < lim * lim) return e.k ? M_.MUD : M_.REDROCK;
+    if (d2 < lim * lim) return e.k ? M_.CRACKED : M_.REDROCK;   // (a seep's ring: the desert's cracked mud, SC3-F - the marsh's dark mud with its blue puddles read as a stain)
+  }
+  return -1;
+}
+// A desert pool's own outline (11-25, the water's edges: a seep two tiles across came out as a square with eased
+// corners, a tile's shape): water past the pool's rim - its radius lobed by the angle, never a circle - is drawn as
+// the ring's ground. The material, or -1 (not one of these pools' water, or inside its rim).
+export const TINA_RIM = { at: 0.98, lobe: 0.1, reach: 1.7 };
+export function tinaTrim(list, X, Y, seed) {
+  for (const e of list) {
+    if (!e.r) continue;
+    const dx = X - e.x, dy = Y - e.y, d2 = dx * dx + dy * dy, far = e.r * TINA_RIM.reach;
+    if (d2 > far * far) continue;
+    const a = Math.atan2(dy, dx), ph = ((e.x * 7 + e.y * 13) % 628) / 100;
+    const rim = e.r * (TINA_RIM.at + TINA_RIM.lobe * (Math.sin(a * 2 + ph) * 0.6 + Math.sin(a * 3 + ph * 1.7) * 0.4)) + (vnc(X, Y, 9, seed + 81) - 0.5) * 5;
+    return d2 > rim * rim ? (e.k ? M_.CRACKED : M_.REDROCK) : -1;
   }
   return -1;
 }
 // a two-rut track's ruts (shared/naturesites.js: the canyon's, the trailhead's): two lines either side of its middle
-// (0 off it, 1 the track, 2 a rut; a track drawn per pixel - r.px - is all its own, else only its ruts on its dirt tiles)
+// (0 off it, 1 the track, 2 a rut; a track drawn per pixel - r.px - is all its own, else only its ruts on its dirt tiles).
+// A track of its own (11-24, DEVLOG "Fields with edges ..."): two worn ruts and a crown between (one rut for a
+// narrow ride), ragged shoulders; over its last TRACK_FADE px it narrows and thins to nothing.
+export const TRACK_FADE = 96, SINGLE_HW = 26;
+const DRYTRACK = new Uint8Array(MATS.length);
+for (const k of ['DESERT', 'DUNE', 'REDROCK', 'CRACKED', 'BEACH', 'SCREE', 'WASH', 'SHINGLE', 'QUARRY', 'GRANITE', 'TRACKD']) DRYTRACK[M_[k]] = 1;
 function rutPx(list, X, Y, seed, onDirt) {
   for (const r of list) {
-    if (!r.px && !onDirt) continue;
+    const own = r.px || r.ride;
+    if (!own && !onDirt) continue;
     if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) continue;
-    const P = r.pts, hw = r.hw;
-    let d2 = 1e12;
-    for (let k = 1; k < P.length; k++) {
+    const P = r.pts, hw = r.hw, n = P.length;
+    let d2 = 1e12, end = 1e9;   // (end: px along it from the nearer end, where that is on its first or last stretch)
+    for (let k = 1; k < n; k++) {
       const ax = P[k - 1][0], ay = P[k - 1][1], dx = P[k][0] - ax, dy = P[k][1] - ay;
       if ((X < ax - hw && X < ax + dx - hw) || (X > ax + hw && X > ax + dx + hw) || (Y < ay - hw && Y < ay + dy - hw) || (Y > ay + hw && Y > ay + dy + hw)) continue;
-      const l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)), qx = X - ax - dx * t, qy = Y - ay - dy * t, q = qx * qx + qy * qy;
-      if (q < d2) d2 = q;
+      const l2 = dx * dx + dy * dy || 1, tr = ((X - ax) * dx + (Y - ay) * dy) / l2, t = Math.max(0, Math.min(1, tr)), qx = X - ax - dx * t, qy = Y - ay - dy * t, q = qx * qx + qy * qy;
+      if (q < d2) { d2 = q; end = k === 1 ? tr * Math.sqrt(l2) : k === n - 1 ? (1 - tr) * Math.sqrt(l2) : 1e9; if (n === 2) end = Math.min(tr, 1 - tr) * Math.sqrt(l2); }
     }
-    const lim = r.px ? hw * (0.8 + 0.35 * vnc(X, Y, 23, seed + 91)) : hw;
-    if (d2 < lim * lim) return Math.abs(Math.sqrt(d2) - hw * 0.4) < 3 + vnc(X, Y, 11, seed + 89) * 1.6 ? 2 : r.px ? 1 : 0;
+    if (!own) { if (d2 < hw * hw && Math.abs(Math.sqrt(d2) - hw * 0.4) < 3 + vnc(X, Y, 11, seed + 89) * 1.6) return 2; continue; }
+    if (end <= 0) continue;                                     // (past its end: no round cap)
+    const f = end >= TRACK_FADE ? 1 : end / TRACK_FADE, lim = hw * (0.8 + 0.35 * vnc(X, Y, 23, seed + 91)) * (0.45 + 0.55 * f);
+    if (d2 >= lim * lim) continue;
+    // (a ride no wider than a bike's - the enduro's single track - has one rut down its middle)
+    const d = Math.sqrt(d2), single = r.ride && hw <= SINGLE_HW, rut = single ? 0 : hw * 0.4, rw = (single ? 4.6 : 3.4) + vnc(X, Y, 11, seed + 89) * 2, worn = vnc(X, Y, 17, seed + 93);
+    if (Math.abs(d - rut) < rw && worn < 0.25 + 0.75 * f + 0.2) return f < 1 && worn > f + 0.15 ? 0 : 2;   // (the ruts, breaking up as they start)
+    if (d < rut) return worn > 0.72 - 0.1 * f ? 1 : 0;           // (the crown: the ground's own, worn through here and there)
+    const u = (d - rut) / Math.max(1, lim - rut);                // (the shoulder: 0 by the rut .. 1 its edge)
+    return worn * f > 0.2 + 0.55 * u ? 1 : 0;
   }
   return 0;
 }
@@ -498,9 +538,32 @@ function farmRects(M) {
   return out;
 }
 const inRect = (r, X, Y) => r && X >= r.x && X < r.x + r.w && Y >= r.y && Y < r.y + r.h;
+export const SUMMIT_R = 12;   // (tiles round a summit's cairn a chunk looks for its knob - shared/world3-peaks.js PEAKS3.knob: the shelf and the way up are granite)
 const inRects = (list, X, Y, key) => list.some((r) => (!key || r.key === key) && inRect(r, X, Y));
 
 // ---- 2. roads as distance fields ------------------------------------------------------------------------------
+// A fork (the owner, 11-25: "What is up with this double yellow lane merge on this street?"): where a road leaves a
+// junction at a sharp angle to another, its centre line lies inside the other's pavement for a way, and both roads'
+// double yellows ran side by side into the junction. The road that carries straight on through the junction keeps
+// its lines; the one joining it starts its own where its middle comes out of the other's pavement.
+export const FORK = { cos: 0.5, pad: 10, max: 480 };   // (under 60 degrees apart; px past the other's kerb; at most)
+export function forkTrim(M, e, n) {
+  if (!n || !n.edges || n.edges.length < 3 || !n.dirs) return 0;
+  const ids = n.edges.filter((id) => M.edges[id] && n.dirs[id] !== undefined), my = n.dirs[e.id];
+  if (my === undefined) return 0;
+  // how straight a road carries on: the most nearly opposite of the others (1: dead straight through)
+  const thru = (id) => Math.max(...ids.filter((o) => o !== id).map((o) => -Math.cos(n.dirs[o] - n.dirs[id])));
+  let trim = 0;
+  for (const o of ids) {
+    if (o === e.id) continue;
+    const c = Math.cos(n.dirs[o] - my);
+    if (c < FORK.cos) continue;
+    const a = thru(e.id), b = thru(o);
+    if (a > b + 1e-6 || (Math.abs(a - b) <= 1e-6 && e.id < o)) continue;   // (this one carries on: its lines stay)
+    trim = Math.max(trim, Math.min(M.edges[o].hw / Math.sqrt(Math.max(0.02, 1 - c * c)) + FORK.pad, FORK.max));
+  }
+  return trim;
+}
 function edgeInfo(M, e) {
   if (e._gb) return e._gb;
   const P = e.pts;
@@ -512,7 +575,7 @@ function edgeInfo(M, e) {
   // a little wider on curves where the tile raster steps out past the smooth kerb line
   const city = CITY.has(e.kind), walk = city ? (e.walk ?? 2 * TILE) + (aligned ? 0 : 0.6 * TILE) : e.kind === 'rural' ? 18 : 0;
   const L = P[P.length - 1].s, na = M.nodes[e.a], nb = M.nodes[e.b];
-  const t0 = ((na && na.trim[e.id]) || 0) + 6, t1 = L - ((nb && nb.trim[e.id]) || 0) - 6;
+  const t0 = Math.max(((na && na.trim[e.id]) || 0) + 6, forkTrim(M, e, na)), t1 = L - Math.max(((nb && nb.trim[e.id]) || 0) + 6, forkTrim(M, e, nb));
   const linked = na && nb && na.edges.length >= 3 && nb.edges.length >= 3 && t1 - t0 < 138 && e.kind !== 'hwy';
   // bridge spans: where the centre line runs over water, with a short run onto each bank
   const wet = [];
@@ -798,6 +861,67 @@ function railLoop(C, R, bias) {
   }
 }
 
+// A field's edge (11-24; DEVLOG "Fields with edges"): round every field a ragged verge of grass, then the headland
+// of turned earth, then the crop - not a ruled line. Its own stubble against its standing crop is no edge.
+export const FIELD_EDGE = { verge: 6, head: 17 };
+const CROP = new Uint8Array(MATS.length), STUBBLE = new Uint8Array(MATS.length);
+for (const k of ['WHEAT', 'CORN', 'CORNV', 'VEG', 'HAY', 'PLOW', 'PLOWV', 'STUB', 'STUBV']) CROP[M_[k]] = 1;
+STUBBLE[M_.STUB] = 1; STUBBLE[M_.STUBV] = 1;
+function fieldEdge(b, ti, X, Y, m, seed) {
+  const own = b.tm[ti];
+  if (own !== m) return isSoft(own) ? own : M_.DRYGRASS;   // (a crop keeps to its own tiles)
+  const lx = X - Math.floor(X / TILE) * TILE + 0.5, ly = Y - Math.floor(Y / TILE) * TILE + 0.5, rx = TILE - lx, ry = TILE - ly;
+  let d = 99, other = -1;
+  for (let n = 0; n < 8; n++) {
+    const dx = n === 0 || n === 4 || n === 6 ? -1 : n === 1 || n === 5 || n === 7 ? 1 : 0, dy = n === 2 || n === 4 || n === 5 ? -1 : n === 3 || n === 6 || n === 7 ? 1 : 0;
+    const mm = b.tm[ti + dx + dy * TN];
+    if (mm === m || (CROP[mm] && (STUBBLE[mm] || STUBBLE[m]))) continue;
+    const ex = dx < 0 ? lx : dx > 0 ? rx : 0, ey = dy < 0 ? ly : dy > 0 ? ry : 0, q = dx && dy ? Math.sqrt(ex * ex + ey * ey) : ex + ey;
+    if (q < d) { d = q; other = mm; }
+  }
+  if (other < 0) return -1;
+  const e = d + (vnc(X, Y, 29, seed + 171) - 0.5) * 11 + (vnc(X, Y, 9, seed + 173) - 0.5) * 5;
+  if (e < FIELD_EDGE.verge) return isSoft(other) ? other : M_.DRYGRASS;
+  return e < FIELD_EDGE.head ? M_.DIRT : -1;
+}
+
+// A country car park's edge (11-24): within LOT_EDGE px of soft ground the gravel gives way to it, raggedly.
+export const LOT_EDGE = 9;
+function lotEdge(b, ti, X, Y, seed) {
+  const lx = X - Math.floor(X / TILE) * TILE + 0.5, ly = Y - Math.floor(Y / TILE) * TILE + 0.5, rx = TILE - lx, ry = TILE - ly;
+  let d = 99, other = -1;
+  for (let n = 0; n < 8; n++) {
+    const dx = n === 0 || n === 4 || n === 6 ? -1 : n === 1 || n === 5 || n === 7 ? 1 : 0, dy = n === 2 || n === 4 || n === 5 ? -1 : n === 3 || n === 6 || n === 7 ? 1 : 0;
+    const kk = ti + dx + dy * TN, mm = b.tm[kk];
+    if (!isSoft(mm) || b.tw[kk]) continue;
+    const ex = dx < 0 ? lx : dx > 0 ? rx : 0, ey = dy < 0 ? ly : dy > 0 ? ry : 0, q = dx && dy ? Math.sqrt(ex * ex + ey * ey) : ex + ey;
+    if (q < d) { d = q; other = mm; }
+  }
+  if (other < 0) return -1;
+  return d + (vnc(X, Y, 27, seed + 181) - 0.5) * 14 + (vnc(X, Y, 8, seed + 183) - 0.5) * 6 < LOT_EDGE ? other : -1;
+}
+
+// A wild bank's kind along the shore (11-24, not one brown line): 0 an earth lip, 1 grown over to the water,
+// 2 shingle, 3 a bar of dirt. Designed ground keeps 0. test/groundedges.test.js
+const WILD_BANK = new Set([M_.MEADOW, M_.DRYGRASS, M_.ALPINE, M_.FOREST, M_.FORESTDIRT, M_.PASTURE, M_.DIRT]);
+const BANK_IN = 13;
+const tongue = (X, Y, seed) => vnc(X, Y, 10, seed + 215) * 0.85 + hh(X >> 1, Y >> 1, seed + 216) * 0.15;
+const beachW = (X, Y, seed) => 7 + vnc(X, Y, 23, seed + 213) * 22;   // (px: a shingle or sand bank's width, wandering)
+export function bankKind(m, X, Y, seed) {
+  if (!WILD_BANK.has(m)) return 0;
+  const v = vnc(X, Y, 190, seed + 211) + (hh(X >> 2, Y >> 2, seed + 212) - 0.5) * 0.006;
+  return v < 0.44 ? 1 : v < 0.55 ? 0 : v < 0.67 ? 2 : 3;
+}
+// Reeds in the shallows, how thick (0 none): beds across still water; a running creek's banks only; its pool clear
+export function reedAt(k, fv, pk, depth, d, reedy) {
+  if (depth >= (k === WK.MARSH ? 0.9 : 0.45)) return 0;
+  const still = k === WK.POND || k === WK.LAKE || k === WK.MARSH || fv < 0.2, bed = reedy > 0.55, e = d < 5;
+  if (pk > 0.05) return e ? 0.1 : 0;
+  if (!still && !e) return bed && d < 12 ? 0.3 : 0;
+  return e || bed ? (bed ? 0.42 : 0.1) : 0;
+}
+export const EDGE_TEST = { fieldEdge, lotEdge, rutPx, TN, reedAt, WK, bankKind, M_ };   // (for test/groundedges.test.js)
+
 // ---- 3. classes ------------------------------------------------------------------------------------------------
 function classify(C) {
   const { M, b, seed, WX0, WY0, TX0, TY0 } = C;
@@ -823,6 +947,7 @@ function classify(C) {
           }
         }
       }
+      if (C.tina && C.tina.length && isWater(m)) { const q = tinaTrim(C.tina, X, Y, seed); if (q >= 0) m = q; }   // (a desert pool's own lobed rim)
       // --- lawn against paving: threshold the blurred softness
       if (fl & 2 && (isSoft(m) || b.tso[ti] === 0) && t !== T.WATER && t !== T.DEEP) {
         const sv = (b.tsf[k00] * (1 - vx) + b.tsf[k00 + 1] * vx) * (1 - vy) + (b.tsf[k00 + TN] * (1 - vx) + b.tsf[k00 + TN + 1] * vx) * vy;
@@ -834,14 +959,31 @@ function classify(C) {
         const gi = gy * GW + (px >> 2), gfx = (px & 3) / 4;
         const ox = (b.wx[gi] * (1 - gfx) + b.wx[gi + 1] * gfx) * (1 - gfy) + (b.wx[gi + GW] * (1 - gfx) + b.wx[gi + GW + 1] * gfx) * gfy;
         const oy = (b.wy[gi] * (1 - gfx) + b.wy[gi + 1] * gfx) * (1 - gfy) + (b.wy[gi + GW] * (1 - gfx) + b.wy[gi + GW + 1] * gfx) * gfy;
-        const t2 = (Math.floor((Y + oy) / TILE) - TY0) * TN + Math.floor((X + ox) / TILE) - TX0;
-        if (t2 >= 0 && t2 < TN * TN && isSoft(b.tm[t2]) && !b.tw[t2]) m = b.tm[t2];
+        // (the nature pass, 11-21: the warped lookup alone left a border that runs on the slant as a staircase of tile
+        // corners - a beach's sand against its grass in saw-teeth. The ground here is whichever soft ground weighs most
+        // among the four tiles round the (warped) point, each by how near its centre is: on a slant the border runs
+        // straight through between the centres, and the warp makes it wander)
+        const fx = (X + ox) / TILE - 0.5 - TX0, fy = (Y + oy) / TILE - 0.5 - TY0, i0 = Math.floor(fx), j0 = Math.floor(fy), ax = fx - i0, ay = fy - j0;
+        let m0 = -1, w0 = 0, m1 = -1, w1 = 0, m2 = -1, w2 = 0, m3 = -1, w3 = 0;
+        for (let q = 0; q < 4; q++) {
+          const ii = i0 + (q & 1), jj = j0 + (q >> 1);
+          if (ii < 0 || jj < 0 || ii >= TN || jj >= TN) continue;
+          const kk = jj * TN + ii, mm = b.tm[kk];
+          if (!isSoft(mm) || b.tw[kk]) continue;
+          const w = ((q & 1) ? ax : 1 - ax) * ((q >> 1) ? ay : 1 - ay);
+          if (m0 === mm || m0 < 0) { m0 = mm; w0 += w; } else if (m1 === mm || m1 < 0) { m1 = mm; w1 += w; } else if (m2 === mm || m2 < 0) { m2 = mm; w2 += w; } else { m3 = mm; w3 += w; }
+        }
+        if (m0 >= 0) { let mb = m0, wb = w0; if (w1 > wb) { mb = m1; wb = w1; } if (w2 > wb) { mb = m2; wb = w2; } if (w3 > wb) { mb = m3; } m = mb; }
       }
       // --- the desert's waters (shared/world3-tinajas.js): a tinaja's bowl of slickrock, a seep's ring of cracked mud -
       // round the water out to a ragged edge, per pixel (a tile's step would show as a square)
       if (C.tina && C.tina.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS)) { const q = tinaPx(C.tina, X, Y, seed); if (q >= 0) m = q; }
       if (C.wash && C.wash.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS) && m !== M_.DIRT) { const q = washPx(C.wash, X, Y, seed); if (q >= 0) m = q; }
-      if (C.ruts && C.ruts.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS)) { const q = rutPx(C.ruts, X, Y, seed, m === M_.DIRT); if (q) m = q === 2 ? M_.RUT : M_.TRACKD; }
+      if (C.ruts && C.ruts.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS)) { const q = rutPx(C.ruts, X, Y, seed, m === M_.DIRT); if (q) m = q === 2 ? M_.RUT : DRYTRACK[m] ? M_.TRACKD : M_.DIRT; }   // (worn ground: pale on sand and rock, dark earth in the woods and the grass)
+      // --- a field's edge (fieldEdge): a grass verge and the headland the tractor turns on, ragged
+      if (CROP[m]) { const q = fieldEdge(b, ti, X, Y, m, seed); if (q >= 0) m = q; }
+      // --- a country car park's edge (lotEdge): its gravel thins out into the ground beside it
+      else if (m === M_.GRAVLOT && b.tm[ti] === m) { const q = lotEdge(b, ti, X, Y, seed); if (q >= 0) m = q; }
       // --- vectors: roads, sidewalks, shoulders, bridge decks
       const a = b.aux[i];
       let z = 0;
@@ -945,7 +1087,7 @@ function shoreDistance(C) {
 // 191 + px out into the sea or a lake (to 47), 191 - px up a beach (to 30), 255 elsewhere. The alpha is still
 // coverage (above a half: drawn), so nothing else changes. Runs last, over the decorations too.
 const SURF_LAND = new Uint8Array(NM);
-for (const k of ['BEACH', 'WETSAND', 'SHINGLE', 'DUNE', 'ROCKSHORE']) SURF_LAND[M_[k]] = 1;
+for (const k of ['BEACH', 'WETSAND', 'SHINGLE', 'DUNE', 'ROCKSHORE', 'BASALT']) SURF_LAND[M_[k]] = 1;
 // A river's water (M.flow: which way it runs, sixteenths of a turn) takes 239 + that instead: the lighting runs its
 // ripples and foam downstream.
 function surf(C, G) {
@@ -979,8 +1121,9 @@ function paint(C, G) {
         const ti = (Math.floor(Y / TILE) - TY0) * TN + Math.floor(X / TILE) - TX0;
         if (m === M_.POOL || m === M_.SPRING) {
           const r = m === M_.POOL ? poolPx(C.M.pools, X, Y, d, seed) : springPx(X, Y, d, seed);
-          c = r.c; nx = r.nx; ny = r.ny; f = F_GROUND | F_WATER; b.wcode[gi] = 0;
-          if (r.e) { emi[j] = 255; emi[j + 1] = 246; emi[j + 2] = 222; emi[j + 3] = r.e; }
+          // (11-24: still inland water with its word, as a pool sprite is - not open sea; a spring's glow dim)
+          c = r.c; nx = r.nx; ny = r.ny; f = F_GROUND | F_WATER | F_NOCAST; b.wcode[gi] = m === M_.POOL ? 230 : 224;
+          if (r.e) { const sp = m !== M_.POOL && r.e < 30; emi[j] = sp ? 60 : 255; emi[j + 1] = sp ? 92 : 246; emi[j + 2] = sp ? 84 : 222; emi[j + 3] = sp ? 1 : r.e; }
         } else {
           const r = waterPx(C, X, Y, d, ti, k00, vx, vy, TN, m === M_.SEA ? WK.SEA : m === M_.LAKE ? WK.LAKE : m === M_.POND ? WK.POND : WK.RIVER);
           c = r.c; nx = r.nx; ny = r.ny;
@@ -1002,6 +1145,7 @@ function paint(C, G) {
     }
   }
 }
+export const LEDGE = { step: 4, slope: 0.12, rib: 0.4, soft: 0.45, dark: 0.45, shade: 0.64 };   // (dark: a ledge's face on a slope already in shade is no darker than this of the rock's own colour - the two together went to a third, near black, on the high mountains' steepest ground; shade: the darkest a slope turned from the light is shaded - was 0.55: half the scree on the steepest ground came out under 50 of 255)   // (metres of height between a crag's ledges; the slope, m a tile, under which rock lies flat)
 // 9. the land's relief (World v3 8.22: shared/world3-relief.js, M.relief - metres per tile, dithered): the ground
 // shaded by its slope under a light from the north-west, a touch lighter the higher it stands; per tile from a 4 x 4
 // box of heights either side (the box undoes the dithering), bilinear per pixel; the water left as it is
@@ -1020,13 +1164,14 @@ export function shadeRelief(M, cx, cy, G, under) {
 function reliefOn(C, G, under) {
   const { M, b, TX0, TY0, WY0, WX0 } = C, R = M.relief;
   if (!R) return;
-  const zb = (tx, ty) => { let s = 0; for (let dy = -2; dy < 2; dy++) for (let dx = -2; dx < 2; dx++) { const x = tx + dx, y = ty + dy; if (M.inside(x, y)) s += R[M.row(y) + M.col(x)]; } return s / 16; };
-  const sh = b.tsh;
+  const zb = (tx, ty) => { let s = 0; for (let dy = -2; dy < 2; dy++) for (let dx = -2; dx < 2; dx++) { const x = tx + dx, y = ty + dy; if (M.inside(x, y)) s += R[M.row(y) + M.col(x)]; } return reliefMetres(s / 16); };
+  const sh = b.tsh, zt = b.tzt || (b.tzt = new Float32Array(TN * TN)), gt = b.tgt || (b.tgt = new Float32Array(TN * TN * 2));   // (the heights and slopes the rock's ledges are drawn from)
   for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, ty = TY0 + j, h = zb(tx, ty);
+    { zt[j * TN + i] = h; gt[(j * TN + i) * 2] = (zb(tx + 2, ty) - zb(tx - 2, ty)) / 4; gt[(j * TN + i) * 2 + 1] = (zb(tx, ty + 2) - zb(tx, ty - 2)) / 4; }
     const gx = (zb(tx + 3, ty) - zb(tx - 3, ty)) / 6, gy = (zb(tx, ty + 3) - zb(tx, ty - 3)) / 6;
     const k = (0.42 * gx + 0.5 * gy + 0.76) / Math.sqrt(gx * gx + gy * gy + 1) / 0.76;
-    sh[j * TN + i] = Math.max(0.55, Math.min(1.3, 1 + (k - 1) * 1.4 + (h - 30) * 0.0007));
+    sh[j * TN + i] = Math.max(LEDGE.shade, Math.min(1.3, 1 + (k - 1) * 1.4 + (h - 30) * 0.0007));
   }
   const col = G.col, fl = G.flag;
   for (let y = 0; y < CHUNK; y++) {
@@ -1035,7 +1180,21 @@ function reliefOn(C, G, under) {
       const gi = y * CHUNK + x;
       if (fl[gi] & F_WATER) continue;
       const fx = (WX0 + x + PAD) / TILE - 0.5 - TX0, i0 = Math.floor(fx), vx = fx - i0, k0 = j0 * TN + i0;
-      const k = (sh[k0] * (1 - vx) + sh[k0 + 1] * vx) * (1 - vy) + (sh[k0 + TN] * (1 - vx) + sh[k0 + TN + 1] * vx) * vy;
+      let k = (sh[k0] * (1 - vx) + sh[k0 + 1] * vx) * (1 - vy) + (sh[k0 + TN] * (1 - vx) + sh[k0 + TN + 1] * vx) * vy;
+      const mt = b.mat[(y + PAD) * WN + x + PAD];
+      if (mt === M_.CRAG || mt === M_.SCREE || mt === M_.GRANITE) {
+        // rock rises in benches (the owner's pick "B", 11-25): at every LEDGE.step metres of the land's height a ledge - its
+        // face where the ground falls toward you, a light lip above it; the benches follow the land's own contours. The
+        // mountains' open ground (scree) shows them too where it is steep (LEDGE.rib), fainter (LEDGE.soft): a slope reads
+        // as a slope, and nothing there looks like a wall you cannot climb
+        const bl = (A, o) => (A[k0 * 2 + o] * (1 - vx) + A[(k0 + 1) * 2 + o] * vx) * (1 - vy) + (A[(k0 + TN) * 2 + o] * (1 - vx) + A[(k0 + TN + 1) * 2 + o] * vx) * vy;
+        const X = WX0 + x + PAD, Y = WY0 + y + PAD, hgt = (zt[k0] * (1 - vx) + zt[k0 + 1] * vx) * (1 - vy) + (zt[k0 + TN] * (1 - vx) + zt[k0 + TN + 1] * vx) * vy + (vnc(X, Y, 46, 7811) - 0.5) * 2.6 + (vnc(X, Y, 13, 7813) - 0.5) * 0.9;
+        const gx = bl(gt, 0), gy = bl(gt, 1), sl = Math.sqrt(gx * gx + gy * gy);
+        const rk = mt === M_.CRAG ? 1 : LEDGE.soft;
+        if (sl > (rk === 1 ? LEDGE.slope : LEDGE.rib)) { const STEP = LEDGE.step, f = hgt / STEP, fr = f - Math.floor(f), sp = STEP / sl * TILE, px = fr * sp, south = -gy / sl;   // (px: how far up from the ledge's foot, along the slope)
+          const face = Math.min(26, sp * 0.4) * Math.max(0.25, south);
+          if (px < face) k = Math.max(LEDGE.dark, k * (1 - (1 - (south > 0 ? 0.62 + 0.12 * (px / face) - (hh(X, 0, 7815) > 0.7 ? 0.05 : 0) : 0.86)) * rk)); else if (px < face + 3) k *= 1 + 0.2 * rk; }
+      }
       if (k > 0.995 && k < 1.005) continue;
       const j = gi * 4;
       col[j] = Math.min(255, col[j] * k); col[j + 1] = Math.min(255, col[j + 1] * k); col[j + 2] = Math.min(255, col[j + 2] * k * (k < 1 ? 1.04 : 1));
@@ -1602,6 +1761,16 @@ function edges(C, G) {
         setC(G, gi, sd(R, near === 1 ? 0.5 : near === 2 ? 0.88 : 0.74 + (hh(X >> 3, Y >> 3, seed) - 0.5) * 0.12, X, Y, 0.3));
       }
     } else if (k === 3 || k === 2) {
+      const dw = k === 2 ? b.dist[i] / 10 : 9;
+      if (dw < BANK_IN) {   // (a soft bank going under)
+        let lm = 0;
+        for (const o of [-BANK_IN * WN, BANK_IN * WN, -BANK_IN, BANK_IN]) if (WILD_BANK.has(M[i + o])) { lm = M[i + o]; break; }
+        const bk = lm ? bankKind(lm, X, Y, seed) : 0;
+        if (bk && tongue(X, Y, seed) < 0.9 - dw / BANK_IN) {
+          const c = bk === 2 ? GSHADE.washGravel(X, Y, seed) : bk === 3 ? GSHADE.sandWet(X, Y, seed) : SHADER[lm](X, Y, seed), j = gi * 4;
+          G.col[j] = (G.col[j] + c[0] * 0.8) >> 1; G.col[j + 1] = (G.col[j + 1] + c[1] * 0.85) >> 1; G.col[j + 2] = (G.col[j + 2] + c[2] * 0.9) >> 1;
+        }
+      }
       // the face of a raised edge just north of this pixel, facing the camera: kerbs over roads, quay walls, pier
       // and deck sides and earth banks over the water (scan up through this pixel's own kind of low ground)
       let open = k === 2;   // (open water straight north of it: the lee of a bridge running north-south is looked for below)
@@ -1614,11 +1783,15 @@ function edges(C, G) {
         const bank = k === 2 && isSoft(up) && up !== M_.BEACH && up !== M_.DUNE && up !== M_.WETSAND;
         const quay = k === 2 && !isSoft(up) && !deck && !dock;
         if (!quay && !deck && !dock && !bank && KIND[up] !== 4 && up !== M_.PLATFORM) break;
+        if (bank && bankKind(up, X, Y - r, seed)) break;   // (no earth face where the bank is grown over, shingle or sand)
         // a bridge over the water shows the thickness of its deck (the slab and the girders under it) and darkens the
         // water in its lee: boats pass under it (host.js draws a boat part-way under a deck beneath it)
         const span = deck && k === 2 && Z[i - r * WN] >= C.deckZ - 1;
         const H = quay ? 12 : dock ? 6 : bank ? 3 : up === M_.PLATFORM ? 6 : span ? DECK_FACE : Z[i - r * WN];
-        if (span && r > H) { darken(G, gi, 0.62 + (r - H) / DECK_SHADE * 0.3); break; }
+        if (span && r > H) {
+          if (pierNose(X, 1)) { setC(G, gi, sd(MAT.concrete, 0.2 - (r - H) * 0.012 + (((X % PIER.gap) + PIER.gap) % PIER.gap < 2 ? 0.1 : 0), X, Y, 0.3)); putN(G, gi, 0, 2.2); G.z[gi] = PIER.z; G.flag[gi] = F_GROUND | F_WET; break; }   // (a pier's column under the deck)
+          darken(G, gi, 0.62 + (r - H) / DECK_SHADE * 0.3); break;
+        }
         if (r > H) break;
         if (span) {
           const girder = r > DECK_FACE - 5, rib = (X % 48) < 3;
@@ -1642,7 +1815,14 @@ function edges(C, G) {
       if (open) for (let r = 1; r <= DECK_LEE; r++) {
         const lf = M[i - r];
         if (isWater(lf)) continue;
-        if ((lf === M_.DECK || lf === M_.DECKF || lf === M_.RAILDECK || lf === M_.DECKWALK) && Z[i - r] >= C.deckZ - 1) darken(G, gi, 0.6 + r / DECK_LEE * 0.32);
+        if ((lf === M_.DECK || lf === M_.DECKF || lf === M_.RAILDECK || lf === M_.DECKWALK) && Z[i - r] >= C.deckZ - 1) darken(G, gi, 0.46 + (r / DECK_LEE) * (r / DECK_LEE) * 0.5);   // (the lee: deep by the deck, easing out)
+        break;
+      }
+      // (a pier's nose beyond the edge of a deck that runs north-south: either side of it)
+      if (k === 2 && pierNose(Y, 1)) for (const sg of [-1, 1]) for (let r = 1; r <= PIER.out; r++) {
+        const nb = M[i + sg * r];
+        if (isWater(nb)) continue;
+        if ((nb === M_.DECK || nb === M_.DECKF) && Z[i + sg * r] >= C.deckZ - 1) { const pm = ((Y % PIER.gap) + PIER.gap) % PIER.gap; setC(G, gi, sd(MAT.concrete, (sg < 0 ? 0.3 : 0.5) - r * 0.03 + (pm < 2 ? 0.14 : pm > PIER.len - 3 ? -0.12 : 0), X, Y, 0.3)); putN(G, gi, 0, 1); G.z[gi] = PIER.z; G.flag[gi] = F_GROUND | F_WET; }
         break;
       }
       if (m === M_.TRACK) {                                     // red-and-white kerbs along a race track's edges; the chequered start line
@@ -1663,11 +1843,16 @@ function edges(C, G) {
     } else if (k === 0) {
       // soft ground meeting water: wet sand, a muddy lip, damp grass; elsewhere a damp edge against paving
       const d = b.dist[i] / 10;
-      if (d < 12) {
+      if (d < 30) {
         if (m === M_.BEACH || m === M_.DUNE) { if (d < 7 + vnc(X, Y, 9, seed) * 5) setC(G, gi, GSHADE.sandWet(X, Y, seed)); }
-        else if (m === M_.ROCKSHORE || m === M_.SHINGLE) { if (d < 6) darken(G, gi, 0.72 + d * 0.04); }
-        else if (d < 3) setC(G, gi, sd(MAT.soil, 0.3 + d * 0.15 + hh(X, Y, seed) * 0.15, X, Y, 0.6));
-        else if (d < 6) darken(G, gi, 0.8 + d * 0.025);
+        else if (m === M_.ROCKSHORE || m === M_.SHINGLE || m === M_.BASALT) { if (d < 6) darken(G, gi, 0.72 + d * 0.04); }
+        else {
+          const bk = bankKind(m, X, Y, seed);
+          if (bk === 1) { if (tongue(X, Y, seed) < 0.82 - d * 0.085) { darken(G, gi, 0.72); G.col[gi * 4 + 2] += 14; } }   // (damp)
+          else if (bk) { if (d < beachW(X, Y, seed)) { setC(G, gi, bk === 2 ? GSHADE.washGravel(X, Y, seed) : d < 3 ? GSHADE.sandWet(X, Y, seed) : GSHADE.dirtPebbly(X, Y, seed)); if (d < 2) darken(G, gi, 0.84); } }
+          else if (d < 3) setC(G, gi, sd(MAT.soil, 0.3 + d * 0.15 + hh(X, Y, seed) * 0.15, X, Y, 0.6));
+          else if (d < 6) darken(G, gi, 0.8 + d * 0.025);
+        }
       } else if (KIND[M[i - WN]] === 4 || KIND[M[i - 1]] === 4 || KIND[M[i + 1]] === 4 || KIND[M[i + WN]] === 4) darken(G, gi, 0.8);
     }
   }
@@ -1676,7 +1861,30 @@ const low = (m) => KIND[m] === 3 || KIND[m] === 2;
 // ---- 8. decorations ------------------------------------------------------------------------------------------------
 // stamp a cover sprite with its root at world (X, Y): each pixel is kept only where it stands at least as high
 // as what is already there (the depth rule, so overlaps come out the same in every chunk)
+// (at the art pixel where the chunk is: ground.js coverSprite. Not the dense turf: a lawn of blades one art pixel wide,
+// each with its sunlit tip, came out as yellow static in the game - halved and averaged by the bake it is the soft
+// mottled grass it was)
+const cover = (C, kind, v) => coverSprite(kind, v, C.ap === 2 && kind !== 'turf');
 function stamp(C, G, spr, X, Y, z0 = 0, fl = 0) {
+  if (spr.ap2) {   // (made at the art pixel: its root on the art grid, each of its pixels a 2 x 2 block)
+    const rx = Math.round(X / 2) * 2 - C.X0 - spr.ax * 2, ry = Math.round(Y / 2) * 2 - C.Y0 - spr.ay * 2;
+    for (let y = 0; y < spr.h; y++) for (let x = 0; x < spr.w; x++) {
+      const si = y * spr.w + x; if (!spr.col[si * 4 + 3]) continue;
+      const z = spr.z[si] + z0, sj = si * 4;
+      for (let v = 0; v < 2; v++) {
+        const gy = ry + y * 2 + v; if (gy < 0 || gy >= CHUNK) continue;
+        for (let u = 0; u < 2; u++) {
+          const gx = rx + x * 2 + u; if (gx < 0 || gx >= CHUNK) continue;
+          const gi = gy * CHUNK + gx, j = gi * 4;
+          if (z < G.z[gi]) continue;
+          G.col[j] = spr.col[sj]; G.col[j + 1] = spr.col[sj + 1]; G.col[j + 2] = spr.col[sj + 2];
+          G.nrm[j] = spr.nrm[sj]; G.nrm[j + 1] = spr.nrm[sj + 1]; G.nrm[j + 2] = spr.nrm[sj + 2];
+          G.z[gi] = z; G.flag[gi] = spr.flag[si] | F_GROUND | F_WET | fl;
+        }
+      }
+    }
+    return;
+  }
   const ox = Math.round(X) - C.X0 - spr.ax, oy = Math.round(Y) - C.Y0 - spr.ay;
   for (let y = 0; y < spr.h; y++) {
     const gy = oy + y; if (gy < 0 || gy >= CHUNK) continue;
@@ -1716,8 +1924,15 @@ cov('DESERT', [['pebble', 6, 0.05], ['tuftDry', 8, 0.035], ['scrub', 6, 0.012], 
 cov('CRACKED', [['tuftDry', 8, 0.02], ['pebble', 6, 0.03]]);
 cov('REDROCK', [['redStone', 6, 0.06], ['tuftDry', 8, 0.05], ['scrub', 6, 0.015]]);
 cov('SCREE', [['rock', 6, 0.05], ['tuftAlp', 6, 0.05]]);
+cov('GRANITE', [['rock', 6, 0.03], ['pebble', 6, 0.04], ['tuftAlp', 6, 0.03]]);
 cov('GRAVEL', [['weed', 4, 0.03], ['tuftDry', 8, 0.012]]);
-cov('BEACH', [['shell', 4, 0.02], ['pebble', 6, 0.03], ['starfish', 1, 0.002], ['seaweed', 4, 0.004]]);
+cov('BEACH', [['shell', 4, 0.007], ['pebble', 6, 0.02], ['starfish', 1, 0.002], ['seaweed', 4, 0.004]]);   // (shells a third of what they were: the owner, 11-23 - "shells too thick")
+cov('BASALT', [['starfish', 1, 0.012], ['seaweed', 4, 0.03], ['shell', 4, 0.008]]);
+// The tideline (11-25; NS1-F, the plan's "kelp wrack and seaweed on the tideline"): on a sea beach the last high
+// tide's line - seaweed thick along a band `w` px wide that wanders `wander` px about `at` px up the sand from the
+// water (above the swash's reach, lightgame.js: 30), a shell among it. wrackW: how much of it at nd px from the shore.
+export const WRACK = { at: 34, wander: 12, w: 4.5, fill: 0.85, shell: 0.1, sea: 20 };
+export const wrackW = (nd, X, Y, seed) => { const w = Math.abs(nd - (WRACK.at + (vnc(X, Y, 70, seed + 221) - 0.5) * WRACK.wander)); return w < WRACK.w ? 1 - w / WRACK.w : 0; };
 cov('SHINGLE', [['seaweed', 4, 0.01], ['shell', 4, 0.006], ['rock', 3, 0.01]]);
 cov('ROCKSHORE', [['rock', 6, 0.04], ['seaweed', 4, 0.012], ['tuftAlp', 6, 0.02]]);
 cov('DUNE', [['duneGrass', 6, 0.03], ['pebble', 6, 0.006], ['tuftDry', 8, 0.01]]);
@@ -1726,6 +1941,40 @@ cov('SHOULDER', [['pebble', 6, 0.04], ['tuftDry', 8, 0.04], ['weed', 4, 0.03]]);
 cov('GRAVLOT', [['weed', 4, 0.012], ['pebble', 6, 0.02]]);
 cov('QUARRY', [['rock', 6, 0.03], ['pebble', 6, 0.05]]);
 cov('BALLAST', [['weed', 4, 0.01]]);
+// 8b. talus: what has come down off a crag lies at its foot. South of solid rock (a relief band's wall, a rock rib)
+// the wild ground is pale broken stone for TALUS.reach px and up to TALUS.vary more, its edge ragged and dithered out, and the decor
+// pass strews fallen blocks and stones over it, thickest by the wall - so a wall does not stand on bare earth (the
+// owner, 11-25: "big rock structure and mountain side and cliffs and rocky terrain systems"; his pick, look B).
+// b.tal: 1 + px south of the rock for an apron pixel, 0 elsewhere.
+export const TALUS = { reach: 54, vary: 46, rocks: 0.7, drop: 3, cover: 0.72 };   // (drop: metres the rock must stand over the ground for an apron - a flat slab in a meadow sheds nothing; cover: how much of the apron is stone, the ground showing between)
+function talus(C, G) {
+  const { b, seed, WX0, WY0 } = C, Mt = b.mat, tal = b.tal || (b.tal = new Uint8Array(WA)), A2 = C.ap === 2;
+  tal.fill(0);
+  let any = false;
+  for (let i = 0; i < WA; i += 5) if (Mt[i] === M_.CRAG) { any = true; break; }
+  if (!any || !SHADER[M_.WASH]) return;
+  const far = TALUS.reach + TALUS.vary, Mp = C.M, R = Mp.relief;
+  const zAtPx = (qx, qy) => { if (!R) return 0; const tx = Math.floor((WX0 + qx) / TILE), ty = Math.floor((WY0 + qy) / TILE); return Mp.inside(tx, ty) ? reliefMetres(R[Mp.row(ty) + Mp.col(tx)]) : 0; };
+  for (let px = 0; px < WN; px++) {
+    let d = 255, hc = 0;
+    for (let py = 0; py < WN; py++) {
+      const i = py * WN + px, m = Mt[i];
+      if (m === M_.CRAG) { if (d !== 0) hc = 0; d = 0; if (R && (py & 15) === 0) hc = Math.max(hc, zAtPx(px, py - 2 * TILE)); continue; }
+      if (!WILD_BANK.has(m) && m !== M_.SCREE && m !== M_.GRANITE) { d = 255; continue; }   // (a road, water, a yard: the apron ends there)
+      if (d < 255) d++;
+      if (d > far) continue;
+      const x = px - PAD, y = py - PAD, X = WX0 + (A2 ? (x & ~1) + PAD : px), Y = WY0 + (A2 ? (y & ~1) + PAD : py);
+      const edge = (TALUS.reach + TALUS.vary * vnc(X, 0, 52, seed + 311)) * (0.7 + 0.6 * vnc(X, Y, 11, seed + 313));
+      if (d > edge) continue;
+      if (R && hc - zAtPx(px, py) < TALUS.drop) continue;   // (no height over it: nothing came down)
+      tal[i] = 1 + d;
+      if (x < 0 || y < 0 || x >= CHUNK || y >= CHUNK) continue;
+      if (d > edge * 0.55 && hh(X, Y, seed + 315) > (edge - d) / (edge * 0.45)) continue;   // (thinning out toward its edge)
+      if (hh(X >> 1, Y >> 1, seed + 317) > TALUS.cover) continue;   // (the ground shows between the stones)
+      { const c = SHADER[M_.WASH](X, Y, seed), j = (y * CHUNK + x) * 4; G.col[j] = c[0] * 0.88; G.col[j + 1] = c[1] * 0.88; G.col[j + 2] = c[2] * 0.9; }   // (pale broken stone, the granite's own grey - the mountains' ground is the brown scree)
+    }
+  }
+}
 function decor(C, G) {
   const { M, b, q, seed } = C;
   if (q <= 0) return;
@@ -1739,7 +1988,7 @@ function decor(C, G) {
     const n = Math.round((raised(m) || roadLike(m) ? 26 : 40) * dens);
     for (let k = 0; k < n; k++) {
       const a = hh(k, Math.round(p.x), seed + 81) * 6.283, r = Math.sqrt(hh(k, Math.round(p.y), seed + 83)) * 52;
-      stamp(C, G, coverSprite('leaf', (hh(k, 7, seed + Math.round(p.x)) * 5) | 0), p.x + Math.cos(a) * r * 1.25, p.y + Math.sin(a) * r * 0.85 + 6, zAt(C, p.x + Math.cos(a) * r * 1.25, p.y + Math.sin(a) * r * 0.85 + 6));
+      stamp(C, G, cover(C, 'leaf', (hh(k, 7, seed + Math.round(p.x)) * 5) | 0), p.x + Math.cos(a) * r * 1.25, p.y + Math.sin(a) * r * 0.85 + 6, zAt(C, p.x + Math.cos(a) * r * 1.25, p.y + Math.sin(a) * r * 0.85 + 6));
     }
   }
   turf(C, G, 1);                                              // (the grass itself: full density from q1 up)
@@ -1751,12 +2000,18 @@ function decor(C, G) {
     const px = Math.floor(X - C.WX0), py = Math.floor(Y - C.WY0);
     if (px < 0 || py < 0 || px >= WN || py >= WN) continue;
     const i = py * WN + px, m = b.mat[i];
+    // (the talus under a crag: fallen blocks and stones, thickest by the wall)
+    if (b.tal && b.tal[i] && h0 > 1 - TALUS.rocks * dens * (1 - (b.tal[i] - 1) / (TALUS.reach + TALUS.vary + 1))) { stamp(C, G, cover(C, h0 > 0.8 && b.tal[i] < 60 ? 'rock' : 'pebble', (hh(cx, cy, seed + 97) * 6) | 0), X, Y, b.zb[i]); continue; }
     const list = COVER[m];
     if (list) {
+      const nd = b.dist[i] / 10, bk = nd < 30 ? bankKind(m, X, Y, seed) : 0;
+      if (WILD_BANK.has(m) && nd < 18 && h0 > 1 - (bk > 1 ? 0.3 : 0.18) * dens) { stamp(C, G, cover(C, h0 > 0.94 ? 'rock' : 'pebble', (hh(cx, cy, seed + 97) * 6) | 0), X, Y, b.zb[i]); continue; }
+      if (bk > 1 && nd < beachW(X, Y, seed)) continue;
+      if (m === M_.BEACH && nd < 60 && M.distSea) { const ww = wrackW(nd, X, Y, seed), tx = Math.floor(X / TILE), ty = Math.floor(Y / TILE); if (ww > 0 && M.inside(tx, ty) && M.distSea[M.idx(tx, ty)] < WRACK.sea && h0 < WRACK.fill * dens * ww) { stamp(C, G, cover(C, hh(cx, cy, seed + 223) < WRACK.shell ? 'shell' : hh(cx, cy, seed + 225) < 0.7 ? 'wrack' : 'seaweed', (hh(cx, cy, seed + 97) * 6) | 0), X, Y, b.zb[i]); continue; } }
       let acc = 0;
       for (const [kind, nv, p] of list) {
         acc += p * dens;
-        if (h0 < acc) { stamp(C, G, coverSprite(kind, (hh(cx, cy, seed + 97) * nv) | 0), X, Y, b.zb[i]); break; }
+        if (h0 < acc) { stamp(C, G, cover(C, kind, (hh(cx, cy, seed + 97) * nv) | 0), X, Y, b.zb[i]); break; }
       }
       continue;
     }
@@ -1767,15 +2022,16 @@ function decor(C, G) {
       if (!w || w.k === WK.SEA || b.tt[(Math.floor(Y / TILE) - C.TY0) * TN + Math.floor(X / TILE) - C.TX0] === T.WALL) continue;   // (nor on a ledge fall's lip)
       const still = (w.k === WK.POND || w.k === WK.LAKE || w.k === WK.MARSH || w.fv < 0.2) && !(w.pk > 0.05);   // (a river's calm pocket: no lilies)
       const reedy = vnc(X, Y, 150, seed + 103) + (w.k === WK.MARSH ? 0.25 : w.k === WK.POND ? 0.1 : 0);
-      if (w.depth < (w.k === WK.MARSH ? 0.9 : 0.45) && (d < 5 || reedy > 0.55) && h0 < (reedy > 0.55 ? 0.42 : 0.1) * dens) stamp(C, G, coverSprite('reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
-      else if (still && w.depth > 0.25 && w.depth < 1.9 && d > 5 && vnc(X, Y, 110, seed + 105) > (w.k === WK.LAKE ? 0.68 : w.k === WK.MARSH ? 0.7 : 0.6) && h0 < 0.55 * dens) stamp(C, G, coverSprite('lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, LILY_Z, F_NOCAST);
+      const rd = reedAt(w.k, w.fv, w.pk, w.depth, d, reedy);
+      if (rd && h0 < rd * dens) stamp(C, G, cover(C, 'reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
+      else if (still && w.depth > 0.25 && w.depth < 1.9 && d > 5 && vnc(X, Y, 110, seed + 105) > (w.k === WK.LAKE ? 0.68 : w.k === WK.MARSH ? 0.7 : 0.6) && h0 < 0.55 * dens) stamp(C, G, cover(C, 'lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, LILY_Z, F_NOCAST);
       continue;
     }
     // paving and asphalt: litter and weeds by wealth
     const ti = (Math.floor(Y / TILE) - C.TY0) * TN + Math.floor(X / TILE) - C.TX0, D = DISTRICTS[b.td[ti]] || DISTRICTS[1];
     const lit = (LITTER[D.tier] ?? 0.3) * dens;
     if ((raised(m) || roadLike(m)) && h0 < 0.004 * lit) litterAt(C, G, X, Y, b.zb[i], cx * 7 + cy);
-    else if ((raised(m) || m === M_.LOT || m === M_.YARD) && h0 > 1 - 0.025 * lit * (WEAR[D.tier] ?? 0.3)) stamp(C, G, coverSprite('weed', (h0 * 400) & 3), X, Y, b.zb[i]);
+    else if ((raised(m) || m === M_.LOT || m === M_.YARD) && h0 > 1 - 0.025 * lit * (WEAR[D.tier] ?? 0.3)) stamp(C, G, cover(C, 'weed', (h0 * 400) & 3), X, Y, b.zb[i]);
   }
 }
 // grass as E1 draws it: overlapping tufts in staggered rows, each a fan of blades with sunlit tips, stamped north
@@ -1798,7 +2054,7 @@ function turf(C, G, dens) {
       if (TURFCLOV[m] && cloverAt(X | 0, Y | 0, seed, TURFCLOV[m])) continue;
       const tall = m === M_.MEADOW && vnc(X, Y, 31, seed + 115) > 0.45 ? 5 : pal, pv = vnc(X, Y, 53, seed + 119) + (h0 - 0.5) * 0.3;
       const shade = pv < 0.38 ? 0 : pv > 0.64 ? 2 : 1;
-      stamp(C, G, coverSprite('turf', (tall * 3 + shade) * 16 + ((hh(c, r, seed + 117) * 12) | 0)), X, Y, b.zb[py * WN + px]);
+      stamp(C, G, cover(C, 'turf', (tall * 3 + shade) * 16 + ((hh(c, r, seed + 117) * 12) | 0)), X, Y, b.zb[py * WN + px]);
     }
   }
 }
@@ -1817,7 +2073,7 @@ function crops(C, G, dens) {
         const X = c * RX + ox + (hh(r, c, seed + 133) - 0.5) * 1.5, Y = r * RY + (h0 - 0.5);
         const px = Math.floor(X - C.WX0), py = Math.floor(Y - C.WY0);
         if (px < 0 || py < 0 || px >= WN || py >= WN || !mats.includes(b.mat[py * WN + px])) continue;
-        stamp(C, G, coverSprite(kind, ((hh(c, r, seed + 137) * nv) | 0) + (vnc(X, Y, 90, seed + 141) > 0.5 ? nv : 0)), X, Y, b.zb[py * WN + px]);   // (in patches a head taller)
+        stamp(C, G, cover(C, kind, ((hh(c, r, seed + 137) * nv) | 0) + (vnc(X, Y, 90, seed + 141) > 0.5 ? nv : 0)), X, Y, b.zb[py * WN + px]);   // (in patches a head taller)
       }
     }
   }

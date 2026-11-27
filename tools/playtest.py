@@ -20,6 +20,8 @@ Options
   --mobile                touch + phone user agent
   --timeout 120           seconds to wait for the city
   --quiet                 only print errors and step output
+  --ls KEY=VALUE          a localStorage item set before the page loads (repeatable): --ls cla.polish=1 is the people's polish pass
+                          (the first-launch gate - the age line and consent - is answered 'essential' unless set here: --ls cla.gate=null)
 Steps
   wait:MS                 let the game run
   shot:PATH               full-page screenshot (PNG)
@@ -30,6 +32,7 @@ Steps
   time:MIN                set the server clock (minutes after midnight, e.g. 720 noon, 1380 night)
   tp:X,Y[,LZ]             teleport the player (world px; LZ 1 = up on the highway deck)
   eval:JS                 evaluate JS (expression or function body with return) and print the result
+  save:JS:PATH            write the data URL that JS gives (a canvas's toDataURL()) to PATH
   waitfor:JS[:MS]         wait until JS is truthy (default 30 s)
   perf:MS                 sample frame times for MS and print avg / p95 / worst ms
 Examples
@@ -65,6 +68,7 @@ def main():
     ap.add_argument('--xbox', action='store_true')
     ap.add_argument('--timeout', type=int, default=120)
     ap.add_argument('--quiet', action='store_true')
+    ap.add_argument('--ls', action='append', default=[], help="KEY=VALUE stored in localStorage before the page loads (repeatable), e.g. --ls cla.polish=1")
     ap.add_argument('steps', nargs='*')
     a = ap.parse_args()
     if not a.server: a.server = f'ws://127.0.0.1:{a.game_port}/ws'
@@ -109,7 +113,10 @@ def main():
         if a.xbox:
             ctx.add_init_script("""(() => { const mm = window.matchMedia.bind(window); const fake = (q, m) => ({ matches: m, media: q, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent() { return false; } });
               window.matchMedia = (q) => /any-pointer:\\s*fine/.test(q) ? fake(q, false) : /any-hover:\\s*hover/.test(q) ? fake(q, false) : /pointer:\\s*coarse/.test(q) ? fake(q, true) : /pointer:\\s*fine/.test(q) ? fake(q, false) : mm(q); })();""")
-        ctx.add_init_script("try { localStorage.setItem('cla.tutorial', '99'); const s = JSON.parse(localStorage.getItem('cla.settings') || '{}'); s.gfxPreset = %s; s.gfxOpts = null; s.autoFullscreen = false; localStorage.setItem('cla.settings', JSON.stringify(s)); } catch (e) {}" % json.dumps(a.preset))
+        ctx.add_init_script("try { if (!localStorage.getItem('cla.gate')) localStorage.setItem('cla.gate', JSON.stringify({ age17: true, consent: 'essential' })); const s = JSON.parse(localStorage.getItem('cla.settings') || '{}'); s.gfxPreset = %s; s.gfxOpts = null; s.autoFullscreen = false; localStorage.setItem('cla.settings', JSON.stringify(s)); } catch (e) {}" % json.dumps(a.preset))
+        for kv in a.ls:
+            k, _, v = kv.partition('=')
+            ctx.add_init_script('try { localStorage.setItem(%s, %s); } catch (e) {}' % (json.dumps(k), json.dumps(v)))
         pg = ctx.new_page()
         pg.on('pageerror', lambda e: errors.append('pageerror: ' + str(e) + ' ' + (getattr(e, 'stack', '') or '')[:600]))
         # (offline practice: the page's tries at its online server - the static server here, no game server - fail, as they
@@ -148,7 +155,7 @@ def main():
                 if op == 'wait': pg.wait_for_timeout(int(arg))
                 elif op == 'shot':
                     path = os.path.abspath(arg)
-                    pg.screenshot(path=path); say('shot', path)
+                    pg.screenshot(path=path, timeout=180000); say('shot', path)
                 elif op == 'key':
                     k, _, ms = arg.partition(':')
                     if ms: pg.keyboard.down(k); pg.wait_for_timeout(int(ms)); pg.keyboard.up(k)
@@ -170,6 +177,14 @@ def main():
                     v = [float(x) for x in arg.split(',')]
                     pg.evaluate('(v) => window.CLA.send({ t: "dev", c: "tp", x: v[0], y: v[1], lz: v[2] || 0 })', v)
                 elif op == 'eval': print('[eval]', st[5:60], '=>', json.dumps(js(arg), default=str)[:4000], flush=True)
+                elif op == 'save':
+                    # save:JS:PATH  JS gives a data URL (say a canvas's toDataURL()); its bytes are written to PATH - far
+                    # quicker than a screenshot under SwiftShader
+                    expr, _, path = arg.rpartition(':')
+                    import base64
+                    u = js(expr)
+                    if not u or ',' not in u: print('save: nothing at', expr[:60]); continue
+                    open(os.path.abspath(path), 'wb').write(base64.b64decode(u.split(',', 1)[1])); say('saved', path)
                 elif op == 'waitfor':
                     expr, _, ms = arg.rpartition(':') if arg.rsplit(':', 1)[-1].isdigit() else (arg, '', '')
                     expr = expr or arg

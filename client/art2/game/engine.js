@@ -89,6 +89,8 @@ const Z4 = new Float32Array(4), ONE = new Float32Array([1]), CLR = new Float32Ar
 const CAM_OCT = octEncode(0, 0.55, 0.835);           // an upright card facing the camera
 // (layer: 0 the city's chunks, 1 the subway's tunnel - art2/game/tunnel.js: the two kept apart, the city's resident under
 // the tunnel while you ride, drawn whichever this frame's layer is)
+export const CHUNK_HARD = 40;   // the most chunk slots ever held (the view's own reserved past the quality's count: _slot)
+export const XF_MS = 320;   // a walk-in's swap: its pixel dissolve (uploadChunk xf, STATIC_FS uX)
 const ckey = (cx, cy, layer = 0) => layer * 4294967296 + (cy + 32768) * 65536 + (cx + 32768);
 const clampQ = (q) => Math.max(0, Math.min(3, Math.round(+q || 0)));
 const ema = (a, v) => (a ? a * 0.9 + v * 0.1 : v);
@@ -126,12 +128,17 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // one's lighter, so it keeps its shape), the clear space round a figure - how much of its radius is the feathered edge,
 // how much taller than wide it is; CLR_SWAP: past what share of the clear space a texel takes the ground's height,
 // dithered over CLR_SWAP_W (10-24); SEE: how much of the ghost lies over what is behind it (GHOST_FS), next to over the street
-export const GHOST = 0.6, GHOST_THIN = 0.3, CLR_SOFT = 0.65, CLR_TALL = 1.3, CLR_SWAP = 0.3, CLR_SWAP_W = 0.55, SEE = 0.5;
+// (11-25, the owner on the see-through streets: "we need the buildings to be totally transparent like as transparent as
+// it is around my character. Maybe a little bit of gradient or dissolve around the edges" - GHOST 0.6 -> 0.94: all but
+// clear; and along the edges of what fades - its picture's outline, the rim of its footprint - it dissolves in over
+// EDGE_PX, from GHOST_EDGE: the building's shape stays readable as a soft rim, nothing lies over the street)
+export const GHOST_EDGE = 0.5, EDGE_PX = 12;
+export const GHOST = 0.94, GHOST_THIN = 0.3, CLR_SOFT = 0.65, CLR_TALL = 1.3, CLR_SWAP = 0.3, CLR_SWAP_W = 0.55, SEE = 0.5;
 // seeThrough: STATIC_FS's fade of a texel at world (x, y) outside its building's footprint, in JS (the tests): f the
 // building's fade (uFade), C the clear spaces (uClr) -> 0..1. seenBehind: how much shows of a sprite there (GHOST_FS;
 // 0 when it isn't fading: hidden, as behind anything solid)
-export function seeThrough(f, x, y, C) {
-  const gh = f < 0 ? GHOST_THIN : GHOST, a = Math.abs(f), sst2 = (e0, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (1 - e0))); return t * t * (3 - 2 * t); };
+export function seeThrough(f, x, y, C, edge = 0) {   // (edge 0..1: how near the rim of what fades - fadeOf's e)
+  const gh = f < 0 ? GHOST_THIN : GHOST - (GHOST - GHOST_EDGE) * edge, a = Math.abs(f), sst2 = (e0, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (1 - e0))); return t * t * (3 - 2 * t); };
   let cl = 0;
   for (let i = 0; i < 4; i++) if (C[i * 4 + 2] > 0) cl = Math.max(cl, (1 - sst2(1 - CLR_SOFT, Math.hypot((x - C[i * 4]) / C[i * 4 + 2], (y - C[i * 4 + 1]) / (C[i * 4 + 2] * CLR_TALL)))) * C[i * 4 + 3]);
   return a * (gh + (1 - gh) * cl);
@@ -215,6 +222,12 @@ float fadeOf(ivec2 src, out vec4 u, out float fa, out float fc){
   vec4 fp = uFoot[k];
   vec2 sp = vec2(src * AP) + 0.5 * float(AP);
   if (f <= 0.002 || (fp.x <= fp.z ? sp.x >= fp.x && sp.x < fp.z && sp.y >= fp.y && sp.y < fp.w : length((sp - (fp.xy + fp.zw) * 0.5) / max((fp.xw - fp.zy) * 0.5, vec2(1.0))) < 1.0)) return 0.0;
+  // (the rim: beside its own footprint, and where its picture ends - a neighbour texel EDGE_PX off is not its own)
+  float e = fp.x <= fp.z ? 1.0 - smoothstep(0.0, ${EDGE_PX.toFixed(1)}, length(max(max(fp.xy - sp, sp - fp.zw), vec2(0.0)))) : 0.0;
+  ivec2 tsz = textureSize(t3, 0) - 1; float out4 = 0.0;
+  for (int i = 0; i < 8; i++) { ivec2 o = ivec2(i < 4 ? ${Math.round(EDGE_PX / 2)} : ${EDGE_PX}, 0) / AP; if ((i & 1) == 1) o = -o; if ((i & 2) == 2) o = o.yx; if (int(texelFetch(t3, clamp(src + o, ivec2(0), tsz), 0).a * 255.0 + 0.5) != k) out4 += i < 4 ? 0.2 : 0.1; }
+  e = max(e, min(1.0, out4));
+  if (gh > ${GHOST_EDGE}) gh -= (gh - ${GHOST_EDGE}) * e;
   vec2 wp = uChunk + sp;
   float cl = 0.0;
   for (int i = 0; i < 4; i++) { vec4 q = uClr[i]; if (q.z > 0.0) cl = max(cl, (1.0 - smoothstep(${(1 - CLR_SOFT).toFixed(2)}, 1.0, length((wp - q.xy) / vec2(q.z, q.z * ${CLR_TALL.toFixed(2)})))) * q.w); }
@@ -241,6 +254,13 @@ const STATIC_FS = (AP) => HDR + `
 #define AP ${AP}
 #define CTX ${CHUNK_PX / AP}
 uniform sampler2D t0, t1, t2, tN; uniform vec2 uOff; uniform float uFadeOn;
+// (a walk-in's swap between the street's picture and the cut-away, 11-23: for XF_MS each art texel shows the old picture
+// (p0..p2) or the new, by a 4x4 dither against uX - a pixel dissolve over the building's chunks alone, nothing else dims)
+uniform sampler2D p0, p1, p2; uniform float uX;
+bool XO;
+vec4 F0(ivec2 p, int l){ return XO ? texelFetch(p0, p, l) : texelFetch(t0, p, l); }
+vec4 F1(ivec2 p, int l){ return XO ? texelFetch(p1, p, l) : texelFetch(t1, p, l); }
+vec4 F2(ivec2 p, int l){ return XO ? texelFetch(p2, p, l) : texelFetch(t2, p, l); }
 uniform vec4 uWind, uGust, uPush[${PUSH_N}]; uniform float uFlut; uniform int uSway;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
@@ -260,7 +280,8 @@ int leanOf(float pw, float pi, float pp, float h, int f, int R){
 }
 void main(){
   ivec2 q = ivec2(gl_FragCoord.xy - uOff), t = q / AP, src = t;   // the chunk's world px, its art texel
-  vec4 b = texelFetch(t1, t, 0);
+  XO = uX >= 0.0 && bayer4(t) + 0.5 >= uX;   // (bayer4: -0.47..0.47, here 0..1)
+  vec4 b = F1( t, 0);
   float gb = 0.0, gp = 0.0;   // (gp: how near someone pushing it aside - bent over, in their shade)
   if (uSway > 0) {
     vec2 w = uChunk + vec2(t * AP) + 0.5 * float(AP);
@@ -271,7 +292,7 @@ void main(){
     bool any = (fl0 & ${F_LEAF}) != 0;
     for (int k = -3; k <= 3; k++) {
       if (any || k == 0 || abs(k) > R || t.x - k < 0 || t.x - k > CTX - 1) continue;
-      any = (flOf(texelFetch(t1, ivec2(t.x - k, t.y), 0)) & ${F_LEAF}) != 0;
+      any = (flOf(F1( ivec2(t.x - k, t.y), 0)) & ${F_LEAF}) != 0;
     }
     if (any) {
       float g = gustAt(w), s = uWind.x;
@@ -293,7 +314,7 @@ void main(){
           if (k == 0 || abs(k) > R) continue;
           int sx = t.x - k;
           if (sx < 0 || sx > CTX - 1) continue;
-          vec4 sb = texelFetch(t1, ivec2(sx, t.y), 0);
+          vec4 sb = F1( ivec2(sx, t.y), 0);
           int sf = flOf(sb);
           if ((sf & ${F_LEAF}) == 0) continue;
           float sh = zOf(sb);
@@ -301,15 +322,15 @@ void main(){
         }
         if (bestK == 99) {
           ivec2 s2 = ivec2(clamp(t.x - own, 0, CTX - 1), t.y);
-          vec4 b2 = texelFetch(t1, s2, 0);
+          vec4 b2 = F1( s2, 0);
           if ((flOf(b2) & ${F_LEAF}) == 0) { src = s2; b = b2; }
-        } else if (bestK != 0) { src = ivec2(t.x - bestK, t.y); b = texelFetch(t1, src, 0); }
+        } else if (bestK != 0) { src = ivec2(t.x - bestK, t.y); b = F1( src, 0); }
       }
     }
   }
-  vec4 a = texelFetch(t0, src, 0);
+  vec4 a = F0( src, 0);
   if (a.a < 0.5) discard;
-  vec4 c = texelFetch(t2, src, 0);
+  vec4 c = F2( src, 0);
   float h = zOf(b);
   int fl = flOf(b);
   bool ground = (fl & ${F_GROUND}) != 0;
@@ -524,7 +545,7 @@ export class Art2Engine {
     this.vaoSpr = this._instVao(this.ibSpr); this.vaoDec = this._instVao(this.ibDec); this.vaoXr = this._instVao(this.ibXr);
     this.uboBuf = gl.createBuffer(); gl.bindBuffer(gl.UNIFORM_BUFFER, this.uboBuf); gl.bufferData(gl.UNIFORM_BUFFER, this.ubo.byteLength, gl.DYNAMIC_DRAW); gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     const IA = ['c', 'iDst', 'iSrc', 'iPar', 'iTint'];
-    this.pStatic = glProgram(gl, STATIC_VS, STATIC_FS(this.ap), ['c'], { t0: 0, t1: 1, t2: 2, t3: 7, tN: 8 });
+    this.pStatic = glProgram(gl, STATIC_VS, STATIC_FS(this.ap), ['c'], { t0: 0, t1: 1, t2: 2, t3: 7, tN: 8, p0: 9, p1: 10, p2: 11 });
     this.pGhost = glProgram(gl, STATIC_VS, GHOST_FS(this.ap), ['c'], { t0: 0, t2: 2, t3: 7 }); this.DBG = [gl.COLOR_ATTACHMENT0, gl.NONE, gl.COLOR_ATTACHMENT2];
     // (the wind's noise for the swaying vegetation: unit 8, which nothing else uses)
     this.tWN = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.tWN);
@@ -535,6 +556,7 @@ export class Art2Engine {
     this.pDecal = glProgram(gl, DECAL_VS, DECAL_FS, ['c', 'iA', 'iSrc', 'iSz', 'iPar'], { tA: 3 });
     this.pPresent = glProgram(gl, TRI_VS, PRESENT_FS, ['p'], { tF: 0 });
     this.pXray = glProgram(gl, XRAY_VS, XRAY_FS, IA, { tA: 3, tB: 4, tS: 6 });
+    this.clouds = true; try { this.clouds = localStorage.getItem('cla.clouds') !== '0'; } catch { /* blocked: on */ }
     this.light = new LightGame(gl, this.vaoTri); this.light.ap = this.ap; this.light.setTier(this.q); this.light.warm();
     this.tCan = null; this._upCanopy();
     this.slots = []; this.chunks = new Map();
@@ -553,7 +575,8 @@ export class Art2Engine {
     return v;
   }
   _chunksCap() { const c = this.lowMem ? Math.min(10, QUALITY[this.q].chunks) : Math.min(32, QUALITY[this.q].chunks + this.more); return Math.max(c, this.chunkMin || 0); }
-  reserveChunks(n) { this.chunkMin = Math.max(0, Math.min(32, n | 0)); }
+  // (the view's own chunks, each frame: host.js - the city's and the tunnel's each under its own name, added up)
+  reserveChunks(n, who = 'tun') { const R = this.reserves || (this.reserves = {}); R[who] = Math.max(0, n | 0); let t = 0; for (const k in R) t += R[k]; this.chunkMin = Math.min(CHUNK_HARD, t); }
   chunkCap() { return this._chunksCap(); }
   _pagesCap() { return this.lowMem ? Math.min(4, QUALITY[this.q].pages) : QUALITY[this.q].pages; }
   _allocAtlas() {
@@ -621,6 +644,7 @@ export class Art2Engine {
       const s = this.slots[k];
       if (s.key >= 0) this.chunks.delete(s.key);
       for (const t of s.t) gl.deleteTexture(t);
+      if (s.pt) { for (const t of s.pt) gl.deleteTexture(t); s.pt = null; }
       this.slots.splice(k, 1);
     }
     if (this._pagesCap() !== pages) this._allocAtlas();
@@ -639,7 +663,7 @@ export class Art2Engine {
     const gl = this.gl;
     if (!gl.isContextLost()) {
       this._freeScene(); this.light.dispose();
-      for (const s of this.slots) for (const t of s.t) gl.deleteTexture(t);
+      for (const s of this.slots) { for (const t of s.t) gl.deleteTexture(t); if (s.pt) for (const t of s.pt) gl.deleteTexture(t); }
       for (const t of this.atlas) gl.deleteTexture(t);
       if (this.tCan) gl.deleteTexture(this.tCan);
       if (this.tWN) gl.deleteTexture(this.tWN);
@@ -669,8 +693,18 @@ export class Art2Engine {
       s = { t: [glTex(gl, T, T), glTex(gl, T, T), glTex(gl, T, T)], key: -1, cx: 0, cy: 0, real: false, src: null, used: 0 };
       this.slots.push(s);
     }
-    if (!s) { for (const x of this.slots) if (!s || x.used < s.used) s = x; this.chunks.delete(s.key); }
-    s.key = k; s.cx = cx; s.cy = cy; s.layer = layer; s.real = false; s.src = null; s.used = this.frameNo - 1;
+    // (never a chunk drawn this frame or the last: the owner, 11-23 - "the art loads at first but then disappears ... while
+    // you're in it". A view needing more chunks than the slots took one still on screen, which took another back. The
+    // view's own are reserved (reserveChunks); past that a slot is added, up to CHUNK_HARD, before one in view goes)
+    if (!s) { for (const x of this.slots) if (x.used < this.frameNo - 1 && (!s || x.used < s.used)) s = x; }
+    if (!s && this.slots.length < CHUNK_HARD) {
+      const gl = this.gl, T = this.ctx;
+      s = { t: [glTex(gl, T, T), glTex(gl, T, T), glTex(gl, T, T)], key: -1, cx: 0, cy: 0, real: false, src: null, used: 0 };
+      this.slots.push(s);
+    }
+    if (!s) { for (const x of this.slots) if (!s || x.used < s.used) s = x; }
+    if (s.key >= 0) this.chunks.delete(s.key);
+    s.key = k; s.cx = cx; s.cy = cy; s.layer = layer; s.real = false; s.src = null; s.used = this.frameNo - 1; s.xf = 0;   // (a slot taken over: no dissolve of another chunk's picture)
     this.chunks.set(k, s);
     return s;
   }
@@ -683,9 +717,15 @@ export class Art2Engine {
     gl.clearBufferfv(gl.COLOR, 0, CLR);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
-  uploadChunk(cx, cy, g, layer = 0) {
+  // xf: a time (performance.now()) the swap dissolves from - the old picture kept for XF_MS (the walk-ins: host.js)
+  uploadChunk(cx, cy, g, layer = 0, xf = 0) {
     if (this.lost || !g) return false;
-    const gl = this.gl, s = this._slot(cx, cy, layer), T = this.ctx;
+    const gl = this.gl, had = this.chunks.get(ckey(cx, cy, layer)), s = this._slot(cx, cy, layer), T = this.ctx;
+    if (xf && had === s && s.real) {   // (the old picture's three textures kept as they are; the new one into the spare three)
+      if (!s.pt) s.pt = [glTex(gl, T, T), glTex(gl, T, T), glTex(gl, T, T)];
+      for (let i = 0; i < 3; i++) { const o = s.t[i]; s.t[i] = s.pt[i]; s.pt[i] = o; }
+      s.xf = xf;
+    } else s.xf = 0;
     let pk = g.p0 ? g : this._pack(g), under = g.under || null;
     if ((g.ap || 1) < this.ap) {
       // full resolution (baked on this thread, or planes packed elsewhere): to art pixels here
@@ -854,6 +894,7 @@ export class Art2Engine {
   // ---- the frame ----------------------------------------------------------------------------------------------
   // f: {camX, camY, zoom, viewW, viewH, time, preset, wet, quality, +flash, +fog}
   beginFrame(f) {
+    this.tNow = performance.now();   // (the frame's time: a walk-in's dissolve the same step on every chunk of it)
     if (this.lost || this.disposed) return false;
     if (f.quality !== undefined && clampQ(f.quality) !== this.q) this.setQuality(f.quality);
     this.frameNo++; this.inFrame = true;
@@ -961,6 +1002,7 @@ export class Art2Engine {
     const LS = this.LS;
     LS.A = this.tA; LS.B = this.tB; LS.C = this.tC; LS.w = this.SW; LS.h = this.SH; LS.preset = this.P;
     LS.wet = this.wet; LS.time = this.time; LS.flash = this.flash; LS.fog = this.fog;
+    LS.clouds = this.clouds;   // (cloud shadows: on unless the debug menu switched them off on this screen - lightgame.js CLOUD)
     const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind; LS.air = this.air; LS.bio = this.bio;
     LS.can = this._canopyInView() ? this.canopy : null; LS.canTex = this.tCan;
     LS.nL = this._packLights(); LS.ubo = this.uboBuf; LS.out = this.fbOut; LS.mark = this.profile ? this._mark : null;
@@ -1055,6 +1097,9 @@ export class Art2Engine {
         if (on) { gl.uniform1fv(u.uFade, FA); gl.uniform4fv(u.uFoot, s.foot); gl.uniform4fv(u.uClr, this.clr || CLR0); (s.fa || (s.fa = new Float32Array(64))).set(FA); s.gx = cx; s.gy = cy; GL.push(s); }
       }
       gl.uniform1f(u.uFadeOn, on);
+      const xk = s.xf ? ((this.tNow || performance.now()) - s.xf) / XF_MS : -1;
+      if (xk >= 1) s.xf = 0;
+      if (xk >= 0 && xk < 1 && s.pt) { for (let i = 0; i < 3; i++) { gl.activeTexture(gl.TEXTURE9 + i); gl.bindTexture(gl.TEXTURE_2D, s.pt[i]); } gl.uniform1f(u.uX, Math.max(0.001, xk)); } else gl.uniform1f(u.uX, -1);
       const x = cx * CHUNK_PX - this.ox, y = cy * CHUNK_PX - this.oy;
       gl.uniform4f(u.uRect, x, y, CHUNK_PX, CHUNK_PX); gl.uniform2f(u.uOff, x, y); gl.uniform2f(u.uChunk, cx * CHUNK_PX, cy * CHUNK_PX);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

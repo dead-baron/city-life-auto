@@ -4,6 +4,7 @@
 // Built from the shared map data, so new places show up by themselves. client/worldmap.js draws the map itself.
 import { DISTRICTS } from '../shared/mapcore.js';
 import { TILE } from '../shared/constants.js';
+import { racePlaceHidden } from '../shared/hidden.js';
 // the district a place is in, by name (as the paused tour's districtAt: kept here so the tour stays out of the page)
 const districtAt = (map, x, y) => { const d = map.dist[map.idx(Math.floor(x / TILE), Math.floor(y / TILE))]; return DISTRICTS[d] ? DISTRICTS[d].name : null; };
 import { iconImg } from './pixicons.js';
@@ -36,7 +37,7 @@ export const KIND_ICON = {
 // the car soccer arenas (map.arenas: not among the world's places) as places at their gates - the big map, this panel
 // and the phone's Places list them (the owner, 11-06: "Can't figure out the rocket league arena")
 export const arenaPlaces = (map) => (map.arenas || []).map((a, i) => ({ id: `arena${i}`, kind: 'arena', label: `${a.name} (car soccer)`, x: a.gate.x, y: a.gate.y }));
-export const placesOf = (map) => [...(map.places || map.pois), ...arenaPlaces(map)];
+export const placesOf = (map) => [...(map.places || map.pois), ...arenaPlaces(map)].filter((p) => !racePlaceHidden(map, p));   // (a hidden race's start: not listed)
 // shown zoomed all the way out; the rest (the corner shops, the ATMs) once zoomed in
 export const MAJOR_KINDS = new Set(['jobcenter', 'hospital', 'sar', 'police', 'bank', 'gunshop', 'station', 'airport', 'garage', 'paint', 'dealer', 'clothing', 'farm', 'warehouse',
   'courthouse', 'marina', 'ride', 'race', 'clubhouse', 'roadhouse', 'gang', 'smuggler', 'winery', 'club', 'pawn', 'fence', 'salvage', 'huntcamp', 'lodge', 'bowling', 'cinema', 'bathhouse', 'arena']);

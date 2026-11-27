@@ -179,6 +179,9 @@ export function parkWest3(m, H3) {
   for (const { b, S, door } of shops) {
     const q = K.poi({ ...S.poi, x: Math.round((door + 0.5) * TILE), y: Math.round((P.shopRows[1] + 1.7) * TILE), b: b.id });
     if (S.poi.kind === 'convenience') q.store = 'mart';
+    // (a room you walk into, like the other shops - the owner, 11-23 07:09: "I think they should get rooms yes"; laid here,
+    // after the city's rooms were: the block is built late. The café's tables inside come from the room - foodrooms.js)
+    if (H3.walkInRoom && H3.WALK_IN && H3.WALK_IN.has(q.kind) && H3.walkInRoom(m, b, [q], [q], true)) out.rooms = (out.rooms || 0) + 1;
   }
   (m.dealerLots ||= []).push({ poi: lot.id, slots, used: 1, stock: lot.stock });
   (m.stealAlleys ||= []).push({ name: 'the alley off Park West Lane', x: Math.round(acx * TILE), y: Math.round(((ay0 + ay1) / 2) * TILE), spots: aspots, stn: st.id });

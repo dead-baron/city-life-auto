@@ -7,7 +7,10 @@ import { Scene } from './scene.js';
 import { groundPixel } from './ground.js';
 import { hash, F_GROUND, F_WET, F_WATER } from './gbuf.js';
 import { Vox } from './voxel.js';
-import * as F from './flora.js';
+import * as F0 from './flora.js';
+// The sheets show the plants as the game draws them: each maker run at the art pixel (flora.js floraArt) and spread back
+// out to the sheet's world px.
+const F = new Proxy(F0, { get: (t, k) => (typeof t[k] === 'function' && typeof k === 'string' && k[0] === k[0].toLowerCase() && !/^(floraArt|artDouble|floraScale|floraBare|compose)$/.test(k) ? (...a) => t.artDouble(t.floraArt(1, () => t[k](...a))) : t[k]) });
 
 // a flat studio-grey ground, faintly mottled
 function greyGround(G, seed) {

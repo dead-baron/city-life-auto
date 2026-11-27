@@ -13,7 +13,7 @@
 //   nurseLog(seed, len, r)        a fallen giant lying east-west, mossed over, ferns and seedlings growing on it
 //   sorrel(seed, w)               a patch of redwood sorrel: clover leaves carpeting the floor, a few pale flowers
 import { GBuf, F_LEAF, F_GROUND, hash, vnoise, bayer, mulberry32 } from './gbuf.js';
-import { ramp } from './palette.js';
+import { natRamp as ramp, lumFloor } from './palette.js';   // (nature's ramps: no near-black shade - palette.js NAT)
 import { FOL } from './flora.js';
 
 const PI = Math.PI;
@@ -24,6 +24,14 @@ const nrm = (x, y, z) => { const l = Math.hypot(x, y, z) || 1; return [x / l, y 
 // cinnamon-red bark (fibrous, deep vertical furrows), charcoal for old fire scars, the moss and the sprays
 const BARK = ramp('#8a4428', 8, 3, { dark: 0.72, light: 0.52, shift: 0.24 });
 const CHAR = ramp('#3a2a26', 5, 2, { dark: 0.5, light: 0.35 });
+// (the inside of a burnt hollow, a root cave's way in. Not black: no wood of a plant is painted under the floor - the
+// owner, 11-25, "plants lit evenly, never black"; test/leaflight.test.js caught the first version's [16, 12, 14] on the
+// hollow giants. The darkest brown the floor allows, and the charred rim a step lighter than it.)
+const HOLLOW_FLOOR = 54, dk = (c) => lumFloor(c, HOLLOW_FLOOR);
+export const HOLLOW_DARK = lumFloor([46, 30, 26], HOLLOW_FLOOR);
+// (a root cave is a hole in the ground, not a plant's wood: its way in is a cave's dark - terrain.js VOID's - or it is a
+// brown patch on a brown mound, seen 11-26)
+export const CAVE_DARK = [22, 17, 20];
 const MOSS = FOL('#5a8a2a');
 const SPRAY = FOL('#5c9428'), SPRAY_DK = FOL('#3f7430'), SPRAY_SUN = FOL('#7aa62a');
 const PUNK = ramp('#a86a3e', 6, 3, { dark: 0.6, light: 0.45 });
@@ -74,6 +82,7 @@ function clump(G, cx, cy, rx, ry, seed, zAt, sun = 0.5, n = 0) {
 // rooted, mossy foot, and a trunk that rises into its crown, the sprays closing over its tip.
 export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
   const rnd = mulberry32(seed * 977 + 3), flare = o.flare ?? 0.6, bulge = 0.5, cone = !!o.cone;
+  const tp = o.taper ?? 1;   // (0: a column that keeps its width to the top; o.top 'dome' / 'ragged' closes it - statics.js RW_TOP)
   // (a dead top, only when asked for: a silver spike standing out of the crown)
   const snag = !!o.snag && !cone, Ht = snag ? H * 1.06 : H;
   const lean = o.lean ?? (hash(seed, 7, 2) - 0.5) * hw * 0.7, crownW = hw * 2.6 + 30;
@@ -83,7 +92,7 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
   const cx = G.ax, foot = G.ay, nfl = Math.max(6, Math.round(hw / 3.6));
   // the column: wide flared foot, a gentle taper, a slight wobble, narrowing to a spire in the crown; xAt: its
   // middle at height z (the lean)
-  const rad = (z) => hw * (1 + flare * Math.max(0, 1 - z / (hw * 1.7)) ** 2) * (1 + 0.03 * Math.sin(z * 0.04 + seed)) * (1 - Math.min(1, z / Ht) * 0.42) * (1 - clamp((z - Ht * 0.68) / (Ht * 0.32)) ** 1.6 * 0.86);
+  const rad = (z) => hw * (1 + flare * Math.max(0, 1 - z / (hw * 1.7)) ** 2) * (1 + 0.03 * Math.sin(z * 0.04 + seed)) * (1 - Math.min(1, z / Ht) * 0.42 * (0.3 + 0.7 * tp)) * (1 - clamp((z - Ht * 0.68) / (Ht * 0.32)) ** 1.6 * 0.86 * tp);
   const xAt = (z) => cx + lean * (z / H) ** 1.6;
   const SNAG = ramp('#8c8274', 6, 3, { dark: 0.62, light: 0.38 });
   const scar = !!o.scar, scarH = hw * (1.1 + hash(seed, 10, 4) * 0.9), scarW = 0.38 + hash(seed, 11, 4) * 0.2;
@@ -98,6 +107,7 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
       const a = PI * (0.06 + 0.88 * hash(i, 1, seed)) + (i % 2 ? 0 : PI), fr = Math.sin(a) > 0.2;
       if (fr !== front) continue;
       if (tun && front && Math.abs(Math.cos(a)) < 0.82) continue;   // (none across the tunnel's mouth)
+      if (scar && front && Math.abs(Math.cos(a)) < 0.62) continue;   // (...nor across a hollow's)
       const L = hw * (0.5 + hash(i, 2, seed) * 0.6), r0 = hw * 0.9, w0 = hw * 0.24;
       for (let s = 0; s < L; s += 0.6) {
         const wv = w0 * (1 - s / L) + 1, X = cx + Math.cos(a) * (r0 + s), Y = foot + Math.sin(a) * (r0 + s) * 0.62;
@@ -145,7 +155,10 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
       let t = 0.47 - u * 0.26 + (fl > 0.5 ? 0.14 : fl < -0.45 ? -0.28 : 0) + (streak > 0.84 ? -0.2 : streak < 0.12 ? 0.12 : 0) + (plate - 0.5) * 0.16 + (z < 6 ? -0.15 : 0) + bump * 0.18;
       let c = snag && zEst > H * 0.94 ? pick(SNAG, clamp(t + 0.1), x, y, 0.55) : pick(BARK, clamp(t), x, y, 0.55), f = 0, nx = u + Math.cos(phi * nfl) * 0.22, nz = 0.12;
       // the fire hollow at its foot (dark, charred, in the face toward the viewer)
-      if (scar && zEst < scarH * (1 - (Math.abs(u) / scarW) ** 2) && Math.abs(u) < scarW) { c = pick(CHAR, 0.3 + zEst / scarH * 0.4 + (hash(x, y, seed) - 0.5) * 0.3, x, y, 0.5); nx *= 0.3; nz = 0.6; }
+      // (11-25, NS1-A: it read as a flat grey tent. A ragged edge - the burn's lip wanders by the height -, a rim of
+      // charred wood a few pixels deep, and inside it the dark of the hollow, near black)
+      const sw = scar ? scarW * (1 + (vnoise(zEst * 0.9, seed, 5, seed + 61) - 0.5) * 0.34) : 0, sIn = scar && Math.abs(u) < sw ? scarH * (1 - (Math.abs(u) / sw) ** 2) - zEst : -1;
+      if (sIn > 0) { const edge = Math.min(sIn, (sw - Math.abs(u)) * rr * 1.2); c = edge < 2.6 ? dk(pick(CHAR, 0.9 + (hash(x, y, seed) - 0.5) * 0.2, x, y, 0.5)) : edge < 6 ? dk(pick(CHAR, 0.6 + (hash(x, y, seed) - 0.5) * 0.2, x, y, 0.5)) : HOLLOW_DARK; nx *= 0.3; nz = 0.6; }
       else {
         // moss low down, more on the shaded right flank
         const mz = hw * 1.8 * (0.6 + vnoise(phi * 9, 0, 3, seed) * 0.8) * (u > 0 ? 1.3 : 0.75);
@@ -172,8 +185,21 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
     }
   }
   const tz = snag ? H * 0.9 : H - 4;
-  for (let i = 0; i < 5; i++) { const zz = tz - i * 9, mx = xAt(zz); clump(G, mx + (hash(seed, 40 + i, 5) - 0.5) * 10, foot - zz, 5 + i * 2.2, 4 + i * 0.8, seed + 90 + i, zAt, 0.75); }
-  G.outline(0.42, true);
+  if (o.top === 'ragged') {
+    // (a broken old top: sprays hung over the trunk's end in two uneven rows, a few leaders above)
+    const rt = rad(H - 10), n = Math.round(5 + rt * 0.4), zF = (yy) => zAt(yy) + rt;
+    for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) {
+      const u = (i + 0.5) / n * 2 - 1 + (hash(seed, 60 + i + row * 40, 5) - 0.5) * 0.4, zz = H - 20 + row * 9 + hash(seed, 80 + i + row * 40, 5) * 9 - Math.abs(u) * 6;
+      clump(G, xAt(zz) + u * rt * (1.3 - row * 0.25), foot - zz, 5 + hash(seed, 100 + i + row * 40, 5) * 4.5, 4 + hash(seed, 120 + i + row * 40, 5) * 3, seed + 300 + i * 17 + row * 701, zF, 0.7);
+    }
+    const L = 2 + Math.floor(hash(seed, 140, 5) * 3);
+    for (let i = 0; i < L; i++) {
+      const u = (hash(seed, 150 + i, 5) - 0.5) * 1.6, hi = 6 + hash(seed, 160 + i, 5) * 14;
+      for (let k = 0; k < 3; k++) { const zz = H - 6 + hi * k / 2; clump(G, xAt(zz) + u * rt + (hash(seed, 170 + i * 3 + k, 5) - 0.5) * 4, foot - zz, 6.5 - k * 1.5, 5 - k, seed + 500 + i * 31 + k, zF, 0.78); }
+    }
+  } else
+  for (let i = 0; i < 5; i++) { const zz = tz - i * 9, mx = xAt(zz); clump(G, mx + (hash(seed, 40 + i, 5) - 0.5) * 10, foot - zz, o.top === 'dome' ? Math.max(5 + i * 2.2, rad(zz) * 1.25) : 5 + i * 2.2, 4 + i * 0.8, seed + 90 + i, zAt, 0.75); }
+  G.outline(0.42, true, 50);
   return G;
 }
 
@@ -212,7 +238,7 @@ export function oldStump(seed = 1, r = 26) {
       G.put(x, y, mo ? pick(MOSS, 0.4 - u * 0.15, x, y) : pick(BARK, 0.45 - u * 0.25 + (fl > 0.5 ? 0.12 : fl < -0.4 ? -0.22 : 0), x, y), nrm(u, Math.sqrt(1 - u * u), 0.1), z, null, mo ? F_LEAF : 0);
     }
   }
-  G.outline(0.42, true);
+  G.outline(0.42, true, 50);
   return G;
 }
 
@@ -251,8 +277,76 @@ export function nurseLog(seed = 1, len = 200, r = 18, flip = 0) {
     if (rnd() < 0.6) for (let k = 0; k < 7; k++) { const a = -PI / 2 + (k - 3) * 0.42, L = 8 + rnd() * 5; for (let s = 0; s < L; s += 0.7) { const X = Math.round(x + Math.cos(a) * s), Y = Math.round(y + Math.sin(a) * s * 0.8 + s * s * 0.02); if (G.inside(X, Y)) G.put(X, Y, pick(SPRAY, 0.4 + s / L * 0.3 - (a > -PI / 2 ? 0.1 : 0), X, Y), [Math.cos(a) * 0.4, 0.3, 0.85], zAt(Y), null, F_LEAF); } }
     else clump(G, x, y - 6, 5, 7, seed + i, zAt, 0.4, 6);
   }
-  G.outline(0.42, true);
+  G.outline(0.42, true, 50);
   return flip ? mirror(G) : G;
+}
+// ---- a root cave (concept NS1-A; the art pass, 11-25) ---------------------------------------------------------
+// The torn-up root mass of a fallen giant, stood on edge and grown over: a broad uneven mound of roots twisting out
+// from a dark way in at its foot, their broken ends standing up along its top like fingers, earth packed between
+// them, moss and a fern or two on its shoulders. w: its width (art px). Not a disc: the mound's outline is three
+// waves of its own, lopsided by the seed, and the way in sits off its middle.
+export const ROOTCAVE = { w: 200, kinds: 6 };
+export function rootCave(seed = 1, w = ROOTCAVE.w) {
+  const Hr = (k) => hash(seed, k, 81), hw = w / 2, Ht = Math.round(w * (0.56 + Hr(1) * 0.12)), W = Math.ceil(w + 48), Hh = Ht + 70, G = new GBuf(W, Hh);
+  G.ax = W >> 1; G.ay = Hh - 22;
+  const cx = G.ax, foot = G.ay, EARTH = ramp('#57402e', 6, 3, { dark: 0.6, light: 0.4 });
+  const lop = (Hr(2) - 0.5) * 0.6, ph = Hr(3) * 6.28, mx = cx + (Hr(4) - 0.5) * w * 0.24, mw = w * (0.12 + Hr(5) * 0.04), mh = Ht * (0.4 + Hr(6) * 0.1);
+  // the mound's top at column u (-1..1): a lopsided hump with waves on it (a root mass, not a disc)
+  const topAt = (u) => Ht * Math.sqrt(Math.max(0, 1 - Math.abs(u) ** 2.4)) * (1 + lop * u) * (0.8 + 0.1 * Math.sin(u * 5 + ph) + 0.07 * Math.sin(u * 11 + ph * 2));
+  const arch = (xo, zE, pad = 0) => { const q = xo / (mw + pad); return Math.abs(q) < 1 && zE < (mh + pad) * Math.sqrt(1 - q * q) + 2; };
+  // 1. the mass: packed earth, clods and stones in it, darker low and to the right
+  for (let x = 0; x < G.w; x++) {
+    const u = (x + 0.5 - cx) / hw; if (Math.abs(u) >= 1) continue;
+    const top = topAt(u), depth = Math.sqrt(1 - u * u) * hw * 0.3;
+    for (let y = 0; y < G.h; y++) {
+      const zE = foot + depth * 0.5 - y; if (zE < 0 || zE > top) continue;
+      const clod = vnoise(x * 0.6, y * 0.6, 7, seed + 87);
+      G.put(x, y, pick(EARTH, clamp(0.34 - u * 0.2 + (clod - 0.5) * 0.7 + zE / top * 0.12), x, y, 0.55), nrm(u * 0.8, Math.sqrt(Math.max(0.1, 1 - u * u)) * 0.9, 0.25 + zE / (top + 1) * 0.5), Math.round(zE + depth * 0.5), null, 0);
+    }
+  }
+  // 2. the roots: seven to ten thick ones, each on its own way out from round the way in - unevenly spaced, bending,
+  // tapering, the long ones standing clear of the mound's top as broken ends
+  const n = 7 + Math.floor(Hr(7) * 4), ang = [];
+  for (let i = 0; i < n; i++) ang.push(PI * (0.04 + 0.92 * ((i + Hr(20 + i) * 0.9) / n)));
+  const draw = (x0, z0, a0, L, w0, bend, k) => {
+    let X = x0, Z = z0, a = a0;
+    for (let t = 0; t < L; t += 0.5) {
+      a += bend / L * 0.5; X += Math.cos(a) * 0.5; Z += Math.sin(a) * 0.5;
+      const wv = Math.max(1.2, w0 * (1 - t / L * 0.75)), px = -Math.sin(a), pz = Math.cos(a);
+      for (let o = -wv; o <= wv; o += 0.5) {
+        const xx = Math.round(X + px * o), zz = Z + pz * o, yy = Math.round(foot - zz);
+        if (!G.inside(xx, yy) || zz < 0 || arch(xx + 0.5 - mx, zz)) continue;
+        const e = o / wv, grain = hash(Math.round(t / 5), k, seed + 91);
+        G.put(xx, yy, pick(BARK, clamp(0.5 + (px * e) * -0.3 + pz * e * 0.26 + (grain > 0.8 ? -0.16 : grain < 0.15 ? 0.1 : 0) - (Math.abs(e) > 0.8 ? 0.18 : 0)), xx, yy, 0.55), nrm(px * e * 0.8 - 0.1, 0.7, pz * e * 0.6 + 0.4), Math.round(zz + 6), null, 0);
+      }
+    }
+  };
+  ang.forEach((a, i) => {
+    const u = clamp((mx + Math.cos(a) * hw * 0.8 - cx) / hw, -0.98, 0.98), reach = Math.max(mh, topAt(u)), L = reach * (0.55 + Hr(40 + i) * 0.5) + (Hr(50 + i) < 0.3 ? 4 + Hr(60 + i) * 12 : 0);
+    draw(mx + Math.cos(a) * mw * 1.05, mh * (0.25 + Math.sin(a) * 0.75), a + (Hr(70 + i) - 0.5) * 0.7, L, 5 + Hr(80 + i) * 6, (Hr(90 + i) - 0.5) * 3.4, i);
+  });
+  // 3. the way in: dark, a rim of earth, a root across its top
+  for (let x = Math.floor(mx - mw - 6); x <= mx + mw + 6; x++) for (let zE = 0; zE < mh + 8; zE++) {
+    const xo = x + 0.5 - mx, y = Math.round(foot - zE);
+    if (!G.inside(x, y) || !arch(xo, zE, (vnoise(zE * 0.5, x * 0.5, 5, seed + 83) - 0.5) * 5)) continue;
+    const e = Math.min((1 - Math.abs(xo / mw)) * mw, mh * Math.sqrt(Math.max(0, 1 - (xo / mw) ** 2)) + 2 - zE);
+    G.put(x, y, e < 3.5 ? dk(pick(EARTH, 0.3 + (hash(x, y, seed) - 0.5) * 0.2, x, y)) : CAVE_DARK, nrm(0, 0.8, 0.6), Math.round(zE), null, 0);
+  }
+  draw(mx - mw * 1.25, mh * 0.72, 0.28 + (Hr(8) - 0.5) * 0.2, mw * 2.5, 4.5, (Hr(9) - 0.5) * 0.9, 99);
+  // 4. moss and ferns on its shoulders and top (more on the shaded right), roots running out over the floor
+  for (let x = 0; x < G.w; x++) {
+    const u = (x + 0.5 - cx) / hw; if (Math.abs(u) >= 1) continue;
+    const top = topAt(u);
+    for (let zE = Math.round(top * (u > 0 ? 0.5 : 0.68)); zE <= top + 3; zE++) { const y = Math.round(foot - zE); if (G.inside(x, y) && vnoise(x * 0.7, y * 0.45, 9, seed + 89) > (u > 0 ? 0.47 : 0.57) - (zE / top - 0.7) * 0.3) G.put(x, y, pick(MOSS, 0.42 - u * 0.15 + (hash(x >> 1, y >> 1, seed) - 0.5) * 0.3, x, y, 0.5), nrm(u * 0.5, 0.6, 0.7), Math.round(zE + 7), null, F_LEAF); }
+  }
+  for (let i = 0; i < 6; i++) {
+    const sd = i % 2 ? 1 : -1, a = sd * (0.3 + Hr(110 + i) * 0.6), L = w * (0.12 + Hr(120 + i) * 0.14), bx = mx + sd * (mw + 8 + Hr(130 + i) * (hw - mw - 24));
+    for (let t = 0; t < L; t += 0.5) { const wv = 4 * (1 - t / L) + 1.2, X = bx + Math.sin(a) * t, Y = foot + 3 + t * 0.36; for (let o = -wv; o <= wv; o += 0.5) { const xx = Math.round(X + o), yy = Math.round(Y - Math.abs(o) * 0.25); if (G.inside(xx, yy)) G.put(xx, yy, pick(BARK, 0.44 - o / wv * 0.22 + (hash(xx >> 1, yy >> 1, seed) - 0.5) * 0.2, xx, yy, 0.5), nrm(o / wv * 0.6, 0.4, 0.7), 3, null, 0); } }
+  }
+  const zAt = (yy) => Math.max(1, foot - yy + 8);
+  for (const uu of [-0.6 + Hr(140) * 0.1, 0.46 + Hr(141) * 0.14, -0.1 + Hr(142) * 0.3]) clump(G, cx + uu * hw, foot - topAt(uu) * 0.96, 11, 10, seed + Math.round(uu * 50), zAt, 0.5, 8);
+  G.outline(0.42, true, 50);
+  return G;
 }
 // the same picture the other way round (the light stays on the left: only the shape flips, the normals turn back)
 function mirror(S) {
@@ -303,7 +397,7 @@ export function swordFernArt(seed = 1, size = 84) {
       }
     }
   }
-  G.outline(0.5, true);
+  G.outline(0.5, true, 50);
   G.ax *= 2; G.ay *= 2; G.ap2 = 2;
   return G;
 }

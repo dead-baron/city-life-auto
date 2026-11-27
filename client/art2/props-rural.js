@@ -144,6 +144,26 @@ export function fuelPump(color = '#c8342e', on = 0) {
   m.box(0, 0, 0, 12, 10, 4, w); m.box(1, 1, 4, 11, 9, 30, b); m.box(1, 1, 30, 11, 9, 34, w); m.box(3, 9, 18, 9, 10, 26, s); m.box(10, 3, 12, 12, 5, 20, w);
   return m;
 }
+// A hotel's or a motel office's entrance canopy (the bake's own, statics.js addLots: until 11-26 the forecourt's white
+// slab stood there): cloth in the house's colour stretched flat from the wall out over the pavement, a little crowned
+// along its middle, a scalloped valance with a pale trim round the three open sides, two brass posts at the front
+// corners, a warm lamp under it. Its back edge is made fast to the wall: no posts there.
+export const ENTRY_COLS = ['#7a1e2a', '#1e3a5e', '#2a4a3a', '#3a2c4a', '#2a2c38'];
+export function entryCanopy(w = 96, d = 34, h = 46, col = ENTRY_COLS[0], on = 0) {
+  const m = new Vox(w, d, h + 6);
+  const cloth = m.mat({ ramp: R(col), k: 3, shade: (x, y) => (Math.round(x) % 12 === 0 ? -0.5 : 0) - Math.abs(y / d - 0.5) * 0.5 });
+  const val = m.mat({ ramp: R(col), k: 2 }), trim = m.mat({ ramp: R('#e8dcc0'), k: 4 }), brass = m.mat({ ramp: R('#b8904a'), k: 3, flag: F_THIN });
+  const lamp = m.mat({ ramp: R('#f4e2b0'), k: 4, emi: [255, 214, 140, 30 + on * 190], flag: F_NOCAST });
+  m.box(0, 0, h, w, d, h + 3, cloth);
+  m.box(2, Math.round(d * 0.3), h + 3, w - 2, Math.round(d * 0.7), h + 4, cloth);   // (the crown along its middle)
+  // the valance: down the front and the two sides, scalloped (every third tooth short), a pale trim along its foot
+  const tooth = (k) => (k % 6 < 5 ? 5 : 3);
+  for (let x = 0; x < w; x++) { m.box(x, d - 1, h - tooth(x), x + 1, d, h + 3, val); m.box(x, d - 1, h - tooth(x), x + 1, d, h - tooth(x) + 1, trim); }
+  for (let y = 0; y < d - 1; y++) for (const x of [0, w - 1]) { m.box(x, y, h - tooth(y), x + 1, y + 1, h + 3, val); m.box(x, y, h - tooth(y), x + 1, y + 1, h - tooth(y) + 1, trim); }
+  for (const x of [2, w - 4]) { m.box(x, d - 4, 0, x + 2, d - 2, h, brass); m.box(x - 1, d - 5, 0, x + 3, d - 1, 2, brass); }
+  m.box(Math.round(w / 2) - 5, Math.round(d * 0.4), h - 1, Math.round(w / 2) + 5, Math.round(d * 0.6), h, lamp);
+  return m;
+}
 // a forecourt canopy on four posts with a lit red band round the fascia
 export function fuelCanopy(w = 150, d = 80, h = 52, on = 0) {
   const m = new Vox(w, d, h + 10);
@@ -484,17 +504,95 @@ export function missionRuins() {
 // its faces pitted, lichen on the weather side, moss at the foot; a flat one (h small) is the altar or a fallen stone
 export function standingStone(w = 16, d = 9, h = 48, seed = 1, lean = 0) {
   const W = Math.ceil(w + Math.abs(lean) * h + 6), m = new Vox(W, d + 6, h + 2);
-  const st = m.mat({ ramp: R('#8a8a86'), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2) + Math.round(y / 2), seed) - 0.5) * 0.9 + (hash(Math.round(x / 6), Math.round(z / 5), seed + 1) - 0.5) * 0.6 });
+  // (dark weathered granite: the first was the scree's pale grey and lost on it, 11-21)
+  const st = m.mat({ ramp: R('#63666c', 7, 3), k: 3.4, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2) + Math.round(y / 2), seed) - 0.5) * 1.3 + (hash(Math.round(x / 6), Math.round(z / 5), seed + 1) - 0.5) * 1.0 - (z < h * 0.3 ? (1 - z / (h * 0.3)) * 1.2 : 0) + (z > h * 0.8 ? 0.5 : 0) });
   const lichen = m.mat({ ramp: R('#b8b878'), k: 3 }), moss = m.mat({ ramp: R('#5a7a34'), k: 3, flag: F_LEAF });
   const x0 = 3 + Math.max(0, -lean * h);
   m.fill((x, y, z) => {
     const t = z / h, cx = x0 + w / 2 + lean * z, hw = w / 2 * (1 - t * 0.25) - (t > 0.85 ? (t - 0.85) * 18 * hash(Math.round(x), 3, seed) : 0), hd = d / 2 * (1 - t * 0.2);
     const n = (hash(Math.round(x / 3), Math.round(z / 3), seed + 2) - 0.5) * 2.2;
     if (Math.abs(x - cx) > hw + n * 0.5 || Math.abs(y - (3 + d / 2)) > hd + n * 0.4 || z > h - Math.abs(x - cx) * 0.35 * hash(seed, 4, 7)) return -1;
-    if (z < 3 && hash(Math.round(x), Math.round(y), seed + 3) > 0.5) return moss;
-    if (y < 4 && hash(Math.round(x / 2), Math.round(z / 2), seed + 4) > 0.82) return lichen;
+    if (z < 4 && hash(Math.round(x), Math.round(y), seed + 3) > 0.4) return moss;
+    if (hash(Math.round(x / 3), Math.round(z / 3) + Math.round(y / 3), seed + 4) > 0.8 && z > h * 0.25) return lichen;   // (patches of pale lichen up its faces)
     return st;
   });
   m.smooth = 1;
+  return m;
+}
+
+// ---- the meadows' and the woods' missing pieces (the nature pass, 2026-11-21; concepts NS1-E, NS1-B) ---------------
+// Built at the art pixel: one voxel here is 2 x 2 px in the world (statics.js draws them with the bake's ap2), so a
+// stone is a stone and a bar a bar at the size the game shows. Sizes below are in those voxels.
+const FIELDSTONE = R('#8e8e8a', 7, 3), LICHEN = R('#7f8a52', 5, 2);
+// a stone's face in a dry wall: courses of uneven stones, each its own tone, dark in the joints between
+const stoneOf = (x, z, seed, ch = 4) => { const c = Math.floor(z / ch), o = hash(c, 7, seed) * 7, L = 5 + Math.floor(hash(c, 9, seed) * 4), i = Math.floor((x + o) / L); return { c, i, edge: Math.floor((x + o) % L) === 0 || z % ch === 0 }; };   // (a stone 4 high and 5 to 8 long, a dark joint at its left and its foot)
+// a length of dry-stone wall (NS1-E): no mortar, uneven cap stones, a stone fallen out here and there, lichen on top
+export function dryStoneWall(len = 44, seed = 1) {
+  const H = 12, m = new Vox(len, 5, H + 3);
+  const st = m.mat({ ramp: FIELDSTONE, k: 4, shade: (x, y, z) => { const s = stoneOf(x, z, seed); return (hash(s.i, s.c, seed + 3) - 0.5) * 2.4 - (s.edge ? 1.8 : 0) + (z < 2 ? -0.6 : 0); } });
+  const li = m.mat({ ramp: LICHEN, k: 2, shade: (x, y) => (hash(Math.round(x), Math.round(y), seed + 5) - 0.5) * 1.6 });
+  for (let x = 0; x < len; x++) {
+    const cs = Math.floor((x + hash(1, 2, seed) * 5) / 5), top = H - 2 + Math.round(hash(cs, 11, seed) * 2.4) - (Math.floor((x + hash(1, 2, seed) * 5) % 5) === 0 ? 1 : 0), end = Math.min(x, len - 1 - x);   // (cap stones five long, a notch between them)
+    const h = Math.min(top, 3 + end * 3 + Math.round(hash(x, 13, seed) * 2));   // (its ends step down into the grass)
+    if (hash(Math.floor(x / 3), 17, seed) < 0.06 && end > 4) { m.box(x, 0, 0, x + 1, 5, h - 3, st); continue; }   // (a gap where the cap has gone)
+    m.box(x, 0, 0, x + 1, 5, h, st);
+    if (hash(x, 19, seed) < 0.22 && end > 2) m.box(x, 1, h, x + 1, 4, h + 1, li);
+  }
+  for (let i = 0; i < 3; i++) { const x = 3 + hash(i, 23, seed) * (len - 6); if (hash(i, 29, seed) < 0.6) m.ell(x, 6.2, 0.8, 1.6, 1.2, 1.1, st); }   // (fallen stones at its foot)
+  return m;
+}
+// a five-bar field gate between two posts (NS1-E), weathered wood, a diagonal brace
+export function fieldGate(w = 26) {
+  const m = new Vox(w, 4, 15), wood = m.mat({ ramp: R('#8a6a4a', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z), 41) - 0.5) * 1.2 }), post = m.mat({ ramp: R('#6a4e36', 6, 3), k: 3 });
+  for (const x of [0, w - 3]) m.box(x, 0, 0, x + 3, 4, 14, post);
+  for (const z of [2, 5, 8, 11]) m.box(3, 1, z, w - 3, 2, z + 1, wood);
+  for (let x = 3; x < w - 3; x++) { const z = 2 + (x - 3) / (w - 6) * 9; m.box(x, 1, z, x + 1, 2, z + 1.4, wood); }
+  for (const x of [5, w - 7]) m.box(x, 1, 2, x + 1, 2, 12, wood);
+  return m;
+}
+// a stile over a fence (NS1-E): two posts, the top rail between them, a step plank through on each side
+export function stile() {
+  const m = new Vox(16, 14, 16), wood = m.mat({ ramp: R('#8a6a4a', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(y / 2), 43) - 0.5) * 1.2 }), post = m.mat({ ramp: R('#6a4e36', 6, 3), k: 3 });
+  for (const x of [1, 12]) m.box(x, 6, 0, x + 3, 9, 15, post);
+  m.box(0, 7, 9, 16, 8, 10.4, wood); m.box(0, 7, 5, 16, 8, 6.2, wood);
+  m.box(4, 1, 3, 12, 6.5, 4.2, wood); m.box(4, 8.5, 3, 12, 13, 4.2, wood);   // (the two steps)
+  for (const [x, y] of [[5, 2], [10, 2], [5, 11], [10, 11]]) m.box(x, y, 0, x + 1, y + 1, 3, post);
+  m.box(4, 5, 6.4, 12, 9.5, 7.6, wood);   // (the board across the top of the fence)
+  return m;
+}
+// a rope swing (NS1-E): a bough reaching out, two ropes, a plank seat - stood beside an oak's trunk
+export function ropeSwing(side = 1) {
+  const m = new Vox(22, 5, 30), bark = m.mat({ ramp: MAT.woodDark, k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z), 47) - 0.5) }), rope = m.mat({ ramp: R('#c8b07a', 5, 2), k: 2, flag: F_THIN | F_NOCAST }), seat = m.mat({ ramp: R('#9a7448', 6, 3), k: 3 });
+  const X = (x) => (side > 0 ? x : 21 - x);
+  for (let x = 0; x < 22; x++) { const z = 26 + Math.round(Math.sin(x * 0.22) * 1.6), r = x < 14 ? 2 : 1; m.box(X(x), 2 - (r > 1 ? 1 : 0), z - (r > 1 ? 1 : 0), X(x) + 1, 3 + (r > 1 ? 1 : 0), z + 1, bark); }
+  for (const x of [12, 17]) for (let z = 7; z < 26; z++) m.set(X(x), 2, z, rope);
+  m.box(Math.min(X(11), X(18)), 1, 6, Math.max(X(11), X(18)) + 1, 4, 7.2, seat);
+  return m;
+}
+// stone ruins in the woods (NS1-B): what is left of a house - an L of wall with a doorway and a window's sill, its
+// corner still standing tall, the rest down to a few courses, blocks fallen round it, ivy over the stone
+// (k: its size - 1 the first drawing's, 58 x 40 voxels; in the world it is built at 1.4, a house's worth of wall)
+export function woodRuins(seed = 1, k = 1) {
+  const W = Math.round(58 * k), D = Math.round(40 * k), kh = 1 + (k - 1) * 0.6, m = new Vox(W, D, Math.round(30 * kh) + 2);
+  const st = m.mat({ ramp: FIELDSTONE, k: 3.6, shade: (x, y, z) => { const s = stoneOf(x + y, z, seed + 50, 4); return (hash(s.i, s.c, seed + 53) - 0.5) * 2.2 - (s.edge ? 1.7 : 0) + (z < 2 ? -0.6 : 0) - (z < 4 && hash(Math.round(x / 2), Math.round(y / 2), seed + 59) > 0.5 ? 0.8 : 0); } });
+  const ivy = m.mat({ ramp: MAT.leaf, k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y) + Math.round(z) * 7, seed + 57) - 0.5) * 2.4 });
+  const li = m.mat({ ramp: LICHEN, k: 2 });
+  // how high the wall still stands along its run (u: 0..1 from the back wall's left end round the corner to the side wall's end)
+  const hAt = (u) => { const base = u < 0.18 ? 6 + u * 60 : u < 0.5 ? 24 - Math.abs(u - 0.34) * 40 : u < 0.62 ? 26 : 22 - (u - 0.62) * 46; return Math.max(3, Math.round((base + (hash(Math.floor(u * 40), 61, seed) - 0.5) * 5) * kh)); };
+  const wall = (x, y, u) => {
+    let h = hAt(u);
+    const door = u > 0.2 && u < 0.3, win = u > 0.72 && u < 0.84;
+    if (door) return;                                         // (the doorway: open to the ground)
+    for (let z = 0; z < h; z++) { if (win && z >= 9 * kh && z < 17 * kh) continue; m.set(x, y, z, st); m.set(x, y + 1, z, st); m.set(x + (y === 6 ? 0 : 0), y + 2, z, st); }
+    if (hash(x + y, 67, seed) < 0.3) m.set(x, y + 1, h, li);
+    if (hash(Math.floor((x + y) / 5), 71, seed) < 0.45) for (let z = Math.max(0, h - 2 - Math.floor(hash(x, y, seed + 73) * 9)); z <= h; z++) if (hash(x * 3 + y, z, seed + 75) < 0.7) m.set(x, y + 3, z, ivy);   // (ivy hung down its face)
+  };
+  const bx0 = 6, bx1 = Math.round(46 * k), by = 6, sy1 = Math.round(32 * k), run = (bx1 - bx0) + (sy1 - by);
+  for (let x = bx0; x <= bx1; x++) wall(x, by, (x - bx0) / run);
+  for (let y = by; y <= sy1; y++) { const u = ((bx1 - bx0) + (y - by)) / run, h = hAt(u), win = u > 0.72 && u < 0.84; for (let z = 0; z < h; z++) { if (win && z >= 9 * kh && z < 17 * kh) continue; for (let k = 0; k < 3; k++) m.set(bx1 + k, y, z, st); } if (hash(y, 79, seed) < 0.4) for (let z = Math.max(0, h - 8); z <= h; z++) if (hash(y, z, seed + 81) < 0.6) m.set(bx1 + 3, y, z, ivy); }
+  for (let i = 0; i < Math.round(9 * k * k); i++) {   // (fallen blocks, inside and out)
+    const x = 4 + hash(i, 83, seed) * (W - 10), y = 10 + hash(i, 85, seed) * (D - 14), r = 1.4 + hash(i, 87, seed) * 1.6;
+    m.box(x, y, 0, x + r * 2, y + r * 1.4, r * 1.3, st); if (hash(i, 89, seed) < 0.4) m.box(x, y, r * 1.3, x + r * 2, y + r, r * 1.3 + 1, li);
+  }
   return m;
 }

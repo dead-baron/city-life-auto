@@ -29,6 +29,9 @@ export const DEV_SECTIONS = [
   ] },
   // what the owner's phone does (the perf work, 10-26): the readout over the screen, kept on in this browser till switched off
   { id: 'perf', title: '📈 Performance', items: [['📈 Performance readout on / off (your screen)', '@perf']] },
+  { id: 'polish', title: '🧍 Character polish', items: [['🧍 Character polish on / off - the new people, on for everyone since 11-22; off shows the old ones (your screen; reloads)', '@polish']] },
+  { id: 'clouds', title: '☁ Cloud shadows', items: [['☁ Cloud shadows on / off - soft shadows drifting over the land by day (your screen; reloads)', '@clouds']] },
+  { id: 'recmusic', title: '🎵 Recorded music', items: [['🎵 The owner\'s recordings on / off - on for everyone since 11-22; off plays the old synth tunes (your screen; reloads)', '@recmusic']] },
   // the scene director's scenes (server/systems/director.js, shared/scenes/): started now, at the place nearest you - your
   // camera follows the script's (client/director.js; Esc gives it back)
   { id: 'scenes', title: '🎬 Director scenes', items: [...SCENE_LIST.map((q) => [`🎬 ${q.n}`, 'scene', { id: q.id, hold: 1 }]), ['⏹ End the scene you\'re watching', 'scene', { k: 'stop' }]] },
@@ -60,7 +63,7 @@ export const DEV_SECTIONS = [
     ['🛒 The nearest grocery (carts by the door)', 'near', { k: 'grocery' }],
   ] },
   { id: 'fish', title: '🎣 Fishing', items: [
-    ['🎣 Every rod and 20 of every bait', 'fish', { k: 'kit' }],
+    ['🎣 Every rod and 20 of every bait', 'fish', { k: 'kit' }], ['📖 Half the kinds in your Fish log', 'fish', { k: 'log' }],
     ['🏞 A pond', 'fish', { k: 'go', w: 'pond' }], ['🏞 A lake', 'fish', { k: 'go', w: 'lake' }], ['🏞 A river', 'fish', { k: 'go', w: 'river' }],
     ['🏞 A creek', 'fish', { k: 'go', w: 'creek' }], ['🌀 A river\'s calm pocket (the big trout)', 'fish', { k: 'go', spot: 'pocket' }], ['🪨 The fishing rocks (stripers, redfish)', 'fish', { k: 'go', spot: 'point' }], ['🦢 The marshes', 'fish', { k: 'go', w: 'swamp' }], ['🏖 The shallows', 'fish', { k: 'go', w: 'shore' }],
     ['⚓ A pier', 'fish', { k: 'go', w: 'pier' }], ['🐠 The reef (the southern keys)', 'fish', { k: 'go', w: 'reef' }],
@@ -193,11 +196,12 @@ export const DEV_SECTIONS = [
   // flying (shared/flight.js, server/systems/aircraft.js): an aircraft beside you; the airport's runway and the airstrip
   { id: 'air', title: '🚁 Flying', items: [
     ['🛫 A light plane in the air, you flying it', 'car', { m: 'plane', alt: 500, in: 1 }], ['🚁 A helicopter in the air, you flying it', 'car', { m: 'heli', alt: 400, in: 1 }], ['🛫 A runway (take off from it)', 'near', { k: 'runway' }],
-    ['🪂 Skydive: high over here, a parachute in your bag', 'sky', { alt: 900, chute: 1 }], ['🪂 Skydive with no parachute (steer for the water)', 'sky', { alt: 900 }], ['🪂 A parachute in my bag', 'give', { kind: 'item', id: 'parachute', n: 1 }], ['🅷 A helipad', 'near', { k: 'helipad' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }],
+    ['🪂 Skydive: high over here, a parachute in your inventory', 'sky', { alt: 900, chute: 1 }], ['🪂 Skydive with no parachute (steer for the water)', 'sky', { alt: 900 }], ['🪂 A parachute in my bag', 'give', { kind: 'item', id: 'parachute', n: 1 }], ['🅷 A helipad', 'near', { k: 'helipad' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }],
   ] },
   // fire on people, the tank, the explosion tester (H58: server burning.js, tank.js, boomtest.js)
   { id: 'fire', title: '🔥 Fire, the tank & the Boom Tester', items: [
     ['🧨 Boom Tester (shoot it: the blast where it lands; reload picks the kind)', 'give', { kind: 'weapon', id: 'boomtest', n: 1 }],
+    ['🧨 Boom Tester as a real weapon (NPCs react, police come, it counts)', 'give', { kind: 'weapon', id: 'boomtest', n: 1, live: 1 }],
     ['🪖 A tank (drive; the turret follows your aim; fire the cannon)', 'car', { m: 'tank' }],
     ['🔥 Set me on fire (roll, run or find water)', 'burn', { k: 'me' }], ['🔥 People on fire ahead of me', 'burn', { k: 'crowd' }],
     ['🌧 Rain (fires go out faster)', 'rain'],

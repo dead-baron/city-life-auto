@@ -5,7 +5,7 @@ import { CRATE_TIERS, bagTier } from '../shared/items.js';
 import { newPedState } from '../shared/physics.js';
 
 export const SKINS = ['#f1c9a5', '#e0ac7e', '#c68953', '#a86b3c', '#7d4a26', '#4f2f1a'];
-const HAIR = ['#1a1410', '#3b2414', '#6b3e1e', '#b5862f', '#d9c27a', '#8a8a8a', '#e8e8e8', '#7a1d1d'];
+export const HAIR = ['#1a1410', '#3b2414', '#6b3e1e', '#b5862f', '#d9c27a', '#8a8a8a', '#e8e8e8', '#7a1d1d'];
 
 // Archetypes: appearance generator + behaviour stats.
 export const ARCHETYPES = {

@@ -34,7 +34,7 @@ test('World v3: the cliffs are solid where they are drawn - on foot, by car, fro
   // each face's rock as drawn, in world pixels: its sprite's opaque pixels on the ground (x, y + z) and where they hide
   // the ground behind them (x, y) - a mask over the face's box
   const rockOf = (p) => {
-    const G = makeStatic({ t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1, st: p.st });
+    const G = makeStatic({ t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1, st: p.st, ...(p.relief && { rl: 1 }) });   // (as statics.js draws it: a relief band's granite face is the crag's wall - 11-25)
     const X0 = Math.round(p.x - G.ax), Y0 = Math.round(p.y - G.ay), mw = G.w, mh = G.h + 40, mask = new Uint8Array(mw * mh);
     for (let sy = 0; sy < G.h; sy++) for (let sx = 0; sx < G.w; sx++) {
       const q = sy * G.w + sx;
@@ -158,8 +158,9 @@ test('World v3: the cliffs are solid where they are drawn - on foot, by car, fro
   const carBlock = CAR_BLOCK.map((v, t) => (v || t === T.WATER || t === T.DEEP ? 1 : 0));
   for (const [how, block] of [['on foot', PED_BLOCK], ['by car', carBlock]]) {
     const Rr = flood(block), lost = [];
-    // (a place in the water - a lake, a tinaja - by its shore)
-    const reached = (tx, ty) => { const t = m.tiles[ty * W + tx], r = t === T.WATER || t === T.DEEP ? 40 : 2; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = tx + dx, y = ty + dy; if (x >= 0 && y >= 0 && x < W && y < H && Rr[y * W + x]) return true; } return false; };
+    // (a place in the water - a lake, a tinaja - by its shore; one inside its walk-in room - its point on the floor, a few
+    // tiles behind the door, where no car goes - by the ground at its door)
+    const reached = (tx, ty) => { const t = m.tiles[ty * W + tx], r = t === T.WATER || t === T.DEEP ? 40 : t === T.FLOOR || t === T.COUNTER ? 4 : 2; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = tx + dx, y = ty + dy; if (x >= 0 && y >= 0 && x < W && y < H && Rr[y * W + x]) return true; } return false; };
     for (const [name, tx, ty] of targets) if (!reached(tx, ty)) lost.push(name);
     assert.ok(lost.length <= KNOWN_UNREACHED[how], `the desert ${how}: ${lost.length} of ${targets.length} out of reach (${lost.slice(0, 12).join('; ')})`);
   }

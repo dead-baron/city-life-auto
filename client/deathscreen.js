@@ -260,33 +260,37 @@ function spawnMap(H, me, C, show) {
   render(H, c);
 }
 function mapInput(H, c) {
+  // (the pointer in the canvas's own pixels, from its box on screen: on a desktop the panel is scaled with CSS zoom
+  // (style.css --zk), and offsetX/Y there didn't match where the marks are drawn - a click never found its place)
+  const xy = (e) => { const r = c.getBoundingClientRect(), kx = r.width ? c.clientWidth / r.width : 1, ky = r.height ? c.clientHeight / r.height : 1; return [(e.clientX - r.left) * kx, (e.clientY - r.top) * ky]; };
   const pts = new Map();
   let drag = 0, pinch = 0;
-  c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.offsetX, e.offsetY]); drag = 0; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
+  c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); pts.set(e.pointerId, xy(e)); drag = 0; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
   c.addEventListener('pointermove', (e) => {
     const p = pts.get(e.pointerId);
     if (!p || !SM.wm) return;
     if (pts.size === 2) {
-      pts.set(e.pointerId, [e.offsetX, e.offsetY]);
+      pts.set(e.pointerId, xy(e));
       const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
       if (pinch > 0 && d > 0) SM.wm.zoom(d / pinch, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, c.clientWidth, c.clientHeight);
       pinch = d; drag = 99; render(H, c); return;
     }
-    const dx = e.offsetX - p[0], dy = e.offsetY - p[1];
+    const [ex, ey] = xy(e), dx = ex - p[0], dy = ey - p[1];
     drag += Math.abs(dx) + Math.abs(dy);
     if (drag > 6) { SM.wm.pan(dx, dy); render(H, c); }
-    pts.set(e.pointerId, [e.offsetX, e.offsetY]);
+    pts.set(e.pointerId, xy(e));
   });
   const up = (e) => {
     const was = pts.has(e.pointerId), n = pts.size;
     pts.delete(e.pointerId);
     if (!was || n > 1 || drag > 6 || e.type === 'pointercancel') return;
+    const [ex, ey] = xy(e);
     let best = null, bd = 30;   // a tap: the mark under it (or nearest it, within reach)
-    for (const [x, y, o] of SM.hits) { const d = Math.hypot(x - e.offsetX, y - e.offsetY); if (d < bd) { bd = d; best = o; } }
+    for (const [x, y, o] of SM.hits) { const d = Math.hypot(x - ex, y - ey); if (d < bd) { bd = d; best = o; } }
     if (best) pick(H, (H.me.spawnOpts || []).find((q) => q.id === best.id) || best);
   };
   c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
-  c.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); if (SM.wm) { SM.wm.zoom(e.deltaY < 0 ? 1.25 : 0.8, e.offsetX, e.offsetY, c.clientWidth, c.clientHeight); render(H, c); } }, { passive: false });
+  c.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); if (SM.wm) { const [wx, wy] = xy(e); SM.wm.zoom(e.deltaY < 0 ? 1.25 : 0.8, wx, wy, c.clientWidth, c.clientHeight); render(H, c); } }, { passive: false });
   // a picked spot off the map's edge (zoomed in): the view moves to it
   SM.keepInView = (o) => {
     const wm = SM.wm, [ox, oy] = wm.origin, sc = wm.scale, x = (o.x - ox) * sc, y = (o.y - oy) * sc;
@@ -316,16 +320,20 @@ function render(H, c) {
   if (!wm || !c.clientWidth) return;
   const at = SM.at;
   // the ground, the railway, the district names - no places' icons: only the numbered places to wake up
-  wm.draw(c, { me: null, mini: H.mini }, -1e6, -1e6, 0, { cats: new Set() });
+  // (the district names keep clear of the numbered places and of where you fell - the owner, 11-22)
+  const avoid = SM.places.map((o, i) => [o.x, o.y, (o.on ? 18 : i < WAKE_ROWS ? 15 : 11) + 3]).filter((a) => a[0] !== undefined);
+  if (at) avoid.push([at[0], at[1], 12]);
+  wm.draw(c, { me: null, mini: H.mini }, -1e6, -1e6, 0, { cats: new Set(), avoid });
   const g = c.getContext('2d'), [ox, oy] = wm.origin, sc = wm.scale;
   const P = (x, y) => [(x - ox) * sc, (y - oy) * sc];
   const css = getComputedStyle(document.documentElement), col = (k) => css.getPropertyValue(k).trim();
-  const ink = col('--ink'), gold = col('--gold'), danger = col('--danger'), cream = col('--cream');
+  const ink = col('--ink'), gold = col('--gold'), danger = col('--danger'), cream = col('--cream'), medic = col('--pocket-green');   // (medic: the clinics' green - a white cross on it, 4.8:1)
   g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  if (at) {   // where you fell: a red ring, its name over it
+  let fellAt = null;
+  if (at) {   // where you fell: a red ring (its name after the places, clear of them)
     const [x, y] = P(at[0], at[1]);
     g.strokeStyle = danger; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 9, 0, 6.28); g.stroke();
-    g.font = '700 14px "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText('You fell here', x + 1, y - 21); g.fillStyle = cream; g.fillText('You fell here', x, y - 22);
+    fellAt = [x, y];
   }
   SM.hits = [];
   g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif';
@@ -342,11 +350,18 @@ function render(H, c) {
     g.fillStyle = ink; g.fillText(o.kind === 'home' ? '⌂' : String(i + 1), x, y + 1);
     SM.hits.unshift([x, y, o]);
   }
-  if (SM.amb) {   // the ambulance (or rescue boat) you called, driving over: a white disc with a red cross, its name under it
+  if (fellAt) {   // "You fell here": over its ring, or the first side of it no numbered place covers (the owner, 11-22: its words under the "1")
+    const [x, y] = fellAt, t = 'You fell here', w = g.measureText(t).width / 2 + 4, h = 9;
+    const hit = (cx, cy) => SM.hits.some(([px, py]) => Math.abs(px - cx) < w + 16 && Math.abs(py - cy) < h + 16);
+    const spots = [[x, y - 22], [x, y + 24], [x + w + 14, y], [x - w - 14, y], [x, y - 44], [x, y + 46]];
+    const [tx, ty] = spots.find(([sx, sy]) => !hit(sx, sy)) || spots[0];
+    g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText(t, tx + 1, ty + 1); g.fillStyle = cream; g.fillText(t, tx, ty);
+  }
+  if (SM.amb) {   // the ambulance (or rescue boat) you called, driving over: a white cross on a green disc (never a red cross - the owner's rule, 10-18), its name under it
     const [x, y] = P(SM.amb.x, SM.amb.y), r = 11;
-    g.fillStyle = cream; g.strokeStyle = danger; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill(); g.stroke();
-    g.fillStyle = danger; g.fillRect(x - 2, y - 7, 4, 14); g.fillRect(x - 7, y - 2, 14, 4);
+    g.fillStyle = medic; g.strokeStyle = ink; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill(); g.stroke();
+    g.fillStyle = cream; g.fillRect(x - 2, y - 7, 4, 14); g.fillRect(x - 7, y - 2, 14, 4);
     const t = SM.wet ? 'Rescue boat' : 'Ambulance';
-    g.font = '700 13px "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText(t, x + 1, y + r + 11); g.fillStyle = cream; g.fillText(t, x, y + r + 10);
+    g.font = '700 13px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText(t, x + 1, y + r + 11); g.fillStyle = cream; g.fillText(t, x, y + r + 10);
   }
 }

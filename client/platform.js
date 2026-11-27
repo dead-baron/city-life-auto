@@ -14,7 +14,10 @@ let forced = null;
 try { forced = typeof localStorage !== 'undefined' ? localStorage.getItem('cla.device') : null; } catch { /* storage blocked */ }
 if (/[?&]console=1\b/.test(QS)) forced = 'console';
 export const DEVICE_FORCED = forced === 'console' || forced === 'pc' || forced === 'mobile' ? forced : null;
-const padCursor = /Windows NT/i.test(UA) && mq('(pointer: coarse)') && !mq('(any-pointer: fine)');
+// (a Windows touch tablet - a Surface without its keyboard - has a coarse pointer and no fine one too, but it has a
+// touch screen: maxTouchPoints > 0; Edge on Xbox has none - pre-beta quick wins, REPORT2 B6)
+const touchScreen = !!(NAV && NAV.maxTouchPoints > 0);
+const padCursor = /Windows NT/i.test(UA) && mq('(pointer: coarse)') && !mq('(any-pointer: fine)') && !touchScreen;
 // why this counts as a console ('' if it doesn't): shown in Settings and the diagnostics
 export const CONSOLE_WHY = DEVICE_FORCED === 'console' ? 'set in Settings'
   : /Xbox/i.test(UA) ? 'Xbox browser' : /PlayStation|Nintendo/i.test(UA) ? 'console browser'

@@ -66,6 +66,9 @@ ask CLA_CONTACT "The contact email players can write to (account deletion, quest
 echo; echo "== Google Analytics 4 (section 5)"
 ask GA_MEASUREMENT_ID "GA4 measurement ID (starts with G-)" 0
 ask GA_API_SECRET "GA4 Measurement Protocol API secret" 1
+echo; echo "== Players in the city (the line at the door)"
+ask CLA_MAX_PLAYERS "Players in the city at once; past it, newcomers wait in line (default 100)" 0
+ask CLA_LINE_MAX "How many may wait in that line; past it, 'try again in a few minutes' (default 200)" 0
 echo; echo "== Ads (opt-in rewarded ads at the job computer - only once Google approves H5 Games Ads)"
 ask CLA_ADSENSE_CLIENT "Your AdSense publisher id (starts with ca-pub-)" 0
 ask CLA_ADS "Ads: off (the default), test (Google's test ads only) or on" 0

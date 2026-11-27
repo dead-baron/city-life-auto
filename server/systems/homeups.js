@@ -240,7 +240,7 @@ function unloadBag(world, p, h) {
   const prof = p.profile, at = matsAt(prof, h.id);
   let n = 0;
   for (const m of ['stone', 'metal']) { const t = takeBag(prof, m, Math.min(bagCount(prof, m), storeCap(prof, h) - usedOf(at))); at[m] += t; n += t; }
-  if (!n) return usedOf(at) >= storeCap(prof, h) ? 'The garage is full.' : 'No stone or scrap metal in your bag.';
+  if (!n) return usedOf(at) >= storeCap(prof, h) ? 'The garage is full.' : 'No stone or scrap metal in your inventory.';
   store.touch(); p.meDirty = true;
   world.notify(p, `Unloaded ${n} into the garage (${usedOf(at)}/${storeCap(prof, h)}).`, 'good');
   return null;
@@ -252,7 +252,7 @@ function intoBag(world, p, h, m) {
   const id = MATS[m].items[0];
   prof.inventory[id] = (prof.inventory[id] || 0) + n; at[m] = 0;
   store.touch(); p.meDirty = true;
-  world.notify(p, `${n} ${ITEMS[id].name} into your bag.`, 'good');
+  world.notify(p, `${n} ${ITEMS[id].name} into your inventory.`, 'good');
   return null;
 }
 // a bundle of firewood off the stack, in your arms (to sell, or take somewhere)
@@ -306,12 +306,12 @@ function menuOf(world, p, h) {
       for (const o of offered(prof, h, world).concat(roomOffers(prof, h, true))) { const c = costOf(o.id), left = missing(u, o.id).wood; if (c.wood && left > 0 && (u.p[o.id] || opts.length < 6)) opts.push({ id: `u:tw:${o.id}`, label: `Put it toward ${o.name.toLowerCase()}`, note: `firewood ${(c.wood || 0) - left}/${c.wood}` }); }
     }
     const bs = bagCount(prof, 'stone'), bm = bagCount(prof, 'metal');
-    if (bs || bm) opts.push({ id: 'u:unload', label: `Unload your bag: ${[bs && plural(bs, 'stone'), bm && plural(bm, 'metal')].filter(Boolean).join(', ')}` });
+    if (bs || bm) opts.push({ id: 'u:unload', label: `Unload your inventory: ${[bs && plural(bs, 'stone'), bm && plural(bm, 'metal')].filter(Boolean).join(', ')}` });
     if (!p.ped.vehId && !p.ped.carrying && matsAt(prof, h.id).wood > 0) opts.push({ id: 'u:take', label: 'Take a bundle of firewood off the stack', note: 'carry it', shut: 1 });
     opts.push({ id: 'u:list', label: 'Upgrade the home - new rooms, floors, amenities', note: `${builtOf(u).length} built` });
   } else if (V.v === 'list') {
     title = `Upgrades - ${h.name}`;
-    sub = `The outside stays as it is; inside, it grows. Pay with materials from the garage and your bag, or with money. Kept here: ${matLine(prof, h)}.`;
+    sub = `The outside stays as it is; inside, it grows. Pay with materials from the garage and your inventory, or with money. Kept here: ${matLine(prof, h)}.`;
     for (const r of roomSlots(prof, h)) opts.push({ id: `u:rooms:${r.lv}`, label: `Add a room on ${levelName(r.lv)}`, note: `${r.free} empty` });
     for (const o of offered(prof, h, world)) opts.push({ id: `u:card:${o.id}`, label: o.name, note: u.p[o.id] ? `under way · ${needLine(u, o.id)}` : `${money(priceOf(o.id))} or materials` });
     const done = builtOf(u).map((id) => nameOf(h, id));
@@ -328,7 +328,7 @@ function menuOf(world, p, h) {
     title = nameOf(h, id);
     sub = `${r ? `${ROOMS[r.k].what[0].toUpperCase()}${ROOMS[r.k].what.slice(1)}.` : U.what} Takes: ${needLine(u, id)} and ${money(costOf(id).labour || 0)} for the work. Kept here: ${matLine(prof, h)}.`;
     const can = MAT_IDS.some((m) => left[m] && (matsAt(prof, h.id)[m] > 0 || (m !== 'wood' && bagCount(prof, m) > 0)));
-    opts.push({ id: `u:put:${id}`, label: 'Put in the materials you have', dis: !can, note: can ? 'from the garage, then your bag' : 'none of what it needs' });
+    opts.push({ id: `u:put:${id}`, label: 'Put in the materials you have', dis: !can, note: can ? 'from the garage, then your inventory' : 'none of what it needs' });
     opts.push({ id: `u:pay:${id}`, label: MAT_IDS.some((m) => left[m]) ? 'Pay for the rest and build it now' : 'Pay the builders and build it', price: left.pay });
     if (u.p[id]) opts.push({ id: `u:out:${id}`, label: 'Take the materials put in back out' });
     opts.push({ id: r ? `u:rooms:${r.lv}` : 'u:list', label: 'Back' });
@@ -336,9 +336,9 @@ function menuOf(world, p, h) {
     title = 'The materials';
     sub = `On the shelves here and in the garage: ${matLine(prof, h)}. Firewood comes stacked from a felled tree; stone from the mines and the hardware store; scrap metal from salvage and the caves' iron and copper ore.`;
     const bs = bagCount(prof, 'stone'), bm = bagCount(prof, 'metal'), at = matsAt(prof, h.id);
-    if (bs || bm) opts.push({ id: 'u:unload', label: `Put away your bag's: ${[bs && plural(bs, 'stone'), bm && plural(bm, 'metal')].filter(Boolean).join(', ')}` });
-    if (at.stone) opts.push({ id: 'u:bag:stone', label: `Take the stone into your bag (${at.stone})` });
-    if (at.metal) opts.push({ id: 'u:bag:metal', label: `Take the scrap metal into your bag (${at.metal})` });
+    if (bs || bm) opts.push({ id: 'u:unload', label: `Put away your inventory's: ${[bs && plural(bs, 'stone'), bm && plural(bm, 'metal')].filter(Boolean).join(', ')}` });
+    if (at.stone) opts.push({ id: 'u:bag:stone', label: `Take the stone into your inventory (${at.stone})` });
+    if (at.metal) opts.push({ id: 'u:bag:metal', label: `Take the scrap metal into your inventory (${at.metal})` });
     opts.push({ id: 'u:list', label: 'The upgrades', note: `${builtOf(u).length} built` });
   } else if (V.v === 'craft') {
     title = 'The workbench';

@@ -18,11 +18,11 @@ test('the HUD row is PHONE · MAP · CHAT · EMOTES · MENU as icons, and the hu
   const row = HTML.slice(HTML.indexOf('<div id="hud-btns">'), HTML.indexOf('</div>', HTML.indexOf('<div id="hud-btns">')));
   // (UI-8, the owner 2026-10-30: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon should work")
   // (Direction A, the owner 2026-11-12: one row of system buttons - chat moved into it from the top left)
-  assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-phone', 'b-map', 'b-chat', 'b-emo', 'b-menu'], 'five buttons, the menu in the corner (11-13: the emotes beside chat on a desktop)');
-  assert.deepEqual([...row.matchAll(/aria-label="([A-Za-z]+)" title="[^"]+"><i class="ic" data-gl="([a-z-]+)"><\/i><span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['Phone smartphone P', 'Map map M', 'Chat message-circle-more T', 'Emotes smile B', 'Menu menu ESC'], 'line icons (11-05: Lucide, client/touchicons.js glyph - a mobile phone, not a handset), named for a screen reader and a tooltip, the keys on a keyboard');
+  assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-phone', 'b-map', 'b-chat', 'b-emo', 'b-bag', 'b-menu'], 'six buttons, the menu in the corner (11-13: the emotes beside chat on a desktop; the bag, pre-beta quick wins - hidden on touch, where BAG is a switch)');
+  assert.deepEqual([...row.matchAll(/aria-label="([A-Za-z]+)" title="[^"]+"><i class="ic" data-gl="([a-z-]+)"><\/i><span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['Phone smartphone P', 'Map map M', 'Chat message-circle-more T', 'Emotes smile B', 'Bag backpack I', 'Menu menu ESC'], 'line icons (11-05: Lucide, client/touchicons.js glyph - a mobile phone, not a handset), named for a screen reader and a tooltip, the keys on a keyboard');
   assert.ok(!/<\/svg>[A-Z]/.test(row), 'no words on them');
   assert.match(HTML, /<button id="b-dev"[^>]*aria-label="Debug menu"/, 'and the debug button (the owner wants it on the HUD), apart');
-  for (const gone of ['b-bag', 'b-settings', 'b-fs', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);
+  for (const gone of ['b-settings', 'b-fs', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);
   // (UI-10, UIC-07: the pause list first - RESUME, the five screens, LOG OFF, LEAVE GAME; each screen's head: back, its
   // name, close)
   const bar = hubHtml.slice(0, hubHtml.indexOf('<div id="hub-body">'));
@@ -49,7 +49,11 @@ test('every item of the old pause list has a home in the hub', () => {
   // the debug menu: reachable, last and quiet
   const lines = [...help.matchAll(/data-h="([a-z]+)"/g)].map((m) => m[1]);
   assert.equal(lines[lines.length - 1], 'dev', 'the debug menu is the last line');
-  assert.match(help, /class="opt quiet play-only" data-h="dev"/, 'and never loud');
+  assert.match(help, /class="opt quiet play-only" data-h="dev" id="h-dev"/, 'and never loud');
+  // (pre-beta quick wins: only the owner, admins, Dev Debug Mode or the server's open dev mode see the debug ways in)
+  assert.match(read('client/style.css'), /body:not\(\.dbg-ok\) :is\(#b-dev, #h-dev\) \{ display: none !important; \}/, 'hidden from players');
+  assert.match(MAIN, /function debugOk\(\) \{ return !!\(S\.dev \|\| S\.devMode \|\| S\.devOpen \|\| S\.role === 'owner' \|\| S\.role === 'admin'\); \}/);
+  assert.match(MAIN, /function openDebug\(\) \{\s*if \(!debugOk\(\)\) return;/, 'the ` key and the pad too');
   // each Help line does what the pause line did
   const hub = read('client/hub.js');
   for (const h of ['unstuck', 'surrender', 'cine', 'fullscreen', 'title', 'install', 'look', 'devmode', 'dev']) assert.match(hub, new RegExp(`\\b${h}: `), `Help: ${h}`);
@@ -83,7 +87,7 @@ test('Esc, Start and MENU open the pause list; P, M, I a screen; back steps out;
   assert.equal(KB.hub, 'ESC'); assert.equal(PAD.hub[0], 'MENU'); assert.match(PAD.hubtab[0], /LB \/ RB/);
   const readme = read('README.md');
   assert.match(readme, /\| Menu \(the pause list: Resume, Map, Phone, Bag, People, Settings, Report a bug, Log off, Leave game\)/);
-  assert.match(readme, /\| Bag \(EQUIPMENT: [^\n]*\| tap ITEMS \|/);
+  assert.match(readme, /\| Inventory \(was the Bag\): [^\n]*\| tap BAG; tap, the ✕ on a slot \|/);
 });
 
 test('the hub\'s tabs load when first opened, not with the page', () => {
@@ -244,5 +248,5 @@ test('a sideways phone: the shop\'s menu has a compact head and a scroll cue; th
   assert.match(css, /\.cue-down \{[^}]*mask-image/);
   assert.match(read('client/hud.js'), /box\.classList\.toggle\('cue-down'/, 'the menu shows when there is more below');
   assert.match(read('client/bag.js'), /export function cue\(el\) \{ el\.classList\.toggle\('cue-down'/, 'the bag\'s grid too');
-  assert.match(css, /@media \(max-height: 560px\) \{\n  \.bag \{ grid-template-columns: 200px minmax\(0, 1fr\) 240px;/, 'the bag beside its slots and its details at 844x390');
+  assert.match(css, /@media \(max-height: 560px\) \{\n  \.bag \{ grid-template-columns: 250px minmax\(0, 1fr\) 190px;/, 'the bag beside its slots and its details at 844x390');
 });

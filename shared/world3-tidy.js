@@ -11,6 +11,8 @@
 // For the whole-world build only. Deterministic: arithmetic.
 import { TILE, T } from './constants.js';
 import { DISTRICTS } from './mapcore.js';
+import { hash2 } from './rng.js';
+import { fenceKindOf, fenceEnds } from './fences.js';
 
 // LAND: the prop types that need dry ground under them (plants by species: reeds and cattails grow in the water);
 // WET_SP: the plants that stand in water; FENCE: the fence kinds that stop at a road or the water; step: px along a run
@@ -90,6 +92,20 @@ export function tidyProps3(m) {
       }
     }
   }
+  // a fence piece out in a roadway - road on both sides of it along most of its length: a yard's line that a later pass
+  // laid a road over (The Yards' boulevard) - goes (11-23: a vehicle is held by every fence now - shared/fences.js)
+  for (const p of m.props) {
+    if (!p || gone.has(p) || !fenceKindOf(p)) continue;
+    const [x0, y0, x1, y1] = fenceEnds(p), L = Math.hypot(x1 - x0, y1 - y0);
+    if (L < 2) continue;
+    const nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
+    let n = 0, k = 0;
+    for (let d = 4; d < L; d += 8) {
+      const x = x0 + (x1 - x0) * d / L, y = y0 + (y1 - y0) * d / L, road = (o) => { const t = tileAt(x + nx * o, y + ny * o); return t === T.ROAD || t === T.BRIDGE; };
+      k++; if (road(10) && road(-10)) n++;
+    }
+    if (k && n * 2 > k) { gone.add(p); out.fenceRoad = (out.fenceRoad || 0) + 1; }
+  }
   if (gone.size) dropProps(m, gone);
   // a standing sign out in the wilds is a trail sign - planks on posts, its words cut in - not a lit panel (the owner,
   // 2026-11-13: "it should just be a more appropriate wooden sign"; client/art2/game/statics.js 'textsign' p.wood). A
@@ -102,7 +118,7 @@ export function tidyProps3(m) {
 }
 
 // take these props away (the solids that were theirs with them; the hand-placed solids stay)
-function dropProps(m, gone) {
+export function dropProps(m, gone) {
   const keep = [], remap = new Map();
   m.props.forEach((pr, i) => { if (gone.has(pr)) return; remap.set(i, keep.length); keep.push(pr); });
   m.props = keep;
@@ -164,5 +180,124 @@ export function clearHomePaths3(m, removeProps) {
   const path = homePaths3(m), gone = new Set();
   for (const p of m.props) if (p && TIDY3.PLANT.test(p.t) && onHomePath(m, path, p.x, p.y, 14)) gone.add(p.x + ',' + p.y);
   if (gone.size) removeProps(m, (x, y) => gone.has(x + ',' + y));
+  return gone.size;
+}
+
+// Black bin bags only by a bin, or anywhere in the rough districts (DECISIONS, World: "Black bin bags only a few, near cans
+// or in rough alleys", 10-10; the audit's binBags, 44 on 11-19): the bags that are neither. The lint counts with this
+// (tools/audit/worldrows.mjs) and the build takes them up (strayBags3, the done hook) - one rule, no drift.
+export const BAGS = { near: 3 * TILE, BINS: /^(trashcan|dump_[gbo]|trashpile|burnbarrel)$/ };
+export function strayBags(m) {
+  const bins = m.props.filter((p) => p && BAGS.BINS.test(p.t)), BC = 256, g = new Map(), out = [];
+  for (const b of bins) { const k = Math.floor(b.y / BC) * 100000 + Math.floor(b.x / BC); let l = g.get(k); if (!l) g.set(k, (l = [])); l.push(b); }
+  for (const p of m.props) {
+    if (!p || p.t !== 'bags') continue;
+    const D = m.districtAt ? m.districtAt(p.x, p.y) : null;
+    if (D && D.tier === 'rough') continue;
+    let ok = false;
+    for (let j = -1; j <= 1 && !ok; j++) for (let i = -1; i <= 1 && !ok; i++) for (const b of g.get((Math.floor(p.y / BC) + j) * 100000 + Math.floor(p.x / BC) + i) || []) if (Math.hypot(b.x - p.x, b.y - p.y) < BAGS.near) { ok = true; break; }
+    if (!ok) out.push(p);
+  }
+  return out;
+}
+// A few bags piled beside some bins in the rough districts (the owner, 11-23 07:09: "a few bags but not too many, just some
+// bins have some bags piled next to it in rough neighborhoods"): about one bin in three with the ones that had bags
+// already (BIN_BAGS.share of the rest, a trash can or a
+// dumpster - a trash pile is one already), a bag or two at its side on the same kind of ground - never in the road, on a
+// door's step, or on another thing. One with bags beside it already is left as it is.
+export const BIN_BAGS = { share: 0.25, BINS: /^(trashcan|dump_[gbo])$/, near: 3 * TILE, clear: 14 };
+const BAG_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DIRT]);
+export function binBags3(m, H3) {
+  if (!Array.isArray(m.props) || !H3 || !H3.addProp) return 0;
+  const C = 128, grid = new Map(), cell = (x, y) => Math.floor(y / C) * 100000 + Math.floor(x / C);
+  const index = (p) => { const k = cell(p.x, p.y); let l = grid.get(k); if (!l) grid.set(k, (l = [])); l.push(p); };
+  for (const p of m.props) if (p) index(p);
+  const nearAny = (x, y, r, test) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const q of grid.get(cell(x, y) + j * 100000 + i) || []) if ((!test || test(q)) && Math.hypot(q.x - x, q.y - y) < r) return true; return false; };
+  const doors = new Set();
+  for (const b of m.buildings || []) {   // (a building's door and its walk-in's doorways: the step kept clear)
+    if (!b) continue;
+    if (b.door && m.inside(b.door.tx, b.door.ty)) for (let k = 0; k < (b.door.w || 2); k++) if (m.inside(b.door.tx + k, b.door.ty)) doors.add(m.idx(b.door.tx + k, b.door.ty));
+    for (const u of (b.walkIn && b.walkIn.units) || []) if (u.door) for (let k = 0; k < (u.door.w || 2); k++) for (const ty of [u.door.ty, u.door.ty + 1, u.door.ty - 1]) if (m.inside(u.door.tx + k, ty)) doors.add(m.idx(u.door.tx + k, ty));
+  }
+  const bins = m.props.filter((p) => p && BIN_BAGS.BINS.test(p.t));
+  let n = 0;
+  for (const b of bins) {
+    const D = m.districtAt ? m.districtAt(b.x, b.y) : null;
+    if (!D || D.tier !== 'rough') continue;
+    const bx = Math.round(b.x), by = Math.round(b.y);
+    if (hash2(bx, by, 1123) >= BIN_BAGS.share) continue;
+    if (nearAny(b.x, b.y, BIN_BAGS.near, (q) => q.t === 'bags')) continue;
+    const big = b.t !== 'trashcan', off = big ? 34 : 22, count = big || hash2(bx, by, 1124) < 0.5 ? 2 : 1;
+    const ground = m.inside(Math.floor(b.x / TILE), Math.floor(b.y / TILE)) ? m.tiles[m.idx(Math.floor(b.x / TILE), Math.floor(b.y / TILE))] : -1;
+    const sides = hash2(bx, by, 1125) < 0.5 ? [[1, 0], [-1, 0], [0, 1], [0, -1]] : [[-1, 0], [1, 0], [0, 1], [0, -1]];
+    const fits = (x, y) => {
+      const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+      if (!m.inside(tx, ty)) return false;
+      const i = m.idx(tx, ty), t = m.tiles[i];
+      return BAG_GROUND.has(t) && (t === ground || ground === -1) && !doors.has(i) && !nearAny(x, y, BIN_BAGS.clear, (q) => q !== b);
+    };
+    for (const [dx, dy] of sides) {
+      const spots = [];
+      for (let k = 0; k < count; k++) spots.push([b.x + dx * (off + k * 12) + dy * (k ? 7 : 0), b.y + dy * (off + k * 12) + dx * (k ? 6 : 0)]);
+      if (!spots.every(([x, y]) => fits(x, y))) continue;
+      for (const [x, y] of spots) { H3.addProp(m, 'bags', Math.round(x), Math.round(y), 0); index(m.props[m.props.length - 1]); n++; }
+      break;
+    }
+  }
+  return n;
+}
+// A walk-in that opens on its north side (the side the camera doesn't see - its roof covers the step) gets an A-board out
+// in front of it, in line with its doorway, as far out as its roof hides (NORTH_BOARD.out tiles, nearer if the paving
+// ends): the way in reads from the street it faces. With the lit sign on its roof's north edge (art: statics.js) - the
+// owner, 11-23: "Keep, make doors read". On paving only (a pavement, a plaza, a lot), clear of other things.
+export const NORTH_BOARD = { out: 6, min: 3, clear: 20 };
+const BOARD_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.LOT]);
+export function northDoorBoards3(m, H3) {
+  if (!H3 || !H3.addProp || !Array.isArray(m.props)) return 0;
+  let n = 0;
+  for (const id of m.walkIns || []) {
+    const b = m.buildings[id];
+    if (!b || !b.walkIn || b.walkIn.south || b.gone) continue;
+    for (const u of b.walkIn.units || []) {
+      if (!u.door) continue;
+      const x = (u.door.tx + (u.door.w || 2) / 2) * TILE;
+      let at = -1;
+      for (let k = 1; k <= NORTH_BOARD.out; k++) {
+        const tx = Math.floor(x / TILE), ty = u.door.ty - k;
+        if (!m.inside(tx, ty) || !BOARD_GROUND.has(m.tiles[m.idx(tx, ty)])) break;
+        if (k >= NORTH_BOARD.min) at = ty;
+      }
+      if (at < 0) continue;
+      const y = (at + 0.5) * TILE;
+      if (m.props.some((q) => q && Math.abs(q.x - x) < NORTH_BOARD.clear && Math.abs(q.y - y) < NORTH_BOARD.clear)) continue;
+      H3.addProp(m, 'aboard', Math.round(x), Math.round(y), 0);
+      n++;
+    }
+  }
+  return n;
+}
+// A casino that opens north (Old Downtown's on the south of the covered street) has its gaming floor reaching back to its
+// south wall - and a building standing right in front of that wall, drawn up the screen with its storeys, covered the
+// floor (the owner, 11-17 21:07: "looks really weird"; the audit's interiorOverlap). That building is drawn low - one
+// storey under a shallow roof (art: statics.js b.low, as the buildings in front of a platform are - world3-rail.js):
+// Old Downtown's Horseshoe Motor Inn and Club Neon Cactus. (The owner, 11-23: "Keep, make doors read".)
+export function lowBeforeCasinos3(m) {
+  let n = 0;
+  for (const id of m.walkIns || []) {
+    const b = m.buildings[id], W = b && b.walkIn;
+    if (!W || W.south || b.gone || !(W.units || []).some((u) => { const p = m.pois[u.poi]; return p && p.casino; })) continue;
+    const foot = b.ty + b.th, x0 = b.tx, x1 = b.tx + b.tw;
+    for (const o of m.buildings) {
+      if (!o || o.gone || o.id === id || o.low) continue;
+      if (o.ty < foot - 1 || o.ty > foot + 3 || o.tx + o.tw <= x0 || o.tx >= x1) continue;   // (right in front of its south wall: within 3 tiles - a lane between)
+      o.low = 1; n++;
+    }
+  }
+  return n;
+}
+export function strayBags3(m) {
+  if (!Array.isArray(m.props)) return 0;
+  const gone = new Set(strayBags(m));
+  if (gone.size) dropProps(m, gone);
   return gone.size;
 }

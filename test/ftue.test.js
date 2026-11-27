@@ -23,6 +23,8 @@ import * as combat from '../server/systems/combat.js';
 import { FTUE_STEPS } from '../server/analytics.js';
 import * as transit from '../server/systems/transit.js';
 import { guideSections } from '../shared/guide.js';
+import { wadeBand, WB } from '../shared/physics.js';
+import { VEHICLES } from '../shared/vehicles.js';
 import { readFileSync } from 'node:fs';
 
 // a world with the analytics' funnel listened to (server/launch.js world.track)
@@ -362,13 +364,33 @@ test('the first-time moments fire once each, ever: wanted, knocked down, a shop,
   teleport(w, other.p.ped, p.ped.x + 64, p.ped.y); gap();
   assert.ok(tips().includes('chat'), 'someone near: the chat moment');
   players.leave(w, other.p);
+  // by the water with a rod in the bag, not in hand: no "Fish here" - the rod's moment, once (players.js fishHere; the
+  // owner, 11-16: "You should have your fishing pole equipped before it prompts you to fish")
+  { const b = fishing.bankNear(w, p.ped.x, p.ped.y, 600, (h) => h && h.spot !== 'lily', null);
+    assert.ok(b, 'a bank');
+    prof.inventory.caneRod = 1; p.ped.weapon = 'fists';
+    teleport(w, p.ped, b.x, b.y); p.ped.a = b.a; gap();
+    assert.ok(!/Fish/.test((players.findInteraction(w, p) || {}).label || ''), 'no prompt with the rod in the bag');
+    assert.ok(tips().includes('rod'), 'the rod\'s moment');
+    p.ped.weapon = 'rod';
+    assert.ok(/Fish here/.test((players.findInteraction(w, p) || {}).label || ''), 'the rod out: the prompt');
+    p.ped.weapon = 'fists'; }
+  // at the wheel in water a car can wade (shared/physics.js wadeBand; vehicles.js wade): the wading moment
+  { const m = w.map; let at = null;
+    for (let ty = m.y0 + 2; ty < m.y0 + m.h - 2 && !at; ty++) for (let tx = m.x0 + 2; tx < m.x0 + m.w - 2; tx++) { const x = tx * 32 + 16, y = ty * 32 + 16; if (wadeBand(m, x, y, VEHICLES.sedan) === WB.WADE) { at = { x, y }; break; } }
+    assert.ok(at, 'water a car wades');
+    teleport(w, p.ped, at.x - 40, at.y);
+    const v = w.spawnVehicle('sedan', at.x, at.y, 0, { npcOwned: false });
+    assert.ok(vehicles.tryEnter(w, p.ped)); gap();
+    assert.ok(tips().includes('wade'), 'the wading moment');
+    vehicles.ejectPed(w, p.ped, true); w.remove(v); }
   // knocked down
   combat.damage(w, p.ped, 9999, null, 'test');
   assert.ok(p.ped.dead);
   p.ftueTipAt = -1e9; run(w, 0.6);   // (no clock jump: that would wake them before the moment's look)
   assert.ok(tips().includes('down'));
   const all = tips();
-  assert.deepEqual([...all].sort(), Object.keys(MOMENTS).sort(), 'all seven, once each');
+  assert.deepEqual([...all].sort(), Object.keys(MOMENTS).sort(), 'every one, once each');
   // each line names its Guide section, and the profile remembers them
   for (const m of sent(conn, (x) => x.t === 'ftue' && x.a === 'tip')) assert.ok(['around', 'earn', 'law', 'places', 'activities', 'property', 'items'].includes(m.sec), m.id);
   assert.deepEqual(Object.keys(prof.ftue.m).sort(), Object.keys(MOMENTS).sort());
@@ -650,4 +672,22 @@ test('the tip\'s Guide link: each moment names a Guide section; a tap on the tip
   assert.ok(z(/#ftue-line\.tip \{[^}]*z-index: (\d+)/) > z(/#touch \{[^}]*z-index: (\d+)/), 'the tip over #touch');
   assert.match(css, /#ftue-line\.faded \{[^}]*pointer-events: none/, 'faded: back to the sticks');
   assert.match(html, /id="s-tips"/, 'Settings: First-time tips');
+});
+
+test('the arrival letterbox never cuts the HUD: the HUD is away while the bars are in (pre-beta quick wins)', () => {
+  const css = readFileSync(new URL('../client/style.css', import.meta.url), 'utf8');
+  assert.match(css, /body:has\(#arrival:not\(\.hidden\):not\(\.leaving\)\) #hud \{ visibility: hidden; \}/);
+});
+
+// The arrival over, its screen comes off the stack wherever it is (11-24, tools/uishots.py): the server asks the question
+// itself when a page's scene stalls (ftueUntil), so the question's menu can open over the arrival; left under it, the
+// arrival was the top screen again once the menu closed - hidden, but every hub button (MENU, PHONE, MAP, the Inventory)
+// opened nothing (main.js openHub gives way to another screen on top).
+test('the arrival over: off the screens\' stack even with the question over it', () => {
+  const page = readFileSync(new URL('../client/ftue.js', import.meta.url), 'utf8');
+  const end = page.slice(page.indexOf('function end('), page.indexOf('export function closed'));
+  assert.match(end, /\n {2}C\.closeOverlay\('arrival'\);/, 'closed unconditionally');
+  assert.doesNotMatch(end, /topOverlay\(\) === 'arrival'\) C\.closeOverlay/, 'not only when it\'s on top');
+  const main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
+  assert.match(main, /function closeOverlay\(id = topOverlay\(\)\) \{\n {2}if \(!id\) return;\n {2}const i = overlays\.lastIndexOf\(id\);\n {2}if \(i >= 0\) overlays\.splice\(i, 1\);/, 'closeOverlay takes a screen out from under others');
 });

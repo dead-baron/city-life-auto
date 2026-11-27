@@ -15,6 +15,9 @@
 //     in a wall or inside, never on its own on the pavement
 //   - (the owner, 11-16) every run of hanging lights made fast at both ends - a wall, a post, a tree, a lamp post, a
 //     stall - with some slack in it, its bulbs or lanterns over people's heads; never a post in the road (shared/festoon.js)
+//   - (the owner, 11-16, Egret Point) nothing over a sign's words or its window's OPEN - a cash machine, a prop, a place's
+//     badge (signCovered); every business's and home's door on a path that reaches a road (doorOnGrass); every place you'd
+//     walk into walked into, its service inside at the counter (wallOnly)
 //   - no pier's or boardwalk's planks over a beach taken for water (a sliver of sea along them), and a skate park's
 //     ledges, boxes, rails and benches solid on foot (the owner, 11-14)
 // The checks are on the map's own data, so a failure names the thing and where: fix it in the data, not here.
@@ -26,6 +29,7 @@ import { lint, LINT_ALLOW } from '../tools/placementlint.mjs';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const L = lint(M);
+console.log('lint rows', JSON.stringify(Object.fromEntries(Object.entries(L.rows).map(([k, l]) => [k, l.length])))); console.log('lint saw', JSON.stringify({ roofs: L.seen.roofs, roofRows: L.seen.roofRows, roofPairs: L.seen.roofPairs, yardTwins: L.seen.yardTwins, roofSwapped: L.seen.roofSwapped, windows: L.seen.windows, tradeWindows: L.seen.tradeWindows, windowKinds: L.seen.windowKinds, picSigns: L.seen.picSigns, signFronts: L.seen.signFronts, roofSigns: L.seen.roofSigns }));
 const say = (rows) => rows.slice(0, 10).map((r) => `${r.what} at ${Math.round(r.x / 32)}, ${Math.round(r.y / 32)}${r.why ? ` (${r.why})` : ''}`).join('; ');
 
 for (const k of Object.keys(L.rows)) {
@@ -36,5 +40,5 @@ for (const k of Object.keys(L.rows)) {
 }
 
 test('the lint looked at things (it isn\'t passing on an empty world)', () => {
-  assert.ok(L.seen.boats > 200 && L.seen.signs > 150 && L.seen.props > 20000 && L.seen.decks > 500 && L.seen.beachWaterOld > 5 && L.seen.skateKit > 5 && L.seen.fronts > 1500 && L.seen.paths > 2000 && L.seen.atms > 300 && L.seen.festoons > 300 && L.seen.texts > 500, JSON.stringify(L.seen));
+  assert.ok(L.seen.boats > 200 && L.seen.signs > 150 && L.seen.props > 20000 && L.seen.decks > 500 && L.seen.beachWaterOld > 5 && L.seen.skateKit > 5 && L.seen.fronts > 1500 && L.seen.paths > 2000 && L.seen.roofSigns > 400 && L.seen.picSigns > 60 && L.seen.picSigns < L.seen.signFronts * 0.4 && L.seen.roofs > 4000 && L.seen.roofPairs > 1500 && L.seen.roofRows > L.seen.roofs * 0.15 && L.seen.roofRows < L.seen.roofs * 0.4 && L.seen.windows > 2000 && L.seen.tradeWindows > 1000 && L.seen.windowKinds.pharmacy > 10 && L.seen.windowKinds.gunshop > 20 && L.seen.windowKinds.hardware > 20 && L.seen.windowKinds.bakery > 15 && L.seen.windowKinds.barber > 10 && L.seen.windowKinds.tackle > 10 && L.seen.windowKinds.sports > 3 && L.seen.atms > 300 && L.seen.festoons > 300 && L.seen.texts > 500 && L.seen.doors > 4000 && L.seen.enter > 900, JSON.stringify(L.seen));
 });

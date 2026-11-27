@@ -164,6 +164,9 @@ function devLocal(c, extra) {
   else if (c === '@fog') S.fogForce = extra ? { k: extra.k, spread: extra.spread } : null;
   else if (c === '@bio') S.bioForce = extra ? [extra.k, 0.5] : null;   // (the sea's sparkle whatever the night: art2 host.js)
   else if (c === '@perf') import('./perfhud.js').then((m) => { const v = m.show(S); S.hud.toast(`Performance readout ${v ? 'on' : 'off'}`, 'info'); });   // (client/perfhud.js)
+  else if (c === '@clouds') { try { localStorage.setItem('cla.clouds', localStorage.getItem('cla.clouds') !== '0' ? '0' : '1'); location.reload(); } catch { /* blocked */ } }   // (cloud shadows: client/art2/game/lightgame.js CLOUD)
+  else if (c === '@recmusic') { try { localStorage.setItem('cla.recmusic', localStorage.getItem('cla.recmusic') !== '0' ? '0' : '1'); location.reload(); } catch { /* blocked */ } }   // (the staged recordings: client/sound/stage.js recOn)
+  else if (c === '@polish') { try { localStorage.setItem('cla.polish', localStorage.getItem('cla.polish') !== '0' ? '0' : '1'); location.reload(); } catch { /* blocked */ } }   // (the staged character polish pass: docs/characters/NOTES.md)
   else if (c === '@wardrobe') { closeOverlay('dev'); openCreator('dev'); }   // (the debug wardrobe: client/creator.js)
   else if (c === '@homes' && S.map) import('./devhomes.js').then((m) => m.showHomes(S.map, (id) => { send({ t: 'dev', c: 'home', op: 'go', id }); closeOverlay('dev'); }));   // (every home: client/devhomes.js)
 }
@@ -202,6 +205,7 @@ function title() {
   if (UI.page === 'tp') return '📍 Teleport';
   if (UI.page === 'give') return '🎁 Give';
   if (UI.page === 'players') return '👥 Players online';
+  if (UI.page === 'admin') return '🛡 Admin';
   if (UI.page === 'find') return '🔎 Find';
   const sec = DEV_SECTIONS.find((s) => s.id === UI.page);
   return sec ? sec.title : '';
@@ -237,6 +241,7 @@ function render() {
   else if (UI.page === 'give') fillGive(body);
   else if (UI.page === 'players') { body.innerHTML = '<div id="dev-players"></div>'; requestPlayers(); renderDevPlayers(); }
   else if (UI.page === 'find') fillFind(body);
+  else if (UI.page === 'admin') fillAdmin(body);
   else fillSection(body, DEV_SECTIONS.find((s) => s.id === UI.page));
 }
 const grid = (parent, cls = '') => { const g = document.createElement('div'); g.className = `dv-grid ${cls}`; parent.appendChild(g); return g; };
@@ -281,8 +286,25 @@ function step(d) {
   open(P[(i + d + P.length) % P.length]);
 }
 
+// the admin panel (client/adminpanel.js, loaded when it's first opened): admins and the owner (the account's role: S.role)
+const isStaff = () => S.role === 'admin' || S.role === 'owner';
+let admP = null;
+function fillAdmin(body) {
+  body.innerHTML = '';
+  (admP ||= import('./adminpanel.js').catch((e) => { admP = null; throw e; })).then((m) => m.fill(body, {
+    S, send, toast: (t, tone) => S.hud.toast(t, tone),
+    admin: (a, args) => (S.launch ? S.launch.acc.admin(a, args) : Promise.resolve({ ok: false, err: 'Not connected yet.' })),
+    staffPage: (pg) => (S.launch ? S.launch.acc.staffPage(pg) : Promise.resolve({ ok: false })),
+    spectate: () => enterSpectate(), places: () => (S.map ? teleportPlaces(S.map) : []), close: () => closeOverlay('dev'),
+  })).catch((e) => { body.textContent = 'The admin panel didn\'t load - try again.'; console.warn('[admin]', e); });
+}
 function fillHome(body) {
   body.innerHTML = `<div id="dev-sound" class="dev-sound">${esc(soundStatus())}</div>`;
+  if (isStaff()) {   // (the owner's tools first - the owner, 11-16: "make it easy to find")
+    const a = grid(body, 'dv-tiles');
+    const b = button(a, S.watch ? `🛡 Admin · watching ${S.watch.n}` : '🛡 Admin: players, watch, gifts', 'dv-tile dv-t-pl', null, 'page:admin');
+    b.style.borderColor = 'var(--gold)'; b.onclick = () => open('admin');
+  }
   // the quick presses
   const q = grid(body, 'dv-quick');
   button(q, '🔫 Every weapon + tools', 'dev-top', () => send({ t: 'dev', c: 'guns' }), 'q:guns');

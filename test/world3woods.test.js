@@ -151,7 +151,9 @@ test('World v3: Highland Woods - the falls, the trails and their furniture, the 
   check(ic && ic.where === 'island' && m.restSpots.includes(ic), `the islet's camp: ${JSON.stringify(ic)}`);
   if (ic) {
     const has = (t) => m.props.some((p) => p && p.t === t && Math.hypot(p.x - ic.x, p.y - ic.y) < 4 * TILE);
-    check(has('campfire') && has('log') && has('tent') && has('canoe'), 'the fire, a seat, a tent and a canoe by it');
+    // (the canoe a real boat since 11-22 - shared/world3-boats.js boatsAfloat3: a kayak in the water beside where it lay)
+    const canoe = (m.marina || []).some((q) => q.kind === 'kayak' && Math.hypot(q.x - ic.x, q.y - ic.y) < 8 * TILE);
+    check(has('campfire') && has('log') && has('tent') && canoe, 'the fire, a seat, a tent and a canoe by it');
     const tx = Math.floor(ic.x / TILE), ty = Math.floor(ic.y / TILE);
     const ringed = [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => { for (let k = 1; k < 30; k++) { const i = (ty + dy * k) * W + tx + dx * k; if (m.lake[i] && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP)) return true; } return false; });
     check(ringed, 'water all round it');

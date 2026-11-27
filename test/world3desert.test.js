@@ -149,8 +149,28 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
   check(ML.belt >= 80 && ML.palms >= 4, `its green belt (${ML.belt} tiles, ${ML.palms} palms)`);
   check(ML.beach >= 80 && ML.jetty >= 6, `its white beach (${ML.beach}) and jetty (${ML.jetty})`);
   const mls = m.natureSites.find((s) => s.kind === 'lake' && s.name === 'Mirage Lake');
-  check(mls && m.props.some((p) => p && p.t === 'rowboat' && Math.hypot(p.x - mls.x, p.y - mls.y) < 30 * TILE), 'its rowboat by the jetty');
+  // (a real boat since 11-22 - shared/world3-boats.js boatsAfloat3: moored in m.marina)
+  check(mls && (m.marina || []).some((q) => q.kind === 'rowboat' && Math.hypot(q.x - mls.x, q.y - mls.y) < 30 * TILE), 'its rowboat by the jetty');
   check(mls && m.props.filter((p) => p && p.t === 'palm_a' && Math.hypot(p.x - mls.x, p.y - mls.y) < 30 * TILE).length >= 4, 'palms round it');
+  // (the owner, 11-23: "the lake a perfect oval"; 11-24: "it was mirage lake". Its shore against the oval that fits it
+  // best, on 72 bearings: it was within a twelfth of it all round - sd 0.042, 0.91 to 1.07. A bay, a point and a cove
+  // now: the shore strays from the oval, in places by a sixth and more. And the jetty still stands in the water.)
+  if (mls) {
+    const sx = Math.floor(mls.x / TILE), sy = Math.floor(mls.y / TILE), wetAt = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= m.h) return false; const t = m.tiles[y * W + x]; return t === T.WATER || t === T.DEEP || (t === T.DOCK && !m.land[y * W + x]); };
+    const seen = new Set([sy * W + sx]), q = [[sx, sy]], pts = [];
+    while (q.length) { const [x, y] = q.pop(); pts.push([x, y]); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Y = y + dy; if (!seen.has(Y * W + X) && wetAt(X, Y) && Math.abs(X - sx) < 45 && Math.abs(Y - sy) < 45) { seen.add(Y * W + X); q.push([X, Y]); } } }
+    let cx = 0, cy = 0, vx = 0, vy = 0;
+    for (const [x, y] of pts) { cx += x / pts.length; cy += y / pts.length; }
+    for (const [x, y] of pts) { vx += (x - cx) ** 2; vy += (y - cy) ** 2; }
+    const rx = Math.sqrt(vx / pts.length) * 2, ry = Math.sqrt(vy / pts.length) * 2, R = [];
+    for (let k = 0; k < 72; k++) { const a2 = k / 72 * Math.PI * 2; let r = 0; for (let t = 0; t < 60; t += 0.25) if (seen.has(Math.floor(cy + Math.sin(a2) * t + 0.5) * W + Math.floor(cx + Math.cos(a2) * t + 0.5))) r = t; R.push(r * Math.hypot(Math.cos(a2) / rx, Math.sin(a2) / ry)); }
+    const mean = R.reduce((p, c) => p + c, 0) / 72, sd = Math.sqrt(R.reduce((p, c) => p + (c - mean) ** 2, 0) / 72);
+    console.log('Mirage Lake shore against its oval: sd', sd.toFixed(3), 'from', Math.min(...R).toFixed(2), 'to', Math.max(...R).toFixed(2));
+    check(sd >= 0.07 && Math.min(...R) <= 0.82 && Math.max(...R) >= 1.12, `Mirage Lake's shore is an oval again (sd ${sd.toFixed(3)}, ${Math.min(...R).toFixed(2)} to ${Math.max(...R).toFixed(2)} of the oval that fits it)`);
+    let dock = 0, dockWet = 0;
+    for (let y = sy - 45; y < sy + 45; y++) for (let x = sx - 45; x < sx + 45; x++) if (x >= 0 && y >= 0 && x < W && y < m.h && m.tiles[y * W + x] === T.DOCK) { dock++; if ([[1, 0], [-1, 0], [0, -1]].some(([dx, dy]) => { const t = m.tiles[(y + dy) * W + x + dx]; return t === T.WATER || t === T.DEEP; })) dockWet++; }
+    check(dock >= 6 && dockWet >= 4, `its jetty stands in the water (${dockWet} of ${dock} tiles with water beside them)`);
+  }
   // 9. the desert's roads by their furniture (shared/world3-roadside.js): white delineator posts along their shoulders -
   // on the sand or gravel by the asphalt, in the desert's districts only, never on a road, a designed place's ground,
   // a lot or a building; along several roads

@@ -50,6 +50,7 @@ import * as firstcar from './firstcar.js';
 import * as safety from './safety.js';
 import * as homes from './homes.js';
 import * as fishing from './fishing.js';
+import * as combat from './combat.js';   // (the rod you're given, in your hand)
 import * as mailjob from './mailjob.js';
 import * as skills from './skills.js';
 import * as transit from './transit.js';
@@ -68,12 +69,14 @@ const stepCtl = (f) => (f.step === 1 && f.car && f.car.k === 'steal' ? 'vehicle'
 // The first-time moments: what each says (one line), the control it names, the Guide's section it opens on
 export const MOMENTS = {
   wanted: { text: 'You\'re wanted. Get out of sight and lie low until the stars fade.', sec: 'law' },
-  down: { text: 'Knocked down - your guns fall where you lie. Pick where to wake up, or call for help and wait for a revive.', sec: 'law' },   // (the guns at risk: arms.js - the Guide's Knocked down and Your stash)
+  down: { text: 'Knocked down - the cash and guns you carry fall where you lie (bank cash at any ATM). Pick where to wake up, or call for help.', sec: 'law' },   // (the cash line: the balance audit's A4, the owner 11-24)   // (the guns at risk: arms.js - the Guide's Knocked down and Your stash)
   shop: { text: 'Shopping: pick a line to buy it. Cash goes first, then your bank.', sec: 'items' },
   transit: { text: 'Buses, trains and ferries are free - wait at the stop and board.', ctl: 'action', sec: 'around' },
   night: { text: 'Night falls. A flashlight lights your way.', ctl: 'light', sec: 'items' },
   hurt: { text: 'Hurt? Hold for your quick wheel - a bandage patches you up.', ctl: 'use', sec: 'items' },
   chat: { text: 'Another player\'s near - say hi. Quick lines and emotes too, no typing needed.', ctl: 'chat', sec: 'activities' },
+  rod: { text: 'Take your rod out to fish - it\'s with your weapons.', ctl: 'nextw', sec: 'activities' },
+  wade: { text: 'Shallow water: you can drive through it, slowly. Stay in too long and the engine floods - deeper water sinks it.', sec: 'around' },   // (the first time your vehicle wades: vehicles.js wade, shared/physics.js wade)   // (by the water, a rod in the bag: players.js fishHere)
 };
 
 // The arrival stations' card: each region's name and its one line (World v3's regions: shared/world3-arrivals.js
@@ -176,7 +179,7 @@ export function goalFor(world, ans, x, y) {
 }
 
 // ---- the lines ---------------------------------------------------------------------------------------------------------
-const THERE = { mail: (g) => `Take a mail round at ${g.name}`, courier: (g) => `Sign on for work at ${g.name}`, fence: (g) => `Talk to the fence at ${g.name}`, gang: (g) => `Talk to the Syndicate at ${g.name}`, fish: () => 'Cast a line: face the water, hold and let go' };
+const THERE = { mail: (g) => `Take a mail round at ${g.name}`, courier: (g) => `Sign on for work at ${g.name}`, fence: (g) => `Talk to the fence at ${g.name}`, gang: (g) => `Talk to the Syndicate at ${g.name}`, fish: () => 'Rod in hand, face the water: hold and let go to cast' };
 const PLACE = { mail: (g) => g.name, courier: (g) => g.name, fence: (g) => g.name, gang: (g) => g.name, fish: (g) => g.name };
 // the step's line (the page puts its control's glyph in front of it) and the job card's objective
 export function stepLine(world, p, f) {
@@ -286,7 +289,7 @@ function offer(world, p) {
   if (opts.length < 2) { pick(world, p, null); return; }   // (one station, or none: nothing to choose)
   f.st = 'pick'; stamp(f, 'pick'); p.ftuePickAt = 0;
   p.ftuePickUntil = world.time + FTUE.pickS;
-  send(p, { t: 'ftue', a: 'pick', title: 'Where to?', sub: 'Pick where your train comes in. There\'s a cheap car to be had near each one.', opts, s: FTUE.pickS });
+  send(p, { t: 'ftue', a: 'pick', title: 'Where to?', sub: 'Pick where your train comes in.', opts, s: FTUE.pickS });
   store.touch(); p.meDirty = true;
 }
 // picked (stn: a station's poi from the card), or the default (null: skipped, left, or not one of the card's)
@@ -354,7 +357,8 @@ function gear(world, p) {
   if (!fishing.canFish(p)) { inv[FTUE.rod] = (inv[FTUE.rod] || 0) + 1; got.push(`a ${ITEMS[FTUE.rod].name.toLowerCase()}`); }
   const [bait, n] = FTUE.bait;
   if (!Object.keys(inv).some((k) => ITEMS[k] && ITEMS[k].bait && inv[k] > 0)) { inv[bait] = (inv[bait] || 0) + n; got.push(`${n} ${ITEMS[bait].name.toLowerCase()}`); }
-  if (got.length) world.notify(p, `In your bag: ${got.join(' and ')}.`, 'good');
+  if (got.length) world.notify(p, `In your Inventory: ${got.join(' and ')}.`, 'good');
+  if (p.ped && !p.ped.dead && p.ped.weapon === 'fists') combat.selectWeapon(world, p.ped, 'rod');   // (the rod in your hand: you fish with it out - fishing.js)
   store.touch();
 }
 function setStep(world, p, n) {

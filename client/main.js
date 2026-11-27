@@ -2,20 +2,22 @@
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_LOOP_S, SKY_LIFT } from '../shared/constants.js';
-import { cityFromData, WATER_T, TRAIN_CARS, mapSignature } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
+import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, FENCE_PROPS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
-import { pedStep, vehStep, driveInput, setFences } from '../shared/physics.js';
+import { pedStep, vehStep, driveInput, setFences, wadeBand, WB } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
 import { VEHICLE_BY_INDEX, vehicleWord } from '../shared/vehicles.js';
-import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb } from '../shared/items.js';
+import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb, ITEMS } from '../shared/items.js';
+import { loadout } from '../shared/loadout.js';
 import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
+import { raceShown } from '../shared/hidden.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
-import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, setTouchAim, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
+import { initInput, sample, input, takeNumberPick, tabHeld, tabDown, cancelTabTap, settings, saveSettings, detectDevice, touchAimState, virtualTap, setTouchAim, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
@@ -29,10 +31,9 @@ import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
 import { createRouter } from './route.js';
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
-import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
-// The first-time experience (the old city tour's place - retired 11-04): the server runs it (server/systems/ftue.js); its
-// page side, client/ftue.js, loads the first time the server speaks of it - a new character's arrival, the first goal's
-// lines, a first-time moment's tip - never with the page.
+import { EVENT_KINDS } from '../shared/worldevents.js';
+// The first-time experience: the server runs it (server/systems/ftue.js); its page side, client/ftue.js, loads the
+// first time the server speaks of it - never with the page.
 let FT = null, ftP = null;
 const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
   m.init({ S, send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay: () => topOverlay(), sfx: (n, v) => sfx(n, v), hud: () => S.hud, openGuide: (sec) => { S.guideSec = sec; openHub('phone', 'guide'); }, openApp: (k) => openHub('phone', k), setCam: (fn) => { S.camOver = fn; }, refocus: () => { ovFocus = startFocus(); focusOverlay(); } });
@@ -111,6 +112,8 @@ if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection 
 setTimeout(preloadAudio, 1500);
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
+// (the character polish pass, staged - the debug menu's switch: the title's portrait and the creator draw with it too; docs/characters/NOTES.md)
+try { if (localStorage.getItem('cla.polish') !== '0') window.CLA_POLISH = Promise.all([import('./art2/people.js'), import('./art2/peoplepolish.js')]).then(([p, m]) => p.setPolish(m.POLISH)).catch(() => {}); } catch { /* blocked */ }
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
 const afloat = (e) => e.swim || (e.kind === K.VEH && !!e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).kind === 'boat');
 S.fx.water = (x, y) => { const t = S.map ? S.map.tileAtPx(x, y) : -1; return WATER_T[t] === 1 ? 1 : t === T.BRIDGE && afloatUnder(S.ents.values(), x, y, afloat) ? 2 : 0; };   // (render/fx.js: 2 under a deck)
@@ -146,7 +149,8 @@ function launchHello() {   // (in the hello: this browser's device marker, and w
     if (!dm || !/^[a-f0-9]{32}$/.test(dm)) { const b = new Uint8Array(16); crypto.getRandomValues(b); dm = [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); localStorage.setItem('cla.dm', dm); }
     age17 = !!(JSON.parse(localStorage.getItem('cla.gate') || 'null') || {}).age17;
   } catch { /* storage blocked */ }
-  return { dm, age17, restore: !!S.restore };
+  let tz = null; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { /* no Intl */ }
+  return { dm, age17, restore: !!S.restore, tz, dk: getDevice().kind };   // (tz, dk: the owner's console - the country when the address can't say, the device kind)
 }
 function launchCall(k, a) {
   if (S.practice) return;
@@ -157,7 +161,7 @@ function launchCall(k, a) {
     // Messages app and Settings > Chat; while its line has the keys, the game's input rests: S.chatUp)
     const chat = ch.createChat({
       send, canvas, toast, screenOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry }) : null; },
-      headOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry - (e.rz ? liftOf(e.rz) : 0) - ((e.d && e.d.gt === 'emote' && EM_HEAD[e.d.em]) || SKULL_HEAD) }) : null; },   // (the top of the head: the balloons, the bubbles)
+      headOf: (eid) => { const e = S.ents.get(eid); if (!e || e.rx === undefined) return null; const q = worldToScreen({ x: e.rx, y: e.ry - (e.rz ? liftOf(e.rz) : 0) - ((e.d && e.d.gt === 'emote' && EM_HEAD[e.d.em]) || SKULL_HEAD) }); if (q && e.d && e.d.pl && e.d.n && e.id !== S.myPedId) q.y -= e.d.np && e.d.np.t ? 26 : 15; return q; },   // (over another player's name tag, which hangs just over the head: drawWorldLabels)   // (the top of the head: the balloons, the bubbles)
       moreEmotes: () => { if (S.playing && !topOverlay()) openHub('phone', 'emotes'); },
       device: () => input.device, playing: () => !!(S.playing && S.welcomed && !S.practice),
       focus: (on) => { S.chatUp = !!on; }, dot: (on) => { S.chatDot = on; $('b-chat').classList.toggle('dot', on); $('b-talk').classList.toggle('dot', on); },
@@ -167,7 +171,7 @@ function launchCall(k, a) {
     // (noGate: the title shows the age gate itself, in its own slot, before the first PLAY - withGate)
     acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
     S.launch = { acc, ga, chat, er };
-    acc.launchInfo().then((i) => { discordLinks(i && i.discord); supportLinks(i && i.support); }).catch(() => {});
+    acc.launchInfo().then((i) => { S.devOpen = !!(i && i.devOpen); syncDebugUi(); discordLinks(i && i.discord); supportLinks(i && i.support); }).catch(() => {});
     // the title's slots (UI-10): SIGN IN opens the account panel in the sign-in screen, the gate shows in the gate's -
     // with no sign-in provider switched on (today), the panel still has the transfer code and the name
     setAccountUi({
@@ -183,7 +187,7 @@ function launchCall(k, a) {
     if (k === 'msg') {
       // (a new session's account state: GA's ids again - the server forgets them with a session - and any errors queued
       // while offline go now)
-      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) { L.ga.setId(a.ga); L.ga.resend(); L.er.flush(); } L.acc.onMessage(a); } else L.chat.onMessage(a);
+      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) { L.ga.setId(a.ga); L.ga.resend(); L.er.flush(); S.role = a.role || null; syncDebugUi(); } L.acc.onMessage(a); } else L.chat.onMessage(a);
     } else if (k === 'play') { L.ga.event('play_click'); send({ t: 'ftue', s: 'title_play' }); }
     else if (k === 'world') { L.ga.event('in_world'); send({ t: 'ftue', s: 'in_world' }); }
     else if (k === 'perf') L.ga.perf(a);
@@ -210,7 +214,17 @@ function launchPad() {
 // and PLAY tries again. 4009 kicked, 4010 banned, 4011 the age gate, 4012 moved to another device, 4013 too many new
 // guests from this network, 4014 signed out on this device (the token goes: PLAY plays as a new guest), 4017 a deleted
 // account (RESTORE brings it back: the hello's restore - server/launch.js login).
-const REFUSED = new Set([4009, 4010, 4011, 4012, 4013, 4014, 4017]);
+const REFUSED = new Set([4009, 4010, 4011, 4012, 4013, 4014, 4017, 4018]);   // (4018: the city's full and so is the line - server/line.js)
+// The city's full: our place in the line at the door, kept up to date; the welcome comes when it's our turn. Cancel: out
+// of the line (PLAY joins it again).
+function inLine(m) {
+  const st = $('t-status');
+  st.textContent = `The city's full - you're #${m.pos} in line`;
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = 'Cancel'; b.className = 't-restore';
+  b.onclick = () => { const w = S.ws; S.refusedWhy = 'You left the line.'; refusedAtDoor(4018); try { w && w.close(); } catch { /* closed */ } };
+  st.append(' ', b);
+}
 function refusedAtDoor(code) {
   clearTimeout(S.reconnectT);
   S.ws = null; S.welcomed = false; S.refused = code;
@@ -279,7 +293,7 @@ function connect() {
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
   S.ws = ws;
-  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
+  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; S.updatingUntil = 0; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
     S.lastMsgAt = performance.now();   // (the probe after coming back into view: update.js onVisible)
     if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"spawnat"')) { spawnAt(ev.data); return; }   // (never held: the city waits for it)
@@ -351,25 +365,28 @@ function scheduleReconnect(why, toTitle = false) {
   S.ws = null;
   S.connectFailed = true;
   if (S.playing && S.everConnected && !S.lostAt) S.lostAt = performance.now();
-  if (!toTitle && S.playing && S.everConnected && performance.now() - S.lostAt < RECONNECT_IN_GAME_MS) reconnecting(true);
+  const updating = (S.updatingUntil || 0) > performance.now();   // (the server said it was restarting for an update: it's a few minutes, not lost)
+  if (!toTitle && S.playing && S.everConnected && (updating || performance.now() - S.lostAt < RECONNECT_IN_GAME_MS)) reconnecting(true, updating);
   else {
     reconnecting(false);
     $('title').classList.remove('hidden');
     $('hud').classList.add('hidden');
     $('t-resume').classList.add('hidden');
     $('play').disabled = true;
-    $('t-status').textContent = S.everConnected
+    $('t-status').textContent = updating ? 'The server is updating to a new version - back in a few minutes. Your progress is saved; you\'ll go straight back in.'
+      : S.everConnected
       ? `${why}. Retrying in ${Math.round(S.reconnectIn / 1000)}s... (if you were mid-fight you have 30s before your ghost drops loot)`
-      : `The online city isn't reachable right now (retrying every few seconds).${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
+      : `The online city isn't reachable right now - it may be updating (a few minutes). Retrying every few seconds.${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
   }
   clearTimeout(S.reconnectT);
   S.reconnectT = setTimeout(connect, retryDelay(S.reconnectIn, document.hidden, performance.now() - (S.visibleAt ?? -1e9)));
   S.reconnectIn = Math.min(15000, S.reconnectIn * 1.6);
 }
-function reconnecting(on) {
+function reconnecting(on, updating = false) {
   let el = document.getElementById('reconn');
   if (!on) { if (el) el.classList.add('hidden'); return; }
-  if (!el) { el = document.createElement('div'); el.id = 'reconn'; el.setAttribute('role', 'status'); el.textContent = 'Reconnecting...'; document.body.appendChild(el); }
+  if (!el) { el = document.createElement('div'); el.id = 'reconn'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = updating ? 'Server updating - back in a few minutes...' : 'Reconnecting...';
   el.classList.remove('hidden');
 }
 // The page going into the background (a phone switching apps, another tab): the server is told it's away - it sends
@@ -408,9 +425,9 @@ function send(obj) { if (S.ws && S.ws.readyState === 1) S.ws.send(typeof obj ===
 let LOOKS = null, creatorP = null;
 const lookWait = [];
 import('../shared/look.js').then((m) => { LOOKS = m; for (const d of lookWait.splice(0)) lookApp(d); }).catch((e) => console.warn('[looks]', e));
-function lookApp(d) { if (!LOOKS) { lookWait.push(d); return; } const L = LOOKS.decodeLook(d.app.lk); if (L) d.app = LOOKS.lookToApp(L, d.app.lk); }
+function lookApp(d) { if (!LOOKS) { lookWait.push(d); return; } const L = LOOKS.decodeLook(d.app.lk); if (L) { const fd = d.app.fd; d.app = LOOKS.lookToApp(L, d.app.lk); if (fd) d.app.fd = 1; } }   // (fd: the founder's look over it - client/art2/game/peds.js)
 function openCreator(mode) {
-  creatorP ||= import('./creator.js').then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k), zoom: () => baseZoom() }); S.creator = m; return m; });   // (zoom: the game's CSS px per world px - the creator draws you a little bigger than that)
+  creatorP ||= Promise.resolve(window.CLA_POLISH).then(() => import('./creator.js')).then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k), zoom: () => baseZoom() }); S.creator = m; return m; });   // (zoom: the game's CSS px per world px - the creator draws you a little bigger than that)
   creatorP.then((m) => m.open(mode, S.looks)).catch((e) => console.warn('[creator]', e));
 }
 
@@ -422,7 +439,7 @@ function onText(m) {
       else if (worldChanged(m)) break;   // (the server runs another world than the one this page asked its city worker for)
       else if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
       try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
-      S.welcomed = true; S.restore = false; S.pid = m.pid; S.dev = !!m.dev;
+      S.welcomed = true; S.restore = false; S.pid = m.pid; S.dev = !!m.dev; syncDebugUi();
       S.day = Number(m.day) || 0; S.snapLoop = undefined;   // (the day: the server's count of the loop's turns; onBinary counts on)
       if (!m.practice) S.everConnected = true;
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
@@ -446,6 +463,7 @@ function onText(m) {
       // home leaves you stuck" - the page kept showing the rooms while the server had you out by the door)
       if (S.homeP) S.homeP.then((mod) => mod.onMsg(S, { off: 1 })).catch(() => {});
       for (const p of S.map.props) if (p && p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
+      if (S.map.downFences) S.map.downFences.clear();
       S.confirmedBreaks.clear(); S.predBreaks.clear();
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
       S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) if (pr) pr.off = false;
@@ -475,7 +493,8 @@ function onText(m) {
       if (!S.playing) requestPlayers();   // (who's online, on the title)
       break;
     case 'sp': for (const d of m.e) { const e = ent(d.id, d.k); if (d.app && d.app.lk && d.app.t === undefined) lookApp(d); e.d = d; } break;
-    case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); if (m.open) openCreator(m.open); else if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first; the home's wardrobe opens the wheel or the mirror)
+    case 'stash': S.stash = m; bag.refresh(); if (m.open && S.playing) { if (S.hud && S.hud.menuOpen) S.hud.closeMenu(); if (topOverlay() !== 'inv') openHub('bag'); } break;   // (your stash, opened at one of its doors: server/systems/stash.js - the Inventory shows it)
+    case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); bag.refresh(); if (m.open) openCreator(m.open); else if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first; the home's wardrobe opens the wheel or the mirror)
     case 'ds': for (const id of m.ids) S.ents.delete(id); break;
     case 'ev': for (const ev of m.l) onEvent(ev); break;
     case 'fish': fishGo(m); break;   // (a catch landed: its card)
@@ -509,10 +528,12 @@ function onText(m) {
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
+    case 'fishlog': phone.on('FishLog', m); break;   // the Fish log app (server fishing.js logInfo)
     case 'next': phone.on('Next', m); break;   // the "What's next" app (server whatsnext.js; client/whatsnext.js)
     case 'crew': phone.on('Crew', m); S.crewMsg = m; if (hubMod && topOverlay() === 'players') hubMod.people(); break;   // the Crew app and the People tab (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       if (m.close) { if (topOverlay() === 'arcade') closeOverlay('arcade'); break; }   // (quit from the server - activityquit.js: the score so far goes in as Esc's does)
+      if ((m.game === 'jam' || m.game === 'rhythm') && inHub()) closeHub();   // (an instrument out of the Inventory: the pad and your character in view - the owner, 11-16)
       openOverlay('arcade');
       $('arc-hint').textContent = input.device === 'touch' ? 'Tap ✕ to leave' : 'Esc / B to leave';
       (m.game === 'race' ? import('./racebook.js') : m.game === 'rhythm' || m.game === 'jam' ? import('./music/play.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : m.game === 'chess' ? import('./leisure/chess.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send(m.game === 'chess' ? { t: 'chess', a: 'leave' } : m.mp ? { t: 'pool', a: 'leave' } : { t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
@@ -524,8 +545,10 @@ function onText(m) {
     case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.on('Transit', m); if (S.bigmap) mapwp.refreshLegend(); break;
     case 'logoff': onLogoff(m); break;   // (the pause list's LOG OFF: the server's count - UI-10)
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
-    case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; S.refusedWhy = m.reason; break;
+    case 'kicked': if (m.restart) { S.updatingUntil = performance.now() + (m.back || 300) * 1000; break; }   // (the server restarting for an update: keep reconnecting through it - scheduleReconnect)
+      S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; S.refusedWhy = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
+    case 'line': inLine(m); break;   // the city's full: waiting at the door, in at our turn (server/line.js)
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
     case 'wiped': freshDone(m.keep); break;   // Start fresh: the character is gone (server players.js wipeAccount)
     case 'acctdeleted': S.ws = null; location.replace(location.pathname + location.search); break;   // (Delete account: back to the title, which says it's deleted and offers RESTORE - refusedAtDoor 4017)
@@ -603,7 +626,7 @@ function reconcile(s) {
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
     if (def.kind === 'air' && !S.airMod) { S.pred = null; loadAir(); return; }   // (flying: predicted once render/aircraft.js is in)
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), ug: S.ugLayer || 0 };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), stalled: def.kind !== 'air' && !!(e.flags & VF.STALL), ug: S.ugLayer || 0 };
     S.pred = { kind, s: st, def, prev: null };
     if (def.kind === 'air') { Object.assign(st, { alt: s.self.rdy, vz: s.self.stamina, spool: s.self.rollT, bank: s.self.rdx, slip: 0, spin: 0, launch: 0 }); S.pred.air = true; }
     else if (def.horse) { const r = s.self.rdy; st.blown = r < -0.5; st.stam = st.blown ? -1 - r : r; }   // (a horse's wind, as the server has it: server/net.js)   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
@@ -691,7 +714,13 @@ function fixedStep() {
   if (!spec && !ch && input.wheelHold < 0 && canWheel() && !wheel.open && !wpick.open && rad) rad.open();
   else if (!spec && !ch && input.wheelHold > 0 && canWheel() && !wheel.open && !wpick.open) wwheel.show();
   if (rad && rad.isOpen) { if (input.wheelRelease < 0) rad.release(); else if (input.wheelHeld >= 0 || !canWheel()) rad.close(); else if (input.padAxes) rad.point(input.padAxes.lx, input.padAxes.ly, input.padAxes.rx, input.padAxes.ry); }
-  if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
+  // the keyboard's: hold Tab (a tap is the next weapon - input.js), point with the mouse, let go
+  if (!spec && !ch && !S.kbWheel && tabHeld() && canWheel() && !wheel.open && !wpick.open && !wwheel.open && wwheel.show()) { S.kbWheel = true; cancelTabTap(); }
+  if (S.kbWheel) {
+    if (!wwheel.open) S.kbWheel = false;
+    else if (!canWheel()) { wwheel.close(); S.kbWheel = false; }
+    else { const ms = mouseScreen(); wwheel.point({ lx: 0, ly: 0, rx: (ms.x - innerWidth / 2) / 90, ry: (ms.y - innerHeight / 2) / 90 }); if (!tabDown()) { wwheel.pick(); S.kbWheel = false; } }
+  } else if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
   const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || S.chatUp || (S.launch && S.launch.chat.isOpen && input.device === 'touch') || inOverlay || wheel.open || wpick.open || wwheel.open || (S.launch && S.launch.chat.radial.isOpen) || spec || !!(DIR && DIR.holds());   // (DIR: the cinematic mode's free camera has the keys)
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
   // ignore the action buttons until they're released, or B would instantly reopen the shop menu
@@ -729,7 +758,8 @@ function fixedStep() {
   const n = takeNumberPick();
   if (n !== null && !spec) {
     if (S.hud.menuOpen) S.hud.pickMenu(n);
-    else if (S.me && S.me.weapons[n]) send({ t: 'weapon', id: S.me.weapons[n].id });
+    else if (topOverlay() === 'inv') { if (bagMod) bagMod.numberKey(n); }
+    else if (!topOverlay()) quickKey(n);
   }
 }
 
@@ -773,6 +803,7 @@ function setPropBroken(i, a, withFx) {
   p.broken = { a };
   const se = S.map.propSolid.get(i);
   if (se) se.off = true;
+  if (FENCE_PROPS.has(p.t)) (S.map.downFences ??= new Set()).add(i);
   S.ground.invalidateAt(p.x, p.y);
   if (S.art2) S.art2.propChanged(i);
   if (!withFx) return;
@@ -947,7 +978,10 @@ function onEvent(ev) {
       // running shooter (the owner, 2026-10-09). The flash stays on the gun for its few frames (collectLights).
       const sh = ev.id ? S.ents.get(ev.id) : null, still = ev.x2 === ev.x1 && ev.y2 === ev.y1;
       const a = still ? (sh && sh.ra !== undefined ? sh.ra : 0) : Math.atan2(ev.y2 - ev.y1, ev.x2 - ev.x1);
-      const off = w && w.type === 'rocket' ? 20 : 14, follow = !!(sh && sh.rx !== undefined && Math.hypot(sh.rx - ev.x1, sh.ry - ev.y1) < 260);
+      // (at the barrel's end as the aiming pose draws it - the owner, 11-23: "coming from the middle of my character":
+      // MUZZLE [reach along the aim, height] by how it's held, measured off the people renderer's aim pose)
+      const mz = MUZZLE[w && LONG_GUN.has(w.id) ? 'long' : w && (w.type === 'rocket' || w.type === 'flame') ? 'tube' : 'hand'];
+      const off = mz[0], follow = !!(sh && sh.rx !== undefined && Math.hypot(sh.rx - ev.x1, sh.ry - ev.y1) < 260);
       // (from a car: out of its window as the car's drawn, not at the shooter lagging behind it - render/fx.js windowMuzzle)
       const car = follow && sh.parent ? S.ents.get(sh.parent) : null, cd = car && car.kind === K.VEH && car.d && car.rx !== undefined ? VEHICLE_BY_INDEX[car.d.m] : null;
       const win = cd && cd.kind !== 'bike' && cd.kind !== 'air' && !cd.crew && !cd.horse ? { car: car.id, def: cd, back: !!sh.back, aim: a } : null;
@@ -956,7 +990,7 @@ function onEvent(ev) {
       fx.tracer(x1, y1, ev.x2, ev.y2);
       if (win) { win.until = S.loopClock + 0.45; (S.leans ||= []).push(win); }   // (the arm and the gun out of the window: drawLeans)
       if (w && w.silenced) { sfx('swing', distVol(ev.x1, ev.y1) * 0.5); break; } // a suppressed cough, no muzzle flash
-      S.flashes.push({ x: x1, y: y1, t: 0.065, a, r: 170, id: follow && !win ? ev.id : 0, off, win });
+      S.flashes.push({ x: x1, y: y1, z: win ? 18 : mz[1], t: 0.065, a, r: 170, id: follow && !win ? ev.id : 0, off, win });
       fx.spawn(4, x1, y1, 0, 0, 0.05, 6, '#fff3b0');
       sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun' || w.id === 'huntrifle') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
       break;
@@ -1085,8 +1119,9 @@ function onEvent(ev) {
     case 'swish': { const e = S.ents.get(ev.id); if (e) { e.swingAt = S.loopClock; e.swingSide = (e.swingSide || 0) ^ 1; } sfx('swing', distVol(e ? e.rx : 0, e ? e.ry : 0) * 0.5); break; }
     case 'flame': {   // the flamethrower's jet (server combat.js flame): a cone of fire out of the nozzle, the roar
       const sh = ev.id ? S.ents.get(ev.id) : null, x0 = sh && sh.rx !== undefined ? sh.rx : ev.x, y0 = sh && sh.ry !== undefined ? sh.ry : ev.y;
-      for (let k = 0; k < 7; k++) { const aa = ev.a + (Math.random() - 0.5) * 0.5, sp = 380 + Math.random() * 160, d = 14; fx.spawn(3, x0 + Math.cos(ev.a) * d, y0 + Math.sin(ev.a) * d, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.28 + Math.random() * 0.12, 3 + Math.random() * 4, Math.random() < 0.5 ? '#ff9a1a' : '#ffd23a', 18); }
-      if (sh) S.flashes.push({ x: x0 + Math.cos(ev.a) * 30, y: y0 + Math.sin(ev.a) * 30, t: 0.1, a: ev.a, r: 150, id: ev.id, off: 30 });
+      const FR = WEAPONS.flamer.range;   // (the jet reaches as far as it burns: items.js flamer range)
+      for (let k = 0; k < 9; k++) { const aa = ev.a + (Math.random() - 0.5) * 0.5, sp = 380 + Math.random() * 160, d = 14; fx.spawn(3, x0 + Math.cos(ev.a) * d, y0 + Math.sin(ev.a) * d, Math.cos(aa) * sp, Math.sin(aa) * sp, (FR / sp) * (0.75 + Math.random() * 0.3), 3 + Math.random() * 4, Math.random() < 0.5 ? '#ff9a1a' : '#ffd23a', 18); }
+      if (sh) S.flashes.push({ x: x0 + Math.cos(ev.a) * 30, y: y0 + Math.sin(ev.a) * 30, t: 0.1, a: ev.a, r: FR, id: ev.id, off: 30 });
       sfx('burner', distVol(ev.x, ev.y) * 0.5);
       break;
     }
@@ -1131,7 +1166,7 @@ function onEvent(ev) {
     case 'propfix': {
       const p = S.map.props[ev.i];
       S.confirmedBreaks.delete(ev.i); S.predBreaks.delete(ev.i);
-      if (p) { delete p.broken; const se = S.map.propSolid.get(ev.i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); if (S.art2) S.art2.propChanged(ev.i); }
+      if (p) { delete p.broken; if (S.map.downFences) S.map.downFences.delete(ev.i); const se = S.map.propSolid.get(ev.i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); if (S.art2) S.art2.propChanged(ev.i); }
       break;
     }
     case 'geyser': { const g = S.geysers.find((q) => Math.hypot(q.x - ev.x, q.y - ev.y) < 4); if (g) delete g.seq; else S.geysers.push({ x: ev.x, y: ev.y, until: performance.now() + ev.d * 1000 }); fx.splash(ev.x, ev.y, 14); break; }
@@ -1140,12 +1175,7 @@ function onEvent(ev) {
     case 'thud': sfx('thud', distVol(ev.x, ev.y)); break;
     case 'skbank': case 'skbail': if (S.skate) S.skate.onEvent(ev, fx); break;   // (a skate combo banked, or lost: client/skate.js)
     case 'ollie': { const e = S.ents.get(ev.id); if (e) { e._oa = now; e._od = ev.d || 0.55; e._oh = ev.h ?? 15; e._oh0 = ev.h0 || 0; } break; }   // (an air on a board: how long, how high - server skate.js)
-    case 'bail': {   // thrown off a skateboard (server skate.js): the board shoots off the way they were going, spinning, and lies there a moment
-      const a = ev.a || 0, sp = 60 + (ev.v || 0) * 0.55;
-      fx.chunk(boardImg(), 0, 0, 22, 8, 20, 7, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 70, (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 5), 1.6);
-      const c = fx.chunks[(fx.ci + fx.chunks.length - 1) % fx.chunks.length]; if (c) c.a = a;
-      break;
-    }
+    case 'bail': break;   // thrown off a skateboard: the board itself skids off on the server (skate.js slide) - no stand-in here (the owner, 11-17)
     case 'door': sfx('door', distVol(ev.x, ev.y)); break;
     case 'deposit': fx.ring(ev.x, ev.y - 20, 26, 'rgba(61,220,132,'); sfx('cash', distVol(ev.x, ev.y)); fx.floatText(ev.x, ev.y - 40, `Banked $${ev.n}`, '#3ddc84'); break;
     case 'loot': case 'cash': fx.ring(ev.x, ev.y, 20, 'rgba(120,255,160,'); sfx('cash', distVol(ev.x, ev.y)); if (ev.n) fx.floatText(ev.x, ev.y - 18, `+$${ev.n}`, '#7fe07f'); break;
@@ -1363,7 +1393,7 @@ function keepWindow(job) {
   clearInterval(S.winTimer);
   S.winTimer = setInterval(() => {
     if (!S.welcomed || !S.map || !S.win) return;
-    const me = selfPos(), eye = (DIR && DIR.eye()) || me;   // (the cinematic mode's camera off you: the window goes with it)
+    const me = selfPos(), eye = (DIR && DIR.eye()) || (S.watch ? { x: S.cam.x, y: S.cam.y } : null) || me;   // (the cinematic mode's camera off you, or an admin watching someone: the window goes with it)
     if (!me || !Number.isFinite(me.x)) return;
     const at = [Math.floor(me.x / TILE), Math.floor(me.y / TILE)];
     try { job.worker.postMessage({ where: [Math.floor(eye.x / TILE), Math.floor(eye.y / TILE)] }); } catch { /* gone */ }
@@ -1459,7 +1489,7 @@ async function startArt2(map) {
   S.art2Off = null;
   if (token !== S.art2Token || S.map !== map) return; // a newer city arrived meanwhile
   // what the renderer borrows from here: how people look and pose, body heights, seats, the birds
-  const api = { pedLook, pedPose, vehLift, selfPos, walkInAt, umbrellaSprite, birds, PED_BUILD_SCALE, CSCALE, SEAT_BIKE, RIDER_H, UMBRELLA_COLORS };
+  const api = { pedLook, pedPose, fishFrame, vehLift, selfPos, walkInAt, umbrellaSprite, birds, PED_BUILD_SCALE, CSCALE, SEAT_BIKE, RIDER_H, UMBRELLA_COLORS };
   let w = null;
   // (a city read back from this browser's copy is read by the bake workers themselves: no copy sent from here)
   const worldKey = S.mapFrom === 'cache' && window.CLA_WORLD ? window.CLA_WORLD.key : null;
@@ -1581,7 +1611,13 @@ function enterCity() {
 
 // Open the debug menu straight away, switching Dev Debug Mode on first if it's off (no password while the team
 // and friends are testing; if the server asks for one after all, its prompt opens).
+// Who sees the debug entry points (the HUD's button, Settings > Help's row, the ` key / pad): the owner and admins,
+// anyone already in Dev Debug Mode (or on a private dev server), and everyone only while the server's open dev mode is
+// on (CLA_DEV_OPEN, /launch.json devOpen) - other players never see them (pre-beta quick wins).
+function debugOk() { return !!(S.dev || S.devMode || S.devOpen || S.role === 'owner' || S.role === 'admin'); }
+function syncDebugUi() { document.body.classList.toggle('dbg-ok', debugOk()); }
 function openDebug() {
+  if (!debugOk()) return;
   if (S.dev || S.devMode) { if (topOverlay() !== 'dev') openOverlay('dev'); return; }
   if (!S.welcomed) return;
   S.openDevOnEnter = true;
@@ -1594,6 +1630,7 @@ setInterval(() => { const el = document.getElementById('dev-sound'); if (el && e
 // first time it's on - the page itself only shows or hides its button.
 let devMenu = null, devMenuP = null;
 function setupDev() {
+  syncDebugUi();
   const on = S.dev || S.devMode;
   if (!on) { $('dev').classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
   devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
@@ -1610,7 +1647,7 @@ function renderPlayers() {
   el.innerHTML = '';
   for (const q of ps) {
     const row = document.createElement('div'); row.className = 'pl-row';
-    row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm ? ' <i>dev</i>' : ''}<small>${q.gu ? 'Guest · ' : ''}${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
+    row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm && !q.fo ? ' <i>dev</i>' : ''}<small>${q.fo ? '<b style="color:var(--gold)">♛ Founder</b> · ' : ''}${q.gu ? 'Guest · ' : ''}${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
     if (S.plist.dev && !q.me && q.id) for (const [c, label] of [['goto', 'Go to'], ['bring', 'Bring'], ...(q.dm ? [] : [['grant', 'Give dev']])]) {
       const b = document.createElement('button'); b.className = 'pl-btn'; b.textContent = label;
       b.onclick = () => { send({ t: 'dev', c, pid: q.id }); if (c !== 'grant') closeHub(); setTimeout(requestPlayers, 300); };
@@ -1806,7 +1843,11 @@ function deathPad() {
 let bagMod = null, bagP = null;
 const bag = {
   show() {
-    (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); } }))))
+    (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); }, stash: () => S.stash, leave: () => { if (topOverlay() === 'inv') closeHub(); },
+      looks: () => S.looks, look: () => { const e = S.me && S.ents.get(S.me.pedId); return (e && e.d && e.d.app && e.d.app.lk) || (S.looks && S.looks.cur) || null; },
+      pp: () => { const e = S.me && S.ents.get(S.me.pedId); return (e && e.d && e.d.pp) || null; },
+      stamina: () => (S.pred && S.pred.kind === 'ped' ? [S.pred.s.stamina, (S.pred.mods && S.pred.mods.staminaMax) || 100] : null),
+      close: () => closeHub() }))))
       .then((b) => { if (topOverlay() === 'inv') b.show(); }).catch((e) => { bagP = null; console.warn('[bag]', e); });
   },
   hide() { if (bagMod) bagMod.hide(); },
@@ -1820,6 +1861,20 @@ const wpick = createWeaponPicker({ el: $('wpick'), send: (o) => send(o), me: () 
 const wwheel = createWeaponWheel({ el: $('wwheel'), send: (o) => send(o), me: () => S.me });
 function openWeaponPick() { if (wpick.open) { wpick.close(); return; } if (canWheel() && S.me.weapons && S.me.weapons.length > 1) { if (wheel.open) wheel.close(); wpick.show(); } }
 function canWheel() { return S.playing && S.me && !S.me.dead && !(S.spec && S.spec.on) && !topOverlay() && !(S.hud && S.hud.menuOpen) && !S.bigmap; }
+// the quick keys (the Inventory's quick bar): 1-4 your weapon slots - Gun 1, Gun 2, Melee, Thrown (shared/loadout.js; the
+// one in your hands again puts it away), 5-8 the four things to use, 9 your fists
+function quickKey(n) {
+  const m = S.me;
+  if (!m || m.dead || !S.playing) return;
+  if (n < 4) { const id = loadout((m.weapons || []).map((w) => w.id))[n]; if (id) send({ t: 'weapon', id: m.weapon === id ? 'fists' : id }); else if (S.hud) S.hud.toast(`Nothing in slot ${n + 1} - your Inventory shows your weapons.`, 'info'); return; }
+  if (n < 8) {
+    const id = (m.quick || [])[n - 4];
+    if (id && ((m.inv || {})[id] || 0) > 0) send({ t: 'inv', a: 'use', id });
+    else if (S.hud) S.hud.toast(id && ITEMS[id] ? `No ${ITEMS[id].name} left.` : `Quick bar slot ${n + 1} is empty - put a thing on it in your Inventory.`, 'info');
+    return;
+  }
+  if (m.weapon !== 'fists') send({ t: 'weapon', id: 'fists' });
+}
 function toggleBag() {
   if (topOverlay() === 'inv') { closeHub(); return; }
   if (!S.playing || !S.me || S.me.dead) return;
@@ -2120,7 +2175,7 @@ const mapwp = createMapWaypoints({
   job: () => S.me && S.me.job,
   center: (x, y) => S.hud && S.hud.centerMap(x, y),
 });
-// ---- the hub (UI-3; UI-10 after UIC-07): the pause list first - RESUME, MAP, PHONE, BAG, PEOPLE, SETTINGS, LOG OFF,
+// ---- the hub (UI-3; UI-10 after UIC-07): the pause list first - RESUME, MAP, PHONE, INVENTORY, PEOPLE, SETTINGS, LOG OFF,
 // LEAVE GAME - opened by Esc, Start and the HUD's MENU; P / M / I (D-pad left / right, the HUD's PHONE and MAP) open a
 // screen straight away. Every screen has the same head: back and its name top left (Esc, B), close top right. Back
 // steps out of an app or a detail first, then to the pause list if that's where you came from, else to the game. Each
@@ -2169,7 +2224,7 @@ function hubToggle(tab) { if (topOverlay() === HUB_TABS[tab]) closeHub(); else o
 function hubStep(d) { const i = STEP_TABS.indexOf(hubTab), n = STEP_TABS.length; openHub(STEP_TABS[i < 0 ? (d > 0 ? 0 : n - 1) : (i + d + n) % n], null, hubFromPause); }
 // the frame shows while a screen is in the stack (an install help or a password box may sit over it); on the title
 // screen Settings shows on its own. Its name in the head (an app's, in the phone), and #hub[data-tab] shapes the frame
-const HUB_NAMES = { pause: 'PAUSED', map: 'MAP', phone: 'HOME', bag: 'BAG', people: 'PEOPLE', settings: 'SETTINGS' };
+const HUB_NAMES = { pause: 'PAUSED', map: 'MAP', phone: 'HOME', bag: 'INVENTORY', people: 'PEOPLE', settings: 'SETTINGS' };
 function syncHub() {
   const id = [...overlays].reverse().find((o) => HUB_IDS.includes(o));
   $('hub').classList.toggle('hidden', !id);
@@ -2367,11 +2422,15 @@ function toggleFullscreen(force, auto = false) {
     Promise.resolve(req).then(followRotation).catch(() => {});
   } else if (!want && isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
 }
-for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
+$('t-fs').onclick = () => toggleFullscreen();
+// Settings > Graphics: a plain switch that shows whether you're in fullscreen now (F11 and Esc move it too; the owner, 11-17)
+$('s-fsnow').onchange = (e) => { toggleFullscreen(e.target.checked); setTimeout(() => { $('s-fsnow').checked = isFullscreen(); }, 600); };   // (refused: the switch goes back)
+$('s-fsnow').checked = isFullscreen();
 // the HUD's row: MENU (the hub on its last tab), PHONE, MAP - each closes the hub when it's on that tab
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
 $('b-chat').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };   // (chat: client/chat.js - the sheet, or away again)
+$('b-bag').onclick = () => { if (S.playing) toggleBag(); };   // (the bag on the HUD's row, I - pre-beta quick wins)
 $('b-emo').onclick = () => { if (S.playing && !S.practice) launchCall('emotes'); };   // (the emotes beside it on a desktop: the picker, as B - client/emotes.js)
 // the thumb's chat button (touch): a tap the sheet; the emote button beside it: a tap the emote picker (client/emotes.js)
 $('b-talk').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };
@@ -2380,7 +2439,7 @@ for (const id of ['b-talk', 'b-emote']) $(id).addEventListener('pointerdown', (e
 $('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
 $('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub('pause'); };
 $('ph-back').onclick = () => phone.back();
-for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });   // (older iPad Safari: the prefixed one)
+for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { document.body.classList.toggle('fs', isFullscreen()); $('s-fsnow').checked = isFullscreen(); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });   // (older iPad Safari: the prefixed one)
 
 // Let the phone rotate freely, even in fullscreen and in the installed app. 'any' follows the
 // rotation sensor and overrides an older landscape-only install (Android only refreshes an installed
@@ -2587,6 +2646,7 @@ function overlayPad() {
   const el = f[ovFocus];
   if (HUB_IDS.includes(topOverlay()) && input.menuTab && S.playing) { hubStep(input.menuTab); return true; }   // (LB / RB: the hub's screens)
   if (HUB_IDS.includes(topOverlay()) && input.menuBack) { hubBack(); return true; }   // (B: one step back, as Esc and the head's back)
+  if (topOverlay() === 'inv' && bagMod && bagMod.pad(input)) return true;   // (the Inventory: LT / RT its tabs, X equip or wear, Y drop - client/bag.js)
   if (topOverlay() === 'gate' && input.menuBack) return true;   // (the first-launch gate is answered, not backed out of)
   if (topOverlay() === 'bigmap' && input.padY) { mapMarkCentre(); return true; }
   if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-chip'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }
@@ -2802,6 +2862,7 @@ $('radar').onclick = () => { if (S.playing) toggleMap(true); };
 // on touch the weapon box is a button too: a tap takes out the next weapon, holding it opens the picker
 { const wb = $('weapon'); const tap = () => { if (S.playing) virtualTap('nextw'); }; tapHold(wb, tap, () => { if (S.playing) openWeaponPick(); }); }
 // the weapon plate's quick weapons (UI-9, the HUD concepts UIC-11/12): a click takes that one out (its number key does too)
+{ const q = $('qbar'); if (q) q.addEventListener('pointerup', (e) => { const b = e.target.closest('.qb[data-i]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const id = S.me && S.me.quick && S.me.quick[+b.dataset.i]; if (S.playing && id && (S.me.inv[id] || 0) > 0) send({ t: 'inv', a: 'use', id }); }); }   // (N7: the quick bar - client/hud.js quickBar)
 { const q = $('w-quick'); const pick = (e) => { const b = e.target.closest('.wq'); if (!b) return; e.preventDefault(); e.stopPropagation(); if (S.playing && S.me) send({ t: 'weapon', id: b.dataset.w }); };
   q.addEventListener('mousedown', pick); q.addEventListener('touchstart', pick, { passive: false }); q.addEventListener('mouseup', (e) => e.stopPropagation()); q.addEventListener('touchend', (e) => e.stopPropagation()); }
 $('radar').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.playing) toggleMap(true); }, { passive: false });
@@ -2957,13 +3018,26 @@ function callCruiser() {
   if (c.s === 'none' && c.cd > 0) { S.hud.toast(`Dispatch can send a new cruiser in ${c.cd}s.`, 'warn'); return; }
   send({ t: 'cruiser' });
 }
-// World events: a coloured arrow around the player points at each one (and a ring marks it
-// when it's on screen). Each arrow shows for ARROW_SHOW_S seconds from when it first appeared
-// and then fades, so an ignored event doesn't nag forever; the radar blip stays.
+// World events: a pixel highlight marks each one where it is (no arrow off screen: the owner, 11-17); the radar blip
+// shows the ones further away.
 const evSeen = new Map();
+const EV_NEAR = [90, 320], EV_NEAR_A = 0.3;   // the highlight: faded to EV_NEAR_A within EV_NEAR[0] world px of you, full from EV_NEAR[1]
+// Where an event's highlight goes: round the person it's about, where they are now (ev.e; a fight: both, ev.e2), framing
+// a standing figure (feet to head, SKULL_HEAD) - or, for a place (a robbed store, a crate), a square on the spot.
+// -> { x, cy (the frame's middle), rx, ry (its half sizes), y (the feet, for the distance) } | null
+function evFrame(ev) {
+  const at = (id) => { const e = id && S.ents.get(id); return e && e.rx !== undefined && !(e.flags & PF.INVEH) ? e : null; };
+  const a = at(ev.e), b = at(ev.e2);
+  if (a || b) {
+    const xs = [a, b].filter(Boolean), x0 = Math.min(...xs.map((q) => q.rx)), x1 = Math.max(...xs.map((q) => q.rx)), y0 = Math.min(...xs.map((q) => q.ry)), y1 = Math.max(...xs.map((q) => q.ry));
+    const x = (x0 + x1) / 2, foot = (y0 + y1) / 2;
+    return { x, y: foot, cy: (y0 - SKULL_HEAD + y1) / 2, rx: (x1 - x0) / 2 + 14, ry: (y1 - y0 + SKULL_HEAD) / 2 + 6 };
+  }
+  if (ev.e) return null;   // (about someone the page doesn't have in view yet: nothing over an empty spot)
+  return { x: ev.x, y: ev.y, cy: ev.y, rx: 14, ry: 14 };
+}
 let lostArt = 0;
 function drawEventArrows(g, list, z, now) {
-  const me = selfPos();
   const tNow = performance.now() / 1000;
   const live = new Set();
   let slot = 0;
@@ -2973,8 +3047,8 @@ function drawEventArrows(g, list, z, now) {
     live.add(ev.id);
     if (!evSeen.has(ev.id)) evSeen.set(ev.id, tNow);
     const age = tNow - evSeen.get(ev.id);
-    const alpha = kind.stay || age < ARROW_SHOW_S - ARROW_FADE_S ? 1 : Math.max(0, (ARROW_SHOW_S - age) / ARROW_FADE_S);   // (stay: a lost pet's, till you have it or it's home)
-    if (alpha <= 0) continue;
+    const alpha = 1;   // (the highlight stays while the event lasts: it's only seen when it's on screen)
+    void age;
     if (ev.k === 'poster' || ev.r) {
       if (lostArt && lostArt !== 1) lostArt.mark(g, ev, kind, z, now); else if (!lostArt) { lostArt = 1; import('./lostposter.js').then((m) => { lostArt = m; }, () => { lostArt = 0; }); }
       if (ev.k === 'poster') continue;
@@ -2990,26 +3064,37 @@ function drawEventArrows(g, list, z, now) {
       g.fill();
       g.fillStyle = '#fff'; g.fillText(t, bx + 25 * u, oy + u); g.textAlign = 'center';
     }
-    const dx = ev.x - me.x, dy = ev.y - me.y, d = Math.hypot(dx, dy);
+    // (the owner, 11-17: no arrow pointing off screen - you see an event when it's on screen; there it gets an
+    // SNES-style highlight: four pixel corner brackets in its colour and a small bobbing chevron. 11-22: "it still covers
+    // up the NPC a lot ... more subtle ... easier to see when you're further away ... once you start getting closer to it
+    // maybe it is a little faded away"; "the indicator will just show over nothing sometimes" - so: on the person it's
+    // about (ev.e, and a fight's second, ev.e2) where they are now, the brackets framing the figure, not over it; full
+    // strength from afar, fading to EV_NEAR_A as you walk up, the chevron gone up close)
+    const f = evFrame(ev);
+    if (!f) continue;
+    const me = S.ents.get(S.myPedId), dist = me && me.rx !== undefined ? Math.hypot(me.rx - f.x, me.ry - f.y) : 1e9;
+    const near = Math.max(0, Math.min(1, (dist - EV_NEAR[0]) / (EV_NEAR[1] - EV_NEAR[0])));   // 0 up close .. 1 far
     g.save();
-    g.globalAlpha = alpha;
-    // ring on the event itself
-    const ph = (now * 1.4) % 1;
-    g.strokeStyle = kind.color; g.lineWidth = 3 / z;
-    g.beginPath(); g.arc(ev.x, ev.y, (18 + ph * 22) / Math.max(z, 0.5), 0, 6.28); g.stroke();
-    if (d > 150 && !kind.noArrow) {
-      const a = Math.atan2(dy, dx), r = (78 + slot * 6) / z;
-      const ax = me.x + Math.cos(a) * r, ay = me.y + Math.sin(a) * r, s = 15 / z;
-      g.translate(ax, ay);
-      g.save(); g.rotate(a);
-      g.fillStyle = kind.color; g.strokeStyle = 'rgba(0,0,0,.85)'; g.lineWidth = 2 / z;
-      g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.7, -s * 0.8); g.lineTo(-s * 0.3, 0); g.lineTo(-s * 0.7, s * 0.8); g.closePath(); g.fill(); g.stroke();
-      g.restore();
-      const txt = `${kind.label} · ${Math.round(d / 32)}m`;
-      g.font = `600 ${12 / z}px "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-      const ly = (Math.sin(a) > 0 ? 1 : -1) * 22 / z;
-      g.lineWidth = 3 / z; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(txt, 0, ly);
-      g.fillStyle = kind.color; g.fillText(txt, 0, ly);
+    g.globalAlpha = alpha * (EV_NEAR_A + (1 - EV_NEAR_A) * near);
+    const u = 1 / Math.max(z, 0.5), st = Math.floor(now * 3) % 2, RX = f.rx + st * 2, RY = f.ry + st * 2, L = 5 * u, w = 2 * u;
+    const pts = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+    g.fillStyle = 'rgba(0,0,0,.7)';
+    for (const [sx, sy] of pts) {
+      const cx = f.x + sx * RX, cy = f.cy + sy * RY;
+      g.fillRect(cx - (sx > 0 ? L : 0) - u, cy - (sy > 0 ? w : 0) - u, L + 2 * u, w + 2 * u);
+      g.fillRect(cx - (sx > 0 ? w : 0) - u, cy - (sy > 0 ? L : 0) - u, w + 2 * u, L + 2 * u);
+    }
+    g.fillStyle = kind.color;
+    for (const [sx, sy] of pts) {
+      const cx = f.x + sx * RX, cy = f.cy + sy * RY;
+      g.fillRect(cx - (sx > 0 ? L : 0), cy - (sy > 0 ? w : 0), L, w);
+      g.fillRect(cx - (sx > 0 ? w : 0), cy - (sy > 0 ? L : 0), w, L);
+    }
+    if (near > 0.35) {   // the chevron over it, from afar only
+      const cy0 = f.cy - RY - (8 + st * 2) * u;
+      g.globalAlpha *= Math.min(1, (near - 0.35) / 0.3);
+      g.beginPath(); g.moveTo(f.x - 4 * u, cy0 - 3 * u); g.lineTo(f.x + 4 * u, cy0 - 3 * u); g.lineTo(f.x, cy0 + 2 * u); g.closePath();
+      g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 2 * u; g.stroke(); g.fill();
     }
     g.restore();
     slot++;
@@ -3025,7 +3110,7 @@ function drawSuspectMarks(g, ids, z, now) {
     const e = S.ents.get(id);
     if (!e || e.rx === undefined || (e.flags & PF.INVEH)) continue;
     const down = e.flags & (PF.DOWN | PF.STUN | PF.DEAD);
-    const y = e.ry - 22;
+    const y = e.ry - SKULL_HEAD - 7 / z;   // (over the head at any zoom, not on the chest: the owner, 11-22 - overhead marks cover the person)
     g.save();
     if (down) {
       g.globalAlpha = 0.55 + 0.35 * Math.sin(now * 6);
@@ -3035,7 +3120,7 @@ function drawSuspectMarks(g, ids, z, now) {
       g.globalAlpha = 0.7;
       g.fillStyle = (now * 2 | 0) % 2 ? '#ff4a4a' : '#5b8cff';
       g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 1.2 / z;
-      g.beginPath(); g.moveTo(e.rx, y + 5); g.lineTo(e.rx - 4.5, y - 1); g.lineTo(e.rx + 4.5, y - 1); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(e.rx, y + 5 / z); g.lineTo(e.rx - 4.5 / z, y - 1 / z); g.lineTo(e.rx + 4.5 / z, y - 1 / z); g.closePath(); g.fill(); g.stroke();
     }
     g.restore();
   }
@@ -3113,6 +3198,14 @@ const SWING_TIME = 0.3, BANG_S = 0.42;
 function heldWay(id, now, span, n) { const s = Math.floor((now + id * 2.3) / (span + (id % 5))); return ((Math.imul(s + 1, 0x9e3779b1) >>> 9) + id) % n; }
 // the FISHING bit on these means kneeling (a medic at someone hurt, an officer holding someone down), not fishing
 const KNEELERS = new Set(['medic', 'cop', 'swat', 'agent', 'soldier', 'rescue']);
+// The fishing pose's frame (the owner, 11-16: "the fishing pole has a line that goes out and a line that drops straight
+// down"): a player's line is drawn by client/fishing.js from the rod's tip to the bobber, so a player is drawn with no
+// hanging line - the rod held back while the cast charges (frame 1), out over the water once the line's cast (2). An NPC
+// angler, whose line nobody else draws, keeps the pose's own line hanging into the water (0: art2/people.js 'fish').
+function fishFrame(e) {
+  if (!e.d || !e.d.pl) return 0;
+  return S.fish && S.fish.lineOut(e.id) ? 2 : 1;
+}
 function pedPose(e) {
   const f = e.flags;
   if (f & PF.DEAD) return 'dead';
@@ -3141,9 +3234,8 @@ function pedPose(e) {
 }
 
 let last = performance.now(), fpsAcc = 0, fpsN = 0, pingAt = 0;
-// A frame that throws no longer ends the game (the owner, 2026-10-15: "Spawning a helicopter turned the screen black and
-// froze the game" - the next frame was only asked for at the end of this one): the next frame is always asked for, and
-// the error goes to the server once (reportError: /clienterrors).
+// A frame that throws doesn't end the game (DEVLOG 10-15): the next frame is always asked for; the error goes to the
+// server (reportError).
 function frame(nowMs) {
   try { frameBody(nowMs); } catch (e) { reportError('frame', e); }
   if (!CAP) requestAnimationFrame(frame);
@@ -3427,6 +3519,7 @@ function prepFrame(dt) {
   // keep the camera over the world: the sea runs on past the map's edge as far as you can go (shared/border.js),
   // so it follows you out there; never past where nothing can go (the world's frame: the map's m.frame, a window's too)
   if (S.map) clampCam(S.cam, S.map.frame);
+  if (S.watch) watchCam();   // (an admin watching a player: the camera on them - client/adminpanel.js, server admin.js watch)
   if (S.specArt) { const st = S.spec.state; S.cam.x = st.x; S.cam.y = st.y; S.cam.zoom = st.z; S.cam.shake = 0; } // (the spectator's camera)
   else if (DIR) DIR.cam(S.cam, dt, tx, ty);   // (the cinematic mode's: smooth, free, on someone, the tour - client/director.js)
   S.cam.shake *= Math.exp(-6 * dt);
@@ -4204,7 +4297,7 @@ $('int-open').onclick = () => send({ t: 'interior' });
 // Race marks: the start float or flag, the numbered gate buoys - pixel art (client/render/racemarks.js, loaded the first
 // time one is in view)
 function drawBuoys(view, now) {
-  const races = S.map.races;
+  const races = S.map.races && S.map.races.filter(raceShown);
   if (!races || !races.length) return;
   if (S.raceMarks) { S.raceMarks.drawRaceMarks(g, races, view, now); return; }
   const near = (p) => p.x > view.x0 - 200 && p.x < view.x1 + 200 && p.y > view.y0 - 200 && p.y < view.y1 + 200;
@@ -4483,7 +4576,8 @@ function driverBlinks(v) { for (const p of S.ents.values()) if (p.kind === K.PED
 const vehSpeed = (v) => (v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x - v.buf[v.buf.length - 2].x, v.buf[v.buf.length - 1].y - v.buf[v.buf.length - 2].y) * 20 : 0);
 // (an aircraft only when it's down on the water - not every frame it flies over it at any height: the splashes and rings
 // under a helicopter at 31 m, the owner 11-06 - and a floatplane never; v._up: up in the air, no puddle splashes either)
-const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+// (a land vehicle only deeper than it can ford: shallower it splashes or wades through - shared/physics.js wade; v._wade the band)
+const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1 && (def.kind === 'air' || def.horse || (v._wade = wadeBand(S.map, v.rx, v.ry, def)) === WB.DEEP);
 const TRAIL = [];   // (trailSteps' points: reused every call)
 function vehVisual(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
@@ -4493,6 +4587,9 @@ function vehVisual(v, now, dt) {
   const sinking = vehSinking(v, def);
   v.sinkT = sinking ? (v.sinkT || 0) + dt : 0;
   if (sinking && Math.random() < 0.5) S.fx.splash(v.rx + (Math.random() - 0.5) * def.L * 0.6, v.ry + (Math.random() - 0.5) * def.W * 0.6, 1);
+  // splashing or wading through the shallows: spray off the wheels, more the faster it goes (none standing still)
+  else if (!sinking && v._wade && def.kind !== 'boat' && def.kind !== 'air' && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1) { const sp = vehSpeed(v); if (sp > 20 && Math.random() < Math.min(0.9, sp / 300)) for (const sg of [-1, 1]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, (Math.random() - 0.5) * def.L * 0.7, sg * def.W * 0.5); S.fx.splash(x, y, 1); } }
+  else v._wade = 0;
   // leaning out on corners (from how fast it turns at speed)
   const prevA = v.leanA ?? v.ra;
   let dA = v.ra - prevA; while (dA > Math.PI) dA -= Math.PI * 2; while (dA < -Math.PI) dA += Math.PI * 2;
@@ -4740,6 +4837,7 @@ function pedLook(p, now) {
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   if (seqFr >= 0) fr = seqFr;
   if (pose === 'downF' && p.d && p.d.cf) fr = 0;   // (held flat, not pushing up)
+  if (pose === 'fish') fr = fishFrame(p);   // (one line: the rod's own hanging line only on an NPC angler)
   if (fight) fr = pose === 'crawl' ? Math.floor(now * 9 + p.id) % 4 : 1;
   if (run && (pose === 'downF' || pose === 'downB')) fr = now - p.runAt > p.runD - 0.8 ? 1 : 0;   // (flat, then pushing up)
   if (fire) fr = fire === 1 ? Math.floor(now * 7 + p.id) % 4 : 1;   // (flailing; pushing up)
@@ -5153,7 +5251,8 @@ function drawSpanWire(sg, n) {
 // to see - the target too. A little pixel skull, made once and drawn crisp at any zoom, with a slow gold glow.
 const SKULL = ['...#####...', '.#########.', '###########', '###########', '##...#...##', '##...#...##', '###########', '.####.####.', '..#######..', '..#.#.#.#..', '..#######..'];
 let skullImg = null;
-const SKULL_HEAD = 46;   // world px from a standing person's feet to the top of their head (art v2 people)
+const TAG_S = 3, FIGHT_GAP_S = 6;   // BRUTE / TOUGH over a brawler: the first TAG_S s of a fight (a pause of FIGHT_GAP_S starts a new one)
+const SKULL_HEAD = window.CLA_POLISH ? 50 : 46;   // (the polish pass's people stand two art pixels taller: line 115)  // world px from a standing person's feet to the top of their head (art v2 people)
 const EM_HEAD = { sit: 30, crouch: 30, kneel: 36, lie: 14, sleep: 16, faceplant: 12, pushups: 16 };   // (the same, sat, crouched, knelt or lying: an emote's pose - client/art2/poses.js)
 function skullSprite() {
   if (skullImg) return skullImg;
@@ -5237,6 +5336,16 @@ function drawMyCar(c, view, now, z, vehs) {
   g.fillStyle = '#fff'; g.fillText(plate, x, ty + u);
   g.restore();
 }
+// watching a player (the admin panel): the camera on them - their vehicle when they're in one; gone a few seconds (they left,
+// the server stopped it), back to you
+function watchCam() {
+  const W = S.watch, e = S.ents.get(W.eid);
+  if (!e || e.rx === undefined) { if (performance.now() - W.at > 5000) { S.watch = null; S.hud.toast('Stopped watching - they left the city.', 'info'); } return; }
+  W.at = performance.now();
+  let x = e.rx, y = e.ry - (e.rz ? liftOf(e.rz) : 0);
+  if (e.flags & PF.INVEH) { let bd = 90 * 90; for (const v of S.ents.values()) { if (v.kind !== K.VEH || v.rx === undefined) continue; const d = (v.rx - e.rx) ** 2 + (v.ry - e.ry) ** 2; if (d < bd) { bd = d; x = v.rx; y = v.ry; } } }
+  S.cam.x = x; S.cam.y = y;
+}
 // A player in a vehicle: the name tag over the vehicle they're in (the nearest one under them) - an aircraft drawn up
 // by its height carries it up there, over its nose (the owner, 11-12: "BETA Claw16" on the grass under a helicopter)
 function tagY(p, vehs, py, z) {
@@ -5259,6 +5368,15 @@ function dimHex(c) {
   dimMemo.set(c, d);
   return d;
 }
+// the founder's mark (the owner's account: server net.js fo): a small gold pixel crown, centred on (x, y), with a dark edge
+const CROWN = ['1.1.1', '11111', '11111', '.111.'];
+function founderMark(x, y, z) {
+  const u = 1.5 / z, w = 5 * u, h = 4 * u, x0 = x - w / 2, y0 = y - h / 2;
+  g.fillStyle = 'rgba(8,10,20,.92)';
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) if (CROWN[j][i] === '1') g.fillRect(x0 + (i - 1) * u, y0 + (j - 1) * u, 3 * u, 3 * u);
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) if (CROWN[j][i] === '1') { g.fillStyle = j === 0 ? '#fff2b0' : j === 3 ? '#c89220' : '#ffcc33'; g.fillRect(x0 + i * u, y0 + j * u, u, u); }
+}
+const MARK_GAP = 6;   // screen px between the head's top and the foot of the "!" over a reported suspect
 function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the camera's { tags, marks, rest } - what of it's drawn)
   const fs = 12 / z;
   g.textAlign = 'center';
@@ -5267,27 +5385,41 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
     if (p.flags & PF.INVEH && !p.d.pl) continue;
     let py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
     if (p.flags & PF.INVEH) py = tagY(p, vehs, py, z);
+    // (every overhead label hangs from the top of the head at any zoom - the owner, 11-22: names, BRUTE / TOUGH and the
+    // brawl bar sat over the face and chest. hd: the head's top; tagged: a player whose name shows - the marks over it go higher)
+    const hd = p.flags & PF.INVEH ? py - 22 / z : py - SKULL_HEAD,   // (in a vehicle: tagY's spot over it, the name where it was)
+      tagged = p.d.pl && p.d.n && p.id !== S.myPedId, tagUp = tagged ? (p.d.np && p.d.np.t ? 26 : 15) / z : 0;
     // (clear above the head at any zoom: the head's top is ~46 world px up; then a gap and half the skull, in screen px)
-    if ((!only || only.marks) && p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD) && !(S.launch && S.launch.chat.balloonOn(p.id))) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
+    if ((!only || only.marks) && p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD) && !(S.launch && S.launch.chat.balloonOn(p.id))) drawSkull(p.rx, hd - tagUp - ((p.flags & PF.FLARE) ? 46 : 16) / z, z, now);
     if ((!only || only.marks) && p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
-      const bob = Math.sin(now * 10) * 3 / z;
-      g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, py - 30 / z + bob + 1.5 / z);
-      g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, py - 30 / z + bob);
-      g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
+      // (its foot clear above the head whatever the baseline was left at - the owner, 11-23: "slightly above the player model
+      // instead of over the player"; MARK_GAP screen px, the bob only ever upward)
+      const bob = -Math.abs(Math.sin(now * 10)) * 3 / z, bl = g.textBaseline, y = hd - tagUp - MARK_GAP / z + bob;
+      g.textBaseline = 'bottom';
+      g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, y + 1.5 / z);
+      g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, y);
+      g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textBaseline = bl;
     }
     if ((!only || only.rest) && !p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
-      // health bar over whoever you're brawling with; tough/brute builds get a tag so you can size them up
-      const y = py - 24 / z, bd = p.d.app ? p.d.app.bd : 1;
+      // health bar over whoever you're brawling with, just over the head; tough/brute builds get a tag so you can size them
+      // up - over the bar, and only for the first seconds of a fight (TAG_S; the owner, 11-22: "I dont think it needs to stay
+      // on for long"): a fight that stops for FIGHT_GAP_S and starts again shows it again
+      const y = hd - 9 / z, bd = p.d.app ? p.d.app.bd : 1;
       g.fillStyle = 'rgba(0,0,0,.75)'; g.fillRect(p.rx - 16 / z, y, 32 / z, 5 / z);
       g.fillStyle = p.hp < 0.3 ? '#ff4d5e' : '#7fe07f'; g.fillRect(p.rx - 15 / z, y + 1 / z, 30 / z * p.hp, 3 / z);
-      if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
+      if (!p.tagAt || S.loopClock - (p.tagSeen || 0) > FIGHT_GAP_S) p.tagAt = S.loopClock;
+      p.tagSeen = S.loopClock;
+      const ta = Math.min(1, (TAG_S - (S.loopClock - p.tagAt)) / 0.5);
+      if (bd >= 2 && ta > 0) { g.globalAlpha = ta; g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 3 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.globalAlpha = 1; }
     }
     if ((!only || only.tags) && p.d.pl && p.d.n && p.id !== S.myPedId) {
-      const y = py - 26 / z;
+      const y = hd - 4 / z;   // (the name's foot just over the head at any zoom - the owner, 11-22: "slightly above the player so it doesn't cover the player's character"; SKULL_HEAD carries the polish pass's taller people)
       const np = p.d.np, nm = np && np.k ? `[${np.k}] ${p.d.n}` : p.d.n;   // (their name color, title plate and crew tag: server cosmetics.js)
-      const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade - no tag; members in white)
-      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(nm, p.rx + 1 / z, y + 1 / z);
+      const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade, a faint shadow and no edge; members bright, with a dark edge all round - told apart by lightness and the edge, no word: the owner, 11-16)
+      if (gu) { g.fillStyle = 'rgba(0,0,0,.45)'; g.fillText(nm, p.rx + 1 / z, y + 1 / z); }
+      else { g.lineJoin = 'round'; g.lineWidth = 3 / z; g.strokeStyle = 'rgba(8,10,20,.92)'; g.strokeText(nm, p.rx, y); }
+      if (p.d.fo) founderMark(p.rx - g.measureText(nm).width / 2 - 7 / z, y - 4.5 / z, z);   // (the founder's gold crown by his name, for everyone: server net.js fo)
       g.fillStyle = S.me && S.me.crew && S.me.crew.ids.includes(p.id) ? (gu ? '#5fb879' : '#7dffa0') : p.flags & PF.BADGE ? (gu ? '#5c82b8' : '#7ab0ff') : np && np.c ? (gu ? dimHex(np.c) : np.c) : gu ? '#a3a8b0' : '#fff'; g.fillText(nm, p.rx, y);   // (your crew's: green - crews.js)
       if (np && np.t) { const t = np.t.toUpperCase(); g.font = `700 ${9 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(t, p.rx + 1 / z, y - 10 / z); g.fillStyle = gu ? dimHex(np.g ? '#ffcc33' : '#d8dee9') : np.g ? '#ffcc33' : '#d8dee9'; g.fillText(t, p.rx, y - 11 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }
@@ -5310,12 +5442,30 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
   }
   if (S.meters) { S.meters.drawGolf(g, z, now); S.meters.drawHoops(g, z); }   // (your golf ball's aim and meter, the hoop's: client/meters.js)
   if (me && me.job) {
-    g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
-    const bob = Math.sin(now * 4) * 5;
-    g.beginPath(); g.moveTo(me.job.x, me.job.y - 20 + bob); g.lineTo(me.job.x - 10, me.job.y - 40 + bob); g.lineTo(me.job.x + 10, me.job.y - 40 + bob); g.closePath(); g.fill(); g.stroke();
+    // (above what it marks - j.h, the height of a hoop's backboard - never over it; j.fade: shown a moment, then gone,
+    // till the target moves - the owner, 11-23: the arrow over the hoop hid where you were shooting)
+    const j = me.job, key = `${Math.round(j.x)},${Math.round(j.y)}`, t = performance.now() / 1000;
+    if (S.jobMarkKey !== key) { S.jobMarkKey = key; S.jobMarkAt = t; }
+    const a = j.fade ? jobMarkAlpha(t - S.jobMarkAt) : 1;
+    if (a > 0) {
+      g.save(); g.globalAlpha = a;
+      g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
+      const bob = Math.sin(now * 4) * 5, y = j.y - (j.h || 0);
+      g.beginPath(); g.moveTo(j.x, y - 20 + bob); g.lineTo(j.x - 10, y - 40 + bob); g.lineTo(j.x + 10, y - 40 + bob); g.closePath(); g.fill(); g.stroke();
+      g.restore();
+    }
   }
   void vehs;
 }
+
+// where a shot's flash and tracer start: [px along the aim from the shooter, px up] - a pistol held out at arm's length,
+// a long gun at the shoulder, a tube on it (client/art2/people.js aimPose, measured: the barrel's end 23-25 px out,
+// 22-31 up)
+const MUZZLE = { hand: [24, 28], long: [27, 23], tube: [26, 27] };
+const LONG_GUN = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
+// a fading job marker's strength JOB_MARK[0] s after it showed: full, then gone over JOB_MARK[1] s
+const JOB_MARK = [2.5, 1];
+function jobMarkAlpha(s) { return s <= JOB_MARK[0] ? 1 : Math.max(0, 1 - (s - JOB_MARK[0]) / JOB_MARK[1]); }
 
 // ---- lighting: every light source of the frame into the light map and the bloom pass -----------
 // (render/lighting.js does the compositing). Also returns the light sources the puddles and the rain
@@ -5729,4 +5879,4 @@ if (ART2_WANTED) { connect(); if (!CAP) requestAnimationFrame(frame); }
 else ensureV1Art().finally(() => { connect(); if (!CAP) requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
-window.CLA = { S, send, WEAPONS, load: LOAD, setAccountUi, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };
+window.CLA = { S, send, WEAPONS, load: LOAD, setAccountUi, hub: openHub, unhub: closeHub, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };

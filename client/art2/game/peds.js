@@ -4,7 +4,7 @@
 //
 //   adaptApp(app, ar, opt) -> art2 app      app: the server appearance { s, h, hc, t, tc, tc2, l, sh, ht, htc, b, bd,
 //                                           bandana } (server entities.js); ar: the archetype (e.d.ar: 'player', an NPC
-//                                           archetype, 'medic', ...); opt.censored dresses undressed bodies in swimwear.
+//                                           archetype, 'medic', ...).
 //                                           The server's few fields are spread into C2/C3-style looks: the archetype picks
 //                                           the outfit family (suits, hi-vis, uniforms, gang vests, fur coats...), and a
 //                                           hash of the record picks the details (hair cut, bottoms, beard, glasses, bags).
@@ -20,7 +20,7 @@
 //     weapon: WEAPON_BY_INDEX index (drawn held: rest, aimed or swung per pose), or an items.js kind ('phone', 'medkit')
 //     opt.bc: the plasma blade's colour (shared/items.js BLADE_COLORS; 0 / none: its own blue), opt.cut: a half of the body
 //   weaponItem(w) -> items.js kind or null;  PED_POSES: frames per pose;  SEATS: seat heights of the seated poses
-import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN } from '../people.js';
+import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN, FOUNDER, setPolish } from '../people.js';
 import { ITEMS } from '../items.js';
 import { hash, cutGBuf } from '../gbuf.js';
 import { WEAPON_BY_INDEX, bladeColor, hexRgb } from '../../../shared/items.js';
@@ -99,14 +99,16 @@ export function adaptApp(app, ar = null, opt = {}) {
   const a = app || {};
   ar = ar || a.ar || 'casual';
   if (typeof ar === 'string' && ar.startsWith('pet:')) return { pet: ar.slice(4), seed: 1 };
+  // the founder's look (server net.js app.fd)
+  if (a.fd) return FOUNDER;
   // a player's look (shared/look.js): its code says it all
-  if (a.lk) { const L = decodeLook(a.lk); if (L) return lookArt(L, { code: a.lk, censored: !!opt.censored }); }
+  if (a.lk) { const L = decodeLook(a.lk); if (L) return lookArt(L, { code: a.lk }); }
   const H = seedOf(a, ar), r = (k) => hash(H & 0xfffff, k, 131), pick = (arr, k) => arr[Math.floor(r(k) * arr.length) % arr.length];
   const t = a.t ?? 0, tc = a.tc || '#888888', tc2 = a.tc2 || '#dddddd', l = a.l || '#334455', sh = a.sh || '#222222';
   const fem = a.h === 2 || a.h === 5 || t === 5;
   const police = t === 6 && blueish(tc) && lumOf(tc) < 0.3, medic = ar === 'medic' || (t === 6 && lumOf(tc) > 0.8), sweeper = t === 6 && !police && !medic;
   const swat = ar === 'swat' || (t === 3 && lumOf(tc) < 0.1 && a.ht === 5), soldier = ar === 'soldier', agent = ar === 'agent';
-  const out = { seed: H & 0xffff, skin: Math.max(0, Math.min(5, a.s ?? 1)), fem, ar, censored: !!opt.censored };
+  const out = { seed: H & 0xffff, skin: Math.max(0, Math.min(5, a.s ?? 1)), fem, ar };
   // ---- body: the server's build (frail .. brute), a gut on some brutes and seniors
   const bd = Math.max(0, Math.min(3, a.bd ?? 1));
   out.body = { ...BODIES[bd] };
@@ -255,9 +257,10 @@ const KEYS = new WeakMap();
 function art2Key(A) {
   let k = KEYS.get(A);
   if (k) return k;
-  if (A.lk) { k = 'L' + A.lk + (A.censored ? 'c' : '') + (A.pp ? '+' + A.pp : '') + (A.back === 'moneybag' ? '$' : ''); KEYS.set(A, k); return k; }
+  if (A.founder) { k = 'F' + Object.keys(A).filter((f) => A[f] !== FOUNDER[f]).sort().map((f) => `;${f}=${JSON.stringify(A[f])}`).join(''); KEYS.set(A, k); return k; }
+  if (A.lk) { k = 'L' + A.lk + (A.pp ? '+' + A.pp : '') + (A.back === 'moneybag' ? '$' : ''); KEYS.set(A, k); return k; }
   const parts = [];
-  for (const f of ['seed', 'skin', 'fem', 'build', 'body', 'hair', 'beard', 'top', 'bottom', 'shoes', 'shoeKind', 'hat', 'glasses', 'mask', 'bandana', 'chain', 'carry', 'held', 'back', 'backColor', 'gloves', 'tattoo', 'censored', 'pet']) {
+  for (const f of ['seed', 'skin', 'fem', 'build', 'body', 'hair', 'beard', 'top', 'bottom', 'shoes', 'shoeKind', 'hat', 'glasses', 'mask', 'bandana', 'chain', 'carry', 'held', 'back', 'backColor', 'gloves', 'tattoo', 'pet']) {
     const v = A[f];
     if (v === undefined || v === null || v === false) continue;
     parts.push(f + ':' + (typeof v === 'object' ? Object.keys(v).sort().map((q) => q + '=' + v[q]).join(',') : v));
@@ -267,17 +270,39 @@ function art2Key(A) {
   return k;
 }
 export function appKey(app, opt = {}) {
-  if (app && app.lk && app.top === undefined) return 'L' + app.lk + (opt.censored ? 'c' : '');
-  if (isServer(app)) return 'S' + [app.s, app.h, app.hc, app.t, app.tc, app.tc2, app.l, app.sh, app.ht, app.htc, app.b, app.bd, app.bandana ? 1 : 0, opt.ar || app.ar || '', opt.censored ? 1 : 0].join(',');
+  if (app && app.fd) return 'F';
+  if (app && app.lk && app.top === undefined) return 'L' + app.lk;
+  if (isServer(app)) return 'S' + [app.s, app.h, app.hc, app.t, app.tc, app.tc2, app.l, app.sh, app.ht, app.htc, app.b, app.bd, app.bandana ? 1 : 0, opt.ar || app.ar || ''].join(',');
   return art2Key(app || {});
 }
 const normPose = (p) => (p && p.startsWith('move') ? 'walk' + (p[4] || '0') : p || 'idle');
 // lying flat straight up/down the screen reads as standing: drawn on the diagonal (the owner, 11-15)
 const FLAT = new Set(['emfaceplant', 'emlie', 'emsleep', 'empushups', 'downF', 'downB', 'deadF', 'deadS', 'dead']);
 export const flatDir = (pose, dir8) => { const d = ((dir8 | 0) % 8 + 8) % 8; return (d & 3) === 0 && FLAT.has(pose) ? d + 1 : d; };
+// (the staged polish pass, docs/characters/NOTES.md: '~' starts a polished sprite's key)
+let PLM = null, PLON = false;
+export const loadPolish = (url) => (PLM ? Promise.resolve() : import(url).then((m) => { PLM = m.POLISH; }));
+export function usePolish(on) { PLON = !!on && !!PLM; setPolish(PLON ? PLM : null); }
+// Blinking (the polish pass; the owner, 11-20: "natural ... not on a loop"): each person's own moments, from their id - time
+// in slots of 0.9 s, a blink in about one slot in four at its own point in the slot (so 1 to 15 s apart, 3.7 on average),
+// now and then a second one straight after. 1: the eyes are shut now; 2: they will be within the second (ask for the sprite).
+const bh = (a, b) => { let h = (Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263)) >>> 0; h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+export function blinkAt(id, now) {
+  if (!PLON) return 0;
+  const t = now / 0.9 + (id % 97) * 0.618, s0 = Math.floor(t);
+  let r = 0;
+  for (let s = s0 - 1; s <= s0 + 1; s++) {
+    if (bh(id, s) > 0.24) continue;
+    const dt = (t - s - bh(id, s + 7919) * 0.6) * 0.9;   // (seconds since this slot's blink began)
+    if ((dt >= 0 && dt < 0.13) || (bh(id, s + 104729) < 0.15 && dt >= 0.3 && dt < 0.42)) return 1;
+    if (dt < 0 && dt > -1) r = 2;
+  }
+  return r;
+}
+export const BLINKS = /^(idle|sit|sitx|sitlow|lean|phone)/;   // (the poses a blink shows in: standing and sitting still)
 export function pedKey(app, pose, dir8, frame, weapon, opt = {}) {
   const pn = normPose(pose), n = PED_POSES[pn] || 1, k = weaponItem(weapon);
-  return `${appKey(app, opt)}|${pn}|${flatDir(pn, dir8)}|${(((frame | 0) % n) + n) % n}|${k || ''}${opt.bc && k === 'energyBlade' ? '|bc' + opt.bc : ''}${opt.cut ? '|cut' + opt.cut : ''}`;
+  return `${PLON ? '~' : ''}${appKey(app, opt)}|${pn}|${flatDir(pn, dir8)}|${(((frame | 0) % n) + n) % n}|${k || ''}${opt.bc && k === 'energyBlade' ? '|bc' + opt.bc : ''}${opt.cut ? '|cut' + opt.cut : ''}${opt.bl ? '|bl' : ''}`;
 }
 // The plasma blade in another colour (the descriptor's bc): items.js draws it blue and glowing - the blade's pixels carry
 // its glow [70, 150, 255], the white-hot core's [210, 235, 255] (people.js keeps an item pixel's glow as it is, and gives
@@ -312,7 +337,7 @@ export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {
   const A = isServer(app) ? adaptApp(app, opt.ar || app.ar, opt) : app || {};
   const d = (8 - flatDir(normPose(pose), dir8)) % 8;
   const k = weaponItem(weapon);
-  const G = person(A, d, normPose(pose), frame | 0, k ? { held: k, tight: true } : { tight: true });
+  const G = person(A, d, normPose(pose), frame | 0, k ? { held: k, tight: true, blink: opt.bl } : { tight: true, blink: opt.bl });
   if (opt.bc && k === 'energyBlade') recolorBlade(G, opt.bc);
   return opt.cut ? cutGBuf(G, opt.cut, 7) : G;   // (cut in two by the plasma blade: one half, a little apart from the other, the edge seared)
 }
@@ -366,7 +391,10 @@ export function personaPose(d, pose) {
   const g = d.gt;
   if (!g) return pose;
   if (g === 'dance' && d.dm !== undefined && pose === 'idle') return DANCE_POSE[d.dm] || g;   // (a move: dancing, task #394)
-  if (g === 'emote') { if (!EMOTE_FPS['em' + d.em] && d.em) loadPoses(); return pose === 'idle' && EMOTE_FPS['em' + d.em] ? 'em' + d.em : pose; }   // (an emote on the body: server emote.js)
+  // (11-25: the poses are asked for until THIS module has them - EM - not until the table is filled: the emote wheel's
+  // portraits load poses.js on their own (client/portrait.js), which filled EMOTE_FPS and so stopped the load here; with
+  // no EM every emote stood on its first frame - a faceplant only leaned, lying down and sleeping never lay down.)
+  if (g === 'emote') { if (d.em && !EM) loadPoses(); return pose === 'idle' && EM && EMOTE_FPS['em' + d.em] ? 'em' + d.em : pose; }   // (an emote on the body: server emote.js)
   if (g === 'dance' || g === 'lean' || g === 'statue' || g === 'statuebow') return pose === 'idle' ? g : pose;   // (statue: a living statue on its crate - personas.js BUSKS)
   if (ACT_POSES[g]) return pose === 'idle' ? ACT_POSES[g] : pose;   // (at an activity, held while they stay: server activities.js)
   if (pose === 'walk0' || pose === 'walk1' || ((g === 'skate' || g === 'blade') && pose.startsWith('walk'))) return g;

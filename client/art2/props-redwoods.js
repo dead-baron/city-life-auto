@@ -13,11 +13,11 @@
 //   mist(w, d, seed) / ray(w, h, seed)  a low bank of mist; a shaft of sunlight down through the canopy (soft sprites)
 // Model y runs north -> south (the camera looks from the south); 1 voxel = 1 world px.
 import { GBuf, F_WATER, F_NOCAST, hash, vnoise } from './gbuf.js';
-import { ramp } from './palette.js';
+import { ramp, natRamp } from './palette.js';
 import { Vox } from './voxel.js';
 import { WATER, waterfall } from './water.js';
 
-const R = (h, n = 6, k, o) => ramp(h, n, k ?? Math.floor((n - 1) / 2), o);
+const R = (h, n = 6, k, o) => natRamp(h, n, k ?? Math.floor((n - 1) / 2), o);   // (nature's ramps: palette.js NAT)
 const BAS = R('#a4a4aa', 7, 3, { dark: 0.62, light: 0.45, shift: 0.14 }), BASTOP = R('#9c9a96', 6, 3, { dark: 0.45, light: 0.5, shift: 0.1 });
 const BASWET = R('#62626a', 6, 2, { dark: 0.6, light: 0.7 }), MOSSY = R('#6e8e2c', 6, 3, { dark: 0.6, light: 0.5, shift: 0.32 });
 const FERNY = R('#4a842a', 5, 2, { dark: 0.55, light: 0.5, shift: 0.3 }), BARK = R('#6e4628', 6, 3, { dark: 0.58, light: 0.45 });

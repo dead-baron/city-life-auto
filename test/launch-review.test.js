@@ -53,7 +53,7 @@ test('1. the gate and the panel on a gamepad: D-pad moves, A presses, B backs ou
     assert.ok(/modals\.push\(/.test(body) && /data-cla-modal|claModal/.test(body), `${what}: the pad drives it`);
   }
   assert.match(acc, /const FOCUS_CSS = 'cla-pfocus'/);
-  assert.match(acc, /\{outline:3px solid #ffd27f/, 'the pad\'s focus is shown');
+  assert.match(acc, /\{outline:3px solid (#ffd27f|var\(--pad-gold\))/, 'the pad\'s focus is shown (quick wins 4: the token, not the literal)');
 });
 
 // ---- 2: signing in on another device (also test/launch-auth.test.js) ----
@@ -156,7 +156,7 @@ test('7. no guest limit unless set, its refusal has its own code; the page stops
   const r = L.login(null, {}, '5.5.5.5');
   assert.equal(r.code, 4013);
   const main = read('client/main.js');
-  assert.match(main, /const REFUSED = new Set\(\[4009, 4010, 4011, 4012, 4013, 4014, 4017\]\)/);
+  assert.match(main, /const REFUSED = new Set\(\[4009, 4010, 4011, 4012, 4013, 4014, 4017, 4018\]\)/);
   assert.match(main, /if \(ev && REFUSED\.has\(ev\.code\)\) \{ refusedAtDoor\(ev\.code\); return; \}/);
   assert.match(main, /if \(S\.refused\) \{/, 'PLAY tries again');
 });

@@ -27,7 +27,7 @@ import { isBlocked, unjam, goRound, standing } from './reroute.js';   // (driver
 import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind, giveUpEnd, clearance, OPEN_ANY as OPEN_ANY_GROUND } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384; giving one up: giveUpEnd)
 import { loadExplosives } from './cargo.js';
 import { homeLotSpots } from './homes.js';
-import { parkWhy } from '../../shared/parkcheck.js';   // (never on a pavement, a promenade, a lawn: the owner, 11-14)
+import { parkWhy, parkExempt } from '../../shared/parkcheck.js';   // (never on a pavement, a promenade, a lawn: the owner, 11-14)
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 import { dressWild, riderLook } from './wildfolk.js';   // (the country riders' looks: the people of the wilds)
 import { missPed, lateFor, noteBraking, held as slipHeld } from './slips.js';   // (fallible drivers, rarely: the owner's notes, 11-03)
@@ -553,41 +553,75 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
 
 // Route over the road network (BFS on junctions, any level - police and ambulances take the
 // highway too): world waypoints along the lanes, ending at the target.
-export function planRoute(world, fromX, fromY, toX, toY) {
-  const m = world.map, net = m.net;
-  const start = clearNode(m, fromX, fromY), goal = clearNode(m, toX, toY);
-  if (!start || !goal || !net) return [{ x: toX, y: toY, final: true }];
-  let prev;
+// The way by road from (fromX, fromY) to (toX, toY): waypoints along the kerb lanes, the last the target itself (final).
+// From the street the vehicle is on - along its lane to either end, whichever makes the whole way shorter (a one-way
+// street: its own way only) - then the shortest way by length over the junctions (the owner, 11-23: the police car taking
+// you in cut across pavements to a junction far down the street, and went the long way round; a breadth-first plan
+// counted junctions, not distance). Roads remembered as blocked (reroute.js) are avoided if there's another way.
+const ON_STREET = 140;   // px: this near a street's line, the vehicle starts along it (else from the nearest clear junction)
+// opts.heading: the vehicle's heading (the way back behind it costs a turn - UTURN_PX); opts.inner: along the inside lane (a car on its siren: the traffic it's passing pulls over to the kerb - traffic.js
+// sirenBehind - and the kerb lane is where it stops)
+export function planRoute(world, fromX, fromY, toX, toY, opts = null) {
+  const m = world.map, net = m.net, inner = !!(opts && opts.inner), ln = (e) => (inner ? Math.max(0, (e.nl || 1) - 1) : 0);
+  const goal = net && clearNode(m, toX, toY);
+  if (!goal || !net) return [{ x: toX, y: toY, final: true }];
+  const starts = leadIns(net, fromX, fromY, ln, opts && opts.heading);
+  if (!starts.length) { const n0 = clearNode(m, fromX, fromY); if (!n0) return [{ x: toX, y: toY, final: true }]; starts.push({ id: n0.id, len: Math.hypot(n0.x - fromX, n0.y - fromY), pts: [] }); }
+  let prev, dist;
   for (const avoid of world.blockedEdges && world.blockedEdges.size ? [true, false] : [false]) {   // (roads remembered as blocked: reroute.js)
-    prev = new Map([[start.id, null]]);
-    const q = [start.id];
-    for (let qi = 0; qi < q.length; qi++) {
-      const id = q[qi];
+    prev = new Map(); dist = new Map();
+    const H = [];   // (a binary heap of [d, id])
+    const push = (d, id) => { H.push([d, id]); let i = H.length - 1; while (i > 0) { const j = (i - 1) >> 1; if (H[j][0] <= H[i][0]) break; [H[i], H[j]] = [H[j], H[i]]; i = j; } };
+    const pop = () => { const top = H[0], last = H.pop(); if (H.length) { H[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let k = i; if (l < H.length && H[l][0] < H[k][0]) k = l; if (r < H.length && H[r][0] < H[k][0]) k = r; if (k === i) break; [H[i], H[k]] = [H[k], H[i]]; i = k; } } return top; };
+    for (const st of starts) if (!dist.has(st.id) || st.len < dist.get(st.id)) { dist.set(st.id, st.len); prev.set(st.id, { start: st }); push(st.len, st.id); }
+    while (H.length) {
+      const [d, id] = pop();
+      if (d > dist.get(id)) continue;
       if (id === goal.id) break;
-      for (const [eid, nid] of Object.entries(net.nodes[id].links)) if (!prev.has(nid) && !(avoid && isBlocked(world, +eid))) { prev.set(nid, { id, e: +eid }); q.push(nid); }
+      for (const [eid, nid] of Object.entries(net.nodes[id].links)) {
+        if (avoid && isBlocked(world, +eid)) continue;
+        const E = net.edges[+eid], nd = d + (E && E.len ? E.len : Math.hypot(net.nodes[nid].x - net.nodes[id].x, net.nodes[nid].y - net.nodes[id].y));
+        if (!dist.has(nid) || nd < dist.get(nid)) { dist.set(nid, nd); prev.set(nid, { id, e: +eid }); push(nd, nid); }
+      }
     }
     if (prev.has(goal.id)) break;
   }
+  if (!prev.has(goal.id)) return [{ x: toX, y: toY, final: true }];
   const chain = [];
-  let cur = goal.id;
-  while (cur !== undefined && cur !== start.id) { const p = prev.get(cur); if (!p) break; chain.unshift({ from: p.id, e: p.e }); cur = p.id; }
+  let cur = goal.id, start = null;
+  for (let g = 0; g < 4000; g++) { const q = prev.get(cur); if (!q) break; if (q.start) { start = q.start; break; } chain.unshift({ from: q.id, e: q.e }); cur = q.id; }
   const pts = [];
   let last = null;
+  if (start && start.pts.length) { for (const q of stride(start.pts, 0, 96)) pts.push(q); last = { p: start.pts[start.pts.length - 1], d: endDir(start.pts) }; }
   for (const step of chain) {
     const e = net.edges[step.e];
-    const lp = lanePath(net, e, step.from, 0);
-    if (last) for (const p of turnPath(last.p, last.d, lp[0], startDir(lp), 4)) pts.push({ x: p.x, y: p.y });
-    for (const p of stride(lp, 0, 96)) pts.push(p);
+    const lp = lanePath(net, e, step.from, ln(e));
+    if (last) for (const q of turnPath(last.p, last.d, lp[0], startDir(lp), 4)) pts.push({ x: q.x, y: q.y });
+    for (const q of stride(lp, 0, 96)) pts.push(q);
     last = { p: lp[lp.length - 1], d: endDir(lp) };
   }
   pts.push({ x: toX, y: toY, final: true });
   return pts;
 }
+// the ways onto the junctions from the street at (x, y): along its kerb lane, from the point beside the vehicle to each end
+// it may drive to -> [{ id (the junction), len, pts (the lane from here on) }]
+const UTURN_PX = 900;   // (the way back behind a vehicle: counted this much longer - turning round in a street is slow, and a car turning across it can wedge)
+function leadIns(net, x, y, ln = () => 0, heading = undefined) {
+  const ne = nearestEdge(net, x, y, (e) => e.lvl === 0);
+  if (!ne || ne.d > ON_STREET) return [];
+  const e = ne.e, out = [];
+  for (const [from, to] of [[e.a, e.b], [e.b, e.a]]) {
+    if (e.oneway && from !== e.a) continue;
+    const lp = lanePath(net, e, from, ln(e)), pr = project(lp, { x, y });
+    if (!pr) continue;
+    const L = lp[lp.length - 1].s, rest = lp.filter((q) => q.s > pr.s + 24);
+    let len = Math.max(0, L - pr.s);
+    if (heading !== undefined) { const t = pointAt(lp, pr.s); if (t.tx * Math.cos(heading) + t.ty * Math.sin(heading) < -0.2) len += UTURN_PX; }
+    out.push({ id: to, len, pts: rest.length ? rest : [lp[lp.length - 1]] });
+  }
+  return out;
+}
 
-// The ground junction nearest (x, y) that it can be driven to in a straight line - the first leg of a route, and its last
-// - with no building or wall in between (the nearest as the crow flies was often the one on the next street, behind the
-// block: an ambulance leaving a scene steered straight for it, up the pavement and into the building); the nearest if
-// none is.
 function clearNode(m, x, y) {
   const n0 = m.nearestNode(x, y);
   if (!n0 || !lineBlocked(m, x, y, n0.x, n0.y, 4000)) return n0;
@@ -815,13 +849,17 @@ function steerTraffic(world, v, t) {
   // getting jammed in a spot" - a passer-by pinned against a lorry in the road, the cars behind waiting for ever.
   if (ai.creepUntil > now) {
     (ignore ||= new Set()).add(ai.creepPast); desired = Math.min(desired, PED_CREEP_PX);
-    // (nudged aside: off the car's line, a step at a time, onto open ground only)
-    const q = world.get(ai.creepPast), c = Math.cos(v.a), sn = Math.sin(v.a);
-    if (q && !q.dead && !q.vehId && !q.player) {
+    // (nudged aside: off the car's line, a step at a time, onto open ground only - everyone on foot in its way, not just
+    // the one it first waited for: two passers-by stood in the road took turns holding a taxi ~50 s, each blocking while
+    // it crept past the other - gridlock.test.js, 11-27)
+    const c = Math.cos(v.a), sn = Math.sin(v.a), fx = v.x + c * (v.def.L / 2 + 20), fy = v.y + sn * (v.def.L / 2 + 20);
+    for (const q of world.query(fx, fy, v.def.L / 2 + 40, K.PED)) {
+      if (q.dead || q.vehId || q.player) continue;
       const lx = (q.x - v.x) * c + (q.y - v.y) * sn, ly = -(q.x - v.x) * sn + (q.y - v.y) * c;
       if (lx > 0 && lx < v.def.L / 2 + 40 && Math.abs(ly) < v.def.W / 2 + 12) {
+        ignore.add(q.id);
         const sd = ly >= 0 ? 1 : -1, nx = q.x - sn * sd * 2.5, ny = q.y + c * sd * 2.5;
-        if (!PED_BLOCK[world.map.tileAtPx(nx, ny)]) { q.x = nx; q.y = ny; }
+        if (!PED_BLOCK[world.map.tileAtPx(nx, ny)]) { q.x = nx; q.y = ny; world.place(q); }
       }
     }
   }
@@ -1241,7 +1279,7 @@ function manage(world) {
       if (pm === 'bike') pm = weighted(motoMix('', world.map.districtAt(sp.x, sp.y).style));   // (which motorcycle: by district - task #366)
       const fit = bayRoom(world.map, sp, i);   // (a bay at the street's end: nothing so long it sticks out into the junction)
       if (VEHICLES[pm].L > fit) { pm = FITS.find((k) => VEHICLES[k].L <= fit); if (!pm) continue; }
-      if (!sp.drive && pm !== 'golfcart' && badBay(world.map, sp, i, pm)) continue;   // (a space laid over a pavement, a promenade or a lawn: left empty - the lint lists them, tools/placementlint.mjs parked)
+      if (!parkExempt(sp, pm) && badBay(world.map, sp, i, pm)) continue;   // (a space laid over a pavement, a promenade or a lawn: left empty - the lint lists them, tools/placementlint.mjs parked)
       const v = world.spawnVehicle(pm, sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
       world.parked.set(i, v.id);
     }

@@ -100,6 +100,12 @@ export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die',
 const WATER_RACES = { jetski: 'jetski', boat: 'speedboat', kayak: 'kayak' };   // (a water race's kind: the craft waiting at its start)
 const waterRaces = (m, kind = null) => (m.races || []).filter((r) => r.start && WATER_RACES[r.kind] && (!kind || r.kind === kind)).map((r) => ({ x: r.start.x, y: r.start.y, name: r.name || 'Race start', craft: WATER_RACES[r.kind], race: r }));
 export const NEAR_KINDS = {
+  // (every waterfall a fish could leap at - the nature sites' own, the coast's and the bigger small ones, as the page
+  // lists them, client/art2/game/waterlife.js fallsOf - stood a little below its foot: the water pass's films, 11-24)
+  falls: (m) => [
+    ...(m.natureSites || []).filter((q) => q.falls && Number.isFinite(q.falls.x)).map((q) => ({ x: q.falls.x, y: q.falls.y + 100, name: `${q.name || q.kind}'s falls` })),
+    ...(m.props || []).filter((q) => q && (q.t === 'coastfall' || (q.t === 'fallsmall' && (q.h || 30) >= 20))).map((q) => ({ x: q.x, y: q.y + 100, name: 'a waterfall' })),
+  ],
   records: (m) => (m.walkIns || []).flatMap((id) => (m.buildings[id] && m.buildings[id].walkIn ? m.buildings[id].walkIn.units : []).filter((u) => u.trade === 'records' && m.pois[u.poi]).map((u) => ({ x: m.pois[u.poi].x, y: m.pois[u.poi].y, name: m.pois[u.poi].label }))),   // (the record shops you walk into: music.js)
   firestation: (m) => firefighter.sitesOf(m).stations.map((q) => ({ x: q.x, y: q.y, name: q.name })),   // (the job card at a job's place: UI-3)
   taxirank: (m) => taxijob.ranksOf(m).map((r) => ({ x: r.x, y: r.y, name: r.name })),
@@ -469,6 +475,7 @@ export function give(world, p, msg) {
   if (!q || !q.conn) return '[dev] That player isn\'t online.';
   const n = Math.max(1, Math.min(GIVE_MAX, Math.floor(Number(msg.n)) || 1));
   const kind = String(msg.kind || ''), id = String(msg.id || '').slice(0, 30);
+  if (kind === 'weapon' && id === 'boomtest') q.boomLive = !!msg.live;   // (the Boom Tester as a real weapon or the dev tool: boomtest.js)
   let what;
   if (kind === 'all') {
     for (const wid of Object.keys(WEAPONS)) if (wid !== 'fists') addThing(q, 'weapon', wid, n);

@@ -21,6 +21,12 @@ const pressedOnce = new Set();
 const tappedKeys = new Set(); // keys pressed since the last sample (so quick taps are never missed)
 let pad = null;
 let numberPick = null;
+// Tab: a tap takes out the next weapon (on its release), held it opens the weapon wheel (client/main.js) - as RB on a pad
+export const TAB_HOLD_MS = 260;
+let tabAt = 0, tabNext = false;
+export const tabHeld = () => tabAt > 0 && performance.now() - tabAt >= TAB_HOLD_MS;
+export const tabDown = () => !!tabAt;
+export function cancelTabTap() { tabAt = tabAt && -1; tabNext = false; }
 let walkToggle = false;
 let kbSteer = 0, kbSteerAt = 0;
 
@@ -95,11 +101,16 @@ export function initInput(canvas, hooks) {
     keys.add(k);
     if (k === 'Tab' || k === 'Space' || k === 'KeyT' || k.startsWith('Arrow')) e.preventDefault();   // (T: chat - its letter mustn't land in the line it opens)
     if (/^Digit[1-9]$/.test(k)) numberPick = Number(k.slice(5)) - 1;
+    if (k === 'Tab' && !e.repeat) tabAt = performance.now();
     if (k === 'KeyC') walkToggle = !walkToggle;
     hooks.onKey?.(k);
     setDevice('keyboard');
   });
-  addEventListener('keyup', (e) => { keys.delete(e.code); hooks.onKeyUp?.(e.code); });
+  addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+    if (e.code === 'Tab') { if (tabAt > 0 && performance.now() - tabAt < TAB_HOLD_MS) tabNext = true; tabAt = 0; }
+    hooks.onKeyUp?.(e.code);
+  });
   addEventListener('blur', () => { keys.clear(); mouse.down = false; mouse.rdown = false; });
   canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.movedAt = input.activeAt = performance.now(); if (!e.sourceCapabilities || !e.sourceCapabilities.firesTouchEvents) setDevice('keyboard', 'mouse'); });
   canvas.addEventListener('mousedown', (e) => {
@@ -336,20 +347,19 @@ export function sample(view) {
     if (k('Space')) bits |= IN.CLIMB;
     if (k('ShiftLeft') || k('ShiftRight')) bits |= IN.DESCEND;
   }
-  if (pressedOnce.has('Tab')) bits |= IN.NEXTW;
+  if (tabNext) { bits |= IN.NEXTW; tabNext = false; }   // (a tap of Tab, let go: the next weapon)
   if (mouse.wheel > 0) bits |= IN.NEXTW;
   if (mouse.wheel < 0) bits |= IN.PREVW;
   mouse.wheel = 0;
   pressedOnce.clear();
   tappedKeys.clear();
 
-  // mouse: the cursor is the aim. With a gun out you always face the cursor (twin-stick);
-  // unarmed / melee you face where you walk and turn to the cursor only to hit or when
-  // holding the right button.
+  // mouse: the cursor is the aim, while the right button is held (the gun up, pointed at it) or as you fire; otherwise
+  // you face where you walk, the gun down - as on a pad (the owner, 11-23: "you used to only hold up the weapon when you
+  // were aiming ... hold right click"; it was twin-stick since 11-13, the gun up whenever the mouse had moved)
   if (input.device === 'keyboard' && view.selfScreen) {
-    const mouseRecent = performance.now() - mouse.movedAt < 8000;
     const cursorAim = Math.atan2(mouse.y - view.selfScreen.y, mouse.x - view.selfScreen.x);
-    if ((view.armed && mouseRecent) || mouse.down || mouse.clicked || mouse.rdown) { aim = cursorAim; bits |= IN.AIMING; }
+    if (mouse.down || mouse.clicked || mouse.rdown) { aim = cursorAim; bits |= IN.AIMING; }
     if (mouse.down || mouse.clicked) bits |= IN.FIRE;
     if (mouse.rdown && !view.inVehicle) bits |= IN.BLOCK;
   }

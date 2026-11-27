@@ -250,7 +250,34 @@ function boreOf(m, F, u0, u1, open) {
     box: [Math.floor(Math.min(a.x, b.x) - reach - TILE), Math.floor(Math.min(a.y, b.y) - reach - TILE), Math.ceil(Math.max(a.x, b.x) + reach + TILE), Math.ceil(Math.max(a.y, b.y) + reach + TILE)],
   };
   m.tunnels.push(t);
+  moundOf(m, F, u0, u1, open);
   return t;
+}
+// The hill the bore goes through, in the land's relief (m.relief, what the art shades the ground by): the cover's hill is
+// drawn over the bore but the ground round it was flat, so nothing read as a rise (the placement audit's portalOnFlat).
+// MOUND.h metres over the bore, falling away along the line - steeply on the portal's side (MOUND.portal tiles: the
+// stretch to the platform stays flat), gently behind the blind end (MOUND.back) and to the sides (MOUND.side); open ground
+// and the bore's own rock only (a road, a building, water or the platform keep their height).
+export const MOUND = { h: 4, portal: 3, back: 4, side: 3 };   // (11-22 night: smaller - the shading spread past the cover's hill, a dark patch on the sand by Northshore Station)
+const MOUND_ON = new Set([T.GRASS, T.DIRT, T.SAND, T.FIELD, T.WALL]);
+function moundOf(m, F, u0, u1, open) {
+  if (!m.relief) return;
+  const a = F.at(u0), b = F.at(u1), span = HW + WALL, far = (Math.max(MOUND.back, MOUND.side, MOUND.portal) + 1) * TILE + span;
+  const tx0 = Math.floor((Math.min(a.x, b.x) - far) / TILE), tx1 = Math.floor((Math.max(a.x, b.x) + far) / TILE);
+  const ty0 = Math.floor((Math.min(a.y, b.y) - far) / TILE), ty1 = Math.floor((Math.max(a.y, b.y) + far) / TILE);
+  // (the portal: the u1 end of the 'b' bore - the blind end at u0 - and the u0 end of the 'a' one)
+  const fallLo = (open === 'b' ? MOUND.back : MOUND.portal) * TILE, fallHi = (open === 'b' ? MOUND.portal : MOUND.back) * TILE;
+  for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+    if (!m.inside(tx, ty)) continue;
+    const i = m.idx(tx, ty);
+    if (!MOUND_ON.has(m.tiles[i]) && !(m.cover && m.cover[i])) continue;
+    const dx = (tx + 0.5) * TILE - a.x, dy = (ty + 0.5) * TILE - a.y, u = dx * F.ux + dy * F.uy + u0, o = Math.abs(dx * F.nx + dy * F.ny);
+    const su = u < u0 ? (u0 - u) / fallLo : u > u1 ? (u - u1) / fallHi : 0, so = Math.max(0, o - span) / (MOUND.side * TILE);
+    const d = Math.sqrt(su * su + so * so);
+    if (d >= 1) continue;
+    const s = d * d * (3 - 2 * d), add = Math.round(MOUND.h * (1 - s));
+    if (add > 0) m.relief[i] = Math.min(255, m.relief[i] + add);
+  }
 }
 
 // ---- the pass ----------------------------------------------------------------------------------------------------------

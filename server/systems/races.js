@@ -4,6 +4,7 @@
 // Anyone who turns up mid-race joins the next round. Leave your vehicle, die, or wander off and you forfeit - the
 // race carries on for everyone else.
 import { store } from '../store.js';
+import { raceShown } from '../../shared/hidden.js';
 import * as skills from './skills.js';
 import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
@@ -32,6 +33,7 @@ export function update(world) {
   if (!world.raceState || world.tick % 5 !== 3) return;
   const now = world.time;
   world.map.races.forEach((race, i) => {
+    if (!raceShown(race)) return;   // (hidden for the beta: rules.js RACES_HIDDEN)
     const st = world.raceState[i];
     // who is sitting at the start buoy in the right kind of craft
     const atStart = [];
@@ -118,7 +120,7 @@ export function withdraw(world, p) {
 // On foot at a race that starts from a hire dock (the Redwood River Run's kayaks: shared/world3-riverrun.js race.rental) -
 // on its planks, at its start buoy or at the hire's counter, with no hire boat of your own out: rent one right there (the
 // owner, 2026-11-13: "I dont see a way to start the kayak run either"; players.js findInteraction asks this before the
-// places and before "Fish here", which used to win on the planks with a rod in the bag). -> { label, run } or null
+// places and before "Fish here" (offered only with the rod in hand since 11-16), which used to win on the planks). -> { label, run } or null
 export function footInteraction(world, p, rentals, openMenu) {
   const ped = p.ped;
   if (!ped || ped.vehId || !world.map.races) return null;
@@ -129,7 +131,7 @@ export function footInteraction(world, p, rentals, openMenu) {
     const near = Math.hypot(ped.x - race.start.x, ped.y - race.start.y) < START_R * 1.2 || Math.hypot(ped.x - r.dock.x, ped.y - r.dock.y) < 120;
     if (!near || rentals.current(world, p)) continue;
     const model = rentals.modelsAt(r)[0];
-    return { label: `Rent a ${model} for ${race.name}`, run: () => { openMenu(world, p, poi); if (p.menu) p.menu.at = { x: ped.x, y: ped.y }; } };
+    return { label: raceShown(race) ? `Rent a ${model} for ${race.name}` : `Rent a ${model}`, run: () => { openMenu(world, p, poi); if (p.menu) p.menu.at = { x: ped.x, y: ped.y }; } };
   }
   return null;
 }

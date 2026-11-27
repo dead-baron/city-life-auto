@@ -12,6 +12,8 @@
 // For the whole-world build only (shared/world3-world.js's done hook, after Granite Peaks' part 1). Deterministic:
 // arithmetic and integer hashes.
 import { TILE, T } from './constants.js';
+import { cliffSolid } from './cliffshape.js';
+import { RELIEF } from './mapcore.js';
 
 const RES = 32, KEEP = 4, LUSH = 128, D_PEAKS = 48;
 const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -20,7 +22,14 @@ export const TARN3 = {
   beach: 3,         // the pebble beach on the west shore: tiles from the water
   slabs: 5,         // a slab every this many tiles of the north shore
   camp: { name: 'Summit Tarn Camp', back: 4 },   // the camp's shelf: this many tiles back from the beach's water
-  crag: { name: 'Eagle Crag', reach: 36, foot: 3 },   // looked for within reach tiles of the tarn's middle; the gear's row this many 8-px steps below its foot
+  crag: { name: 'Eagle Crag', reach: 36, foot: 3 },
+  // the cirque (the owner, 11-25 13:33: "you can change the summit tarn if you think it looks or works better"): the
+  // tarn lay on open scree with nothing behind it. A crescent of the mountain's rock stands behind its north shore -
+  // `back` tiles from the water (the turf and the slabs stay in front of it), `deep` tiles through, from `span` round
+  // (radians about the tarn's middle: west-north-west to north-east; the beach and the camp on the west and the
+  // cabin's meadow on the east stay open), the land raised `rise` m behind it, cliff walls on its faces toward the
+  // tarn; and where its outflow ended on the scree, a lower pool `pool` (half axes, tiles) with granite on its lip
+  cirque: { back: 5, deep: 5, rise: 14, span: [-2.55, -0.75], face: 90, pool: [4.2, 3] },   // looked for within reach tiles of the tarn's middle; the gear's row this many 8-px steps below its foot
 };
 
 export function tarnByHand3(m, H3) {
@@ -117,6 +126,69 @@ export function tarnByHand3(m, H3) {
   }
   // Eagle Crag: a granite crag on open ground off the tarn's north-east shore - its face, a lower buttress beside it,
   // the gear at its foot (the face looks south, toward the tarn's side)
+  // the cirque: rock behind the north shore, its walls toward the water
+  const Q = TARN3.cirque;
+  {
+    const rx = (wx1 - wx0) / 2 + Q.back, ry = (wy1 - wy0) / 2 + Q.back, rock = new Set();
+    const free = (i) => open(i) && !taken.has(i) && !water.has(i) && !(m.reserve[i] & ~(LUSH | RES | KEEP));   // (the tarn's own kept ground too; not a road's, a lot's, a track's)
+    for (let y = Math.floor(my - ry - Q.deep - 2); y <= my + 2; y++) for (let x = Math.floor(mx - rx - Q.deep - 2); x <= mx + rx + Q.deep + 2; x++) {
+      if (!inF(x, y)) continue;
+      const a = Math.atan2(y - my, x - mx), i = idx(x, y);
+      if (a < Q.span[0] || a > Q.span[1]) continue;
+      const e0 = Math.hypot((x - mx) / rx, (y - my) / ry), e1 = Math.hypot((x - mx) / (rx + Q.deep + hh(Math.round(a * 6), 3, 81) * 1.5), (y - my) / (ry + Q.deep + hh(Math.round(a * 6), 3, 81) * 1.5));
+      if (e0 < 1 || e1 > 1 || !free(i)) continue;
+      rock.add(i);
+    }
+    // (only a piece that holds together: no single tiles)
+    for (const i of [...rock]) if ([i - 1, i + 1, i - W, i + W].filter((j) => rock.has(j)).length < 2) rock.delete(i);
+    for (const i of rock) {
+      const x = i % W, y = (i - x) / W, e0 = Math.hypot((x - mx) / rx, (y - my) / ry);
+      m.tiles[i] = T.WALL; m.reserve[i] |= 32;
+      m.relief[i] = Math.min(255, m.relief[i] + Math.round(Q.rise * Math.min(1, 0.4 + (e0 - 1) * ry / Q.deep) * (m.relief[i] >= RELIEF.knee ? RELIEF.high : 1)));
+      drop.push([(x + 0.5) * TILE, (y + 0.5) * TILE, TILE * 0.8]);
+    }
+    // the walls: each run (to 8 tiles) of the rock's edge that faces south - toward the tarn - a cliff face, where the
+    // rock it is drawn over lies on the crescent
+    let faces = 0;
+    for (let y = Math.floor(my - ry - Q.deep - 2); y <= my; y++) {
+      let run = 0;
+      for (let x = Math.floor(mx - rx - Q.deep - 3); x <= mx + rx + Q.deep + 3; x++) {
+        const i = idx(x, y), foot = rock.has(i) && !rock.has(i + W);
+        if (foot && run < 8) { run++; continue; }
+        if (run >= 3) {
+          const x0 = x - run, fcx = (x0 + run / 2) * TILE, fcy = (y + 1) * TILE;
+          face: for (const h of [Q.face, 60]) for (let t = 0; t < 8; t++) {
+            const fs = (x0 * 7 + y + t * 13) % 50 + 1, at = cliffSolid(fcx, fcy, run * TILE, 2 * TILE, h, fs);
+            if (at.some(([ax, ay]) => !inF(ax, ay) || (!rock.has(idx(ax, ay)) && !free(idx(ax, ay))))) continue;
+            for (const [ax, ay] of at) { const j = idx(ax, ay); if (!rock.has(j)) { m.tiles[j] = T.WALL; m.reserve[j] |= 32; rock.add(j); drop.push([(ax + 0.5) * TILE, (ay + 0.5) * TILE, TILE * 0.8]); } }
+            P('cliff', fcx, fcy, 0, { w: run * TILE, d: 2 * TILE, h, s: fs, relief: 1 });
+            faces++;
+            break face;
+          }
+        }
+        run = foot ? 1 : 0;
+      }
+    }
+    out.cirque = { rock: rock.size, faces };
+    // the lower pool: where the outflow ended on the scree
+    if (outlet) {
+      const fx = Math.floor(outlet[0]), fy = Math.floor(outlet[1]), wet = (x, y) => inF(x, y) && (m.tiles[idx(x, y)] === T.WATER || m.tiles[idx(x, y)] === T.DEEP) && !m.lake[idx(x, y)];
+      let end = null;
+      for (let y = fy; y < fy + 40; y++) { let hit = null; for (let dx = 0; dx <= 8 && !hit; dx++) for (const x of [fx + dx, fx - dx]) if (wet(x, y)) { hit = [x, y]; break; } if (hit) end = hit; else if (end) break; }
+      if (end) {
+        const [px, py] = [end[0], end[1] + 2], [ax, ay] = Q.pool;
+        let n = 0;
+        for (let y = Math.floor(py - ay - 1); y <= py + ay + 1; y++) for (let x = Math.floor(px - ax - 1); x <= px + ax + 1; x++) {
+          const k = Math.hypot((x - px) / ax, (y - py) / ay) + (hh(x, y, 83) - 0.5) * 0.25, i = idx(x, y);
+          if (k > 1 || !inF(x, y) || !(open(i) || wet(x, y))) continue;
+          m.tiles[i] = k < 0.5 ? T.DEEP : T.WATER; m.land[i] = 0; m.river[i] = 1; m.reserve[i] |= RES; n++;
+          drop.push([(x + 0.5) * TILE, (y + 0.5) * TILE, TILE]);
+        }
+        for (const [dx, dy, w] of [[-ax - 0.6, 1.2, 76], [ax + 0.4, 1.4, 84], [-1.6, ay + 1.1, 96], [2.2, ay + 1, 76]]) P('outcrop', (px + dx + 0.5) * TILE, (py + dy + 0.5) * TILE, 22, { w, d: 50, h: 40, s: Math.round(w / 7), style: 'granite' });
+        out.pool = { x: px, y: py, tiles: n };
+      }
+    }
+  }
   const C = TARN3.crag;
   const clearRect = (sx, sy) => {
     for (let dy = -5; dy <= 4; dy++) for (let dx = -6; dx <= 6; dx++) { const x = sx + dx, y = sy + dy, i = idx(x, y); if (!inF(x, y) || !(m.tiles[i] === T.DIRT || m.tiles[i] === T.GRASS) || water.has(i) || taken.has(i) || (m.reserve[i] & (32 | 16 | 2 | 1 | 8)) || m.dist[i] !== D_PEAKS) return false; }

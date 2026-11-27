@@ -33,7 +33,10 @@ export const CRIMES = {
   copAssault:  { heat: 40, label: 'Assaulting an officer', felony: true, sev: 1.3 },
   murder:      { heat: 45, label: 'Murder', felony: true, sev: 1.5 },
   copMurder:   { heat: 90, label: 'Killing an officer', felony: true, sev: 2 },
-  vehKill:     { heat: 40, label: 'Vehicular homicide', felony: true, sev: 1.4 },
+  // (the owner, 11-22: "You get wanted levels too easily still" ... "people on an honest path ... don't get penalized too
+  // hard if they accidentally do something": a pedestrian run down was a felony at once - two stars and no badge, ever, till
+  // the record's paid off. Now a lesser crime: on the tally with no stars (a warning, the second a star), no felony)
+  vehKill:     { heat: 22, label: 'Vehicular homicide', sev: 1.2 },
   hitrun:      { heat: 15, label: 'Hit and run', sev: 1.1 },
   brandish:    { heat: 6,  label: 'Shots fired', sev: 1.2 },
   theft:       { heat: 10, label: 'Vehicle theft', sev: 0.85 },
@@ -356,11 +359,16 @@ function star(world, p, type, x, y, via, by = 0) {
 function sameTrain(a, b) { return !!(a && b && a.onTrain && b.onTrain && a.onTrain.t === b.onTrain.t && a.onTrain.c === b.onTrain.c); }
 function canSee(world, e, ped) { return !!e.sub === !!ped.sub && (sameTrain(e, ped) || (ped.ug ? !!e.ug && ugLos(undergroundOf(world.map), e.x, e.y, ped.x, ped.y) : world.map.los(e.x, e.y, ped.x, ped.y))); }   // (underground: the tunnels' own walls - shared/underground.js)
 
+// Self-defense: the victim struck first (and not long ago) - never against the police (they shoot at the wanted: killing
+// them is no defense), never for someone already wanted, and never when the perp struck them first (a victim fighting
+// back; the owner, 11-25: on a fresh character the stars stopped coming after a great deal of crime - every cop and
+// every civilian who had fought back counted as self-defense). Who started it: onDamage's started.
+const startedBy = (a, b, now) => { const t = a.started && a.started.get(b.id); return t !== undefined && now - t < 60; };   // (a struck b first, lately: onDamage)
 function immune(world, perp, victim) {
   if (!victim) return false;
   const now = world.time;
   const firstStrike = perp.aggressors.get(victim.id);
-  if (firstStrike !== undefined && now - firstStrike < 60) return 'self-defense';
+  if (firstStrike !== undefined && now - firstStrike < 60 && !isCop(victim) && !(perp.player && perp.player.wanted > 0) && !startedBy(perp, victim, now)) return 'self-defense';
   if (isFlagged(world, victim)) return 'flagged';
   if (victim.npc && victim.npc.role === 'gang' && isTurf(world.map, victim.x, victim.y)) return 'turf';
   return false;
@@ -462,7 +470,9 @@ export function addHeat(world, p, amount, x, y, damp = false) {
   if (p.wanted > prof.peakWanted) { prof.peakWanted = p.wanted; }
   prof.peakWantedAt = Date.now();
   p.faction = FACTION.CRIMINAL;
-  if (p.wanted >= 4) p.cityBounty = Math.max(p.cityBounty || 0, 500 * p.wanted);
+  // (no "city bounty" at 4+ stars any more - the owner, 11-22: "The bounty system was supposed to be something players put
+  // on each other, I wasn't planning on having it something you get for committing crimes around the city". A bounty is
+  // only one a player places (bounties.js); the police still pay their own arrest reward by the stars)
   bounties.sync(world, p);
   if (p.hunter && p.wanted > 0) { p.hunter = false; world.notify(p, 'Bounty Hunter license suspended while wanted.', 'bad'); }
   p.meDirty = true;
@@ -516,7 +526,8 @@ export function onDamage(world, attacker, victim, amount, cause) {
   const now = world.time;
   victim.aggressors.set(attacker.id, now);
   // who started it, between two players (bounties.js selfDefence): a blow that isn't hitting back
-  if (attacker.player && victim.player) { const back = attacker.aggressors.get(victim.id); if (back === undefined || now - back >= 60) (attacker.started ||= new Map()).set(victim.id, now); }
+  // (and between a player and anyone - immune(): self-defense is the victim's only if they started it)
+  if (attacker.player || victim.player) { const back = attacker.aggressors.get(victim.id); if (back === undefined || now - back >= 60) { const st = (attacker.started ||= new Map()); if (st.size > 200) for (const [k, t] of st) if (now - t >= 60) st.delete(k); st.set(victim.id, now); } }
   if (!attacker.player || cause === 'vehicle') return;
   if (victim.hp <= 0) return; // a lethal hit is reported (or not) as the killing itself
   attacker.recentAssault = attacker.recentAssault || new Map();

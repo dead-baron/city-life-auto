@@ -16,6 +16,7 @@
 // - buildWest(m, addProp) (from the dress hook, before the biomes' dressing - what it builds is kept from it, reserve 4).
 // - westDone(m): the summary (m.world3.west).
 import { TILE, T } from './constants.js';
+import { cliffSolid } from './cliffshape.js';
 
 export const WEST_IDS = { egret: 65 };
 const Z = 65;
@@ -105,7 +106,7 @@ function addBld(m, x, y, w, h, kind, name, roofKind, art, sign) {
 
 export function buildWest(m, addProp) {
   const W = m.w, HH = m.h;
-  const out = { village: [], homes: 0, piers: 0, boats: 0, quay: 0, raceway: null, light: null, boardwalk: 0, hide: null, blinds: 0, ramps: 0, falls: null, platform: 0, cape: null, pools: 0, stacks: 0, coves: 0, tracks: 0, props: 0 };
+  const out = { village: [], homes: 0, paved: 0, piers: 0, boats: 0, quay: 0, raceway: null, light: null, boardwalk: 0, hide: null, blinds: 0, ramps: 0, falls: null, platform: 0, cape: null, pools: 0, stacks: 0, coves: 0, tracks: 0, props: 0 };
   const inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH;
   const tile = (x, y) => (inF(x, y) ? m.tiles[y * W + x] : T.DEEP);
   const sea = (x, y) => { if (!inF(x, y)) return true; const i = y * W + x; return !m.land[i] && !m.river[i] && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP); };
@@ -207,19 +208,35 @@ export function buildWest(m, addProp) {
     // nets and gear on the quay, a bench looking out
     let q = 0;
     for (const [x, y] of quay) { if (hash(x, y, 74) > 0.07) continue; addProp(m, ['crates', 'pallet', 'fishtable', 'drum', 'rods', 'lifering'][q++ % 6], (x + 0.5) * TILE, (y + 0.5) * TILE, 0); out.props++; }
-    // the businesses by the quay (north and south of Wharf Street's end), the shacks along the road
-    const named = (x, y, w, h, kind, name, sideN, poiKind, extra) => {
-      const b = addBld(m, x, y, w, h, kind, name, 'metal', null, { x: (x + w / 2) * TILE, y: (sideN ? y + h + 0.8 : y - 0.8) * TILE, text: name });
+    // a path laid over open ground (grass, sand, dirt - never a building, the road or the water): t PLAZA for the paved
+    // forecourts, DIRT for the shacks' gravel paths (the owner, 11-16: "they don't have sidewalks or walkways leading up
+    // to the buildings, they just sit on grass")
+    const pave = (x0, y0, x1, y1, t) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (open(x, y)) { const i = y * W + x; if (m.tiles[i] !== t) out.paved++; m.tiles[i] = t; m.reserve[i] |= 4; } };
+    // the businesses by the quay (north and south of Wharf Street's end), each walked into (b.rooms: shared/map.js
+    // buildInteriors - the room, its counter, the place's spot moved in front of it; the owner, 11-16: "these places
+    // don't have interiors, they just have you interact at the wall"): every front on its south side, as drawn, its door
+    // there (b.door), onto a paved forecourt that runs on to the quay - the north row's down to Wharf Street, the south
+    // row's on the water side, a lane between them back up to the street
+    const named = (x, y, w, h, kind, name, poiKind, extra) => {
+      const b = addBld(m, x, y, w, h, kind, name, 'metal', null, { x: (x + w / 2) * TILE, y: (y + h - 0.6) * TILE, text: name });
       if (!b) return null;
       out.village.push(name);
-      if (poiKind) poi(poiKind, name, x + w / 2, sideN ? y + h + 1 : y - 1, { b: b.id, ...extra });
+      b.rooms = true; b.door = { tx: x + (w >> 1), ty: y + h };
+      if (poiKind) poi(poiKind, name, x + w / 2, y + h + 0.8, { b: b.id, ...extra });
       return b;
     };
-    named(1298, R - 15, 14, 8, 'market', 'Egret Point Fish Market', true, 'fishmarket');
-    named(1280, R - 13, 12, 7, 'club', 'The Gaff Hook', true, 'club');
-    named(1302, R + 6, 9, 6, 'tackle2', 'Egret Point Bait & Tackle', false, 'tackle');
-    const ch = named(1288, R + 6, 8, 5, 'charter', 'Egret Point Charters', false, 'charter');
+    const QX = Math.min(...quay.filter(([, y]) => y >= R - 18 && y <= R + 16).map(([x]) => x).concat([1318]));   // (the quay's west edge along here)
+    named(1298, R - 15, 14, 8, 'market', 'Egret Point Fish Market', 'fishmarket');
+    const gaff = named(1280, R - 13, 12, 7, 'bar', 'The Gaff Hook', 'delivery', { walk: true, store: 'bar' });   // (a dockside tavern: its bar, stools, the pool table - shared/shoprooms.js; not a 'club' lot: that's a nightclub's)
+    if (gaff) gaff.arch = 'club';   // (its look as before: the neon name over a bar's front)
+    named(1302, R + 6, 9, 6, 'tackle2', 'Egret Point Bait & Tackle', 'tackle');
+    const ch = named(1288, R + 6, 8, 5, 'charter', 'Egret Point Charters', 'charter');
     if (ch && charter) { const p = m.pois[m.pois.length - 1]; p.boat = { x: Math.round(charter[0] * TILE), y: Math.round(charter[1] * TILE) }; }
+    // the forecourts: the north row's from its fronts down to Wharf Street and east to the quay; the south row's along
+    // the water side of its fronts to the quay, and the lane between the charter office and the bait shop up to the street
+    pave(1278, R - 8, QX + 14, R - 4, T.PLAZA);   // (open ground only: up to the quay's planks, however far out it starts)
+    pave(1286, R + 11, QX + 14, R + 14, T.PLAZA);
+    pave(1296, R + 4, 1301, R + 13, T.PLAZA);
     // the fishing shacks: weathered siding, tin roofs, either side of the road; homes as today's shacks
     const walls = ['#8a9aa0', '#a08a70', '#7a8a7a', '#b0a088', '#6e7e88', '#9a7a62'];
     let k = 0;
@@ -232,14 +249,21 @@ export function buildWest(m, addProp) {
       const b = addBld(m, x, y, w, h, 'shack', `Fishing Shack`, 'metal', { spec: { floors: 1, style: 'siding', wallColor: walls[k % walls.length], pitch: 'gable', roof: 'metal', roofColor: ['#7a8288', '#8a6a50', '#6a7076'][k % 3], slope: 0.4 + (k % 3) * 0.08 } });
       k++;
       if (!b) continue;
-      const id = m.homes.length, door = { x: (x + w / 2) * TILE, y: (N ? y + h + 0.8 : y - 0.8) * TILE };
+      // its door where it's drawn - on its south side, the camera's (the south row's had theirs on the back, by the street)
+      const id = m.homes.length, door = { x: (x + w / 2) * TILE, y: (y + h + 0.8) * TILE };
       const home = { id, kind: 'shack', name: `Egret Point Shack #${id + 1}`, price: 6000, slots: 1, x: door.x, y: door.y, garage: { x: (x + w - 0.8) * TILE, y: (N ? y + h + 1.6 : y - 1.6) * TILE, a: N ? -Math.PI / 2 : Math.PI / 2 }, b: b.id };
       m.homes.push(home);
       m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: door.x, y: door.y, r: 40, b: b.id });
       b.home = id; b.name = home.name; out.homes++;
-      // nets drying, pots and a skiff on blocks beside some
-      if (k % 3 === 0) prop('crates', x - 1.2, N ? y + 2 : y + 4, 10);
-      if (k % 4 === 1) prop('drum', x + 8, N ? y + 3 : y + 2, 6);
+      // a gravel path from its step to Wharf Street: the north row's straight down to it; the south row's along the front
+      // and up the shack's west side (the gap to the next is three tiles or more)
+      const cx = x + w / 2, c0 = Math.floor(cx - 0.9), c1 = Math.floor(cx + 0.9);
+      b.door = { tx: Math.floor(cx), ty: y + h };
+      if (N) pave(c0, y + h, c1, R - 4, T.DIRT);
+      else { pave(x - 2, y + h, c1, y + h + 1, T.DIRT); pave(x - 2, R + 4, x - 1, y + h + 1, T.DIRT); }
+      // nets drying, pots and a skiff on blocks beside some (off the paths: the south row's behind it, by the street)
+      if (k % 3 === 0) prop('crates', N ? x - 1.2 : x + 2, N ? y + 2 : y - 1.2, 10);
+      if (k % 4 === 1 && N) prop('drum', x + 8, y + 3, 6);
     }
     for (let j = 0; j < 4; j++) addProp(m, 'lamp', (1142 + j * 44) * TILE, (R - 3.2) * TILE), out.props++;
     keep(EGRET.box[0], EGRET.box[1], EGRET.box[2], EGRET.box[3]);
@@ -456,7 +480,15 @@ export function buildWest(m, addProp) {
         const x = cliffX(y);
         if (Math.abs(y - ky - 8) <= 1) continue;   // (the stairs' gap)
         for (let j = 0; j < 2; j++) if (open(x + j, y)) { m.tiles[y * W + x + j] = T.WALL; m.reserve[y * W + x + j] |= 4; rock++; }
-        if ((y - ky) % 6 === 0) addProp(m, 'cliffwall', (x - 0.4) * TILE, (y + 0.5) * TILE, 0, { len: 6 * TILE, h: 74 + (Math.abs(y) % 3) * 8, d: 56, s: y }), out.props++;
+        // (11-25: the band's rock was a wall piece six tiles long every six rows - south-facing pieces down a west-facing
+        // shore, a column of square turf-topped blocks; the owner that day, of rock drawn by code: "not all so uniform".
+        // Now a scarp of basalt along the band itself: a boulder or an outcrop every other row, each its own size, a
+        // little off the line)
+        if ((y - ky) % 2 === 0) {
+          if (hh(y, 3, 915) < 0.5) addProp(m, 'boulder', (x + 0.5 + hh(y, 1, 915) * 1.2) * TILE, (y + 0.5) * TILE, 14, { s: 34 + Math.round(hh(y, 2, 915) * 26), style: 'basalt' });
+          else addProp(m, 'outcrop', (x + 1 + (hh(y, 1, 915) - 0.5)) * TILE, (y + 0.7) * TILE, 20, { w: 70 + Math.round(hh(y, 4, 915) * 56), d: 44 + Math.round(hh(y, 5, 915) * 22), h: 40 + Math.round(hh(y, 6, 915) * 40), s: Math.abs(y), style: 'basalt' });
+          out.props++;
+        }
       }
       const gx = cliffX(ky + 8);
       addProp(m, 'stairs', (gx - 1) * TILE, (ky + 8.6) * TILE, 0, { len: 2 * TILE + 16, h: 70, w: 30 }); out.props++;
@@ -526,7 +558,11 @@ export function buildWest(m, addProp) {
       for (const py of [cy - 14, cy + 14]) {
         const x = coastX(py, sx);
         for (let yy = py - 2; yy <= py + 2; yy++) for (let j = -1; j < 12; j++) if (open(x + j, yy)) { m.tiles[yy * W + x + j] = T.WALL; m.reserve[yy * W + x + j] |= 4; }
-        addProp(m, 'cliffwall', (x + 5) * TILE, (py + 2.6) * TILE, 0, { len: 12 * TILE, h: 80, d: 60, s: py }); out.props++;
+        // (11-25: the point's rock is a headland of crags - a `cliff` drawn rough, statics.js rg -, not one straight
+        // wall piece with a turf top; solid where it stands: cliffshape.js)
+        const hx = (x + 5.5) * TILE, hy = (py + 3) * TILE, hw = 12 * TILE, hd = 4 * TILE, hH = 76 + (Math.abs(py) % 3) * 14;
+        for (const [qx, qy] of cliffSolid(hx, hy, hw, hd, hH, Math.abs(py))) if (open(qx, qy)) { m.tiles[qy * W + qx] = T.WALL; m.reserve[qy * W + qx] |= 4; }
+        addProp(m, 'cliff', hx, hy, 0, { w: hw, d: hd, h: hH, s: Math.abs(py), st: 'basalt', rough: 1 }); out.props++;
       }
       // sea stacks in the cove's mouth, driftwood on the sand
       for (const [dy, d, r, h] of [[-8, 10, 22, 120], [5, 16, 16, 90], [12, 7, 26, 140]]) { const tx = coastX(cy + dy, sx) - d, ty = cy + dy; if (sea(tx, ty)) { addProp(m, 'seastack', tx * TILE, ty * TILE, r, { s: (tx + ty) % 4 + 1, r, h }); out.stacks++; out.props++; } }

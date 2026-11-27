@@ -241,6 +241,14 @@ test('tall blocks: no building without a reason to stand tall hides the street b
   assert.ok(B0.length > 100, `the survey finds the tall plain blocks the cap is for (${B0.length})`);
   // (left over: only a section already at its lowest - minFl storeys - over a street on both sides of a corner)
   const left = B1.filter((q) => q.floors > STREET_CAP.minFl);
+  // (11-23, "buildings covering streets, sidewalks and alleys - again"): no plain wall over more than half the street in
+  // front of it, one storey over a lane - the far half of every street shows (streetDepth, reachOK)
+  const { streetDepth, reachOK, floorsMin, staticIndex } = await import('../client/art2/game/statics.js');
+  const c = staticIndex(M).c;
+  const over = after.filter((q) => !q.purpose && q.floors > floorsMin(streetDepth(c, q.tx, q.ty, q.tw)) && !reachOK(q.H, streetDepth(c, q.tx, q.ty, q.tw)));
+  assert.equal(over.length, 0, `over half the street: ${over.slice(0, 6).map((q) => `#${q.b} ${q.name} at ${q.tx},${q.ty}: ${q.floors} floors over ${streetDepth(c, q.tx, q.ty, q.tw)} rows`).join('; ')}`);
+  const hid = (L) => L.filter((q) => !q.purpose).reduce((a, q) => a + q.hidden, 0);
+  assert.ok(hid(after) < hid(before) * 0.85, `street hidden by plain buildings ${hid(before)} -> ${hid(after)}`);
   assert.equal(left.length, 0, `still hiding the street: ${left.slice(0, 6).map((q) => `#${q.b} ${q.name} ${q.tw}x${q.th} at ${q.tx},${q.ty}: ${q.floors} floors, ${q.hidden} tiles`).join('; ')}`);
   // the landmark towers and the walk-ins keep their height; nothing that has a reason is lowered
   const was = new Map(before.map((q) => [q.b + ':' + q.tx + ':' + q.ty, q]));

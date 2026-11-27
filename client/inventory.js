@@ -1,4 +1,4 @@
-// The quick wheel, the weapon picker and the weapon wheel (the bag itself, the hub's BAG tab: client/bag.js).
+// The quick wheel, the weapon picker and the weapon wheel (the Inventory itself, the hub's 'bag' tab: client/bag.js).
 //
 // Quick wheel: hold the use key (X / View / ITEMS) and four slots fan out round your character;
 // point at one (mouse, right stick, or your finger) and let go to use it. A quick tap uses the slot
@@ -26,6 +26,10 @@ export const ITEM_ICON = {
   seed_corn: '🌱', seed_strawberry: '🌱', seed_sunflower: '🌱', corn: '🌽', strawberry: '🍓', sunflower: '🌻', prize_corn: '🌽', prize_strawberry: '🍓', prize_sunflower: '🌻',   // (H78)
 };
 const SLOTS = 4;
+// each thing's own pixel picture (client/itemart.js), loaded the first time the wheel is drawn - off the page's first
+// load; until it is in, and for a thing it has none of, the old mark
+let ART = null, artP = null;
+const pic = (id) => (ART && ART.itemIcon(id)) || ITEM_ICON[id] || '•';
 
 // ---- the quick wheel ------------------------------------------------------------------------------
 // Four slots round a centre; pick(angle) gives the slot a direction points at (up, right, down, left).
@@ -42,13 +46,14 @@ export function createWheel({ el, send, me }) {
   function render() {
     const m = me();
     if (!m) return;
+    if (!ART) artP ||= import('./itemart.js').then((a) => { ART = a; if (open) render(); }).catch(() => {});
     const quick = m.quick || [];
     el.innerHTML = '';
     for (let i = 0; i < SLOTS; i++) {
       const id = quick[i], n = id ? (m.inv[id] || 0) : 0;
       const b = document.createElement('button');
       b.className = `wheel-slot s${i}` + (i === sel ? ' on' : '') + (!id || !n ? ' empty' : '');
-      b.innerHTML = id ? `<span class="ic">${ITEM_ICON[id] || '•'}</span><span>${ITEMS[id].name}</span><small>${!n ? 'none' : ITEMS[id].light ? (m.light ? 'on' : 'off') : 'x' + n}</small>` : '<span class="ic">·</span><span>empty</span><small>pin one in the bag</small>';
+      b.innerHTML = id ? `<span class="ic">${pic(id)}</span><span>${ITEMS[id].name}</span><small>${!n ? 'none' : ITEMS[id].light ? (m.light ? 'on' : 'off') : 'x' + n}</small>` : '<span class="ic">·</span><span>empty</span><small>pin one in the bag</small>';
       b.onpointerup = (e) => { e.stopPropagation(); sel = i; use(); };
       el.appendChild(b);
     }
@@ -76,8 +81,8 @@ export function createWheel({ el, send, me }) {
 }
 
 // ---- the weapon picker (touch: hold the weapon plate) -----------------------------------------------------
-// Every weapon you carry in a tray at the bottom of the screen, the one in your hands marked: tap one to take it
-// out. Tapping off the tray, or picking, closes it. (A tap on the weapon plate just takes out the next one.)
+// Every weapon you carry round a ring in the middle of the screen (a tray at the bottom past twelve), the one in your
+// hands marked: tap one to take it out. Tapping off the tray, or picking, closes it. (A tap on the weapon plate just takes out the next one.)
 export function createWeaponPicker({ el, send, me }) {
   let open = false, sig = '', press = null;
   function render() {
@@ -116,6 +121,15 @@ export function createWeaponPicker({ el, send, me }) {
       row.appendChild(b);
     }
     box.appendChild(row);
+    // a ring round the middle, as the pad's weapon wheel (the owner, 11-16: switch "without digging through the inventory"
+    // - GTA's weapon wheel): each weapon its slot round the circle, the one in your hands lit; a long list stays a tray
+    const n = row.children.length, ring = n >= 2 && n <= 12;
+    box.classList.toggle('ring', ring); el.classList.toggle('ringed', ring);
+    if (ring) {
+      const R = Math.round(Math.max(84, Math.min(n * 16, Math.min(innerWidth, innerHeight) * 0.5 - 70))), D = 2 * R + 112;
+      box.style.width = box.style.height = D + 'px';
+      [...row.children].forEach((b, i) => { const a = (i / n) * Math.PI * 2; b.style.left = Math.round(D / 2 + Math.sin(a) * R - 50) + 'px'; b.style.top = Math.round(D / 2 - Math.cos(a) * R - 28) + 'px'; });
+    } else box.style.width = box.style.height = '';
     el.appendChild(box);
   }
   function close() { open = false; sig = ''; press = null; el.classList.add('hidden'); }

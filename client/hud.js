@@ -1,6 +1,7 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, shop menus, death screen, radar + big map.
 import { logNote, noteLine, promptWords, promptFades, fitPrompt } from './notelog.js';
+import { loadout } from '../shared/loadout.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -48,6 +49,7 @@ function optKind(o) {
 const KIND_NAME = { pistols: 'PISTOLS', rifles: 'RIFLES', melee: 'MELEE', throw: 'THROWABLES', ammo: 'AMMO', gear: 'GEAR' };
 const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', usedlot: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs', jobcenter: 'jobs', jobpc: 'jobs' };
 const WEAPON_BY_ID = WEAPONS;
+let QB_ART = null, QB_P = null;   // (the item pictures for the quick bar: client/itemart.js, loaded when first wanted)
 export const WQ_MS = 4000;   // the quick weapons stay this long after a switch (UI-9)
 // a note's icon (UIK-00 6A/B): money in, a tick, a warning, an alarm, or the info mark
 const toastIcon = (tone, msg) => (/^\+\$|\bpaid\b|\+\$\d/i.test(msg) && tone !== 'bad' ? 'money' : tone === 'good' ? 'check' : tone === 'warn' ? 'warn' : tone === 'bad' ? 'alert' : 'info');
@@ -120,6 +122,36 @@ export class HUD {
   setInfoCtx(c) { this.infoCtx = c; this.info?.setCtx(c); }
   hint(k) { return !!this.info && this.info.hint(k); }
 
+  // N7 (the owner's notes 11-22): the quick wheel's four slots as a strip over the weapon plate, on a keyboard - the items
+  // pinned from the bag, a click uses one (as the wheel does: { t: 'inv', a: 'use' }), held the use key opens the wheel.
+  // Dim (UI-9's minimal HUD) till the pointer is on it or a slot's count changed; none pinned, none shown.
+  quickBar(me) {
+    const el = $('qbar');
+    if (!el) return;
+    // (a keyboard's: touch and a pad keep the quick wheel - the owner, 11-22 N7; on a phone the strip sat under BAG with
+    // "HOLD HOLD BAG" - the touch key's own name is "hold BAG" - 11-23)
+    const q = me.dead || input.device !== 'keyboard' ? [] : (me.quick || []), any = q.some(Boolean);
+    const key = any ? q.map((id) => (id ? `${id}:${me.inv[id] || 0}${ITEMS[id] && ITEMS[id].light ? (me.light ? '+' : '-') : ''}` : '')).join() + (QB_ART ? '|a' : '') : '';
+    const now = performance.now();
+    if (any && now - (this.qbAt || 0) > 500) {   // (sat on the weapon plate, whatever its height: measured twice a second, not every frame)
+      this.qbAt = now;
+      const w = $('weapon'), bottom = w ? w.offsetHeight + (parseFloat(getComputedStyle(w).bottom) || 0) + 4 : 64;
+      if (this.qbB !== bottom) { this.qbB = bottom; el.style.bottom = `${bottom}px`; }
+    }
+    if (el.dataset.q === key) return;
+    const was = el.dataset.q;
+    el.dataset.q = key;
+    if (!any) { el.innerHTML = ''; return; }
+    if (!QB_ART && !QB_P) QB_P = import('./itemart.js').then((a) => { QB_ART = a; el.dataset.q = ''; }).catch(() => {});
+    const pic = (id) => (QB_ART && QB_ART.itemIcon(id)) || '<span class="ic">•</span>';
+    el.innerHTML = Array.from({ length: 4 }, (_, i) => {
+      const id = q[i], n = id ? me.inv[id] || 0 : 0, I = id && ITEMS[id];
+      if (!I) return `<button type="button" class="qb empty" tabindex="-1" aria-label="Empty slot"></button>`;
+      const tag = I.light ? (me.light ? 'on' : 'off') : n > 1 ? `x${n}` : n ? '' : '0';
+      return `<button type="button" class="qb${n ? '' : ' empty'}" data-i="${i}" title="${esc(I.name)}" aria-label="${esc(I.name)}">${pic(id)}${tag ? `<small>${tag}</small>` : ''}</button>`;
+    }).join('');
+    if (was) { el.classList.add('on'); clearTimeout(this.qbT); this.qbT = setTimeout(() => el.classList.remove('on'), WQ_MS); }
+  }
   setMe(me) {
     const prev = this.me;
     this.me = me;
@@ -316,7 +348,10 @@ export class HUD {
       requestAnimationFrame(tick);
     } else if (!me.reloading && this.rlAt) { this.rlAt = 0; fb?.classList.remove('cooling'); }
     const ow = me.weapons.find((x) => x.id === me.weapon);
-    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : '';   // (UI-9: no standing "TAB to switch" - the first-time hints and the README say it)
+    // (on touch the plate is a round button: the count without its spaces, and smaller when it's long - "30 | 120" ran
+    // past its sides on a phone upright, 11-23; test/hudlayout's cut check)
+    const tAm = input.device === 'touch', amT = w.mag ? (me.reloading ? (tAm ? 'RELOAD' : 'RELOADING') : `${ow ? ow.mag : 0}${tAm ? '|' : ' | '}${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : '';
+    $('w-ammo').textContent = amT; $('w-ammo').classList.toggle('long', tAm && amT.length > 5);   // (UI-9: no standing "TAB to switch" - the first-time hints and the README say it)
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
     const wg = $('w-glyph'), gk = glyphOfWeapon(me.weapon, w.type);   // (on touch the button shows what you hold as a one-color silhouette - the owner, 11-03)
@@ -326,13 +361,15 @@ export class HUD {
       const hg = document.querySelector('#tbtns [data-lbl="HIT"] svg.gl');
       if (hg) hg.outerHTML = monoGlyph(iconOf('fire', 'HIT'));
     }
-    // the quick weapons (UIC-11/12: under what you hold, the next ones you carry - their number keys on a keyboard; a
-    // click takes one out: client/main.js)
-    const qk = me.weapons.map((x, n) => [x, n]).filter(([x]) => x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');
+    // the quick weapons (UIC-11/12: under what you hold, the others of your weapon slots - Gun 1, Gun 2, Melee, Thrown:
+    // shared/loadout.js - with their number keys 1-4 on a keyboard, as the Inventory's quick bar; a click takes one out:
+    // client/main.js)
+    const qk = loadout(me.weapons.map((x) => x.id)).map((id, n) => [me.weapons.find((x) => x.id === id), n]).filter(([x]) => x && x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');
     if ($('w-quick').dataset.q !== qs) {
       $('w-quick').dataset.q = qs;
       $('w-quick').innerHTML = me.dead ? '' : qk.map(([x, n]) => { const d = WEAPON_BY_ID[x.id]; return d ? `<button type="button" class="wq" data-w="${esc(x.id)}" title="${esc(d.name)}${n < 9 ? ` (${n + 1})` : ''}" aria-label="${esc(d.name)}"><img alt="" src="${weaponThumb(d.i)}">${n < 9 ? `<span class="kchip kbm-only">${n + 1}</span>` : ''}</button>` : ''; }).join('');
     }
+    this.quickBar(me);
     // (UI-9, the owner's minimal HUD: the quick weapons show a few seconds after you take one out, and while the pointer is
     // on the plate - not all the time)
     if (this.wqW !== me.weapon) { const first = this.wqW === undefined; this.wqW = me.weapon; if (!first) { $('weapon').classList.add('wq-on'); clearTimeout(this.wqT); this.wqT = setTimeout(() => $('weapon').classList.remove('wq-on'), WQ_MS); } }
@@ -472,7 +509,7 @@ export class HUD {
     while (this.toastEls.length > 2) { const old = this.toastEls.shift(); clearTimeout(old._t); old.remove(); }
     const gone = () => { this.toastEls = this.toastEls.filter((x) => x !== el); el.classList.add('out'); setTimeout(() => el.remove(), 260); };   // (it fades out: style.css .out)
     el._t = setTimeout(gone, Math.min(6000, 2600 + shown.length * 40));
-    requestAnimationFrame(() => { const tx = el.lastChild; el.classList.toggle('more', line !== msg || tx.scrollWidth > tx.clientWidth + 1); });
+    requestAnimationFrame(() => { const tx = el.lastChild; el.classList.toggle('more', line !== msg || tx.scrollWidth > tx.clientWidth + 1 || tx.scrollHeight > tx.clientHeight + 1); });
   }
 
   // the money's count-up (the motion sheet UIC-20 02): the cash counts up (or down) to the new sum over 300 ms, the

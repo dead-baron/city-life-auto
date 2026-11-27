@@ -60,9 +60,10 @@ export const WEAPONS = {
   arifle:   { i: 33, name: 'Assault Rifle',   type: 'gun', dmg: 17, range: 620, spread: 0.06, cd: 0.095, mag: 30, reload: 1.8, illegal: true, hand: 17 },
   // the SAM launcher (the owner, 10-16: "A way to fight back against helicopters (a SAM launcher, or aiming up), without
   // making them weak"): aimed at an aircraft up in the air it locks on, and its missile chases it (combat.js
-  // stepMissile) - two hits bring down a police helicopter, three the gunship. Shown in hand as the bazooka.
-  sam:      { i: 35, name: 'SAM Launcher',    type: 'rocket', sam: true, dmg: 230, radius: 60, range: 1700, speed: 760, turn: 2.6, cd: 2.4, mag: 1, reload: 2.8, illegal: true, hand: 12, ammoName: 'missiles', starter: 2 },
-  flamer:   { i: 34, name: 'Flamethrower',    type: 'flame', dmg: 5, range: 150, arc: 0.6, cd: 0.1, mag: 60, reload: 2.4, illegal: true, ammoName: 'fuel', hand: 12 },
+  // stepMissile) - two hits bring down a helicopter or a plane, three the gunship (the owner, 11-25: "two hits, three at
+  // most"; 240 so the gunship's 700 takes three, not four). Shown in hand as the bazooka.
+  sam:      { i: 35, name: 'SAM Launcher',    type: 'rocket', sam: true, dmg: 240, radius: 60, range: 1700, speed: 760, turn: 2.6, cd: 2.4, mag: 1, reload: 2.8, illegal: true, hand: 12, ammoName: 'missiles', starter: 2 },
+  flamer:   { i: 34, name: 'Flamethrower',    type: 'flame', dmg: 5, range: 340, arc: 0.5, cd: 0.1, mag: 60, reload: 2.4, illegal: true, ammoName: 'fuel', hand: 12 },
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
@@ -538,3 +539,16 @@ SHOPS.grocery = { title: 'FreshHub Grocery', buy: [], sells: GARDEN_PRODUCE.slic
 SHOPS.hardware.buy.push(...SEED_OFFERS);
 SHOPS.market.buy.push(...SEED_OFFERS);
 SHOPS.market.sells.push(...GARDEN_PRODUCE);
+
+// ---- no money loops (the security audit, 11-19) ----------------------------------------------------------------------
+// A shop must never sell an item for less than some place buys it back for: the fruit stand sold apples at $4 for 3 and
+// the corner stores paid $5 each - a script made ~$350k an hour. Every item a shop sells costs at least a quarter more per
+// piece than the best price anywhere pays for it (picking your own fruit, hunting your own meat stays the way to earn).
+{
+  const bestBuyback = (id) => Math.max((ITEMS[id] && ITEMS[id].sell) || 0, ...Object.values(SHOPS).map((s) => (s && s.sellPrice && s.sellPrice[id]) || 0));
+  for (const sh of Object.values(SHOPS)) for (const b of (sh && sh.buy) || []) {
+    if (!b || b.kind !== 'item' || !(b.price > 0) || !ITEMS[b.id]) continue;
+    const floor = Math.ceil(Math.max(1, b.qty || 1) * bestBuyback(b.id) * 1.25);
+    if (b.price < floor) b.price = floor;
+  }
+}

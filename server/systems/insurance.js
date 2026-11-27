@@ -10,6 +10,7 @@
 // company's truck (not yours).
 //   profile.vehicles[i]: + { vid (a stable id: the world's vehicle carries it as v.ownVid), ins (1: insured), cl [the
 //     claims' times, ms], hold ($ owed before it comes back) } - absent on old entries; profile.insGrace: the goodwill used
+import * as trunk from './trunk.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { INSURANCE, FTUE, TOW_FEE } from '../../shared/rules.js';
 import { store } from '../store.js';
@@ -58,6 +59,7 @@ export function wrecked(world, v, why = 'wrecked', now = Date.now()) {
   if (!v || !v.owner || v.claimDone || v.starter || v.rentedBy || v.workTruck || v.forSale || (v.def && v.def.horse)) return null;
   const { p, prof } = ownerOf(world, v);
   const ov = prof && entryOf(prof, v);
+  if (ov && v.ownVid) trunk.spill(world, v, ov);   // (what was in its trunk spills where it is: trunk.js)
   if (!ov || !insurable(ov)) return null;
   v.claimDone = 1;
   const nm = nameOf(ov);

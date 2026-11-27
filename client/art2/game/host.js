@@ -22,6 +22,9 @@ import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bak
 // see-through buildings (_fades): seconds to ease in and out; the clear space's radius round you on foot, in a vehicle at
 // most (else half its length + 34 px), round another player
 export const FADE_IN = 0.35, FADE_OUT = 0.5, CLR_FOOT = 64, CLR_VEH_MAX = 130, CLR_OTHER = 48;
+export const FADE_REACH = 20, FADE_ACROSS = 7;   // tiles: how far the open ground round you is followed, along and up or down - what lies over it fades (_fades)
+const AWN_MIN = 6;   // a building's picture this far south of its foot is an overhang you can stand under (_fades)
+const XF_MS = 320;   // a walk-in's swap: its pixel dissolve (engine.js XF_MS - the same; the engine loads lazily)
 const TURRET_TOP = 47;   // (_turret)
 // a bush a vehicle goes through (_bushes): knocked aside for KNOCK_S s, a burst of leaves once per BURST_GAP s; the
 // props that are bushes (never a tree), bucketed BUSH_CELL px; the leaves' colours (green, the desert's grey-green)
@@ -35,8 +38,9 @@ import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
 import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/constants.js';
 import { AIR_UP, washK } from '../../../shared/rules-page.js';
-import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate } from '../../../shared/mapcore.js';
+import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate, underDeckAt } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
+import { wadeBand, WB } from '../../../shared/physics.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
 import { BARRIER_PIECE } from '../../../shared/levels.js';
 import { pointAt } from '../../../shared/geom.js';
@@ -97,6 +101,13 @@ function birdShadow(s, w) {
     const wing = t < 1 && x > sx - cw * 0.55 && x < sx + cw * 0.45;
     if (body || tail || wing) put(G, i, j, rgb, 0, UP_N, F_GROUND);
   }
+  return G;
+}
+// something small up in the air (a ball in flight, a thrown grenade): a round shadow on the ground below it, s px across -
+// the one rule for anything in the air (the pre-beta list C, "Shadows"; birds and leaping fish draw their own shapes)
+function blobShadow(s) {
+  const W = s + 2, G = gbuf(W, W, W >> 1, W >> 1), c = W / 2, rx = s / 2, ry = s / 2 * 0.62, rgb = [14, 16, 24];
+  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const x = (i + 0.5 - c) / rx, y = (j + 0.5 - c) / ry; if (x * x + y * y < 1) put(G, i, j, rgb, 0, UP_N, F_GROUND); }
   return G;
 }
 // a happy pet's hops (px up): quick little bounces, a beat between them, each pet in its own time
@@ -223,6 +234,47 @@ export function planBake(need, bake, view, vx, vy, reach, out = [], grid = [Infi
   return out;
 }
 
+// The frame's lights: the best n moved to the front of L (in place; returns n) - the strongest and nearest (s) up to cap, but the
+// moving ones (mv: the vehicles' headlights, tail lights, sirens) are sure of MOVE_SHARE of it before the rest fill it -
+// a street full of neon never puts out the cars' lamps.
+export const MOVE_SHARE = 0.25;
+// (no sort: an insertion into the best cap kept - the cap is small - so nothing is allocated per frame; the kept ones
+// end up first in L, in no order: the engine orders its own)
+const PK_I = new Int32Array(256), PK_S = new Float64Array(256), PM_I = new Int32Array(64), PM_S = new Float64Array(64);
+let pkStamp = 0;
+function topInto(I, S, cap, m, i, s) {
+  if (m === cap && s <= S[m - 1]) return m;
+  let j = m < cap ? m++ : m - 1;
+  while (j > 0 && S[j - 1] < s) { S[j] = S[j - 1]; I[j] = I[j - 1]; j--; }
+  S[j] = s; I[j] = i;
+  return m;
+}
+export function pickLights(L, cap) {
+  const n = L.length;
+  if (n <= cap) return n;
+  cap = Math.min(cap, PK_I.length);
+  let m = 0;
+  for (let i = 0; i < n; i++) m = topInto(PK_I, PK_S, cap, m, i, L[i].s);
+  const res = Math.min(PM_I.length, Math.ceil(cap * MOVE_SHARE));
+  let mv = 0;
+  for (let k = 0; k < m; k++) if (L[PK_I[k]].mv) mv++;
+  const st = ++pkStamp;
+  for (let k = 0; k < m; k++) L[PK_I[k]]._pk = st;
+  if (mv < res) {
+    // (short of the share: the best moving ones not kept, in for the weakest of the rest)
+    let q = 0;
+    for (let i = 0; i < n; i++) if (L[i].mv && L[i]._pk !== st) q = topInto(PM_I, PM_S, res - mv, q, i, L[i].s);
+    for (let j = 0, k = m - 1; j < q && k >= 0; j++) {
+      while (k >= 0 && L[PK_I[k]].mv) k--;
+      if (k < 0) break;
+      L[PK_I[k]]._pk = 0; L[PM_I[j]]._pk = st; PK_I[k] = PM_I[j]; k--;
+    }
+  }
+  let w = 0;
+  for (let i = 0; i < n; i++) if (L[i]._pk === st) { const t = L[i]; L[i] = L[w]; L[w] = t; w++; }
+  return w;
+}
+
 export function qualityOf(gfx, lowMem) {
   if (lowMem) return 0;
   const named = { low: 0, medium: 1, high: 2, ultra: 3 }[gfx.preset];
@@ -286,7 +338,7 @@ export const trainSteps = (N) => Math.min(128, N * 2);
 // half way up - measured from the art (redwoods.js giantRedwood: where a third or more of nine trees is covered;
 // the giant's top band again when its dead tops went, task #399). The host fades one only when it's in front of you
 // (_treeCovers).
-const TREE_FADE = 1e6;
+const TREE_FADE = 1e6, EL_FADE = 4e5, UP_Z = 24;   // (EL_FADE..TREE_FADE: the El's deck and the highway decks - statics.js; UP_Z: you are up on one, not under it)
 const RW_OUTLINE = {
   giantL: [112, 80, 72, 64, 64, 64, 64, 64, 64, 104, 136, 144, 144, 136, 104, 88, 88, 80],
   gate: [124, 88, 80, 72, 72, 72, 72, 72, 72, 112, 144, 152, 152, 144, 112, 96, 96, 88, 80],   // (Giant's Gate: giantL a size up)
@@ -297,6 +349,7 @@ const RW_OUTLINE = {
 // the time-of-day keys of the presets (minutes after midnight), blended in between: a long dark night (20:26-05:05,
 // lit by the lamps, windows and headlights), first light, sunrise, the day, golden hour, sunset and blue hour
 // (v1's sky, render/atmos.js KEYS, keeps to the same times; the night part of the loop runs at 0.6 s a minute)
+const INDOOR_NIGHT = 0.75, INDOOR_EASE = 4;   // (inside a walk-in at night: how far to the indoor light; how fast it eases, per second)
 const SKY_KEYS = [[0, 'night'], [305, 'night'], [338, 'predawn'], [372, 'dawn'], [400, 'dawn'], [470, 'morning'], [600, 'noon'], [900, 'noon'], [1000, 'afternoon'],
   [1085, 'golden'], [1140, 'golden'], [1172, 'sunset'], [1198, 'dusk'], [1226, 'night'], [1440, 'night']];
 // how far the light comes from the sun's own place (v1's sky) rather than the night preset's moon: eased over in
@@ -401,6 +454,15 @@ const SHOP_NEAR = 150, SHOP_FAR = 260, SHOP_SKIP = new Set(['home', 'atm', 'stat
 // the wall's foot is half a tile below. test/storeicons.test.js checks it against a baked front.
 export const BADGE = { doorH: 50, drop: 13, size: 19 };   // (19: a little bigger again, still under the lintel - the owner, 11-14)
 export function badgeAt(doorX, doorY) { const foot = doorY + TILE / 2; return { x: doorX, y: foot - BADGE.doorH + BADGE.drop, size: BADGE.size }; }
+// A place's badge: a walk-in's under its door's lintel (door: its doorway's middle); a place at a building's front wall -
+// served at the wall - under the lintel's height on that wall too, never up in the sign board over it (the owner, 11-16:
+// a place's badge over a shop's name - the placement lint's signCovered); anything else 64 px over where you stand at it
+export function badgeOf(m, p, door) {
+  if (door) return badgeAt(door.x, door.y);
+  const b = p.b !== undefined && p.b !== null && m.buildings ? m.buildings[p.b] : null;
+  if (b && b.tw !== undefined) { const foot = (b.ty + b.th) * TILE; if (p.y >= foot - 4 && p.y <= foot + 1.5 * TILE && p.x >= b.tx * TILE && p.x <= (b.tx + b.tw) * TILE) return badgeAt(p.x, foot - TILE / 2); }
+  return { x: p.x, y: p.y - 64, size: 24 };
+}
 // a hospital's badge is the red H on white, a clinic's the white cross on green (the owner, 2026-10-18: never the red
 // cross); the names decide which, as the signs' do (client/art2/signfont.js tradeOf)
 const glyphOf = (p, kinds) => (p.kind === 'hospital' && /HOSPITAL|MEDICAL CENTER/i.test(p.label || '') ? 'hosp' : kinds[p.kind]);
@@ -487,6 +549,7 @@ export class World2 {
       const t = performance.now();
       const [A, Pd] = await Promise.all([import('./actors.js').catch(() => null), import('./peds.js').catch(() => null)]);
       this.A = A; this.Pd = Pd;
+      try { if (Pd && localStorage.getItem('cla.polish') !== '0') { await Pd.loadPolish(new URL('../peoplepolish.js', import.meta.url).href); Pd.usePolish(true); } } catch { /* off */ }
       if (A && A.artFrom) A.artFrom({ fleet: () => import('../fleet.js'), horse: () => import('../horse.js') });   // (the batch-4 fleet's models, the horse: when first needed - actors.js)
       this._loadMark('artmods', performance.now() - t);
     } catch { /* providers optional */ }
@@ -675,7 +738,7 @@ export class World2 {
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
     // the sea's sparkle tonight (render/atmos.js bioAt: some nights, along some shores; the day from the server)
     const bio = S.bioForce || bioAt((S.day || 0) * DAY_LOOP_S + (S.loopTime || 0), F.sky.minutes, this.bioArr || (this.bioArr = [0, 0]));   // (S.bioForce: the debug menu's)
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, clear: this.clr || null, push: sub ? null : this.pushA, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: globalThis.__claArtTime ?? F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, clear: this.clr || null, push: sub ? null : this.pushA, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
@@ -873,6 +936,9 @@ export class World2 {
     if (this.pc) for (const jk of this.pc.out) jobs.add(jk);   // (and a walk-in's cut-away ahead: _precut)
     if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && !jobs.has(jk));
     for (const jk of this.results.keys()) if (!jobs.has(jk)) this.results.delete(jk); // landed too late to matter
+    // the view's own chunks always have slots (engine.js reserveChunks: a view needing more than the quality's count -
+    // zoomed out, a cinematic, an aircraft - took one on screen for another, and the art came and went, 11-23)
+    if (E.reserveChunks) E.reserveChunks(need.size + 2, 'city');
     // the road ahead already resident (not on screen yet) is kept like what is drawn: the chunks left behind go first
     if (E.keepChunk) for (const k of bake.keys()) if (!need.has(k)) E.keepChunk(k % 1000, Math.floor(k / 1000));
     // uploads, nearest first: what is needed now; the rest into the slots not taken by what is wanted (a slot whose
@@ -896,10 +962,22 @@ export class World2 {
           const st = this.chunkState.get(res.key);
           if (st && !st.preview && st.ver === res.ver && E.hasChunk(res.cx, res.cy)) { this.results.delete(res.jk); continue; }
         }
+        // (walking in or out of a walk-in: its chunks swap between the street's picture and the cut-away one. The owner,
+        // 11-22: "the inside view pops up"; 11-23: not the whole screen dimming either - "the interior/exterior art just
+        // faded from one to the other". A chunk on screen that changes its cut swaps at once and dissolves from the old
+        // picture to the new, pixel by pixel over XF_MS (engine.js uploadChunk xf), all of the building's chunks from one
+        // start; nothing else on screen changes)
+        const st0 = this.chunkState.get(res.key);
+        let xf = 0;
+        if ((st0 && !res.preview && st0.mode !== res.mode && (st0.mode >= 0 || res.mode >= 0) && E.hasChunk(res.cx, res.cy) && (res.cx + 1) * CHUNK > this.vx0 && res.cx * CHUNK < this.vx1 && (res.cy + 1) * CHUNK > this.vy0 && res.cy * CHUNK < this.vy1)) {
+          const now = performance.now();
+          if (!this.xfAt || now - this.xfAt > XF_MS) this.xfAt = now;
+          xf = this.xfAt;
+        }
         n--;
         const t = performance.now();
         let ok = false;
-        try { const g = res.r.g; if (res.r.under) g.under = res.r.under; g.blds = res.r.blds || null; ok = E.uploadChunk(res.cx, res.cy, g) !== false; } catch (e) { console.error('[art2] uploadChunk', e); }
+        try { const g = res.r.g; if (res.r.under) g.under = res.r.under; g.blds = res.r.blds || null; ok = E.uploadChunk(res.cx, res.cy, g, 0, xf) !== false; } catch (e) { console.error('[art2] uploadChunk', e); }
         this.results.delete(res.jk);
         if (!ok) continue;
         this.t.upChunkMs = performance.now() - t; this._upDone('chunk', this.t.upChunkMs);
@@ -965,7 +1043,7 @@ export class World2 {
   // whether any of a hull's length (bow, middle, stern) lies under a bridge deck (bridge tiles over the water)
   _underDeck(x, y, a, L) {
     const M = this.map, c = Math.cos(a) * L * 0.5, s = Math.sin(a) * L * 0.5;
-    for (let k = -1; k <= 1; k++) if (M.tileAtPx(x + c * k, y + s * k) === TT.BRIDGE) return true;
+    for (let k = -1; k <= 1; k++) if (underDeckAt(M, x + c * k, y + s * k)) return true;   // (a bridge's tiles, or water under the highway's deck)
     return false;
   }
 
@@ -1019,13 +1097,13 @@ export class World2 {
       for (const p of list) {
         if (!p || !kinds[p.kind] || SHOP_SKIP.has(p.kind)) continue;
         const at = doors.get(p.id) || p;
-        if (Math.abs(at.x - sp.x) < SHOP_FAR && Math.abs(at.y - sp.y) < SHOP_FAR) near.list.push({ x: at.x, y: at.y, kind: p.kind, glyph: glyphOf(p, kinds), door: at !== p });
+        if (Math.abs(at.x - sp.x) < SHOP_FAR && Math.abs(at.y - sp.y) < SHOP_FAR) near.list.push({ x: at.x, y: at.y, kind: p.kind, glyph: glyphOf(p, kinds), door: at !== p, B: badgeOf(m, p, at !== p ? at : null) });
       }
     }
     for (const p of near.list) {
       const d = Math.hypot(p.x - sp.x, p.y - sp.y), k = d < SHOP_NEAR ? 1 : Math.max(0, 1 - (d - SHOP_NEAR) / (SHOP_FAR - SHOP_NEAR));
       if (k <= 0.02) continue;
-      const B = p.door ? badgeAt(p.x, p.y) : { x: p.x, y: p.y - 64, size: 24 }, y = B.y + Math.sin(F.now * 2.2 + p.x * 0.013) * (p.door ? 0.5 : 1.5);
+      const B = p.B, y = B.y + Math.sin(F.now * 2.2 + p.x * 0.013) * (B.size < 24 ? 0.5 : 1.5);
       g.save();
       g.globalAlpha = k;
       icon(g, p.glyph, B.x, y, B.size);   // (the round gold-rimmed badge: client/storeicons.js)
@@ -1134,6 +1212,8 @@ export class World2 {
     }
     // 2. along the roads from here, by the distance along them (the ground level: a deck's chunks are its ground's)
     const net = air || rail ? null : this.map.net;
+    // (fast, the roads behind you wait BEHIND_S s - a turn round - so the downloads go to the way ahead: P2, 11-23)
+    const bx = sp > 300 ? v.x / sp : 0, by = sp > 300 ? v.y / sp : 0, late = Math.min(sp, 1500) * (this.LR ? this.LR.BEHIND_S : 4);
     if (net && net.nodes && net.nodes.length) {
       const dist = new Map(), open = [];
       for (const nd of net.nodes) { const d = Math.hypot(nd.x - x0, nd.y - y0); if (d < 700) { dist.set(nd.id, d); open.push(nd.id); } }
@@ -1152,7 +1232,7 @@ export class World2 {
           for (let i = 0; i < e.pts.length; i++) {
             const pt = e.pts[back ? e.pts.length - 1 - i : i], nx = e.pts[back ? Math.max(0, e.pts.length - 2 - i) : Math.min(e.pts.length - 1, i + 1)];
             const seg = Math.hypot(nx.x - pt.x, nx.y - pt.y), steps = Math.max(1, Math.ceil(seg / 300));
-            for (let t = 0; t < steps; t++) { const f = t / steps, px = pt.x + (nx.x - pt.x) * f, py = pt.y + (nx.y - pt.y) * f; if (d0 + along + seg * f <= ROAD) add(Math.floor(px / CHUNK), Math.floor(py / CHUNK), d0 + along + seg * f); }
+            for (let t = 0; t < steps; t++) { const f = t / steps, px = pt.x + (nx.x - pt.x) * f, py = pt.y + (nx.y - pt.y) * f; if (d0 + along + seg * f <= ROAD) add(Math.floor(px / CHUNK), Math.floor(py / CHUNK), d0 + along + seg * f + ((px - x0) * bx + (py - y0) * by < -CHUNK ? late : 0)); }
             along += seg;
           }
           const nd2 = d0 + (e.len || along);
@@ -1300,15 +1380,54 @@ export class World2 {
     if (!F.sub && !F.spec && !riding) for (const st of this.chunkState.values()) { // (none while spectating)
       if (!st.blds) continue;
       for (const r of st.blds) {
-        const b = r[0], fading = (this.fades.get(b) || 0) !== 0, m = fading ? 16 : 0;
-        if (r[5] <= py + 2) continue;   // (its foot north of yours: it stands behind you)
+        const b = r[0], fading = (this.fades.get(b) || 0) !== 0, m = fading ? 16 : 0, el = b >= EL_FADE && b < TREE_FADE;
+        if (el && (z0 > UP_Z || onTrain)) continue;   // (up on the deck or the platform, or riding the train on it: it stays)
+        // (its foot north of yours: it stands behind you - unless its picture hangs out over you: an awning, a canopy over
+        // its door. The owner, 11-22: "the awning over the doorway still hides a lot ... as soon as you go under the awning
+        // ... it makes the awning partly transparent ... so you can see the doors open as you go inside". Its footprint
+        // never fades, so only the overhang goes see-through, clear round you)
+        if (r[5] <= py + 2 && !(b < TREE_FADE && r[4] > r[5] + AWN_MIN && sy < r[4] + 4 && sy > r[5] - 10)) continue;   // (a building, not a tree)
         // a giant redwood only when it's really in front of you (not every tree whose box you're near)
         if (b >= TREE_FADE) { if (!onTrain && this._treeCovers(b - TREE_FADE, px, sy, inVeh, fading ? 10 : 0)) want.set(b, 1); continue; }
         if (r[3] < px - rx - m || r[1] > px + rx + m || r[4] < sy - up - m || r[2] > sy + down + m) continue;
         // (thin: its picture much taller than wide, or narrow - a hut by a mast, a lighthouse, a silo)
         const pw = r[3] - r[1], ph = r[4] - r[2];
-        want.set(b, pw < 72 || pw * 2.2 < ph ? -1 : 1);
+        want.set(b, !el && (pw < 72 || pw * 2.2 < ph) ? -1 : 1);
       }
+    }
+    // the open ground round you (the owner, 11-25: "see the entire street and sidewalk from anywhere in the street ...
+    // so nobody can hide"; "more buildings go transparent when they're blocking an alley or street"): the street,
+    // sidewalk or alley you stand on is followed out from your tile - FADE_REACH tiles either way along, FADE_ACROSS
+    // up and down, never through a building or a wall - and every building whose picture lies over that ground fades.
+    // A building you face from its own street covers none of it, and keeps its front. Worked out when you change tile.
+    const M = this.map;
+    this._upZ = z0 > UP_Z;
+    if (M && M.tiles && M.inside && !F.sub && !F.spec && !riding && !onTrain) {
+      const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE), key = tx + ty * 65536 + this.chunkState.size * 4294967296;
+      if (this._openKey !== key || (this._openN = (this._openN | 0) + 1) > 40) {   // (and now and then: chunks' buildings arrive)
+        this._openKey = key; this._openN = 0;
+        const RX = FADE_REACH, RY = FADE_ACROSS, GW = RX * 2 + 1, GH = RY * 2 + 1, G = this._openG || (this._openG = new Uint8Array(GW * GH)), out = this._openB || (this._openB = new Map());
+        G.fill(0); out.clear();
+        const open = (x, y) => { if (!M.inside(x, y)) return false; const t = M.tiles[M.idx(x, y)]; return t !== TT.BUILDING && t !== TT.WALL; };
+        if (open(tx, ty)) {
+          const q = [RX, RY]; G[RY * GW + RX] = 1;
+          for (let h = 0; h < q.length; h += 2) {
+            const gx = q[h], gy = q[h + 1];
+            for (let d = 0; d < 4; d++) { const nx = gx + (d === 0) - (d === 1), ny = gy + (d === 2) - (d === 3); if (nx < 0 || ny < 0 || nx >= GW || ny >= GH || G[ny * GW + nx] || !open(tx - RX + nx, ty - RY + ny)) continue; G[ny * GW + nx] = 1; q.push(nx, ny); }
+          }
+          for (const st of this.chunkState.values()) for (const r of st.blds || []) {
+            if (r[0] >= TREE_FADE) continue;
+            const el = r[0] >= EL_FADE;
+            // (the ground its picture lies over: tiles of the open ground inside its picture, north of its foot)
+            const a0 = Math.max(0, Math.ceil((r[1] + 8) / TILE - 0.5) - (tx - RX)), a1 = Math.min(GW - 1, Math.floor((r[3] - 8) / TILE - 0.5) - (tx - RX));
+            const b0 = Math.max(0, Math.ceil(r[2] / TILE - 0.5) - (ty - RY)), b1 = Math.min(GH - 1, Math.floor(Math.min(r[4], r[5]) / TILE - 0.5) - (ty - RY));
+            let n = 0;
+            for (let gy = b0; gy <= b1 && n < 2; gy++) for (let gx = a0; gx <= a1; gx++) if (G[gy * GW + gx] && ++n >= 2) break;
+            if (n >= 2) { const pw = r[3] - r[1], ph = r[4] - r[2]; out.set(r[0], !el && (pw < 72 || pw * 2.2 < ph) ? -1 : 1); }
+          }
+        }
+      }
+      for (const [b, sg] of this._openB) if (!want.has(b) && !(this._upZ && b >= EL_FADE && b < TREE_FADE)) want.set(b, sg);
     }
     // each one's progress runs linearly (fadeP) and is shown through a smoothstep, so it eases in and out at both ends
     const dt = Math.min(0.1, F.dt || 0.016), P = this.fadeP || (this.fadeP = new Map());
@@ -1536,6 +1655,13 @@ export class World2 {
       d[0] = x / n; d[1] = y / n; d[2] = zz / n;
       if (this.L.sunKeep) this.L.sunKeep(p, pz, s, up);
     }
+    // inside a walk-in after dark: its own lights on - the light eases most of the way to the indoor one (a warm fill, the
+    // room's lamps) as you go in, and back out as you leave (11-22, N14: "the hospital's inside is dark at night")
+    const inW = F.insideB && F.insideB.walkIn ? 1 : 0, at = this.inAt ?? F.now;
+    this.inK = (this.inK ?? inW) + (inW - (this.inK ?? inW)) * Math.min(1, Math.max(0, F.now - at) * INDOOR_EASE);
+    this.inAt = F.now;
+    const ik = this.inK * dark * INDOOR_NIGHT;
+    if (ik > 0.01 && P.indoor) p = blend(p, P.indoor, ik, this.presetF || (this.presetF = {}));
     p.lampsOn = Math.max(p.lampsOn || 0, sky.night);
     p.rain = Math.max(p.rain || 0, rk);
     p.motes = this._nature(F);
@@ -1742,7 +1868,7 @@ export class World2 {
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
     // felling a tree (d.ch: server felling.js): the axe swung, the chainsaw held out; the lantern carried by its bail
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
-    const wpn = L.board || L.surf || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
+    const wpn = L.board || L.surf || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : p.d.ph === 3 ? 'phoneSelfie' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined) || p.d.gt === 'emote') && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : q === 'pushup' || q === 'situp' ? repFrame(p, now) : q === 'cue' && Pd.cueFrame ? Pd.cueFrame(p, p.id) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
@@ -1751,6 +1877,9 @@ export class World2 {
     this.meNone = me && !(p._v2k && E.hasSprite(p._v2k));
     if (me && this.warming && World2.X) World2.X.warmMe(this, A2, wpn, bo);
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo]);
+    // (a blink, peds.js blinkAt: the same figure, the eyes shut - asked for a second ahead, shown only once it's made)
+    const bk = sk && Pd.blinkAt && Pd.BLINKS.test(ppose) && !lying ? Pd.blinkAt(p.id, now) : 0;
+    if (bk) { const ob = { ...(bo || {}), bl: 1 }, kb = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, ob), [A2, ppose, d8, pf, wpn, ob]); if (bk === 1 && kb) sk = kb; }
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
     if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {
       p._cp = ppose; p._cd = d8; p._cw = wpn; p._ca = A2;
@@ -1768,7 +1897,7 @@ export class World2 {
     if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
     const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
     const z0 = (sky ? sky * SKY_LIFT : (car ? 0 : this._z0(p, L.swimming)) + lift) + extraZ, ap = E.ap || 1;
-    o.under = L.swimming && this.map.tileAtPx(p.rx, p.ry) === TT.BRIDGE ? UNDER_Z : 0;   // (swimming under a bridge)
+    o.under = L.swimming && underDeckAt(this.map, p.rx, p.ry) ? UNDER_Z : 0;   // (swimming under a bridge or the highway's deck)
     E.drawSprite(sk, (car ? car.rx + snapTo(p.rx - car.rx, ap) : p.rx) + hx, (car ? car.ry + snapTo(p.ry - car.ry, ap) : p.ry) + hy, z0, o);
     o.under = 0;
     this.n.drawn++;
@@ -1873,7 +2002,7 @@ export class World2 {
     if (def && def.horse) { this._horse(v, now, me, def); return; }   // (a horse: the animal's own sprite, its rider up in the saddle - #325)
     if (!def || !A || !A.vehicleKey || !A.vehState) return;
     const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
-    const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
+    const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1 && wadeBand(this.map, v.rx, v.ry, def) === WB.DEEP, sk = Math.min(1, (v.sinkT || 0) / 3);   // (shallower than it can ford: wading, not sinking - shared/physics.js wade)
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase, v.hp, v.parent);   // (parent: its damage word - task #402)
     if (st.cut) { this._vehCut(v, now, me, st, hi, N); return; }   // (cut in two by a plasma blade)
     if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);
@@ -1954,7 +2083,7 @@ export class World2 {
         const c = Math.cos(v.ra), s = Math.sin(v.ra), x = v.rx + c * seat[0] - s * seat[1], y = v.ry + s * seat[0] + c * seat[1];
         const pp = def.kind === 'boat' ? api.pedPose(p) : null, kneel = pp === 'kneel', angle = pp === 'fish';   // (angle: fishing over the side - you, or an angler's boat: server boats.js)
         const d8 = dir8(kneel || angle ? p.ra ?? v.ra : v.ra), pose = def.cart ? (pass ? 'cartsit' : kick >= 0 ? 'cartkick' : 'cartride') : def.pedal ? 'pedal' : kneel ? 'kneel' : angle ? 'fish' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
-        const fr = pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : pose === 'cartkick' ? kick : pose === 'cartride' ? Math.floor(now * 2 + v.id) & 1 : pose === 'cartsit' && (v._csp || 0) > def.max * 0.55 && (now + v.id * 1.7) % 5 < 1.4 ? 1 : 0, wpn = def.cart ? 0 : p.extra | 0;   // (in the basket at speed: now and then both arms up - CC02)
+        const fr = pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : pose === 'cartkick' ? kick : pose === 'cartride' ? Math.floor(now * 2 + v.id) & 1 : pose === 'cartsit' && (v._csp || 0) > def.max * 0.55 && (now + v.id * 1.7) % 5 < 1.4 ? 1 : angle && api.fishFrame ? api.fishFrame(p) : 0, wpn = def.cart ? 0 : p.extra | 0;   // (in the basket at speed: now and then both arms up - CC02)
         const was = this.sprPrio;
         if (p.id === myPed) this.sprPrio = -3;
         const bo = bladeOpt(p, wpn);
@@ -2160,12 +2289,12 @@ export class World2 {
     void F;
   }
 
-  _small(kind, key, args, e, x, y, z0) {
+  _small(kind, key, args, e, x, y, z0, shadow = true) {
     let sk = this._spr('actors', kind, key, args);
     if (!sk) sk = e._v2k && this.E.hasSprite(e._v2k) ? e._v2k : null;
     if (!sk) return;
     e._v2k = sk;
-    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false;
+    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = shadow; o.tint = null; o.flipX = false;
     this.E.drawSprite(sk, x, y, z0, o); this.n.drawn++;
   }
 
@@ -2193,7 +2322,7 @@ export class World2 {
         if ((b.flags & 1) && Math.floor(now * 5) % 2) continue;   // about to vanish: it blinks
         const hi = quant(b.ra || 0, 16); this._small('bag', A.bagKey(b.d.t, hi, 16), [b.d.t, hi, 16], b, b.rx, b.ry, this._z0(b, false));
       }
-      for (const b of F.balls) { const t = b.d.t | 0, spin = quant(b.ra || 0, 4); this._small('ball', A.ballKey(t, spin), [t, spin], b, b.rx, b.ry, (b.extra || 0) * 2 + this._z0(b, false)); }
+      for (const b of F.balls) { const t = b.d.t | 0, spin = quant(b.ra || 0, 4), up = (b.extra || 0) * 2; if (up > 4) this._airShadow(b.rx, b.ry, up, 8); this._small('ball', A.ballKey(t, spin), [t, spin], b, b.rx, b.ry, up + this._z0(b, false), up <= 4); }   // (up in the air: a round shadow below it, not the shadow march's column)
       for (const pr of F.projs) {
         const N = 32, hi = quant(pr.ra, N), w = pr.d.w | 0;
         if (!this.projWarm.has(w)) { this.projWarm.add(w); for (let h = 0; h < N; h++) this.warmQ.unshift(['actors', 'proj', A.projKey(w, h, N), [w, h, N], -1]); }
@@ -2229,8 +2358,21 @@ export class World2 {
       if (f.kind === 'boom' || f.a === undefined) continue;
       const hi = quant(f.a, 16), frm = f.t > 0.045 ? 0 : f.t > 0.02 ? 1 : 2;
       const k = this._spr('actors', 'muzzle', A.muzzleKey(1, hi, 16, frm), [1, hi, 16, frm]);
-      if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; this.E.drawSprite(k, f.x, f.y, 18, o); }
+      if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; this.E.drawSprite(k, f.x, f.y, f.z ?? 18, o); }   // (f.z: the barrel's height - main.js MUZZLE)
     }
+  }
+
+  // Something small up in the air (blobShadow): a round shadow s px across on the ground, away from the sun by its
+  // height, fainter higher up, at night and in the rain - as a bird's (_flyShadow)
+  _airShadow(x, y, z, s) {
+    const sky = this.F && this.F.sky;
+    if (!sky || !sky.sunDir || this.F.sub) return;
+    const al = 0.5 * (1 - sky.night) * (1 - 0.7 * Math.min(1, this.F.rain || 0)) * Math.max(0.3, 1 - z / 240);
+    if (al < 0.04) return;
+    const key = this._conv(`ash|${s}`, () => blobShadow(s), true);
+    if (!key) return;
+    const u = sky.sunDir, l = Math.hypot(u.x, u.y) || 1, d = z * Math.max(0.3, Math.min(2.5, sky.shadowLen)) / 0.62;
+    this.E.drawDecal(key, x + u.x / l * d, y + u.y / l * d, 0, al, 0);
   }
 
   // A flying bird's shadow (10-23: no column): its shape from above (span; k the wingbeat, -1 tucked) on the ground,
@@ -2624,13 +2766,13 @@ export class World2 {
       if (age < 0 || age > LIFE) continue;
       const x = W.d[j], y = W.d[j + 1];
       if (x < x0 || x > x1 || y < y0 || y > y1) continue;
-      if (this.map.tileAtPx(x, y) === TT.BRIDGE) continue;   // (dropped under a bridge: the deck over it hides the foam - b1c)
+      if (underDeckAt(this.map, x, y)) continue;   // (dropped under a bridge or a highway deck: the deck over it hides the foam - b1c)
       const a = W.d[j + 2], hw = W.d[j + 4], sp = W.d[j + 5], f = 1 - age / LIFE, alpha = Math.pow(f, 1.3) * Math.min(1, sp / 300) * 0.9;
       const spread = hw * 0.8 + age * (10 + sp * 0.035), nx = -Math.sin(a), ny = Math.cos(a);
       for (let s = -1; s <= 1; s += 2) {
         const key = streak[(k + (s > 0 ? 1 : 0)) % 3];
         const qx = x + nx * spread * s, qy = y + ny * spread * s;
-        if (key && this.map.tileAtPx(qx, qy) !== TT.BRIDGE) E.drawDecal(key, qx, qy, a + s * 0.35, alpha, 0);
+        if (key && !underDeckAt(this.map, qx, qy)) E.drawDecal(key, qx, qy, a + s * 0.35, alpha, 0);
       }
       if (age < 1 && churn) E.drawDecal(churn, x, y, a, (1 - age) * alpha, 0);
     }
@@ -2662,7 +2804,8 @@ export class World2 {
       const age = now - c.born, hold = c.small ? 1.5 : 150, a = c.alpha * (age > hold ? 1 - (age - hold) / (c.small ? 3.5 : 40) : 1);   // (feet: pushed down a moment, back up within seconds - the owner, 11-14)
       if (a <= 0.02) { c.on = false; continue; }
       const frm = c.small * 8 + (Math.round(((((c.a || 0) % Math.PI) + Math.PI) % Math.PI) / Math.PI * 8) & 7);
-      E.drawDecal(this._spr('actors', 'fx', A.fxKey('dCrush', frm), ['dCrush', frm]), c.x, c.y, 0, a, 0, 18);   // (zt: over the standing crop, as farmart.js CROP_Z - it lies flat where it was)
+      const CK = this.crushK || (this.crushK = []), ck = CK[frm] || (CK[frm] = [A.fxKey('dCrush', frm), ['dCrush', frm]]);
+      E.drawDecal(this._spr('actors', 'fx', ck[0], ck[1]), c.x, c.y, 0, a, 0, 18);   // (zt: over the standing crop, as farmart.js CROP_Z - it lies flat where it was)
     }
     for (let i = 0; i < fx.d.length; i++) {
       const d = fx.d[i];
@@ -2673,14 +2816,16 @@ export class World2 {
       if (a <= 0.02) { d.on = false; continue; }
       let key = null;
       if (d.type === 1 && d.size < 4) key = this._genDecal(d);
-      else if (A) { const name = A.v1DecalFx(d), frm = A.v1DecalFrame(d); key = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]); }
+      else if (A) { const name = A.v1DecalFx(d), frm = A.v1DecalFrame(d); if (d._kn !== name || d._kf !== frm) { d._kn = name; d._kf = frm; d._kk = A.fxKey(name, frm); d._ka = [name, frm]; } key = this._spr('actors', 'fx', d._kk, d._ka); }   // (its key kept on it: built per decal per frame, a drive's garbage - drivebench --alloc, 11-24)
       if (key) E.drawDecal(key, d.x, d.y, d.a, a, 0);
     }
   }
   _genDecal(d) {
+    if (d._gk && d._gc === d.color && d._gs === d.size && this.E.hasSprite(d._gk)) return d._gk;   // (kept on it: no key string or maker per frame)
     const t = d.type, sz = t === 1 || t === 5 ? Math.max(1, Math.min(24, Math.round(d.size))) : t === 3 ? Math.max(4, Math.min(64, Math.round(d.size / 4) * 4)) : t === 6 ? Math.max(1, Math.min(5, Math.round(d.size))) : 1;
     const rgb = rgbOf(d.color);
-    return this._conv(`gdc|${t}|${sz}|${rgb.join(',')}`, () => {
+    d._gk = `gdc|${t}|${sz}|${rgb.join(',')}`; d._gc = d.color; d._gs = d.size;
+    return this._conv(d._gk, () => {
       const blob = (rx, ry, extra) => {
         const w = Math.ceil(rx * 2 + (extra ? rx * 1.4 : 0)) + 2, h = Math.ceil(ry * 2) + 2, G = gbuf(w, h, Math.ceil(rx) + 1, h >> 1);
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -2716,7 +2861,7 @@ export class World2 {
     L.x = x; L.y = y; L.z = z; L.r = r; L.col = col; L.k = k;
     if (cone) { L.cn.a = cone[0]; L.cn.spread = cone[1]; L.cn.len = cone[2]; L.cone = L.cn; } else L.cone = null;
     const d = Math.hypot(x - this.camX, y - this.camY);
-    L.s = k * Math.sqrt(r) / (1 + (d / 700) ** 2);
+    L.s = k * Math.sqrt(r) / (1 + (d / 700) ** 2); L.mv = this.mvOn;
     this.lights.push(L);
   }
   _lights(F) {
@@ -2725,7 +2870,8 @@ export class World2 {
     const x0 = this.vx0 - 260, x1 = this.vx1 + 260, y0 = this.vy0 - 260, y1 = this.vy1 + 360;
     const inV = (x, y) => x > x0 && x < x1 && y > y0 && y < y1;
     // 1. the chunks' static lights (where a chunk has none baked yet: v1's lamps, windows and doors)
-    for (const [k, st] of this.chunkState) {
+    for (const k of this.chunkState.keys()) {   // (keys, not [k, st] entries: an array per chunk per frame)
+      const st = this.chunkState.get(k);
       if (!st.lights.length) continue;
       const cx = k % 1000, cy = Math.floor(k / 1000);
       if ((cx + 1) * CHUNK < x0 || cx * CHUNK > x1 || (cy + 1) * CHUNK < y0 || cy * CHUNK > y1) continue;
@@ -2741,7 +2887,8 @@ export class World2 {
     if (night > 0.05) this._v1StaticLights(F, (x, y) => inV(x, y) && !this._litChunk(x, y), nightK);
     // the glowing mushrooms and golden stars (_forage): a soft pool of their colour in the dark
     if (nightK > 0.02 && this.fgLit) for (let i = 0; i < this.fgLit.length; i += 3) this._light(this.fgLit[i], this.fgLit[i + 1], 5, 58, this.fgLit[i + 2], 1.2 * nightK);
-    // 2. moving lights
+    // 2. moving lights (their own share of the cap: MOVE_SHARE)
+    this.mvOn = 1;
     for (const v of F.vehs) {
       const def = VEHICLE_BY_INDEX[v.d.m];
       if (!def) continue;
@@ -2752,17 +2899,19 @@ export class World2 {
       const hl = (vL || def.L) / 2;
       if (f & VF.LIGHTS) {
         const fx = v.rx + c * hl, fy = v.ry + s * hl;
-        this._light(fx, fy, zb + 8, 340, C.head, 2.4 * (0.35 + 0.65 * nightK), [v.ra, 0.42, 340]);
+        const hc = this.hcone || (this.hcone = [0, 0.42, 340]); hc[0] = v.ra;   // (_light copies it: one array for every car)
+        this._light(fx, fy, zb + 8, 340, C.head, 2.4 * (0.35 + 0.65 * nightK), hc);
         for (let sd = -1; sd <= 1; sd += 2) this._light(v.rx - c * hl - s * def.W * 0.31 * sd, v.ry - s * hl + c * def.W * 0.31 * sd, zb + 8, f & VF.BRAKE ? 60 : 36, C.tail, f & VF.BRAKE ? 1.4 : 0.7);
       } else if (f & VF.BRAKE) this._light(v.rx - c * hl, v.ry - s * hl, zb + 8, 40, C.tail, 0.9);
       if (f & (VF.SIREN | VF.BEACON)) this._light(v.rx, v.ry, zb + 24, 240, Math.floor(now * 6) % 2 ? C.red : C.blue, 2.2);
       if (f & VF.BURN) this._light(v.rx, v.ry, zb + 20, 200, C.fire, 2.2 * (0.75 + 0.25 * Math.sin(now * 23 + v.id)));
     }
+    this.mvOn = 0;
     for (const c of F.cars) {
       if (!(c.flags & 8)) continue;
       const def = TRAIN_CARS[c.d.c];
       this._light(c.rx, c.ry, 20, def.L * 0.75, C.window, 1.2);
-      if (c.d.c === 0) this._light(c.rx + Math.cos(c.ra) * def.L / 2, c.ry + Math.sin(c.ra) * def.L / 2, 14, 460, C.head, 2.4, [c.ra, 0.36, 460]);
+      if (c.d.c === 0) { const tc = this.tcone || (this.tcone = [0, 0.36, 460]); tc[0] = c.ra; this._light(c.rx + Math.cos(c.ra) * def.L / 2, c.ry + Math.sin(c.ra) * def.L / 2, 14, 460, C.head, 2.4, tc); }
     }
     // signal heads: the lit lens of every head in a baked chunk (a little out in front), v1's heads elsewhere
     const hs = this.liveHeads, sigK = 0.25 + 1.2 * nightK;
@@ -2834,11 +2983,10 @@ export class World2 {
         else this._light(p.x, p.y, p.y - countryLightY(p, 0.96), 280, C.fire, (0.8 + 1.8 * night) * fl);
       }
     }
-    // the strongest and nearest, up to the tier's cap
-    const out = this.lights;
-    out.sort((a, b) => b.s - a.s);
-    const n = Math.min(out.length, this.tier.lights);
-    for (let i = 0; i < n; i++) this.E.addLight(out[i]);
+    // the strongest and nearest, up to the tier's cap - the vehicles' lamps with a share of their own (the owner: headlights
+    // lost on the Neon Strip, where its signs and lamps took every one of the 96)
+    const n = pickLights(this.lights, this.tier.lights);
+    for (let i = 0; i < n; i++) this.E.addLight(this.lights[i]);
     this.n.lights = n;
   }
   // is (x, y) in a chunk whose bake brought its own static lights?

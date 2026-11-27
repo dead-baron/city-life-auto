@@ -195,7 +195,9 @@ export const DELIVER_BONUS = 0.5;      // an officer who drives the prisoner in 
 // and the third in a while a star (the second in front of an officer); a carjacking a warning, the second a star. Felonies
 // (murder, hitting or killing an officer, a robbery, an escape) and assaults are stars at once, as ever; small crimes
 // (a punch, a bike lifted) have their own count (SUSPICION_*).
-export const LENIENCY = { star: 24, cop: 2, holdS: 45, fade: 0.4 };
+// (the owner, 11-22: "You get wanted levels too easily still": 24 -> 36 - a car stolen is a warning twice and a star the
+// fourth time in a while (the second in front of an officer), a hit and run the third, a carjacking the second)
+export const LENIENCY = { star: 36, cop: 2, holdS: 45, fade: 0.4 };
 // The police by your stars (police.js, struggle.js, custody.js, law.js): sharp at 4-5 as they've always been, worse at
 // 1-3. drive: their top speed in a chase (x 720 px/s after a car, 520 on the roads); react: how stale (s) the spot they
 // steer for is - they turn late and wide; ram: they lean on your car to spin it (a PIT) - only at 4-5; foot / drain:
@@ -341,7 +343,7 @@ export const PACK_BLINK_S = 30;               // ...and blinks for its last seco
 // +1 throwable - profile.carryUp; not built yet). Your stash (one per
 // character): opened at your home's safe, and at any gun shop or pawn shop; a gun bought "to stash" goes straight into
 // it. giveR: hand a weapon to a crewmate this close (px). Police issue is the department's: never at risk, never a slot.
-export const ARMS = { carry: { gun: 2, melee: 1, throw: 1 }, carryMax: { gun: 4, melee: 2, throw: 2 }, keepMax: 300, dropS: 60, blinkS: 15, giveR: 120, stashKinds: ['gunshop', 'pawn'] };
+export { ARMS, STASH, TRUNK } from './rules-arms.js';   // (its own file: the page's quick keys read the carry classes - shared/loadout.js)
 export { GUN_PRICES } from './rules-base.js';   // (the basic pistol's prices: kept low now a carried gun can be lost - shared/rules-base.js)
 // Your car (the owner, 2026-11-14: "map + valet delivery, no teleport"; server/systems/mycar.js): the car you last took
 // out stays where you left it (through a logout, and a restart: profile.carAt) and shows on your map. The phone's "Have it
@@ -535,7 +537,7 @@ export const SAW_NOTE_S = 600;           // "you saw a crime" pops up at most th
 export const REPORT_SEARCH_S = 45;       // the unit looks round the caller this long
 export const REPORT_SPOT_PX = 360;       // ...and knows the suspect when it has them in sight this close
 // Small crimes seen add up (law.js): this many is a star (one an officer sees: at once); each fades after a quiet while
-export const SUSPICION_STAR = 4;
+export const SUSPICION_STAR = 5;   // (4 -> 5, the owner 11-22: too easily wanted - a fifth punch or bump people see in a while, not a fourth)
 export const SUSPICION_HOLD_S = 30;
 export const SUSPICION_FADE_S = 40;
 // That star: an officer for a word (stops.js). A word ends [warn, fine, arrest]; ran first: STOP_RAN of the warning
@@ -720,7 +722,7 @@ export const SKATE_SCORE = { comboGap: 0.6, specialPts: 2500, specialMul: 3, spe
 export const CART = { hit: 70, hard: 230, driverP: 0.55, hurt: [3, 14] };
 // a session at a skate spot: s seconds, each goal pays goalPay
 export const SKATE_SESSION = { s: 120, goalPay: 40, goals: [['bank', 3000, 'Bank a 3,000-point combo'], ['tricks', 5, 'Land a 5-trick combo'], ['gap', 1, 'Hit a gap'], ['score', 15000, 'Score 15,000']] };
-export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
+export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your inventory and never wears out
 
 // Lost pets (server/systems/pets.js)
 export const PET_EVERY_S = 480;            // about how often one goes missing near a player
@@ -796,7 +798,14 @@ export const BIKE_THIEF_RESPECT = 6;       // ...and the Samaritan points
 // (shared/look.js PIECES) at its prices times this, times the store's own markup (the uptown boutique asks more,
 // thrift and vintage less, the fence a lot more)
 export const CLOTHES_PRICE_K = 1;
-export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];   // what every player owns from the start (with the starting look's pieces)
+export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];
+// the starter wardrobe: everyday pieces everyone can wear from day one, on top of what they own (the owner, 11-17: plenty
+// to make a look you like at the start; the stand-out pieces are what you work toward - shared/wardrobe.js owns)
+export const STARTER_WARDROBE = ['Plain tee', 'Graphic tee', 'Long-sleeve tee', 'Tank top', 'Hoodie', 'Flannel shirt', 'Blouse', 'Crop top',
+  'Jeans', 'Black jeans', 'Chinos', 'Joggers', 'Shorts', 'Skirt', 'Leggings', 'Sundress',
+  'Sneakers', 'Skate shoes', 'Slip-ons', 'Sandals', 'Ballet flats',
+  'Zip hoodie', 'Denim jacket', 'Baseball cap', 'Beanie', 'Sunglasses',
+  'Boxers', 'Briefs', 'Boxer briefs', 'Undershirt and boxers', 'Tank and briefs', 'Bra and briefs', 'Sports bra and shorts', 'Crew socks'];   // (the underwear basics: the owner, 11-19; a pair of socks)   // what every player owns from the start (with the starting look's pieces)
 // the barbershop and the hair salon (ST3): what each change costs; the salon charges SALON_K times as much
 export const BARBER_PRICES = { cut: 15, colour: 25, beard: 12, moustache: 8 };
 export const SALON_K = 2;
@@ -957,7 +966,7 @@ export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana:
 // up to returnS seconds after the job ends (then it's the company's to collect); the job keeps it for you (never tidied
 // away) and a garage won't keep one.
 export const WORK_TRUCK_RETURN = 150;
-export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400 };
+export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400, runway: 1.5 };   // (runway: vehicle lengths of open ground ahead of a job's vehicle where it's put - jobs.js workTruck; the owner, 11-25)
 // A job's vehicle recalled (the owner, 2026-10-23: "Canceling a job should make you have to give up the vehicle like a
 // helicopter"; server jobs.js recall): a job that ends undone - cancelled, quit, expired, lost - and a return window run
 // out take back what the job issued. On the ground you're set down beside it outS seconds after (a moment to pull over);
@@ -1125,7 +1134,8 @@ export const INSURANCE = { premium: 0.06, minPremium: 60, fee: 0.1, minFee: 50, 
 // colors: { id, name, hex, cash | tok }; plates: { id, t (the text), cash | tok | gift }, plus each career's ranks (a rank's
 // title on your plate while you hold it; the top rank's for good, with its season); paint: a color of your choice at a Fresh
 // Coat garage (shared/vehicles.js PAINTS) for cash or a token. beta: the gift of Season 0 (SEASON.beta) to every account
-// that plays during it - the Founding Citizen jacket (shared/lookcore.js, a gift piece: never sold) and the gold Beta plate.
+// that plays during it - the Founding Citizen jacket (shared/lookcore.js, a gift piece: never sold) and the gold Beta plate
+// (card: 1 - on the player's own card only, never over their name: the owner, 11-16).
 export const COSMETICS = {
   colors: [
     { id: 'sky', name: 'Sky blue', hex: '#8fd3ff', cash: 2500 },
@@ -1147,12 +1157,16 @@ export const COSMETICS = {
     { id: 'grinder', t: 'Grinder', tok: 1 },
     { id: 'regular', t: 'Regular', tok: 2 },
     { id: 'legend', t: 'Legend', tok: 4 },
-    { id: 'beta', t: 'Beta', gift: 'beta', gold: 1 },
+    { id: 'beta', t: 'Beta', gift: 'beta', gold: 1, card: 1 },
   ],
   rankPlatesFrom: 1,   // a career's ranks from this one up are plates (rank 0 - Corner Kid, Recruit, Vendor - isn't)
   paint: { cash: 600, tok: 1 },
   beta: { season: 0, jacket: 'Founding Citizen jacket', plate: 'beta' },
 };
+// The admin panel's gifts (server/admin.js gift; the owner, 11-16: "gift things to people"): money into the bank (the
+// panel's quick amounts; maxMoney at most a gift), items and weapons (maxItems at most: of an item, or magazines of a gun),
+// and the bought cosmetics (never a season's gift). Every one in the admin log.
+export const GIFT = { money: [500, 2500, 10000, 50000], maxMoney: 1000000, maxItems: 50 };
 // Existing fees scale gently with rank (your highest rank in any career, 0-7): bail, the arrest fine, felony fines, the
 // hospital and the ambulance cost x this. (The fence's cut already moves with rank the other way - the crime ladder's
 // smaller cut: careers.js fenceCut - so it's left alone.)
@@ -1500,3 +1514,56 @@ export const RACERS = {
   startleS: 1.4,
   stuckS: 1.2,         // s stopped against something before it backs off and takes another line
 };
+
+// A vehicle into a fence (shared/fences.js fenceVehicle; the owner, 11-23 20:10: "cars/vehicles actually knock over or break
+// down or smash through the fence"): faster than this (px/s) it goes through, the panel knocked flat - a low fence (a
+// picket, a rail, a board fence, a low hedge) or a tall one (chain-link, a wall's run, a tall hedge); slower, it holds the
+// car like a wall. keep: the share of its speed the car keeps going through.
+export const FENCE_SMASH = { low: 150, tall: 230, lowKeep: 0.85, tallKeep: 0.7 };
+
+
+export { WADE } from './rules-base.js';   // (vehicles in the water: shared/physics.js wade - its note is in rules-base.js)
+
+// What a vehicle smashes hurts it, by how solid it is and how fast it hit (the owner, 11-25 01:00: "you can run over
+// infinite things apparently ... after running through enough destructible objects (judging on the size and impact ...
+// crashing into a tree vs. driving over a garbage bag) the damage would be comparable"; server props.js smashFor,
+// vehicles.js smashHurt). Damage = w (the kind's weight, def for one not listed) x k x (speed / ref)^pow / sqrt(mass),
+// then the vehicle's toughness (VEHICLE_TOUGH) - a sedan into a tree at 400 px/s loses about a quarter of its health, a
+// bench about a twelfth, a trash bag nothing.
+export const SMASH_HURT = {
+  k: 12, ref: 100, pow: 1.5, def: 0.2, pedalMin: 0.5,   // (pedalMin: a bicycle is hurt only by what weighs this much or more; a horse by nothing)
+  w: {
+    bags: 0, trashpile: 0, flowers_a: 0, flowers_big: 0, cone: 0.03, umbrella_r: 0.05, umbrella_b: 0.05, umbrella_g: 0.05, umbrella_y: 0.05,
+    produce_a: 0.05, produce_b: 0.05, tent: 0.05, shrub_a: 0.08, shrub_b: 0.08, bush_a: 0.08, bush_b: 0.08, bush_c: 0.08, potted: 0.1, planks: 0.1,
+    cactus: 0.15, trashcan: 0.15, news_a: 0.15, news_b: 0.15, news_c: 0.15, mailbox: 0.2, bikerack: 0.2, pallet: 0.15, pallet_b: 0.15, pallet_s: 0.15,
+    tires: 0.15, wheelbarrow: 0.15, cart: 0.15, crates: 0.2, scope: 0.15, dspeaker: 0.2, drum: 0.25, lumber: 0.25, barrier: 0.3, picnic: 0.3,
+    fenceline: 0.15, yfence: 0.15, hedgerun: 0.15, rail: 0.2, chainfence: 0.35,
+    bench_a: 0.4, bench_b: 0.4, bench_m: 0.4, pbench: 0.4, foodcart: 0.4, foodcart_b: 0.4, planter_sq: 0.45, planter_g: 0.45, planter_fl: 0.45,
+    pipes: 0.5, spool: 0.5, palm_s: 0.5, vend_a: 0.6, vend_cola: 0.6, vend_c: 0.6, acunit: 0.6, sandbags: 0.7, busstop: 0.7,
+    bollard: 0.8, phonebox: 0.8, fuelpump: 0.8, hydrant: 0.9, hydrant_y: 0.9, dumpster_s: 0.9, dumpster_m: 0.9, dump_g: 0.9, dump_b: 0.9, dump_o: 0.9,
+    atm: 0.9, lamp: 1, sigpole: 1, palm_a: 1, palm_b: 1, palm_c: 1, palm_d: 1, tree_a: 1.2, tree_b: 1.2, upole: 1.2, billboard: 1.2,
+  },
+};
+
+// Vehicles and fire (the owner, 11-25 03:23: "badly damaged vehicles sometimes catch fire; fire weapons set a vehicle
+// alight only after enough exposure; a burning vehicle goes out or explodes"; server vehicles.js ignite / fireTick):
+// a flamethrower on a vehicle for exposeS seconds (its exposure cools at coolRate a second out of the flames) sets it
+// alight; a hard crash (impact over crashImpact) that leaves it under crashBelow of its health catches it at crashChance;
+// under smoulderBelow it may catch on its own (smoulderPerS a second). Alight, it burns burnS seconds losing dps of its
+// full health a second (no toughness): a healthy one comes through scorched and the fire goes out, a battered one's
+// engine dies and it goes up (DEAD_FIRE_S, DEAD_BOOM_S). Water puts it out (a wading vehicle - shared/physics.js wadeBand).
+export const VEH_FIRE = { exposeS: 2.5, coolRate: 0.5, burnS: 12, dps: 0.04, crashImpact: 220, crashBelow: 0.3, crashChance: 0.35, smoulderBelow: 0.15, smoulderPerS: 0.03 };
+
+// Pepper spray and the taser against players (the owner, 11-25 03:23: "no keeping a player down for good - full effect the
+// first time or two, then little for a while. NPCs matter less"; server combat.js stunFor): within windowS seconds of the
+// first, a player takes full stuns, the rest at after of their length (NPCs always the full stun).
+export const STUN_RESIST = { full: 2, windowS: 60, after: 0.25 };
+
+// The dog runs (server/systems/dogrun.js; the owner, 11-25): how a dog off its lead spends its time - throwChance: the
+// chance, each time it's done nosing about a spot, that its owner throws the ball; throwPx: how far (px); flightS: the
+// ball's time in the air; roamS: seconds at a spot nosing about; trot / run / back: its speed (of a person's walk) about
+// the run, after the ball, bringing it back; happyS: hopping about its owner with the ball dropped.
+// cats: the street cats on stoops and down alleys - shyPx: how close before one darts off, dartPx how far, dartS at most;
+// calmS: sat still that long before it looks about (or pads back to its spot, pad its speed); run its dart's speed.
+export const DOGRUN = { throwChance: 0.45, throwPx: [120, 260], flightS: 0.9, roamS: [2, 5], trot: 0.7, run: 1.5, back: 1.1, happyS: 1.6,
+  cats: { shyPx: 70, dartPx: [80, 140], dartS: 2.5, calmS: 6, run: 1.7, pad: 0.45 } };

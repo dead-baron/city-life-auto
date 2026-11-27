@@ -35,3 +35,14 @@ export const GARDEN_CROPS = {
   strawberry: { seeds: 12, days: 1.4, yield: 5, sell: 4, heal: 5 },
   sunflower: { seeds: 7, days: 2, yield: 2, sell: 12, heal: 3 },
 };
+
+// Vehicles in the water (the owner, 11-24; shared/physics.js waterDepth, server vehicles.js wade; DEVLOG 11-26): slope m of
+// depth a tile from the bank, cap the deepest; splash m; ford m by vehicle (def.ford wins); the engine's hold / restart s.
+export const WADE = {
+  slope: { sea: { sand: 0.22, rock: 0.55 }, lake: { k: 0.32, cap: 14 }, pond: { k: 0.55, cap: 3.2 }, river: { k: 0.25, cap: 3.4 } },
+  splash: 0.3,
+  ford: { car: 0.5, truck: 0.7, truckMass: 2.4, bike: 0.35, small: 0.15, offroad: 1.0, offroadRough: 0.4 },
+  holdS: 8, offroadHoldS: 30, dryRate: 2, restartS: 15, retryS: 5,
+  splashSurf: [0.92, 0.85, 0],
+  wadeSurf: { speed: 0.3, shallow: 0.35, grip: 0.55, offroadMul: 1.35, max: 0.85 },
+};

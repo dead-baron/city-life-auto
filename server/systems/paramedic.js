@@ -24,6 +24,8 @@ import { sitesOf, openNear } from './firefighter.js';
 import { isDowned } from './revive.js';
 import * as combat from './combat.js';
 import * as jobs from './jobs.js';
+import { poisKind } from '../pois.js';
+import { decodeLook, encodeLook, validLook, lookToApp, SLOTS, item } from '../../shared/look.js';
 
 export const KINDS = ['minor', 'serious', 'player'];
 const SAY = {
@@ -34,7 +36,7 @@ const SAY = {
 const NAMES = ['a cyclist', 'a jogger', 'a shopper', 'a pensioner', 'a delivery rider', 'a tourist', 'a dog walker', 'a builder'];
 let seq = 1;
 
-const hospitals = (m) => m.pois.filter((q) => q.kind === 'hospital');
+const hospitals = (m) => poisKind(m, 'hospital');   // (the map's list, shared: never changed here)
 export function hospitalFor(world, p) {
   const L = hospitals(world.map);
   if (!L.length) return null;
@@ -52,6 +54,7 @@ export function start(world, p, h = null) {
   const v = jobs.workTruck(world, p, h, 'ambulance', h);
   if (!v) { p.job = null; return 'No room to park the ambulance there.'; }
   v.sirenOn = false;
+  dress(p);
   world.notify(p, `You're a paramedic out of ${h.label}: your ambulance is the green ring. Calls come over the phone - H for the siren; hold Act by a patient to treat them.`, 'good', 'Paramedic shift: your ambulance is the green ring');
   p.meDirty = true;
   store.touch();
@@ -219,8 +222,31 @@ function step(world, p, dt) {
 }
 
 // ---- every tick --------------------------------------------------------------------------------------------------------
+// The uniform for the shift (the owner, 11-25: "wear a paramedic outfit for the job, your own clothes back when it ends or
+// you quit"): the catalogue's paramedic uniform on your own body, face and hair - your look kept (p.medicCivvies) and put
+// back whichever way the shift ends (update: no medic job any more). Your saved look is never touched.
+function dress(p) {
+  if (!p.ped || p.medicCivvies) return;
+  const L = p.profile.look ? decodeLook(p.profile.look) : null;
+  if (!L) return;
+  for (const sl of SLOTS) if (sl !== 'under' && sl !== 'socks') L.outfit[sl] = null;
+  L.outfit.set = item('Paramedic uniform'); L.outfit.shoes = item('Work boots', 'black');
+  const V = validLook(L);
+  if (!V) return;
+  p.medicCivvies = p.ped.app;
+  const code = encodeLook(V);
+  p.ped.app = lookToApp(decodeLook(code), code); p.ped.appVer = (p.ped.appVer || 0) + 1;
+  p.meDirty = true;
+}
+function undress(p) {
+  if (p.ped && p.medicCivvies) { p.ped.app = p.medicCivvies; p.ped.appVer = (p.ped.appVer || 0) + 1; p.meDirty = true; }
+  p.medicCivvies = null;
+}
 export function update(world, dt) {
-  for (const p of world.players.values()) if (p.job && p.job.type === 'medic') step(world, p, dt);
+  for (const p of world.players.values()) {
+    if (p.job && p.job.type === 'medic') step(world, p, dt);
+    else if (p.medicCivvies) undress(p);   // (the shift over, however it ended: your own clothes back)
+  }
   if (world.medicCalls && world.tick % 20 === 7) for (const { pid, c } of [...world.medicCalls.values()]) {
     const p = world.players.get(pid);
     if (!p || !p.job || p.job.type !== 'medic' || p.job.call !== c) letGo(world, c);

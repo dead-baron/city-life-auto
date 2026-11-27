@@ -925,7 +925,10 @@ function standDown(world, v, crew, dt) {
   }
   if (v.seats[0]) {
     if (!v.ai.leave) v.ai.leave = { x: v.x + Math.cos(v.a) * 2000, y: v.y + Math.sin(v.a) * 2000 };
-    if (!v.ai.route || now - v.ai.routeAt > 5) { v.ai.route = planRoute(world, v.x, v.y, v.ai.leave.x, v.ai.leave.y); v.ai.routeAt = now; }
+    // (someone standing in front of it - the one it just spoke to, say: a few seconds, then it leaves the other way)
+    if (v._pblk && Math.hypot(v.vx, v.vy) < 5) v.ai.pedWait = (v.ai.pedWait || 0) + 0.05; else v.ai.pedWait = 0;
+    if (v.ai.pedWait > 3) { v.ai.pedWait = 0; v.ai.leave = { x: v.x - Math.cos(v.a) * 2000, y: v.y - Math.sin(v.a) * 2000 }; v.ai.route = null; v.ai.reverseUntil = now + 2; }
+    if (!v.ai.route || now - v.ai.routeAt > 5) { v.ai.route = planRoute(world, v.x, v.y, v.ai.leave.x, v.ai.leave.y, { heading: v.a }); v.ai.routeAt = now; }
     while (v.ai.route.length > 1 && Math.hypot(v.ai.route[0].x - v.x, v.ai.route[0].y - v.y) < 60) v.ai.route.shift();
     driveToward(world, v, v.ai.route[0].x, v.ai.route[0].y, 260, {});
   }

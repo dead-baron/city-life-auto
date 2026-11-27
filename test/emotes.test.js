@@ -258,3 +258,33 @@ test('lying flat straight up or down the screen is drawn on the diagonal (it rea
   const app = { s: 2, h: 1, hc: '#3a2414', t: 4, tc: '#a02a2a', tc2: '#eee', l: '#2a3a5a', sh: '#eee', bd: 1 };
   assert.equal(pedKey(app, 'emfaceplant', 0, 4, 0), pedKey(app, 'emfaceplant', 1, 4, 0));   // (one sprite for both)
 });
+
+// A faceplant falls flat; lying down and sleeping lie down (the owner, 11-25: "Faceplant lose still not working it just
+// leans forward but not falling flat on their face (as well as lying down or sleeping, it doesn't lay all the way
+// down)"). The emote wheel's portraits load art2/poses.js on their own; that filled the emotes' table, the page's
+// people module then never loaded the poses for itself, and every emote stood on its first frame. Whoever loads the
+// poses first, an emote on a body runs through its frames.
+test('an emote runs through its frames even when something else loaded the poses first', async () => {
+  // (in a process of its own: the module's state is the bug - nothing else here may have loaded the poses for it)
+  const { spawnSync } = await import('node:child_process');
+  const code = `
+    await import('./client/art2/poses.js');   // (as client/portrait.js does for the wheel)
+    const Pd = await import('./client/art2/game/peds.js');
+    const d = { gt: 'emote', em: 'faceplant' }, p = { id: 3, d };
+    for (let i = 0; i < 100 && Pd.personaPose(d, 'idle') !== 'emfaceplant'; i++) await new Promise((r) => setTimeout(r, 20));   // (only the drawing asks for them)
+    const out = { pose: Pd.personaPose(d, 'idle'), on: Pd.emoteAt(p, 'emfaceplant', 10) };
+    Pd.emoteAt(p, 'emfaceplant', 11.5); out.flat = p._emF;
+    out.n = [Pd.PED_POSES.emfaceplant, Pd.PED_POSES.emlie, Pd.PED_POSES.emsleep];
+    out.keys = Pd.pedKey({}, 'emfaceplant', 2, 0, 0) !== Pd.pedKey({}, 'emfaceplant', 2, 4, 0);
+    out.lie = ['lie', 'sleep'].map((em) => { const q = { id: 5, d: { gt: 'emote', em } }; Pd.emoteAt(q, 'em' + em, 20); Pd.emoteAt(q, 'em' + em, 23); return q._emF; });
+    console.log(JSON.stringify(out));`;
+  const r = spawnSync(process.execPath, ['--input-type=module', '-e', code], { cwd: new URL('..', import.meta.url).pathname, encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const o = JSON.parse(r.stdout.trim().split('\n').pop());
+  assert.equal(o.pose, 'emfaceplant');
+  assert.ok(o.on, 'the emote is on the body');
+  assert.ok(o.flat >= 4, `a second and a half in: flat on the face (frame ${o.flat})`);
+  assert.ok(o.n[0] >= 8 && o.n[1] >= 4 && o.n[2] >= 4, `the sprite cache knows the emotes' frame counts (${o.n})`);
+  assert.ok(o.keys, 'frame 4 is its own sprite, not frame 0 again');
+  assert.ok(o.lie[0] >= 3 && o.lie[1] >= 3, `lying down and asleep after three seconds (frames ${o.lie})`);
+});

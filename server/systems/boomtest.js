@@ -9,7 +9,10 @@
 //   launch, pieces, wheel        a sedan blown up into the air / blown apart / losing a burning wheel
 //   tanker, truck                a fuel tanker / a flatbed loaded with explosives there, gone up (huge; chain reactions)
 //   fire                         a burst of flame: everyone close by set alight (burning.js)
-// Nobody's crime (dev mode only). The kind is kept on the player (p.boomKind).
+// Nobody's crime (dev mode only) - unless it was given as a real weapon (the debug menu's second line, p.boomLive; the
+// owner, 11-25: "one that acts as a real in game weapon"): then people react as to gunfire, the police come, and what it
+// destroys is yours. The kind is kept on the player (p.boomKind). A vehicle it lands on or beside is destroyed outright,
+// as a rocket does (armored ones take two): shared size.wreck, combat.js blast.
 import { K } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { BOOM_TEST_KINDS, BURN } from '../../shared/rules.js';
@@ -18,6 +21,8 @@ import * as explosions from './explosions.js';
 import * as vehicles from './vehicles.js';
 import * as cargo from './cargo.js';
 import * as burning from './burning.js';
+import * as law from './law.js';
+import * as npc from './npc.js';
 
 // the blast sizes (as the debug menu's: dev.js BLAST_SIZES)
 const SIZES = { small: () => blastSize(VEHICLES.sedan), medium: () => blastSize(VEHICLES.boxtruck), big: () => blastSize(VEHICLES.tanker), ultra: () => blastSize(null, VEHICLES.flatbed.slots.length) };
@@ -40,15 +45,16 @@ export function fire(world, ped, w, aim) {
   proj.land = land;
   proj.boomK = kindOf(ped.player);   // (not .kind: that's the entity's)
   world.emit(sx, sy, { e: 'shot', x1: sx, y1: sy, x2: sx, y2: sy, w: w.i, id: ped.id });
+  if (ped.player && ped.player.boomLive) { proj.liveBy = ped.id; law.gunfire(world, ped); npc.onGunfire(world, ped.x, ped.y, ped, 400); }
 }
 
 // Where it lands (x, y; backed off a little along its flight, out of the wall it hit): the kind it was fired as
 export function land(world, p, x, y) {
   const a = Math.atan2(p.vy, p.vx), z = p.lz || 0;
-  boom(world, p.boomK || BOOM_TEST_KINDS[0], x - Math.cos(a) * 24, y - Math.sin(a) * 24, a, z);
+  boom(world, p.boomK || BOOM_TEST_KINDS[0], x - Math.cos(a) * 24, y - Math.sin(a) * 24, a, z, p.liveBy ? world.get(p.liveBy) || null : null);
 }
-export function boom(world, k, x, y, a = 0, z = 0) {
-  if (SIZES[k]) { explosions.blastAt(world, x, y, SIZES[k](), null, undefined, z); return; }
+export function boom(world, k, x, y, a = 0, z = 0, by = null) {
+  if (SIZES[k]) { explosions.blastAt(world, x, y, { ...SIZES[k](), wreck: true }, by, undefined, z); return; }
   if (k === 'fire') {
     explosions.blastAt(world, x, y, { r: 50, dmg: 4, big: 0 }, null, undefined, z);
     for (const q of world.query(x, y, 90, K.PED)) if (Math.hypot(q.x - x, q.y - y) < 90) burning.ignite(world, q, null, BURN.secs);

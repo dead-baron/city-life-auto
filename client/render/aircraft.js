@@ -360,7 +360,7 @@ function drawPads(g, F, S, v2) {
     g.strokeStyle = '#e8b52a'; g.lineWidth = 5; g.beginPath(); g.arc(0, 0, r - 4, 0, Math.PI * 2); g.stroke();
     g.fillStyle = p.kind === 'hospital' ? '#f2f2f2' : '#f2f2f2';
     g.fillRect(-18, -24, 9, 48); g.fillRect(9, -24, 9, 48); g.fillRect(-9, -4, 18, 8);
-    if (p.kind === 'hospital') { g.fillStyle = '#d8382e'; g.fillRect(r - 22, -r + 10, 12, 4); g.fillRect(r - 18, -r + 6, 4, 12); }
+    if (p.kind === 'hospital') { g.fillStyle = '#1d7a3a'; g.fillRect(r - 24, -r + 4, 16, 16); g.fillStyle = '#f2f2f2'; g.fillRect(r - 22, -r + 10, 12, 4); g.fillRect(r - 18, -r + 6, 4, 12); }   // (a white cross on green - never a red cross: the owner's rule, 10-18)
     g.restore();
   }
 }

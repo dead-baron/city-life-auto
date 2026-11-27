@@ -10,21 +10,31 @@
 //   { t: 'chatset', off: { near?, crew?, faction?, phone? } }   channels switched off for you
 //   { t: 'mod', a: 'mute'|'unmute'|'block'|'unblock'|'report', id, why?, note? }
 //   { t: 'contacts' } · { t: 'inbox' }
+//   { t: 'friend', a: 'ask'|'yes'|'no'|'unfriend'|'forget', id }   a friend request to a contact, a crewmate or someone near;
+//     accept or decline one; stop being friends (still a contact); remove a contact (both ways, till you meet again)
+//   { t: 'chatset', who: 'met'|'friends' }        who can text me (shared/chatdefs.js WHO_TEXT), kept with the account
 // (server -> page): { t: 'chat', ch, n (sender's name), id (sender's public id), eid (their ped, for the bubble: near),
 //   text, at, own?, bb? (near: a speech bubble too - a quick line or a short one; a long line goes to the log only) }
 //   · { t: 'emote', eid, e, n, id, b? (its balloon over the head), lg? (a line in the log) } - only for an emote with a
 //   balloon or a log line (the rest the body says) · { t: 'typing', eid, on } (the people near, while someone types) · { t: 'chatstate', off, muted, strikes, guest, max, mutes, blocks,
-//   names ({ id: name } of the mutes and blocks), me, crew (in a crew), fac ('police' | 'gang' | null) }
-//   · { t: 'contacts', l: [{ id, n, how, on, crew }] } · { t: 'inbox', l: [...chat lines] } · { t: 'chatsay', ok, err }
+//   names ({ id: name } of the mutes and blocks), me, crew (in a crew), fac ('police' | 'gang' | null), who ('met' | 'friends') }
+//   · { t: 'contacts', l: [{ id, n, how, on, crew, fr (a friend), rs (your request waiting with them), at }] (friends
+//   first, then crew, online, recent), rq: [{ id, n, at }] (friend requests waiting for you) } · { t: 'inbox', l: [...chat
+//   lines] } · { t: 'chatsay', ok, err } · { t: 'friendres', ok, note | err } (a contacts list follows)
+// Safety (the owner, 11-15 - open to players 13+): contact details in every line masked (chatfilter.js contact); a line
+// fishing for personal info (age, home, school, real name, photos, another app, secrets) goes to the staff's Review list
+// as 'safety' (chatfilter.js fishing) - never blocked - and whoever it reached gets the "never share" tip now and then.
 import { CHAT, CHANNELS, EMOTES, REPORT_WHY, FACTIONS, QUICK, emoteWire, emoteId } from '../shared/chatdefs.js';
 import { keyedHash } from './auth.js';
+import { contact as maskContact, fishing } from './chatfilter.js';
 import { chatData, reporterWeight } from './moderation.js';
 import * as crews from './systems/crews.js';
 import * as emotes from './systems/emote.js';
 
 const PX = 32;
 
-export function createChat({ accounts, filter, mod, now = Date.now, onLine = null }) {
+// links: our own links that pass the contact filter (the Discord invite, the Ko-fi page; deadbaron.com always does)
+export function createChat({ accounts, filter, mod, now = Date.now, onLine = null, links = [] }) {
   const handles = new Map();   // pid -> public id (and back)
   const byHandle = new Map();
   function hid(pid) {
@@ -62,8 +72,8 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     for (const [x, y] of [[a, b], [b, a]]) {
       const c = cd(x);
       const had = c.contacts[y.pid];
-      c.contacts[y.pid] = { n: y.name, at: now(), how: had && had.how !== 'met' ? had.how : how };
-      const keys = Object.keys(c.contacts);
+      c.contacts[y.pid] = { ...had, n: y.name, at: now(), how: had && had.how !== 'met' ? had.how : how };
+      const keys = Object.keys(c.contacts).filter((k) => !c.contacts[k].fr);   // (friends are never pushed out)
       if (keys.length > CHAT.contactsMax) { keys.sort((k1, k2) => c.contacts[k1].at - c.contacts[k2].at); for (const k of keys.slice(0, keys.length - CHAT.contactsMax)) delete c.contacts[k]; }
     }
     accounts.touch();
@@ -90,6 +100,28 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
       const r = recent.get(p);
       if (r && r.typ && (now() - r.typ > CHAT.typingS * 1000 || !p.conn || !p.ped || p.ped.dead)) typing(world, p, false);
       if (p.ped && emotes.holding(p.ped, 'sleep') && r && now() - r.zzzAt >= CHAT.zzzS * 1000) { r.zzzAt = now(); tell(world, p, 'sleep', true); }
+    }
+  }
+
+  const blocked = (c, pid) => c.blocks.includes(pid) || c.mutes.includes(pid);
+  // who can text me: everyone met (the default), or friends and crew only (c.who) - the phone channel and the inbox
+  const textOk = (c, from, me) => c.who !== 'friends' || !!(c.contacts[from] && c.contacts[from].fr) || crews.mates({ pid: from }, { pid: me });
+  // a line fishing for personal info: to the staff's Review list (its last few lines, the masked text - what was shown),
+  // a sender at most once every CHAT.safetyGapS (the lines in between ride along); whoever it reached gets the tip
+  const FISH_NOTE = { age: 'asked someone\'s age', home: 'asked where someone lives', school: 'asked about someone\'s school', name: 'asked for a real name', photo: 'asked for a photo', apps: 'asked to move to another app or for a number', secret: 'asked to keep a secret / about parents' };
+  function flag(world, p, kind, text, ch, to, tn = '') {
+    const r = rec(p);
+    (r.fish ||= []).push({ at: now(), ch, kind, text: text.slice(0, 200), ...(tn ? { to: tn } : null) });
+    if (r.fish.length > 5) r.fish.shift();
+    if (now() - (r.fishAt || -1e12) >= CHAT.safetyGapS * 1000) {
+      r.fishAt = now();
+      mod.review('safety', { id: p.pid, n: p.name }, `${FISH_NOTE[kind] || kind} in chat (${guest(p) ? 'a guest' : 'a member'})`, { lines: r.fish.slice() });
+    }
+    for (const q of to) {
+      const rq = rec(q);
+      if (now() - (rq.tipAt || -1e12) < CHAT.safetyTipS * 1000) continue;
+      rq.tipAt = now();
+      world.notify(q, 'Safety tip: never share your age, address, school, photos or other apps with people you meet in the game. Tap their name to block or report them.', 'warn');
     }
   }
 
@@ -141,6 +173,13 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
       }
       text = f.text;
     }
+    // contact details masked; a line fishing for personal info flagged for the staff (after who hears it is known)
+    const fish = fishing(text);
+    const ci = maskContact(text, links);
+    if (ci.hits.length) {
+      text = ci.text;
+      if (now() - (r.maskAt || -1e12) > CHAT.maskToldS * 1000) { r.maskAt = now(); world.notify(p, 'Phone numbers, emails, links, addresses and social handles are hidden in chat, to keep everyone safe.', 'info'); }
+    }
     r.last = { text, at: now() };
     r.said.push({ at: now(), ch, text });
     if (r.said.length > 8) r.said.shift();
@@ -167,9 +206,11 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
       const out = line(p, ch, text, { to: hid(pid) });
       const q = world.players.get(pid), qa = accounts.get(pid);
       if (!qa) return { err: 'They\'re gone.' };
-      const qc = chatData(qa);
-      say(p, { ...out, own: 1, tn: (cd(p).contacts[pid] || {}).n || (q && q.name) || '' });
-      if (qc.blocks.includes(p.pid) || qc.mutes.includes(p.pid)) return { ok: true };   // (sent, as far as they know)
+      const qc = chatData(qa), tn = (cd(p).contacts[pid] || {}).n || (q && q.name) || '';
+      if (!blocked(qc, p.pid) && !textOk(qc, p.pid, pid)) return { err: `${tn || 'They'} only take${tn ? 's' : ''} messages from friends and crew - send a friend request first.` };
+      say(p, { ...out, own: 1, tn });
+      if (fish) flag(world, p, fish, text, ch, q && q.conn ? [q] : [], tn);
+      if (blocked(qc, p.pid)) return { ok: true };   // (sent, as far as they know)
       if (!qc.contacts[p.pid]) { qc.contacts[p.pid] = { n: p.name, at: now(), how: crews.mates(p, { pid }) ? 'crew' : 'met' }; accounts.touch(); }
       if (q && q.conn && !qc.off.phone) say(q, out);
       else { qc.inbox.push(out); if (qc.inbox.length > CHAT.inboxMax) qc.inbox.splice(0, qc.inbox.length - CHAT.inboxMax); accounts.touch(); }
@@ -179,6 +220,7 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     if (ch === 'near') typing(world, p, false);
     say(p, { ...out, own: 1 });
     for (const q of to) say(q, out);
+    if (fish) flag(world, p, fish, text, ch, to);
     return { ok: true, n: to.length };
   }
 
@@ -247,18 +289,116 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     const nm = c.nm || {}, names = {};
     for (const pid of [...c.mutes, ...c.blocks]) names[hid(pid)] = nm[pid] || (c.contacts[pid] || {}).n || 'Someone';
     const fk = factionKey(p);
-    return { t: 'chatstate', off: c.off, muted: mod.mutedUntil(a), strikes: mod.activeStrikes(a), guest: guest(p), max: guest(p) ? CHAT.guestMaxLen : CHAT.maxLen, mutes: c.mutes.map(hid), blocks: c.blocks.map(hid), me: hid(p.pid), names, crew: !!crews.crewOf(p.pid), fac: fk ? fk.split(':')[0] : null };
+    return { t: 'chatstate', off: c.off, muted: mod.mutedUntil(a), strikes: mod.activeStrikes(a), guest: guest(p), max: guest(p) ? CHAT.guestMaxLen : CHAT.maxLen, mutes: c.mutes.map(hid), blocks: c.blocks.map(hid), me: hid(p.pid), names, crew: !!crews.crewOf(p.pid), fac: fk ? fk.split(':')[0] : null, who: c.who === 'friends' ? 'friends' : 'met' };
   }
+  // friends first, then crew, then online, then the most recent; the friend requests waiting for you
   function contacts(world, p) {
     const c = cd(p), out = [], crew = crews.crewOf(p.pid);
     const seen = new Set();
-    if (crew) for (const pid of crew.members) if (pid !== p.pid) { seen.add(pid); out.push({ id: hid(pid), n: (world.players.get(pid) || {}).name || crew.names[pid] || 'Someone', how: 'crew', crew: 1, on: !!(world.players.get(pid) || {}).conn }); }
+    const asked = (pid) => { const qa = accounts.get(pid), qc = qa && chatData(qa); return !!(c.fsent && c.fsent[pid] && qc && qc.freq && qc.freq[p.pid]); };
+    if (crew) for (const pid of crew.members) if (pid !== p.pid) { seen.add(pid); const v = c.contacts[pid] || {}; out.push({ id: hid(pid), n: (world.players.get(pid) || {}).name || crew.names[pid] || v.n || 'Someone', how: 'crew', crew: 1, on: !!(world.players.get(pid) || {}).conn, ...(v.fr ? { fr: 1 } : asked(pid) ? { rs: 1 } : null), at: v.at || 0 }); }
     for (const [pid, v] of Object.entries(c.contacts)) {
       if (seen.has(pid) || c.blocks.includes(pid)) continue;
       const q = world.players.get(pid);
-      out.push({ id: hid(pid), n: (q && q.name) || v.n, how: v.how, on: !!(q && q.conn), at: v.at });
+      out.push({ id: hid(pid), n: (q && q.name) || v.n, how: v.how, on: !!(q && q.conn), at: v.at, ...(v.fr ? { fr: 1 } : asked(pid) ? { rs: 1 } : null) });
     }
-    return { t: 'contacts', l: out };
+    out.sort((a, b) => (b.fr || 0) - (a.fr || 0) || (b.crew || 0) - (a.crew || 0) || (b.on ? 1 : 0) - (a.on ? 1 : 0) || (b.at || 0) - (a.at || 0));
+    pruneReq(c);
+    const rq = Object.entries(c.freq || {}).filter(([pid]) => !c.blocks.includes(pid)).sort((a, b) => b[1].at - a[1].at).map(([pid, v]) => ({ id: hid(pid), n: (world.players.get(pid) || {}).name || v.n, at: v.at }));
+    return { t: 'contacts', l: out, rq };
+  }
+
+  // ---- friends (the owner, 11-15) ---------------------------------------------------------------------------------
+  // c.contacts[pid].fr: friends (both ways); c.freq { pid: { n, at } }: requests waiting for you (CHAT.friendReqS);
+  // c.fsent { pid: at }: the ones you sent - the same person again only after CHAT.friendAgainS
+  function pruneReq(c) {
+    const t = now();
+    if (c.freq) for (const [k, v] of Object.entries(c.freq)) if (t - v.at > CHAT.friendReqS * 1000) delete c.freq[k];
+    if (c.fsent) for (const [k, at] of Object.entries(c.fsent)) if (t - at > CHAT.friendAgainS * 1000) delete c.fsent[k];
+  }
+  const friendCount = (c) => Object.values(c.contacts).filter((v) => v.fr).length;
+  // both sides: no longer friends, no requests either way
+  function unfriend(pa, pb) {
+    for (const [x, y] of [[pa, pb], [pb, pa]]) {
+      const xa = accounts.get(x);
+      if (!xa) continue;
+      const c = chatData(xa);
+      if (c.contacts[y]) delete c.contacts[y].fr;
+      if (c.freq) delete c.freq[y];
+    }
+    accounts.touch();
+  }
+  function friend(world, p, msg) {
+    const a = String(msg.a || ''), id = String(msg.id || ''), c = cd(p);
+    pruneReq(c);
+    // (a request waiting for you: its sender, by their public id)
+    const fromReq = () => Object.keys(c.freq || {}).find((k) => hid(k) === id) || null;
+    if (a === 'yes' || a === 'no') {
+      const pid = fromReq();
+      if (!pid) return { err: 'That friend request has lapsed.' };
+      const qa = accounts.get(pid), name = (world.players.get(pid) || {}).name || c.freq[pid].n || 'them';
+      delete c.freq[pid];
+      if (a === 'no' || !qa) { accounts.touch(); return { ok: true, note: `Declined ${name}'s friend request.` }; }
+      return makeFriends(world, p, pid, name);
+    }
+    const pid = target(world, p, id) || resolveContact(p, id);
+    if (!pid || pid === p.pid) return { err: 'Can\'t find that player.' };
+    const qa = accounts.get(pid);
+    if (!qa) return { err: 'They\'re gone.' };
+    const qc = chatData(qa), q = world.players.get(pid);
+    const name = (q && q.name) || (c.contacts[pid] || {}).n || 'them';
+    if (a === 'unfriend') {
+      if (!(c.contacts[pid] && c.contacts[pid].fr)) return { err: `${name} isn't a friend.` };
+      unfriend(p.pid, pid);
+      return { ok: true, note: `${name} is no longer a friend - still in your contacts.` };
+    }
+    if (a === 'forget') {
+      if (crews.mates(p, { pid })) return { err: 'Your crew stay in your contacts.' };
+      if (!c.contacts[pid]) return { err: `${name} isn't in your contacts.` };
+      delete c.contacts[pid]; delete qc.contacts[p.pid];
+      if (c.freq) delete c.freq[pid];
+      if (qc.freq) delete qc.freq[p.pid];
+      accounts.touch();
+      return { ok: true, note: `Removed ${name} from your contacts - till you meet again.` };
+    }
+    if (a !== 'ask') return { err: 'No such action.' };
+    if (c.contacts[pid] && c.contacts[pid].fr) return { err: `You're already friends with ${name}.` };
+    if (c.blocks.includes(pid)) return { err: `Unblock ${name} first.` };
+    if (c.freq && c.freq[pid]) { delete c.freq[pid]; return makeFriends(world, p, pid, name); }   // (they asked you already)
+    // a contact, a crewmate, or someone near you now
+    const near = q && q.ped && p.ped && (q.ped.x - p.ped.x) ** 2 + (q.ped.y - p.ped.y) ** 2 <= (CHAT.nearM * PX) ** 2;
+    if (!c.contacts[pid] && !crews.mates(p, { pid }) && !near) return { err: 'You can only ask people you\'ve met, your crew, or someone near you.' };
+    c.fsent ||= {};
+    if (c.fsent[pid]) return { err: qc.freq && qc.freq[p.pid] ? `Your request is waiting for ${name}.` : `You asked ${name} not long ago - try again another day.` };
+    if (friendCount(c) >= CHAT.friendsMax) return { err: `Your friends list is full (${CHAT.friendsMax}).` };
+    const r = rec(p), t = now();
+    r.fasks = (r.fasks || []).filter((x) => t - x < CHAT.friendRate.s * 1000);
+    if (r.fasks.length >= CHAT.friendRate.n) return { err: 'That\'s a lot of friend requests - wait a few minutes.' };
+    pruneReq(qc);
+    if (!blocked(qc, p.pid) && Object.keys(qc.freq || {}).length >= CHAT.friendReqMax) return { err: `${name} can't take more friend requests right now.` };
+    r.fasks.push(t);
+    c.fsent[pid] = t;
+    if (!blocked(qc, p.pid)) {   // (blocked or muted: sent, as far as they know)
+      (qc.freq ||= {})[p.pid] = { n: String(p.name).slice(0, 32), at: t };
+      if (q && q.conn) { world.notify(q, `${p.name} sent you a friend request - see Messages on your phone.`, 'info'); say(q, contacts(world, q)); }
+    }
+    accounts.touch();
+    return { ok: true, note: `Friend request sent to ${name}.` };
+  }
+  function makeFriends(world, p, pid, name) {
+    const c = cd(p), qa = accounts.get(pid), qc = chatData(qa), q = world.players.get(pid);
+    if (friendCount(c) >= CHAT.friendsMax) return { err: `Your friends list is full (${CHAT.friendsMax}).` };
+    if (friendCount(qc) >= CHAT.friendsMax) return { err: `${name}'s friends list is full.` };
+    const qname = (q && q.name) || name;
+    for (const [x, y, yn] of [[c, pid, qname], [qc, p.pid, p.name]]) {
+      const had = x.contacts[y];
+      x.contacts[y] = { ...had, n: String(yn).slice(0, 32), at: now(), how: had ? had.how : crews.mates(p, { pid }) ? 'crew' : 'met', fr: 1 };
+      if (x.freq) delete x.freq[y];
+      if (x.fsent) delete x.fsent[y];
+    }
+    accounts.touch();
+    if (q && q.conn) { world.notify(q, `${p.name} accepted your friend request.`, 'good'); say(q, contacts(world, q)); }
+    return { ok: true, note: `You and ${name} are friends now.` };
   }
 
   // who a mute, block or report is about: someone online (their public id) or one of your contacts
@@ -277,7 +417,7 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     const forget = () => { if (c.nm && !c.mutes.includes(pid) && !c.blocks.includes(pid)) delete c.nm[pid]; };
     if (a === 'mute') { addTo(c.mutes); accounts.touch(); return { ok: true, note: `Muted ${name}: you won't see their messages.` }; }
     if (a === 'unmute') { c.mutes = c.mutes.filter((x) => x !== pid); forget(); accounts.touch(); return { ok: true, note: `Unmuted ${name}.` }; }
-    if (a === 'block') { addTo(c.blocks); addTo(c.mutes); accounts.touch(); return { ok: true, note: `Blocked ${name}: no messages either way.` }; }
+    if (a === 'block') { addTo(c.blocks); addTo(c.mutes); unfriend(p.pid, pid); accounts.touch(); return { ok: true, note: `Blocked ${name}: no messages either way.` }; }
     if (a === 'unblock') { c.blocks = c.blocks.filter((x) => x !== pid); c.mutes = c.mutes.filter((x) => x !== pid); forget(); accounts.touch(); return { ok: true, note: `Unblocked ${name}.` }; }
     if (a === 'report') {
       const why = REPORT_WHY.includes(msg.why) ? msg.why : 'other';
@@ -300,12 +440,20 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
       case 'chatset': {
         const c = cd(p);
         if (msg.off && typeof msg.off === 'object') for (const ch of CHANNELS) if (ch in msg.off) { if (msg.off[ch]) c.off[ch] = 1; else delete c.off[ch]; }
+        if (msg.who === 'friends') c.who = 'friends'; else if (msg.who === 'met') delete c.who;
         accounts.touch();
         return state(p);
       }
       case 'mod': { const r = moderate(world, p, msg); return { t: 'modres', ...r, state: state(p) }; }
       case 'contacts': return contacts(world, p);
-      case 'inbox': { const c = cd(p), l = c.inbox.splice(0); if (l.length) accounts.touch(); return { t: 'inbox', l }; }
+      case 'friend': { const r = friend(world, p, msg); say(p, { t: 'friendres', ...r }); return contacts(world, p); }
+      case 'inbox': {
+        // (who can text me: friends and crew only - what came from anyone else while it was otherwise is dropped)
+        const c = cd(p), l = c.inbox.splice(0);
+        if (l.length) accounts.touch();
+        const from = (id) => byHandle.get(id) || Object.keys(c.contacts).find((k) => hid(k) === id) || null;
+        return { t: 'inbox', l: c.who === 'friends' ? l.filter((x) => { const f = from(x.id); return f && !blocked(c, f) && textOk(c, f, p.pid); }) : l };
+      }
       default: return undefined;
     }
   }
@@ -313,6 +461,9 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     say(p, state(p));
     const c = cd(p);
     if (c.inbox.length) world.notify(p, `${c.inbox.length} new message${c.inbox.length === 1 ? '' : 's'} on your phone.`, 'info');
+    pruneReq(c);
+    const nr = Object.keys(c.freq || {}).length;
+    if (nr) world.notify(p, `${nr} friend request${nr === 1 ? '' : 's'} waiting - see Messages on your phone.`, 'info');
   }
-  return { handle, update, onJoin, addContact, send, emote, announce, typing, state, contacts, hid, factionKey, target, moderate, said: (p) => rec(p).said };
+  return { handle, update, onJoin, addContact, send, friend, emote, announce, typing, state, contacts, hid, factionKey, target, moderate, said: (p) => rec(p).said };
 }

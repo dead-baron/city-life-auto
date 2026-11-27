@@ -10,8 +10,9 @@
 //     big for a few seconds when a step comes in (or on a tap or a click), then a one-line chip; the pay when it's
 //     done, then it goes;
 //   - the vehicle chip: the name, the speed, the height in the air - only in a vehicle;
-//   - the first-time hint strips (driving, flying, a horse, a boat, a board, swimming, the cinematic mode): the keys,
-//     the pad's buttons or the touch slots' own names, the first HINT_TIMES times on this device for this character;
+//   - the first-time hint strips (driving, flying, a horse, a boat, a board, the cinematic mode): the keys, the pad's
+//     buttons or the touch slots' own names, at most HINT_TIMES times on this device for this character, then never
+//     again - the Guide has it (the owner, 11-16: "they show up once or twice then don't need to keep going");
 //   - on a keyboard or a pad, the prompt kept by you (below you on the screen); on touch it has its slot above the thumbs.
 // hud.js calls me(me, prev) with each self record; main.js frame(f) each frame and hint(state) for the cinematic mode.
 import { WEAPONS } from '../shared/items.js';
@@ -31,7 +32,10 @@ const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
 export const JOB_BIG_MS = 5000;     // the card stays big this long when a step comes in or it's tapped, then folds to a chip
 export const JOB_PAID_MS = 3500;    // the pay shows this long on the card
 export const STARS_AFTER_MS = 8000; // the stars stay this long after the police stop looking
-export const HINT_TIMES = 3;        // a hint strip shows the first this many times
+// The cap on every control hint of this kind (a device's glyph + what it does): shown at most this many times, then never
+// again (the owner, 11-16). Counted per device (this page's storage, per character): the strips are the page's own, the
+// server never sees them. test/hudinfo.test.js checks every strip goes through hintDue.
+export const HINT_TIMES = 2;
 export const HINT_MS = 7000;        // and stays up this long (or till you stop doing it)
 export const STAM_REST_MS = 2500;   // stamina full this long and its row folds away (UI-9)
 
@@ -116,11 +120,10 @@ export const HINTS = {
   horse: { all: [['move', 'ride'], ['sprint', 'gallop'], ['dive', 'stop'], ['vehicle', 'get off']] },
   boat: { all: [['move', 'steer'], ['dive', 'brake'], ['horn', 'horn'], ['vehicle', 'get off at a dock']], pad: [['steer', 'steer'], ['gas', 'gas'], ['brake', 'brake'], ['vehicle', 'get off']] },
   board: { all: [['move', 'push and steer'], ['dive', 'ollie'], ['trick', 'tricks'], ['vehicle', 'step off']] },
-  swim: { all: [['move', 'swim for the shore'], ['vehicle', 'climb into a boat']] },
-  cine: { kbm: [['F2', 'the HUD back'], ['F4', 'the camera panel'], ['F8', 'a picture'], ['ESC', 'back to you']], pad: [['Y', 'the camera panel'], ['X', 'a picture'], ['B', 'back to you']], touch: [['TAP', 'the camera bar'], ['MENU', 'leave the cinematic mode']] },
+  cine: { kbm: [['F2', 'the HUD back'], ['F4', 'the camera panel'], ['F8', 'a picture'], ['ESC', 'back to you']], pad: [['Y', 'the camera panel'], ['X', 'a picture'], ['B', 'back to you']], touch: [['TAP', 'the camera bar'], ['✕', 'leave the cinematic mode']] },
 };
 export const HINT_STATES = Object.keys(HINTS);
-const TOUCH_STATE_OF = { drive: 'drive', air: 'air', horse: 'horse', boat: 'boat', board: 'board', swim: 'swim' };
+const TOUCH_STATE_OF = { drive: 'drive', air: 'air', horse: 'horse', boat: 'boat', board: 'board' };   // (no swimming strip: the owner, 11-16)
 // the strip for a state on a device ('kbm' | 'pad' | 'touch'): [[glyph, words, kind]] - kind 'key' | 'pad' | 'touch'
 export function hintStrip(state, dev) {
   const H = HINTS[state];
@@ -297,7 +300,7 @@ export function createInfo(H) {
     if (I.job.j && now - (I.job.drawn || 0) > 250) { I.job.drawn = now; drawJob(now); }
     // the hint strips: the first few times you're doing each
     const vd = f.veh && f.veh.d ? VEHICLE_BY_INDEX[f.veh.d.m] : null;
-    const state = f.cine ? 'cine' : !f.veh ? (f.board ? 'board' : f.swim ? 'swim' : input.device !== 'touch' && !f.dead ? 'foot' : '') : !f.driver || !vd ? '' : vd.kind === 'air' ? 'air' : vd.horse ? 'horse' : vd.kind === 'boat' ? 'boat' : 'drive';
+    const state = f.cine ? 'cine' : !f.veh ? (f.board ? 'board' : f.swim ? '' : input.device !== 'touch' && !f.dead ? 'foot' : '') : !f.driver || !vd ? '' : vd.kind === 'air' ? 'air' : vd.horse ? 'horse' : vd.kind === 'boat' ? 'boat' : 'drive';
     if (state !== I.hint.state) { I.hint.state = state; if (state) hint(state, now); else showStrip(null); }
     else if (I.hint.until && now > I.hint.until) showStrip(null);
     // (the prompt has one slot on every device since UI-9: bottom centre, over the hint line - the concepts UIC-11/12 -

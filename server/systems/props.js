@@ -4,7 +4,7 @@
 // re-bakes that bit of ground. Smashed hydrants gush a water geyser that drags passing cars.
 // The city tidies itself up: props come back a few minutes later when nobody is looking.
 import { K } from '../../shared/constants.js';
-import { BREAKABLE } from '../../shared/map.js';
+import { BREAKABLE, FENCE_PROPS } from '../../shared/map.js';
 import { breakGrid, propRadius, smashProps, geyserDrag, GEYSER_S } from '../../shared/smash.js';
 import * as vehicles from './vehicles.js';
 import * as explosions from './explosions.js';
@@ -24,11 +24,10 @@ export function smashFor(world, v) {
     const p = map.props[i];
     const driver = v.seats[0] ? world.get(v.seats[0]) : null;
     breakProp(world, i, v.vx, v.vy, driver);
-    // heavy things (trees, lamp posts, hydrants) dent the car too
-    if (heavy) {
-      vehicles.damageVehicle(world, v, Math.min(14, sp * 0.03) / Math.sqrt(v.def.mass), null);
-      world.emit(v.x, v.y, { e: 'crash', x: p.x, y: p.y, p: Math.min(0.7, sp / 600) });
-    }
+    // it hurts the vehicle by how solid it was and how hard it hit (rules.js SMASH_HURT): a trash bag nothing, a bench a
+    // little, a tree or a lamp post a real hit
+    vehicles.smashHurt(world, v, p.t, sp);
+    if (heavy) world.emit(v.x, v.y, { e: 'crash', x: p.x, y: p.y, p: Math.min(0.7, sp / 600) });
   });
   // player-driven cars feel the hydrant spray per input step too (matches their prediction)
   if (v.ownStepTick === world.tick && world.geysers && world.geysers.length) geyserDrag(v, world.geysers.filter((q) => q.until > world.time), 1 / 20);
@@ -42,6 +41,8 @@ export function breakProp(world, i, ax = 0, ay = 0, by = null) {
   world.brokenProps.set(i, world.time);
   const e = world.map.propSolid.get(i);
   if (e) e.off = true;
+  if (FENCE_PROPS.has(p.t)) (world.map.downFences ??= new Set()).add(i);   // (lying flat: no longer in anyone's way - shared/fences.js)
+  throwSitters(world, p, i, ax, ay, by);
   const a = Math.atan2(ay, ax) || 0;
   world.broadcast({ e: 'propbreak', i, a: +a.toFixed(2), x: p.x, y: p.y });
   if (p.t === 'hydrant' || p.t === 'hydrant_y') {
@@ -52,6 +53,25 @@ export function breakProp(world, i, ax = 0, ay = 0, by = null) {
   if (p.t === 'fuelpump') pumpGoes(world, i, by);
   if (by && by.player) by.player.profile.stats.smashed = (by.player.profile.stats.smashed || 0) + 1;
   return true;
+}
+
+// Anyone sitting on it - a bench, a bus stop's seat, a picnic table, a ledge - goes flying the way the car was going (the
+// owner, 11-23: "if an NPC or player is sitting on an object, like a bench or bus stop, then they should go flying off
+// while the bench or object they're on gets destroyed"): flung (vehicles.fling: the arc, the landing, the hurt of a car's
+// knock, half of it), out of whatever they were doing there.
+export const SIT_THROW = { reach: 18, keep: 0.6, minSpeed: 140, hurt: 0.5 };
+export function throwSitters(world, p, i, ax, ay, by = null) {
+  const r = propRadius(world.map, i) + SIT_THROW.reach, sp = Math.max(SIT_THROW.minSpeed, Math.hypot(ax, ay) * SIT_THROW.keep);
+  const a = Math.atan2(ay, ax) || 0;
+  for (const e of world.query(p.x, p.y, r + 40, K.PED)) {
+    if (e.dead || e.vehId || Math.hypot(e.x - p.x, e.y - p.y) > r) continue;
+    const sitting = e.gt === 'sit' || e.gt === 'sitlow' || !!e.sit;
+    if (!sitting) continue;
+    if (e.npc && e.npc.act) { e.npc.act = null; e.npc.state = 'wander'; e.npc.until = 0; }   // (off the activity: up and away once they land)
+    if (e.sit) e.sit = null;
+    if (e.gt) { e.gt = null; e.pp = null; e.appVer = (e.appVer || 0) + 1; }
+    vehicles.fling(world, e, Math.cos(a) * sp, Math.sin(a) * sp, by, 'car', SIT_THROW.hurt);
+  }
 }
 
 // ---- a filling station's pumps (FUEL_PUMP; map.js pumpProps) ---------------------------------------------------------
@@ -157,6 +177,7 @@ export function update(world, dt) {
       for (const pl of world.players.values()) if (pl.ped && Math.hypot(pl.ped.x - p.x, pl.ped.y - p.y) < (pump ? FUEL_PUMP.seePx : 1000)) { seen = true; break; }
       if (seen) continue;
       world.brokenProps.delete(i);
+      if (map.downFences) map.downFences.delete(i);
       const e = map.propSolid.get(i);
       if (e) e.off = false;
       world.broadcast({ e: 'propfix', i });

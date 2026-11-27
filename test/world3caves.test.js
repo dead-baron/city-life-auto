@@ -166,7 +166,7 @@ test('World v3: the Redwood Caverns - in behind Redwood Creek Falls, out at the 
     assert.equal(solid, 0, `${M.name}: nothing solid where you come out`);
   }
   assert.ok(near('stairs', MF.x, MF.y, 200) >= 1 && near('rail', MF.x, MF.y, 300) >= 1, 'the falls: the stairs and the rail');
-  assert.ok(near('cliffwall', MS.x, MS.y, 700) >= 3 && near('rowboat', MS.x, MS.y, 500) === 1 && near('barrel', MS.x, MS.y, 300) >= 2, 'the sea cave: the basalt cliff, the rowboat on the cobbles, barrels');
+  assert.ok(near('cliff', MS.x, MS.y, 300) === 1 && near('cliffwall', MS.x, MS.y, 700) === 0 && near('rowboat', MS.x, MS.y, 500) === 1 && near('barrel', MS.x, MS.y, 300) >= 2, 'the sea cave: its rock (one basalt mass, no row of cliff pieces - the owner, 11-21), the rowboat on the cobbles, barrels');
   let cobbles = 0;
   for (let ty = Math.floor(MS.y / TILE) - 2; ty <= Math.floor(MS.y / TILE) + 16; ty++) for (let tx = Math.floor(MS.x / TILE) - 12; tx <= Math.floor(MS.x / TILE) + 12; tx++) { const i = m.idx(tx, ty); if (m.tiles[i] === T.SAND && m.reserve[i] & 128) cobbles++; }
   assert.ok(cobbles >= 60, `the cobble beach (${cobbles} tiles)`);

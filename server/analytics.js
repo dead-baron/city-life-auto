@@ -9,7 +9,16 @@
 //          load{bucket}, flags{kind} }
 //   cohorts: { day: { n, d1, d7, w1 } } - accounts first seen that day, back on day 1, day 7, any day of the first week
 // Per account (acct.an): { first, last, days, sess (sessions; absent on accounts from before 11-12), d1, d7, w1, ftue{} }.
+//   roll: the owner's console's rolling buckets (the owner, 11-16: "a real-time look at what's currently happening, the last
+//     few hours, the last day, the last few days") - m: a bucket a minute for the last ROLL.min (6 hours), h: a bucket an
+//     hour for the last ROLL.hr (7 days); each { t (its start, ms), on (most online), os / oc (online summed / sampled: the
+//     average), u: { player key: where } (the players seen in it - a salted hash of the account, never the account id;
+//     where: 'US/Central', 'US' or '?'), nw (new accounts), se (sessions begun), sm / sn (ended sessions' ms / count), rt
+//     (back on another day), su (sign-ups), jb (jobs done), cr (crimes), de (deaths), ch (chat lines), er (page errors) }.
+//     Bounded (the oldest bucket dropped), saved with the rest, so a restart keeps the week. trends(win) and places(win) read
+//     them (server/adminhttp.js).
 import { existsSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
+import { createHash, randomBytes } from 'node:crypto';
 
 export const FTUE_STEPS = ['first_join', 'look_picked', 'moved', 'title_play', 'in_world', 'first_job', 'first_job_done', 'first_crime', 'first_purchase', 'first_death', 'first_chat', 'played_10m', 'played_30m', 'came_back', 'signed_up', 'tutorial_begin', 'tutorial_complete',
   // the first-time experience (server/systems/ftue.js): the arrival, the answer, each step reached, done or skipped; the
@@ -45,10 +54,71 @@ export function deviceClass(r) {
   return 'desktop';
 }
 
+// the console's windows (adminhttp.js Trends): its length, the buckets it reads ('m' minutes, 'h' hours) and its chart's bin
+export const ROLL = { min: 360, hr: 168 };
+export const WINDOWS = { '1h': { ms: 3600e3, b: 'm', bin: 60e3 }, '6h': { ms: 6 * 3600e3, b: 'm', bin: 5 * 60e3 }, '24h': { ms: 86400e3, b: 'h', bin: 3600e3 }, '3d': { ms: 3 * 86400e3, b: 'h', bin: 3600e3 }, '7d': { ms: 7 * 86400e3, b: 'h', bin: 2 * 3600e3 } };
+const ROLL_SUMS = ['nw', 'se', 'sm', 'sn', 'rt', 'su', 'jb', 'cr', 'de', 'ch', 'er'];
+
 export function createAnalytics({ file = null, now = Date.now, ga = null, onEarned = null } = {}) {
   let S = { v: 1, days: {}, cohorts: {}, conc: [] };
   if (file && existsSync(file)) { try { const d = JSON.parse(readFileSync(file, 'utf8')); if (d && d.v === 1) S = { ...S, ...d }; } catch { /* start over */ } }
+  S.roll ||= { m: [], h: [] }; S.roll.m ||= []; S.roll.h ||= [];
+  S.salt ||= randomBytes(12).toString('hex');   // (the players' keys in the buckets: never the account id)
   let dirty = false;
+  // ---- the rolling buckets (the console) ----
+  const pkey = (p) => createHash('sha256').update(S.salt + (p.pid || p.id || '')).digest('base64url').slice(0, 10);
+  const whereOf = (p) => (p && p.cc ? (p.cc.r ? `${p.cc.c}/${p.cc.r}` : p.cc.c) : '?');
+  function bucket(k, t = now()) {
+    const L = S.roll[k], span = k === 'm' ? 60e3 : 3600e3, t0 = Math.floor(t / span) * span;
+    let b = L[L.length - 1];
+    if (!b || b.t !== t0) {
+      b = { t: t0, on: 0, os: 0, oc: 0, u: {} };
+      L.push(b);
+      const max = k === 'm' ? ROLL.min : ROLL.hr;
+      if (L.length > max) L.splice(0, L.length - max);
+    }
+    return b;
+  }
+  const rollAdd = (f, n = 1) => { for (const k of ['m', 'h']) { const b = bucket(k); b[f] = (b[f] || 0) + n; } dirty = true; };
+  const rollSeen = (p) => { if (!p || !(p.pid || p.id)) return; const h = pkey(p), w = whereOf(p); for (const k of ['m', 'h']) bucket(k).u[h] = w; };
+  const rollOnline = (n) => { for (const k of ['m', 'h']) { const b = bucket(k); b.on = Math.max(b.on, n); b.os += n; b.oc++; } };
+  // a window's numbers and its chart (adminhttp.js /admin/api): { win, from, to, uniq, peak, avg, nw, se, avgMin, rt, su, jb,
+  // cr, de, ch, er, series: [{ t, on, u, se }] - each chart bin: most online, players seen, sessions begun }
+  function trends(win = '24h') {
+    const W = WINDOWS[win] || WINDOWS['24h'], to = now(), from = to - W.ms, L = S.roll[W.b], out = { win, from, to, uniq: 0, peak: 0, avg: 0 };
+    for (const f of ROLL_SUMS) out[f] = 0;
+    const seen = new Set(), bins = new Map();
+    let os = 0, oc = 0;
+    for (const b of L) {
+      if (b.t + (W.b === 'm' ? 60e3 : 3600e3) <= from) continue;
+      for (const f of ROLL_SUMS) out[f] += b[f] || 0;
+      out.peak = Math.max(out.peak, b.on); os += b.os; oc += b.oc;
+      const k = Math.floor(b.t / W.bin) * W.bin, q = bins.get(k) || { t: k, on: 0, u: new Set(), se: 0 };
+      q.on = Math.max(q.on, b.on); q.se += b.se || 0;
+      for (const h in b.u) { seen.add(h); q.u.add(h); }
+      bins.set(k, q);
+    }
+    out.uniq = seen.size; out.avg = oc ? +(os / oc).toFixed(1) : 0; out.avgMin = out.sn ? +(out.sm / out.sn / 60000).toFixed(1) : 0;
+    const series = [];
+    for (let t = Math.floor(from / W.bin) * W.bin + W.bin; t <= to; t += W.bin) { const q = bins.get(t); series.push({ t, on: q ? q.on : 0, u: q ? q.u.size : 0, se: q ? q.se : 0 }); }
+    out.series = series;
+    return out;
+  }
+  // where a window's players came from: { countries: [[code, players]], regions: [[code/region, players]], known, unknown }
+  function places(win = '24h') {
+    const W = WINDOWS[win] || WINDOWS['24h'], from = now() - W.ms, who = new Map();
+    for (const b of S.roll[W.b]) if (b.t + (W.b === 'm' ? 60e3 : 3600e3) > from) for (const h in b.u) { const w = b.u[h]; if (w !== '?' || !who.has(h)) who.set(h, w); }
+    const C = new Map(), R = new Map();
+    let unknown = 0;
+    for (const w of who.values()) {
+      if (w === '?') { unknown++; continue; }
+      const c = w.slice(0, 2);
+      C.set(c, (C.get(c) || 0) + 1);
+      if (w.length > 3) R.set(w, (R.get(w) || 0) + 1);
+    }
+    const sort = (M) => [...M].sort((a, b) => b[1] - a[1]);
+    return { countries: sort(C), regions: sort(R).slice(0, 30), known: who.size - unknown, unknown };
+  }
   function day(t = now()) {
     const k = dayKey(t);
     let d = S.days[k];
@@ -77,13 +147,14 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
     const t = now(), d = day(t), a = an(acct), dn = dayNum(t);
     p.anStart = t; p.anPlayed = 0;
     d.sessions++;
+    rollAdd('se'); rollSeen(p);
     a.sess = (a.sess || 0) + 1;   // (sessions all told: the staff's Players page - server/staffplayers.js)
     if (!a.first) {
-      a.first = dn; d.newAcc++;
+      a.first = dn; d.newAcc++; rollAdd('nw');
       const c = (S.cohorts[a.first] ||= { n: 0, d1: 0, d7: 0, w1: 0 }); c.n++;
       ftue(p, acct, 'first_join');
     } else if (a.last !== dn) {
-      d.returning++;
+      d.returning++; rollAdd('rt');
       const since = dn - a.first, c = (S.cohorts[a.first] ||= { n: 0, d1: 0, d7: 0, w1: 0 });
       if (since === 1 && !a.d1) { a.d1 = 1; c.d1++; }
       if (since === 7 && !a.d7) { a.d7 = 1; c.d7++; }
@@ -97,11 +168,13 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
   function sessionEnd(p) {
     if (!p.anStart) return;
     day().sessionMs += now() - p.anStart;
+    rollAdd('sm', now() - p.anStart); rollAdd('sn');
     p.anStart = 0;
   }
   function signIn(p, acct, method, created) {
     const d = day();
     bump(created ? d.signups : d.logins, method);
+    if (created) rollAdd('su');
     if (created) ftue(p, acct, 'signed_up');
     gaEvent(p, created ? 'sign_up' : 'login', { method });
   }
@@ -155,6 +228,8 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
   }
   function event(kind, p, data = {}) {
     const d = day();
+    const R = { crime: 'cr', death: 'de', job_done: 'jb', chat: 'ch', error: 'er' }[kind];
+    if (R) rollAdd(R);
     if (kind === 'crime') { bump(d.act, 'crime:' + data.type); if (p && p.acct) ftue(p, p.acct, 'first_crime'); gaEvent(p, 'crime', { crime: key(data.type) }); }
     else if (kind === 'death') { const c = deathCause(data.cause, data.killer); bump(d.deaths, c); if (p && p.acct) ftue(p, p.acct, 'first_death'); gaEvent(p, 'player_death', { cause: c }); }
     else if (kind === 'job_start') { bump(d.act, 'job:' + data.type); if (p && p.acct) ftue(p, p.acct, 'first_job'); }
@@ -194,12 +269,14 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
     for (const p of world.players.values()) {
       if (!p.conn) continue;
       n++;
+      rollSeen(p);
       bump(d.mins, activityOf(world, p));
       p.anPlayed = (p.anPlayed || 0) + 1;
       if (p.acct) p.acct.playMin = (p.acct.playMin || 0) + 1;   // (minutes played, all told: a reporter's weight - moderation.js)
       if (p.acct) { if (p.anPlayed === 10) ftue(p, p.acct, 'played_10m'); if (p.anPlayed === 30) ftue(p, p.acct, 'played_30m'); }
     }
     if (n > d.peak) d.peak = n;
+    rollOnline(n);
     d.liveMs = 0;
     for (const p of world.players.values()) if (p.conn && p.anStart) d.liveMs += now() - p.anStart;
     gaMoneyFlush(world);
@@ -215,5 +292,5 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
     dirty = false;
     try { writeFileSync(file + '.tmp', JSON.stringify(S)); renameSync(file + '.tmp', file); } catch (e) { dirty = true; console.error('[analytics] save failed:', e.message); }
   }
-  return { sessionStart, sessionEnd, signIn, money, event, perf, minute, concurrency, ftue, norm, save, activityOf, get data() { return S; }, day };
+  return { sessionStart, sessionEnd, signIn, money, event, perf, minute, concurrency, ftue, norm, save, activityOf, trends, places, get data() { return S; }, day };
 }

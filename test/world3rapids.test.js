@@ -292,17 +292,20 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   const step = () => { rw.tick++; rw.time += 1 / 30; races.update(rw); };
   for (let i = 0; i < 30 * (races.COUNTDOWN_S + 1); i++) step();
   const st = rw.raceState[race.id];
-  assert.ok(st.phase === 'running' && st.racers.has('kay') && !st.racers.has('row'), `a kayak entered, a rowboat not (${st.phase}, ${[...st.racers.keys()]})`);
+  // (hidden for the beta - the owner, 11-24: shared/hidden.js; test/hidden.test.js - it doesn't start; shown, a kayak enters)
+  const { raceShown } = await import('../shared/hidden.js');
+  if (raceShown(race)) assert.ok(st.phase === 'running' && st.racers.has('kay') && !st.racers.has('row'), `a kayak entered, a rowboat not (${st.phase}, ${[...st.racers.keys()]})`);
+  else assert.ok(st.phase === 'idle' && !st.racers.size, 'hidden: no race starts');
   // on foot on the put-in's planks: hire a kayak right there (races.js footInteraction - before "Fish here": players.js)
   { const rentals = await import('../server/systems/rentals.js'), opened = [];
     const walker = { pid: 'walk', ped: { x: put.dock.x, y: put.dock.y } };
     const it = races.footInteraction(rw, walker, rentals, (w, p, poi) => opened.push(poi.id));
-    assert.ok(it && /Rent a kayak for Redwood River Run/.test(it.label), `the hire on the planks (${it && it.label})`);
+    assert.ok(it && /^Rent a kayak( for Redwood River Run)?$/.test(it.label), `the hire on the planks (${it && it.label})`);
     it.run(); assert.deepEqual(opened, [RR.put.poi], 'its counter\'s menu');
     walker.ped.x += 40 * TILE; assert.equal(races.footInteraction(rw, walker, rentals, () => {}), null, 'not away from it'); }
   const kv = ents.get(1);
   for (const c of race.cps) { kv.x = c.x; kv.y = c.y; for (let i = 0; i < 6; i++) step(); }
-  assert.ok(kay.profile.bank > 0 && told.some(([pid, t]) => pid === 'kay' && /Finished 1st/.test(t)), `home first, the prize (${kay.profile.bank})`);
+  if (raceShown(race)) assert.ok(kay.profile.bank > 0 && told.some(([pid, t]) => pid === 'kay' && /Finished 1st/.test(t)), `home first, the prize (${kay.profile.bank})`);
   // an angler's hold on the bank below the falls (server/systems/wildfolk.js: the plunge pools early)
   const { spotsOf } = await import('../server/systems/activities.js');
   const holdsAt = spotsOf(m).list.filter((q) => q.k === 'holds');

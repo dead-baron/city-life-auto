@@ -1,4 +1,5 @@
 import * as revive from './systems/revive.js';
+import * as stash from './systems/stash.js';
 // One connected client: handshake, input decoding and message routing. Shared by the
 // Node WebSocket server and the in-browser offline practice worker.
 import { decodeInput, MSG_INPUT } from '../shared/protocol.js';
@@ -49,7 +50,7 @@ import * as jobcenter from './systems/jobcenter.js';
 const TEXT_MAX = 8192, PERF_MAX = 16384;   // a text message's size cap (a perf report is the biggest a page sends)
 const FLOOD_CLOSE_S = 5;                   // this many seconds in a row over the flood guard and the socket is closed
 export function createSession(world, conn, opts) {
-  let player = null;
+  let player = null, waiting = false;   // (waiting: in the line at the door - server/line.js)
   let msgBudget = 0, budgetAt = Date.now(), floodS = 0, myToken = null;
   const hooks = opts.hooks || null;
   const api = {
@@ -69,31 +70,25 @@ export function createSession(world, conn, opts) {
         return;
       }
       let msg;
-      try { msg = JSON.parse(data); } catch { return; }
-      if (!msg || typeof msg !== 'object') return;
+      // (no key that changes how a value turns into text: an object with its own toString / valueOf threw wherever the
+      // server did String() on it - the security audit, 11-19)
+      try { msg = JSON.parse(data, (k, v) => (k === 'toString' || k === 'valueOf' || k === '__proto__' || k === 'constructor' ? undefined : v)); } catch { return; }
+      if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
       if (data.length > TEXT_MAX && msg.t !== 'perf') return;
       if (msg.t === 'hello') {
-        if (player) return;
+        if (player || waiting) return;
         const closed = opts.closedReason && opts.closedReason();
         if (closed) { conn.sendJSON({ t: 'kicked', reason: closed }); conn.close(4003, 'quota'); return; }
-        const online = [...world.players.values()].filter((p) => p.conn).length;
-        if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
-        const res = opts.login(msg.token, msg);
-        if (res.refused) { conn.sendJSON(res.refused === 'agegate' ? { t: 'agegate', age: 13 } : { t: 'kicked', reason: res.refused, code: res.code, until: res.until }); conn.close(res.code || 4003, 'refused'); return; }
-        const { profile, token } = res;
-        myToken = token;
-        // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
-        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, world: opts.world, sig: mapSignature(world.map), tick: world.tick, day: world.day, dev: opts.dev, practice: !!opts.practice, server: opts.label, build: world.build || undefined, built: world.buildAt || undefined, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), clubs: nightclubs.liveList(world), forage: foraging.goneList(world), fires: campfires.fireList(world), felled: felling.felledList(world), logs: felling.logList(world), glights: lights.groundList(world), xing: trains.crossingStates(world), tt: trains.timetable(world), rides: rides.active(world) });
-        player = players.join(world, conn, profile, { clientBuild: typeof msg.cb === 'string' ? msg.cb.slice(0, 40) : null, clientBuiltAt: Number(msg.cbt) || 0 });
-        // the safe exit's end of this session (logoff.js finish): its leaving as any leaving (the launch hooks), and nothing
-        // more from this connection reaches the character (the socket closes right after)
-        const me = player;
-        me.endSession = () => { if (player !== me) return; player = null; if (hooks) hooks.leave(me); };
-        // where the character starts (a fresh start after an update, a first visit: a hospital or their home): the page's
-        // city worker picks its first window of World v3 round it, not round where the page guessed (client/worldgen.js)
-        if (player.ped && Number.isFinite(player.ped.x)) conn.sendJSON({ t: 'spawnat', x: Math.round(player.ped.x), y: Math.round(player.ped.y) });
-        conn.sendJSON(looks.stateMsg(player));   // your look, whether you've picked one yet, your saved looks (client/creator.js)
-        if (hooks) hooks.join(player, { dm: typeof msg.dm === 'string' ? msg.dm.slice(0, 64) : null, age17: !!msg.age17 }, res);
+        // a full city: the line at the door (server/line.js - its turn comes: the same hello, let in); without one (offline
+        // practice, the tests), turned away as before
+        if (opts.line) {
+          const r = opts.line.arrive(conn, msg.token, () => { waiting = false; if (conn.open) api.hello(msg); });
+          if (r !== 'in') { waiting = r === 'queued'; return; }
+        } else {
+          const online = [...world.players.values()].filter((p) => p.conn).length;
+          if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
+        }
+        api.hello(msg);
         return;
       }
       if (!player) return;
@@ -105,6 +100,26 @@ export function createSession(world, conn, opts) {
         world.curOpt = msg.t === 'menu' ? String(msg.opt || '').slice(0, 30) : null;
       }
       try { api.route(msg); } finally { world.curMsg = null; world.curOpt = null; }
+    },
+    // in: the account signed in, the character into the city
+    hello(msg) {
+      if (player) return;
+      const res = opts.login(msg.token, msg);
+      if (res.refused) { conn.sendJSON(res.refused === 'agegate' ? { t: 'agegate', age: 13 } : { t: 'kicked', reason: res.refused, code: res.code, until: res.until }); conn.close(res.code || 4003, 'refused'); return; }
+      const { profile, token } = res;
+      myToken = token;
+      // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
+      conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, world: opts.world, sig: mapSignature(world.map), tick: world.tick, day: world.day, dev: opts.dev, practice: !!opts.practice, server: opts.label, build: world.build || undefined, built: world.buildAt || undefined, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), clubs: nightclubs.liveList(world), forage: foraging.goneList(world), fires: campfires.fireList(world), felled: felling.felledList(world), logs: felling.logList(world), glights: lights.groundList(world), xing: trains.crossingStates(world), tt: trains.timetable(world), rides: rides.active(world) });
+      player = players.join(world, conn, profile, { clientBuild: typeof msg.cb === 'string' ? msg.cb.slice(0, 40) : null, clientBuiltAt: Number(msg.cbt) || 0 });
+      // the safe exit's end of this session (logoff.js finish): its leaving as any leaving (the launch hooks), and nothing
+      // more from this connection reaches the character (the socket closes right after)
+      const me = player;
+      me.endSession = () => { if (player !== me) return; player = null; if (hooks) hooks.leave(me); };
+      // where the character starts (a fresh start after an update, a first visit: a hospital or their home): the page's
+      // city worker picks its first window of World v3 round it, not round where the page guessed (client/worldgen.js)
+      if (player.ped && Number.isFinite(player.ped.x)) conn.sendJSON({ t: 'spawnat', x: Math.round(player.ped.x), y: Math.round(player.ped.y) });
+      conn.sendJSON(looks.stateMsg(player));   // your look, whether you've picked one yet, your saved looks (client/creator.js)
+      if (hooks) hooks.join(player, { dm: typeof msg.dm === 'string' ? msg.dm.slice(0, 64) : null, age17: !!msg.age17, ip: conn.remoteAddress || null, tz: typeof msg.tz === 'string' ? msg.tz.slice(0, 48) : null, dk: typeof msg.dk === 'string' ? msg.dk.slice(0, 12) : null }, res);   // (ip: only for the country, server/geo.js - not kept)
     },
     route(msg) {
       if (hooks) {
@@ -156,6 +171,7 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'logoff') { const r = logoff.request(world, player, msg.a); if (r) conn.sendJSON(r); return; }   // the pause menu's LOG OFF: the safe exit (logoff.js)
       if (msg.t === 'surrender') { const err = unstuck.surrender(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'cruiser') { const err = cruiser.call(world, player); if (err) world.notify(player, err, 'warn'); return; }
+      if (msg.t === 'stash') { stash.handle(world, player, msg); return; }   // (your stash, open in the Inventory: stash.js)
       if (msg.t === 'look') { const r = looks.handle(world, player, msg); if (r) conn.sendJSON(r); return; } // the character creator (and the blade's colour)
       // Start fresh (task #413): this session's own character deleted for good - never anyone else's (no pid is read from
       // the message); the page forgets its token and comes back as a new player
@@ -193,7 +209,10 @@ export function createSession(world, conn, opts) {
         dev.command(world, player, String(msg.c || ''), msg);
       }
     },
-    onClose() { if (player && player.conn === conn) { if (hooks) hooks.leave(player); players.leave(world, player); } },
+    onClose() {
+      if (waiting) { waiting = false; if (opts.line) opts.line.leave(conn); return; }   // (out of the line: Cancel, the tab closed)
+      if (player && player.conn === conn) { const pid = player.pid; if (hooks) hooks.leave(player); players.leave(world, player); if (opts.line) opts.line.left(pid); }
+    },
   };
   return api;
 }

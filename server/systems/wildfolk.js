@@ -338,6 +338,7 @@ export function wildMembers(s, rng) {
 
 // ---- how they go about it (activities.js steer): a route walked out and back (a pause now and then; a forager down on a
 // knee at each patch), the ranger's beat with a word on the radio at each end -> { inp, factor } or null (off: on their way)
+const ARRIVE_NEAR = 40;   // px: the ranger's beat end reached when it gets no nearer than this for a while
 export function wildSteer(world, ped, now, x) {
   const n = ped.npc, a = n.act;
   if (a.route) {
@@ -367,13 +368,15 @@ export function wildSteer(world, ped, now, x) {
     if (now < (n.holdTo || 0)) {
       ped.vx = ped.vy = 0;
       if (n.talkTo) { const q = world.get(n.talkTo); if (q && !q.dead) ped.a = Math.atan2(q.y - ped.y, q.x - ped.x); a.pp = null; }
-      else if (now >= (n.lookAt || 0)) { n.lookAt = now + 1.5 + x.rng() * 2; if (x.rng() < 0.5) ped.a += (x.rng() - 0.5) * 1.6; a.pp = x.rng() < 0.45 ? 'radio' : null; }
+      else if (now >= (n.lookAt || 0)) { n.lookAt = now + 1.5 + x.rng() * 2; if (x.rng() < 0.5) ped.a += (x.rng() - 0.5) * 1.6; a.pp = a.radioDue || x.rng() < 0.45 ? 'radio' : null; a.radioDue = false; }   // (the first look at each end: a word on the radio)
       x.pose(ped, true);
       return { inp: x.NO_INPUT, factor: 0.55 };
     }
     n.talkTo = 0;
-    const t = P0[a.leg % 2];
-    if (Math.hypot(t.x - ped.x, t.y - ped.y) < 8) { a.leg++; n.holdTo = now + 4 + x.rng() * 6; n.lookAt = 0; return { inp: x.NO_INPUT, factor: 0.55 }; }
+    const t = P0[a.leg % 2], d = Math.hypot(t.x - ped.x, t.y - ped.y);
+    // (there: on the spot - or as near as it gets, a few seconds kept off it by whoever it steps aside for: npc.js, 11-23)
+    if (d < (a.bestD ?? Infinity) - 4) { a.bestD = d; a.bestAt = now; }
+    if (d < 8 || (d < ARRIVE_NEAR && now - (a.bestAt ?? now) > 2.5)) { a.leg++; a.bestD = Infinity; a.bestAt = now; n.holdTo = now + 4 + x.rng() * 6; n.lookAt = 0; a.radioDue = true; return { inp: x.NO_INPUT, factor: 0.55 }; }
     if (a.pp) { a.pp = null; }
     x.pose(ped, true);
     return { inp: x.seekTo(ped, t.x, t.y, 0.8), factor: 0.4 };

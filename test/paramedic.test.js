@@ -119,3 +119,24 @@ test('a job given up mid-call: the patient is gone', () => {
   run(w, 1.1);
   assert.ok(q.removed, 'gone');
 });
+
+test('on shift in the paramedic uniform, your own clothes back however it ends; the ambulance can drive off forward (the owner, 11-25)', async () => {
+  const jobs = await import('../server/systems/jobs.js');
+  const { decodeLook } = await import('../shared/look.js');
+  const { PIECES } = await import('../shared/lookcore.js');
+  const { CAR_SPAWN_BLOCK } = await import('../shared/mapcore.js');
+  for (const h of hospitals.slice(0, 6)) {
+    const { p } = joinPlayer(w);
+    put(p.ped, h.x, h.y + 40);
+    const before = p.ped.app;
+    assert.equal(pm.start(w, p, h), null, h.label);
+    const L = decodeLook(p.ped.app.lk);
+    assert.ok(L && L.outfit.set && PIECES[L.outfit.set.id].name === 'Paramedic uniform', 'in the uniform');
+    const v = w.get(p.job.truck) || [...w.entities.values()].find((e) => e.issuedTo === p.pid);
+    assert.ok(v, 'an ambulance');
+    for (let f = 0.5; f <= 2; f += 0.25) assert.ok(!CAR_SPAWN_BLOCK[w.map.tileAtPx(v.x + Math.cos(v.a) * v.def.L * f, v.y + Math.sin(v.a) * v.def.L * f)], `${h.label}: open ground ahead of it`);
+    jobs.failJob(w, p, 'quit');
+    run(w, 0.2);
+    assert.equal(p.ped.app, before, 'your own clothes back');
+  }
+});

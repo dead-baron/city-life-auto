@@ -41,6 +41,7 @@ import * as bathhouse from './bathhouse.js';
 import * as grime from './grime.js';
 import * as homeups from './homeups.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
+import { poiAt } from '../pois.js';   // (the place you're at, through a grid: World v3's thousands of places)
 
 // (the home upgrades - homeups.js: with the world, the level lv of the home as built - the stairs in the ground floor, a
 // floor up or the basement; without, the plan as it came)
@@ -80,7 +81,7 @@ export function enter(world, p, h, at) {
 export function doorInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.carrying || ped.entering || ped.ug) return null;
-  const poi = world.map.poiNear(ped.x, ped.y);
+  const poi = poiAt(world.map, ped.x, ped.y);
   let h = null, back = false;
   if (poi && poi.kind === 'home') {
     if (homes.unitsAt(world, poi)) return lobbyDoor(world, p, poi);   // (H71: an apartment block - into its lobby, open to anyone)
@@ -423,7 +424,7 @@ function menuOf(world, p, h, what) {
   } else if (what === 'fridge') {
     title = 'The fridge';
     const food = Object.entries(st.items || {}).filter(([id, n]) => n > 0 && ITEMS[id] && ITEMS[id].food);
-    sub = food.length ? `Health ${Math.round(ped.hp)}/${ped.maxHp}. Something to eat?` : 'Empty. Put food from your bag in here and it keeps.';
+    sub = food.length ? `Health ${Math.round(ped.hp)}/${ped.maxHp}. Something to eat?` : 'Empty. Put food from your inventory in here and it keeps.';
     for (const [id, n] of food) opts.push({ id: `hi:eat:${id}`, label: `Eat ${ITEMS[id].name}`, note: `+${ITEMS[id].heal} health · ${n} in the fridge` });
     // cooking (the owner, 10-06: "home life: cooking"): three things from the fridge into a meal at the stove
     if (!ped.home.guest && !ped.home.tour) {

@@ -24649,6 +24649,73 @@ number in those lists moves):
   and night (the owner's folder of the job). Re-keys World v3's hashes (`world3`, `art3`) once; today's world and art
   hashes stay (chunks baked the same carry over: server/artcdn.js).
 
+## 2026-11-16 · The Inventory (was the Bag): your character, your clothes, your weapons, quick switching
+
+The owner (11-16, with two screenshots of the Bag): "The inventory system needs a huge overhaul. Too hard to navigate.
+Hard to see what I have. On desktop the inventory is all squished to the side. When I'm trying to play an instrument I
+can't see what I'm doing on the screen. I can't change my clothes or take off clothes ... It doesn't need to be called a
+bag, just Inventory." Built to the concepts U6, U14, U15, CC10 and UIC-19.
+
+- **The screen** (client/bag.js, style.css "the Inventory"): named INVENTORY everywhere you see it (the hub's head, the
+  pause list, Settings' controls, the Guide, the quick wheel, the server's "in your inventory" lines). On a desktop or a
+  phone on its side three columns that use the screen (the frame was 720 px wide, unzoomed - the "squished to the side"):
+  your character | the grid under its tabs with the quick bar | the details. Upright: the character on top, the grid under
+  it, the details a sheet from the bottom. The tabs are U14's seven - All, Clothes, Weapons, Tools, Food & Meds,
+  Materials, Valuables - and wrap rather than run off the edge ("Healin" cut off is gone); the weapon slots' labels are
+  short words in the UI face, never two on one tile (MELEE and THROWN ran together). The sort stays.
+- **Your character** (U6, U15): the game's own sprite of your look (client/art2/people.js through lookArt, as the city
+  draws you - not the close-up renderer), breathing, turned with the arrows or a drag. A vest you wear shows over it (it
+  draws your ped's own look code). The slots round it - Hat, Top, Jacket, Bottoms | Glasses, Accessory, Bag, Shoes (a
+  dress or a set fills the top's slot as OUTFIT, the bottoms' says "with the outfit") - each with an X to take it off;
+  TAKE IT ALL OFF; SAVED LOOKS (CC10) shows your saved looks as small figures, a tap puts that look's clothes on. Health,
+  armor and stamina bars under it.
+- **The character fills its stand** (the owner's review of the first shots: "character is super short in that space"):
+  the stand was stretched to the column's height with a small figure at its foot. Now the stand is sized by the slots
+  round it, the column is wider (the figure gets the room between the slots), and the sprite - its true proportions, the
+  widest and tallest of its eight turns - is scaled by whole device pixels (the desktop's zoom included) to about 85-90%
+  of the stand, centered, feet on the shadow, the turn arrows in the top corners beside the head. The item counts sit on
+  their own line under the names (they ran over them on a phone upright). invlayout.test.js fails a count on a name and
+  a character under 70% of its stand.
+- **Clothes from the inventory, on the server** (server/systems/looks.js): `{ t: 'look', a: 'off', s: slot | 'all' }`,
+  `a: 'wear', id` (a piece you own, in its colors or the ones worn), `a: 'outfit', i` (a saved look's clothes over your
+  own body and hair). All three go through the creator's own `put()`: refused in cuffs, in uniform, and **while you're
+  wanted anywhere but inside your own home** - and only a change at home counts as a disguise (the home's "Change
+  outfit"), as before. So changing out in the street is never a free way to shed the police; the disguise benefit stays
+  where it was (home, the stores' fitting rooms). Everything off leaves the underwear the renderer draws under nothing (a
+  tank or a bare chest, briefs). A top or bottoms over a dress takes the dress off and puts on bottoms (or a top) of yours.
+  The clothes you own are in the grid too (the Clothes tab, and All), each with its colors; WEAR / TAKE OFF in the
+  details' third place.
+- **Weapons at a glance, switched without opening it** (shared/loadout.js - the server's arms.js reads it too; the weapon
+  numbers moved to shared/rules-arms.js, re-exported by rules.js, so the page's start-up code stays off rules.js): the quick
+  bar under the grid has eight slots - 1 GUN 1, 2 GUN 2, 3 MELEE, 4 THROWN (the guns and throwable that take a slot, the
+  melee slot the dear blade else a bat or a knife), then 5-8 the four things to use (pin one from its details, or drag a
+  tile onto the slot). In play the number keys 1-4 take those weapons out (again: put it away), 5-8 use the things, 9
+  your fists - the HUD's weapon plate shows the others of the four with their keys (was the n-th weapon you carried). Tab:
+  a tap the next weapon (on its release), held the weapon wheel - point with the mouse, let go (as RB on a pad). The
+  mouse wheel steps through them as before. On touch the weapon button's hold opens a ring of your weapons in the middle
+  of the screen (a tray only past twelve) - tap one. The pad's wheel (hold RB) and the quick wheel (hold View / X /
+  ITEMS) as they were. No new panel on the HUD.
+- **Instruments** (client/music/play.js): PLAY on an instrument puts the Inventory away; the pads are one see-through
+  strip along the foot of the screen (eight in a row, CHORD and GIG over them; 22% of the screen's height at most, never
+  over your character), the gig's track list and a set's result grow it upward while they show. Your character holds and
+  plays it in the city for everyone (the server's descriptor `pp`, as the buskers: sax, violin, bucket drums, guitar - the
+  keytar as a guitar), and the Inventory's figure plays the instrument you pick. While you play, the dance key (G, one of the
+  pads) no longer starts a dance that took the instrument's pose away (server/systems/dance.js). A gun in your hands goes away while you
+  play (both hands on the instrument; the city drew the gun in place of it) and comes back when you put it away.
+- **A gamepad**: LT / RT change the Inventory's tabs (LB / RB stay the hub's screens, the rule since UI-3), the D-pad or
+  stick moves, A picks, X equips, wears or takes off, Y drops, B backs out of the details then the screen.
+- What I took from similar games: GTA V's weapon wheel (hold a button, point, let go - our Tab / RB / the ring on touch);
+  Stardew Valley's and Terraria's hotbar (the number keys and the scroll wheel switch without opening anything, the
+  inventory a grid with the hotbar along its foot, drag to the bar); Project Zomboid's equip slots (what you wear and hold
+  by slot round the body, each with its own way off) and its item details beside the grid.
+- The Guide: "Your Inventory" rewritten, new "Quick bar and weapon wheel" and "Playing an instrument" (controls by name:
+  [[bag]], [[invtab]], [[quick]], [[nextw]], [[wpnwheel]], [[use]], [[pads]], [[chord]], [[back]] - shared/controls.js
+  gains `quick` and `invtab`; the keyboard's `wpnwheel` is HOLD TAB). README's controls rows updated.
+- Tests: wardrobe.test.js (clothes off, all off, a piece of yours on, a saved look's clothes, a top over a dress; refused
+  while wanted in the street and the heat unchanged), invlayout.test.js (the Inventory measured in headless Chrome at
+  1920x1080, 1280x720, the owner's 1896x1927 window, 844x390, 740x360, 390x844, 360x740, 1024x768 and with a pad:
+  nothing off the screen, nothing cut off, no button on another), music (the pad strip's taps; the drums' pose on the
+  player's ped), hub / uiscreens / uitokens / guide / gamepad / arms updated.
 ## 2026-11-15 - The district craft pass, first wave: the Neon Strip and the Pink Mile
 The owner (11-14 20:28): "Big open spaces (like in the Neon Strip) are way too big and open and the lights don't act like
 lanterns, they just look like random lights strung around. We should be looking at every area and going back through
@@ -24935,3 +25002,3515 @@ shop's counter, and the custody panel over the whole screen with an escape that 
   or kitchen fire with it (firefighter.js outWith, from endCall and letGo), and a spot fire with no call left goes out
   at its next step. Tests: firefighter.test.js (a shift given up, a call run out of time: no fire left), meleefire.test.js
   (no stray fire survives, and a knockdown on that spot lights nobody).
+
+## 2026-11-17 - Open beta safety: friends, Who can text me, contact details hidden, fishing flagged, Undo a block
+The owner (11-15): the beta stays open and easy (13+, under 18 with a parent's permission - the terms carry it); keep the
+chat filter, make report and block easy to find, add friends, hide contact details, flag personal-info fishing to the
+staff, and give players "Remove contact", "Who can text me" and a way to unblock an accidental block.
+- **Friends** (server/chat.js `friend`, the page's Messages app). Add friend on a contact's thread, or the tap-a-name
+  menu (a contact, a crewmate, or anyone within chat range, CHAT.nearM). The other player gets a notification and a
+  "Friend requests" row at the top of Messages: Accept / Decline. Accepted: `contacts[pid].fr = 1` both ways. Friends
+  get a star and come first (then crew, then online, then the most recent - the server sorts, the page merges the
+  threads in the same order); they're never pushed out by CHAT.contactsMax (that cap now counts the others only) and
+  are capped at CHAT.friendsMax (100). Requests (`chat.freq` on the target, `chat.fsent` on the sender) lapse after
+  CHAT.friendReqS (3 days), at most CHAT.friendReqMax (20) wait for one player, a sender gets CHAT.friendRate (6 in 10
+  min), and the same person can be asked again only CHAT.friendAgainS (a day) after the last ask - declined or lapsed.
+  A blocked or muted sender's request "is sent" as far as they know and never arrives; a block ends the friendship and
+  drops requests both ways. Asking someone who already asked you makes you friends. Remove friend keeps the contact.
+  **Guests** can send and accept requests - they already text their contacts; choosing the simplest safe default,
+  since all of it stays inside the game and the safety below applies to everyone.
+- **Remove contact** (a contact's thread, not crew): off both lists - they can't text you - until you meet again.
+- **Who can text me** (Messages, under the list; Settings > Chat): "Everyone I've met" (default) or "Friends and crew
+  only", kept with the account (`chat.who`). The server refuses a phone message from anyone else with a reason ("...only
+  takes messages from friends and crew - send a friend request first"), and the inbox drops what came from others.
+- **Contact details hidden** (server/chatfilter.js `contact`, every channel): phone numbers (7-15 digits with separators,
+  10+ run together, seven or more spelled out), emails (also "at ... dot com"), links and bare domains except our own
+  (deadbaron.com, the Discord invite and the Ko-fi page - passed from config), street addresses (a house number, one to
+  three words, a street word) and handles after a platform's name ("my snap is ...", "insta: ...", "@...", Name#1234)
+  are masked with * for everyone, the sender's own echo included; the sender is told why at most every CHAT.maskToldS.
+  Game talk passes: "$5000", "3 stars", "10:30", "1,000,000", "5 blocks down the road", "oh snap" (test/chatsafety).
+- **Fishing flagged, not blocked** (`fishing`): a line asking someone's age (asl, how old r u), where they live, their
+  school, real name, for photos, to move to another app or for a number, or to keep a secret / whether parents are home
+  goes through as said and lands on the staff's Review list as `safety` - the sender, what was asked, the last few such
+  lines as shown (masked: no raw contact details are stored), and for a text who it went to. At most one review call a
+  sender per CHAT.safetyGapS (the lines between ride along), merged on one entry per hour by moderation.js. Whoever it
+  reached gets a "never share..." tip, at most every CHAT.safetyTipS.
+- **Unblock**: right after a block (tap-a-name menu or a thread) an Undo line shows for CHAT.undoS; Messages gets a
+  "Blocked (n)" row at its bottom that opens the blocked with Unblock; Settings > Chat keeps its list.
+- The Terms get a "Chat, friends and messages" section; the Privacy Policy's chat section says what's kept. The Guide's
+  Chat entry says contact details are hidden and where Unblock lives; a new "Friends and contacts" entry.
+- Wire: `{ t: 'friend', a: 'ask'|'yes'|'no'|'unfriend'|'forget', id }` -> `{ t: 'friendres' }` and a contacts list
+  (`fr`, `rs`, `rq`); `{ t: 'chatset', who }`; chatstate `who`. An erased account leaves others' requests too.
+- Tests: test/chatsafety.test.js (new: the filter both ways, the flags, friends, remove contact, who can text me, the
+  Guide and the Terms), chatui (requests, the star, Blocked, who can text me, a thread's Add friend / Remove contact,
+  Undo), launch-chat. No budget changed (chat.js loads after the page is up).
+
+## 2026-11-16 - Fishing polish: the rod first, one line, the fish drawn, the catch card clear; control hints capped
+
+The owner, from four phone shots: "You should have your fishing pole equipped before it prompts you to fish near water.
+Also the fishing pole has a line that goes out and a line that drops straight down. Also the fish art is still
+placeholder." And: "I don't think we need that hint for swimming either. And when we do hints like that I think they show
+up once or twice then don't need to keep going ... the font that left thumb uses isn't very good and doesn't fit."
+- **The rod first** (server/systems/players.js `fishHere`, fishing.js `rodInHand`, `spotFor`): "Fish here" / FISH only
+  with the rod in hand (the 'rod' weapon) and never while swimming - from the bank, a dock or a boat sitting still; the
+  server refuses a cast otherwise too (`begin`). A rod in the bag takes the rod's weapon slot (shared/fish.js `ownsRod`,
+  `takeable`: the weapon keys, the pad's wheel and the me record's weapons list it; the bag's Use on a rod takes it out -
+  economy.js `useItem`), and the rod the water wants still casts (`rodFor`). After a catch the rod stays in your hand
+  (no more switching back); with the last rod sold or lost it leaves your hand (`tick`). By the water with a rod in the
+  bag, no prompt: a first-time moment says once "Take your rod out to fish - it's with your weapons" (ftue.js
+  `MOMENTS.rod`, server-side, once a character). The FTUE's outdoors start puts its cane pole in your hand; its step
+  line says "Rod in hand, face the water". The debug menu's fishing kit puts the rod in hand.
+- **One line** (client/main.js `fishFrame`, art2/game/host.js in a boat, client/fishing.js `lineOut`): a player fishing
+  is drawn in the fishing pose's frames that have no hanging line of their own - the rod back while the cast charges,
+  out over the water once it's cast - so the only line is the page's, tip to bobber. NPC anglers (no cast line drawn
+  for them) keep the pose's own line. Nothing in art2/people.js changed: the art hash is untouched.
+- **The fish drawn** (client/fishart.js, rewritten): all 91 kinds as pixel art, made procedurally from shared/fish.js
+  and a look per species after FC12-FC20 / FC01-FC02 - the silhouette by shape (fins, tails, snouts, the bill, the
+  barbels), three tones dithered, a sheen row, rayed fins, the eye's catch-light, a coloured outline, and each kind's own
+  marks (the perch's bars, the striper's stripes, the brook trout's worm marks and haloed spots, the rainbow's band, the
+  koi's patches, the clownfish's bands, the lionfish's zebra, the tang's palette...). The legendaries carry a glow rim and
+  sparkles. No image file: the sprites are made when first drawn (about 4 ms each) and kept. Loaded with fishing or the
+  Fish log, never with the page (its budget unchanged).
+- **The Fish log** (new phone app, client/fishlog.js; server fishing.js `logInfo`, the phone's 'fishlog'): your cooler
+  (each fish drawn, its weight, its price) and every kind by its water - caught ones in colour with the count, your best
+  and the records board's, the rest dark shapes.
+- **The catch card** (client/fishing.js `cardLayout`, `drawCardBody`): placed below whatever sits over its column at the
+  top (the corners, the notes, the job card - their boxes read off the page), in the clear between the corners on a
+  phone held sideways, above the thumbs, scaled down rather than cut; every line fitted to the card ("NEW RECORD!" in the
+  pixel face). The catch's note is short ("Striped Bass, 35.1 lb - in your cooler (3/30)." - the card says the rest),
+  and notes wrap to a second line instead of cutting a word (style.css `.toast`).
+- **Control hints** (client/hudinfo.js): every hint strip (a device glyph + what it does) shows at most twice
+  (`HINT_TIMES` 2, was 3), then never - counted per device and character (the page's storage: the strips are the page's
+  own); no swimming strip. Glyph labels - keys, pad buttons, touch words, LEFT THUMB - on one line in the HUD's pixel face,
+  the chip as big as its words (no fixed 22 px height clipping a wrapped label).
+- Guide: Fishing (take the rod out first, not while swimming, the Fish log). Decisions: HUD and controls, Economy (the
+  owner, 11-16).
+- Tests: fishing (rod first - no offer with the rod in the bag or swimming, the weapon keys and the bag take it out, it
+  stays out, gone with the last rod; one line; every species' own pixel art; the card at three screen sizes), hudinfo
+  (the hint cap, only through hintDue, no swimming strip, glyph labels on one line), ftue (the rod's moment), core,
+  water, devplay updated for the rod in hand.
+
+## 2026-11-16 - The owner's console, the founder, an admin panel in the game, clean name tags
+
+The owner (chat, 11-16): no "beta" tag on every player, just the name, guests told apart without the word; his Dead Baron
+avatar as a character he plays in admin mode, with his presence known; the admin tools in one place - a live dashboard
+(now, the last hours, days), who's on, what they're doing, where from - good on a phone and a desktop, for him only.
+
+- **Name tags.** The gold Beta plate is off everyone's name: it's a card plate now (shared/rules.js COSMETICS `card: 1`,
+  server/systems/cosmetics.js `cardPlate`) - still theirs, listed with the Season badges in the Skills app, never over a
+  head; anyone wearing it loses it from the tag on their next session, and the style counter no longer offers it. The
+  Founding Citizen jacket is unchanged. Over heads: a member's name bright white with a dark edge all round, a guest's a
+  softer grey with only a faint shadow (lightness and the edge, not hue - readable at night and colorblind-safe; client/main.js
+  drawWorldLabels). Guide: "Names over heads", "The beta gift".
+- **The founder** (server/founder.js): the owner's account (the role `owner`) gets a small gold pixel crown by his name for
+  everyone (the descriptor's `fo`, client/main.js founderMark) and "♛ Founder" in the players list. His Dead Baron avatar
+  is an outfit (the owner, later the same day: an outfit for fun, not his character): his regular character every time he plays,
+  on only with the admin panel's switch (this session only, never saved), off when he switches it off or logs in again -
+  admin mode alone never puts it on. The avatar is built in the game's own people renderer (client/art2/people.js `FOUNDER`): a
+  skeleton with round pink glasses and cyan angel wings (drawn better the same day: below). The descriptor carries `app.fd` while it's on
+  (server/net.js; client/art2/game/peds.js adaptApp, its own sprite key `F`). Only the server decides; nobody else can
+  wear it.
+  Note: people.js is part of the chunk bake's code, so the `art` hash moves with this change (chunks come out the same and
+  carry over).
+- **The admin panel in the game** (client/adminpanel.js, the debug menu's first tile "🛡 Admin" for admins and the owner,
+  lazy-loaded): the founder switch, the console link, the free camera; everyone online as a card (name, guest, role, district,
+  what they're doing, health, down / wanted / custody); a card's actions: Watch (the camera and what the server sends follow
+  them, you invincible where you stand: server/view.js focusOf, client/main.js watchCam), Go to, Bring, Send to a place,
+  Heal or Revive, Unstick, End job, Gift (money to the bank, an item, a weapon, a name color, a title plate - within
+  shared/rules.js `GIFT`), Mute, Prison, Kick, Ban (the harsh ones ask on a second press). All of it staff commands on the
+  server (server/admin.js roster, watch, tpto, bring, send, heal, revive, endjob, gift, founder; server/roles.js powers),
+  each in the admin log.
+- **The console** (/admin/: server/adminconsole.js page, server/adminconsole-page.js its script, server/adminhttp.js
+  `/admin/api`): tabs Now (who's on - guest or member, district, doing, session length, device, country; what everyone's
+  doing, where in the city, devices), Trends (1 h, 6 h, 24 h, 3 days, 7 days: players, peak and average online, new and
+  returning players, sessions and their length, sign-ups, jobs, crimes, deaths, chat lines, page errors; an online chart and
+  bar charts of players and sessions, every window side by side), Where from (countries, regions, who's on now), Moderation
+  (the review list, player reports, bug reports, the admin log's latest), Server (uptime, tick, memory, entities, accounts,
+  build, page errors, GA, the IP table), Tools (the older pages one tap away; each of them links back to the console). It
+  polls every 5 s (the heavier parts every 30 s or when a tab or window is picked), draws its charts as inline SVG with no
+  library, one column and big tabs on a phone, a grid on a desktop, in the game's navy and gold. Admins and the owner (the
+  new `console` power); the admin log section is the owner's. Settings > Account > Staff tools: Console.
+- **The data** (server/analytics.js `roll`, `trends`, `places`): a bucket a minute for 6 hours and a bucket an hour for
+  7 days, bounded, saved with analytics.json (a restart keeps the week). Players in them are a salted hash, never the
+  account id.
+- **Privacy / where from** (server/geo.js): the country from the connecting address through DB-IP's IP to Country Lite
+  (CC BY 4.0, credited on the console and the privacy page) packed into `<data>/ipcountry.bin` - the server fetches this
+  month's edition by itself a minute after starting when it's missing or over 40 days old (in the background, never on the
+  start's path), or tools/ipcountry.mjs packs one by hand - else from the page's time zone (the IANA zone table,
+  server/data/tzcountry.json), which also gives the region. The address is looked up and dropped: never stored, logged or
+  shown. The console shows no address, email or account id: a player is a ref good for the session (/admin/go). The
+  privacy page says so (server/legal.js).
+- The founder drawn better (the owner: "Let's draw my character a little better" - at the game's zoom he read as a white
+  figure, a pink blob and blue tabs): the skull 1.24x a head (his signature) with a nose hole and a jaw's tooth row; round
+  magenta lenses, each in a dark purple rim with a glint, and their band round the skull so they read from behind and the
+  sides; a rib cage with dark gaps, the spine, thin bone limbs with dark joints; cyan angel wings in three rows a side -
+  the long primaries with pale tips (a faint glow at night), the darker secondaries, the coverts - spread up and out past
+  his shoulders, a little folded at rest and beating with his stride; at rest a peace sign (the right hand up, two
+  fingers in a V). The renderer's code 410 -> 411 KB for it (its comments trimmed first: 410.5).
+- Budget: the bake workers' code 1010 -> 1012 KB (tools/perf.mjs) - the founder figure lives in the people renderer
+  the workers draw with (+1.1 KB gzipped, its comments trimmed first: 1011.5; the bake was at 1010.4 on its own). The
+  renderer stays at 410.
+- Tests: admin-console (the console's access, CSP, its JSON's privacy, the refs; the buckets, their bounds and a restart;
+  the IP table and the time zones; the panel's commands - powers, limits, the log; the founder's crown, switch and art; the
+  Beta plate off the tags); sinks and seasons updated for the card plate.
+
+## 2026-11-17 - Server load: the prompts ten times cheaper, a player cap with a line, sprinting isn't speeding
+
+A bot load test on World v3 (`node tools/bots.js N 75 ws://localhost:8090/ws --spread`, a 2-core sandbox, the bots on
+the same machine) had the tick at 110 ms with 100 players (the budget is 50), and the `players` system was half of it:
+0.5 ms a player a tick. Nearly all of that was every player's prompt (`players.js findInteraction`, five times a second
+each) walking World v3's whole list of places a dozen times a prompt.
+
+- **What was slow, from a CPU profile under 100 bots:** `CityMap.poiNear` (a scan of every place, four times a prompt:
+  the shop menus, the homes', the arcades' and the bathhouses' doors), the sawmills found by a regular expression over
+  every place's name, the taxi ranks, impound yards, hospitals, fish markets, police stations, farms and SAR bases
+  filtered out of every place on each call, the lost pets found by a look through every entity (twice a prompt and once
+  a snapshot), asking anyone into your crew by a look at every player, the trains' doors worked out for every train in
+  at any station anywhere. And outside the per-player work: the NPC boats' "is this real water?" flood fill once per sea
+  point (World v3 has 190,000), 5-7 ms of every tick.
+- **What changed (no gameplay change):** `server/pois.js` - `poiAt`, the same answer as `poiNear` through a grid of the
+  places' circles, and `poisWhere` / `poisKind`, each list made once per map (kept beside the map, so the world's and
+  the art's hashes are untouched); the pets' entities listed once a tick; crews through the spatial grid; trains far
+  off skipped; `world.query` and the snapshots' chunk walk without a generator; a page's messages of a tick in one
+  socket write (`ws.js` cork); the boats' water marked a whole body of water at a time (any tile of it gives the same
+  answer, so one fill marks them all).
+- **The numbers** (avg tick / `players` / `net`, ms; snapshots delivered a second in brackets):
+
+  | bots | before | after |
+  |---|---|---|
+  | 25 | 42 / 11 / 5 | 35 / 2.5 / 5 |
+  | 50 | 57 / 23 / 6 | 44 / 2.9 / 7 |
+  | 100 | 110 / 51 / 13 (900) | 57 / 5 / 12 (1,700) |
+  | 150 | 152 / 81 / 19 (990) | 75 / 7.7 / 17 (2,000) |
+
+  `players` went from 0.5 to 0.05 ms a player. The server now keeps up, so it sends nearly twice the snapshots, and `net`
+  (0.12 ms a player) is the biggest per-player cost left: in-process it's 0.02 (`tools/playersbench.mjs`), the rest is
+  the socket writes (on this sandbox the bots' loopback receive is counted in the server's writes). The rest of the
+  tick is the fixed systems (traffic, vehicles, NPCs, trains: ~25 ms here with 25 bots, the bots' own process on the
+  same two cores).
+- **Guards:** `tools/playersbench.mjs` (N players without sockets, `--v3` for World v3: 0.41 -> 0.03-0.08 ms a player
+  there); `test/serverload.test.js` - the prompts never walk the places' list once warmed up, `poiAt` finds what
+  `poiNear` finds, and a tick of 100 players' prompts stays under 0.035 yardsticks (`tools/perf.mjs`).
+- **Anti-cheat:** the bots were flagged "67 km/h, over the 54 allowed (on foot)". Not a cheat: with the tick behind,
+  a page's inputs back up and each one is still a physics step - two a tick - so a sprint or a dive roll covered
+  twice the ground per second of the world's clock. The movement audit now measures speed over the player's own steps
+  (`p.inSteps`), never counted for more than the wall clock's time, so a page that sends inputs faster than real time
+  is still caught. 0 flags in the runs after (`test/launch-roles.test.js`).
+- **The line at the door** (the owner, 11-17: 100 a city): `CLA_MAX_PLAYERS` (default 100, `deploy/set-keys.sh`,
+  docs/LAUNCH-SETUP.md). Past it a newcomer's title says "The city's full - you're #3 in line" with a Cancel, kept up to
+  date, and they go in when a place opens, first come first served (`server/line.js`, `session.js`). Staff (helper and
+  up) and anyone back within 2 minutes of a drop - or on when the server restarted (`line-held.json` in the data dir) -
+  skip it. The line itself holds `CLA_LINE_MAX` (200); past it "try again in a few minutes" (close 4018, the page
+  doesn't retry). A page in line has no character and gets no snapshots - a position message every few seconds.
+  `/stats` and the console's Server tab: `line` (waiting now, peak, average and longest wait). Bot run with
+  `CLA_MAX_PLAYERS=50` and 70 bots: 50 in, 20 in line (peak 20), all 20 let in as places opened. Tests:
+  `test/line.test.js`.
+
+## 2026-11-17 - The app icon: the neon logo at dusk
+- The owner picked option A of four candidates drawn from the title art: the neon logo (the skyline, "City Life" over
+  "Auto") on a navy sky fading to magenta. It replaces the old purple-circle logo in assets/icons (the favicon, the
+  home-screen and install icons, the maskable pair with the logo inside the safe circle, the Apple touch icon).
+- 256 colors, dithered (no banding in the dusk), the transparency kept: icon-512 153 -> 104 KB; the title's assets
+  budget holds (test/perf.test.js).
+
+## 2026-11-17 - The fist icon drawn as a fist
+- The owner: the weapon wheel's Fists "doesn't look like a fist" (it read as a bread roll). client/render/peds.js
+  weaponIcon draws it by hand now: four knuckles with their creases, the thumb across them, the wrist, shaded skin in a
+  dark line - the same icon in the weapon wheel, the weapon tray and the weapon plate.
+
+## 2026-11-17 - The Camera's clean screen: no close X left on it
+The owner, recording trailer clips (11-17 09:39): "When all the UI is off there is still an X at the top center." The Camera
+panel's close X (and, on a phone, the picture button) stayed up on the clean screen (F2, all the UI off). They now hide with
+the rest of the UI and come back with the bar's controls for a few seconds on a tap or a key; Esc / B still close the camera
+at any time. `client/director.js` (`cine-woke`), `test/directorcam.test.js`.
+
+## 2026-11-17 - The hospital lobby's music: "Visiting Hours", a bossa from the ceiling speakers
+The owner (11-17 08:12): the hospital's "Lobby Hours" becomes a gentle bossa nova elevator tune, "cheesy but not too cheesy",
+a funny contrast to dying and respawning. The live synth's `lobby` song (client/sound/music.js; the hospital, the bank,
+the courthouse and the cinema lobby play it) is now "Visiting Hours": C major, 116 bpm, 16 bars (about 33 s a loop) -
+a nylon guitar comping the bossa's two-bar figure (a new `nylon` voice), a soft electric piano held under each bar, the
+bass on the root and the fifth, brushes, a soft kick and a cross-stick (a new `rim` drum), vibes on the tune. It plays as if
+from the lobby's ceiling speakers: a song's `speaker` band (a high-pass at 420 Hz, a honk at 1.4 kHz, a low-pass at 3.3 kHz,
+the echo through it too) and `room`, a short slap off the walls in place of the beat's echo; the bass an octave up
+(`bassOct`) so the thin speaker still carries it. Same sequencer, same make-up gain and per-step voices as the other
+lobby songs. The songbook (tools/music/songbook.mjs) compiles the new parts (guitar to `pluck`, piano to `keys`, rim to the
+kit's tick); `shared/music-songs.js` and `client/sound/songbook/lobby.json` remade.
+
+## 2026-11-17 - Nothing on screen while a shot plays
+- The owner: playing a shot from the Camera's list left the close X at the top and the shot's bar at the bottom on the
+  recording. While a shot plays (or Play all), the X, the bar, the shutter and the Camera panel are off
+  (`body.cine-shot`); moving the mouse doesn't bring them back. A tap, a key or a button hands you the camera as before
+  (the shot stops and the controls return); Esc / B close the camera.
+
+## 2026-11-17 - The title's CHARACTER applies the look; no lobby music in the cinema
+- The owner: changing your appearance from the main menu and pressing Done didn't apply it. On the title there's no one
+  in the world yet, and the server refused any look change without a ped ("Not right now." - unseen on the title). Now
+  clothes you own go on from the title too; body and hair keep their places (the mirror at home, a barbershop), and a
+  wanted or arrested character still waits till they're in the city. Test: test/wardrobe.test.js.
+- No music in the cinema (it had the lobby's bossa nova): client/sound/places.js SONG_FOR.
+
+## 2026-11-17 - The title's CHARACTER is the character creator (body, face, hair commit there)
+- The owner, again: changes made from the main menu's CHARACTER still didn't stick on Done. A change of body, face or
+  hair was refused there (the mirror at home, a barbershop - the city's rules), with the warning on a toast the title
+  doesn't show, so Done looked like it did nothing. Now the title's creator commits body, face and hair (the page sends
+  `title`; client/creator.js problem, server/systems/looks.js refusal); clothes are still from your wardrobe, and the
+  wanted, cuffed or uniformed are still refused (changeBlocked). DECISIONS (HUD and controls). Test: wardrobe.test.js.
+
+## 2026-11-17 - The creator says why Done didn't put the look on
+- Checked end to end (a local World v3 server, the page in a browser, the title's CHARACTER): a new character's and an
+  established character's hair both commit on Done from the title. What still looked like "Done does nothing" is a look
+  Done can't put on - a piece you don't own yet - whose reason went to a toast, and the title has no HUD to show it.
+  Now the reason is said in the creator itself, above its buttons (client/creator.js sayWhy); Done again leaves as you
+  were.
+
+## 2026-11-17 - Done with locked pieces, and a starter wardrobe
+- The owner: switching to the other body and picking an outfit, Done did nothing and said nothing. A look with any piece
+  you don't own was refused whole. Now Done puts on everything you're allowed (body, face and hair from the title; every
+  owned piece), leaves each locked piece off - the slot back to what you wore if it's yours and fits, else a basic - and
+  says in the creator which pieces were left off and where they're sold; Done again closes (client/creator.js). Checked in a
+  browser against a local server: men -> women, a locked Graphic tee from All, Done - the rest went on, the tee left off.
+- A starter wardrobe: 26 everyday pieces everyone can wear from day one (rules.js STARTER_WARDROBE, wardrobe.js owns) -
+  tees, a hoodie, a flannel, a blouse, a crop top; jeans, chinos, joggers, shorts, a skirt, leggings, a sundress;
+  sneakers, skate shoes, slip-ons, sandals, flats; a zip hoodie, a denim jacket, a cap, a beanie, sunglasses. The
+  stand-out pieces stay in the shops. Guide (Your look) and DECISIONS updated.
+
+## 2026-11-17 - The creator: wearable outfits, a piece in the color it shows, All with the locks plain
+- The owner: complete outfits (the Outfit tab's strip, Random) were shown though you didn't own their pieces; a red shirt
+  picked from its tile went on white; and what you own vs what's locked should be plain to see.
+- Complete outfits and Random are made of what you can wear: each locked piece swapped for an owned one of the same slot
+  that fits, of the same style if there is one (client/creator.js wearable); a new player's free first session still gets
+  anything.
+- A piece picked takes the colors its tile shows (picking the same piece again keeps the colors you gave it).
+- The Outfit tab opens on All: owned pieces bright, locked ones dimmed and greyed with a dashed edge and the 🔒 store that
+  sells them; Owned still filters to yours.
+
+## 2026-11-17 - World events: no arrow, a pixel highlight on screen
+
+The owner (11-17): the arrow that pointed at a nearby event (with its "Someone collapsed - 18m" label) didn't look
+good and didn't add much. It's gone: an event is marked where it is - four pixel corner brackets in its colour that
+step in and out, and a small bobbing chevron over it - and you notice it when it's on screen; the radar blip still
+shows the ones further away. The highlight stays while the event lasts (the arrow's 10-second fade is gone with it).
+`client/main.js` drawEventArrows; DECISIONS (HUD and controls).
+
+## 2026-11-17 - Car soccer: no goal replay
+
+The owner (11-17): the goal's replay (a faint ghost ball re-running its last seconds) was confusing and didn't work.
+Gone from the page: a goal shows GOAL! with "<scorer> scores - back to kick-off", the ball stays where it went in,
+and the kick-off (server/systems/carsoccer.js, unchanged) puts the ball and every car back in their places. The
+server still sends the ball's last seconds (`rp`); dropping that waits for the next server change (no restart for
+this). `client/carsoccer.js`; DECISIONS.
+
+## 2026-11-17 - The respawn map takes clicks on a desktop
+
+The owner (11-17): on a desktop, the map of places to wake up wouldn't take a click on a place. The death screen's
+panel is scaled with CSS zoom on desktops (style.css `--zk`), and inside a zoomed box Chrome's pointer offsetX/Y
+don't match the canvas's own pixels (tested: a zoom of 1.5 put a click 50% off) - so a click never landed near a
+mark. The map now works the pointer out from the canvas's box on screen (clicks, drags, the wheel's zoom point).
+Phones (no zoom) were fine. `client/deathscreen.js` mapInput.
+
+## 2026-11-19 - Security fixes from the audit: two ways to stop the server, and a money loop
+
+The security audit (branch `audit-security`, docs/audit/SECURITY.md) found three critical holes; fixed:
+- **`GET /%FF` stopped the server** (no join needed): a bad % in the path threw out of `decodeURIComponent` in the HTTP
+  handler. Now a 400 (`server/index.js`).
+- **One message stopped the server:** a guest's `{"t":{"toString":1}}` (and 47 other fields the same way) threw where
+  the server turned a value into text, and nothing caught it. Now the JSON is read without `toString` / `valueOf` /
+  `__proto__` / `constructor` keys, a message's type must be a string (`server/session.js`), and a message that still
+  throws is logged once and its connection closed - never the process (`server/index.js`). Checked against a local
+  server: both attacks answered, the server up.
+- **Shops sold for less than they bought back** (apples $4 for 3 at the fruit stand, $5 each at the corner store: about
+  $350k an hour by script; grapes, oranges and three butcher dishes the same): every item a shop sells now costs at
+  least a quarter more per piece than the best buy-back anywhere (`shared/items.js`, applied over the whole table), so
+  picking and hunting stay the way to earn. `test/moneyloop.test.js` guards it.
+The audit's other findings (high and below) are for the pre-beta pass.
+## 2026-11-19 - The character polish pass, staged (off)
+
+The task `docs/tasks/CHARACTERS.md`: a critique of today's people first (`docs/characters/CRITIQUE.md`), then a pass
+behind a switch - about 3.1 heads instead of 2.4, a neck, a shoulder line, hands that show, and a face whose eyes are
+dark on every skin with brows, a nose shadow and a mouth. Off by default; the debug menu's *Character polish* turns it
+on in one browser (`cla.polish`). The pass is `client/art2/peoplepolish.js`, loaded only when on (the sprite workers
+are handed its address, as for the aircraft), so it is in no budget; `people.js` and `game/peds.js` carry small hooks
+(the renderer's code +0.5 KB, inside its 411 KB). The world's baked art doesn't change. Review sheets and the owner's
+choices: `docs/characters/` (`NOTES.md`), drawn by `tools/charsheet.mjs`. Not yet seen running in a browser.
+
+## 2026-11-19 - Character polish, pass 2: the concepts, underwear, every animation checked
+
+The owner chose proportions A and added 94 concept images; pass 2 takes the people toward them. Still staged: the
+drawing is behind the same switch (`cla.polish`, off), so today's people are pixel for pixel what they were.
+
+- **The catalogue:** `docs/characters/CONCEPTS.md` - every concept image in a line, then the gap list (20 gaps ranked,
+  each marked fits / too small).
+- **With the pass on:** dark clothing reads (a dark cloth's ramp lifted step by step to the concepts' warm charcoal, a
+  line where an arm hangs over the body, a waist line between a dark top and dark bottoms, lighter soles); uniforms
+  read (the police's badge an art pixel of gold, a shoulder patch, a gold buckle; reflective bands; no badge or holster
+  on a cook, a mail carrier or a paramedic); underwear drawn finer (full briefs, waistbands, lace, boxers down the
+  thigh); the mosaic from behind too; six hairstyles from the concepts (balding, flat top, pompadour, afro puffs, low
+  ponytail, side fringe - offered in the creator only while the pass is on).
+- **Wardrobe (live with or without the pass):** an **Underwear** slot (the tenth; a look without underwear keeps its
+  66-letter code, one with it is 71) with 17 pieces for both bases - the basics in the starter wardrobe, the lingerie
+  sold at Velvet & Vine, Afterglow and the department store - and **Nothing on**: free, worn anywhere, the built-in
+  mosaic over it (the owner, 11-19). 28 more pieces from the concepts: paramedic uniform, turnout gear and fire helmet,
+  hi-vis coverall, security shirt, scarf, neckerchief, bolo tie, lanyard, gloves, sweatbands, glow bracelets,
+  headphones, camo, a kilt, a sherwani, a onesie... each drawn with a kind the renderer already had. Random looks -
+  the city's people - never fill the underwear slot.
+- **Settings > Censored nudity** (new, off by default): the renderer always could dress a bare body in swimwear, but
+  nothing on the page asked it to. With people free to wear nothing, the switch is in Settings now.
+- **Checked:** every pose in all eight facings with the pass on (`docs/characters/pass2/anim-1..7.png`); the walk bobs
+  one art pixel already. Speech bubbles and the marks over a head sit 4 px higher with the pass on.
+- **Budget (a decision - the owner to confirm):** the renderer's code 411 -> 414 KB (measured 413.4 with LF endings).
+  The catalogue (`shared/lookcore.js`) is what every renderer reads to draw a look, so its 51 new lines land there
+  (+2 KB); the hooks are +0.3 KB; the pass's own drawing is in `peoplepolish.js` (6 KB), loaded only when on, in no
+  budget. Page 532 / 540, bake 1018 / 1020.
+- Tests: `test/characters2.test.js`. Sheets: `node tools/charsheet.mjs versus | grounds2 | anim | lineup | under | hair`.
+  Not seen running in a browser; not stamped (this checkout can't): stamp on merge.
+
+## 2026-11-19 - Character polish, pass 3: the owner's decisions, the rest of the concepts
+
+Pass 3 (`docs/tasks/CHARACTERS3.md`) takes the owner's three decisions of 11-19 and builds the gap list's open rows
+(`docs/characters/CONCEPTS.md`). The drawing is still behind the switch (`cla.polish`, off): today's people are pixel
+for pixel what they were. Notes and what reads well or weakly: `docs/characters/NOTES.md`; sheets:
+`docs/characters/pass3/`.
+
+- **No "censored nudity" setting** (the owner): pass 2's Settings switch, the renderer's swimwear path and its test
+  are out. Nothing on is always under the mosaic, for everyone.
+- **Patrol police wear the light-blue shirt** (the owner): officers, rookies and K9 handlers; a sergeant's stays navy
+  under the gold chevrons, the dress uniform as it was. Live on merge.
+- **The mouth is off** behind one constant (`POLISH.mouthOn`); painted lips stay. `pass3/faces-mouth.png` shows the same
+  faces with and without.
+- **With the pass on:** every hairstyle (all 42) drawn as the concepts draw hair - a mass in clean tones with a lit
+  top, a dark underside, curls broken, braids in strands, in every direction; socks' stripes and leg warmers; small
+  gear (knee, elbow and skate pads, a wallet chain, a tool belt, a climbing harness); body options on the creator's
+  Body tab (body freckles, vitiligo, a prosthetic arm or leg); five draped pieces made their own (hooded cloak, cape
+  coat, sari, ghillie suit, morning dress); a selfie with one arm out and up; a camera, a bouquet and a parasol to
+  carry. The name tag rises with the taller head, as the bubbles did.
+- **Wardrobe (live with or without the pass):** a **Socks** slot (the eleventh; a tab in the creator and the fitting
+  rooms) - ankle, crew (in the starter wardrobe), striped crew, tube, knee, thigh-high, tights, leg warmers - on a bare
+  leg, never through trousers; the five draped pieces as the plain shapes they are built on. The gear and the props
+  are drawn only by the pass, so the creator offers them only while it is on and random looks never pick them.
+- **The look's code:** 66 letters as before; 71 with underwear, 76 with socks, 77 with a body option. Old codes read
+  as before.
+- **The selfie persona** sends `ph` 3 (was 2, the filming hold): drawn as the filming hold until the pass is on.
+- **Checked:** animation sheets 4, 6 and 7 frame by frame with the pass on, and all 114 poses for parts that come
+  apart: nothing to fix. Texting, the texting walk and a call were already in the game and sit right on the new body.
+- **Budget:** the renderer's code 413.97 of 414 KB, measured by hand with LF endings - full. The 27 new catalogue
+  lines and the hooks (+1.2 KB) were paid for by removing the swimwear path and shortening the catalogue's comments.
+  Page 531.8 / 540, bake worker 1019.0 / 1020. No budget raised.
+- The Guide's "Your look" entry: the mosaic for everyone, and the socks' tab.
+- Tests: `test/characters3.test.js` (11). With the pass on, two older checks leaned on the hair's speckle (it differs
+  with every look's seed and is gone now): `peoplelook.test.js` counts a pair of glasses' own pixels there, and the
+  lip shapes are checked with the mouth on. The whole suite: 2136 of 2197 pass here against 2126
+  of 2188 on the commit before the pass - the same failures on both (this checkout's paths, CRLF endings and missing
+  stamp), bar three timing tests that failed only before, and two that failed only in this run: a comment had cut off
+  a line in `client/creator.js` (a syntax error) - fixed, and both pass again.
+  Sheets: `node tools/charsheet.mjs p3police | p3mouth | p3hair | p3socks | p3gear | p3body | p3drapes | p3phone |
+  p3props | anim`. Not seen running in a browser; not stamped (this checkout can't): stamp on merge.
+
+## 2026-11-19 · Characters, polish pass 4: the owner's calls, underwear redrawn (branch characters, staged)
+
+- **The owner's calls:** sergeants stay navy; the nine pieces only the pass draws are out of the stores' stock while the pass is off (`shared/wardrobe.js` `PASS_SOLD` - set it true when the pass goes live); the five draped pieces are out of random looks (still sold).
+- **Underwear** (behind the switch): every piece is cut on the art grid after the figure is lit (`client/art2/peoplepolish.js` `cut4`, `under4`) - whole-pixel edges, one-pixel straps and waistbands, briefs that show from the front, pale cloth shaded cool instead of the skin's brown, lace as a lighter edge and a bow. Sheet: `docs/characters/pass4/underwear.png` (pass 3 | pass 4).
+- **Budget:** the renderer's limit stays 414 KB. The owner allowed up to 430 for this work; it was not needed here - the redraw is all in the pass's own file, which is in no budget, and no file the renderer loads changed.
+- **Not done:** the task's item 3 (the weak pieces' geometry). Notes: `docs/characters/NOTES.md`, "Pass 4".
+
+## 2026-11-19 · Characters, polish pass 5: hair shapes that read, the owner's underwear notes, the concept checklist (branch characters, staged)
+
+- **Hair** (behind the switch; the owner's shot `docs/characters/owner-hair-1119.png`): the tied and the tall styles redrawn in shapes of their own (`client/art2/peoplepolish.js` `hairRe`, one hook in `people.js` `hairPrims`). A high bun is a round knot on a tie, wider than the row under it, not a cone; a ponytail hangs behind the head instead of standing over it as a spike; top knot, man bun (behind the head), space buns and afro puffs (two balls apart), pigtails (out at the sides), half up (a knot over long hair) and the mohawk (a crest two art pixels wide). Sheet `docs/characters/pass5/hair.png` (pass 4 | pass 5, 4 directions, both bases), `node tools/charsheet.mjs p5hair`.
+- **Underwear, the owner's notes:** women's briefs and panties smaller - a level waist, a triangle to the leg; the union suit without buttons; the slip as pass 3 drew it. With no underwear picked a man wears boxers and a woman a bra and panties - that one is `shared/lookcore.js` `lookArt`, so it is live on merge with the pass off (she wore a tank and briefs). Sheet `pass5/underwear.png`.
+- **The concept checklist** (`docs/characters/CHECKLIST.md`): every outfit, piece and creator option on the 94 concept images against the wardrobe - 608 items: 512 in, 77 missing, 19 too small - and the missing ones grouped by what they need. Seven added as wardrobe pieces (a pattern or a colour of a piece we draw): Striped tee, Breton top, Tie-dye tee, Gingham shirt, Tartan trousers, Camo pants, Hunting vest (`pass5/pieces.png`). They are sold and in the city's random looks.
+- **Budget raised: the renderer's code 414 -> 429 KB, 28 -> 29 files** (`tools/perf.mjs`). Why: `client/art2/peoplepolish.js`, the character pass's drawing, is counted in it now (the task's instruction - 14.3 KB that sat in no budget because it loads only when the pass is switched on); the hair's shapes and the seven catalogue lines are the rest. Measured by hand with LF endings: 428.6 KB. The owner allows up to 430 for the character work (DECISIONS, 11-19); 1.4 KB of that is left.
+- **Not done:** the task's item 4 (faces and bodies closer to the concepts). Not seen in a browser; not stamped (stamp on merge). Notes: `docs/characters/NOTES.md`, "Pass 5".
+
+## 2026-11-20 · Characters: the chunky build, an outline on the art grid, the clean-up (branch characters, staged)
+
+The owner picked the direction from sheets and shots in the real game: **the concepts' chunky build with a soft outline in the color of what it outlines**. All of it sits behind the polish switch (`client/art2/peoplepolish.js`), not on main.
+
+- **The build.** Pass 1's "A" (about 3 heads, longer legs) moved away from the concepts: shrunk to the game's 26 art pixels they are a big head under a big mass of hair, a wide deep body, thick arms and short legs - today's chunky measures. `POLISH.K` is back near them (1.38, 0.87, 0.96, 1.24, 1.1), the body deeper, a big build's belly out in front; passes 1-5's neck, hands and faces kept. The task brief of 11-19 asked for 3.5-4 heads: that was the mistake.
+- **Hair with volume** (`POLISH.hairVol`): the cap over the skull was under an art pixel thick. The bun, top knot, half-up and ponytail reshaped for it (a knot wider than its tie, a tail out behind the head).
+- **The outline, on the art grid** (`people.js`, `POLISH.ol`). The old one-pixel line in this buffer came out, at 2 x 2, as a whole art pixel here, half of one mixed into the body there, nothing in a third place. Now each empty art pixel beside the figure is filled whole with a darker tone of the art pixel it borders: one art pixel wide all the way round, lighter on the lit side, capped so skin's outline never reads as more skin (a paler try made blobs of heads and hands in the game). A fine-pixel prototype was shown in the game first: the owner - "stay chunky".
+- **Angled views** (the owner's screenshots): a face at an angle keeps its far eye where the cheek has room and loses the nose's blotch; the far shoulder's sliver beside the cheek folds into the outline; the line a fringe draws on the face is a shadow, not a headband.
+- **Seams and shading.** An art pixel where two materials meet goes to the one with more of it (a hem no longer throws pixels of shorts up into a shirt; a button stays - a material with nothing more of it around is a detail). Sneakers' laces only close up; a sole's lone pixel beyond the shoe folds into the outline. Light colors' shadows turn less toward red and go less dark, the ramp's darkest step is kept for lines, cast shadows and the dither are fainter: a yellow shirt was five tones from cream to dark red. No inner line where two parts' colors already part them - and the outline's shape reads lines by shape alone, so it never moves with a figure's colors.
+- **Tests** re-based on the decision (the proportions test now asks for about two and a half heads; the underwear tests read a piece without the outline, the head, or the body's seeded shading; retired "pass 4's was..." checks removed). `opt.info` on `person()` tells tools and tests what each pixel is.
+- **Budgets raised: the renderer's code 429 -> 440 KB, the bake's 1020 -> 1030 KB** (`tools/perf.mjs`). Why: the art-grid outline and the clean-up live in `client/art2/people.js` (433 and 1023 KB measured), which both load; the owner asked on 11-19 to raise a budget rather than cut the art, and was told on 11-20 this would follow - to confirm at his review.
+- **Going live re-keys the art:** `people.js` is one of the files the art hash reads, so merging this (as with passes 1-5) makes the server bake every chunk again. Merge it with the world batch: one redraw.
+- **Not done yet:** every wardrobe piece and animation checked under the new look, the 77 missing concept pieces and the weak ones, bare feet (two points), underwear at an angle, name tags and vehicles in the game. Not approved for main.
+
+## 2026-11-20 · Characters, the afternoon: the owner's notes on the wardrobe sheets (branch characters, staged)
+
+After the morning's entry the owner went through three sheets of every wardrobe piece and wrote some forty notes (`docs/characters/OWNER-NOTES-1120.md`: each one, and what's done). So far:
+- **Hair, five rounds of his notes** - volume, knots on ties, a ponytail out behind the head, locks over the shoulders so long hair reads from the front, cropped sides in the hair's color, stubble where a style is shaved, neutral hair bands, no ear or shirt through the hair. He: "let's call hair good for now".
+- **Eyes: the picked color with a white beside it** (his pick of four shown; `POLISH.eyeMode`), the six eye shapes on it, the white behind the color in profile. **Blinking**: each person's own irregular moments (`peds.js` `blinkAt`), in still poses.
+- **Underwear**: tidied as a shape on the art grid, a strap round the hips on a woman's briefs, the bra's band round the side; the set "Underwear" is your underwear or the basics; "Nothing" is two mosaic patches. **A woman's body**: a little shape to the chest and the seat (curves, not points), a flatter upper back.
+- **Small fixes**: a paper hat on top of the hair, wide-brim hats from behind, a tank top's straps joined to it, lines on bare skin softer.
+- **Budgets raised: the renderer's code 440 -> 470 KB, the bake's 1030 -> 1045 KB** (`tools/perf.mjs`). Why: the owner's notes are drawing work in `client/art2/people.js` and `peoplepolish.js` - 439 KB with a third of them done. He: "Lets up the render's size budget" (15:06).
+- **Still to do from his notes**: stripes that follow the garment, the size-ups (glasses, necklaces, masks, bags, things held), hats, the gold Founding Citizen jacket, striped underwear. Not approved for main.
+
+## 2026-11-20 · Characters, the bodies: a check that measures them (branch characters, staged)
+
+Four rounds of body notes in an hour each fixed what was pointed at and broke something next to it. The owner: "Is there a better way you can do this and check it out so that all the things we've discussed are fixed and checked and we nail it down this time?" So the method changed: his notes became rules a program measures, and the bodies were worked until it found nothing.
+- **`tools/bodycheck.mjs`, `test/bodyshape.test.js`**: both sexes, five builds, eight directions, in underwear and in a white top and jeans - 160 figures standing, 640 walking - on the game's own art pixels. Ten rules: no points, no one-pixel bumps on the trunk, the legs apart up to the garment, underwear whole across its middle with nothing bare under it, a strap on both sides, a neck from the side, nothing darker than a little over half its color's usual tone, a level hem, the eyes there at an angle, a foot no wider than its shin plus one. `--show f,3,under,0` prints one figure as a map of its parts. The first run found 197 faults; it finds none now.
+- **Shading tidied on the art grid** (`POLISH.clean`): a body is a dozen small round shapes each lit on its own, and the bake shows the one pixel of four that differs most - specks. Each art pixel of the body now takes the tone most of it has, and one alone in its tone takes its neighbors'. A line one art pixel long is dropped before it is colored. Lines are a shade of what they sit on (about three quarters of it, lighter still on pale cloth, warm on skin); bare skin's shade stops one tone higher.
+- **A hem is level on the screen and on the art grid** (`underHem`): one line across the pelvis and the waist, along the bottom of the art-pixel row it falls in. Before, the waist's lowest pixels hung over the trousers as a tab - the "V" on the men's shirts.
+- **Underwear**: every row of the bottom half runs unbroken (a belly included); a boxer's hem is one level row; a bra's lowest row gives way whole where it would touch the briefs; from behind the band is one level row with the straps on it; no palest tone on two pixels of cloth.
+- **Builds**: slim is an average build three fifths of the way back to it (at four fifths of the width the trunk was six art pixels under a head of ten, and no deeper than its own arm); every trunk is deeper than the arm beside it; feet scale with the legs; a man's curvy build has no small belly; the head sits a pixel higher on a man.
+- **Fixed on the way**: an art pixel folded into the outline with no body left beside it stayed as a stray pixel off the figure's edge (walking frames) - it goes now.
+- With the pass off the renderer still draws exactly what pass 5 drew (240 sprites). Sizes: renderer 446 of 470 KB, bake 1029 of 1045.
+- **Not done**: kneeling and punching lose an eye at some angles; the far hand shows as a small nub at an angle on the wide builds; the wardrobe notes (stripes, size-ups, masks, hats, bags, the gold jacket).
+
+## 2026-11-20 · Characters, the bodies: the owner's second look, fixed one at a time (branch characters, staged)
+
+The owner on the checked sheets: "overall this is WAY better", a dozen pixel-level notes, and a request: "Can we isolate these fixes? can they be made without breaking everything else". So each fix was made against a snapshot of all 160 standing figures (and 640 walking, every wardrobe piece, every hair style), and the snapshot's diff is the proof of what it touched.
+- **Lines on bare skin are the skin's own shade** (`POLISH.skinLine`): half way between the tone under the one it is drawn on and the next, never under the ramp's second tone - on a leg too. A darkened copy of the color was a tan smudge on light skin and near-black on a leg at an angle ("an extra line on her leg", "dark shading in the crotch region", "weird shading"). Same pixels, new color: 149 figures, 32 art pixels at most.
+- **Bare legs stay two apart up to the underwear** where they stand two apart below: 13 figures, 1-2 px.
+- **A bra at an angle and from behind**: a row of the chest that is mostly the top is the top right across, a strap up from each end with bare chest over it; from behind the band runs to the arm on both sides and the straps run up to the shoulder. 24 figures, all women in underwear at five directions; front and profile untouched.
+- **In profile the near arm is lifted by what the high camera drops it** (`POLISH.armLift`, 8.5 px at most): from the side the hand hung at the knee, two art pixels lower than from the front. What the hand holds or wears goes with it. 40 figures: the two profile directions only.
+- **A tank top in profile**: no art pixel of the top on its own (a strap's end on the neck's row or behind the arm), no single pixel of skin in it. 10 figures.
+- **Short hair**: a one-pixel bump at the back of the head, in profile and from three quarters behind, folded into the outline (`POLISH.nubOff`) - only the style named: every other style is as the owner passed it. 8 figures.
+- **Seven new rules** in `tools/bodycheck.mjs` (reach, profile, thighs, strapsUp, angled, nub, skinline). Run on the version he looked at they find 132 faults; on this one, none.
+- Not changed: the slim woman's arms from behind keep their shape - what read as "weird" there was mostly the dark lines; thicker arms or wider shoulders were tried and changed her from every side. To look at with him.
+- Open: the outline's strength - three options sent.
+
+## 2026-11-20 · Characters: stray garment pixels at an angle, and the bodies passed (branch characters, staged)
+
+The owner's last two notes on the bodies - "a random blue pixel here and there", "a random white pixel" - were one thing: the hem is a line level on the screen, but a thigh's top stands out beside the hips over that line, so at an angle one art pixel of trousers sat in the shirt's side and the shirt hung a row lower next to it. Over the hem's line a thigh is under the shirt too now (`W.leg`, the same `underHem` as the pelvis and the waist). 39 of the 160 standing figures changed, all clothed, 8 art pixels at most; in the wardrobe the same few pixels on every figure in an untucked top.
+- A new rule in `tools/bodycheck.mjs` (`stray`: no art pixel of a garment on its own in another, standing, outside profile) finds 8 in the version before and none now.
+- Tried and dropped: a general "lone pixel of a big material takes its neighbor's" rule on the art grid. It touched two thirds of the wardrobe, because garments of one color share a material (a white tee and white sneakers) - the fix belonged at the hem.
+- Left: in profile the hanging arm parts a garment, and the bit of it in front of the hand can be a single pixel; walking frames have their own one-pixel peeks.
+- **The owner: the outline stays (option A); the bodies are good - on to the wardrobe notes.**
+
+## 2026-11-20 · Characters, wardrobe notes 1: sports bra, bikini, striped underwear (branch characters, staged)
+
+First batch of the owner's wardrobe notes, now that the bodies are passed.
+- **Sports bra, bikini top, bikini bottoms** ("one thin line", "two pixels", "a strap"): the renderer drew them as a color by where a world pixel sits on the body, and at the game's size their edges fell between art pixels. They are cut on the art grid like the underwear now (`peoplepolish.js` `dress`: `wearT`, `wearB`; `under4`) - a sports bra a band with broad straps, a bikini top two cups with straps, the bottoms a triangle with a strap round the hips - each half in its own piece's color (`S.RCb`). The swimsuit stays the renderer's own: cut this way its edge was ragged.
+- **A yellow or a pink piece keeps its color** (`pale4`): pale pieces had their shades pulled to a cool grey so white underwear has a shape on skin - on a yellow bikini that was sand. Only near-neutral pale colors now.
+- **Striped underwear, three new pieces** at the end of the catalogue (`shared/lookcore.js`): Striped boxers, Striped briefs, Striped bra and panties (`stripe: 1`). Stripes in the trim's color on the art grid: down a boxer's legs, across briefs and a bra.
+- Measured against the wardrobe snapshot: only Sports bra, Bikini top, Bikini bottoms and the three new pieces differ. Tests: the underwear count 16 -> 19; a new test for these pieces in `test/bodyshape.test.js`.
+- Next from his notes: stripes that follow the garment on clothes; the size-ups (glasses, eye patch, necklaces, tiara, bow tie, stethoscope, bracelets, lanyard, smartwatch, pads, camera); masks; hats, earmuffs, headphones; bags and held things, bib straps; shirt buttons, tactical vest, ghillie suit, the gold Founding Citizen jacket.
+
+## 2026-11-20 · Characters, wardrobe notes 2: stripes that follow the garment (branch characters, staged)
+
+The owner, on the striped underwear of an hour before: "the stripes are still drawn perfectly horizontally, I had left a note earlier about figuring out a better way to do stripes." His note was "not one horizontal line at any angle"; the stripes pattern was every third art-pixel row of the screen - a ruler across the chest and both sleeves, the same from every side - and the new underwear had copied it.
+- **A stripe is a ring round the part it is on** (`people.js` `patFn`, `Q.sv`; `POLISH.stripeK`, `stripeTilt`): on the trunk, its level on the screen plus a third of what the high camera adds for a point nearer to it - it dips a little in front and leans a little on a body turned three quarters; down a sleeve or a trouser leg, the limb's own length - rings that sit at the arm's height, not the chest's, and turn with the arm.
+- Tried first and dropped: the whole of the camera's effect (true rings). On a wide chest at three quarters that is a sash from shoulder to hip.
+- Striped underwear bends the same way (`under4`: the screen's row, a third of the way to the body's own height there).
+- Against the wardrobe snapshot: Rugby shirt, Striped tee, Breton top, Pajamas, Poncho and the striped underwear - 27 figures - and nothing else. With the pass off the old rows are drawn, exactly as before.
+
+## 2026-11-20 · Characters, stripes again: one art pixel thick, joined from side to side (branch characters, staged)
+
+The owner on the stripes of the entry above: "The lines aren't consistent across - they are thicker in places and thinner and not complete in others. Is there a way to make the full stripe connect all the way around?" He was right: deciding a stripe one world pixel at a time left it to the bake which of an art pixel's four to show.
+- **Stripes are laid on the art grid** (`people.js` render(), after the tidy pass; `POLISH.stripeN`): the pattern only says where a pixel sits along its part (`Q.sv`) and what the stripe's color is (`Q.sr`). For each part - the trunk, each sleeve, each leg - down every column of art pixels a stripe is every third one, exactly one thick; from a column to the next it moves one art pixel at most; where it would stop short of the part's edge it runs on to it. A limb held level is cut along its rows instead.
+- A part that fills half an art pixel or less (an arm in front of the rest) lays no stripe there, and a single pixel of a part alone in an art pixel takes what the rest is: what the bake shows of those was a guess. A cloth and its own stripe are no longer merged by the seam rule (a sleeve's ring is not the chest's).
+- Striped underwear: the bend is a whole art pixel a column, the same down the column - one thick, unbroken.
+- **A test** (`test/bodyshape.test.js`): Striped tee on both sexes, five builds, eight directions - no stripe two art pixels thick, none that stops with two art pixels of cloth beyond it.
+- Against the wardrobe snapshot: Rugby shirt, Striped tee, Breton top, Pajamas, Poncho only. Pass off: unchanged.
+
+## 2026-11-20 · Characters, wardrobe notes 3: the big batch - accessories, masks, hats, bags, four garments (branch characters, staged)
+
+The owner passed the stripes ("I think it looks great"; the striped bra and panties "leave it as is for now") and asked for "a big batch ... of the rest of the work we have planned for characters and NPCs". This is his wardrobe list of 13:33, the part not yet built. All of it in the polish pass (`PL`); with the pass off every piece renders as before, checked piece by piece against the commit before (one exception, below).
+- **Sizes up.** Glasses frames a size larger (`POLISH.GLS`: round, half, frames, browline, rimless; the eye patch a full patch). Chains and necklaces a wider U with a pendant; the lanyard (`lany`) carries a card in its trim color and runs round the collar at the back; the stethoscope (`steth`) ends in a silver bell. Watches and bangles go right round the wrist (they show from behind). Bow tie two wings and a knot; tiara a band with a gem. Knee and elbow pads go round the joint. Things held in the hand 18% larger (`POLISH.itemK`). The camera has a body on its strap.
+- **Masks.** Bear and panda (`animal`): round ears, a pale muzzle, a dark nose; the panda its eye patches and ears in black.
+- **Hats.** Top hat: a box with a level lid. Fire helmet (`fire`): a crest, a brim over the neck, a shield in the trim color. Visor: a band round the head and a real bill. Cap backwards: the bill behind. Turban: two crossing folds and a knot. Earmuffs and headphones (`phones`): pads outside the hair and a band over it.
+- **Bags.** Backpack and hiking pack: a bigger box with a pocket. Guitar case: two bouts and a neck. Tool bag: bigger, with a handle. Duffel bag (`duffel`): drawn at the hip (it was not drawn at all). Bib overalls: the straps join in a panel at the back.
+- **Clothes.** Button-up shirts (`BTN`): buttons one art pixel each - the art column the middle of the front falls in, every second art row, anchored to the body so they do not swim. Tactical vest: plates standing off the chest and the back, three pouches. Ghillie suit: tufts in three greens standing out of the shoulders, arms, hood and hips. **Founding Citizen jacket**: `shared/lookcore.js` makes it a gold bomber (`bomber: 1, shine: 1`, gold with a black trim; it was the varsity jacket, black with gold sleeves); the pass adds dark ribbing at the cuffs and on the hem's art row, a gloss, and one art pixel in eighteen that catches the light (an emission: it shows at night) - which ones moves with the body, so it twinkles as the figure breathes and walks at no cost. This one changes with the pass off too: the data says bomber now.
+- Checked: the wardrobe snapshot (1,665 figures) - 204 changed, 53 pieces, the ones aimed at and what shares their code (Gingham shirt and Pajamas have buttons; Chest waders and Overalls the back panel; the bolo tie, whistle and scarf the chain). Bodies: 0 faults standing and walking. Pass off: 240 sprites identical; 27 of the 28 touched pieces identical in 16 poses each, the jacket by design.
+- Left: the camera is still small; the other ten masks are unchanged; the scarf reads as a necklace; a pearl necklace does not show on a white top.
+- Budgets, not raised: the renderer's code 457 of 470 KB, the bake's 1037 of 1045 KB - the bake has 8 KB left, so the next batch of this size needs room made or a decision. 152 character, look and wardrobe tests pass; the budgets test passes.
+
+## 2026-11-20 · Characters, wardrobe notes 4: the owner's look at the batch - pictures in art pixels (branch characters, staged)
+
+The owner went through the batch above piece by piece (20:15): chains, lanyard and stethoscope "still too thin to recognize", a bow tie that should look like one, buttons centered and all the way up, glasses "too close together", masks, hats and bags by name - and "we should do the weak or left alone parts too right?". Two things were wrong with how the small pieces were drawn. They were decided one world pixel at a time, so the bake showed a pixel here and a pixel there; and they were one art pixel of something. Now they are small pictures.
+- **Things on the chest are pictures in art pixels** (`peoplepolish.js` dress(), `NECK`): rows of characters, hung from the collar's art pixel at the middle of the front - the same column the nose is in. Chains (five across, two thick at the bottom; a Cuban chain a row more; a pendant), pearls (beads in two tones, so they show on white), a lanyard with its card, a stethoscope's two tubes with a bell and an earpiece, a whistle, a bolo tie, a scarf (a band at the collar and a tail), a bow tie (five by three), a button-up shirt's buttons (every second row from the collar to the hem), the zip of a zipped jacket, a backpack's straps, the strap of a duffel or a guitar case across the chest and the back, a camera on its strap (silver top, dark body, lens). In profile each has a `side` picture, columns back from the chest's front; from behind a line on the nape. Never under the chin (the head's lowest art row is worked out from the head's place over the spine: a woman's collar is under it), never under the hem. `people.js` no longer draws these with the pass on (chain, buttons, the bow's shapes, the pack's straps, the camera in the hand).
+- **Masks are pictures too** (`peoplepolish.js` masks(), called last in `people.js` face()): columns from the eyes across the face, rows down from them. Party and masquerade masks: a band across the eyes with eye holes, the trim at the tips (a masquerade's feathers larger). Medical: the lower face in two tones with ear loops. Face bandana: dotted, a point at the chin. Gas: lenses and one canister in front. Pig: folded ears and a snout with nostrils. Bear: larger ears, a short pale muzzle with a nose and mouth (the long one read as a beak at an angle). Panda: white eyes in black patches, a nose. Clown: red nose and mouth, pink cheeks, tufts of hair at the sides. Skull: sockets, nose hole, teeth. Alien: larger slanted eyes. Welding: a dark green glass. An animal's muzzle counts as face for the stamps.
+- **Glasses** (`POLISH.GLS`): a lens is two art pixels wide - the eye and the pixel beside it - inside its rim; the two share the pixel between the eyes as the bridge. Round, square, browline, rimless, half.
+- **Hats.** Cap backwards: no logo, a longer darker bill behind, an arch cut over the brow where the adjuster is. Top hat: the round crown again, taller, cut level under a lid in the hat's dark tones; its band a ring round the foot (as a capsule the band's domed end came up through the lid - the "white top"). Turban: fuller, the folds rising to a point over the brow, the under-wrap in a peak there (`W.hat`). Tiara: a band over the hair from ear to ear, three points, the stone. Earmuffs and headphones: nearer the first size, outside the hair.
+- **Bags.** Tool bag: a tool box in the hand (at the hip where the pose has no free hand), tools standing out of it. Duffel: longer and rounder behind the hip with pale bands and handles. Guitar case: a guitar's real size.
+- **Founding Citizen jacket**: zipped (`zipped: 1` on the piece; the open front is closed with the pass on), a zip down it, a dark collar. The open / zipped choice for jackets is still to be decided.
+- **Budget raised, the owner's word**: the bake's code 1045 -> 1080 KB (`tools/perf.mjs`; 1038 measured). The renderer's is 461 of 470 KB - the next thing to ask him about.
+- **A test** (`test/bodyshape.test.js`): from the front, on both sexes, a chain, a lanyard, a stethoscope, a bow tie, a scarf and a camera are each so many art pixels on the trunk; a shirt's buttons are a material of their own in one column, none touching.
+- Checked: the wardrobe snapshot - 193 of 1,665 figures, 50 pieces, the ones aimed at and what shares their code (Delivery, Hiking and Trekking packs their straps; Big frames, Reading glasses and Glasses on a chain the lens; Towel wrap the turban's peak; Gingham shirt and Pajamas the buttons). Bodies: 0 faults standing and walking. Pass off: 240 sprites and 46 touched pieces identical to the commit before.
+- Weak still: pearls on a white top are faint; the bolo tie is small; on the narrowest chests a bow tie loses a pixel to the sleeve.
+
+## 2026-11-20 · Characters: jackets open or done up, the player's choice; the scarf, the bow tie, the bear again (branch characters, staged)
+
+The owner at 20:53: "Let's do a zipper and unzipped version and give players the option and we can test out how it works", "Is there a reason not to raise the render budget? If not lets raise it", and three pieces back: the bear's snout at an angle, a scarf that "doesn't look like a scarf yet", a bow tie that should be "comically large".
+- **A jacket worn open or done up** (`shared/lookcore.js` `canZip`, `isZipped`, `setZipped`): the jackets with a front that closes - a zip on jackets, leather, puffers and zip hoodies; buttons on coats, cardigans and blazers; none on vests, ponchos, robes, cloaks. The choice is one bit, `z`, on the look's jacket - a spare bit of its pattern letter in the look's code, so a code is no longer and every code from before reads as it did (open). A piece can be the other way round by default (`zipped: 1`: the Founding Citizen jacket). The creator and the shop show **Front: Open / Zipped** (or Buttoned) under the colors (`client/creator.js`). Drawn by the polish pass: the front closed (`people.js` `T.open`), a zip or a column of buttons down it (`peoplepolish.js` NECK). The Guide's "Your look" says so. The server needs nothing new: it validates looks with the same shared code.
+- **Pictures on the chest sit in the middle** (`NECK`): a figure facing us is an even number of art pixels across, so its middle is the line between two. There a picture is one wider with its middle column twice - a chain, a card, a bow tie are centered, not half a pixel to one side. Buttons and a zip stay one column.
+- **Bow tie**: seven across (eight on the line), three tall, pinched at the knot, where the chest has room; the five-wide one on narrow chests. **Scarf**: wound round the neck two rows thick and wider than it, ribbed in two tones, one end down the front. **Bear**: the muzzle a pale block three by two with the nose on it - no dark line down its middle - a step toward the way the head is turned, its nose at the tip in profile; the eyes plain dots (the white of the eye beside them is the mask's color). Pig and panda take the same step.
+- **Budget raised, the owner's word**: the renderer's code 470 -> 510 KB (`tools/perf.mjs`).
+- **A test** (`test/bodyshape.test.js`): which jackets close and how; open unless chosen and the gift jacket the other way; the code the same length and there and back; a shirt showing down an open front and not a closed one; the pass off, nothing changes.
+
+## 2026-11-20 · Characters, the missing concept pieces 1: twenty pieces and three marks (branch characters, staged)
+
+The owner at 20:53: "Go ahead and start on all of it we are missing, let's knock this out." The checklist (`docs/characters/CHECKLIST.md`) had 77 concept items with nothing in the wardrobe; this is the first 24, the ones the new pictures in art pixels make cheap. All are the polish pass's (`pp`): not sold and not worn in the city while it is off, and with it off they draw as the thing they are built on.
+- **On the chest** (`peoplepolish.js` NECK, the jewelry slot): Necktie, Braces (a Y at the back, clips at the waist), Cravat, Towel round the neck, Sweater over the shoulders (knotted in front, its body down the back).
+- **On the face** (`masks()`): Sleep mask (a band over both eyes), Novelty glasses (a pink nose and a moustache under the frames), Chicken mask (a comb in three lobes, a beak, a wattle). Two marks in the creator's Scar list - Plaster, Black eye - and Face paint in Makeup, in the makeup's color (`lookcore.js` SCARS, MAKEUP: appended, so every code from before reads the same).
+- **Hats**: Feathered hat (a fedora with a feather in the band), Riding helmet (a dome, a short peak, a button), Half helmet with goggles.
+- **To carry**: Newspaper, Clipboard, Laptop sleeve, Parcel (the small bag's block at their own sizes, `POLISH.propBox`, held in front of the thigh), Basketball, Glow sticks (one a hand, lit), Trekking poles (one a hand), Yoga mat (rolled across the back, a strap over the chest), Boxing gloves.
+- A hand-carried thing has no strap across the chest any more (the small bag's strap was drawn for the camera, the newspaper and the rest).
+- Checked: the catalogue test (every piece complete, a store, valid style tags), 154 character, look and shop tests; the wardrobe snapshot - none of the 1,665 figures from before changed, 100 new; pass off: 46 touched pieces and 240 sprites identical.
+- **Weak, said so**: the newspaper, the clipboard, the laptop sleeve and the basketball are a few art pixels at the hand - a figure with its arms down has nowhere to show them; they want a carrying pose (an arm bent, the thing held against the chest). The towel round the neck is sky blue by default because white on a white top does not show.
+- **Left of the 77** (53): patterns we lack (dots, a stripe that runs down, sequins, patterns in the underwear's cut); pieces worn another way (a shirt open, a tee over a long sleeve, a coat on the shoulders, a shirt tied at the waist, one strap down, a wetsuit peeled, a towel at the waist or over the shoulder); shapes of their own (riot armour, the motorcycle officer's stripe, jodhpurs, a sherpa collar and a hood's fur trim, a racer's suit, harem trousers, a fringed skirt, cut-out and tee dresses, crochet, arm warmers, bondage trousers, a ripped tee, a two-color windbreaker, a tuxedo for women, a kimono for men, ragged clothes); a surfboard to carry; hair, face and body (waves, a faux-hawk, a receding hairline, a loc updo, pin curls, two-tone hair, a length slider, three styles for men, beards and moustaches, eyeshadow, a bodybuilder build, a stoop); and the four world things that are not clothes.
+
+## 2026-11-20 · Characters, the missing concept pieces 2: two patterns, pieces worn another way; the owner's notes on batch 1 (branch characters, staged)
+
+The owner at 21:55 on the first batch, piece by piece, and "Keep on building!". The checklist stands at 556 in, 32 missing, 1 dropped (`docs/characters/CHECKLIST.md`).
+- **His notes.** Bear at an angle: the muzzle one tone and longer, the nose at its tip. Scarf: snug under the chin. Necktie: striped, the tip cut on the slant (a picture of its own for the case where the body's middle is the line between two art pixels: `rowsE`). Braces are **Suspenders** now, and show from an angle: turned three quarters, the far half of the chest is a column narrower, so what hangs there is drawn a column nearer the middle (`NECK` `q34`). The **cravat is taken out** (not live: the pieces after it move up one). Sleep mask three rows. Riding helmet: a band over the crown, a dark peak, cheek straps. Goggles are worn over the eyes. Newspaper: a headline bar and lines of print (its lines were only on the box's side faces). Basketball: its own deep orange - the lit tone of the piece's orange was the skin's.
+- **Two patterns** (`lookcore.js` PATTERNS, appended; `people.js` patFn): **dots** - an art pixel of the trim every second row, each row half a step from the last - and **pinstripe**, every third column. Both are the pass's: the creator offers them only while it is on (`PASS_PATTERNS`), as it does the jacket's Front now. Any top, jacket, bottoms or set can take them.
+- **Sixteen pieces of the pass's** (`pp`): Polka-dot blouse, Pinstripe suit, Sequin bomber (the gift jacket's sparkle on a silver bomber), Open shirt (a jacket-slot shirt over a top or a bare chest; it buttons - a new top kind, `openshirt`), Towel round the waist, Towel over the shoulder, Dungarees with one strap down, Tee over a long sleeve (`layertee`: the sleeve past the tee's is the trim's), Shirt tied at the waist (a check on the hem's art row and the one under it, the knot in front), Arm warmers, Ripped tee, Color-block windbreaker (the trim from the chest up, cut on an art row), Side-stripe trousers, Sherpa-collar jacket.
+- **Four ordinary pieces**, each a piece the renderer already draws in the concepts' colors: Jodhpurs, Tweed jacket, T-shirt dress, Jersey dress - sold and worn in the city like any other. **Listed for both now**: Tuxedo, Kimono; the hairstyles Curly long, Half up, Box braids.
+- Not built though tried: a polka-dot bikini - two art pixels of cloth have no room for a dot; the two pieces were taken out again.
+- Checked: 154 character, look and shop tests (the per-look timing test fails when run beside the others and passes alone, three times of three - a loaded machine); the body check 0 faults; pass off: 46 touched pieces and 240 sprites identical.
+- **Left** (32): sequins on a jumpsuit, patterns in the underwear's cut (the striped set, print and plaid boxers), polka-dot bikini; a coat on the shoulders, a wetsuit peeled to the waist; riot armour, jodhpurs' own cut, a hood's fur trim, a racer's suit, harem trousers, a fringed skirt, a cut-out dress, crochet, bondage trousers, ragged clothes; a surfboard to carry; hair, face and body (waves, a faux-hawk, a receding hairline, a loc updo, pin curls, two-tone hair, a length slider, a circle beard, four moustaches, a beard's own color, colored eyeshadow, a bodybuilder build, a stoop); the four world things.
+
+## 2026-11-20 · Characters: the whole wardrobe checked for skin showing through; every pose; the missing concept pieces 3 (branch characters, staged)
+
+The owner at 22:19: seven pieces back, "T shirt dress and jersey dress have skin pixels showing through (I thought we were doing checks on this to make sure)", "please make sure all animations work well", and "finish everything missing and make sure all notes are accounted for".
+- **The check missed the dresses because it dressed its figures in one outfit.** `tools/bodycheck.mjs` `wardrobe()` now puts on every piece in turn, as the wardrobe sheet does, from six sides, with two rules: **speck** - an art pixel of bare skin with clothing on three or four sides and no skin beside it - and **stray**, a pixel of one of the figure's main cloths on its own inside another. First run: about 170 specks on 60 pieces. The classes: a thigh's top poking out of a skirt's or a dress's side; a clothed thigh over the hem taking the top's bare places; a jacket's opening, half an art pixel wide at an angle, showing a single pixel of the shirt or the chest.
+- **The fix is the same rule, in the renderer** (`people.js` render(), after the tank top's profile rule): such an art pixel takes the color of the clothing beside it; a cloth's lone pixel inside another likewise (not on patterned pieces, where a dot is such a pixel). Pieces made to show skin (a ripped tee, mesh, a crop top, a bikini) are left alone (`W.holes`). 6 specks are left and named in the test: a hand's art pixel over the hip from behind that reads as the leg's, the sari's drape, one skirt at one angle. 68 strays remain, most of them uniforms' badges and reflective bands; the test holds that number.
+- **Tests** (`test/bodyshape.test.js`): the whole wardrobe has no speck outside the six named; every one of the 68 poses renders with every piece the pass draws.
+- **Animations**: all 68 poses with all 207 accessories, jackets and pass pieces from two sides - 28,152 renders, none failed. A sheet of 25 poses in a tie, a pack, glasses and a backwards cap was looked at. Things held to the chest have a pose of their own (`accHands`, `POLISH.propHold`): the forearm across the body, a newspaper, a clipboard, a laptop sleeve or a ball held flat against it - they were a few art pixels at a hanging hand. Not done: watching the poses move in the running game.
+- **His seven**: the ball is held where all of it shows; goggles are shapes (a frame, two lenses), there from every side; the scarf comes up over the jaw's corners; the tie is four wide with a point; the sleep mask is one plain shape; an animal mask's eye row is the mask's color before the eyes are put on it (no white beside a dot at an angle).
+- **Missing pieces, 3** - 12 more of the checklist's items (568 in, 20 missing): Sequin jumpsuit, Riot helmet (a visor) and Riot armor (shoulder and forearm guards over the plates), Racing suit, Fringed skirt with its conchos, Cut-out dress, Bondage trousers, Ragged coat, Crochet top; five facial hair styles (Circle beard, Horseshoe, Walrus, Pencil moustache, Fu Manchu - `people.js` BEARD); Eyeshadow in the makeup's color. The striped underwear of 18:10 answers two more lines.
+- `validLook` refuses a piece id past the end of the list (clamped, it became the last piece - whatever that was; the test for it failed when the last piece became a top).
+- **Not built, and why**: a bodybuilder build - added and taken out again, the underwear's cut throws on a body that wide and the build needs its own pass through the body check; a stoop, two-tone hair, a hair length slider, a beard's own color - each a new field in the look's code; waves, a faux-hawk, a loc updo, a receding hairline, pin curls - each a hair shape of its own, and hair is passed; a wig; a coat on the shoulders; a peeled wetsuit; a hood's fur trim; harem trousers; a crochet cover-up; a polka-dot bikini; a surfboard to carry; the three world things.
+
+## 2026-11-20 · Characters: facial hair you can see, eyes on one row, a round ball - the owner's six notes of 23:27 (branch characters, staged)
+All behind the polish switch; the pass off is byte-identical (240 sprites, and the wardrobe's pieces against the base list).
+- **Facial hair** (`peoplepolish.js` BST, `masks()`): the sixteen styles were decided a world pixel at a time on the head's curve, in the hair ramp's base tone - on the art grid a dark pixel or two that read as a hole in the face ("I can't see any of the moustaches"). Each is rows of five art pixels now. The small ones are [the moustache's row, the chin's] across the face's middle; the beards [cheeks, moustache, chin] stretched from one edge of the face to the other. From the front a face has three rows under the eyes (the moustache on the second, skin between it and the eyes); turned, two. The tone is between the hair's body tone and its lit one - what the hair above it looks like - darkened toward brown until it stands off the skin. `people.js` skips the per-pixel beard for a style that has a picture; a long beard keeps its shape under the chin.
+- **Eyes on one row** (`people.js` face(), `POLISH.eyeLevel`): turned three quarters, the far eye's place projects a couple of world pixels lower, so on half the builds it landed an art row off the near one - eyes on a slope, and anything laid over the eyes' row (an animal mask's eye holes, a sleep mask) missed one of them: the bear mask's white eye. The eye that faces the camera less moves onto the other's row - where it has cheek beyond it, else a column nearer, else at the face's edge - or the other way round. 80 faces checked: 75 level, the rest covered by the mask itself.
+- **Basketball**: it lay against the chest under the forearm, four and a half art pixels of leather the color of a tanned arm. A hand pose of its own (`propHold` 2: on the palm, out in front of the hip), a radius of five, its middle snapped to an art pixel's middle on the screen (the prim's place is the world's, so the snap is on x and on y * SA - z * CA), seams drawn on the disc's middle column and row. When fewer than eight art pixels of it show past the body the figure is cast again without it.
+- **A jersey's number**: a 14-cell grid a world pixel wide, white specks at the game's size. A chest picture now (`rows` / `rowsE` / `back`): a 7.
+- **Scarf**: the 22:19 fix stamped it on the jaw, which showed only where the head hangs over the chest - at one angle. Off the face; one wrap from every side in flat tones (a ramp of one tone: its ribs of two tones went pink in the light), `bu` lifts the back's rows onto the neck.
+- **Sleep mask**: lavender, not navy.
+- Tests (`test/bodyshape.test.js`, 12): eyes on one row on every build at both angles; every facial hair style is pixels of its own on the face from three sides, in at most three tones; no white on a bear's or pig's mask from any side; the scarf round the neck from eight sides and never on the head; the ball five by five where it's in view and never a speck; the number six or seven pixels, four rows tall, in one piece.
+- **Not done / to look at**: the sleep mask may still read as a visor; from the front the ball's top corner is behind the arm; five faces of eighty keep their eyes a row apart (no free pixel on either row); the twenty missing concept items are unchanged; none of this has been watched moving in the running game.
+
+## 2026-11-21 · Characters: the scarf is a shape, facial hair is eight styles that read (branch characters, staged)
+The owner on the 23:27 sheet: the scarf "really isn't working ... ditch it unless we can get it right this next round"; beards "a few okay ones ... a bigger beard and obvious facial hair we should go for it but otherwise it might not be worth it". Behind the polish switch; the pass off is byte-identical (240 sprites; the wardrobe's pieces against the base list).
+- **Scarf** (`people.js` buildFigure, `peoplepolish.js` dress() `W.scarf`): three rounds of pictures laid on the chest never looked like a scarf, because a scarf is bulk round the neck and a picture has none. It's three prims now: a roll round the neck as wide as the head and up over the chin (an ellipsoid at the neck's base), an end hanging down the chest (a capsule), a band across its foot. So it's the same from all eight sides, the head and the hair sit in it as they would, and it goes over whatever is worn. Tones: the color and two shades under it, nothing lighter (lit, a red one went pink). The chest picture and the stamps on the jaw are gone.
+- **Facial hair** (`peoplepolish.js` BST / BVOL / `beardTone`, `lookcore.js` FACIAL_RETIRED, `creator.js`): eight styles, each in two parts - rows of art pixels on the face, and for a full beard, a long one, a goatee and mutton chops hair that stands off the head (prims in the head's group, in the beard's one tone, so the hair's own lighting isn't laid over them). A full beard fills every pixel of the face from the moustache down. A chin strap, a soul patch and a Van Dyke draw as a short beard, a goatee and a goatee, and the creator leaves them out while the pass is on (a look saved with one keeps its number; pass off, nothing changes). The five styles added on 11-20 are out of the list and the per-pixel table: they were never live.
+- Tests (`test/bodyshape.test.js`, 12 pass): a goatee's tuft, a full beard's mass and a long beard's length are each more hair than the last, from the front and three quarters; every style is pixels of its own in one tone and its shade; the scarf is ten art pixels or more from the front and the sides (four from behind, under the hair) and never over the eyes. The wardrobe snapshot: only the scarf's five figures changed.
+- **Not done**: watching either in the running game; the creator's facial hair grid with the pass on (the filter is two lines, not clicked through). A blonde beard on tan skin is low in contrast.
+
+## 2026-11-21 · Characters, overnight: the checklist finished, new look options, the NPCs checked, the pass seen in the running game (branch characters, staged)
+The owner at 01:31: "can you do everything left for the character/npc characters and work until it's done". All behind the polish switch; the pass off is byte-identical (240 sprites; the wardrobe's pieces against the base list).
+- **Handlebar**: at three quarters a parted moustache is one bar (the parting isn't under the nose any more) and a moustache sits on the face's second row wherever there is one - skin between it and the eyes, as from the front; from the side it starts at the lip and runs three pixels back.
+- **Eight pieces** (`lookcore.js`, all `pp`): Harem trousers (the leg prims fuller, gathered at the ankle), Wetsuit peeled to the waist (the suit's top half as a band round the hips - the waist-shirt wrap; a set's `fk` is the women's top kind), Fur-hood parka (a hood down the back with a roll of fur), Coat over the shoulders (a cape's drape, the shoulders covered, an empty sleeve down the outside of each arm, the arms the top's own), Surfboard (a prop as tall as its owner), Crochet cover-up, Roller skates (wheels under the boot), Party wig (a hat that is hair: `lookArt` swaps the hair).
+- **Five hair shapes** (`HAIR_STYLES` fourth field, `peoplepolish.js` hair()): Waves (rings of light on a close cap), Faux-hawk (a ridge over faded sides), Loc updo (locs standing out of a tie), Receding (`hairLN`), Pin curls.
+- **Three more things a look can say** (`lookcore.js` validLook / encodeLook / decodeLook / lookArt): `hair.tip` and `hair.bcol` (0, or a hair color + 1) and `body.stoop`. The stoop is the spare bit of the marks' letter; tips and a beard's color are two letters after it (`LOOK_CODE_MAX2`). A look without them encodes exactly as before, and older codes decode as before. Drawn only by the pass: long hair's ends, a spiky cut's spikes, a short cut's lit tones (`hairLit` - the whole top in another color was a cap); the beard's tone from its own ramp; a stoop is lean and head pitch added after the rig. Creator rows (pass on): Dyed tips, Beard color, Posture.
+- **A sixth build**, Bodybuilder (`pp`, men only: on a woman the underwear's cut fails the body check; `validLook` gives her Athletic). Random looks pick from the first five as before.
+- **Carried things**: a newspaper and a clipboard are held on the palm out in front of the hip like the ball (`propHold` 2), bigger, the newspaper newsprint gray with its lines on art rows.
+- **NPCs** (`tools/bodycheck.mjs` looksCheck): the wardrobe's skin-showing-through rule on whole looks. 17 recipes and 29 personas: all draw, in every pose. My first run of it passed on nothing - `recipeLook` returns `{ look, bi }` and I had fed it the wrapper, which validates to an empty look; caught on the sheet (46 rows of the same man in underwear). The test asserts the looks are real ones.
+- **In the running game**: `tools/playtest.py --ls KEY=VALUE` seeds localStorage (the pass: `cla.polish=1`); screenshots wait up to three minutes. Seen with the pass on: the starting looks, the creator (facial hair grid, Front, patterns), the street. Headless Chromium on this machine only gets through the first-time flow at the low preset.
+- **Tried and taken out**: letting a hand beside a thigh not block the speck fill - it did not close the seven known pixels and moved 87 other figures by a pixel each.
+- Tests: `test/bodyshape.test.js` 15 (the new options in the code and drawn; the NPCs; a blink is the same figure with its eyes shut), the two pinned lists in `characters2` / `characters4` updated. Budgets: page 532 / 540 KB, bake 1048 / 1080, renderer 477 / 510.
+- **Not done**: watching animations and a blink in motion; a phone and the Xbox; the pieces listed as weak in OWNER-NOTES; go-live (the owner's review first).
+
+## 2026-11-21 · Characters: beards and moustaches textured like the hair (branch characters, staged)
+The owner at 04:54: "beards need similar texture as hair, right now beards and moustaches are one solid color". `peoplepolish.js` `beardTone` returns three tones (a warm shade, the body, a lit tone - the hair ramp's own highlight where that stands off the skin); the pictures on the face pick one per art pixel (`tex`: lit on the upper left, shade on the chin's far side, a clump up or down from a hash of the pixel and the figure's seed), and the beard that stands off the head takes a tone up or down per art pixel the same way (`people.js` `W.beardM`). Stubble is a plain shade as before. A test: a full beard is at least three tones of its own.
+
+## 2026-11-21 · Characters: the weak ones from the overnight sheet; the whole suite run (branch characters, staged)
+- **Fur-hood parka**: fur round the collar too - from the front the fur along the hood's edge was a thin line behind the head. **Receding**: the hairline further back (two rows of forehead where a crew cut has one). **Crochet cover-up**: open work on the art grid - every other art pixel the skin under it; it had been a cream dress.
+- **The whole test suite**, for the first time this week. Three at a time it ran this 7 GB machine out of memory (the world tests' processes were killed), so every file that failed was run again alone. Alone, the world files pass. Eight files keep a failure: `prison` (the weapon back after a sentence), `uikit` (the touch buttons' CSS), `uiscreens` (the phone's Guide tile), `hudlayout` (a note under the status line on touch at 844x390 and 740x360), `scenes` (a live event near a player in their first minutes), `visaudit` (two placement audits), `world3arrivals` (the park block), `gridlock` (two junctions). All eight fail the same way on yesterday evening's commit (ae1bdf2b), before any of this work - they are this branch's distance from main or older breaks, not tonight's. (`gridlock` showed a second failing junction once, while sheets were rendering beside it; alone it fails the one it failed before.) None is in code this work touched. Left alone: they are not the characters' to fix on this branch, and each needs its owner's eye.
+- Lesson kept: run the whole suite one file at a time here (`--test-concurrency=1`), or the result is the machine's, not the code's.
+
+## 2026-11-19 - Pre-beta quick wins 1: debug hidden from players
+
+The second audit (REPORT2 B4): every player saw the debug button by the minimap and "Debug menu" in Settings > Help
+(a tap sent `devmode` with no password and got a refusal). Now only the owner and admins (`S.role`), anyone already
+in Dev Debug Mode (or on a private dev server, `S.dev`), and everyone while the server's open dev mode is on
+(`CLA_DEV_OPEN`, read from /launch.json `devOpen`) see them: `body.dbg-ok` shows the button and the row, and
+`openDebug` (the button, the row, the backquote key, the pad) does nothing for anyone else. While testing with the
+open dev mode on, nothing changes; at `CLA_DEV_OPEN=0` players stop seeing them. `client/main.js` debugOk /
+syncDebugUi, `client/style.css`, `index.html`; `test/hub.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 2: the arrival's letterbox doesn't cut the HUD
+
+REPORT2 B6: the arrival's black bars (`#arrival::before/::after`, over the HUD) sliced the minimap and the round
+buttons in half. The HUD is now away while the arrival (and its "Where to?" pick) is up with its bars in, and back as
+they slide off (`#arrival.leaving`). `client/style.css`; `test/ftue.test.js`.
+Not done - the sign "SANDPIPER / JUNCTION FIRST" (the desert first-aid post): the art's `signName`
+(`client/art2/game/statics.js` `clean(b.name, 26)`) cuts "Sandpiper Junction First Aid Station" at 26 characters, mid
+"FIRST AID", and the post's small front clips the two-line board. Fixing it changes the baked art (a new `art` hash, a
+rebake), which this pass mustn't: left for the owner (fix: hand the whole name to `layoutSign`, which already shortens to
+"SANDPIPER FIRST / AID STATION"-style lines, and give a two-line board its height on the small posts).
+
+## 2026-11-19 - Pre-beta quick wins 3: the bag findable
+
+The owner (11-17): the bag can't be found. A desktop had only the I key and MENU > BAG; on touch the ITEMS switch showed
+only while you held an item. Now a desktop (and a pad) has a backpack button in the HUD's row, between the emotes and
+MENU, with its I chip (`#b-bag`, `client/main.js` toggleBag; hidden on touch), and on touch the switch is always there
+(no `items` flag) and called BAG - the name the screen, the pause row and the Guide use (it was ITEMS:
+`shared/touchcontrols.js`, `shared/controls.js`, `client/touchicons.js`). The Guide's bag line and the README say so.
+The 10-24 hub (UI-3) had taken the bag's HUD button away; the hub tests now expect it back.
+
+## 2026-11-19 - Pre-beta quick wins 4: menus in the pixel font
+
+The owner (11-17): the menus weren't in the SNES pixel font. The page's body face (`--ui`, every menu's text and 5
+HUD bits) is now CLA Pixel: its Regular answers every weight under 700 (`@font-face` weight ranges), so what you read is
+the Regular face and heads, labels and buttons (700) the Bold - one readable face, no new font. Barlow Condensed stays
+only as the fallback for a glyph CLA Pixel lacks, and is no longer preloaded (CLA Pixel Regular is). The canvas text
+that was Barlow only (the ride and skate score cards, the knocked-out map's labels, the fish catch card, the spectator
+and debug maps) leads with CLA Pixel too. The age / consent gate and the Account panel (`client/account.js`) lost their
+76 inline "app" styles (system-ui, grey box, blue buttons): they're `.acc-*` classes in `client/style.css` - a UI v2
+navy plate with the gold rim, square, the pixel face, Google's and Discord's own buttons - and full screen the panel
+scrolls inside the screen (a phone on its side no longer cuts the gate's title). On a phone on its side the title keeps
+SIGN IN, compact in the player card. Checked in headless Chrome at 844x390 and 1440x900 (title, gate, Account,
+Settings). `test/uitokens.test.js`; DECISIONS (HUD and controls).
+
+## 2026-11-19 - Pre-beta quick wins 5: device words
+
+REPORT2 B4/B6: touch and pad players read keyboard keys. A key named inside a prompt or a note - the server's "Hold to
+revive Sam · hold F to finish them", any "press E" - or an `[[action]]` is now this device's own: the key's tile on a
+keyboard, the pad's button, and on touch the button in words (no chip on the touch prompt's card - the 11-14 rule:
+"hold the door button to finish them") - all on the page (`client/glyphs.js` keysHtml, localizeText), no server change.
+The cinematic panel and its notes speak the device (`client/director.js` say/key: no Esc, WASD, Q / E or F2 / F4 / F8
+on touch or a pad; the keys only on a keyboard), the horse's line says SHIFT / RT ALL THE WAY / HOLD GALLOP instead of
+SPRINT (`client/ridehud.js`), and the touch cinematic hint names the ✕, not MENU (`client/hudinfo.js`). A Windows touch
+tablet with no mouse (a Surface without its keyboard) is no longer taken for an Xbox: the pad-cursor test now needs a
+screen with no touch points (`client/platform.js`), so it gets the touch controls, not "A SELECT / B BACK".
+`test/devicewords.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 6: the starting looks
+
+REPORT2 B4/B6: the starting looks said "You can change everything later from the menu (Appearance)" - there's no
+such screen. Now: "You can change it later: CHARACTER on the title screen, or in the city the mirror at home" (the
+11-17 decision). Their carousel showed the browser's white scrollbar under the navy panel: every scrollbar on the page
+is now thin, a gold thumb on the panels' ink (`client/style.css`; a rule's own `scrollbar-width: none` still wins).
+`client/creator.js`; `test/uitokens.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 7: touch collisions on a 360x740 phone
+
+REPORT2 B3: on a 360x740 phone upright (a common Android size the layout test didn't have) the emote button ran into
+FIRE's disc and the chat button touched FIRE ON (0 px): both are placed by CSS offsets beside the move stick, and at
+360 px there's no room along the bottom. Under 380 px wide, upright, they now sit side by side in the free space just
+over the move stick's rest (8 px above its ring, by the left thumb, clear of the prompt card). `test/hudlayout.test.js`'s
+small-phone test now measures chat, the emotes and the move stick with the cluster, and its placement rule knows the
+narrow-phone spot (and the HUD row's new bag button). 44 px targets on touch: chat's tabs, quick lines and row
+buttons (34-36 px), the emote picker's tabs (36), What's next's skip (30) and goal buttons (32), and Settings' tabs on a
+short screen (40). `client/style.css`; `test/uitokens.test.js`.
+
+## 2026-11-19 - Pre-beta quick wins 8: no red cross on the knocked-out screen (and two more)
+
+The owner's rule (10-18): never a red cross. The knocked-out screen's map drew the ambulance you called as a white
+disc with a red cross; it's now a white cross on the clinics' green (`client/deathscreen.js`). The test's source
+guard (`test/storeicons.test.js`) only looked at lines assigning a `cross...` variable, so it missed it: it now also
+catches a plus painted as two turned bars (`fillRect` pairs) in any red - and that found two more, both fixed the same
+way: the hospital helipad's badge (`client/render/aircraft.js`) and the lifeguard tower's roof (`client/render/trains.js`
+drawLifeguardTower; its red flag stays). None is in the art bake's imports (no new art hash). The guard's walk of
+`client/` also works on Windows now (`fileURLToPath`).
+
+## 2026-11-19 - Pre-beta quick wins 9 (part): Next moves to the next shot
+
+The owner (recording trailers with the camera tool): "next scene" didn't move to the next shot. A shot tapped in the
+list was a reel of one, so Next (the panel's ⏭, the bar's Next, N, a pad's A / RB) just ended it. A tapped shot now
+keeps its list - its section's kept shots, or the unreviewed ones - so Next and the one before step through it; on its
+own it still stops when it's over (`one`: no auto-advance; Play all still plays on). `client/director.js` D.shot;
+`test/directorcam.test.js` (fails on the old code). A new test also plays every place shot on the page - held, go,
+then frames - and each one's camera travels, so the page side of "shots that don't play their camera move" checks out
+with the shots' own anchors; the live cause (a place whose anchors or cast don't resolve, the camera holding its last
+spot) needs a World v3 run to find. Not done: shots of NPCs playing their games (pool, cards, hoops) - new scenes with
+the watchable games' server sims, a server change.
+
+## 2026-11-20 - The "Before you play" screen: no checkbox
+
+The owner (11-20): smoother, without the tick box. The screen now says "By playing you confirm you're 13 or older
+(under 18: with a parent or guardian's permission)" and either button confirms it: **Accept** (with Google Analytics) or
+**Essential only** (without) - side by side, equally easy, as Europe's consent rules want; the analytics line is a small
+note under them. Shown once and remembered, as before. `client/account.js` showGate.
+## 2026-11-17 - Fullscreen as a switch at the top of Graphics
+- The owner: the "Fullscreen on or off" button at the bottom of Settings > Graphics should sit higher and show whether
+  it's on. It's now the first row of Graphics, a plain switch that shows the state - F11, Esc and the title's button move
+  it too (fullscreenchange), and a browser that refuses puts it back. The title's FULLSCREEN button stays hidden with a
+  keyboard and mouse (F11 does it on a desktop) and shows on touch and gamepad.
+
+## 2026-11-21 - The animals drawn at the art pixel: faces, eyes, legs that hold (first pass, branch `animals`)
+The owner (11-21): "I'd like to polish the animal/wildlife art up, some dont look very good at all. I'd like to get it
+close to the concepts." A sheet of every land animal and bird as the game drew it, beside its concept, showed it was
+nearly all of them, and one cause: the models are 1 world px a voxel, the game's art pixel is 2, and the picture was
+made with one ray per art pixel - whatever was thinner than the pixel (a leg, a tail, an eye) was lost or doubled by
+chance, the eyes were buried inside the head, and the bodies were too thin to carry a face from the front.
+
+- **The picture** (`client/art2/animals.js` `renderArt`, used whenever `px` > 1; the old one-ray picture stays for the
+  previews at px 1). Every art pixel looks at each world px under it, down the line of sight a world px of depth at a
+  time: the material most of the pixel shows, in its average tone; a thin part (a material's `thin`: a tail, an
+  antler, an ear, a bill) fills the pixel it only half covers; the legs on the far side of the body (`limb`) a tone
+  darker, so four legs read as four; the shading in three clean bands from the surface's own direction, never the
+  ramp's last tone; and the features (`feat`: an eye, a nose, a tongue - each its own material) one art pixel each,
+  where the middle of what shows of it lands - seen through 2 px of coat, so an eye sits where it reads from the
+  front and from the side both; the far eye not seen side on, none from behind; two eyes never touching.
+- **The rig**: the pets of A1 chunky - the head big and carried high over the back, sturdy legs set apart, ears a
+  shade off the coat - and each breed's own marks (the spaniel's brown head and white blaze, the shepherd's black
+  muzzle and saddle, the husky's white face and legs and blue eyes, the bulldog's and the pit bull's white, the
+  dalmatian's spots an art pixel each, the tabbies' bands, the cats' eye colours). The farm: the cow's pink muzzle and
+  black ears, the sheep's black face and legs, the pig, the goat. The wild ones: antlers, horns and tusks that hold,
+  the moose's palms laid back, the wolf sturdier with yellow eyes, the raccoon's mask, the bobcat.
+- **A bug found on the way: the birds had no heads.** In `client/art2/birds.js` every bird's table gave `head` twice -
+  its size, then its colour - so the colour overwrote the size and the head, the eyes, the bill and a quail's topknot
+  were never drawn (a radius of '#3e3a46'). The colour is `headC` now. The small birds are drawn a little bigger than
+  the table's sizes (`GROW`: a quail 1.3) - the picture only; nothing the server measures.
+- **Budget**: the renderer's code 411 -> 419 KB (`tools/perf.mjs`): `renderArt` and the rig's markings join the
+  renderer's first load, as the animals' code always has. A sprite takes about twice as long to draw as before
+  (measured here: 12 -> 23 ms each over 192 sprites); they are drawn once and kept.
+- **Tests**: `test/animalart.test.js` - every four-legged animal has two eyes from the front, apart and level; one eye
+  from the side and none from behind, for the animals and the birds; a bird's head is a size and `headC` a colour;
+  fore and hind feet apart on the ground; the px-1 picture still there. `test/wildart.test.js` unchanged and passing.
+- Not done yet: the moose's antlers and the deer's rack from the front, the mountain goat, the birds' wings in flight,
+  the shark and the sea life, the fish in the water and on the catch card (to be judged on sheets), the animals in
+  motion in the game. Not on `main`: the owner sees the sheets first.
+
+## 2026-11-21 - Animals, second pass: the birds that fly round you, antlers, the horse's eye, richer coats
+- **The pigeons, gulls and sparrows were smudges** (the owner: "even the birds you see flying around as a world
+  detail"). `critters.js` paints them 1 world px a pixel, right for the chunks' scenery; as live sprites the game
+  halved each to the 2 px art pixel and a ten-pixel pigeon lost its head, wing and bill. The ones that fly round the
+  player are now their own pictures at that size (`client/art2/game/actors.js` `critterArt`, a pixel at a time: the pigeon on the
+  ground, taking off and three wingbeats, the gull's four, the sparrow, the three butterflies, the dragonfly, the
+  bee, the frog); `actors.js` `critterSprite` hands them out at art pixel 2 (the painted frames at 1, and for the
+  scenery as before). The verge's rabbit, the squirrel on a trunk and the pond's heron are the same models as the ones
+  you hunt, so a kind has one look. Kept in `actors.js`: `critters.js` is part of the chunks' bake (a change to it is
+  a new build of every chunk), and the renderer is at its file budget for a file of its own.
+- **Antlers and horns**: the moose's palms stand like open hands with fingers along the top (from the side a palm
+  and its points, not a block on its head); a deer's rack spreads from the front; the mountain goat's black horns
+  show, its head carried higher.
+- **The horse** (`horse.js`) has an eye a pixel in the picture, like the others.
+- **Coats**: the back and the flank keep the coat's own colour, lit only along the upper left and shaded underneath
+  (they were a tone too pale all over - the bears most); a belly stays its own colour in the body's shadow (the deer's
+  had turned to a red stripe).
+- **Left as they are**: the 91 fish of the catch card and the Fish log (`client/fishart.js`, 11-16) and the fish seen
+  in the water (`waterlife.js`) - judged on a sheet, they hold up.
+- **Budget**: the bake worker's code 1020 -> 1024 KB (`tools/perf.mjs`; it counts the sprite providers): the art-pixel
+  critters' pictures. No chunk is rebuilt: the art hashes are unchanged.
+- `tools/playtest.py --ls` brought over from the `characters` branch (the local gate) for the in-game captures.
+- Tests: `test/animalart.test.js` + the critters at the art pixel (their frames, mirrored, what the game hands out).
+
+## 2026-11-21 - Animals: the owner's notes of 09:27
+"The critters looked a bit better before than after ... return back to the before but just see if a little more polish
+makes it look better. Like the sparrow looks better after." / the moose's body "not moose like" / the bear's body
+"strange" / the heron's legs "really thick" from the front and back / the cats "look like small dogs".
+- **The critters are their painted frames again** (`critters.js`, untouched), the redrawn ones gone - but for the
+  sparrow, which he preferred. The light polish: `actors.js` `tidyDown` halves a painted frame to the art pixel with one
+  rule changed - a block that holds any of the creature shows the creature, not the ink line round it (a lone bright
+  eye or bill kept) - so each keeps its size and shape exactly and reads less as an outline: the pigeon, the gull, the
+  bee, the frog, the rabbit, the squirrel, the pond's heron. The butterflies and the dragonfly are left exactly as the
+  game halves them (their wings' dark veins are the picture). A before / after sheet went to him: it is his call
+  whether the polish stays.
+- **The moose**: a shorter body on longer legs, the withers high over a sloping back (`slope`), the long head carried
+  forward and down from the shoulders on a real neck (`hfwd`, `hdrop`), a darker muzzle.
+- **The bears**: a rounder barrel with an arched back (`arch`), the black bear's rump over its shoulders, the grizzly's
+  hump broader and lower; the head big, low and forward of the shoulders, not perched on the back like a dog's.
+- **The heron** (and every bird): the legs a voxel wide on whole voxels either side of the middle of an even-width
+  model, and drawn `bare` - no ink line round them (`renderArt`) - so from the front and from behind they are two thin
+  legs with the ground between, not a post.
+- **The cats**: a face wider than it is deep and flat in front (`catFace`), bigger ears set wide, a pink nose, a long
+  thin tail up in an S with the tip curling over (`tail: 'cat'`), slimmer legs, a lower head.
+- Tests: `test/animalart.test.js` - the painted critters keep their size, shape and anchor and carry no more ink than
+  before; the butterflies, dragonfly, leaves and motes untouched; the sparrow its own picture.
+
+## 2026-11-21 - Animals: the owner's notes of 09:55 (branch `animals`)
+- **Cats.** The face is its eyes: the nose pixel is gone (beside an eye it read as a second eye), and every cat's
+  collar is a different colour from its eyes (the tabby's eyes amber). The ears are bigger and set wide, so the front
+  and the back show two triangles with the crown between them. The tail goes up behind and hooks back at its tip,
+  a little to one side - it no longer stands over the head as a spire from the front (`tail: 'cat'`; the tail
+  helper takes a sideways offset).
+- **Grizzly.** The hump is a slight one (`hump` 1.5 -> 0.7, `arch` 0.26 -> 0.14) and the bear stands taller on its
+  legs (`h` 31 -> 34), so it reads as a bear and not a mound.
+- **Moose.** Slim legs (`legK` 0.62: it had the thick legs of a humped animal). The antlers are tan as in AN4 and
+  defined: a palm that sweeps back from the brow, darker in its hollow than its rim, separate points up off the top
+  edge and one brow point forward.
+- **Monarch (and the other two butterflies)** and **the rabbit** are their own pictures at the art pixel now, as the
+  sparrow is (`actors.js` `CART`, a palette per kind, a frame may carry its own anchor column): the butterflies from
+  above - black-edged wings with pale tip spots either side of the body, open / rising / closed / falling; the
+  rabbit sitting up, leaping, stretched out, landing, with the pink inside its ear, a white tail and a cream chest.
+  The pigeon, gull, bee, frog, squirrel and heron stay the painted frames with the light clean-up; the dragonfly
+  as painted. `critters.js` is untouched (the art hashes don't move).
+- `test/animalart.test.js`: the butterflies are the same either side and open and close; the rabbit has pink in
+  its ears in every frame.
+
+## 2026-11-21 - Item and weapon pictures in pixels: a proposal, not wired in (branch `itemicons`)
+The owner (11-21): "I think the UI art overall needs help, and the icons and things that go with UI. Like symbols and
+icons for different weapons or items or inventory." Today the bag shows an item as its family's line icon (one paw
+print for every hide and pelt, one hook for every bait - `client/bag.js` `ITEM_GLYPH`, since 11-05), and the quick
+wheel (`client/inventory.js` `ITEM_ICON`) still shows system emoji. His icon sheets IC1-IC5 show each item as its own
+pixel picture.
+
+- **`client/itemart.js`** (new, loaded by nothing yet): `itemSprite(id)` / `itemIconURL(id)` / `itemIcon(id, px)` and
+  `weaponSprite(id)` - every one of the 246 items in `shared/items.js`, the 13 things the stages add (fireworks, the
+  camp kit, the players and instruments, the tapes) and the 36 weapons, each its own picture on a 24 x 24 grid in the
+  game's style: a dark coloured outline, three tones lit from the upper left, a catch-light. Made from a few shapes
+  each by a small painter (an ellipse, a box, a polygon, a line), no image files. Families share a part and differ by
+  what tells them apart: the hides and pelts by the animal's coat and tail, a poor one torn and a perfect one starred,
+  the legends' pelts white; the meats by colour and cut; the seeds a packet with the crop on it, the prize crops a
+  blue rosette; the picks by their head; the rods by their colour.
+- **Not wired in.** The bag's clean line icons were the owner's call (11-06: the pixel icon set does not ship), and a
+  visual direction is shown as variants before it goes in (11-12). A side-by-side sheet of the bag's tiles both ways
+  went to him; the wiring (the bag's tiles and details, the quick wheel, the shops' rows) follows his pick.
+- `test/itemart.test.js`: every item and every weapon has a picture, no two different ones share one, a hide's
+  grades differ from it and from each other, the stages' things are covered.
+
+## 2026-11-21 - The pixel pictures go into the bag and the quick wheel; the owner's notes (branch `itemicons`)
+The owner picked the pixel pictures from the side-by-side sheet ("Items are looking good") and named the ones to draw
+again. This supersedes the 11-06 call ("the pixel icon set does not ship") for items and weapons only - buttons, apps
+and the HUD keep the clean line set.
+
+- **Wired in.** The bag (`client/bag.js`: tiles, the details panel, the quick bar, the equipment slots) and the quick
+  wheel (`client/inventory.js`, which loads `itemart.js` the first time the wheel opens - the page's startup code
+  doesn't grow) show `itemIcon(id)` / `weaponIcon(id)`; the line glyph stays as the fallback for an id without a
+  picture. Shown at whole multiples of the 24 px grid (48 px in a tile, 72 px in the details, 24 px in the quick bar
+  and the wheel; 24 / 48 px on a short screen), `image-rendering: pixelated`. A tile's row stays 40 px high and the
+  picture overhangs it 4 px each way, so the name and the count sit where they did.
+- **His notes on items.** The pickaxes have a traditional crescent head over a shaded handle; the hatchet and the axes
+  a wedge head with a bright edge; the feathers a vane with splits, a quill and barbs (the eagle's dark with a white
+  tip); every mushroom a domed cap, gills and a ringed stem (the chanterelles two funnels, the oysters a shelf, the
+  earthstar a star); the geodes facets, glints and sparkles; raw meat a steak with a fat rim, a bone and marbling.
+- **His notes on weapons** (a second pass on all 36): the sword a straight double-edged blade with a cross guard; the
+  katana curved, with a small round guard and a long wrapped grip; the knife and the hunting knife single-edged with
+  their own shapes; the fists a fist (knuckles, thumb, wrist); the hunting bow aims forward - belly and arrowhead to
+  the right, the string drawn back; the plasma blade glows in layers with sparkles; the bat tapers with grip tape; the
+  sledgehammer's block head sits across its handle; the crowbar is hooked; the flamethrower and the baton redrawn.
+- `test/itemart.test.js` as before; `test/uiscreens.test.js` pins the bag's weapon line to `weaponIcon(id) || glyph`.
+- Checked in the running game (a local copy, the bag opened with a full kit): the pictures sit in the tiles, the
+  equipment slots and the details panel. Seen there and not from this change: at 1280 x 720 the details panel clips a
+  long weapon name and the EQUIP label, and the Sort box runs under the panel - for the pre-beta list.
+- **His notes again (09:55).** The pickaxe's head is one even arc with two points across the top of the handle; the
+  katana a long slim blade with a gentle curve (a dark spine, a bright edge), a small round guard and a grip wrapped
+  in diamonds; the hunting knife a buck knife - a broad clip-point blade, brass guard and pommel, a wooden grip; the
+  bat a bat - a knob, a slim taped handle, a long taper to the barrel; the silenced pistol's silencer is its own
+  fatter tube on a short neck. The cooked steaks tell apart by colour and trimming (venison dark with a sprig of
+  rosemary, elk redder and on the bone, game golden with a pat of butter), the raw meats by a wider spread of reds.
+
+## 2026-11-21 - The nature kit, first pass: every plant made at the art pixel (branch `nature`)
+The owner (11-21): "please start on the nature kit". Set beside his plant sheets (E3a-E3f, NK1-M), the game's trees
+and plants were flat and speckled. The cause was one, the same the animals had: `flora.js` paints a plant in world px -
+a crown of small leaf clusters, each lit on its upper left with a dark pocket under it - and the bake then halves it to
+the art pixel (2 world px), keeping one texel of four. A cluster five px across came out as noise. The old-growth
+redwoods, the only trees already made at the art pixel (`redwoods.js` `giantRedwoodArt`, `ap2`), were the proof: the
+best-looking trees in the game.
+
+- **`floraArt(k, maker)`** (`client/art2/flora.js`): the maker runs at half the asked size and its picture comes back
+  marked `ap2 = 2` - the chunk bake lays each of its pixels over 2 x 2 world px on the art grid
+  (`chunkbake.js` `compositeDepth2`, as for the giants and the mesas). `statics.js` `makeFlora` makes every species
+  that way (109 of them; the redwoods' own pictures were there already). The game shows the picture as it was
+  painted.
+- **How the makers follow.** They write their sizes in world px. The tree engines (broadleaf, conifer, pine tufts,
+  groves, palms, saguaro, joshua tree, redwood) multiplied theirs by the tree's scale already; they now follow it
+  everywhere (the pine's tufts, a grove's stems, the saguaro's arms by its true height, the palms' skirts and dates
+  had their own fixed px) and work in canvas px (`CAN`). Every other maker - shrubs, hedges, flower beds, ferns,
+  grasses, cacti, rocks, logs - stays in world px, and the painters convert what it hands them (`uu`): positions and
+  lengths by the unit `U`, a leaf cluster by less (`CQ`, with fewer of them, so the cover is the same), while what a
+  painter draws at a fixed size - a flower head, a berry, a frond's leaflet, the bark's grain - stays in canvas px.
+  At the art pixel a plant is made of fewer, bigger pieces, not a shrunken picture: tulips read as tulips, an apple
+  tree's apples as apples.
+- **Tuned by hand** where a plant closed up at half the room: the grasses, reeds, lavender, pampas, yucca and dry
+  grass keep fewer blades and set them against each other by tone (`nu`); the agave fewer, broader leaves; the
+  tumbleweed fewer hoops; a hedge and the topiary a fine, even face (`clip`); the ocotillo its canes; the cattails'
+  glints at the water a few, not a line.
+- **The small ground cover** too (`ground.js` `coverSprite(kind, v, art)`, stamped by `groundbake.js` in 2 x 2 blocks
+  on the art grid): the flowers, ferns, reeds, tall tufts, pebbles, cones and shells strewn over the ground are one
+  art pixel to the pixel. Not the dense turf: a lawn of blades one art pixel wide, each with its sunlit tip, came out
+  as yellow static in the running game - halved and averaged by the bake it stays the soft mottled grass it was.
+- **Birch and aspen**: fewer stems, set apart (six in a bundle read as a stone pillar at the art pixel).
+- **The olive, the Italian cypress and the small fan palm** came from the older painters (`trees.js`): made in
+  `flora.js` now (`oliveTree`, `italianCypress`, `smallFanPalm`), so they are at the art pixel with the rest;
+  `statics.js` no longer loads `trees.js`.
+- **Sizes hold**: a tree is as tall as it was within a few art pixels (`test/floraart.test.js`), and every picture
+  fits the room its map item claims (four species' rooms a few px wider: the whitebark pine, the twisted shrub, the
+  coastal cypress, the mesquite). Collision, the canopy fade and the wind don't change: they come from the map and
+  the leaf flag.
+- **The greens stay** (the owner, 11:11). Claude had set the plants beside the plant sheets alone and suggested
+  leaning their greens to the sheets' olive and gold; he asked whether the game's greens weren't chosen for the whole
+  game from a style anchor. They were: the Round 1 targets, R1-D's palette (dark blue-green through yellow-green to a
+  pale lime), which `FOL`'s ramps follow, and the plant sheets are lit at golden hour - the game's own golden hour
+  turns the same greens olive and gold. The colours are set as a whole, not sheet by sheet. The tone option is out
+  of the code.
+- **One outline rule** (the owner, 11:11: "some have dark outlines and others dont"). Halved, most of a plant's
+  outline was lost; made at the art pixel it is all there, so the differences showed: Claude had given the grasses a
+  softer one than the trees, shrubs and flowers. Every plant has the spec's outline now, the one the people, the
+  animals and the cars have (`done`: one art pixel, a dark tone of the colour beside it - so darker round a dark
+  plant than a pale one - never black, none along the foot). The ground and what is strewn on it have none, as the
+  spec says.
+- **Variety** (the owner, 11:40: "a few variations to each nature prop so that things dont look repetitive"). The
+  world drew 3 shapes of a species (4 of the ten commonest trees) and 2 of a boulder. Doubling them (`statics.js`
+  `NV`: 6 and 8; boulders 4, the town's 5) was not enough by itself: every oak the same height and width, every
+  palm leaning the same way, every saguaro with the same two arms. So each shape has its own build (`flora.js`
+  `VARY`, on inside `floraArt`, from the shape's seed): a broadleaf's height, crown width and depth and its crown a
+  little off the trunk; a conifer's height and spread, one in three with a bare lower trunk; a pine or a palm
+  leaning either way, the palm's height; a saguaro's height and none to three arms; a shrub's, a grass clump's, a
+  fern's and a flower bed's size and how many flowers (a planter keeps its own). The kit's own pictures don't vary
+  (a maker called on its own paints what it did). An item's room is a fifth over its species' size (`floraExt`).
+- **Cacti, colours** (the owner, 11:48). The saguaros' arms are each shape's own (`saguaro` under `VARY`: none to four,
+  each with its side, its height up the trunk, its length and reach, one in five a bud; white blossoms or red fruit on
+  the crown and the arm tips); the prickly pears and the barrel cacti come as clumps of their own number and size.
+  Flowers and berries take a stand's colour: `flora.js` `tc([...])` picks from a kind's list by `floraArt`'s tint
+  (`FLORA_TINTS`: 26 kinds, 2 to 4 colours each, all the palette's reds, oranges, yellows, pinks, purples, blues and
+  whites); `statics.js` `tintAt` gives a drift some nine tiles across one colour (a slanted grid) with one plant in
+  five a stray. A coloured shape is one more small sprite made once and kept.
+- **The painted light** (his question on the oaks' dark lower right). A plant's picture carries shading lit from the
+  upper left; the game's sun and shadows are added on top (lit at morning, noon, afternoon and golden hour off-line:
+  the lit side follows the sun, the painted dark stays). Leaving the left-right light to the game was tried
+  (`cluster`'s `SIDE`) and a sheet sent; it stays as it was (`SIDE` 1) unless he picks the other.
+- **The audit, and the pieces never placed** (the owner, 11:48 and 12:12; project doc
+  `claude/nature-audit-2026-11-21.md`). A first pass matched the concept sheets' pieces by name against the kinds of
+  thing `statics.js` draws and called many missing; the world's own files (`shared/world3-*.js`, the nature program
+  of 10-20 to 10-31) showed that wrong - the clearings, windfalls and nurse logs, the hoodoos and tinajas, the alpine
+  meadows, the farm ponds, the tidepools, the marsh boardwalk are all there. So the work ahead per biome is their look
+  at the art pixel (the rocks, logs, stumps and the places' props are still halved), spreading the same kit by rule
+  beyond the few hand-made places, and a short list of missing pieces (a hollow trunk, a root cave, stone ruins, a
+  playa, a dry-stone wall, a swing, a stile, marmots, tideline kelp, cypress knees). What the audit did find: `flora.js`
+  drew 144 things and the world planted 93. Placed now, as walk-through undergrowth by rule (`statics.js` `SPECIES`,
+  `NAT_SP`): trillium, fallen branches, pine cones, leaf litter, conifer saplings and wild strawberries on the forest
+  floor (trillium, branches and saplings under the redwoods too); daisies, buttercups and clover as two more kinds of
+  meadow drift; columbine and buttercups in the alpine ground; rushes at the water's edge.
+- **Nothing grows through a fence (the owner, 12:20).** The undergrowth is made per tile on the page and kept off the
+  map's props by the tile each prop stands on - but a fence is a line, and only its first tile was kept clear, so a
+  drift of lupines grew through a pasture's rails. Every fence, wall and hedge line is laid by `fenceLine`; it now hands
+  its line to `addGreenery`, which keeps beds, drifts and tufts out of every tile the line crosses
+  (`test/undergrowth.test.js`: one world build, the pastures, farms and a sample of the map's own fences). The audit of
+  11-19 has no row for this (its fence row is railings over water) and fixed nothing itself: its plants-on-walkways
+  list (2,914) is the towns' placed trees, shrubs, hedges and palms - the world batch's, not touched here.
+- **Rocks at the art pixel.** The wild's boulders, outcrops, sea stacks, seal rocks and the red rock's stacks were shaped
+  in world pixels and halved like the plants were: grain, moss and outline came out as speckle. They are shaped at
+  half size now and laid 2 x 2 by the bake (`statics.js` `artRock`, the mesas' way), so a rock reads as planes with a
+  lit top, a shaded side and one outline. Fallen logs and stumps are voxel models and already read cleanly; the cliff
+  faces keep their world-pixel outline (it is the solid rock's own shape) and wait for their biome.
+- **A rock never stands alone (concepts NR1-A, NS1-B).** The undergrowth used to keep a tile clear all round every
+  prop, so each boulder sat on a bare patch. A wild boulder and a fallen log keep only their own tiles now: ferns and
+  flowers come up to them, loose stones lie at a rock's foot (`flora.js` `looseStones`, in the rock's own stone -
+  granite, red sandstone, basalt) and mushrooms and ferns grow along a log (`toadstools`, three cap colors by stand).
+  `test/undergrowth.test.js` counts them over the built world.
+- **Variety, measured (the owner, 13:08: "the same tree used multiple times near each other").** A plant's shape was
+  picked by chance from six or eight, so twins were certain: on the live build one tree in five in the woods has the
+  very same picture (species, shape, size) within five tiles, and four ferns in five have theirs within three. Three
+  changes. (1) `statics.js` `shapeAt` lays the shapes out on a lattice over 32 px cells, the multiplier chosen per
+  count so the nearest same number is as far off as the count allows; a pure function of the place, so the server's
+  bake and every page's agree. (2) A wild tree's number also sets its size (three sizes), and the forest's main trees
+  and the carpeting ferns have twelve shapes each (`NV12`). (3) A shape is a build, not a wobble: conifers come young
+  (short, slim), old (bare lower trunk, thin top), ragged (gaps, off the plumb) or as they were; broadleaf trees young,
+  slim or as they were. Measured over the built world (`test/undergrowth.test.js`): trees with a twin within 160 px
+  0% in three woods (12-21% live); undergrowth with a twin within 96 px 11-17% (81-85% live); a wood draws on about
+  230 pictures where it drew on about 80.
+- **Waterfalls, first step: the sheet (the owner, 13:08: "They should look natural and like the concepts").** Sixteen
+  falls rendered as the game draws them showed the fault was mostly in one place: a fall's water fanned out to three
+  times its width by the foot, so a tall fall read as a white tent and the redwood horseshoe as a row of eighteen
+  cones; and its white with one-pixel streaks was halved to speckle. `water.js` `FALL_LOOK` (1, pending the owner's
+  pick between 1 and 2): the sheet drops nearly straight - a low fall widens at its foot as before (the owner's earlier note, held by `test/fallart.test.js`), a tall one no more than a low one - in ropes two px wide with their own length and
+  pace, whiter to the foot, glassy where it leaves the lip, the wet rock dark through its thin places, on a ramp of
+  its own from wet rock to white; the lip's water darker. A world's fall is drawn at the art pixel (`waterfall`
+  `o.art`, the bake's ap2). Not done: the settings - Summit Tarn's fall still stands on flat ground and the ledge
+  falls still read low; their rock changes the world's solid ground and goes in with the world batch.
+- **Waterfalls, second step: where the water comes from (the owner, 14:34).** Look 2 is his pick. A fall carried its
+  own little pool on top, pool-blue against the river's teal, and stood the same whether a river reached it or not.
+  `statics.js` `putFall` reads the map where each fall stands: if a river or lake lies on the ground above its lip
+  (`src` 1) the fall draws no water of its own up there - the source's own moving water runs to the lip under a
+  see-through glassy tongue (`water.js` `waterfall`); if nothing does (`src` 2: Coral Cay's, the canyon oasis') it comes
+  out of a dark cleft in a hood of rock, a spring. A fall's own pools (its shelf, a spring's tongue) are in the rivers'
+  teal. A resort's built fall keeps its pool. Seen in the world: the redwood horseshoe, Twin Falls, Summit Tarn,
+  Coral Cay.
+- **Waterfalls, third step.** A spring's rock is rougher: an uneven top with mossy boulders on it, roots hanging over
+  a ragged cleft. The ruled, dotted arc of foam round a plunge pool is gone (`water.js`: a pocket of kind 2 carries
+  flecks and short rafts of foam drifting on it, thinning outward). The owner's call for Coral Cay (14:54): "a little
+  stream and small pool feeding into it" - with the world batch; the fall takes it as its source by itself once it is
+  there. Seen and not fixed: a block of broken white squares in the river below Willow River Falls (there on the
+  live build too) - for the water audit.
+- **The meadow's and the woods' missing pieces, drawn (the owner, 13:08: "please do create any missing art you find
+  that would be useful").** `props-rural.js`: a dry-stone wall (coursed stones each its own tone, cap stones with
+  notches between, a stone fallen out, lichen), a five-bar field gate, a stile, a rope swing off a bough, stone ruins
+  in the woods (an L of wall with a doorway and a window, its corner standing, blocks fallen round it, ivy). Built at
+  the art pixel - one voxel 2 x 2 px - and drawn by a recipe of their own (`statics.js` `'va'`, `artVox`), set beside
+  concepts NS1-E and NS1-B. Not placed: placing them changes the world, which waits for the world batch.
+  `test/naturepieces.test.js`. The spray at a fall's foot stands a little thicker and lies out over the pool.
+- **The redwoods' crowns by place (the owner, 15:39).** In the redwood woods the crowns hid the floor, the creek and
+  the trails; concept N1 is trunks with the floor between them. The owner's rule: the high crown where it would cover
+  a path, a mix elsewhere. `statics.js` `crownOver` looks up the screen from a tree's foot, over the band its boughs
+  draw in, for a trail or clearing (the designed places' reserve bit), water, a road or a bridge: such a tree is drawn
+  with its crown high - the common redwood's third build (`redwoodC`), and high-crowned versions of the giants and
+  the young redwoods (`giantLH`, `giantH`, `giantSH`, `redwood2H`), which were most of the cover in the picture that
+  raised it. Deeper in, the common redwood is A, B or C by place. Page-side: the world is unchanged; the giants still
+  fade round the player as before.
+- **A break the combined branch's test run found, fixed.** The placement lint (`tools/placementlint.mjs`) read two
+  things the nature kit changed: a plant's width from its item's room (now a size roomier: 14 planter boxes "on a
+  path" that are not) and a sprite's pixels as world pixels (an art-pixel sprite's cover 2 x 2 each: the covered-sign
+  counts moved). It now takes a plant's own half-width (`statics.js` `floraHalf`) and counts through `pxOver`, which
+  knows an art-pixel sprite. Not caught earlier because the lint's test was never reached in the two partial runs on
+  this branch - the lesson is in the handover: the lint is run before a branch is called tested.
+- **Mountain and desert, looked over** (eight places as the game draws them). The canyon oasis, the desert camp, the
+  mission and the mine read well with the art-pixel plants and rocks. Changed: sagebrush and white bursage a shade
+  greener and darker at the art pixel - in the sun they read as pale boulders among the desert's grey rocks. Noted,
+  not changed: the standing stones are thin slabs that barely read; the mission ruin is small for a landmark.
+- **Coast, marsh and jungle looked over** (eight places). The coves, the wreck beach, the marsh boardwalk and Coral
+  Cay's lagoon read well. Changed: where a beach's sand met its grass on a slant the border ran as a staircase of
+  tile corners; `groundbake.js` now takes, at each (warped) point, whichever soft ground weighs most among the four
+  tiles round it, so the border runs through on the slant and the warp makes it wander. Smaller teeth, not gone.
+- **The river ledge falls drawn taller.** At their true drop (27 to 66 px) the six ledge falls read as low white
+  weirs across a wide river. They are drawn half as tall again (`statics.js` `LEDGE_TALL`), their dry bluffs with
+  them; the world's own lip of rock and the drop the game plays by are unchanged. A step, not the answer: they still
+  want a darker, lower river below and a face either side (`nature-world`).
+- **Summit Tarn drains over a low sill (the owner, 19:18).** The tarn and its stream lie at one level in the world, so
+  the tall two-tier fall stood on flat ground, and the granite rim tried that afternoon on `nature-world` was a line
+  of cliff on flat ground - rejected. Page-side instead: a spill a step high over a granite sill between boulders
+  (where the world's own solid line is), the stream starting at its foot (`statics.js`, `FALLS_LOOK.tarn`; the granite
+  kit in `water.js` `rockKit`).
+- **Water, step 1: a way to measure it, and the two worst things it showed (the owner, 13:08 and 20:11: "I'm always
+  finding glitches on the surface ... in different types of water bodies"; "Please move onto water").**
+  *The recorder* (`tools/nature/waterwatch.sh`, `waterprobe.js`): a local headless game jumps to each kind of water
+  place, lets its chunks bake, then - in the page - steps the art's clock a tenth of a second a frame (a hook for
+  tests: `host.js` reads `globalThis.__claArtTime` when it is set) and counts the water pixels whose brightness jumps
+  from one frame to the next. It leaves a picture with those pixels in red. A headless screenshot takes twenty
+  seconds, so pictures a moment apart could not show flicker; stepping the clock can.
+  *Sparkle* (the owner, 11-17, Harbor Marina: "glistening rapidly"): under a clear sky at 13:00, 2.4 to 4.2% of the
+  sea's pixels at the pier jumped every tenth of a second. The glints were single pixels under a needle-thin highlight
+  on the ripples' slopes, so each tenth of a second lit another set; and which pixels might glint was drawn afresh
+  three times a second. A sparkle now stands where it is and breathes: one cell in fourteen can sparkle, each on its
+  own beat of four to ten seconds, coming up and dying away, gathered on the ripples' crests and in patches
+  (`lightgame.js` `waterSurf`; `test/calmwater.test.js`' mirror follows). The net of light on a clear bed was hard
+  on or off too and hopped from pixel to pixel as it drifted (a cove's whole floor crawling, 4.2 to 4.7%): it comes
+  up across its edge now and drifts at half the pace. Measured after, same sky and hour: the pier 0.65 to 0.87%, the
+  cove 0.88 to 0.99%, the marsh 0.25% (was about 1), Summit Tarn 0.22% (was about 1). What still moves is what
+  should: the wave on the beach, boats, the Ferris wheel. A first measurement that looked better still (0.04%) was a
+  clouded sky, where nothing glints - the recorder clears the sky now. The sparkle is sparser and quieter than it
+  was; if it reads too flat in play, its share (`0.93`) is the number to lower.
+  *White squares* below Willow River Falls (on the live build too): a river's white water was only drawn where all
+  four tiles round a pixel belonged to one reach, so where two reaches meet it came and went tile by tile, in flat
+  white. It is laid by the place now and always broken (`water.js`).
+  Run so far at midday only: pier, beach, cove, creek, pond, marsh, hot springs, oasis, lake camp, tarn - all under
+  1% now. Still to look at: sunset, night and rain; rivers in spate; the garden pond's white blotches; water creeping
+  beside docks; koi over the water. Seen by the way: a jam of six cars on Coral Cay's jungle track.
+- **The forest floor, toned.** At the art pixel the dead bracken read whole: a hot orange star every few steps. Two in
+  three stand green now and the rest a dull russet; last year's leaves are browns; fallen branches fall their own way
+  per shape (flipped, slanted, two sticks or three). The kit's own world-pixel pictures are unchanged.
+- **Cost.** One art batch: the art hash changes, so the world re-bakes once when this goes live (about five hours of
+  the server's bake). The bake itself draws a quarter of the pixels per plant; `node tools/perf.mjs` is within every
+  budget with twice the shapes (`trees.js` no longer in the bake; the bakes 57x of 90x). **The bake's code budget goes
+  from 1020 to 1022 KB** (a decision, per the rule): the art-pixel kit stood at 1016, and the forest floor's pieces,
+  the loose stones and mushrooms and the fences' lines brought it to 1021. The workers load this after the page, so
+  it costs no start-up time. The `animals` branch raised the same number to 1024 for its own 4 KB: merged, the two
+  need 1026. Later the same day: the branch takes `characters`' 1080 (the owner's number of 11-20), so the branches
+  agree where they meet (`prebeta-art` measures 1062 with everything in).
+- Seen as the game draws it (`tools/area-shot.mjs`, six places before and after): a mountain meadow, a pasture, a
+  desert oasis, a cove, a redwood road, a town block. And in the running game (a local copy: the mountain tarn, a pasture, the
+  Giants Loop trail, the canyon oasis).
+- Not live: on the branch until the owner has seen it.
+
+## 2026-11-22 - Pre-beta, first batch: the owner's notes of 11-22 (branch `prebeta-art`)
+His 15-page notes triaged with their pictures (`docs/tasks/PREBETA-NOTES-2026-11-22.md`, the table at the top: each
+note's ripple check, package and guard). Fixed in this batch, page and server, no world or art change:
+- **Overhead labels hang from the head** (N5, N19): names, title plates, the brawl bar and BRUTE / TOUGH, the wanted
+  flare, the bounty skull and an officer's suspect chevron were placed by a fixed offset from the feet in screen px,
+  so at most zooms they sat on the face or the chest. All seven now measure from the head's top (SKULL_HEAD); speech
+  bubbles and emote balloons over another player go over their name. BRUTE / TOUGH shows for the first 3 s of a fight
+  (a 6 s pause starts a new one). `test/overhead.test.js`.
+- **The event highlight** (N11, N12): it drew at the event's last server spot, so a runner left it over nothing. The
+  server now says who an event is about (a snatch's thief, a fight's two, the fainted, the wallet's owner, a crate's
+  carrier on foot) and the page frames that person where it draws them; the brackets are smaller and round the
+  figure, not over it; full strength from afar, faded to 30% within ~90 px, the chevron only from afar.
+- **The bag** (N1, N8): a tile's IN HAND / SLOT tag and its ammo count sit in a footer row inside the tile (the tag
+  hung off the corner - "part of a yellow button"; the count crowded the name). The EQUIPMENT slots show the weapon of
+  their kind you EQUIP (taken in hand), and keep it after you put it away; the details say what EQUIP does. The quick
+  bar says how to reach it in play on this device; an empty slot says "pin an item". Use on something you take out
+  into the world (an instrument, the boombox, the mat, a board, a rod, fireworks) closes the bag behind it, so you see
+  yourself play; a light or a consumable keeps it open. The three detail buttons fit at fs-2.
+- **The respawn map** (N21): the district names keep clear of the numbered places, and "You fell here" takes the
+  first side of its ring no place covers. (The dashed diagonal on the big map is the subway's tunnel: the map draws
+  every underground run of rail dashed. Not changed.)
+- **Wanted, less easily** (N3): the tally before the first star 24 -> 36 (a car stolen is a warning twice, a hit and
+  run twice, a carjacking once), small crimes seen before a star 4 -> 5, and running someone down is no longer a
+  felony at once: vehicular homicide 40 heat (two stars, and no badge until the record's paid off) -> 22, a lesser
+  crime on the tally. **No city bounty** (N4): 4+ stars put a "bounty" of $500 a star on you, shown as one and paid to
+  hunters; bounties are only what players place now. Police arrest pay is unchanged.
+- Tests brought up to date with decided behavior: the touch BAG button always there (quick wins 3), the README's bag
+  row, the pad focus token, the vehicle button's accent by action (11-15), the phone's Fish log (11-16). One real
+  layout fault fixed: on an upright phone with RESUME, SUPPORT wrapped onto your card (the tool row at 6 px padding, the
+  menu 8 px higher). `test/notes1122.test.js` guards the rest.
+- Answered, not changed: chat already has a limit (200 characters, guests 120, plus rate limits); a crime nobody saw or
+  called in costs nothing but Criminal XP - Samaritan points never go down for crime; only a seen felony blocks the
+  badge, and the record can be paid off at a courthouse or Police HQ.
+- **Walking in and out** (N16, N17): the walk-in's chunks swap between the street's picture and the cut-away one; a
+  chunk on screen that changes its cut now waits for a 260 ms dip of the screen (to 55% dark and back) and swaps at its
+  darkest, all of the building's chunks together - a door's transition instead of a pop (`host.js` DIP_MS, `main.js`
+  dipTick, `#dip`). A building whose picture hangs out south of its foot - an awning, a canopy over the door - goes
+  see-through round you while you stand under it (the building's own "ghost" fade, its footprint kept; trees excepted).
+  Not seen in a running game yet: checked by the tests and the code only.
+- **Chat you can see is going on** (N22): the feed (bottom left on a desktop, under the HUD on a phone) keeps four lines
+  on a desktop and two on a phone (was two and one), your own lines too (dimmer), each 10 s (was 8). A line said near you
+  that's too long for a bubble now gets one anyway - its start, cut at a word at 44 characters, with an ellipsis; the whole
+  of it in the feed and the log (DECISIONS' "long typed lines to the log (or a capped bubble)", the capped bubble chosen).
+  Events stay in their own fading note line (not merged into the chat feed). The limit was already there: 200 characters
+  a line, 120 for guests, with rate limits.
+- **The balance audit** (A1-A7): `docs/audit/BALANCE-2026-11-22.md` - the owner's questions answered from the rules and
+  one world build (3,467 homes from $5,000, median $18,000; 31 medical places of which ~6 are hospitals; a first car in
+  one job, the badge in 10-20 minutes of the city's little events). Estimates, not telemetry; nothing priced changed.
+  Two text gaps closed: the Guide's "Clean record, quiet money" (a crime nobody saw or reported costs nothing but
+  Criminal XP; Samaritan points never drop for crime; a reported felony blocks the badge until paid off), and the
+  ghostglass caps' price in their pick line and in "A little hustle".
+- **The gig screen, crisp** (N9, its look only - real songs wait for the music package): the arrows were Unicode
+  glyphs in a 9 px monospace with a soft shadow, scaled up pixelated into a blur. They are pixel sprites now (an 11 x 11
+  arrow at 2x: a dark rim, the lane's colour, a lit edge; the receptors on the line hollow until hit), the text in CLA
+  Pixel at its own grid with a solid one-pixel shadow, and the canvas at a whole-number scale.
+- **No twins in a uniform** (N6): the people who wear a fixed uniform (an ambulance's two medics, a SWAT team, a rescue
+  crew - the civilians already draw distinct looks from the wardrobe's pool) came out of one vehicle with the same
+  random skin and hair now and then, and with a cap on they were twins. A uniform's new person now takes another skin
+  (two steps on), hair cut and colour than any of the same uniform within 260 px (`npc.js unTwin`). Civilians who
+  wander together by chance are left to chance, as the owner said.
+- Seen, not fixed (pre-existing on `main`, logged for the UI package): on a small phone held sideways (740 x 360,
+  844 x 390) with a vehicle's readout up, a second two-line note runs down onto the status line under the map
+  (`test/hudlayout.test.js`). A one-rule fix was tried and backed out: it changed the test's measurements on desktop too.
+- **Regression pictures** (package 5, its first half): `tools/regress/` - a fixed list of 55 places (every district's
+  middle, one of each kind of place, the named hand-made ones), rendered with `area-shot`'s bake before and after a world
+  or art change, and a place-by-place diff that lists what moved (`diff.py`, side-by-sides with the change in red). The
+  other half - a guard column beside every note in the decisions register - is the triage table's "Guard" column for the
+  11-22 notes; the older notes still to do.
+## 2026-11-16 - Egret Point: walk-in shops, paths to the doors, nothing over a sign (and the class, world-wide)
+
+The owner's three phone shots of Egret Point (11-16 16:54): "These places in Egret Point don't have interiors, they just
+have you interact at the wall. They also don't have sidewalks or walkways leading up to the buildings, they just sit on
+grass. The open sign on this building is covered by this ATM." - and in the shots, the Fish Market's name read
+"§GRET" (the cash machine's green cap over its first letter) and the Gaff Hook's rooftop BAR read "Uar".
+- **Egret Point** (shared/world3-west.js). The fish market, The Gaff Hook, the bait shop and the charter office are walked
+  into: a room behind the door, the counter inside, the service there (sell the catch, order, buy bait, book the charter).
+  They're built by hand with no lot of their own (`prefab: -1`), which buildInteriors skipped; a building flagged
+  `b.rooms` is walked into all the same (shared/map.js). Every front is on its south side as drawn (the south row's
+  doors had been on their backs, by the street), its door there (`b.door`), onto a paved forecourt that runs on to the
+  quay: the north row's down to Wharf Street, the south row's along the water side with a lane between the charter
+  office and the bait shop back up to the street. The Gaff Hook is a dockside tavern (a hand plan's walk-in bar: its
+  counter the bar, stools, the pool table - shared/shoprooms.js barPlan knows GAFF / HOOK), not a nightclub lot; the
+  charter office a new fit-out (`charterOffice`: charts and photos up the wall, a trophy fish over the desk, a skipper's
+  desk, rods, a cooler). The shacks keep their homes; each gets a gravel path from its step to the street, and the south
+  row's are drawn with their backs to the camera, as their doors are on the street side.
+- **Charter offices are walk-ins** everywhere (`charter` in WALK_IN, plan 'office' -> charterOffice).
+- **The class: three placement lint rows** (tools/placementlint.mjs):
+  `signCovered` (a cash machine, a prop or a place's badge over a sign's words or the window's OPEN, by the drawn
+  pixels), `doorOnGrass` (a business's or home's door step not on a path, or the path reaching no road within 400
+  steps - every one listed), `wallOnly` (a walk-in kind's place with no room behind its door).
+- **Fixed by class:** the wall cash machine is lower (props-kit.js atmWall: 44 tall, was 52), so its cap stays under
+  a shop's sign board (its foot 48 px up the front); the window's OPEN moves to the door's other side when a machine
+  is set in front of it, or is left off (statics.js frontAtms -> spec.shop.avoid, buildings.js storefront); a place
+  served at a building's wall hangs its badge under the lintel's height, not up in the sign (host.js badgeOf, which the
+  lint uses too); a neon board keeps a dark row between its lit rim and the words' halo (statics.js NEON_PAD). The shop
+  rows World v3 adds where a district lacks something, and the storefronts it takes over (shared/world3-shops.js), get
+  their rooms (map.js walkInRoom, as Southside's lots do); and every door on the lawn gets a paved path straight out to
+  the nearest pavement, plaza, lot, dock, track or road where the way is clear (shared/world3-doorpaths.js, the done
+  hook: a home's one tile wide, a shop's two; plants on it taken up).
+  Also: the window's OPEN sits below an awning's scallops (it was painted over, cut in half - the charter office's), and
+  the art's shopfront pots stand clear of it (buildings.js openSignX, shared with statics.js addFrontage).
+- **The lint, before and after** (World v3, seed 1337): signCovered 409 -> 159, doorOnGrass 1777 -> 372, wallOnly
+  111 -> 17; nameCovered 1 -> 0 (the self storage's ATM); plantOnPath 0 -> 2 (two trees whose feet reach a few px over
+  the edge of a new door path: West Hills House #2971's, Pine Hills House #3332's - allowed, to be taken up). The rest is the long tail, allowed in LINT_ALLOW at what's
+  left (bring it down, never up): signCovered - the street's furniture in front of a shop's words (shelter and stall
+  canopies, el piers, phone booths, porches, lamps, flag and power poles, a few planters and street trees, festoons);
+  doorOnGrass - mostly homes whose step can't take a straight path to the pavement (something solid, a field, more
+  than 14 tiles of lawn), or a courtyard's plaza closed in (Bayside Heights, Old Town, the Arts District); wallOnly -
+  Red Lantern Bagels, Kaiju Tacos, Ironside Hardware, Lakeside and Redwood Creek Tackle, Axe & Saw Hardware, Sandpiper
+  Surf Co. and Pier Tackle & Bait, The Copper Room Supper Club (lot buildings with something else behind the same
+  front), Pelican Key Charters (too shallow), four of the added shop rows (too shallow), Marsh Bait & Tackle (a row
+  shared with the outfitters), Lane Mart and Park West Coffee (Greenfield Park's arrival block, built after the rooms).
+- Tests: test/world3west.test.js (each Egret Point business walked into from Wharf Street to its counter and back out,
+  its door on the forecourt; every door in the village on a path to the street), test/placementlint.test.js (the three
+  rows; it logs every row's count), test/world3server.test.js (a new shop's door spot is outside, its place inside).
+- The world and the art are re-keyed (the village, the walk-ins, the paths; the ATM, the OPEN, the neon boards); the
+  chunk carry keeps the unchanged chunks. No budget changed.
+
+## 2026-11-22 - World batch, start (branch `prebeta-world`, not live)
+- **`egret` merged** (Egret Point's interiors, door paths, signs clear) with its lint rows; the clash in
+  `tools/placementlint.mjs` settled keeping both sides (egret's `badgeOf` from host.js, the audit's rows and `pxOver`).
+- **Walkways clear of plants** (the owner, 11-17: "still spawning over sidewalks"; the audit's plantOnWalk 2,914 and
+  planterOnWalk 422): `shared/world3-walks.js`, the last planting pass of the build, with the same test the lint counts by
+  (`plantWalkHit`, now imported by `tools/audit/worldrows.mjs` - the fix and the check can't drift apart). Kept as decided
+  (11-19): 514 palms and trees down boulevard medians, 659 street trees by a kerb or at the walkway's edge in their grate
+  (an oak or a maple named so becomes the street's own grated tree; the page's own street picks unchanged), 469 pots set
+  tight against a wall. Moved onto ground beside (grass, dirt; sand for palms and cacti), clear of the plants there, off
+  every house's path, off every door, and - a tree - out of every shop's sign (`world3-clutter.js doorTiles`,
+  `world3-greens.js signBlocker`): about 1,200. Taken up: 459 (shrubs in parking lots, loose pots in the middle of plazas and wide
+  pavements, hedge runs and boxes on walkways) and 6 whose crowns stood over a house's path.
+  Lint: plantOnWalk 2,914 -> 0, planterOnWalk 422 -> 0, plantOnPath 2 -> 0 (egret's two named ones among them),
+  signCovered 159 -> 158. `test/walks.test.js`.
+- Regression pictures (`tools/regress/`, 55 places, before = `prebeta-art`): 11 places changed, all under 2%, each the
+  plants coming off a pavement (Copper Gulch, Mesa Flats, Northshore Beaches, the stations' forecourts...).
+- Moved plants also keep off every door and, a tree, out of every shop's sign (`world3-clutter.js doorTiles`,
+  `world3-greens.js signBlocker`): `world3server` found the first try setting pots on doors.
+- **Egret Point's room under its neighbour** (interiorOverlap 26 against 25, from the egret merge): shops3 had built
+  Egret Point General Store with its back against Speedy Stop - Egret Coast's front - its doors walled in, the General
+  Store's front drawn over the Speedy Stop's room. Class fix in `world3-shops.js` lotOk: a new building never stands with
+  its back against a walk-in's front. interiorOverlap 25; northDoor 21 -> 19 and atmStray 53 -> 52 lowered to where they
+  stand.
+- Tests on this branch: `placementlint` 42/42, `world3server` 21/21, `world3west`, `world3shops`, `undergrowth`,
+  `walkinfront`, `signs`, `world3city`, `walks` pass; `visaudit` fails its two as on `main`. The other world3 suites are
+  not run yet - run them before this goes anywhere.
+- World change: a new world hash and art hash - every player fetches the city again and the art re-bakes. Goes live only
+  with the rest of the world batch, on the owner's word.
+
+## 2026-11-22 - World batch: bin bags by a bin (branch `prebeta-world2`, on top of `prebeta-world`; not live)
+- Black bin bags only by a bin or in the rough districts (DECISIONS, World 10-10). One rule, `strayBags` in
+  `shared/world3-tidy.js`, is what the lint counts (`tools/audit/worldrows.mjs` binBags) and what the build clears with
+  (`strayBags3`, after the walks pass): the audit's 44 lone bags are taken up. `LINT_ALLOW.binBags` 44 -> 0;
+  `test/binbags.test.js` guards the rule.
+- `test/world3arrivals.test.js` test 4 (failing on `main` too): the open blocks' pieces (`shared/world3-openblocks.js`,
+  `openOf`) are appended after the split towers' parts, like them split off older buildings - nothing renumbered. The
+  test now accepts both kinds of piece after the park block's buildings.
+- World change: rides with the rest of the world batch (one world hash change for all of it).
+
+## 2026-11-22 - The plants lit by the game's sun alone (branch `prebeta-art`)
+- The owner picked between two sheets (oak, maple, birch, pine, rose, hydrangea at morning and afternoon): the
+  plants' painted left-right light is gone (`client/art2/flora.js` `SIDE` 1 -> 0), so the lit side follows the
+  game's sun like everything else. "I think the light should work with the game." DECISIONS, Art direction.
+- An art change: rides in PR #1's re-bake.
+
+## 2026-11-22 - The soundtrack's loops and endings, measured (branch `prebeta-art`; nothing in the game yet)
+- `tools/music/analyze.py`: for each of the owner's 25 primary takes, the beats, bar lines, a seamless loop and a clean
+  ending, measured from the recording (details and results: docs/tasks/MUSIC-HANDOVER.md, `docs/audio/loops-2026-11-22`).
+- A listening page for the owner on his computer (each loop played three times, each ending), his ear to approve.
+
+## 2026-11-22 - A fisher always finds the bank
+- `server/systems/wildlife.js` edgeSpot: after its 30 random tries, rings outward from the water, nearest bank first. The
+  staged "bear fishing" at Pine Lake said "no room" on the world batch (`test/world3scenes.test.js` test 1).
+
+## 2026-11-22 - World batch: a path to the doors on the lawn (branch `prebeta-world2`; not live)
+- `shared/world3-doorpaths.js` doorPaths3: where the straight path from a door can't be laid (no paving in its columns,
+  or something in the way), the way round - the fewest new tiles over open ground (out from the door first, then to the
+  sides) to a path that reaches a road, at most `PATH_ROUND` 22. A door on a plaza or yard that reaches no road (a pocket
+  of paving on a lawn) is joined to one that does the same way. Same rules as before: no building, water, rail or
+  reserved ground under it, nothing solid but plants (taken up).
+- The audit's doorOnGrass 372 -> 89 (124 routed round, 129 pockets joined; `LINT_ALLOW.doorOnGrass` 89). Left: doors
+  onto courtyards walled in by buildings, side-wall doors, a few blocked. Every other lint row unchanged.
+- `test/doorpaths.test.js` (3): round to the pavement, a pocket joined, nothing laid over water. placementlint 42/42,
+  world3doors, world3clutter, world3arrivals 8/8, perf 6/6.
+
+## 2026-11-22 - World batch: every canoe and rowboat a real boat (branch `prebeta-world2`; not live)
+- The owner, 11-17: "every boat that looks usable is usable - a beached canoe/rowboat is a real vehicle (get in, push
+  off, paddle)". `shared/world3-boats.js` boatsAfloat3 (the done hook, after the props are final): each canoe or rowboat
+  prop (not on stands) becomes a river kayak or a rowboat in the water beside where it lay - its whole hull on water and
+  off the rocks (the lint's ROCKS), bow out - through the marina's list (`m.marina`, `kind`, `beached: true`: parked
+  boats, anyone's to take - server/systems/traffic.js marinaModel). 45 made; 3 with no water within reach stay props.
+- The audit's deadBoat 103 -> 58 (`LINT_ALLOW.deadBoat` 58). Left: the moored sailboats (27), yachts (19) and fishing
+  boats (9) - scenery; making them marina vehicles, or keeping them out of swimming reach, is the owner's call (asked).
+- `test/boatsafloat.test.js` (2); placementlint 42/42, fleet, core.
+
+## 2026-11-22 - World batch: railings on the land, not out over the water (branch `prebeta-world2`; not live)
+- The audit's railOverWater (110: "the promenade's railings jutting out over the sea on a diagonal shore"). One rule for
+  the build and the lint (`shared/world3-railtrim.js` railWetAt, railWetRun; tools/audit/worldrows.mjs): a point of a
+  railing is out over the water when there's water under it and no footing either side of it (water, or a wall's foot)
+  - a railing along a seawall, a few px into the water tile, is on the shore.
+- `railTrim3` (the done hook): a run out over the water is first moved back onto the shore - the smallest shift across
+  it, up to 48 px either way, with none of it over the water and none on a building, a wall or a road (79, mostly the
+  Neon Strip's and the Arts District's promenade railings a tile out at sea); else cut back to its dry stretch (7); a
+  run with no dry stretch of a tile is taken up (23). Fences people collide with come from these props
+  (shared/fences.js), so they hold where they're drawn.
+- railOverWater 110 -> 0 (`LINT_ALLOW` 0). Not yet seen in pictures: before / after with `tools/regress/` before the
+  batch goes live. `test/railtrim.test.js` (2).
+- The moored ones too (the owner, 15:03: "Let's make them drivable"): sailboat -> Gull 26 Sailboat, yacht -> Seaview 32
+  Cruiser, fishing boat -> Fishing Trawler (BOAT_AS), parked in the marina's list like the rest. 100 boats in all;
+  deadBoat 103 -> 3 (`LINT_ALLOW` 3: no water near). DECISIONS, World and places.
+
+## 2026-11-22 - World batch: no parking space on a pavement (branch `prebeta-world2`; not live)
+- The audit's parked (124): spaces whose car would stand on a pavement, a promenade, a lawn, the sand, a pier or a
+  building. The server already left them empty (traffic.js badBay), but their wheel stops were still drawn and the lint
+  counted them. `shared/parkcheck.js` badBays3 (the done hook) takes them off `m.parking` by the same measure (parkWhy,
+  the spot's own model else a sedan); a driveway's, a golf cart's and the car lots' spaces are their own. 124 -> 0
+  (`LINT_ALLOW.parked` 0). Tests: placementlint 42/42, firstcar, starter, mycar, homes, trafficbox, world3arrivals.
+
+## 2026-11-22 - World batch: the stray crop scraps cleared (branch `prebeta-world2`; not live)
+- The audit's cropInTown (49; the owner's 16:15 shot). One rule for the build and the lint (`shared/world3-croptidy.js`
+  cropWhy: in a town's or city's district, or within CROP_BEACH tiles of a beach district's sand). `cropScraps3` (the
+  done hook): a crop patch of at most 40 tiles so placed goes back to grass, its crop strips and vine rows with it -
+  26 patches, 150 tiles. 49 -> 23 (`LINT_ALLOW` 23). Left on purpose: Gull Harbor's farms inside its district's line
+  (2,000-3,300 tiles each - whole farms, the owner's call) and five orchards near a beach.
+- Tests: placementlint 42/42, farming, harvestart.
+
+## 2026-11-22 - World batch: the farms back from the beach (branch `prebeta-world2`; not live)
+- The owner, 16:45: "We should get the farm away from the beach". `shared/world3-croptidy.js` farmsOffBeach3 (the done
+  hook, before the scraps): every crop field tile within CROP_BEACH (6) tiles of a beach's sand to grass - 292 tiles;
+  the two fields they belonged to shrink to what's left, their fence runs clipped with them; 4 orchards by a beach go;
+  the crop strips and vine rows on the new grass go. cropWhy: a beach town's district may hold farms back from the
+  sand (only the sand counts there). cropInTown 49 -> 0 (`LINT_ALLOW` 0). DECISIONS: the farms, and the ATM booths.
+- Tests: placementlint 42/42, farming, harvestart, fences.
+
+## 2026-11-22 - World batch: every shop sign names what's behind it (branch `prebeta-world2`; not live)
+- The audit's frontNames (7: "FRAME & MAT" over the Arts District Clinic, "LOBSTER POT" over Gull Harbor Clinic,
+  "HILLS ANIMAL CLINIC" over a donut shop, "QUICK MART 24 7" over a pawn shop and a barber...: old signs left when a
+  building's use changed). One rule for the build and the lint (`shared/world3-signfix.js` signWrong). `frontNames3`
+  (the done hook): a shop front's sign naming none of its places takes the name of the place nearest its middle; a
+  hanging sign with another trade's word (CLINIC, MART, TATTOO) the name of the place nearest it. An airport's own
+  signs stay. 7 -> 0 (`LINT_ALLOW` 0). `test/signfix.test.js`; placementlint 42/42, world3shops, signs.
+- Tried and reverted: facing every walk-in south whenever its south side reaches a road (northDoor 19 -> 10). The
+  pictures showed it wrong for the hand-made blocks whose street is to the north - the Strip's casinos' drop-off loops
+  and Old Downtown's casino row: their way in moved round to the back lots. Those blocks want re-planning (the street
+  to their south), the owner's call - logged.
+
+## 2026-11-22 - World batch: no curtain of hanging lights (branch `prebeta-world2`; not live)
+- The audit's festoonDensity (9: "the Neon alley's curtain of bistro lights"). `shared/world3-festoons.js` festoonThin3
+  (the done hook, after the lights are hung): the runs taken north to south; one is kept only while it and every kept run
+  near it stay within FESTOON_CAP (8) inside FESTOON_R (8 tiles) - the lint's numbers. 10 runs taken down; 9 -> 0
+  (`LINT_ALLOW` 0). `test/festoonthin.test.js`; placementlint 42/42, festoon, lights.
+
+## 2026-11-22 - World batch: hospital helipads on open ground (branch `prebeta-world2`; not live)
+- The audit's heliOffPad (10: a hospital's ground helipad on a sidewalk, or none). `shared/flight.js`: a hospital's yard
+  pad is looked for only on open ground (PAD_YARD: plaza, lot, grass, dirt, sand, field - not the pavement) and out to
+  HOSP_PAD_R (900 px); `findPadSpot` / `clearPad` take the tile set (the other pads keep PAD_OK). 10 -> 1 (`LINT_ALLOW`
+  1): the one left has no open ground near and keeps its roof pad. flight, aircraftart, policeair, rescue,
+  placementlint 42/42.
+
+## 2026-11-22 - World batch: the arrival tunnels go into a hill (branch `prebeta-world2`; not live)
+- The audit's portalOnFlat (16: every one an arrival line's bore - the cover's hill drawn over flat ground, so nothing
+  shaded it as a rise). `shared/world3-arrivals.js` moundOf, with each bore: MOUND.h (6 m) of the land's relief over the
+  bore, falling away steeply on the portal's side (3 tiles: the stretch to the platform stays flat), gently behind the
+  blind end (6) and to the sides (5); open ground and the bore's rock only. Only the art reads the relief this late
+  (the hillshade). 16 -> 0 (`LINT_ALLOW` 0). world3arrivals, ftue, dmath, mapwindow, placementlint 42/42.
+
+## 2026-11-22 - World batch: pier roots on dry land (branch `prebeta-world2`; not live)
+- The audit's beachWater (4: a plank tile standing in water beside dry grass with no water of its own - a grass hole in a
+  pier's foot, a one-tile neck of planks along the shore, the Egret Marsh boardwalk's foot - the art took the planks for
+  water and blurred a sliver of sea onto the grass). `shared/world3-deckroots.js`: sliverAt, the lint's rule moved there
+  (one rule for the build and the lint), and deckRoots3 (the done hook, after the festoons): planks laid over each such
+  dry tile, so the root stands on land (mapcore.js deckOnDry: ground to the art); a boardwalk leg's neighbour joins its
+  legs (m.walkways), plants on it go. 5 tiles; 4 -> 0 (`LINT_ALLOW` 0). `test/deckroots.test.js`.
+- `test/world3marsh.test.js`: the marsh's two canoes are looked for as boats (kayaks moored in m.marina, since the boats
+  became drivable this morning) - the test had still looked for the props.
+- Not done here: dockOverlap (5, the marsh boardwalk's bends: two legs' ends cross with no landing) wants a landing piece
+  (a small deck open on two sides) - a new model, on the Fable list.
+
+## 2026-11-22 - World batch: no oversized empty plazas (branch `prebeta-world2`; not live)
+- The audit's bigEmptyPlaza (14: a stretch of paving 19+ tiles across with nothing on it - the owner, 11-14: "no
+  oversized empty plazas or lots"). `shared/world3-plazafill.js`: emptySpots, the lint's rule moved there (one rule for
+  the build and the lint; EMPTY_R with it), and plazaFill3 (the done hook, after the pier roots): each empty stretch,
+  deepest first, gets an island at its middle - a fountain ringed by benches, trees in planters and lamps (the first in
+  a square, about every other island; never on the airport's forecourt or in a street of houses) or a grove (four trees
+  in planters, two benches, a lamp, a bin) - none within KEEP_CLEAR (6) tiles of a map point or a race's start.
+- A thing laid on the paving with a size (a court, a canopy, a skate pad) now counts with its whole footprint, not just
+  its middle tile: Prison Island's yard was flagged only because its basketball court is painted on the paving - the
+  first try put picnic tables and a third hoop on the court (seen in the pictures; fixed, the yard left as it was).
+- 15 islands (7 fountains, 8 groves): Downtown's tower squares, Midtown's square by the line, Old Downtown, the Stadium,
+  the Harbor, North Point, West Hills, the airport's forecourt. 14 -> 0 (`LINT_ALLOW` 0). `test/plazafill.test.js`.
+- `test/biz.test.js`: "each kind for sale, priced, with a place" now looks at the whole list - the app shows the nearest
+  30, so whether a farm out in the country made it turned on where the test's player spawned (it failed on some spawns,
+  on main too).
+
+## 2026-11-22 - Tests: the desert's walk-in places reached by car at their door (branch `prebeta-world2`)
+- `test/cliffs.test.js` (failing on main too, not from the world batch - its tiles checked: nothing the batch lays stops a
+  car): eight desert places (three hospitals, shops at Mesa Flats and Red Rock) have their map point on their walk-in
+  room's floor, a few tiles behind the door, where no car goes - one there now counts as reached when the ground within
+  4 tiles (its door) is. The known two (a convenience store and a roadhouse with no drivable way in) stay as they were.
+## 2026-11-22 - Soundtrack: full songs and the alternates measured (branch `prebeta-art`; nothing in the game yet)
+- `tools/music/analyze.py` renders each take whole from the top too; the 31 alternates measured; review page v2
+  (`tools/music/review-page.py`) on the owner's computer. All 25 primaries' loops and endings approved (11-22 10:12).
+
+## 2026-11-22 - The owner's songs in the game, staged (branch `music`)
+- **The files** (`tools/music/make-songs.py`): the 56 approved takes (25 primaries, 31 alternates), each as its loop (the
+  title track's seam: aligned to the sample, an equal-power blend, wrap-around margins; decoded seams -17 to -32 dB) and
+  as the full song from the top to its ending (its own, or the new one), Opus (56/80 kbps) and MP3 (80/112 kbps), mono
+  where the channels are alike: `assets/music/songs/` (80 MB Opus, 102 MB MP3; a player fetches one). Files:
+  `client/sound/songs.js` (lazily); timing: `shared/songtimes.js` (3 KB: what the server and page agree on).
+- **Which take** (`shared/music.js` `takeOf`): a pure function of the song and the play - the primary 70%, the
+  alternates the rest. The stations (`stationAt`) and tapes (`tapeAt`) play runs of 8 rounds, each play its take, so
+  where a station is at any moment is a sum - the same on every page, nothing on the wire. Five new tracks for the
+  places' own songs (cues 21-25: Neon Current, Mirrorball Traffic, Dust on the Dial, House Odds, Brass Ticket), at the
+  end of the list (no tape index moves).
+- **Playing them**: radios, tapes, car radios (`client/sound/stage.js` `playTake`): the full song streamed through an
+  `<audio>` element into the source's chain (distance, muffle, pan), re-synced when it drifts over 0.35 s - never decoded
+  whole (a phone's memory). The places (`client/sound/music.js` `rec`): the loop decoded and looped margin to margin into
+  the same chain as before - the shops Aisle Bossa, the lobbies Visiting Hours through the ceiling-speaker band, the
+  drive-in Starlite Slow Dance, the night club Neon Current or Mirrorball Traffic a day each; let go 4 s after it's no
+  longer heard. Level: the title's (-15 LUFS target, `track.js` trackGain). The mat's rhythm game keeps its score (its
+  chart is the score's beats) - the recordings there come with the gig work.
+- **Staged**: off for players; the debug menu's *🎵 Recorded music* turns them on in one browser (`cla.recmusic`).
+- Not yet heard in a running game (Claude can't hear; the owner will). Not yet placed: Dust on the Dial (bars), House
+  Odds and Brass Ticket (the casino) - their tracks exist, their places don't play them yet.
+- Tests: `test/music.test.js` (12: the rotation's shares, every station's song recorded, the files on disk, stations
+  round and round by take), sound, track, drivein, nightclubs, perf, the dev menu's.
+## 2026-11-22 - The new people on for everyone (branch `chars-on`)
+- The owner, 12:41: "I think the human/player art is ready to turn on to go live". The character polish pass
+  (`client/art2/peoplepolish.js`, staged behind `cla.polish` since 11-19) is now on unless switched off: `main.js`,
+  `game/host.js`, `creator.js` read `cla.polish !== '0'`; the debug menu's *Character polish* turns it off on one screen
+  (the old people, still drawn by `people.js` without the pass). Blocked storage: off, as before.
+- Kept safe: the branch `people-before-polish` (the live version just before this change).
+- Cost: the page now loads `peoplepolish.js` at start (lazily, beside `people.js`); `test/perf.test.js` 6/6 (budgets
+  unchanged). No art re-bake: the world's baked chunks draw no people.
+- Tests: characters2-5, npcpeople, peoplelook, peoplepolish (the switch test now expects "on unless '0'"),
+  peoplepolish-wardrobe, wardrobe, portrait, menupolish, perf - all pass. The page loads with the pass and no console
+  errors (headless, title screen); the people themselves were seen in play by the owner with the switch on.
+
+## 2026-11-22 - The recordings on for everyone
+- The owner, 13:12: "I don't think I need to wait for me to check the music you can go for it". `recOn` (client/sound/stage.js)
+  and the places' `rec` (client/sound/music.js) now on unless `cla.recmusic` is '0'; the debug menu's *Recorded music*
+  turns them off on one screen (the synth's tunes, as before). DECISIONS: the soundtrack, and merging to main (Process).
+
+## 2026-11-22 - Music: the casino and the roadhouse, and each source its own speaker
+- A casino's floor (a walk-in with `casino`: shared/casinorooms.js) plays House Odds or Brass Ticket (a day each, the
+  take by the hour); the roadhouse plays Dust on the Dial - their loops through the places' chain (client/sound/music.js
+  REC, places.js). The city's neon bars are storefronts with no room inside: no music there yet.
+- Each source sounds like its speaker (client/sound/stage.js SPEAKER, a high-pass added to every source's chain): a pocket
+  radio thin (380 Hz - 4.2 kHz), a boombox full, a car's own speakers inside, only its bass through the body outside.
+- Tests: sound, music, nightclubs, drivein, casino, casinofloor. Page-only: no restart, no re-bake.
+
+## 2026-11-22 - N7: the quick bar in play, on a keyboard (branch `quickbar`)
+- The owner's note N7 ("how to reach the quick bar in play, desktop and phone"): the quick wheel was there (hold X, hold
+  View, hold BAG) but nothing on screen said so. Now on a keyboard the four pinned things sit in a small strip over the
+  weapon plate (`#qbar`, client/hud.js quickBar): each its picture and count, "HOLD X" beside them, a click uses one (the
+  wheel's `{ t: 'inv', a: 'use' }`). Dim till the pointer is on it or a count changed (UI-9's minimal HUD); hidden with
+  nothing pinned; measured onto the plate twice a second, not every frame. Number keys stay the weapons'.
+- Touch and pad keep the wheel (hold BAG, hold View): the owner's call was a strip only where it costs no screen.
+- Guide (the bag entry) and README's controls updated. Tests: guide, uitokens, uiscreens, uikit, touchslots, lazypage,
+  perf pass; hudlayout fails as on main (pre-existing, logged).
+
+## 2026-11-22 - Lit inside at night (N14)
+- The owner's note (11-22, N14): "the hospital's inside is dark at night". Walk-in rooms were lit by the hour outside,
+  so after dark every room went as dark as the street. `client/art2/game/host.js` `_preset`: inside a walk-in, the light
+  eases (INDOOR_EASE, a quarter second) most of the way (INDOOR_NIGHT 0.75, times how dark it is) to lightgame.js's
+  `indoor` light - a warm fill with the room's lamps - and back out as you leave; by day nothing changes. Client only:
+  not in the art hash, no re-bake. lights, daylight, cavelight, perf, mapwindow, dmath.
+
+## 2026-11-22 - Two tests failing on main put right: the HUD on small sideways phones, the prison
+- `test/hudlayout.test.js` (failing on main since before the pre-beta batch): on a small phone held sideways (844 x 390,
+  740 x 360) a second note - two lines, since notes wrap rather than cut (11-16) - ran down onto the status line under
+  the map and the fishing bar. `client/style.css`: a short touch screen on its side shows one note at a time, as an
+  upright phone already does (the next shows when it fades; all of them are in the Log). Touch only - the desktop's
+  measurements don't move (the one-rule try of 11-22 had changed them). The fix let the test reach a later check it had
+  never got to: "a note more than one line", stale since the 11-16 decision - now two lines at most.
+- `test/prison.test.js` (failing on main): "the weapon back in your hand when you're out" predates 11-14's one stash -
+  booking sends your legal guns to your stash (arms.js onBooked). The test now checks that: out empty-handed, the pistol
+  in your stash.
+- Tests: hudlayout, hudinfo, hudlayers, uikit, uitokens, chatui, chatsafety, notes1122, prison, arms, custody.
+## 2026-11-21 - The sea cave in a rock of its own (branch `nature-world`, off `nature`)
+Two tries. The first (17:32-18:30) set Summit Tarn behind a rim of granite cliff and the sea cave in a bluff of cliff
+pieces; the owner, 19:18: "Both of these fixes do not work ... just added a line of cliffs that dont look good and dont
+consider topographical levels". Both withdrawn. What stands:
+- **Summit Tarn** is page-side now and lives on `nature`: it drains over a low sill into its stream. This branch's
+  `shared/world3-tarn.js` is `nature`'s again.
+- **The sea cave (`shared/world3-caves.js`).** The cove is flat: there is no cliff to set a mouth in, and none within
+  ninety tiles (checked over the built world). So the cave has a rock of its own, as the mine has: one mass of dark
+  basalt behind the cobble pocket (`'cliff'` with `st: 'basalt'`), its outline ragged and its top stepping back in
+  tiers, solid where it is drawn (`shared/cliffshape.js` `cliffSolid`), the way in a low black arch at its foot
+  (`water.js` `caveArch`). The world changes here (the `world3` hash moves).
+- Kept from the first try, unused for now: `cliffWall`'s granite stone and `join`, `caveMouth` deep.
+- Tests on this branch: world3caves (updated: one rock mass, no row of cliff pieces), world3coast, world3redwoods,
+  cliffs, placementlint pass. The first build of the rock cleared the cove's fire ring from the beach beside it
+  (world3coast caught it): the rock now clears only what stands on its own tiles, and never a fire ring. The whole
+  suite has not been run on this branch.
+
+## 2026-11-22 (night) - World batch: before / after pictures; the arrival tunnels' hill made smaller
+- `tools/regress/` on main (before) and `prebeta-world2` with main and `nature-world` merged in (after): 55 places, 14
+  changed by 0.5% or more. Looked at: the moored boats gone from the baked marina (they're boats you can take now, the
+  server's), trees and plants in a few districts the same but drawn as other kinds (the prop list's order moved: the art
+  picks a tree's look by it - two Copper Gulch trees moved a tile, no more), Northshore Station's car park island without
+  its bays (a car there stood on the pavement). And one fix: the arrival tunnels' new hill shaded a dark patch on the sand
+  well past the cover's hill by Northshore Station - MOUND now 4 m, falling over 4 tiles behind and 3 to the sides
+  (portalOnFlat still 0; world3arrivals).
+
+## 2026-11-22 (night) - World batch: walk-ins beside a counter at the wall (wallOnly 17 -> 12)
+- The audit's wallOnly (a place you'd walk into with no room behind its door). Five were in a building shared with a
+  place served at the wall - a butcher's or a lodge's counter, a snack stand, the gang's contact, a hunt camp's desk -
+  and `shared/map.js` buildInteriors left the whole building without rooms. WALL_POIS: those are a closed storefront in
+  the row, as a delivery front is, and the walk-ins beside them get their rooms - Timber Bend's Axe & Saw Hardware and
+  Redwood Creek Tackle, Sandpiper Bay's Surf Co. and Pier Tackle & Bait, Old Downtown's Copper Room Supper Club (seen
+  from inside in pictures: the counters there, the closed fronts as back rooms). doors, doorsbake, foodrooms,
+  interiorload, nightclubs, walkinfront, walkinrooms, world3doors, world3shops, placementlint 42/42.
+- Left (12), why: too small for a room (under 5 tiles inside: Midtown's and the Neon Strip's narrow hand-plan shops, the
+  shallow strips at Pine Hills, Southside, Lake District, Pelican Key's charter desk); hand-built with no room laid -
+  Egret Coast's Marsh Bait & Tackle, and Greenfield Park's Lane Mart and Park West Coffee (the city arrival's own shops:
+  the block is built in a late World v3 pass, after the rooms are laid - a room there means laying it late with its
+  café tables; not done overnight on the first thing a new player sees - logged for the owner).
+
+## 2026-11-23 (night) - The Red Rock trailhead's 4x4s parked on its gravel
+- The suite on the branch caught it (`test/redrock.test.js` "the 4x4s in the lot"): the trailhead's lot is gravel - sand
+  with reserve bit 128, the ground bake's shingle - and `shared/parkcheck.js` parkWhy took sand for a beach, so the
+  server had never parked the jeep and the rescue 4x4 there (traffic.js badBay) and the world batch's badBays3 then took
+  the two spaces off the map. Gravel now holds a parked car (not the valet's strict rule). A dirt yard instead was
+  tried and backed out: it lost the gravel look and grew flowers (the pictures). redrock, placementlint 42/42, mycar,
+  parkducks, trafficbox, trafficwalls.
+
+## 2026-11-23 (night) - No tree's crown over a door or a sign, after the walks are cleared
+- The suite on the branch: `test/visaudit.test.js` "no tree's crown over a door, a sign, a chess table, an ATM or a bus
+  stop" - 10 on the branch (2 on main): the world batch's walk-clearing (clearWalks3) runs after the last sightlines pass
+  and moved plants off the walks to beside doors and signs. `shared/world3-world.js`: sightlines3 once more at the end
+  (after the plazas are planted). 10 -> 0. walks, placementlint 42/42.
+- Still over the allowance in the same test, logged: two hidden doors more than main (Northshore Beaches' Sure Aim Gun
+  Shop and Speedy Stop - now one walk-in opening north; the audit says a tree, none of the trees by them lines up - a try
+  at counting north doorways in the sightlines was made and backed out), one campfire more (the merged sea cave's
+  cove). Main is over too (picnic, vending, three doors).
+
+## 2026-11-23 (night) - The MX park's pit trucks parked again; the desert lake's rowboat a boat
+- The suite on the branch: `test/world3dirt.test.js` "5 bikes, 0 trucks" - the MX park's pits stand on the open ground
+  by design (its own test says so), but the parking rule takes sand and grass for a beach and a lawn: the server had never
+  parked the pit trucks (traffic.js badBay, on main too) and the batch's badBays3 took their spaces off. `shared/parkcheck.js`
+  parkExempt: a driveway's, a golf cart's and the pits' spaces - one answer for the build, the lint and the server.
+- `test/world3desert.test.js` "its rowboat by the jetty": Mirage Lake's rowboat looked for as a moored boat (m.marina).
+- world3dirt, world3desert, placementlint 42/42, trafficbox, mycar, parkducks.
+
+## 2026-11-23 (night) - A shrunk field squares at its district's edge; the tarn's rowboat a boat
+- The suite on the branch: `test/world3kestrel.test.js` "no field runs out of the valley (1)" - the farms-off-the-beach
+  pass (world3-croptidy.js farmsOffBeach3) shrank a field that straddled Willow Valley's east edge to the box round its
+  field tiles left: its middle came into the valley, its box still over the next district's land. A shrunk field now
+  keeps to the district most of it is in, and its box is trimmed an edge at a time while another district's land is
+  inside it (the edge isn't straight). world3kestrel, farming, placementlint 42/42.
+- `test/world3peaks.test.js` "a rowboat pulled up on it": Summit Tarn's rowboat looked for as a moored boat (m.marina).
+
+## 2026-11-23 (night) - No fountain on the Waves Arena's pitch
+- The suite on the branch: `test/world3server.test.js` "nothing solid on the pitch" - the Stadium District's "empty
+  plaza" the fill planted was the Waves Arena's pitch (car soccer). `shared/world3-plazafill.js`: a pitch or a court for
+  a game (m.venues) and an arena (m.arenas) count as taken - played on, not empty paving - for the build and the lint
+  alike. plazafill, world3server, placementlint 42/42 (bigEmptyPlaza still 0).
+- `test/world3woods.test.js` "a canoe by it" (the islet camp): its canoe looked for as a kayak in the water beside it
+  (m.marina), as the other suites' boats now are.
+
+## 2026-11-23 - World batch: a few bags beside some bins in the rough districts
+- The owner (11-23 07:09): "a few bags but not too many, just some bins have some bags piled next to it in rough
+  neighborhoods". `shared/world3-tidy.js` binBags3 (the done hook, after the stray bags go): in a rough district
+  (The Yards, Southside, Smuggler's Rock, Prison Island) a quarter of the trash cans and dumpsters that had none get a bag
+  or two at their side - the same ground, never the road, a door's step or another thing. With the bags the alleys had:
+  Southside 71 of 207 bins, The Yards 3 of 10 (its bins are mostly trash piles already). Seen in pictures (Southside: a
+  bag beside the can on the pavement). `test/binbags.test.js` (+1). DECISIONS: the three calls of 11-23 07:09 (rooms for
+  Lane Mart and Park West Coffee, these bags, casinos facing the street).
+
+## 2026-11-23 - World batch: Greenfield Park's shops get rooms; doors that open north made to read
+- The owner (11-23 07:09): "I think they should get rooms yes". Lane Mart and Park West Coffee (the city arrival's
+  shops, Greenfield Park) are walk-ins now: the park block is built in a late pass, after the city's rooms were laid,
+  so the done hook gets the room helper (`shared/map.js`: walkInRoom, WALK_IN) and `world3-firstcars.js` parkWest3 lays
+  them (the florist stays a delivery front). Seen in pictures from inside: the mart's shelves and checkout, the cafe's
+  counter and tables (foodrooms.js lays the tables from the room). wallOnly 12 -> 10. `test/world3arrivals.test.js`:
+  a shop's front is now the spot outside its door (`outside`) - its place is at the counter inside.
+- The casinos (the owner's pick of three, 11-23: "Keep, make doors read"): the Strip's resorts south of the boulevard
+  and Old Downtown's casinos on the south of the covered street front their street on the north side, the side this
+  camera doesn't see - kept, and every walk-in that opens north is made to read: a lit sign with its name on its roof's
+  north edge over the doorway (art: `client/art2/game/statics.js`, the roof kit's neon - doorName), and an A-board out on
+  the paving in line with the door as far out as the roof hides it (`shared/world3-tidy.js` northDoorBoards3: 3-6 tiles,
+  paving only, clear of other things; none where the north side is lawn - the Arts District's cafes face the park).
+  Seen in pictures: Wagon Wheel, Silver Mule, Rattlesnake lit over the covered street; Starfall Tower and Prism over
+  their drop-off loops. The art change goes into the batch's one re-bake. Not done here: Old Downtown's back row
+  (Horseshoe Motor Inn, Nail & Gear Hardware, Club Neon Cactus) drawn over the casinos' south ends - interiorOverlap,
+  next.
+- world3arrivals, world3shops, firstcar, ftue, foodrooms, interiorload, walkinrooms, activities, art2, art2teleport,
+  signs, binbags, perf, placementlint 42/42.
+- Old Downtown's back row off the casino floors: `shared/world3-tidy.js` lowBeforeCasinos3 - a building standing right
+  in front (within 3 tiles) of a north-opening casino's south wall is drawn low (`b.low`, one storey under a shallow
+  roof, as the buildings before a platform are): the Horseshoe Motor Inn, Nail & Gear Hardware and Club Neon Cactus.
+  Wagon Wheel's floor clear (12 x 6 tiles covered before), Rattlesnake Ruby's down to its last row (13 x 3 -> 13 x 1);
+  interiorOverlap 25 -> 24. Seen from inside both. The motor inn's set-back upper storeys stay (b.low lowers a
+  building's own storeys, not its upper block) - they reach the very south edge of Wagon Wheel's floor. A lower
+  building, not a moved one: the block keeps its plan (the owner's pick named moving them - said so to him).
+  casino, casinofloor, placementlint 42/42.
+
+## 2026-11-23 - The console's Status tab: the server's health at a glance, the art redraw's progress
+- The owner (11-23 07:09): "Can we make the status easier to read and more organized? It would be good to be able to see
+  info more clearly and flag any issues the server may be having. Would be good to see if the art is being redrawn and
+  how far that is into it." The console (/admin/) opens on a new **Status** tab (its tab carries a green / amber / red dot
+  seen from any tab): one answer on top - All good / Worth a look / Needs attention - with each problem as a plain line,
+  worst first; then the art (Redrawing 40% - 18,432 of 45,864 chunks, about 5 h 58 min left, bake threads, a chunk's
+  time - or Up to date, or Stopped), the game server (version, up for, online, the tick against its budget, loop
+  errors), the machine (memory, CPU load, disk), updates (each pull: restarted / no restart / rolled back / down /
+  waiting for Pages), the nightly backup, errors and reports. Phone: one column.
+- `server/status.js` health(): the facts -> the level and the lines, thresholds named (STATUS): a tick over half its
+  budget, a slow hitch, memory, disk, an update rolled back or down in the last day, a wait on Pages, no backup in 36 h,
+  page errors in the last hour, an art redraw with nothing baked for 20 min, failed chunks, the world files. Clock times
+  are said as "x ago" (the server keeps UTC). `server/index.js` statusFacts (the tick now counts its errors),
+  `artcdn.js` keeps when a chunk was last baked; the console's API carries it (`adminhttp.js`, a fault in the check
+  can't take the console down).
+- The deploy scripts leave two small records the game can read (it can't read the journal): `deploy/auto-update.sh`
+  appends each pull's outcome to the data dir's `deploy-log.txt` (60 kept), `deploy/backup.sh` writes `backup-last`.
+  Both start with this version; until the first of each, their cards say so.
+- Seen before shipping: the page served with made-up facts (a redraw, then trouble) and shot on a desktop and a phone.
+  `test/status.test.js`; admin-console, perf.
+
+## 2026-11-23 · The sea cave's rock solid all through (the cove's fire ring moved out of it)
+
+The final run before the world batch: test/cliffs found 12 walkable tiles under a hand-placed face's rock - the sea cave's
+basalt mass (11-21) stood over the cove's fire ring (world3-coast.js), and the ground within 3 tiles of the fire had been
+left open, under drawn rock. Now the ring moves, with its seats, driftwood and lantern, to the nearest open sand at
+least 3 tiles clear of the rock (within 8 tiles: it stays the cove's - test/world3coast), and every tile of the rock is
+solid (shared/world3-caves.js). cliffs, world3caves, world3coast, caveexit, cavelight, natcave pass.
+## 2026-11-23 · The quick bar: a keyboard's only, no hold-key label
+
+The owner (11-23, a phone upright): "the quick bar is covered by other buttons and we don't need the text next to the
+quick bar". The bar was meant for a desktop (11-22 N7: touch and a pad keep the quick wheel) but showed on every device,
+and its "HOLD <key>" label read "HOLD HOLD BAG" on touch (the key's own name is "hold BAG"). client/hud.js quickBar now
+draws nothing unless the device is a keyboard, and the label is gone everywhere (the slots' tooltips name the items).
+test/quickbar.test.js checks both. The first step of the 11-23 UI pass.
+
+## 2026-11-23 · UI pass, batch 1: the ellipsis, the touch ammo, the quick bar in the layout test
+
+The owner (11-23): "a proper UI pass to make sure everything looks right across all devices". The HUD shot at every size
+(test/hudpage.js through Playwright at exact viewports) and looked at, the misses turned into checks:
+- **The cut-off mark read as "_"**: the pixel font's bold widens every stroke a pixel, and the ellipsis' three dots one
+  apart ran into a bar - on every line cut short (the job line, the prompt). The dots now two apart, the quotes too (" was
+  a block); tools/build-pixelfont.py, the fonts rebuilt; test/pixelfont.test.js keeps the dot marks apart in bold.
+- **The touch weapon button's ammo** ("30 | 120") ran past both sides on a phone upright: on touch the count is written
+  without its spaces ("30|120", "RELOAD") and a size smaller when it's long (client/hud.js, style.css `#w-ammo.long`).
+  test/hudpage.js now checks words that must fit inside their button (`cut`), the ammo first.
+- **The quick bar in the layout test**: the HUD test page never drew it, so nothing measured it (how it sat under BAG on a
+  phone went unseen). It's drawn there now for a keyboard, and it found one more: at 844x390 the fishing panel ran into it -
+  on a window that short the bar hides (the 5-8 keys still use the slots).
+
+## 2026-11-23 · The Inventory brought up to date; underwear, socks and towels
+
+The 11-16 Inventory (branch `inventory`) merged with a week of `main`: main's bag changes carried into it (the item and
+weapon pictures, the Inventory getting out of the way when you take out an instrument, a board, a rod or fireworks -
+`leavesBag`, a tile's tag and count in a footer of its own, the EQUIP line), the HUD's quick bar a keyboard's only.
+- **Underwear and socks slots** (main's 11-20 characters pass added the slots): UNDIES on the left, SOCKS on the right,
+  five a side - the slots a little shorter so the figure still fills its stand (test/invlayout: 70%+). JEWELRY for the
+  accessory slot (ACCESSORY was cut off).
+- **REMOVE ALL** (the owner, 11-23: "let's not say take it all off that sounds suggestive") leaves the underwear on. The
+  underwear's own X, swapping it, or a towel in its place happen only where you can change - at home, at a bathhouse,
+  under a shower (`server/systems/looks.js` `changingSpot`; elsewhere a note says where). Two towels everyone owns, worn
+  in the underwear's place: a bath towel wrapped chest to knee and one round the hips (`shared/lookcore.js`, the
+  renderer's towel shapes; shown in the Clothes tab). test/wardrobe.test.js.
+- **Smaller fixes seen in the shots**: a held gun's tile shows its slot number on a cream tag (IN HAND and 12|36 didn't
+  fit a phone's tile together), the quick bar's filled slots without the cut-off names (the tooltip has them), the keys
+  line wraps, "Food & Meds" wraps in the side rail rather than being cut.
+
+## 2026-11-23 · The stash in the Inventory
+
+The owner (11-23): "store items in my home or safe lockers around the world ... and you can access the same pool of
+items/inventory/weapons". One pool per character (profile.stash: the home safe's, the gun counters' and the fridge's, as
+before) now opens in the Inventory: **Open your stash** inside your home, at a gun or pawn shop's counter (its stash
+menu) or at your hideout's office (yours or your crew's) - server/systems/stash.js: `p.stashAt` the door it was opened
+at, closed once you walk off (STASH.reach), leave the home, die or are held; `{ t: 'stash', a: 'put' | 'take', k, id,
+n? }` moves an item (any number) or a weapon with its rounds (arms.js toStash / fromStash: its class full, one swaps back
+in). The page (client/bag.js): a CARRIED | STASH switch over the tabs (the stash first), the same tabs and tiles; a
+stashed thing's details TAKE ALL / TAKE ONE, a carried one's TO STASH / ONE TO STASH; with a mouse drag a tile onto the
+other side's button. Clothes stay in the wardrobe (always yours). The Guide's "Your stash", the README's row.
+test/stash.test.js (doors, moves, closing, the same pool at another door); test/invlayout.test.js measures the stash
+open at every size (on a phone on its side the switch got a row of its own over the rail). The side-by-side screen waits
+for the owner's concept (UIC-21, prompt in the project: claude/stash-concept-prompt-2026-11-23.md).
+
+## 2026-11-23 · Press and drag in the Inventory, on every device
+
+The owner (11-23): "I want to be able to click/press and drag things into slots (or also just when you select an item it
+has an equip or use button still)". One drag for a mouse and a finger (client/bag.js dragStart - the HTML drag and drop
+went: it never worked on touch): a mouse drags once it moves, a finger once it has held still a moment (HOLD_MS - before
+that the grid scrolls as ever; a finger moving first is a scroll). The tile follows the pointer; where it can go lights
+up; let go over a quick bar slot 5-8 (a thing you can use: pinned), a weapon slot 1-4 (that weapon in your hand), a
+clothing slot round your character (a piece for it: worn) or CARRIED / STASH (moved there). Every drop keeps its button in
+the details; a pad picks and presses. Found on the way: CARRIED didn't switch the stash's view (the Inventory redraws only
+when what it shows changes, and the side shown wasn't in that) - now it is. test/invdrag.test.js (test/invpage.js
+?drag=1: a mouse, a finger held, a finger scrolling, onto STASH).
+
+## 2026-11-23 · The Inventory's tiles and slots, from the owner's notes
+
+The owner (11-23, on a screenshot): the names cover the art; the ✕ buttons are too big, cut off at the sides or under
+other buttons; "UNDIES" - UNDERWEAR in smaller text; names cut off ("Compone...") - whole if possible.
+- **A tile**: its picture in a box of its own height (48 px: the 24-px art at 2x ran 12 px under the name), the name under
+  it in a smaller size on up to two lines - whole ("Perfect Mountain Goat Hide", "Component Scrap"), never "...". Tiles a
+  little taller (100 px; 96 on a phone upright, 78 on a phone on its side).
+- **The ✕**: a 14-px box on the slot's top corner, inside its column (a 22-px finger's reach round it, invisible); the
+  touch sizes that made it 28 px went.
+- **The slots' labels** a size smaller, their line as tall as before (the figure's stand, sized by the slots, unchanged):
+  UNDERWEAR whole.
+test/invpage.js counts a name cut on its two lines as cut off (the layout test, every size); a long-named hide in the
+test player's kit.
+## 2026-11-23 · A vehicle's trunk
+
+The owner (11-23) took Claude's suggestion: a trunk is its own small storage, not a door to the stash (a car that opened
+the stash would bank what you carry mid-run and undo the extraction stakes). server/systems/trunk.js: kept on the
+vehicle's entry (profile.vehicles[i].trunk), so it stays while the vehicle is parked, through a logoff and a restart, and
+waits with an impounded one; TRUNK.slots by kind (a car 6, a motorbike 2, a truck 10, a boat 6 - a slot a stack of a
+thing or a weapon; more of a kind already in always fits). At the back of a vehicle of yours standing still the action
+button says "Open the trunk (n/6)" and the Inventory shows CARRIED | TRUNK (stash.js serves both: the door says where
+things go - arms.js toStash / fromStash take the pool). Wrecked (insurance.js wrecked): what was in it spills where it is,
+a bag anyone can take. Cargo crates never go in - they ride in the open (cargo.js), so who carries something worth taking
+shows. The Guide's "Your trunk", the README's row; test/trunk.test.js.
+
+## 2026-11-23 · No merge markers, ever (test/nomarkers.test.js)
+
+A script merged main into a branch, hit a conflict and committed on through it: PR #23 took conflict markers into
+docs/DEVLOG.md on main (version.json, restamped, was fine). Fixed the same day; the class of it now fails a test - no
+`<<<<<<<` or `>>>>>>>` line in any text file of the checkout.
+
+## 2026-11-23 · Walking in and out: the building's picture dissolves, nothing else dims
+
+The owner (11-23): "The transition going in and out of a building does a transition on the full screen not just the
+artwork on the building ... It would be best if the interior/exterior art just faded from one to the other ... not a pop
+... But it shouldn't be a full screen transition". The 11-22 dip (the whole screen darkened for 260 ms, the cut-away
+swapped at its darkest) is gone (main.js dipTick, #dip). Now a walk-in's chunks swap at once and **dissolve** from the
+street's picture to the cut-away, art pixel by art pixel in a 4x4 dither over XF_MS (320 ms) - the classic 16-bit fade,
+on the building's chunks alone: engine.js uploadChunk(cx, cy, g, layer, xf) keeps the old picture's three textures (their
+handles swapped with a spare three, nothing copied; freed with the slot), STATIC_FS picks old or new per texel (uX, the
+frame's time - one step for every chunk in a frame), host.js starts all of a building's chunks from one time.
+test/xfade-gl.test.js on the GPU (headless Chromium, software GL): half way old and new pixels and nothing else, done
+only the new, a plain swap at once; test/notes1122 N16 rewritten. Not yet seen in a running game - the tests only.
+
+## 2026-11-23 · The art in view is never given up (P1 of the 11-23 notes)
+
+The owner (11-23): "areas ... where the art loads at first but then disappears either partially or entirely ... sometimes
+the art chunk will be loaded already but then disappear entirely while you're in it", in cinematics, from an aircraft,
+on a desktop. The engine held a quality's count of chunk slots (16 Low ... 32 Ultra); a view needing more (zoomed out, a
+cinematic's wide shot, an aircraft, a big window) took the least recently drawn slot for each new chunk - one still on
+screen - which then took another back: the art came and went. Now the host reserves the view's own chunks every frame
+(engine.js reserveChunks - the city's and the tunnel's each under its own name, added up), and a slot drawn this frame or
+the last is never taken: past the reserve one is added, up to CHUNK_HARD (40), before anything in view goes.
+test/chunkslots-gl.test.js on the GPU (a low-memory engine's ten slots, twelve chunks in view: all held; the road ahead
+took none of them) - it fails on the engine before this.
+
+## 2026-11-23 · Cinematics: a clean start, the page quiet, marks on the unreviewed shots (C1-C3 of the 11-23 notes)
+
+- **A clean picture** (the owner: "can we have these disappear by the time the scene loads ... so we can get a clean
+  shot"): the tap that starts a shot woke the X and the bar for 3.5 s, and a short black outlasted it - now they're put
+  away the moment the black lifts (client/director.js). The black holds at least 2 s (HOLD_MIN, was 0.5): the traffic,
+  the people and the wildlife round the camera are in before it shows (the server spawns round a scene's camera already -
+  view.js cineEyes in traffic, npc, wildlife, activities, boats).
+- **Quiet** ("the sound is still playing that is around my character ... phone notifications"): while a shot plays the
+  page's own unplaced sounds - notes' pings, the phone, the menus - are silent (client/sound/index.js); the scene's are
+  placed and heard from the camera.
+- **Marks** ("a way to check off things in the review list ... or save it as a bug"): an unreviewed shot playing shows
+  Keep / Cut / Bug in its bar (a tap brings the bar back); the More (unreviewed) list shows each mark, Copy marks puts them
+  on the clipboard to send, a cut shot leaves the reel (and can be put back). Kept in this browser.
+test/notes1123.test.js; test/directorcam's hold now moves its clock past the 2 s.
+
+## 2026-11-23 · No long shadows across open water (P3 of the 11-23 notes)
+
+The owner (11-23): long, huge shadows from cars on a bridge, boats, the seaplane's wings, fish, across the water. The sun's
+shadow marches toward the sun through the height map, and open water took a shadow from anything above it up to 140 px
+high - a bridge deck and the cars on it, a mast, a wing, a leaping fish - thrown a long way across it at a low sun. Now
+open water (F_WATER, not ground) takes shadows only from casters standing within WATER_REACH (22) of its own level - a
+hull, a swimmer - over a short march (WATER_TMAX 56): lightgame.js sunVis(P, wq, reach, tmax), both its paths. Ground is
+as before. test/watershadow-gl.test.js renders the lit frame on the GPU (a block 60 high on water, then on ground, a
+golden-hour sun): on main the water was shadowed (146 vs 227), now not; the ground still is.
+
+## 2026-11-23 · The review list: checked off on the page
+
+The owner (11-23): "Not seeing a way to check off things in the review list ... options that lets me check off things
+that aren't a problem or save it as a bug to review later". The admin console's review list (/admin/reviews: reports,
+filter hits, movement and economy flags) now has, on each open entry, **Resolved**, **Not a problem** and **Bug for later**
+(moderation.js resolve's how), and **Open again** on a done one - a POST with the session's own token, as the bug
+reports', each in the admin log. The open ones come first. The page no longer shows players' account ids (the owner's
+rule: none on any dashboard). test/bugreports.test.js.
+
+## 2026-11-23 · Buildings no longer cover the far half of a street (P5 of the 11-23 notes) - branch, waiting for the owner's word
+The owner, 11-23 (and 11-12 before it): buildings covering streets, sidewalks and alleys - again. The 11-12 street cap
+(`client/art2/game/statics.js` STREET_CAP) let a plain building's wall reach 10 rows over the street north of it - most
+streets here are 9-13 rows deep, so a five-storey front could still cover a whole street. The cap now also measures the
+street in front (`streetDepth`: its rows of street, pavement, plaza or car park north, the middle column's) and lowers
+the wall until it reaches over at most half of it (`reachOK`, STREET_CAP.half 0.5); over a lane (5 rows or fewer) the
+building comes down to one storey (`floorsMin`). Pitched roofs (houses, terraces) are held to the half rule too; the
+old 10-row rule still applies to flat roofs only. Buildings with a reason to stand tall (landmark towers, walk-ins,
+trades, named places - `purposeful`) keep their height, as decided 11-12; the see-through fade still shows anyone
+behind them. Alleys (3 rows or fewer) are left to the fade: any second storey covers one.
+- Counted on the live world against main: 762 buildings (771 sections) come down, 1,957 storeys in all - Northgate 255,
+  Westport Center 213, Old Quarter 80, Arts District 43, Southside 36, Downtown 30, Midtown 29. Buildings hiding the
+  whole street in front: 245 -> 54 (the rest have a reason, or are hand-built frames). Street tiles hidden: 213,167 ->
+  191,027.
+- Lint: `test/plainblocks.test.js` tall blocks - no plain wall over half the street in front (lane: one storey), and the
+  street hidden by plain buildings at least 15% below the uncapped city. Passes.
+- Looked at: before / after of 8 regress places (`tools/regress/`): Northgate's corner block and Westport Center's front
+  lowered as meant, the street's far lane and centre line showing; nothing else moved. Not looked at: a pitched-roof
+  street lowered (none in the regress frames).
+- Art only (the bake): going live is a full re-bake (~5 h). Held on branch `heights-1123` until the 11-23 re-bake has
+  finished and the owner says go - it changes the skyline in 762 places.
+
+## 2026-11-23 · Fences hold vehicles (P6 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: cars drove through the courts' chain-link "and more". The fences (`shared/fences.js`) held people
+only; a car hit just the posts. Now every fence holds a vehicle like a wall (`fenceVehicle`, called from
+`shared/physics.js` vehStep on the server and in the page's prediction): low or tall, square on or at an angle, and a
+fast bike can't skip through one in a step (the middle's way checked against the line). A horse jumps a low fence;
+boats aren't held. Found by the class check and fixed with it:
+- 10 yard-fence panels standing down the middle of a road in The Yards (a later pass laid the road over the yard's
+  line): `shared/world3-tidy.js` takes a fence piece out of a roadway (road on both sides along most of it).
+- 4 parking spaces in a Westport car park with a fence through them: `shared/parkcheck.js` parkWhy - no space across a
+  fence (the build's badBays3, the lint, the server's traffic).
+- Tests: `test/fences.test.js` (sedan, box truck, bikes at three angles into a low and a tall fence; the horse) - it
+  fails without the fix. Lint 42/42, world3server, traffic, tow, police, horses, car soccer, first car and the others
+  that drive: all pass.
+
+## 2026-11-23 · NPCs don't stay pinned; pool players go round the table (P7 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: NPCs stuck on fences, in corners, between a lamp and a fence at the skate park; one inside the pool
+table. The cause: only wanderers stepped aside when pressing into something (`server/systems/npc.js` sidestep);
+someone at an activity walking to their spot, a skater on his loop, a persona on an errand walked straight and pressed
+on for good. Now every walking NPC steps aside the same way, and someone at an activity held both ways three times
+running gives the activity up and wanders off. Furniture isn't solid (by design: shoprooms.js), so a pool player crossed
+the table to his next shot: he now goes round it (`activities.js` roundBox - the shortest way round the rim, a corner at
+a time). Tests: `test/pedunstick.test.js` (every way round a table keeps off it; an activity's NPC fenced off from his
+spot isn't pinned - fails without the fix). A measure round 40 activity spots (not kept as a test: too slow) still
+shows a few wanderers standing in the middle of a wide road for 12 s - looked at, not explained yet.
+
+## 2026-11-23 · A head bandana stays on through a walk (P9 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: the blue-dress NPC's head flickered between skin and hat as she walked. Measured every hat on every
+walk frame (`client/art2/people.js`, the polish pass): a head bandana was drawn under the polish pass's fuller hair -
+1 to 4 pixels of it showing, frame by frame, out of the ~120 it covers on a bald head. It's now drawn like a hat
+(hairPrims hatOn: the hair under it). `test/hatframes.test.js`: every hat that covers the crown, over a spread of hair
+styles, four ways, eight walk frames - it shows, and its area never drops below 60% of its biggest (fails without the
+fix). Not fixed, logged for the art pass: a flower crown sinks into big curly hair (0-4 px), cat ears and a headband
+vary a few pixels with the walk's bob.
+
+## 2026-11-23 · The cinematic station shot's train leaves (P12 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: in a station scene the train never left after BOARDING. World v3's trains are placed only near
+someone (`server/systems/trains.js` nearSomeone - the player's own position), and in the cinematic mode the camera is
+far from the player: the train ran on, its cars stood frozen at the platform. A scene's camera or a follow shot
+(`p.dirCam`, `p.cineF`) now counts - what it looks at is near someone. Test: `test/world3rail.test.js` (fails without).
+
+## 2026-11-23 · Doors kept clear (P11 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: the market hall's door behind a planter. A new lint row, `doorBlocked` (tools/placementlint.mjs):
+something solid on a door's step or the tile out past it, across the doorway - 60 doors world-wide, most behind a
+planter (31), then lamps, café tables, trees, signal poles, vending machines. `shared/world3-doorsteps.js`
+clearDoorSteps3 (the build's last pass before the pumps) slides each along the wall out of the doorway, the nearer way
+first, up to three tiles, onto open pavement clear of every door and every other solid; a planter, a table or a bench
+with nowhere to go is taken up; the prop's own anchor kept off the clutter guard's door tiles too (a planter's solid
+stands off its anchor). One door list for the build and the lint (doorSteps, doorPoi). Left, 13: a hand plan's own
+solids (Midtown's apartment row along the el, Midnight Pho, Westport PD), traffic signal poles at a corner door (a
+signal belongs to its crossing - moving one put it over Old Town Deli's sign) and three trees (moving a tree put its
+crown over a north door) - for the art pass. visaudit fails as on main (5 north doors under trees, picnic 29, cola 2:
+the same lines on main). The other half of P11 - the sea
+creeping up a pier's planks where they meet the sand - was the world batch's deckRoots (beachWater 0, live 11-23):
+to be looked at in the game.
+
+## 2026-11-23 · The police car taking you in gets there (P8 of the 11-23 notes, part 1) - on branch `heights-1123`
+The owner, 11-23: NPC drivers - the police taking you in among them - crash, ride the median, get stuck. Measured: 12
+arrests on streets across World v3 with the city's traffic: 2 driven to a station, 10 faded to black. The causes, fixed:
+- `server/systems/traffic.js` planRoute (every NPC driver with a destination uses it: police, tow trucks, ambulances,
+  stops, the director's cars): the route started at the nearest junction - often a long way down the street - and the
+  car drove straight there across the pavement; and it counted junctions, not distance. Now it starts along the street
+  the car is on, its kerb lane, to whichever end makes the way shorter (a one-way street: its own way), then the
+  shortest way by length (a heap Dijkstra). opts.inner: the inside lane.
+- `server/systems/custody.js`: the car sent for you sat a block off behind the officers and the crowd in the road until
+  the screen faded - stood held up a few seconds within PICKUP_FAR, they walk you to it. The ride counted as stuck when
+  it got no nearer as the crow flies - a route going round first faded; it's judged along the route now, a new plan
+  starting the count again. The station nearest by road (stationByRoad), and the ride allowed as long as the way takes
+  at a police car's pace (RIDE_PACE) if that's longer than RIDE_MAX_S. On its siren it drives the inside lane: the
+  traffic pulls over to the kerb.
+- `server/systems/reroute.js` goRound: a siren goes round a car crawling along in front of it to pull over, as well as
+  one stopped (it sat behind them at walking pace).
+Measured after: with traffic 6-9 of 12 driven (it varies with the traffic), with none 11 of 12; time up on a pavement
+down, still some going round a car. Tests: `test/custodyride.test.js` (five arrests across the city driven to the
+station nearest by road, on the road, no fade; a route's first leg on the road for 155 routes - 9 started across a
+pavement or a block before). Found by the tests and fixed with it: a replan kept the stuck clock running (a car that keeps planning
+again and gets nowhere still fades - test/arrests); the way back behind a vehicle costs a U-turn in the plan
+(opts.heading, UTURN_PX); a police car leaving a stop with someone standing in front of it backs off and leaves the
+other way after a few seconds (test/stops: it waited behind the player for good). The driving suite passes but
+gridlock, which fails on main too. Not done (P8 part 2): racers, taxis and the cinematics' cars, medians, unsticking
+in jams.
+
+## 2026-11-23 · The hoop marker above the backboard, and it fades (P10 of the 11-23 notes) - on branch `heights-1123`
+The owner, 11-23: "When you start the basketball activity an arrow shows up over the hoop and blocks the hoop art so
+it's hard to see where you're shooting." The job marker (client/main.js, the yellow arrow over a job's target) stood
+20-40 px over the target's ground point - on a hoop, over the backboard. A target can now say how high what it marks
+stands (`h`) and that its marker fades once seen (`fade`: full for JOB_MARK[0] s, gone over JOB_MARK[1] s, back when the
+target moves); hoops.js targetFor sends the rim's height + 30 and fade. Test: `test/hoopmark.test.js`. Not looked at
+in a running game.
+
+## 2026-11-23 · The gun up only while aiming, the flash at the barrel, the "!" above the head (the owner's 21:37-21:39 notes) - on branch `heights-1123`
+- Mouse and keyboard (`client/input.js`): the cursor aims - the gun up, pointed at it - only while the right button is
+  held, or as you fire; otherwise you face where you walk with the gun down, as on a pad. It had been twin-stick since
+  11-13 (the gun up whenever the mouse had moved in the last 8 s). The controls table's aim is RMB. DECISIONS, Controls.
+  Test: `test/kbdrive.test.js`.
+- The muzzle flash and the tracer start at the barrel's end (`client/main.js` MUZZLE: along the aim and up, by how the
+  gun is held - a pistol at arm's length, a long gun at the shoulder, a tube), the flash drawn at that height
+  (`host.js` f.z); measured off the people renderer's aiming pose. Test: `test/muzzle.test.js` (each held kind within
+  6 px of the pose's barrel). Before: 14 px out at chest height whatever the gun.
+- The reported suspect's red "!" (the only "!" the page draws over people): its foot 6 px above the head, measured from
+  its foot whatever text baseline was left set, the bob only upward. Test: `test/overhead.test.js`.
+Not looked at in a running game.
+
+## 2026-11-23 · Vehicles smash things, and what they smash lies there (the owner's 20:10 note) - on branch `smash-1123`
+The owner, 11-23: cars should "actually knock over or break down or smash through" fences, trees, bus stops and
+benches, with "a visible reaction not just disappear", and anyone sitting on one "should go flying off".
+- Fences (`shared/fences.js`): a wooden, picket, chain-link or yard fence, a hedge run or a rail still holds a car at a
+  crawl, but one crossing it faster than `FENCE_SMASH` (rules.js: low 150 px/s, tall 230) goes through - slowed (kept
+  85% / 70% of its speed) - and the panel's prop breaks on the server (`props.js` breakProp, the same 'propbreak' every
+  page already hears). A down fence (`m.downFences`, set on the server and on each page from propbreak, cleared by
+  propfix and on a resync) holds no one: walked and driven over until it's put back with the other props.
+  `mapcore.js` BREAKABLE gains the fence kinds (FENCE_PROPS); `smash.js` keeps them off the bump grid (the fence
+  segments do their colliding). The page predicts the hold, not the break - the server's word puts the fence down.
+- What's knocked over (`client/art2/game/statics.js` brokenVariant, `gbuf.js` toppleGBuf): benches, shelters, phone
+  boxes, planters, bins and the fence pieces lie flat on their side, laid along the way they were hit, with shards of
+  their own stuff round them (glass, wood, metal) - before, a broken one of these drew as a small pile of generic
+  bits. Trees, poles, pumps and stumps keep the fallen looks they had. Fence pieces are tied to their prop now (`pi`).
+- Whoever sat on it (`props.js` throwSitters): within reach of a broken seat, a sitter is taken off it and flung the way
+  the car went (vehicles.js fling, half a hit's hurt). 
+- Guide: Driving says it.
+Tests: `test/smash.test.js` (a car fast into a chain-link fence goes through, slowed, the fence broken and down for
+everyone; the knocked-over shelter lies flat; a sitter thrown off), `test/fences.test.js` (at a crawl every vehicle is
+held, as before). Not done: field rail runs (the countryside's own, not props) still only hold; nothing on the page
+plays a crash sound or dust for a fence. The page is at its code budget (540.45 of 540 KB rounded): to fit, three
+old comments in main.js, mapcore.js and smash.js were shortened - the next page change needs a lazy load or the owner's
+word on the budget. Not looked at in a running game.
+
+## 2026-11-23 · Driving fast, the downloads go ahead first (P2 of the 11-23 notes, part 1) - on branch `smash-1123`
+The owner's Pixel 7 Pro, 11-23 20:52: blurry stand-ins at speed in the desert - the server's art there, not on the
+page in time. What the page downloads ahead (host.js `_prebakeList`, then `_fetchAhead`, a few at once) mixed the band
+ahead with the roads from here by their distance - the road behind you as soon as the road ahead at half the distance.
+Now, faster than 300 px/s, a road point more than a chunk behind waits BEHIND_S (4 s) worth of driving (a turn round),
+and above FAST_DRIVE (500 px/s) a phone downloads 6 at once, not 4 (lowres.js aheadPlan: a download waits on the
+network, not the phone). Test: `test/art2.test.js` (900 px/s east: none of the first 24 on the road behind - one was;
+slow, both ways). Not measured on a phone; the long tasks (~70 ms) are not looked at yet.
+
+## 2026-11-23 · Racers keep off the median (P8 part 2, the first of it) - on branch `smash-1123`
+The owner's 11-23 notes: the cinematics' cars "ride the median". Measured first: the city's own traffic doesn't
+(`tools/trafficsim.mjs` now counts moving NPC traffic on a divided road's median away from its junctions, or off the
+road: 0.02% and 0% of 22,862 samples over 4 in-game minutes, World v3 - noise). The racers did: the street race and the
+chase look across the whole road for the line with the most room (racers.js raceStep), and a planted median is road
+tiles under its palms, so a racer boxed in on its own side swung over the median into the oncoming lanes. Now a race's
+way carries, on a divided road away from its junctions (MED_END), the room before the median (`med`, `mw`), and the
+racer's lines stay on the side of it the racer is on - its own, or the far side if it was already overtaking there
+when the median began, till the median ends. Test: `test/racers.test.js` (a racer boxed in on an avenue: never over the
+median - it went over before; now it stops behind). The director's scenes measured (5 races and chases, the test city):
+3 samples in 2,834 on a median (9 before; 199 with a first version that kept every racer to its own side - one already
+across was steered back over the palms). Not done: the cinematics' scripted cars (director legs), taxis,
+unsticking in jams.
+
+## 2026-11-24 · The UI pass's pictures, and what they found (pre-beta item 7) - on branch `smash-1123`
+`tools/uishots.py` (new): the real game played headless (tools/playtest.py, a local dev server), the starting looks
+and the arrival passed, then every screen opened the way a player opens it (`window.CLA.hub` - the HUD's own
+function, now reachable for tools) and shot at four sizes - desk 1440x900, laptop 1280x720, a phone on its side
+844x390 and upright 390x844 - each with an audit beside it: what a player can press that's under 44 px (touch) / 24 px
+(desk), cut off, covered or off the screen, or over another. `tools/playtest.py` answers the first-launch gate
+(age line, consent: essential) - every playtest had stopped at it since it came in. Found and fixed:
+- **The hub's buttons opened nothing after a stalled arrival.** When a page's arrival scene runs long (a slow phone),
+  the server asks the question itself (ftue.js ftueUntil); its menu opened over the arrival, and the arrival stayed in
+  the screens' stack under it - once the question closed it was the top screen again, hidden, and MENU, PHONE, MAP and
+  the Inventory gave way to it. `client/ftue.js` end() now takes it off the stack wherever it is. Test: ftue.test.js.
+- The starting looks on a phone on its side: "The Beachgoer", "The Club-goer", "The Executive" cut to "he Beachgoe"
+  (the names a size down and allowed two lines there - client/creator.js).
+- A 1440 desktop's quick bar: the empty weapon slots read "GU...", "ME...", "T..." - where the bar is narrow they say
+  GUN / MEL / THR (a container query on .bag-wheel; bag.js SLOT_SHORT).
+- The Inventory on a phone on its side: HEALTH and STAMINA ran under their bars (the label column 70 -> 88 px).
+- The phone's Jobs cards: "$140-$330 a call" cut by 4 px on a desktop - "a call" goes under the amount when it must.
+Seen, not fixed (for the UI art pass or a call): the Inventory's character slots on a phone are 44x32 / 52x32 and
+their ✕ 22x22 (under 44: they were sized to fit, the layout test allows the ✕ on the corner); the Inventory shows its
+frame empty for a moment the first time it opens (bag.js loads then); the pause menu in a narrow desktop window (844 px
+wide, keyboard) cuts its second column ("SETT", "INVE"). The pictures are in /tmp/ui2 on the build machine (not kept).
+
+## 2026-11-24 · The stash beside what you carry on a big screen (UIC-21) - on branch `smash-1123`
+The owner's concept UIC-21 (docs/art-v2/targets/ui/UIC-21_stash.png, desktop 1920x1080): CHARACTER | CARRIED | the
+moves | STASH, the details a bar along the foot. With the stash open on a screen at least SIDE_W x SIDE_H (1600 x 1000
+CSS px, not upright - client/bag.js), the Inventory lays out that way: what you carry on the left as ever (its tabs, the
+quick bar), "→ TO STASH" and "← TO CARRY" between (for what's picked; greyed when it can't go), the stash on the right
+with its own tabs and a search ("Search the stash..."), its count against its room in its header and CLOSE; a tile
+dragged across moves (what you carry is a drop target now too); the details one row - what it is, what it does, its
+buttons (they scroll when a thing has many). Smaller screens keep the CARRIED | STASH switch (1440x900 and 1280x720
+tried side by side: the details didn't fit). Test: `test/invlayout.test.js` (side by side at the desktops at or over
+the size, the switch below it; nothing cut off or on another at every size). Not looked at with a pad.
+
+## 2026-11-24 · Headlights keep their share at night (PREBETA-LIST C, "Night lights") - on branch `smash-1123`
+On the Neon Strip the signs, tubes and lamps filled every light the tier allows (96 on Ultra) and the cars' headlights,
+tail lights and sirens were the ones dropped. The frame's lights are still the strongest and nearest first, but the
+moving ones are sure of a quarter of the cap (client/art2/game/host.js pickLights, MOVE_SHARE): short of it, the best of
+them past the cap are swapped in for the weakest of the rest. Test: `test/art2.test.js`. Not looked at on the Strip at
+night in a running game.
+
+## 2026-11-24 · My looks: the saved looks under the creator's preview (PREBETA-LIST C, the design agreed 11-17)
+The owner, 11-17 23:06: "Add to Saved" didn't say where your saved looks were, and saving isn't how you'd look for them.
+As agreed: a **My looks** strip right under the preview, on every tab (client/creator.js mine()) - your saved looks as
+small portraits (a tap wears one; its ⋯ opens Rename / Delete in a row under the strip) and a **+** at its end that
+saves the look on now, named in place ("Save looks here" while there are none). The Saved tab and the "Add to Saved"
+footer button are gone (footer: Random, Undo, Done); the 12-look limit and the server's messages are as before. On a
+short screen the left column scrolls (never cut at both ends) and brings what you're doing into view. The Guide's "Your
+look" says it. Looked at in the running game at 1440x900 and 844x390 (two looks saved, one's menu open). Not looked at
+with a pad.
+
+## 2026-11-24 · P2 part 2: less garbage per frame (the long tasks) - on branch `smash-1123`
+The Pixel's ~70 ms long tasks: tools/drivebench.mjs (2 minutes' night drive in the rain, this machine) puts most of the
+long-task time "not in a callback" - the garbage collector's (6.9 MB a second allocated, 48 collections). New:
+`--alloc` samples what the page allocates while it drives (collected or not), by the function that allocated it. The
+top were the classic lighting pass (main.js collectLights, ~100 MB in the 2 minutes), the renderer's lights and decals
+(host.js _lights, _decals), the fish (waterlife.js draw, 97 MB: a key string and a maker closure per fish per frame),
+the rain and Map entry iterators. Fixed in the renderer (not the page - it's at its budget): the fish's, rings' and
+foam's sprite keys and makers made once per kind and kept (waterlife.js fishKey, leapKey); a decal's key and arguments
+kept on it (host.js _decals, _genDecal: no key string, colour join or closure per decal per frame once its sprite is
+up); the headlight and train-light cones one array each; the chunks' lights walked by key, not [key, value] entries;
+the frame's lights picked without a sort (host.js pickLights: an insertion into the best cap - Array sort's work
+buffers per frame). Measured after: the fish 97 -> 16 MB, the entry iterators 94 -> 47 MB, the whole drive's
+allocation down about a quarter; the long-task counts vary too much run to run on this machine (2 cores, the suite
+running) to claim a change - the phone is the measure. Still the biggest: main.js collectLights (the classic
+renderer's light list, run with art v2 too for the lamps' levels) and render/weather.js drawRain - both page code, at
+its budget; the next step there is to skip what art v2 doesn't use. Tests: art2, waterlife, perf.
+
+## 2026-11-24 · A plant never rounds into the next tile (a pasture rail's) - on branch `smash-1123`
+The whole-suite run on the batch failed test/undergrowth.test.js's sanity floor ("plants looked at beside them": 153,
+needs 500): P6 took some fences off the roads, the props' order shifted, and the test's sample - every 40th fence prop,
+the first 160 places - happened onto far fewer plants (main: 1,273). Sampled wider (every 16th, every place: ~2,400
+plants) it found what the old sample missed, on main as on the batch: a few tufts and lupines standing in a pasture
+rail's tile. The wild undergrowth puts a plant anywhere in its own tile (statics.js coverItems) - Math.round could
+carry it to the next tile's edge, past the fence check made for its own. Now kept inside its tile; the test samples
+wider. (Only the rare plants on a tile's edge move: the chunks the server compares byte for byte stay as they were
+elsewhere.)
+
+## 2026-11-24 · The ranger keeps its beat, the kayaker the shore (the whole-suite run on the batch) - on branch `smash-1123`
+test/wildfolk.test.js failed on the batch (it passes on main): P7's step aside (npc.js - someone walking to their
+activity who presses into something steps aside, and held both ways three times gives the activity up) also ran for
+the people whose activity *is* the walk - a trail out and back, the ranger's beat, the kayaker along the shore - and
+took them off it within seconds (the ranger was wandering after 4.6 s, the kayaker had put the kayak down). Those keep
+to their line as before (npc.js: route, ranger, patrol). And the ranger's beat (wildfolk.js): an end counts as reached
+when it gets no nearer than ARRIVE_NEAR (40 px) for a few seconds - whoever it waits for there - and the first look at
+each end is the word on the radio (it was a 45% chance a look, so a short run could see none). Tests: wildfolk,
+pedunstick, leisure, activities, fences.
+Also from the run: test/unlocks' detective tracking failed once under load and passes alone (flaky, noted).
+
+## 2026-11-24 · The page's code budget 540 -> 560 KB (the owner's call)
+The owner, 11-24 08:15: "Okay to raise the limit". The page (client/boot.js + main.js and what they load at once) was at
+540.46 of 540 KB gzipped after the 11-23 batch - three old comments were shortened to fit it - and P2's biggest
+per-frame garbage left (main.js collectLights, render/weather.js drawRain) is page code. 20 KB more is about 0.1 s on a
+phone on 4G. tools/perf.mjs; DECISIONS (performance budgets).
+
+## 2026-11-24 · Finish or hide, and the balance calls (the owner, 08:44)
+- **The kayak races hidden for the beta** (shared/hidden.js RACES_HIDDEN - a small module the page reads at once;
+  rules.js isn't page code): races.js starts none, the page draws no buoys for them (main.js drawBuoys), their starts
+  are in no list or map (mapwaypoints.js placesOf), the Guide's "The river kayak run" is out; the kayak hire stays
+  ("Rent a kayak"). Test: `test/hidden.test.js`; world3rapids checks the race as hidden. The rest of the D table kept.
+- **The other road** (the balance audit's 3): the daily goals' second is a crime lead for the honest careers, an
+  honest one for crime (goals.js roll; the Guide's "Daily and weekly goals" says it).
+- **Bank it** (the audit's 4): the first knock-down's line - "the cash and guns you carry fall where you lie (bank cash
+  at any ATM)" (ftue.js MOMENTS.down; cargo.js dropEverything drops the cash, as it says).
+- The audit's 1: pay unchanged until the first test weekend's money data (DECISIONS).
+No world or art change: the hashes are as before, so the P5 re-bake runs on. Tests: hidden, races, goals, ftue,
+guide, perf, phones, world3rapids, world3marsh, world3woods, riders, activities.
+
+## 2026-11-24 · The water pass, 1: what the recorder saw at sunset, at night and in rain - on branch `fable-art-1124`
+The art pass (work package 6, docs/tasks/ART-PASS-PLAN-2026-11-24.md) starts where nature stopped on 11-21: water.
+The recorder (tools/nature/waterwatch.sh) had only ever run at a clear midday; it now films each kind of water body at
+several hours and weathers in one run (`MODES`, default noon / sunset / night clear, noon / night in rain), tells the
+water's pixels once at clear noon (it told them by their blue, wrong after dark), sets how wet the page draws things
+outright (the ease takes minutes at a headless page's frame rate) and saves its pictures straight from the canvas
+(tools/playtest.py `save:`). 17 places x 5 looks, set beside the concepts (W1, BE5, the ES and E2 sheets). What it
+showed, and what changed - nothing here is live: it rides the nature re-bake, on the owner's word.
+- **The shore wave was a ruled line racing in** (the owner, 11-23: "waves forming out of a straight hard edge"): born
+  whole on the 47-px contour, the band crossed in 2.2 s. Now (lightgame.js waterSurf) a 9 s cycle with the run in over
+  3.8 s, the front scalloped by two noises, in lengths with gaps, a faint swell far out that fades up, white only near
+  the sand.
+- **Long shadows on the sea** - the Ferris wheel's across the bay at sunset, the stacks', the boats'. The 11-23 rule
+  (P3) tested "water and not ground", which is only a fall's sheet: the sea, lakes and rivers are baked ground | water.
+  Now `openWater()`: water that is not a puddle - and not a pool, a hot spring or a pond (inland water with a pond's
+  word), which sit among paving and lawns and take their trees' shadows like the ground round them.
+  test/watershadow-gl.test.js used a flag the game never bakes; it now lights the game's own four (sea, fall, puddle,
+  pool).
+- **Sunset water was flat and dark** against W1 / BE5: with the sun low and still lit the sea glitters - more cells,
+  longer on, in the sun's own colour (`glintCol`), turned down a step after the first pictures. The owner's eye wanted
+  on it. test/calmwater.test.js mirrors it: more than by day, no rows, no sheet.
+- **The sea cut into cells with ruled edges** (a dark rectangle and an azure block off the surf beach): depth and look
+  come from the one nearest land tile. water.js waterPx reads the sea's far field at a point moved by slow noise (to
+  about two tiles) and dithers the look wider; bedPx lets seagrass and coral begin at a wandering distance from shore,
+  thinning in ("underwater details with a hard edge near shore"). The edges wander now; the blocks are still there -
+  the depth steps where the nearest shore stops being sand (depthOf by the one nearest tile). Left: blend it wide.
+- **Koi stood on the water** (the 'koi' prop was baked over it): no longer drawn (statics.js); a marked koi pond gets
+  live koi (waterlife.js koiPond).
+- **Moon jellies in the botanical garden's lily pond** (the "white blotches" of the 11-21 list): 103 small waters the
+  map lists as no lake, pond or river read as sea, and got the shore's fish. A small water of its own (flooded out,
+  under POCKET = 600 tiles) gets a pond's (waterlife.js pocket); its class stays the map's - a fish keeps to water of
+  its own class (the salmon tests caught the first try, which changed it).
+- **The hot springs were a white shape after dark** (and cream at sunset): a spring or a pool laid in the ground was
+  baked as open sea - no word, no inland flag - and the spring's cream glow over the whole pool fed the bloom. Both are
+  still inland water with a pond's word now (groundbake.js; a pool that is a sprite has been since 10-22), the spring's
+  glow dim and its own; its bubbles keep theirs.
+Flicker (median % of water pixels jumping between frames 0.1 s apart) before, by place: 0 to 2 everywhere but the
+jungle (35% at noon on Coral Cay: leaf edges swaying, not water - for the coast and jungle step). After: the same by
+day; at sunset the sea reads 1.2 to 3.5 where it read 0.3 to 0.8 - that is the glitter twinkling, as meant (the
+3.5, off the surf beach, was measured before the glitter was turned down a step; the pier read 1.4 after).
+Tests: watershadow-gl, calmwater, world3waterbodies (the small waters' fish - seen to fail without the fix -, a koi
+pond's koi, a spring's bake), waterlife, water, waterbake, poolwater, pool, surf, desertwaters, bathhouse,
+bathhouses2, perf, mapwindow, dmath. Not run: the whole suite. Looked at in a running game (headless, the local
+copy): pier, surf beach, cove, garden pond, hot springs, pool, before and after. Not yet looked at after the change:
+lakes, rivers, marsh, oasis, rain (shader paths they share were seen at the sea); no phone.
+Left in water: the salmon's leap; water beside docks; reflections, ripples and wakes against the concepts; a harbour
+for the recorder ('marina' finds a shop street). Seen on the way, not art: cars jammed on Coral Cay's jungle track.
+
+## 2026-11-24 · The water pass, 2: the sea's blocks - on branch `fable-art-1124`
+Left by part 1: the dark rectangle and the azure block off the surf beach, their edges wandering but still there. The
+sea's slope (depth per tile out) was the one nearest land tile's - 0.22 off sand, 0.55 off rock, 1.4 off a quay, rock's
+where no land lay within 24 tiles - so the depth stepped along a ruled line wherever that tile changed kind or ran
+out. Now (water.js coastSlopes) every kind of coast within 24 tiles counts by how near it is (1 / d^3, one distance
+transform a kind on landField's grid - exact, nothing that depends on the chunk's window), and from 10 to 22 tiles
+out every coast's slope comes to the same. Right by the shore the nearest coast's own still rules (the shallows by a
+beach, deep at a quay). Seen at the pier, the surf beach and the cove, noon and sunset: no blocks; a shelf of clear
+shallows along the sand, then deep. A change of look with it, for the owner's eye: the sea is a deeper blue offshore -
+the wide turquoise that reached 20 tiles out off a sandy coast now ends nearer in (two numbers, FAR0 / FAR1, bring it
+back; the test's count of see-through sea off Sunset Beach went 459,916 -> 399,121 px).
+Test: world3waterbodies - between neighbouring sea tiles four tiles out and more the slope never steps (0.071 at
+most over 7,114 pairs; a change of coast was 0.33 and more). Also run: waterbake, water, surf, world3water, calmwater,
+poolwater, desertwaters, perf (the bake's budget holds with the three transforms), mapwindow, dmath. Not run: the
+whole suite. Not looked at: harbours and quays (the recorder has no harbour place yet), the islands, a phone.
+
+## 2026-11-24 · The water pass, 3: the salmon's leap - on branch `fable-art-1124`
+The owner, 11-23: "the salmon leaping (tail, splash)". Filmed at the gorge and at a river falls (a page script that
+keeps the frames with a fish in the air; `near falls` is new in server/dev.js for it), and the sprites drawn large.
+- **The tail.** A fish in the air was the swimming fish's shape from above, held stiff: a bar with a one-pixel stem
+  and a twig fork. Out of the water it is now seen from the side (waterlife.js leapPx): arched, back up, a flank with
+  a pale belly, an eye, a dorsal fin and a broad forked tail that flicks (three sprites a direction). Every fish that
+  leaps - salmon, trout, mullet, bass, carp, chub, the silver fish, koi - not the salmon alone. And it points the
+  way it goes on the screen: nose up rising, over on its side at the top, nose down into the water.
+- **The splash.** A leap marked the water with one ring and a few of the page's drops. `_splash`: rings, spray
+  thrown up and soon gone, foam flecks left on the water - where it leaves, where it lands, and against the falling
+  water at each stage of a climb.
+- **The climb.** A salmon "up the face in stages" climbed from wherever it lay in the pool: through the air over the
+  water - or, at the gorge, over a strip of dry bank, because that falls lands 76 px short of its pond. A climb now
+  starts with a leap across the pool to the foot of the falls ('in'), well inside the curtain, and only where the
+  foot is in the fish's own water within a leap (CLIMB.foot, CLIMB.reach); elsewhere it leaps at the falls and falls
+  back. The gorge's dry foot is a world fault, listed for the biomes' batch with the other falls like it
+  (docs/tasks/ART-PASS-PLAN-2026-11-24.md).
+Page-side: no re-bake. Tests (test/waterlife.test.js, each seen to fail on the old code): the climb's foot is in the
+pool the fish left, a leap away, and the stages go up from it; a leaping fish has its length, a flank, a tail broader
+than its wrist that differs between the two beats; a splash throws spray, leaves foam and rings. Also run: perf (the
+page's budgets - waterlife loads lazily), mapwindow, world3waterbodies, guide, devtp, devplay. Not run: the whole
+suite. Seen in a running game (headless): a leap and fall back at the gorge, a climb's first stages at a river
+falls. Not seen: a climb's last leap over the top, the other species' leaps, a phone.
+
+## 2026-11-24 · Plants cut off by their own canvas (41 of them) - on branch `fable-art-1124`
+The owner, 11-23: "sunflowers cut at the top". Each plant maker in client/art2/flora.js draws on a canvas of a size it
+names, and the tallest sunflowers' heads ran past theirs. Counted over every species and twelve shapes each, before
+the crop that hides it: 41 species drew past their canvas and were sliced flat there - not the sunflowers alone but
+the tops of the hibiscus, the bougainvillea, the salal, the creosote, the berry shrubs, the hydrangea, the roses and
+the hedges (5 to 10 art pixels of crown gone), the pampas's plumes and the juniper and prickly pear at the sides.
+sprite() now gives every canvas room round it that the makers don't know of (G.ox / G.oy: pxn and has() shift by it,
+done() folds it into the anchor and crops), so a maker's own coordinates are as they were. Checked against a
+checkout of the commit before, every species x 12 shapes as the bake makes them: 1,122 of 1,548 pictures byte for
+byte the same (every tree among them); the other 426 are the 49 species that were cut, now whole; none still cut;
+every one still inside the room its item claims in a chunk (floraExt).
+Test: `test/floraclip.test.js` (flora.js tells it, through globalThis.__FLORA_CLIP, what a plant left on the canvas's
+outermost row and columns: nothing; and each picture fits floraExt). Baked art: a new art hash, with the nature
+re-bake. Seen: the twelve worst as sprites lit at noon, before and after. Not seen: in the game. Found with it, not
+fixed: the redwood sorrel's carpet is 25 px past its item's room (it was before) - a chunk's edge can cut it.
+
+## 2026-11-24 · The water pass: the whole recorder run again, after - on branch `fable-art-1124`
+All 17 places at five looks with parts 1 to 3 in (85 films, set beside the first run's). Lakes, the tarn, rivers,
+creeks, the marsh, the oasis and rain - not looked at since the changes - show nothing broken: the same water by day,
+no long shadows on open water at sunset or under the moon (a lake at night reads a little brighter for it), the hot
+springs as water at every hour. Flicker by day as before (0.2 to 2% of water pixels). Higher where it is meant: the
+sea at sunset (the glitter: 1.1 at the pier, 5.3 off the surf beach). Not water at all, and not to be read: 'marina'
+(a shop street), 'pond' (a creek under redwoods, the frame a few pixels off the first run's) and 'rainforest' (leaf
+edges). The recorder still needs a harbour and a real pond among its places.
+
+## 2026-11-24 · The woods' and the meadows' found places (34 of them) - on branch `fable-art-1124`
+The nature audit of 11-21, forest and meadow: "the small found places of NS1-B outside Highland Woods", "a dry-stone
+wall and gate; an oak with a swing; a stile" - and five pieces drawn that day and never placed (props-rural.js:
+dryStoneWall, fieldGate, stile, ropeSwing, woodRuins). Found on the way: the game's rule for small scenes off the road
+(naturesites.js waysideFinds: a camp, a picnic spot, a cairn) names the first city's districts, none of World v3's -
+the whole world had not one.
+`shared/world3-wayside.js` (called from world3-world.js after every place made by hand): little scenes a short walk
+off a trail or a road (6 to 56 tiles), never on one, 36 tiles apart, each on level open ground of its own, clear of
+roads, water, buildings, fields, orchards and crop rows, and of everything made or named. In Highland Woods, among
+pine and oak (not in a redwood grove - those are NS1-A's, the redwood step), 18: the ruins of a house, an old oak
+with a bench and a fingerpost, a fire ring with log seats, a mossy log with ferns and its mushrooms (two forage
+spots each). In Willow Valley's open meadow, 16: a dry-stone wall with a field gate, the same with a stile through
+it and berry bushes, an oak with a rope swing, beehives by sunflowers, a windmill over its trough. The growth is
+cleared off each one's ground and no tree is left standing in front of it.
+The five pieces are world props now ('ruins', 'drywall', 'fgate', 'stile', 'rswing': statics.js), solid by the world's
+circles - a wall stops you, its stile is the way through, a ruin's doorway is open. The ruins are built 1.4 times
+their first drawing (woodRuins' k): at the first size they read as a hut.
+Seen: all 34 rendered as the game draws them (tools/area-shot.mjs), twice - the first pass had an oak with a swing in
+an orchard and a windmill in a lavender field (the farmed strips are grass tiles), a windmill in a thicket (the
+valley's forest ground), flower "lawn" pieces that read as panels, and a bench end-on; all fixed, by rule. Not seen: in
+a running game; after dark.
+Tests: `test/world3wayside.test.js` (enough of each kind; each on its own clear ground; its pieces there; walls solid
+and the stile open; nothing tall in front). `test/undergrowth.test.js`: its log check ran for the first time (it
+sampled every fifth log and needed twenty: the world had 94, now 110) and failed - most logs lie at made places that
+keep their ground bare. It now takes the wild logs only, every one: 13, 6 with undergrowth along them - too few to
+hold to a share, so it prints them; the wild logs are step A3's. Also run: placementlint (its rows hold), dmath,
+mapwindow, perf, and the world tests most likely to notice: world3clearings, world3woods, world3world, world3server,
+world3wild, foraging, finds, wildfolk, nature, world3redwoods, stocktanks - 83 of 84 pass. The one that fails,
+world3wild's "the tracks flagged notraffic (24; others: ... Station Road ...)", fails the same on the commit before
+this work (checked in a second checkout): the stations' roads, not the art pass's - logged for the pre-beta list, not
+touched. Not run: the whole suite.
+A world change (version.json world3 94ff65ee -> 051ab6cf): it goes with the nature batch, on the owner's word.
+No Guide entry: scenery to come across, no new thing to do (the mushrooms are the forage that exists).
+
+## 2026-11-24 · Fields with edges, rows off the shore, the off-road trails as trails - on branch `fable-art-1124`
+The owner, 11-23: "the farm (the flower row, hand-crafted fields)", "the off-road trail (a blended start, a real
+trail)". Found in the game first (tools/area-shot.mjs: the Dry Creek co-op, Lake Road's fields, the lavender and
+sunflower strips, the Red Rock Trail, the Highland Enduro) and set beside D13, FA4, NS1-E and MX2.
+- **A field's edge** (groundbake.js fieldEdge). A crop ended on its tiles' edges: wheat against plough, lavender
+  soil against meadow, in ruled lines and square steps. Round every field now a ragged verge of the grass beside it
+  (a baulk of dry grass between two crops), then the headland - turned earth where the tractor turns - then the crop.
+  A field's own stubble against its standing wheat is no edge. All 156 fields and the 513 planted strips' soil.
+- **The planted rows off the shore** (world3-croptidy.js stripsOffShore3). Three rows of sunflowers stood on North
+  Cape's cobbles with the sea a tile off, lavender on a beach: 65 of the 513 strips had sand under them (the rows are
+  planted before the coasts are shaped; farmsOffBeach3 knows a beach by its district). A strip keeps 3 tiles off any
+  sand and off the sea (a lake's or a river's bank is a farm's own): cut back to its longest stretch that does, gone
+  under 6 tiles, its plants with the ground it loses. A world change.
+- **The off-road rides** (groundbake.js rutPx; m.tracks with `ride`: the Red Rock Trail, the Highland Enduro, Giant's
+  Gate's lane). Each was one band of dirt tiles painted edge to edge - a grey stripe across the desert that began in a
+  blot at its sign. Drawn per pixel now, as the canyon's two-rut tracks were: two ruts worn dark, the crown between
+  them the ground's own with worn patches, shoulders thinning to a ragged edge - one rut down the middle for a bike's
+  single track (hw <= 26: the enduro) - pale on sand and rock, dark earth in the woods. Over its first and last 96 px
+  it narrows and thins to nothing; no round cap past either end. (The canyon's own tracks get the same ends.)
+- **A country car park's edge** (lotEdge): its gravel gives way raggedly to the ground beside it (the enduro's
+  trailhead lot was a ruled rectangle in the ferns); a road or paving beside it keeps its edge.
+Seen: each of these rendered as the game draws it, before and after. Not seen: in a running game; Giant's Gate's lane
+and the canyon's tracks after the change; a field's edge at night. Not done of his note: "the flower row" is read
+here as the rows on the shore and the rows' ruled soil - if he meant a particular row, it wants his pointer (on the
+check list). The farms' yards against D13 (a barn yard with tyre tracks, hay, a tractor) are the farm's own pass:
+not started.
+Tests: `test/groundedges.test.js` (the three functions on made-up tiles: verge, headland, crop; ragged; none at a
+field's own stubble; the lot's edge not against paving; two ruts or one, the fade, no cap); the rows off the shore in
+`test/world3wayside.test.js` (for its world build). The art and the world hashes change: with the nature batch.
+In the built world: 66 strips cut back, 30 gone, 497 plants with them, of 513 strips. Run and passing (88 tests):
+world3wayside, placementlint (its rows hold), perf (the bake's budgets), harvestart, world3dirt, redrock,
+world3kestrel, undergrowth, mapwindow, dmath, waterbake, groundedges. Not run: the whole suite.
+
+## 2026-11-24 · The redwoods stood apart (2,915 trunks out from behind others) - on branch `fable-art-1124`
+The nature status of 11-21: "Redwood woods still denser than concept N1". Rendered first (the Giants Loop, Hidden Pool,
+a plain stretch of grove, the Highland Way) and counted: by number the grove is N1's already - a median of two giants
+to a 16 x 16-tile patch, four at the ninetieth percentile - but a trunk stands 17 to 24 tiles tall in this view, and
+6,559 of the 16,546 redwoods (40%) had another standing right in front of their trunk. Trunk on trunk reads as a
+brown wall, the floor between unseen.
+`thinRedwoods3` (shared/world3-redwoods.js, called after the redwoods' places made by hand): taken from the south, a
+redwood goes if a kept one stands within 6 tiles in front of it with their trunks overlapping. The trees of a place
+made by hand - on ground that place keeps: the Giants Loop's giants, a clearing's fairy ring, Giant's Gate - all
+stay. 2,915 gone (18%), 13,631 standing; 22% still have a trunk in front further off than 6 tiles (was 40%).
+What it does not change, on purpose: where a redwood carries its crown. The lower boughs are most of what still
+covers the floor in a plain stretch of grove, and that mix is the owner's of 11-21 15:39 ("use C for areas it's
+covering the paths but in other areas a combo of A or B"). If he wants the deep grove opener still, more high crowns
+there is the next lever - his call (on the check list, with the picture).
+Also counted, of the 11-21 note "the fern layer covers the floor, the creek and the paths": of 8,731 undergrowth
+pieces in the chunks round six redwood places, 179 (2%) reach over a dirt path by their width and 3 over water - the
+paths and the creek read clear in the pictures. Nothing changed there.
+Not done: the walk-in hollow trunk and the root cave (NS1-A) - new pieces, each a place to walk into: not started.
+Seen at Hidden Pool, not explained: a lighter straight-edged patch on the glade's floor in the offline picture (a
+light shaft, or the offline picture's own way of drawing one) - to look at in a running game before anything is
+touched.
+Test: test/world3redwoods.test.js (no wild redwood right behind another; more than 12,000 still standing). A world
+change: with the nature batch, on the owner's word.
+Run and passing: world3redwoods, world3wayside (the found places as before: 18 and 16), world3clearings,
+world3woods, undergrowth, placementlint, wildfolk, foraging, perf, dmath. Not run: the whole suite.
+
+## 2026-11-24 · The Sentinel Stones read; the oval ponds counted - on branch `fable-art-1124`
+The mountain step, begun. The nature status of 11-21: "standing stones barely read". Rendered: ten pale grey posts on
+pale grey scree, shoulder-high. Now (props-rural.js standingStone, a class - every standing stone) dark weathered
+granite, banded, darker at the foot, patches of pale lichen, moss at the base; a stone that stands (taller than a
+headstone) is drawn 1.5 times its height and a fifth broader (statics.js MSTONE_UP), the altar and the fallen one as
+laid; and the ring stands on a ragged round of green turf (naturesites.js sentinelStones: the map's lush grass). Seen
+rendered, before and after. Tests: the stones in test/world3wayside.test.js (for its world build); nature (the ring's
+own test), perf. The turf is a world change (both worlds' hashes: naturesites.js is the first city's too).
+"The lake a perfect oval" (11-23): counted over the 59 lake and pond bodies - how far each shore is from its box's
+ellipse. The most oval are city parks' ponds made by hand as ellipses (Westport's 69 x 26 with a footbridge straight
+across, the Stadium's two retention ponds, Northgate's Linden Park basin - that one a paved formal pool, an oval on
+purpose) and Mirage Lake (an egg). Summit Tarn and the farm ponds have wavering shores already. No change made: each
+is a hand-made place with its rails, reeds and bridges set on its ellipse - the districts' pass, or sooner where the
+owner says which lake he meant (on the check list).
+Paused here on the owner's word of 18:00: the redwood forest first (docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md).
+
+
+## 2026-11-24 · The redwoods' rooms; the trunks-only look tried and dropped - on branch `fable-art-1124`
+The overhaul's first step (the giants as trunks with no crown, approved with the whole proposal at 18:13) was built two
+ways - a cut top with a few boughs hanging in, then a top outlined whole and thinned out upward by an ordered dither -
+rendered in the grove, the Giants Loop and at Giant's Gate, and dropped on the owner's word at 18:47 ("I don't think
+the disolve looks good ... not looking good compared to what we have already"). Nothing of it is in the code. Variants
+of the tree as it is (the crown higher and smaller) are with him to pick from: docs/DECISIONS.md, the check list.
+
+Kept from it, because the measuring found them in today's trees:
+- **A redwood's picture inside its room.** A giant's roots reach 86 px below its foot (the middle size 68) and every
+  redwood's item claimed 60; the second growth's widest crowns reach 110 px out of a claimed 100. A picture beyond its
+  room is cut at a chunk's edge. `statics.js` `redwoodRoom(art)` (the species' fourth number: the roots' reach) is what
+  the item claims now; `test/redwood-art.test.js` holds all nine placed pictures, twelve shapes each, to it.
+- Counted, for the crossings and the water (docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md part 5): three footbridges in
+  Highland Woods, two of them wrong; 1,248 tiles of water in 1.8 million of land.
+
+Not run: the whole test suite (the redwood, fade, flora and budget tests pass). Not seen in a running game.
+
+## 2026-11-24 · Every footbridge walked and seen (the redwood overhaul, step 2) - on branch `fable-art-1124`
+The owner, 18:00: "a lot of bridges over streams aren't at the right angle or they don't actually let you walk over
+them". Counted in the built world: thirteen footbridges over water (seven plank bridges, four log bridges, one creek
+site's own, one rope bridge), three of them in Highland Woods. The rope bridge over the gorge keeps the trails' own
+deck and is not in this pass; of the other twelve:
+- **Three were pictures only**: the Stadium park's bridge across its pond and West Hills' two over the creek had
+  water tiles under them and no deck - you walked into the pond under the bridge.
+- **Three log stubs** stood where a trail steps onto a road's bridge over a lake, ending in the water.
+- **The Giants Loop's** ended on grass a tile and a half from its trail; **Highland Way's** had a giant redwood drawn
+  over its south end; a log bridge on a lake's edge ended short of its bank.
+`shared/world3-footbridges.js` `footbridges3`, one pass after every place is made: bridge tiles under the whole deck;
+an end over water carried on to its bank (4 lengthened); a short bridge with no bank within reach taken out (3); a
+worn link from an end to the path near it, dirt or paving as the path is (2); no tree left standing where it is drawn
+over a deck (10 props out with the links' undergrowth). `test/world3wayside.test.js` checks every footbridge left (9:
+twelve less the three stubs): no open water under it, its ends on land, a path at both, nothing tall over it.
+The angle: one bridge sits 26 degrees off square to its river (Highland Way's); left as laid - with the trees off it,
+it reads. A world change (world3 hash): it goes with the nature batch.
+Seen: offline renders of each bridge. Not seen: in a running game; the stubs' spot after they went.
+Counted for step 3: Highland Woods has 1,248 tiles of water in 1.8 million of land - new creeks, not repairs.
+
+## 2026-11-24 · A woods creek laid by the land: the sample (the redwood overhaul, step 3) - on branch `fable-art-1124`
+Highland Woods had 1,248 tiles of water in 1.8 million of land; its three creeks are short pieces at the hand-made
+places. `shared/world3-creeks.js` `woodsCreeks3` lays a creek by rule: from a spring it steps down the map's own
+heights (m.relief, a 7 x 7 mean; never back up; off roads, lots, buildings and the made places' ground) to water that
+is already there; the line wanders a little and is curved; narrow at the spring, wider at its mouth; where the ground
+steps down a riffle (white water) and a pool below it with a deep middle, mossy boulders and ferns round it; boulders
+in the run and on its banks and ferns along it by hash; where it meets a path, the path's tiles under it become
+stepping stones on deck tiles; no small tree and no redwood trunk left standing over it; its spring no nearer a road
+than 14 tiles. It is one of the map's running waters (m.waters.ch, with its rapids and pools) and a site
+('woodscreek': name, line, pools - for the finds and the fishing to come).
+ONE creek is laid, the sample for the owner's eye: Fernwater Creek, 283 tiles from the woods west of the Giants Loop
+down to the lake in the Pine Lake hills - 615 tiles of water (half as much again as the whole forest had), 7 riffles
+and pools, 2 path crossings. Counted for a network: of 2,956 test springs on a 24-tile grid, 495 reach water (median
+60 tiles), 1,497 end in a hollow (a pond there is the next rule), 661 meet a road (they want a culvert).
+`test/world3wayside.test.js`: it runs downhill, is one water from spring to mouth, has its pools, nothing stands in
+it, every stone is on a deck tile; and no trail's line anywhere runs over open water.
+Seen: offline renders of four stretches. Not seen: in a running game (the water's motion, the fish, walking the
+stones); its mouth at the lake; night. The whole test suite has not been run. A world change: with the nature batch.
+
+## 2026-11-24 · The fern kit: nine kinds, drawn, not yet planted (the redwood overhaul, step 4) - on branch `fable-art-1124`
+The owner: "I'd really love to improve the ferns and make a lot of variety of ferns". The woods had two ferns (flora.js
+`fern`, also as bracken; redwoods.js `swordFernArt`): every bed was one plant repeated. `client/art2/ferns.js` draws
+nine kinds from one frond painter (a midrib that rises and arches, leaflets in pairs by a length profile, lacy or
+plain; thin stems drawn after the outline so they keep their one pixel), all at the art pixel: sword (and a small
+one), an old tussock of several crowns, lady (a vase of plumes), maidenhair (fans on black wiry stems), bracken (a
+triangle of a frond on a stalk; green, and gone gold), deer (a flat combed rosette, thin fertile fronds standing in
+it), chain (the giant, coarse and dark), fiddleheads (coiled croziers), licorice (a one-sided tuft for a log or a
+rock). `test/ferns.test.js`: each draws inside its canvas on its foot, no black, twelve seeds twelve plants differing
+in size and fullness, and the kinds differ in build (the test caught the lady fern and the bracken cut by their
+canvas at some seeds). `tools/nature/sprites.mjs` draws a maker that is not a world plant yet ({ mod, fn, a }).
+NOT in the bake (statics.js SPECIES) and not planted: the sheet is with the owner first. To come on his word: the
+kinds into the plant table (the bake's code is at its budget - 1,080 of 1,080 KB - so that is a budget decision or a
+trim), laid in drifts by how wet the ground is (thick and mixed along creeks and in hollows, bracken on dry ground).
+Seen: the sheet lit at noon, and a mock-up bed composed from the sprites - not the game's own floor.
+
+## 2026-11-24 · The sample creek: a spring among rocks, reeds kept to a creek's banks - on branch `fable-art-1124`
+Two things seen in the sample's own pictures. **The spring** ended in a channel's blunt cut end with its boulders off to
+one side: now a small round head pool with five mossy boulders ringed round its upstream side and ferns between them
+(`shared/world3-creeks.js`). **Reeds**: the ground bake stood reed beds wherever water was shallow - right for a pond,
+but a creek is shallow from side to side, so beds grew across it and filled its pools; it read as a marsh.
+`groundbake.js` `reedAt`: beds across still water as before; along running water's banks only (within 12 px); a
+creek's pool (a channel's calm pocket) clear but for its very edge. A class fix: every creek and river in the world -
+an art change, with the nature re-bake. `test/groundedges.test.js` holds the rule. The bake's code was 1 KB over its
+budget with it (1,081 of 1,080): two of today's comments trimmed, no budget raised.
+Seen: the spring, a run, the crossing's pool. Not seen: other creeks and rivers after the rule; a running game.
+
+## 2026-11-24 · Mirage Lake is no longer an oval - on branch `fable-art-1124`
+The owner, 11-23: "the lake a perfect oval"; 11-24 18:13: "I think it was mirage lake ... It's one that shows up in
+the cinematics". Its rim (shared/world3-mirage.js, 10-21) was an ellipse wavering in six slow lobes: measured against
+the oval that fits it best on 72 bearings, the shore lay within a twelfth of it all round (sd 0.042, 0.91 to 1.07).
+Now the six lobes carry a finer waver of eleven and the shore has features of its own (`MIRAGE3.shore`): a bay bitten
+into the west shore, a sandy point on the south-west, a cove on the south-east, the east shore bellied out, a notch in
+the north-west; a bay may cut into the old water (deep tiles too). Sd 0.083, 0.76 to 1.16. The green belt, the palms,
+the white beach, the jetty and its rowboat follow the new shore by the same rules as before.
+`test/world3desert.test.js`: the shore strays from its oval (sd, least and most), and the jetty stands in the water.
+Not done: the other near-ovals counted on 11-24 are the city parks' ornamental ponds (Westport's, the Stadium's two,
+Northgate's basin) - theirs with the districts. The cinematics that show the lake want reshooting (they are reshot at
+the end of the art pass). Seen: one offline render at half size. A world change: with the nature batch.
+
+## 2026-11-24 · Banks in a natural mix, stones that differ, a log for a crossing, Mirage Lake's cove - on branch `fable-art-1124`
+The owner's notes of 21:40 on the sample creek and the lake (docs/DECISIONS.md).
+- **Banks.** Every soft bank had one look: a brown earth lip on the land and a brown face on the water side - an
+  outline round all inland water. `groundbake.js` `bankKind`: along a wild shore (meadow, dry and alpine grass,
+  forest floor, pasture, dirt) the bank is, by a slow noise, grown over to the water (43% of the shore: no lip, no
+  face), an earth lip as before (18%), shingle (18%: the wash's pale gravel, 7 to 29 px wide, bare of ground cover)
+  or a bar of dirt with wet sand at its edge (21%); a change of kind about every 150 px. Lawns, parks, golf and the
+  beaches keep what they had. A class change for every wild river, creek, lake and pond: an art change, with the
+  re-bake. `test/groundedges.test.js`.
+- **Stones.** `water.js` `steppingStone`: each seed its own - long or round, turned any way, low or proud, four in
+  ten capped with moss; eight shapes (were four), sizes 7 to 16 (the creek's were 11 to 13), a small one beside a
+  small one now and then.
+- **Crossings.** `world3-creeks.js`: a real crossing has the path's ground on both banks; a path only clipped by the
+  creek keeps its ground (stones where the creek's own run lies on it). A path under two tiles wide crossing no more
+  than seven may take a fallen log (the 'logbridge' piece; `footbridges3` carries it to its banks and links its
+  ends), half the time; else stepping stones. The sample's one crossing (the Mast Ridge Trail's) stays stones.
+- **Mirage Lake.** An offshoot off its west shore (`MIRAGE3.arm`): a short neck out to a round cove, the beach
+  following it. Its shore against its oval: sd 0.187 (was 0.083; 0.042 before today).
+- The bake's code is at its budget to the byte (1,080.50 KB gzipped): five of today's comments were cut down to make
+  room. The fern kit, a stick bridge or the plants' shade floor will not fit without the owner raising it.
+Also `tools/nature/sprites.mjs`: LEAF_WRAP / LEAF_SKY to try the leaf light's numbers (the plants' dark undersides:
+measured, variants with the owner - nothing of it in the game's code yet).
+Seen: offline renders (the crossing, a stretch, the creek's mouth, the lake at half size). Not seen: a running game;
+other rivers and lakes with the new banks; shingle at full size. The whole suite has not been run.
+
+## 2026-11-25 · Plants lit evenly, never black; soft banks blended into the water - on branch `fable-art-1124`
+**The dark on plants** (the owner, 11-24 22:23 to 11-25 00:04: "the dark/basically black shading on the underside of
+this art ... Can we identify these and others across the entire environment/nature art packs"). Measured over all 121
+plant kinds, lit as the game lights them at noon: 102 had over 15% of their pixels near-black. Two causes at once: the
+paint went to black (after the concept sheet NK1-M, whose plants are 38-55% under 50/255; the style anchor R1-D's
+darkest green is 25, 57, 45), and the leaf pixels carried rounded surface directions, so the light pass shaded the
+underside again. The sword fern, which he pointed to as right, has its form in its paint and every pixel facing up.
+`flora.js` `leafLight` (called for every plant the world places: statics.js makeFlora) makes all of them so: leaf
+normals turned three quarters toward up, and leaf tones under 72 pressed up to 46 and pulled to the anchor's dark
+green (`LEAF_LOOK`, four numbers). The outline on leaves becomes that dark green too. Leaves near-black at noon: 0%
+in every kind (`test/leaflight.test.js`); kinds over 15% near-black: 102 -> 18, and those by their bark, cones,
+twigs, stones or cactus skin (pinned). Cast shadows, the hour and the weather still fall on plants as on everything.
+Not done: bark and cactus skin (the giants' trunks are 18-26% near-black on their shaded side) - to judge in the game.
+**Pixel size** (his question of 00:04): every plant kind is made at the art pixel at each of its sizes (the maker is
+run at the size, never resampled; a mirror is exact) - checked, test/floraart.test.js. The close-ups shown on 11-24
+were rendered at the world pixel, twice as fine as the game draws: pictures for him are at the art pixel from now.
+**Banks** (his note of 23:18): `groundbake.js` - a soft wild bank goes damp, then under the water, in tongues
+(`BANK_IN` 13 px of water show the bank through); pebbles and rocks stamped along banks; `water.js` fewer boulders
+standing in creeks and rivers; the sample creek's own moved to its banks. The earth lip stays on about a fifth.
+The bake's code budget: still 1,080 KB - twelve comments from this pass cut down to fit. Not raised.
+Seen: plant sheets with the game's noon light; offline renders at the art pixel. NOT seen in the running game: five
+tries to photograph World v3 in the local game failed on the tool (PREBETA-LIST). The whole suite has not been run.
+
+## 2026-11-25 · The open ground round you is never hidden - on branch `fable-art-1124`
+The owner's two screenshots: an Old Town alley with the one building over him a ghost and its neighbours solid; a
+street at night with the far sidewalk under the roofs of the row to its south ("see the entire street and sidewalk
+from anywhere in the street ... so nobody can hide"). `host.js` `_fades` had one rule - the building whose picture
+covers your own figure fades. Added: the ground you stand on is followed out from your tile (a flood over tiles that
+are not a building or a wall: `FADE_REACH` 20 tiles either way along, `FADE_ACROSS` 7 up and down), and every
+building whose picture lies over two or more tiles of it, north of its own foot, fades. So the row whose roofs hang
+over the street you are on goes see-through for the length of the block, and a whole alley opens when you step into
+it; a building faced from its own street lies over none of your ground and keeps its front. Worked out when you
+change tile (a few hundred tile reads), not every frame. Page-side: no re-bake. `test/alleyfade.test.js`.
+Not seen in a running game: how much of a city street ghosts at once, at an intersection, and from a vehicle.
+
+## 2026-11-25 · A faded building is all but clear; the bake's code budget 1,100 KB - on branch `fable-art-1124`
+**See-through** (the owner on the live build, 03:05: "totally transparent like as transparent as it is around my
+character. Maybe a little bit of gradient or dissolve around the edges"). `engine.js`: `GHOST` 0.6 -> 0.94 - where a
+building fades, 94% of the street shows (it was 60%: roofs' gear lay faintly over the alley); along the rim of what
+fades (within `EDGE_PX` 12 px of its footprint, and where its picture ends: eight taps of the building-index texture)
+it dissolves in from `GHOST_EDGE` 0.5, so its shape stays readable. Thin things keep `GHOST_THIN`. The transition is
+the eased one it had. `test/seethrough.test.js` updated to the new rule (it asserted "semi-transparent, never gone",
+10-23); the GL test passes. Seen in a local game (today's world): the sidewalk behind a roof fully visible.
+Page-side: no re-bake.
+**Budget**: the bake's code 1,080 -> 1,100 KB (tools/perf.mjs), the owner's word of 03:05. Why: the plants' even
+light, the banks and the stones were fitted in by cutting comments (it stood at 1,080.5); the fern kit (about 6 KB),
+natural wild flowers and a stick bridge do not fit.
+**Capturing the running game**: the first-time dialogs can be hidden from a playtest step (an eval that sets the
+dialog's panel to display none), which gives real game pictures - tools/nature/README.md.
+
+## 2026-11-25 · Nature redrawn without the painted shadow - on branch `fable-art-1124`
+The owner, 03:29: art with the dark shadow drawn in is to be redrawn from scratch, with a list; the lift of the
+finished picture changed colours and did not blend. Found: the shadow was in the shared palettes (leaf shade to 28% of
+the leaf's lightness and 42% toward blue-green; bark, stone and props to about 35%, toward violet; the forest soil
+from #121012) and in the clump painter (a dark pocket, a dark core). Redrawn at the source - palette.js `natRamp` /
+`NAT` / `lumFloor`, flora.js `FOL` / `LEAF_PAINT` and the one pixel writer, ground.js `NP`, terrain.js, redwoods.js,
+ferns.js, the redwood / wild / tropic / desert prop kits, water.js RB - and the lift removed (`leafLight` only turns
+normals; it changes no colour). 114 of 129 plant kinds needed it; all plant pixels painted under the
+floor 15.4% -> 0.0%. The forest spot he circled: 21.8% of the land under 50 at noon -> 4.1% (under 35: 10.2% -> 0.1%).
+Tools: `tools/nature/darkscan.mjs` (the census over the baked world, by place, `--who` by kind of art),
+`tools/nature/paintscan.mjs` (each plant kind). Tests: test/leaflight.test.js rewritten to the source rule (no leaf
+under 46, no bark under 50, the even light changes no colour). The full account and the list:
+docs/tasks/NATURE-REDRAW-2026-11-25.md. Baked art: live with the re-bake, on his word.
+Also: the giants' tops a mix of three (statics.js `RW_TOP`), his PDF of play notes logged (PREBETA-LIST).
+
+## 2026-11-25 · The fern kit is planted - on branch `fable-art-1124`
+The owner approved the kit (03:05: "Fern looks good to me ... go easy on the gold bracken"). statics.js: ten kinds in
+the plant table (`fSword` ... `fClump`, made by ferns.js at the art pixel), and `fernKind` - which fern grows where
+in the woods: at a bank the lady fern and maidenhair; near water lady and chain fern; on the ordinary floor sword and
+deer fern in drifts, an old tussock or fiddleheads now and then; in a sunlit gap bracken, and only there the gold - a
+small cluster where a noise runs high, else one frond in twenty-five. `floraExt` claims the room below a foot that a
+kind needs (the tussock and the chain fern hang 40 px under theirs). test/ferns.test.js: the rule (gold never on wet
+or shaded ground, under 5% of ferns, every kind grows somewhere) and each kind's picture inside its room. The bake's
+code: 1,089 of 1,100 KB.
+
+## 2026-11-25 · A fork's centre lines no longer run side by side - on branch `fable-art-1124`
+The owner's note (PDF, a desert road by the Eastern Desert First Aid Station): "What is up with this double yellow lane
+merge on this street? Does not look right". Two roads leaving a junction some 25 degrees apart each painted its
+double yellow up to the junction's trim, so for the length their pavements overlap the two ran side by side into one.
+groundbake.js `forkTrim`: at a junction of three or more roads, a road within 60 degrees of another starts its lines
+where its middle comes out of the other's pavement (the other's half width over the sine of the angle, at most 480
+px) - unless it is the one that carries straight on through the junction, which keeps them. Every fork in the world,
+not this one. test/groundedges.test.js (a Y, a T, a crossroads, a symmetric Y, a very sharp fork); seen at the first
+aid station's fork. Ground paint: with the re-bake.
+
+## 2026-11-25 · You can see under the El and the highway decks - on branch `fable-art-1124`
+The owner's note (PDF): "It would help if players can see under elevated platforms like this railroad bridge, but im
+sure highways and maybe some other structures ... like we do behind buildings, letting the player see a wide range
+under a bridge like this." The El's deck pieces (and its inclines from head height) and the highway decks are now
+fade items like buildings (statics.js `EL_FADE`, `DECK_FADE`: ids between the buildings' and the trees'; `fy`, a deck's
+foot line, read by chunkbake.js): on the ground under or beside one, the pieces over the street you stand on fade
+along it by the same open-ground rule (host.js `_fades`), clear round you, their rim kept; the bents and piers stay.
+Up on the deck or a platform (`UP_Z`) or riding the train, it stays under you. A deck fades as a building does, not
+as a thin mast. test/alleyfade.test.js; seen in a local game under a highway deck (today's world has no El: the El
+itself is untested in a running game). Baked: with the re-bake.
+
+## 2026-11-25 · The mountains' look: three variants on trial - on branch `fable-art-1124`
+The owner's note: a crag reads as "a group of 4 similar shaped rocks stacked in a row". Why: each run of a cliff band
+got a stepped lump of its own, and the solid rock behind was flat cobbles. On trial behind a switch only the picture
+tool sets (`globalThis.__CRAG`; the game draws what it drew): statics.js `cliff` as a sheer wall (terrain.js style
+`crag`: its top the grey of the rock behind, its clefts a tone deeper - `bare`), ground.js `crag` in big light slabs,
+groundbake.js `reliefOn` drawing ledges on rock along the land's contours (every 4 m, the face where the ground falls
+toward the viewer) and, at 3, snow on the benches above 150 m. docs/tasks/MOUNTAIN-LOOK-2026-11-25.md has the three
+pictures' account and what a pick leads to. tools/nature/darkscan.mjs: `--prop type@box` finds where a kind of prop
+stands thickest; `CRAG=n`.
+
+## 2026-11-25 · Wild spike flowers grow as they will - on branch `fable-art-1124`
+The owner, 11-24 23:37, of the purple spike flowers: "really vertical, all the stems are so straight it kind of feels
+out of place in the world (unless its part of a garden or flower pot) ... Can give a more natural version of these
+flowers". flora.js `spikes` (foxglove, lupines, alpine lupine, paintbrush): each stem leans out from the clump and
+its own way (`SPIKE_WILD`: up to 0.3 px a px of height), bows, nods at the tip, and one in four is a short one; the
+flower follows its stem. `o.straight` keeps a bed's rows upright for a garden. Their items claim the wider room
+(statics.js SPECIES; test/floraart.test.js caught the foxglove 4 px out of its room). Picture: report-40.
+
+## 2026-11-25 · Bridges stand on piers; the sea's edge is not painted white - on branch `fable-art-1124`
+From the owner's notes (a road bridge over the sea, seen while spectating: its edge "too hard", "it should be a
+bridge that things can go under ... a passable channel underneath"; and the white in the shallows "just show as
+static images instead of animated").
+- **Is any road laid on the sea as land?** No: tools/causeways.mjs counts road tiles with open water on both sides -
+  21 in the whole world, no run of ten; 47,898 tiles are bridge. The bridges are bridges; they did not look it.
+- **Piers and a shadow** (groundbake.js `PIER`, `pierNose`, `DECK_LEE` 14 -> 30): every 192 px along a deck over the
+  water a pier's nose shows 7 px beyond its edge either side (decks running north-south), or a pier's column stands
+  down under its face (east-west); the water in a north-south deck's lee is darker by the deck and eases out.
+  test/underdeck.test.js. The fringe of shallows and foam along the deck in his picture is the live build's: on the
+  branch the shelf lies along sandy beaches only (11-24).
+- **No painted white at the sea's edge** (water.js): the crests drawn white within 30 px of a beach, the white wash
+  line and the scalloped white band beyond it were still pictures under the engine's moving waves and swash - 3.43%
+  of the sea's pixels by a beach painted white, now none (test/waterbake.test.js, under 0.2%). The lattice keeps a
+  lighter water there, the waterline a pale wet edge. Left as they were: the white of a creek's riffles and rapids
+  and round rocks (still pictures too - to look at with the creeks).
+tools/nature/darkscan.mjs `--seabridge n` finds the long bridges over open water. Baked: with the re-bake. Not seen
+in a running game.
+
+## 2026-11-25 · The shark's bite redrawn - on branch `fable-art-1124`
+The owner's note: "Shark animal is not right yet, doesn't look updated, when it opens it mouth to attack part of its
+head disappear and looks off". animals.js `sharkModel`: biting, the body under the water stopped at 62% of its length
+and a flat grey slab stood over the gap. Now the body runs on under the head, and the head is one: a cone of a snout
+rounded across, grey above and white under, the lower jaw dropped, the mouth red between, teeth along both jaws, the
+eye, gill slits. test/animalart.test.js (in all eight directions the biting shark is no smaller than the swimming
+one; white and red show). Picture: report-41. Actors' art: no re-bake. Not seen in a running game.
+
+## 2026-11-25 · Emotes run through their frames: a faceplant falls flat - on branch `fable-art-1124`
+The owner's note: "Faceplant lose still not working it just leans forward but not falling flat on their face (as well
+as lying down or sleeping, it doesn't lay all the way down)". Seen in a local game: 4 s into a faceplant the player's
+sprite was `emfaceplant` frame 0. Cause: the page's people module (art2/game/peds.js) loaded art2/poses.js only while
+the emotes' table was empty - and the emote wheel's portraits (client/portrait.js) load poses.js on their own, which
+fills that table. So once the wheel had been near, peds.js never got the module for itself: no frame timing
+(`emoteAt`) and no frame counts in its sprite keys, and every emote stood on its first frame - the first lean of a
+faceplant, the start of sitting down for lie and sleep. Fix: the poses are asked for until this module has them.
+test/emotes.test.js (in a process of its own, the poses loaded first by someone else: fails on the old code).
+Seen in a local game after: flat on the face; lying flat. Page code: no re-bake; live with the page on his word.
+
+## 2026-11-25 · The licorice fern by logs; a stick bridge; a cloud-shadow still - on branch `fable-art-1124`
+- statics.js: beside a log or a mossy rock in the woods the cover is now and then the kit's licorice fern
+  (`fLicorice`), the fern that grows there. test/ferns.test.js (its room).
+- props-garden.js `stickBridge(len, s)`: six poles lashed with cord, three builds; shared/world3-creeks.js
+  `CREEKS3.sticks`: 40% of a creek's log crossings are one (a `logbridge` prop with `k: 'sticks'` - the same deck to
+  walk). The sample creek has no log crossing, so none stands yet: with the network. test/naturepieces.test.js.
+- A still of a cloud's shadow passing over Lakeside Greens for the owner's eye (`report-43`; his note: "Maybe
+  occasional cloud shadows passing through the world? Or maybe not a good detail to add not sure"). Nothing built.
+
+## 2026-11-25 · The mountains' crags: look B, no snow - on branch `fable-art-1124`
+The owner's pick (07:19): "B for the mountain/cliffs is best, also were not doing snow yet so let's not do any snow
+for now". The trial's switch is gone and B is what the bake draws: statics.js `cliff` (granite: `cliffH` / `CRAG_TALL`
+1.5, terrain.js style `crag`, one sheer wall), ground.js `crag` (big light slabs), groundbake.js `reliefOn` (`LEDGE`:
+a bench every 4 m of height along the land's contours on rock). C's snow is taken out. The desert's sandstone and the
+coasts' basalt pieces are as they were. test/crags.test.js. With the re-bake.
+
+## 2026-11-25 · Talus at a crag's foot; ledges on the steep open slopes - on branch `fable-art-1124`
+Following the owner's pick of look B. groundbake.js `talus` (a pass between the edges and the decor; `TALUS`): south
+of solid rock that stands 3 m or more over the ground below (from M.relief), the wild ground - the mountains' brown
+scree too - is pale broken stone for 54 to 100 px, its edge ragged and dithered out, the earth showing between the
+stones; the decor strews fallen stones over it, thickest by the wall. `reliefOn`: the mountains' open ground shows
+the rock's ledges where it is steeper than 0.4 m a tile, at 45% strength (`LEDGE.rib`, `LEDGE.soft`). statics.js
+`cliffH`: a cliff run under five tiles wide keeps its own height (taller it stood like a pillar by Summit Tarn).
+test/crags.test.js (the numbers, the pass order); test/cliffs.test.js passes with the walls as drawn. Seen at the
+crag at tiles 684, 588 and at Summit Tarn. No bake-level test of the apron (it needs a World v3 build: by picture
+and the census tool). The summits as knobs: a plan in docs/tasks/MOUNTAIN-LOOK-2026-11-25.md, not built. The bake's
+code: 1,095 of 1,100 KB.
+
+## 2026-11-25 · PR #49 live; the El's and the decks' see-through off for now - on branch `fable-art-1124`
+The owner, 09:03: "Push the transparent buildings and emotes" - PR #49 merged to main (engine.js `GHOST` 0.94 and its
+rim; peds.js the emotes' poses; version.json's world and art hashes unchanged; 27 tests on the main copy). "The
+highway/bridge transparency not sure that's right yet, maybe we leave that alone for now" - statics.js `DECK_SEE`
+false: the El's pieces and the highway decks carry no fade ids, the rule and its test stay. "Build the summit from
+plans"; "Creek looks good let's go with it" - next. His question about snowfields: none is drawn (10-17: the ground
+above the snow line is pale cut granite and scree) - Claude's earlier wording was wrong; corrected in DECISIONS.
+
+## 2026-11-25 · The summits built as knobs of rock; the relief's bytes reach the mountains' top - on branch `fable-art-1124`
+The owner, 09:03: "Build the summit from plans" (docs/tasks/MOUNTAIN-LOOK-2026-11-25.md).
+- **Found on the way - the relief layer ran out of room.** `m.relief` is a byte of metres per tile and Granite Peaks
+  stands to 363 m: 132,603 land tiles (23.2% of the district) read 255 - level to everything that reads the layer, no
+  slope shaded, no ledge drawn on the highest quarter of the mountains, and nothing could be raised there. Now a
+  metre a byte up to 160 m and 0.4 of a byte per metre above (shared/mapcore.js `RELIEF`, `reliefByte`,
+  `reliefMetres`); nothing under 160 m changes. Read back as metres by the ground bake (the hillshade, the ledges, the
+  talus), the trails' router, the rapids, the waysides' and the meadows' level-ground checks. 0 land tiles at the
+  ceiling (test/world3relief.test.js). What changes that he has not seen: the high mountains now show their slopes
+  and ledges (look B, as approved, where it was flat by this fault); the alpine meadows and the Summit Trail are
+  chosen and routed on true heights (the same five meadows by name; the trail 204 tiles, was 240).
+- **A summit is a top of the land**: chosen by the relief's own height (300 m and up, the ones standing highest over
+  the ground round them first), the knob having to fit. The land has two such tops clear of roads and places: Eagle
+  Knob (358 m with its knob; the Summit Trail's, the telescope now here) and Windy Col (340 m). Cairn Peak stays where
+  it was, by the old rule - it lies on a spur at 106 m, not a mountain top (it had the telescope).
+- **The knob** (shared/world3-peaks.js `PEAKS3.knob`): a level shelf 10 x 8 tiles for the cairn, the bench and the
+  telescope; solid rock round it - a ring 3 tiles thick on the north half, a block on the south half that ends in a
+  straight foot 5 tiles south of the shelf (the west half a tile shorter); the relief raised 16 m; a cliff wall (the
+  crag look) on each half of the foot; between them a cleft 3 tiles wide with stone steps (props-wild.js
+  `cliffStairs`'s new stone kind: granite treads, no posts or rope); the Summit Trail's router finds the cleft by
+  itself (rock is closed to it). Built three times before it read as a rock top: as a round, its south edge curved,
+  the walls came out two thin pillars and it looked like a disc of paving with a wooden ladder across it; then the
+  west wall was missing (a face 5 tiles deep is drawn over 7 rows - onto the shelf - so it was not put: `deep` 2).
+- **The ground**: a new ground, the walked granite (ground.js `granite`, groundbake.js `GRANITE`): worn smooth and
+  gritty, a crack wandering over it, a tuft by a crack - not a crag's slabs, which are the rock that stops you. On a
+  summit's shelf and its way up (the summit's own numbers, carried on its site), and in patches above the old snow
+  line where the quarry's cut slabs were (none within 17 tiles of a summit: the knob's outline stays its own).
+  Nothing grows on the shelf or the steps (reserve bits 192, statics.js `coverAt`). No snow anywhere.
+- Tests: test/world3peaks.test.js (each knob: its crown, its walls, the steps, the rise over the ground round it, the
+  walk up from the south to the cairn never through rock, the bench and telescope on open ground; two summits on real
+  tops), test/world3relief.test.js (the ceiling; bytes and metres agree), test/crags.test.js (the walked granite),
+  test/cliffs.test.js, test/world3rapids.test.js, test/world3wayside.test.js pass. The bake's code: 1,096 of 1,100 KB.
+- **The shade**: seen on the steepest ground over 270 m (86 m of fall in 44 tiles), half the scree came out under 50
+  of 255 once the slope was shaded. groundbake.js `LEDGE.shade` 0.64: the darkest a slope turned from the light is
+  shaded (was 0.55, everywhere - the steepest shaded slopes of every hill are a little lighter); `LEDGE.dark` 0.45: a
+  ledge's face on such a slope no darker than that of the rock's colour. There: 19.8% under 50 before these two, 8.2%
+  after (the style anchor: 10.6%). Not raised as a budget: two looks' numbers, tested in test/crags.test.js.
+- `tools/nature/darkscan.mjs --steep m` finds the steepest high ground to look at; the tool is in tools/nature/README.md.
+- Not done from the plan: switchbacks (the cleft is straight, 6 tiles of steps); the bench is not turned to the
+  longest view. Not seen in a running game. The whole suite not run.
+
+## 2026-11-25 · The woods' creek network - on branch `fable-art-1124`
+The owner, 09:03: "Creek looks good let's go with it." shared/world3-creeks.js `CREEKS3.net`: after Fernwater Creek
+(unchanged: 283 tiles, 7 pools, the same crossing) seven more by the same rule - springs tried on a 56-tile grid over
+Highland Woods, the highest first, 110 tiles apart, each run down the land to the first water (the river, the lake, a
+creek laid before it: Thimbleberry Run joins Salamander Creek, Huckleberry Run joins Dipper Creek's pond) or to a
+hollow, where it ends in a pond (three: Mossy Fork, Owl Hollow Creek, Dipper Creek). A creek goes round rock, is not
+laid along a path, through a lot, a field or a building, and would pass a road in a culvert (the road's tiles stay
+road) - none of the seven meets a road, so no culvert is laid and that part is untested in the world. From the data:
+8 creeks, 1,418 tiles of run, 3,345 tiles of water, 36 pools, 2 path crossings (stepping stones), 3 ponds; 9 springs
+tried, 2 with no way down. First try wound round a hollow's floor for 500 tiles (a scribble): a trace that gets no
+further than 12 tiles in 12 steps has reached the floor - the pond goes where that began. test/world3wayside.test.js
+(each creek downhill, one water along its own run, a way over at every path, a culvert wherever road lies under its
+line, its pond, names and springs apart). A car driven into a creek is in water as in any river (the shallow-water
+work is on the pre-beta list). Not seen in a running game.
+
+## 2026-11-25 · The mountains' streams - on branch `fable-art-1124`
+The plan's next part of nature, the mountains' water (docs/tasks/MOUNTAIN-LOOK-2026-11-25.md item 5; the owner's
+note: "water chunks that blend into the mountainous area above and foothills below"). Counted first: Granite Peaks -
+572,588 tiles of land - held 691 tiles of water: one tarn (Summit Tarn, its falls and a 20-tile outflow that ends on
+the scree), the hot springs' pools, and not one running water of the map's 82. The relief's bytes now reaching the
+tops (the entry above), the creeks' rule works there: shared/world3-creeks.js `CREEKS3.alp`, `peakCreeks3` - six
+streams from springs high on the scree down to the sea, a river, a creek in the woods below (Granite Fork passes
+under the road in a culvert and joins Dipper Creek's water in the foothills) or a tarn in a hollow. The mountains'
+own: a spring may rise on scree; a path there is a trail's own tiles (the scree is dirt too); bare granite boulders,
+no ferns; clear alpine water; granite outcrops on a tarn's far shore. From the data: 6 streams, 1,128 tiles of run,
+2,718 tiles of water, 30 pools, 1 culvert, 1 tarn; 23 springs tried (12 with no way down - they go round rock - 3
+over ground they may not take, 1 short, 1 too long under a road).
+- **The culvert seen for the first time** (the woods' creeks meet no road): the piece first used drew nothing - the
+  creek stopped at the road. Now a stone headwall with its arch on each edge of the road (statics.js `culvhead`,
+  the art's `culvert`).
+- **For both networks**: a creek that would end in a hollow within 12 tiles of water runs on into it, unless the way
+  is over a rise (a hollow behind a beach's berm keeps its pond); a pond is laid only where the hollow has room (40
+  tiles) - one ended in 21 tiles of water hemmed by rock; pools, ponds and springs take scree in the mountains (the
+  first tarn laid was a sliver: only grass was taken). The creeks read the land in metres (`reliefMetres`). The
+  woods' eight creeks come out as they were (1,418 tiles, 36 pools, 3 ponds).
+- **Not done**: Summit Tarn's outflow run on - it ends 19 tiles short of a road and a band of rock 40 tiles deep; it
+  wants a cascade down the band, with the falls' own piece. Summit Tarn set in a cirque (a rock wall behind it): a
+  change to a place made by hand - to show him first. Streams over cliff bands as waterfalls. Seen on the way and
+  not touched: Granite Hot Springs' pool rocks are near-black (7.9% of that picture under 35 of 255) - one for the
+  redraw's list.
+- test/world3wayside.test.js: the creeks' checks run over both networks (`checkCreeks`). The bake's code: 1,096.4 of
+  1,100 KB. Not seen in a running game.
+
+## 2026-11-25 · Streams join the water they run to; a road over a creek is a bridge - on branch `fable-art-1124`
+The owner, 13:33 and 13:35, on the mountain streams' pictures (his words in DECISIONS).
+- **"Doesnt just close off right before the open water"** (a stream ended in a pool a few tiles from the sea): a
+  creek that would end in a hollow within 16 tiles of water runs on into it, cutting through whatever lip lies
+  between (`CREEKS3` `reach`; the rule of an hour before kept the pond where the way was over a rise - gone). Marmot
+  Run reaches the sea (the mountains: 6 streams, 1,131 tiles, 29 pools, no tarn left of the rule's); in the woods Owl
+  Hollow Creek reaches the bay (the woods: 8 creeks, 1,421 tiles, 2 ponds).
+- **"Looks like its leading into a skinny concrete structure"** (the stone headwalls at Granite Fork's road): the
+  headwalls are gone (statics.js `culvhead` with them). Where a creek passes under a road the road's tiles over it
+  are a bridge's (22 at Granite Fork: the bake draws a deck there, the water either side right up to it) and a rail -
+  the creek bridges' stone kerb and timber posts, an existing piece - lies along each edge of the road, the way the
+  road runs there. Honest state: it reads as water going under, not yet strongly as a bridge - the deck is asphalt
+  like the road. A stronger deck (a paler slab, parapets) is the next step if he wants it.
+- **Tried and switched off: Summit Tarn's outflow as a cascade** (`CREEKS3.alp.tarnOn`, off). The code lets a stream
+  run over a band of the land's rock (white water all the way, a fall where it comes out through a cliff face) and
+  the outflow does come down the band; below it the land leads it beside a road to a junction where it has no room
+  to end. Five tries; not laid, nothing of it in the world. Needs the junction solved by hand, with the tarn's cirque.
+- Logged from the same message (docs/audit/PREBETA-LIST.md): train riders swimming for a few seconds; the train's
+  front drawn above ground past a tunnel's mouth; tunnel mouths that do not line up.
+- test/world3wayside.test.js: no creek's line on a plain road tile; deck tiles and two rails for every road passed.
+  Not seen in a running game.
+
+
+## 2026-11-25 · Summit Tarn in a cirque, a lower pool; the creek bridge's rails joined to the street - on branch `fable-art-1124`
+- **The rails** (the owner, 14:52: "looks good how it is now except the railings should be a little longer and
+  connected to the street (right now you see the top one have water under it"): each rail lies on the road's own
+  edge - the first and last of its tiles under the creek - and is 44 px longer. A piece on a street is taken off by
+  the clutter pass (that is how one of the first pair went missing): the rails are marked hand-laid.
+- **Summit Tarn** (the owner, 13:33: "you can change the summit tarn if you think it looks or works better"):
+  shared/world3-tarn.js `TARN3.cirque` - a crescent of the mountain's rock behind the north shore, 5 tiles back from
+  the water so the turf, the slabs and the outcrops stay in front of it, 159 tiles of rock, the land raised 14 m,
+  five cliff walls toward the tarn; the beach and the camp on the west and the cabin's meadow on the east left open
+  (the span is cut short of both). Eagle Crag moved 5 tiles north-west to clear it (its own search). Where the
+  outflow ended on the scree: a lower pool (38 tiles, deep in the middle) with granite on its lip - the stream ends
+  in water, not in nothing. The cascade on down the rock band stays off.
+- Tests: test/world3peaks.test.js (the cirque's rock and walls, the camp and the cabin open, the pool),
+  test/world3wayside.test.js (two rails for every road passed), test/cliffs.test.js pass. Not seen in a running game.
+
+## 2026-11-25 · The shark reshaped; the cats' nose, head and tail - page code, on branch `fable-art-1124`
+- **The shark** (the owner, 15:10: "could use another pass on it let's try to make it look better"): it swam as a
+  dark torpedo with a stub of a tail. client/art2/animals.js `sharkModel`: a pointed snout, widest at the shoulders, a
+  long taper to a narrow tail stock; broad swept pectoral fins and small pelvic fins; its back a tone lighter along
+  the middle, where it lies just under the surface; a taller dorsal fin, a small second one aft; the tail's upper
+  lobe a tall blade swept back. The bite of this morning is kept (its test passes). Picture: `report-54`.
+- **The cats** (the owner, 15:22: "a longer cat like tail and a cuter face ... the dog ... has a nose"): a small pink
+  nose low on the face under the eyes (on 11-21 a nose level with an eye read as a second eye and was taken off), the
+  head a size bigger, the tail half as long again, up behind and hooked. A first try for his eye: `report-55`, the
+  cats before and after beside two dogs. They are 17 art pixels tall: a face is two eyes and a nose.
+- Page code: no re-bake. test/animalart.test.js and test/perf.test.js (the page's budget) pass. Not seen in a game.
+- **The cats, second try the same hour** (the owner, 15:26: "the before cats looked better ... keep them like that in
+  the face and snout but just add a little nose ... the tail a little thinner and longer"): the head back to its
+  size; the small nose stays; the tail thin (0.72, was 0.95) and long, in two carriages - up behind and hooked
+  (ginger, calico) or out low with the tip curled up (`tailLow`: black, tabby); the long-haired white cat keeps its
+  plume. The calico's patches are laid from where the model's origin was (her tail's room moved it and with it her
+  patches). Picture: `report-56`.
+- **The cats' nose a light pink** (the owner, 15:42: "right now its too dark red"): a feature pixel takes the ramp's
+  darker step - (244, 45, 129) for this pink; a cat's nose takes the ramp's middle tone, its own colour (246, 173, 187).
+
+## 2026-11-25 · Cloud shadows - page code, on branch `fable-art-1124`
+The owner, 15:10, on the still of 11-25 (`report-43`): "I think the cloud looks okay let's try it out."
+client/art2/game/lightgame.js `CLOUD`: big soft shadows drifting over the land by day. They are the sun's: the light
+pass's sun visibility is multiplied by a slow two-octave noise anchored to the world (cells 1,500 px across, drifting
+9 px a second east-south-east), so a shadow dims the sun's direct light and takes the shade's cool tint, and lies on
+ground, roofs, crowns and water alike. How much of the sun a cloud takes is a preset's number, blended with the day
+like the rest: noon and afternoon 0.36, morning 0.3, golden 0.28, dawn 0.2, sunset 0.18, rain's overcast 0.1; night,
+dusk, storm, fog and indoors none (the default). From the noise worked out again in the test: 31.5% of the land is
+touched by a shadow at a time, 18.6% at half strength or more. A switch in the debug menu ("Cloud shadows", your
+screen, reloads; `cla.clouds`).
+- Cost: eight hashes and two smoothsteps a lit pixel, beside the sun's own ray march (to 110 steps): not measured on
+  a phone. No new texture, no extra pass. Page code: no re-bake.
+- Seen in a local game at noon, switched off and on in the same frame (`report-58`: under the redwoods, where the
+  canopy's own shade hides most of it - it will read plainer on open ground, which was not photographed).
+- test/cloudshadow.test.js (the presets by day only, the shader's rule from the source, the land's share, the
+  switch); the lighting tests and test/perf.test.js pass.
+- **The cats, 15:48** (the owner: the black cat no nose, the grey a black one, "off center from the front view"): the
+  black cat's nose is left off (`noNose`), the tabby's is black. Seen from the front a cat's eyes stand an even gap
+  apart, so no single pixel is the middle: the nose is drawn on both middle pixels (renderArt, a feature's `center`).
+  The collar is a voxel wider on cats so it shows on both middle pixels too. The low-carried tail's tip stays under
+  the head's top (from the front it stood up between the ears as a spike). Picture: `report-59`.
+- **The cats, 15:52** (the owner: "the grey cat a pink nose and the black cat an actual black nose"): the tabby's nose
+  is the cats' light pink again; the black cat's is `#0b0a0e`, a step under its coat's darkest tone (`noNose` stays
+  in the code, unused). On a black face it is two pixels a little darker than the fur round them - there, but faint
+  at the game's size. Picture: `report-60`.
+
+- **The cats, 16:00** (the owner: the grey cat's pink nose not "in the right place ... looks right on the white cat"):
+  every cat's nose is two rows under the eyes, but on the cats with a pale muzzle (tabby, ginger, calico) the muzzle's
+  top showed as a pale row between the eyes and the nose - a white nose with pink under it. A cat's muzzle above its
+  nose's top now takes the head's colour (`animalModel`, after the snout), so the nose stands alone as on the white
+  cat. Tried and not kept: a wider muzzle for pale pads either side of the nose (a four-pixel pale band, a wide
+  mouth). The black cat's nose stays as it is. Picture: `report-61`.
+- **The cats, 16:18** (the owner: "go back to having one pixel for the cat's nose"): the nose of 15:48 took both
+  middle pixels under the eyes; it is one again - the left of the two, never one further out, which is what had
+  read as off-centre. Picture: `report-62`.
+
+
+## 2026-11-25 · The desert, first pass: bloom a rare patch, dry mud flat, no reeds in a street - on branch `fable-art-1124`
+
+The plan's next biome (ART-PASS-PLAN part A). Counted from the built world first: the Red Rock Desert and its towns
+are 3,065,627 tiles (dirt 1.89 M, sand sheets 0.77 M, rock 170,049, of it 168,934 relief cliff), relief to 90 m, 130
+tables, 2,380 cliff faces, 22,713 props (2,198 mesquite, 1,009 palo verde, 250 joshua trees, 3,035 cacti of nine
+kinds, 1,138 boulders, 487 outcrops), 29 places (the oasis, Mirage Lake, the mission, 5 tinajas, 2 seeps, 6 stock
+tanks, the trail). Twelve places baked and lit (`tools/nature/darkscan.mjs`) beside NR1-B, NS1-C, SC3-F: none dark
+(0.8-8.7% under 50). What was wrong, by class, and what is fixed here (all baked art: with the re-bake):
+
+- **Flower beds everywhere.** The bake's rule made 22.8% of the desert a bloom patch with a plant on 30% of its
+  tiles, four in five of them a flower bed: 39% of the desert's small plants (68 of 176 per 1,000 tiles). The concepts
+  show scrub with a rare yellow bush. Now `DESERT_BLOOM { zone: 0.84, share: 0.2 }` (`statics.js desertCover`): a
+  patch is about 7% of the desert, brittlebush first, the many-coloured bed the rarest - beds 4.4% of the plants.
+- **Reeds in Dusty Hollow's street** and on the jeep tracks' gravel: gravel took desert scrub only in district 50;
+  now in the desert's towns too (`dry`).
+- **A desert river's green strip grew lupines, foxgloves and berry shrubs** (the bank's tiles are the water's
+  district, 13): beside the desert it grows rushes, tall grass, reeds, dry grass (`NAT_SP.desertBank`). The strip
+  stays green - "lush even in dry country" is the banks' rule.
+- **A seep's ring was the marsh's dark mud with blue puddles** (a stain round the pool): the desert's cracked mud, as
+  `world3-tinajas.js` always said.
+- **Cracked earth read as cobblestones** (domed plates, heavy shade - on the tables' tops it looked paved): flat
+  plates with thin cracks (`ground.js earthCracked`), as NS1-C's playa.
+
+`test/desertflora.test.js` (new: the bloom's share by counting over the desert's box, the gravel and bank rules, the
+seep's ring). The bake's code is 1,098.1 of 1,100 KB after this (the cats' work took 1.2 KB of it: `animals.js` is
+in the bake's closure) - the next addition of any size needs the owner's word on the budget.
+Not done, listed in `docs/tasks/ART-CHECK-LIST.md`: the tables' cliff faces (a look for him to pick), the mission
+(small), the playa, the tin shack, a seep's square pool. Logged for part B: a concrete door path across Dusty
+Hollow's street; the desert highway's saw-toothed edge.
+
+## 2026-11-25 · The desert's found places; the bake's code budget 1,100 -> 1,150 KB - on branch `fable-art-1124`
+
+- **Found places in the Red Rock Desert** (the plan's step (d): small places of the biome's kit, spread by rule;
+  NS1-C, NR1-B). `shared/world3-wayside.js` knew the woods and the valley; district 50 is a third set on the desert's
+  bare dirt (not the sand sheets), level, off the tables' rock, 6 to 56 tiles off a road or trail: **28 places, 7
+  each** - a cracked playa with a dead snag and tumbleweed (the pan painted by the ground bake from `m.tinajas`,
+  the list a seep's ring is in: no new bake code), a stand of 3-4 hoodoos, saguaros round a rock pile, joshua trees
+  among boulders. 62 found places in the world now (34). A world change: with the batch.
+  `test/world3wayside.test.js` (its pieces by kind; the same ground, distance and nothing-in-front rules).
+- **The bake's code budget raised to 1,150 KB** (`tools/perf.mjs`; the owner, 16:51). Why: 1,098.1 of 1,100 after
+  the desert's first pass, with the desert's tin shack and rusted pickup (new art), cliff look B if he picks it, and
+  the coast and jungle still to draw. What it costs: a browser fetches the bake's code once per build, in a worker,
+  after the first screen - 50 KB more is under 5% of it. The bake's time (`bakeX`) and a kept chunk's weight are
+  budgets of their own and are untouched.
+- **A hoodoo drawn as one** (17:20; NR1-B, NS1-C): the five by the arch and the found places' stands were tall thin
+  `outcrop`s - dark spires. `props-desert.js hoodoo(h, seed)`: a voxel column of banded sandstone (four tones in
+  bands 5-11 px thick, each a little off the last), waisted to a neck under a flat slab cap of red rock, a skirt of
+  fallen rock at its foot; 60 to 100 px, four seeds. Prop `hoodoo` (statics.js), placed by `world3-desert.js` (5)
+  and `world3-wayside.js` (7 stands of 3-4). `test/desertflora.test.js`: the cap overhangs the neck, it flares at
+  the foot, it is banded, each height and seed its own picture. (First drawn at a voxel an art pixel: a voxel is a
+  world pixel, so it stood half size in the baked world - seen there, not on the sprite sheet; drawn at twice the
+  voxels.)
+- **The desert's arch is sandstone** (17:30; seen while looking at the hoodoos): the natural arch by the lookout is
+  the `seaarch` prop - dark layered rock, a wet foot, barnacles, turf and thrift on top - standing in the red
+  desert. The bake picks by where an arch stands (`statics.js`, as it does a boulder's stone): in the desert
+  `seaArch(..., dry)` - red sandstone, bare. One arch in the desert today; the sea's unchanged
+  (`test/desertflora.test.js`).
+- **The tables' cliff faces stay as built** (the owner, 17:18: A). Nothing to change; B's trial code was never in.
+  The bake's code after the hoodoo and the arch: 1,099.0 of 1,150 KB.
+- **The tin shack and the rusted pickup** (17:40-18:10; NS1-C's fourth panel): a fifth desert found place, 6 of
+  each kind now (30 in the desert, 64 in the world). `props-desert.js tinShack(seed)` - plank walls under a gable of
+  corrugated iron, rust in streaks down from the ridge and up from the eaves with bare tin between, a lean-to on
+  posts, a door, a window, a stove pipe - and `rustPickup(seed)` - an open bed, a cab with the dark where its glass
+  was, a hood falling to the grille, flat tyres; rust on iron uses the plain ramp (nature's ramp lifts it to the
+  desert's own orange, and the pickup vanished into the ground). Props `tinshack`, `rustpickup` (statics.js; the
+  pickup at any of 16 headings). `world3-wayside.js` 'tinshack': the shack (its walls 15 solid circles), the pickup
+  at an angle before it (3), two drums, tyres, a dead snag. First baked at a cottage's footprint it read as a hut
+  beside the desert's plants; drawn a third bigger. Tests: `test/world3wayside.test.js` (its pieces, both solid,
+  the pickup clear of the shack), `test/desertflora.test.js` (tin and rust both show on the roof; the pickup rust
+  all over and darker than the ground).
+- **Not done in the desert, and why:** the mission ruin's size (its model is 236 x 196 x 132 voxels and shared with
+  today's world: twice the size is 49 M voxels in one sprite - a step of its own, with a look at the bake's time);
+  a seep's square-cornered pool (every small pond's shore: the water's-edges step of the plan).
+
+## 2026-11-25 · The coast, first pass: a tideline, basalt tide-pool shelves; hoodoos as natural rock - on branch `fable-art-1124`
+
+**The hoodoos again** (the owner, 18:14, on a screenshot of a stand: "very unnatural ... vary the sizes ... not all so
+uniform and perfectly flat and round"). The first ones were a column turned on a lathe under a disc, four tones in
+even bands, four seeds, all near one size. `props-desert.js hoodoo(h, seed)` now builds each of beds of rock stacked
+one on another - each bed its own lumpy outline (three waves round its edge), thickness (3.5 to 12.5 px), tone and a
+little off the last -, the whole leaning up to 6 px, thick or thin (girth 0.72 to 1.34), and topped one of four ways:
+a tilted slab, a boulder left balanced, a stepped pair of slabs, or nothing (a spire). Twelve seeds, heights 30 to
+120 px in steps of 6. A found stand is 3 to 5 of them - one tall (84-114), the rest 36 to 78 - standing irregularly,
+no two the same picture (`world3-wayside.js`). `test/desertflora.test.js`: every height and seed its own picture,
+some capped and some spires, most lopsided, thick and thin, some leaning. DECISIONS has the rule for every rock
+formation drawn by code.
+
+**The coast and jungle, counted first** (one world build): sand by district - Sandpiper Coast 100,876 tiles, Egret
+Coast 62,725, Northshore Beaches 50,321, Willow Valley 36,014, Highland Woods 27,918, Gull Harbor 26,895, Coral Cay
+12,817; jungle floor 18,484 tiles on Coral Cay (22,853 with its coves); tide-pool shelf 1,932 tiles on Coral Cay,
+405 Granite Peaks, 233 Highland Woods, 222 the desert's coast; 17 sea stacks, 408 column stacks, 363 mangroves, 54
+hammocks, 48 pieces of driftwood, 22 coast falls; places: Coral Cay Falls, Macaw Cove, Mangrove Inlet, North Cape's
+and Redwood Cove's tide pools, the sea cave, Egret Marsh's boardwalk, Wreck and Bonfire beaches. Twelve places baked
+and lit beside NS1-F, NS1-G, NR1-C: Coral Cay's falls, Macaw Cove, Mangrove Inlet, the marsh and Wreck Beach stand
+up well. What was wrong, by class, and what is fixed here (baked art: with the re-bake):
+
+- **A wild beach was bare sand to the water.** The tideline (`groundbake.js WRACK`, `wrackW`): on sand within reach
+  of the sea, a band 9 px wide wandering between 24 and 44 px up from the water - above the swash - where the decals
+  pass lays heaps of kelp (`ground.js` cover `wrack`, new), a strand of seaweed, a shell in ten.
+- **"Shells too thick"** (the owner, 11-23): a beach's shells 0.02 -> 0.007 a cell, pebbles 0.03 -> 0.02.
+- **A tide-pool shelf was the rocky shore's pale rounded cobbles** with the pools as pale blobs on it: its own
+  ground `BASALT` (`ground.js basaltShelf`: flat blocks of dark basalt, wet joints, rockweed in patches, a
+  barnacle), starfish and weed on it; the pools now read as water in dark rock (NR1-C, NS1-F). The material is added
+  last so the others keep their numbers.
+- **Reeds on the sea's shingle** (the pebble beach by the sea cave): no shore plants on a gravel bar within four
+  tiles of the sea.
+
+`test/coastart.test.js` (new). Seen and not yet fixed (ART-CHECK-LIST): the sea cave's rock is a round drum of
+stepped rings; three sea stacks stand in a line off Redwood Cove and all stacks are thin; North Cape's bluffs are
+square grass-topped blocks; no cypress knees in the marsh; no rock fishing spot's gear. Logged for part B: hammocks
+standing free on a lawn.
+- **Sea stacks** (19:00; his notes of 11-23 "the sea stacks in a line" and 11-25 18:14 on rock drawn by code).
+  Counted: 17; the four off Redwood Cove stood on one column of tiles (x 491.5) and the Egret coast's three coves
+  each had the same three at the same offsets (two of those triples 1.4 tiles off a line). `world3-coast.js
+  stacksApart3` (`STACKS3`): after the coasts are built every stack is re-sited within 5 tiles of where it stood -
+  (to 11, only when two neighbours on one line leave it nowhere nearer: the cove's fourth went 8 tiles) -
+  open sea 2 tiles round it, 7 tiles from any other, never the third of a line (`inLine3`: three within 30 tiles
+  lying within 2.5 tiles of one line) - and takes its own radius (0.75-1.35 of what it had), height (0.6-1.15) and one
+  of twelve shapes; a gull standing on one moves with it. The rock itself (`terrain.js seaStack`): it was one thin
+  pillar stepped in four even rings; now by its seed a tower with a shoulder, a broad block with a horn, or twin
+  stacks on one foot, basalt broken into columns at the top, 4 to 7 rocks thrown down round its foot; kelp and turf
+  on it cut to a third (with more faces to hang on, the rock went under them).
+- **The sea cave's rock** (the Redwood Caverns' sea mouth; the plan's "sea cave placeholder"): one mass stepped in
+  even rings - a drum. A `cliff` prop with `rough` (world3-caves.js; statics.js recipe `rg`) is drawn as a headland:
+  a low apron on the same outline (so what is solid is as before), a tall crag at the middle of its front where the
+  way in is, five lesser crags of their own heights either side, boulders on the apron. The ground under a rock
+  of dark stone is dark basalt (`groundbake.js darkRock`): with the apron low, the crags' pale granite slabs showed
+  round the rock's back as a collar.
+- Tests: `test/world3wayside.test.js` (the stacks: in the sea, solid, apart, no three in a line, no two one size and
+  shape, a gull's stack under it), `test/coastart.test.js` (`inLine3` on the two layouts found; twelve seeds twelve
+  rocks, broad and narrow; the cave's skyline against the drum's, its tallest crag at the front's middle).
+- Not done on the coast: North Cape's bluffs (`world3-west.js`: a west-facing shore dressed with south-facing wall
+  pieces every six rows - a column of square blocks; it wants the bluff drawn another way, a step of its own);
+  cypress knees; the fishing rocks' gear.
+- **The west coast's bluffs** (19:50; counted: 27 `cliffwall` pieces in the world - 10 at the Redwood River's falls
+  and 2 on the relief, which face south as a wall should and stay; 9 at North Cape and 6 at the Egret coves' horns).
+  North Cape's shore runs north to south, and its rock band was dressed with south-facing wall pieces six tiles
+  long, one every six rows: a column of square turf-topped blocks. `world3-west.js`: a scarp along the band itself
+  - a basalt boulder or an outcrop every other row, each its own size, a little off the line (25 pieces; the
+  stairs' gap as before). The coves' horns - one straight twelve-tile wall piece each - are `cliff` props drawn
+  rough (the sea cave's recipe), solid where they stand (`cliffshape.js cliffSolid`).
+- **Knees in the marsh** (N7, NK1-D; the plan's "cypress knees in the marsh"): the knees were drawn on 11-21
+  (`flora.js cypressKnees`) and never planted. `world3-coast.js marshKnees3`: along the marsh's own water's edge
+  (inside its landmark's box, a land tile beside water with nothing on it) a huddle on one tile in eight - a plant,
+  species `knees` (statics.js). **A wrong first rule, caught in the baked picture:** knees round every `cypress`
+  within two tiles of water - but the world's `cypress` is the Italian cypress of gardens, and 166 of them stand by
+  swimming pools; the rule and a voxel model made for it are gone.
+- **The fishing rocks' gear** was there already (rods and a cooler at both points: world3-coast.js) - off the list.
+- Tests: `test/world3wayside.test.js` (knees by water and by their cypress; no wall piece left on the west coast;
+  seven rough headlands; the cape's scarp of mixed pieces), `test/coastart.test.js` (the knees' art).
+
+## 2026-11-25 · A fall lands in water (the water's edges, begun) - on branch `fable-art-1124`
+
+- **Counted** over the world's 49 falls (a scan south from each one's foot): 20 stood 8 px or more from water. Of
+  those, the ledge falls' 8-40 px is their own rock lip; Granite Hot Springs' three cascades fall onto its flagged
+  paths; one small fall by a footbridge has its creek beside it, not below. The class that reads wrong - open grass
+  or sand between the foot and the water it falls toward: Fern Gorge 52 px (the strip of dry bank seen on 11-24; its
+  salmon could only leap and fall back), Macaw Falls 28, the Redwood River's two end falls 32, a ledge fall at
+  Macaw Cove 128 px of beach from the sea. (A sixth, the water park's little fall on its pool's palm island, is a
+  built basin's: the first run cut a murky channel through the island - seen in the render - so a swimming pool's
+  water is left out of the rule.)
+- **`world3-falls.js fallsFeet3`** (`FEET3`; the falls chain, part 2): for every fall prop, past up to two tiles of
+  its own rock, grass or sand and then water within six tiles becomes that water - as wide as the fall, one tile wide
+  where it is more than two tiles (a rill across the beach), three tiles at least under a fall a tile wide (one
+  tile of water is drawn as mostly bank: the gorge's first render still showed shingle under the foam) - taking the
+  pool's own kind (lake, river or sea) and its pond's box; what grew there goes. Dirt, roads, decks and rock are
+  never flooded. Result: 34 fall props looked at, 5 short, 14 tiles to water.
+- `test/world3wayside.test.js`: no fall with dry grass or sand before its water; the gorge's fall has water within
+  three tiles of its lip.
+- **Not done, and why - Coral Cay's pool and stream above the falls** (the plan's jungle item): above the falls
+  stands the island's spine, rock masses 50 to 214 px tall drawn up the screen; water laid on the ground between
+  them is hidden behind the rock south of it, and the game has no water surface at height. The concept (NS1-G's
+  first panel) shows the fall coming over the rock with jungle above and no stream either. It wants a piece of its
+  own - a pool drawn into a rock's top - if he wants it; logged in ART-CHECK-LIST.
+
+## 2026-11-25 · Wild rock under the rock rule; a desert pool's rim; riffles broken - on branch `fable-art-1124`
+The plan's A3 ("rocks ... brought under the variety test") and the rest of the water's edges. The owner's rock rule
+(DECISIONS 11-25 18:14) set against every rock drawn by code.
+- **Counted:** the world holds 6,322 boulders (56 sizes) and 1,482 outcrops (241 sizes; 743 granite, 488 sandstone,
+  202 lava, 49 basalt). A boulder was one dome with a smaller one always at its right shoulder, four pictures a size;
+  an outcrop one blob stepped in three rings each inside the last - a tiered cake, and a sandstone boulder over 28 px
+  the same cake; every ledge of every outcrop wore the same green turf, red rock too.
+- **`terrain.js boulder`** (`BOULDER.kinds` 5): by its seed a lone lump, a lump with a shoulder on either side, a
+  long low slab, a split pair, a tall tooth with a low one against it - each lump's size from the seed.
+- **`terrain.js outcrop`** (`OUTCROP` kinds 5, tall 2): a low apron on the old outline (what the map holds solid is
+  still under rock) with masses set off its middle - a head with a shoulder, a ridge with a notch, two heads and a
+  saddle, a fin with fallen blocks, a table with one corner up - and loose rocks at its foot; a mass has one step
+  or two, and stands no taller than twice its width (the first sheet had chimneys). A recipe's own steps (the
+  jungle's black rock) keep the one mass.
+- `statics.js`: `ROCK_SEEDS` 4 -> 8 pictures a size; the desert's stone (`DRY_ROCK`) wears thin dry tufts and no
+  moss, the rest thinner turf (0.06 -> 0.035).
+- **A desert pool's rim** (`groundbake.js tinaTrim`, `TINA_RIM`): a seep two tiles across was a square with eased
+  corners; water past the pool's lobed rim is drawn as its ring's ground (cracked mud, slickrock). Seven pools.
+- **Riffles** (`water.js RAPID_BREAK` 0.38): at the art pixel a riffle's churn was flat white blobs ten pixels
+  across; 38% of a churn's pixels, in short dashes, now show the water paled with air.
+- `test/rockart.test.js` (new: every seed its own rock, squat and upright, lopsided, tops left and right; outcrops'
+  high points off the middle; no three-ring cake; dry stone without green; the riffles' break),
+  `test/desertwaters.test.js` (the rim: corners trimmed, lobed, a playa untouched).
+Looked at: sheets of 16 boulders and 8 outcrops a stone before and after; a seep, a tinaja, two riffles and three
+rock fields in a baked render. Bake code 1,106 KB of 1,150. Baked: with the re-bake. Not seen in a running game.
+
+## 2026-11-25 · The woods' deadfall; the redwoods' hollow trunks and root caves - on branch `fable-art-1124`
+The plan's A3 ("the wild logs: 13 in the whole world") and the redwoods' two missing set pieces (NS1-A).
+- **Counted:** 110 fallen logs in the world, 97 of them a made place's seats; Highland Woods' 33,000 pines, firs,
+  cedars and oaks and Granite Peaks' 3,400 mountain trees over a floor with no fallen wood. A hundred tiles of
+  woods hold 5 to 20 trees.
+- **`shared/world3-deadfall.js deadfall3`** (new; `DEADFALL`): about one log to forty trees by cells of ten tiles,
+  on open grass with a tree close by, off every path, road and water, no two within nine tiles - and none where a
+  tree to its south would be drawn over it (the first run laid 253 and a render showed none: they lay under the
+  firs' boughs). 215 laid (206 in Highland Woods, 9 in Granite Peaks), mossy, 120 to 220 px long, thicker than a
+  camp's seat (`statics.js` `p.wild`), solid. The ground bake already grows ferns, toadstools and the licorice fern
+  along a log: `test/undergrowth.test.js` now runs its log rule for the first time (150 looked at, 143 with
+  undergrowth along them).
+- **Hollow trunks** (`world3-redwoods.js hollowGiants3`, `HOLLOW`; `statics.js` species `giantLF`, `giantF` and
+  their high-crowned twins): `redwoods.js` had drawn a fire scar since the first giants and no tree carried it. One
+  big giant in 25 where its foot shows (nothing standing within 150 px south of it), no two within 14 tiles: 241 of
+  6,964. The scar redrawn - it read as a flat grey tent: a ragged lip, a rim of charred wood, near black inside, no
+  root across its mouth.
+- **Root caves** (`redwoods.js rootCave`, `ROOTCAVE`; prop `rootcave`; `world3-redwoods.js rootCaves3`): the
+  torn-up root mass of a fallen giant grown over - a lopsided mound of packed earth, seven to ten thick roots
+  bending out from round a dark way in, a few broken ends standing over it, moss and sprays on its shoulders. Six
+  shapes. 28 in the groves (one cell of 36 tiles in twelve at most), on open grass among at least four redwoods, no trunk in
+  front of the way in, a fern at each shoulder; solid. The first version was a striped fan (a disc); the second a
+  porcupine of straight spikes.
+- `test/world3wayside.test.js` (deadfall: off paths, a tree by it, in sight, apart; hollows: a big giant, nothing
+  in front, apart; root caves: open grass, among redwoods, in sight, several shapes), `test/rockart.test.js` (the
+  root cave's dark way in and lopsided mound; the hollow's dark at the foot of the same tree).
+**Not built, and why - the mission ruin made bigger:** its voxel model is 236 x 196 x 132; a voxel model's normals
+take 17 bytes a voxel while its chunk bakes - 104 MB today, the largest in the game. At 1.6 times the size (a church
+beside the tin shack) that is 425 MB in a page that bakes for itself. It wants either the model split in two (the
+front and gable; the walls and cloister - about 180 MB) or the voxel kit keeping normals for surface voxels only.
+Logged in the check list as his call.
+Looked at: sheets of the hollows and six root caves; two root caves, two hollow giants and two logs in a baked
+render. Baked: with the re-bake. Not seen in a running game.
+
+## 2026-11-25 · The cinema rebuilt: a compact inside at the door, four screens - on branch `fable-art-1124`
+Part B's first place (the owner, 11-24: "before the beta"; the pick agreed in the art pass plan, from IN14).
+- **What was there** (counted, World v3): The Grand Theater on Fountain Square is 40 x 59 tiles; its whole inside
+  was floor - two screens five tiles deep across the back and fifty rows of red carpet between them and the door
+  (2,166 tiles; picture `report-78`, left).
+- **`shared/cinema.js`**: `cinemaBox` - the inside is the whole of a small building (the first city's, unchanged:
+  two screens) and in a big one a box at the door, 23 tiles wide about the door and 19 deep. `cinemaLayout` takes
+  `tiers`: with the room, four screens - two a side of the hall, the far pair behind the near pair, a wall between
+  with the hall through it; each screen's door at its own walkway row. Rooms 0 and 1 stay the far pair. `filmFor`:
+  four screens start on four films (the first two as before). `CINE.LOBBY_T` 7 rows of lobby. 379 tiles of floor (it was 2,166);
+  228 seats. The rest of the building stays shut.
+- **`statics.js`**: each screen's own wall on the hall's side; the wall between the pairs; posters on the counter's
+  side of the poster wall too; the lobby's things from IN14 where it has three rows past the counter - brass posts
+  with velvet ropes before the counter, two benches across from it, a plant either side of the hall's mouth
+  (drawn only); what is cut open beside the box drawn as the dark of shut rooms, not a grey floor.
+- **A sign names what is behind it** (`theatreBlade`): every `theatre` building wore a CINEMA blade and one has
+  screens (11 theatre buildings in World v3). CINEMA over the cinema only; a cabaret says CABARET, a playhouse SHOWS, a club's building LIVE (11-26: the
+  placement lint's `bladeBiz` row caught the first version's LIVE on six playhouses; its theatre words no longer
+  allow CINEMA).
+- The server (`server/systems/cinema.js`) and the page's film (`client/cinema.js`) already went by the rooms'
+  list: no change.
+- `test/cinema.test.js`: a 40 x 59 building, door south and north - four screens, the box's size, at the door,
+  every seat walked to from the door, a wall behind every screen, the hall through the wall between; four films;
+  a small building keeps its whole inside and two screens; the blade's words.
+**Left:** The Palace as a second cinema from the same layout (the plan's ripple) - the server holds one cinema
+(`m.cinema`); it wants a list. The Grand Theater's outside: a 40 x 59-tile box with a gravel roof the size of a
+field - a district matter (Fountain Square), with part B's "no huge plain buildings".
+Looked at: the cut-away before and after from the page's own chunk bake (`tools/area-shot.mjs --cut`). Not seen in
+a running game; no film watched on the new screens.
+
+## 2026-11-25 · Painted lips hold their place over a walk (the faces' look) - on branch `fable-art-1124`
+Part C1, a look only (the owner, 11-25 12:45: "be careful not to try to over fix"; his note of 11-23: painted lips
+"in the run cycle ... jump about the face").
+- **Measured** (a probe in `people.js face()`, `info.face`: where the eyes and the mouth were stamped): on a figure
+  with lipstick facing the camera, over one walk the mouth sat a pixel left or right of the eyes' middle and two or
+  three rows under them from frame to frame - the eyes and the mouth were each rounded to the pixel grid on their own.
+- **Fixed, that fault only:** with both eyes showing the mouth goes by the eyes - under their middle (of two middle
+  columns the left), the rows between rounded once from the head's own measure. In profile (one eye) as it was.
+- **Isolated** (his rule of 11-20 16:51): the twelve starting looks, eight directions, idle and the four walks -
+  2,688 frames against the commit before: 55 changed, all the one figure's with painted lips, about 3 px each; the
+  eleven without make-up not a pixel. `test/facehold.test.js` (new).
+- **Found, not touched - for his eye:** the two eyes are each rounded on their own too, so facing the camera they
+  stand three columns apart in some frames of a walk and four in others. Tying one eye to the other would change
+  every figure in the game: shown to him first (`report-79` shows the heads at 10x).
+`people.js` is in the art hash (the bake draws people too - checked by stamping: the hash moved), so this goes
+with the re-bake. The people's tests pass (74). Not seen in a running game.
+
+## 2026-11-26 · Clothing pictures on the Inventory's tiles (part C3) - on branch `fable-art-1124`
+The art pass plan's C3 (concept UIC-19: a tile shows the piece itself). Counted: 390 pieces in 11 slots, 40 colours;
+every tile showed one line glyph for its slot with a colour dot.
+- **`client/piecepic.js`** (new; `piecePixels`): no drawn set. The game's own people art draws a bare figure and the
+  same figure wearing the piece, from the front; what the piece put on the figure - a pixel that differs, in a
+  colour the bare figure has nowhere - is its picture. In the colours it is worn in. Two bare figures (a light skin
+  in dark underwear, a dark skin in light; the second drawn only when the first shows little) so a cream top or a
+  brown boot is not lost on a skin of its own tone. **334 of 390 pieces have a picture**: every top (but the bare
+  chest), jacket, bottoms, set, hat, pair of glasses, mask, underwear and socks; a bag worn on the back is drawn
+  from behind (17 of 32 bags and hand things); of the jewellery 7 of 45 - a thin chain, ear studs, a watch, a pair
+  of bangles are a few pixels at the game's size and keep their slot's glyph (a picture needs 16 pixels there).
+- **`client/bag.js`**: a tile is the picture at a whole number of the game's pixels (two to one on the figure's
+  slots, inside its box in the grid), a hard one-pixel cream rim round it (black jeans on the navy tile were not to
+  be seen - looked at in the page), drawn one at a time in the page's idle time; the glyph with its dot until then
+  and where there is no picture. `people.js polishOn`: the bare figures are kept by it.
+- `tools/piecesheet.mjs` + `piecesheet.py`: the sheet of every piece, from the same maker (`RES=3` draws from the
+  close-up figure, for a big tile some day).
+- `test/piecepic.test.js` (new): a tee, jeans, shoes, a hat as pictures that fit a tile; red is red; nothing for a
+  bare chest; nine pieces in ten have one; the tile's rules. The page's budgets hold (`test/perf.test.js`).
+Looked at in the real page (`tools/uishots.py`, the Inventory at desk, phone landscape and portrait, before and
+after: the audit's counts are the same - no new overlap or small target). `uishots.py` takes `UISHOT_WAIT`.
+**Not known:** how long a picture takes on a real phone. In the test browser (no graphics card, the suite running
+beside it) they came in one after another over several seconds. The shops' rows already show each piece on your own figure (`creator.js th`):
+nothing to add there. `people.js` is in the art hash: with the re-bake.
+
+## 2026-11-26 · The UI style pass: the pick sheet (part C2) - on branch `fable-art-1124`
+The owner, 11-24: "Some UI still looks overly polished and not that 16-bit SNES style we want (like frames and some
+text and some icons)". The plan: one sheet for his pick before any screen is changed (DECISIONS 11-06 kept the clean
+line icons). Nothing in the game's CSS is changed by this.
+- **Counted** (`client/style.css`): 192 rounded corners through four radius variables (4 px, 10 px, a pill, 28 px),
+  153 shadows, 36 gradients; the type is CLA Pixel on every screen shot (the audit's fonts).
+- **Three looks of the same screens** (the Inventory, Settings, Pause; `tools/uishots.py` now runs a script in the
+  page before each shot - `UISHOT_JS` - so a look is tried without touching the game's CSS): **A** today; **B** hard
+  pixel frames (`tools/uistyle/hard.js`: square frames with a one-step notch out of each corner, a heavier gold
+  rim on the window, flat fills for gradients, a hard black drop for the soft shadows; round buttons and toggles
+  stay round as in UIK-00) with the line icons kept; **C** the same with pixel icons (`pixel.js`: every line glyph
+  redrawn on a grid of two screen pixels to one, one pixel to a line - a preview made from the line icons
+  themselves; the real set would be drawn by hand on that grid).
+- Pictures: `report-82-ui-pick-inventory`, `report-83-ui-pick-settings`, `report-84-ui-pick-close` (2x).
+After his pick: the look goes into `style.css` by its variables, every screen shot at four sizes, and a lint so a
+soft frame or an off-face font cannot come back.
+
+## 2026-11-26 · A soft lip colour: the pick sheet - on branch `fable-art-1124`
+The owner, 11-25 01:34: painted lips work as they are; "add a very soft lip colour" - a default or a choice, his pick
+from a sheet. `tools/lipsheet.mjs` + `lipsheet.py` draw the twelve starting looks' heads at 8x, facing the camera and
+turned a little, four ways: A none (today: the small faces have no mouth, DECISIONS 11-19), B faint and one pixel,
+C faint and two pixels, D soft and two pixels - the lip's colour taken 62% (B, C) or 40% (D) of the way to the skin's
+lit tone; a man's from the skin's own shadow. Painted lips are untouched in all four. The variants live in the tool:
+nothing in the game is changed. Picture: `report-85-soft-lips-pick`. After his pick it is one number in
+`peoplepolish.js` (and, if a choice, a row in the look screen); the mouth in emotes and the idle comes after it.
+
+## 2026-11-26 · The hollow's dark lifted to the plants' floor (found by the suite) - on branch `fable-art-1124`
+The whole suite, run on the night's commit, failed `test/leaflight.test.js`: "giantLF 0: a pixel painted at 13". The
+hollow giants' inside was painted [16, 12, 14] - against the owner's rule of 11-25 that no plant is painted near
+black. The hollow is now the darkest brown the floor allows ([72, 47, 41], luminance 54), its charred rim a step
+lighter; in `report-77` it is still black. A root cave's way in is a hole in the ground, not a plant's wood: a
+cave's dark (`CAVE_DARK`), as the rock caves have. The near-black count at noon takes a hollow giant with its own
+kind, held to five points over it (`leaflight.test.js`); `rockart.test.js` counts the hollow by its own colour.
+
+## 2026-11-26 · A flat over a shop has its own door (part B, the lint's `lobbyDoor`) - on branch `fable-art-1124`
+The lint held `lobbyDoor` at 161: "Midtown Apt #32's lobby door at THE TRESTLE TAP". The hand plans say "a flat
+over the shop, its own door at the other end of the front" (`world3-hand.js`), and only the home's spot was made -
+it stood on the shop's window, under the shop's sign, with no door drawn. The old row took only a front with a sign
+and no place it counted; by the rule itself there were **391** such fronts in World v3 (80 each in Midtown and the
+Arts District, 69 on the Neon Strip, 44 in Northgate, 36 in Old Town ...).
+- **The build** (`shared/world3-flatdoors.js` `flatDoors3`, in the done hook after the signs are named): each such
+  front gets `art.shop.flat` - a door 18 px wide, 7 px in from one end of the front - at the end nearest the spot
+  the plan gave when the shop's own doorway (a walk-in's, where the interiors cut it) and an ATM in the wall leave
+  it a pier and 4 px of window; else the other end (38 moved); else none (0). The home's spot and its record move to
+  the door. A lobby front with no business behind it, or one the homes are named for (Coral Court), is the flats' own
+  way in (9). Result: 382 doors, 9 lobbies, 0 without.
+- **The art** (`buildings.js` `storefront`, `flatPier`, `flatDoor`): from the door's pier to that end of the front
+  the building's own wall shows - no shop glass, people, riser, grille or awning - with a painted hinged door in it,
+  a stone lintel and step and a small lamp. The bake (`statics.js`) places it along the section, keeps the window's
+  OPEN sign off it, brings the door with the live ones (it opens as a walk-up's does; another paint than the
+  shop's), and keeps the shop's board over the shop where its words read the same on the shorter board
+  (`shopSignFits`: the same face, lines and picture - else the board stays the front's width).
+- **The lint** (`tools/audit/worldrows.mjs`) now uses the build's rule: a home at a shop front with no door of its
+  own, or with its spot beside a business's (the 24-7 Market's "Into Southside Apt #3173's lobby", 11-17). Held at
+  **0** (`tools/placementlint.mjs`; was 161).
+- `test/flatdoors.test.js` (the rule on one-building maps; the art: no glass in the pier, a door with its knob, the
+  shop's window unchanged; World v3: every front's door at an end, clear of the doorway and the ATMs, each home at
+  it, the lint's row empty; the bake brings the door, hinged, apart from the shop's). Also run on the change:
+  placementlint 43/43 (doorBlocked still 13, signCovered 157), doors, signs, signfix, shopmarks, doorsbake 15/15,
+  perf 6/6, walkinfront 2/2, world3doors and plainblocks 18/18, world3server and doorways 24/24.
+- A world change and a bake change: they ride with the branch's one rebuild and re-bake. Not seen in a running game.
+
+## 2026-11-26 · A front's words kept clear (part B, the lint's `signCovered` 157 -> 68) - on branch `fable-art-1124`
+What covered what, counted from the lint's rows (157): a **hotel's own entrance canopy over its name** 50 (the bake
+stood the filling stations' white forecourt slab before every hotel, motel office and airport concourse), a topiary
+**cone** by a door 20, a sign **already moved** onto a false front or a porch and still painted behind it 10, the
+rest street furniture, trees and runs of lights.
+- **A hotel's entrance canopy** (`props-rural.js` `entryCanopy`, `statics.js` `addLots`, `HOTEL_CANOPY`): cloth in
+  the front's awning colour (else one of five house colours), a little crowned, a scalloped valance with a pale trim,
+  two brass posts at the front, a lamp under it. It is as wide as the hotel's name needs (96 to 300 px, within the
+  front) and the name stands on its front edge - the rule the casinos' porte-cocheres already had (`coverSign`, from
+  `coverFronts`). I picked this over lowering the slab: a canopy under the board would be lower than the door.
+- **A moved sign is not painted on the wall behind** (`buildings.js`): it was hidden there, or showed twice.
+- **A cone by a shop's door** stands 18 px out where the front has a board (`CONE_AT_BOARD`; 11 as the other pots
+  elsewhere): its box is 64 px tall and reached 5 px into the words.
+- **The window's OPEN and the shop's board keep clear of what stands tall before the front** (`frontTall`: a phone
+  box, a lamp post, a power pole, a forecourt's pumps; `clearStretch`): the OPEN goes to the door's other side or is
+  left out; the board takes the widest clear stretch of the front where its words read the same on the shorter board
+  (`shopSignFits`) - the same rule that keeps it off a flat's door. This helped little for the boards (1 phone box of
+  8): most names do not fit a shorter board as they stand, and I did not let a name change its lines or lose its
+  picture to dodge a pole.
+- **Left, 68** (`tools/placementlint.mjs`, held there): trees and palms 23, a run of lights across a board 9, phone
+  boxes 7, the el's piers 7, forecourt canopies and porches over an OPEN 9, lamps and poles 9, a place's badge over
+  an OPEN 3, a hospital's canopy 1. The trees are `sightlines3`'s leftovers (the world); the el's piers stand where
+  the el stands. The lint's rows now carry the covering item's key and the building.
+- `test/signclear.test.js` (a moved sign not painted; the canopy is cloth, not the pale slab - the old one is 84%
+  pale grey by the same count; the cone's tip under the board; `frontTall` and `clearStretch` on small maps). Run on
+  the change: placementlint 43/43, flatdoors 4/4, perf 6/6, signs, doors, signfix, shopmarks, foodrooms, smash 25/25,
+  binbags, townwork, world3clutter, world3desert, doorsbake 16/16, walkinfront 2/2.
+- A bake change: it rides with the branch's re-bake. Not seen in a running game. Pictures: `report-86`, `report-87`.
+
+## 2026-11-26 · A sign on a roof is seen whole or isn't there (N23) - on branch `fable-art-1124`
+The owner, 11-22: "These signs on the top of these buildings are cut off through the roof." The bake's rule is that the
+higher surface wins, so a billboard at the back of a roof whose foot is behind something taller showed as a strip of
+board standing out of it. Counted from the drawn pixels with a new lint row, `roofSignCut`: **28 of 664** roof signs
+(billboards 325, neon names 217, picture signs 122) - 18 billboards cut by their own roof (most on a roof that is
+pitched: the kit was laid for a flat deck; the rest behind a smokestack, a tank or another sign), 8 signs behind a
+taller building to the south, 2 neon names behind the big neon name on their own front.
+- **The build** (`statics.js` `clearRoofSigns`, in `addBuildings`, which now makes every building's spec and roof kit
+  before it puts any): a roof sign is taken off - a neon's glow with it - when its board's foot would be hidden by
+  its roof's pitch, its building's upper block, a taller piece of its own roof's kit in front, the big neon name on
+  its front, or another building in front. One line of arithmetic per volume (`hidesAt`: along a line of sight the
+  nearer surface is the higher one). It goes by each piece's box, so it is stricter than the drawing: 45 signs are
+  taken off (619 stand), and wherever it lets a sign stand none of the board is hidden.
+- **The lint** (`tools/placementlint.mjs` `roofSignRows`): each sign's board pixels against its own building's sprite
+  and every building item in front that rises over it. Held at **0**. `seen.roofSigns` is in the lint's own check.
+- I took signs off rather than move them: a billboard is one of several things a roof may carry, and moving one
+  means laying the roof out again round it.
+- `test/roofsigns.test.js` (the rule on small sets of buildings - a tank, a pitched roof, a taller neighbour south,
+  north and across a wide street, an upper block, a neon behind the front's name; in the drawn pixels: a smokestack
+  in front cuts the board, `roofSigns` says where each sign is drawn, and what the rule lets stand is whole).
+
+## 2026-11-26 · His words of 09:00: the canopies a mix, UI look C, lips A, the merge waits
+- **"It's okay some signs are on the canopies, don't want it to be all the canopies though."** A hotel with a name of
+  its own carries it on its canopy (16); an OFFICE, a plain HOTEL, an airport's DEPARTURES - ARRIVALS (35) keep the
+  board on the wall over a plain cloth canopy 38 px high, low enough to stand under the board (`ownNameless`,
+  `HOTEL_CANOPY.low`). `signCovered` stays 68. Picture: `report-88`.
+- **UI look C** (hard pixel frames, pixel icons): decided; to build into the game's CSS and icons, every screen, with
+  a lint. Not started.
+- **Lips: A stays** (no mouth); C if some figures get mouths later. Nothing changed.
+- **The merge and re-bake wait** for more of the city.
+- Run on both changes: placementlint 44/44 (`roofSignCut` 0, `signCovered` 68, `lobbyDoor` 0), roofsigns 3/3,
+  signclear, flatdoors, perf, signs, doors 29/29, walkinfront, doorsbake, cinema, alleyfade, seethrough 18/18.
+  Bake changes: with the branch's re-bake. Not seen in a running game.
+
+## 2026-11-26 · The UI's look C built into the game (part C2) - on branch `fable-art-1124`, page code
+The owner, 11-26 09:00, of A today / B hard frames / C hard frames and pixel icons: "I think C looks good for the UI."
+The preview (`tools/uistyle/hardpixel.js`) patched three screens from outside; this puts the look into the sheet and
+the icon set themselves, so every screen has it.
+- **Frames** (`client/style.css`): the tokens carry it - `--r1`, `--r2`, `--r4` are 0 (192 radius rules were already
+  on the tokens; a full round, `--r3`, stays for the round buttons, UIK-00 4D), `--shadow` and `--plate-sh` are hard
+  drops, `--panel-bg` a flat navy. A panel's corners are notched 4 px, a button's, a chip's and a cell's 2 px
+  (`--notch4`, `--notch2`). A notched box is cut to its shape, so what the kit drew round a box on hover or focus -
+  a ring, an outline - is drawn inside it (`--ring-in`, `--ring-in2`: the title's buttons, the looks screen's, a
+  drop target in the bag). The switch is square with a square knob. The phone full-screen on a phone has no notch.
+- **No blur, no soft fill**: 16 blurred shadows made hard (area names and warnings over the world take the ink halo
+  they already had; glows became rings), the bars a flat fill with a two-pixel lit edge, the looks screen's and the
+  Inventory's spotlights flat. Kept soft, each with its reason in the lint: scrims and vignettes over the world
+  (light, not a frame), the title's neon sign, the arrival board's LEDs, an arcade cabinet, a scroll edge's mask.
+- **Pixel icons** (`client/touchicons.js` `glyph`, `VP`; `client/bag.js`): all 160 line glyphs also as a 12 x 12
+  bitmap - two of the line set's units to a pixel, one pixel to a line - made from the paths by
+  `tools/uistyle/glyphgrid.py` (the browser's own path drawing read as coverage per cell, the half-pixel shift with
+  the fewest half-covered cells kept; `--write` puts them in the modules; a glyph redrawn by hand goes in its `OWN`).
+  One `<svg>` carries the line and the pixels; the sheet shows pixels in the menus and the line on the buttons over
+  the street (`#hud`, `#touch`, `#wheel`) - **the HUD's and the touch buttons' icons are unchanged**: he judged C
+  from the menus, and the line there was tuned over the street on 11-05. Menu icon sizes are multiples of 12 px.
+  No new file on the page's first load (86 of 86): the bitmaps sit in the two modules. Page code 541 -> 544 KB of 560.
+- **The lint** (`test/uitokens.test.js`, three new tests over every rule of the sheet and of the seven panels that
+  carry their own CSS): the radii; no blurred shadow, no gradient fill outside a list of allowances that must each
+  still match a rule; the notches and the inside rings; every glyph has a bitmap that is drawn, fills its box and
+  is no other glyph's; the menus' icon sizes. `tools/uishots.py` audits the same on the real page, per shot
+  (`style`: soft corners, blur, gradients, line icons left in a menu).
+- **Looked at** (the real page, headless): 13 screens at desktop, a phone upright and a phone sideways - 0 soft
+  corners, 0 blurred shadows, 0 line icons in a menu on every one; the press audit (too small, cut off, overlapping,
+  covered) is the same as before the change at all three sizes. Pictures: `report-89`, `report-90`, `report-91`.
+- **Not looked at** (the lint covers their rules; no picture taken): the title's buttons (no game server in the
+  title shot), shop menus, job cards, the arcade, the character creator past its first screen, the death map on a
+  phone sideways; a real phone. Some of the made icons are muddy at 12 px (the long guns, sparkles, dice): to redraw
+  by hand.
+- Run: uitokens 10/10, uikit 7/7, acticons 12/12 and the 30 other test files that touch the menus, icons or the
+  sheet - 216 of 217 (the miss, `music` "instruments: played out loud", passes alone and without the change). The
+  art hash does not move: no re-bake.
+
+## 2026-11-26 · Pixel icons on the buttons over the street; the icons' dots - on branch `fable-art-1124`, page code
+The owner, 11-26 11:00: "Buttons over street should get pixel icons yes" (and look C goes live with the art batch).
+- `style.css`: the rule that kept the line inside `#hud`, `#touch` and `#wheel` is gone - one icon set everywhere. The
+  aim stick's see-through knob draws a dark edge round the pixels (four hard drop-shadows), as the line had its halo
+  there. The weapon plate's glyph and the knob's are 24 px (they were 30 / 22 and 26: not whole pixels to a cell).
+- `tools/uistyle/glyphgrid.py`: the line set draws a dot as a stroke of no length with a round cap, which the grid
+  lost - the smile had no face, the message bubble no dots, the phone no button. A dot is now a pixel of its own in
+  its cell (12 glyphs changed).
+- `test/uitokens.test.js`: no rule shows the line of a glyph that has its pixels; the sizes over the street are
+  multiples of 12. Looked at: the HUD at desktop, phone upright and sideways - 0 line icons, the press audit as before.
+
+## 2026-11-26 · Picture signs hung over some shops (part B; the concept BF2) - on branch `fable-art-1124`
+The audit's largest open gap: BF2's row of shops each under a big picture - a book, a cup, a record, a barber's pole.
+Shown to the owner as one Midtown street three ways (`report-92`: A today's name board with a small trade mark, B a
+picture sign hung out over each shop, C the picture large in a crest over the board; B and C mock-ups over a render).
+His word, 11:02: "I think a combination of A and B is good, not every shop in the world needs the sign, but it looks
+good when some do."
+- **The pictures** (`client/art2/signfont.js` `PICS`, `PIC_PAL`, `PIC_OF`; made by `tools/signpics.py`): 21, each
+  14 x 14 at the art pixel on its own ground - book, cup, burger, the pawnbroker's three balls, record, washer,
+  barber's pole, bottle, cocktail glass, apple, plate and cutlery, dress, hammer, palette, flower, pretzel, green
+  cross, sight, shopping bag, fish, ring - for 23 trades.
+- **The sign** (`buildings.js` `picSign`): an iron bar off the wall, two hangers, a square board 18 art px a side with
+  a gold line inside its frame; lit a little after dark. Not drawn on a front whose name went up onto a canopy.
+- **Which fronts** (`statics.js` `PIC_SIGNS`): one in three of the fronts it suits - a trade with a picture, two
+  floors or more of wall to hang it on, 4 tiles wide or more, no blade sign and no big neon name already there - at
+  the end of the front away from the door, clear of a fire escape, 4 art px over the name board, under the wall's
+  top (chosen after the street caps the building's height: ten stood over the top before that). **234 of the 1,731
+  fronts with a name board.** The name boards and their small trade marks are as they were.
+- **The lint** (`tools/placementlint.mjs` row `picSign`, held at 0): a picture sign off its wall, on its own board
+  or beside a blade sign; its own check wants more than 60 signs and fewer than four fronts in ten.
+  `test/picsigns.test.js` (every picture 14 x 14, in the palette, its own drawing, one for each trade named; on a
+  front only the sign's box changes and the picture's colours are in it; none when the name moved).
+- Run: placementlint 45/45, picsigns, signs, signclear, roofsigns, perf, flatdoors, doors 31/31, walkinfront,
+  doorsbake, cinema 9/9. Bake code 1,122 of 1,150 KB. A bake change: with the branch's re-bake. Picture: `report-93`.
+- Not done of the audit's row: picture signs on one-storey shops (no wall above the board to hang one on), the
+  window goods for seven more trades (pharmacy, gun shop, hardware, barber, sports, tackle, bakery).
+
+
+## 2026-11-26 · Shop windows by trade; no people painted in the glass (part B) - on branch `fable-art-1124`
+The shared kit's audit #2, counted first from the world's 2,447 shop fronts (each front's trade - what its sign is
+styled as - against the window it drew): a pharmacy showed a mart's shelves (13 of 16), a gun shop a pawnbroker's
+guitars (28 of 34), a hardware shop a mart's (33 of 39), a bakery a cafe's booths (20 of 21), a barber a salon
+(12 of 16), tackle and sports a mart's (all), and 15 of 20 clinics a mart's shelves, a cafe's booths or - Copper
+Gulch's - a row of liquor bottles.
+- **Nine windows drawn** (`client/art2/buildings.js` `GOODS`, in the manner of the fourteen there): pharmacy (white
+  shelves of boxes, a green cross lit in each second pane), gun shop (long guns racked on the board, pistols on felt
+  in the counter), hardware (tools on a pegboard, tins of paint), barber (round-topped mirrors, red leather chairs,
+  the pole turning colours in the glass), sports (pennants, a rail of team shirts, balls), tackle (rods, a hung net,
+  floats, coolers), bakery (loaves on racks, cakes in the case), clinic (a waiting room: desk, chairs, a plant),
+  jeweller (dark velvet, busts with necklaces, rings under the spots). The seven the audit named, and two the count
+  added. Under an awning - which hides the top 12 px of the glass - each room is drawn in the 27 px that show
+  (`AWNING_HIDES`): seen in the first bake, the pharmacy's cross and the gun shop's rack were behind the cloth.
+- **The window is the trade's** (`GOODS_OF`, `goodsOf`; `statics.js` `styleSign` sets `shop.goods` once the sign's
+  trade is known): 32 trades, each with the windows that suit it - the first where the front's own is none of them.
+  Food and drink keep any of their three rooms as the front was planned (a tiki bar's counter). 256 fronts changed.
+  The front's `kind` is as it was (its door, its OPEN sign): the window, the red riser of a diner go by the goods.
+- **Names read as the wrong trade** (`client/art2/signfont.js` `WORDS`; found in the same count - these boards had
+  the wrong face already): a nail bar read as a hardware shop and the Rusty Nail too (`NAIL`), juice bars as bars,
+  three DISCOUNT stores as night clubs (`DISCO`), shoe and watch repairs as garages, Quill & Ink (books) as a tattoo
+  parlour, brewing companies as cafes, Velvet Bakery and four ateliers as boutiques, Crema Studio (coffee) and Sole
+  Studio (shoes) as galleries; a board's cut name was read instead of the whole one (OVERTIME SPORTS GR - a grill -
+  as a sports shop: `signTrade` now reads the whole name, not its branch after a dash). 33 boards change face.
+  `shopKindOf` took STEEL BARREL SUPPLY for a bar (`BAR`): whole words now.
+- **No people painted in the glass** (the owner, 12:40, seeing the busts in the first pictures: "We shouldnt have
+  just static humans in windows ... if we have humans in the window we want it to be actual NPCs through the window"):
+  `storefront` painted a clerk at every till and one to four busts in most windows; both are gone, and `bust` with
+  them. `shop.people`, `clerk`, `clerkShirt` stay in the plans (shared code: the world's hash is untouched) and draw
+  nothing. The clothes shop's mannequin stays. Real people seen through a window: not built, logged.
+- **The lint** (`tools/placementlint.mjs` row `windowTrade`, held at 0): a shop whose window is another trade's, or a
+  kind the painter doesn't draw; its own check wants 2,000 windows seen and each new kind in the world.
+  `test/shopwindows.test.js` (5: every window named is drawn and its own; the table names real trades and windows;
+  the cross, the pole and the stones glow after dark; the misread names; no person painted, whatever the plan asks).
+- Run: placementlint 46/46 (`windowTrade` 0; 2,447 windows seen, 1,218 with a trade in the table), shopwindows 5/5,
+  perf, signs, signfix, signclear, picsigns, roofsigns, shopmarks, facades, doors, doorsbake, flatdoors, walkinfront.
+  Bake code 1,126 of 1,150 KB (the nine rooms in, the busts' painter out). A bake change: with the branch's re-bake.
+  Looked at in a bake of seven street stretches (`report-94`); not seen in a running game.
+- Not done: a grocer still shows a mart's shelves (78 fronts - they read as groceries), a restaurant a diner's
+  booths (66), no LOANS neon; 674 fronts with no name board keep the window they were planned with.
+- Roofs, counted and not yet changed (5,462 flat roofs): a row of two or more big AC units on 42.5% (the audit wants
+  under 40%), a row of any AC on 81% (walk-ups 93%, strips 100%); a water tank on 57% of walk-ups; of 2,391 pairs of
+  neighbours on a street 266 carry the same kinds of kit and 162 the same counts (Southside 58, the nightlife rows
+  44, the airport 30 of 32). The decks' materials are still to be read (the count took the wrong field).
+
+## 2026-11-26 · Roofs: fewer AC rows, no two neighbours alike (part B, the audit's #3) - on branch `fable-art-1124`
+Counted first over the world's 5,462 flat roofs: a row of AC units on 77% (every strip, 93% of walk-ups, 95% of mixed
+blocks); of 2,391 pairs of neighbours along a street 171 had the same deck and the same kinds of kit.
+- **A roof's character** (`statics.js` `ROOF_CYCLE`, `kitFor`): 'row' the block of units, 'few' one or two small ones
+  apart, 'none' no units - skylights, a washing line, planters, solar panels or pipes instead. Neighbours along a
+  street take the cycle's next (`roofRanks`), so no two share one; big buildings with plant to house keep a row more
+  often. **A row now stands on 1,471 roofs, 26.9%** (walk-ups 28%, mixed 31%, strips 31%, offices 53%).
+- **Decks** (`varyDecks`, `roofLook`): a roof that still looks like its neighbour takes another common deck of its
+  kind (gravel / tar / membrane; rubber / tar; paver / deck / membrane) - 32 swapped.
+- **The lint** (`tools/placementlint.mjs` row `roofTwin`, held at 4; 171 before): two neighbours with the same deck,
+  kit kinds and row. A yard's metal sheds are alike by nature and counted apart (78). Its own check wants a row on
+  15-40% of roofs.
+- Run: placementlint 47/47. **NOT LOOKED AT**: no roof was rendered after this change (the Fable chat's weekly usage
+  ran out at this point) - the first look is owed before the batch goes live: `node tools/nature/darkscan.mjs --rect
+  3050,1670,3080,1682 --out a.png --rect 3255,1836,3286,1846 --out b.png` (tiles) and read `a-lit.png`. No test file of
+  its own beyond the lint row. Not run after it: perf (the bake's code grew by about 3 KB from 1,126 of 1,150),
+  roofsigns, signclear. Water towers, gardens and billboards are as they were (tanks on 57% of walk-ups).
+
+## 2026-11-26 · The art batch goes live (the owner's word of 13:31) - `fable-art-1124` merged to `main`
+The gate of the handover, in order: the roofs of "Roofs" (472cc2b) rendered on the two streets (darkscan, before and
+after) - fewer AC rows, neighbours differ, nothing broken, kept; `main` had not moved; the whole suite on c7ae6cb, 467
+files - 8 fail, all on main too, flaky or CPU timing under load (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`); a
+look in a running World v3 game at 1280x720 and 915x412 (a street at noon, a shop window, the menus and the
+Inventory in look C). Not seen in play: NPCs through a shop window, night, the shark, the cats, cloud shadows. The
+server re-bakes (~5 h); players get a short reconnect.
+
+## 2026-11-26 · Vehicles in shallow water: splash, wade, flood - sink only in deep water (the owner's 11-24 21:40 note) - branch `rules-1126`
+"it shouldn't just instantly sink in any depth of water and lose your vehicle" - and the creek network is live.
+- **The depth** (`shared/physics.js` `waterDepth`, `wadeBand`; numbers in `shared/rules-base.js` `WADE`): metres from the
+  distance to the bank by the kind of water, as the art measures it (`client/art2/water.js` depthOf) - a creek or river
+  0.25 m a tile (at most 3.4), a pond 0.55 (3.2), a lake 0.32, the sea 0.22 off sand and 0.55 off rock or grass; off a
+  quay, a dock, a seawall or a building deep at once (so a car driven off a pier still goes down, as `core.test.js`
+  has it); open deep water deep. Same answer on the server and the page (the page predicts its own car with it).
+- **Who fords what** (`fordOf`; a vehicle's own `def.ford` wins): a car 0.5 m, a truck (mass 2.4+) 0.7, a motorbike or
+  bicycle 0.35, boards and carts 0.15; off-road (`rough` 0.4 or less: the Trailcat 4x4, tractor, combine, tank, dirt
+  bike, mountain bike) 1 m.
+- **Bands:** splash (0.3 m or less): no slowing, spray off the wheels; wade: slower the deeper (an off-road vehicle
+  less so); the engine holds 8 s (30 s off-road), then floods and stalls where it is - no power, steam, never lost
+  (`VF.STALL`, ROTOR's bit, which only aircraft use; the page predicts no power) - and tries again after 15 s with 5 s
+  to get out; out of the water it dries. Deeper than its ford: sinks, as before.
+- Guide entry "Driving into water", a first-time moment `wade`. Tests: `test/wade.test.js` (5), the moment in
+  `ftue.test.js`. The code lives in physics.js, not a file of its own: the page's file count is at its budget (86).
+- **Cost of going live:** physics.js is read by the World v3 build, so the world3 / art3 hashes move (the world is the
+  same: pages fetch the city again, the server re-bakes and identical chunks carry over) - merged after the 11-26 art
+  re-bake has finished.
+
+## 2026-11-26 · What a vehicle smashes hurts it; vehicles catch fire (the owner's notes of 11-25 01:00 and 03:23) - branch `rules-1126`
+- **Smash damage** (`shared/rules.js` `SMASH_HURT`, `server/systems/vehicles.js` `smashHurt`, called from `props.js`
+  smashFor and a fence gone through): every breakable kind has a weight - a bag of trash 0, a cone 0.03, a trash can
+  0.15, a bench 0.4, a bus shelter 0.7, a hydrant 0.9, a lamp post 1, a tree 1.2 - and the damage is weight x 12 x
+  (speed / 100)^1.5 / sqrt(mass), then the vehicle's toughness, on its front: a sedan into a tree at 400 px/s loses
+  about a quarter of its health, a bench a twelfth, a bag nothing; twenty trash cans at speed do more than a tree. A
+  horse tramples through unhurt; a bicycle minds only what weighs 0.5 or more (as before: only the heavy things).
+  Before, only the heavy kinds hurt at all, at most 14 a hit. **A player's vehicle only** (found by the whole suite:
+  the director's street race stopped, its racers wrecked by the furniture they plough through): the NPCs' and the
+  scenes' drivers keep the old dent from the heavy things. Test: `smash.test.js` (every breakable kind has a weight; an
+  NPC's car as before), `racers.test.js`.
+- **Fire** (`VEH_FIRE`, vehicles.js `ignite`, `flameOn`, `fireTick`): a flamethrower on a vehicle for 2.5 s of jet
+  (cooling out of it) sets it alight; a hard crash (impact 220+) that leaves it under 30% catches it one time in three;
+  under 15% it may catch on its own (3% a second). Alight it burns 12 s at 4% of its full health a second - a healthy
+  one comes through scorched and the fire goes out, a battered one's engine dies and it goes up as before. Water puts
+  it out. Bicycles, horses, aircraft and car soccer's cars never catch. Test: `test/vehfire.test.js`.
+
+## 2026-11-26 · Weapons against vehicles: explosives one hit, the SAM two, a longer flamethrower; the Boom Tester as a real weapon (the owner's 11-25 notes) - branch `rules-1126`
+- **Grenades and the Boom Tester** go off beside a vehicle (its nearest part within three quarters of the blast) and it
+  is destroyed, as a rocket's always was - armored vehicles take two, the tank its own number (`size.wreck`:
+  `explosions.js` blastAt -> `combat.js` blast's rocket rule; `grenades.js`, `boomtest.js`). Before, a grenade took
+  about five to finish a sedan.
+- **The SAM** 230 -> 240: two hits for every helicopter and plane, three for the gunship (it took four).
+- **The flamethrower** reaches 340 px (was 150; "at least a quarter way across the screen"), a slightly narrower cone;
+  the page draws the jet to that length (`main.js` 'flame' reads `WEAPONS.flamer.range`).
+- **The Boom Tester as a real weapon:** a second line in the debug menu's Fire section gives it with `live` - people
+  react as to gunfire, the police are called, the blast is the shooter's (`p.boomLive`). The first line stays the dev
+  tool nobody reacts to. Not done (art, for the Fable list): the punching throw and glowing hands.
+- Test: `test/weapontune.test.js`.
+
+## 2026-11-26 · The stars that stopped coming: self-defense never against the police (the owner, 11-25: "Wanted level stops after a great deal of crime on a character made that day") - branch `rules-1126`
+Reproduced in a sim: once a cop had shot at you, killing that cop was "self-defense" (law.js immune: the victim had
+struck first) - so in a shootout no killing added heat, the stars cooled off and stopped; the same for a civilian who
+fought back after you attacked them. Now self-defense is never against the police, never for someone already wanted,
+and never when you started it - `onDamage` records who struck first (`started`) between a player and anyone (it did
+between two players only, for bounties). A clean character a stranger attacks first may still defend themselves.
+Test: `test/selfdefense.test.js`.
+
+## 2026-11-26 · Pepper spray and the taser wear off on players (the owner, 11-25: "no keeping a player down for good") - branch `rules-1126`
+`shared/rules.js` `STUN_RESIST`, `server/systems/combat.js` `stunFor`: a player takes the first two stuns in a minute in
+full; the rest last a quarter as long ("You shake it off faster"), until a minute has passed since the first. NPCs
+take the full stun every time. Test: `test/stunresist.test.js`.
+
+## 2026-11-26 · The paramedic's uniform; job vehicles face a way out (the owner, 11-25) - branch `rules-1126`
+- **The uniform:** on shift you wear the catalogue's Paramedic uniform and work boots on your own body, face and hair
+  (`server/systems/paramedic.js` dress / undress); however the shift ends - done, quit, its time up, the ambulance lost
+  - your own clothes come back. Your saved look is never touched.
+- **Facing a way out** (the class: every job vehicle - `jobs.js` workTruck, `clearAlong`): a job's vehicle is put down
+  facing one of the four ways with a length and a half of open ground ahead (`WORK_TRUCK.runway`), the one along the
+  street first; a free one already there is taken only if it isn't parked nose-on to a wall. His ambulance had been
+  put down facing a brick wall in an alley. Test: `paramedic.test.js` (six hospitals).
+
+## 2026-11-26 · Train riders never swim; boats under the highway's decks drawn under them (the owner's notes of 11-25) - branch `rules-1126`
+- **Riders swimming** (11-25 13:33): the swim flag the page draws from (`server/net.js`, `shared/mapcore.js` isSwimming)
+  read the tile under a rider - over track on water, everyone aboard swam for a few seconds. isSwimming is false for
+  anyone aboard a train, everywhere it's asked. Test: `test/trainswim.test.js`.
+- **Boats over a road deck** (02:36, "it doesn't happen on all bridges"): the renderer knew a bridge's own tiles but
+  not the 6,500 tiles of open water under the elevated highway's decks - boats, their wakes and foam, and swimmers
+  there were drawn over the deck. `mapcore.js underDeckAt` (a bridge tile, or water under `m.deck`), asked by
+  `client/art2/game/host.js` for all four. Test: `test/underdeck.test.js`.
+
+## 2026-11-26 · "Server updating" through a restart; two World v3 tests brought up to the owner's rules; the doorway hop diagnosed - branch `rules-1126`
+- **A restart for an update** (pre-beta list F): the server says so as it shuts down (`server/index.js` shutdown: the
+  'kicked' message with `restart` and `back`, 330 s - World v3 builds in about four minutes); the page keeps
+  reconnecting through it with "Server updating - back in a few minutes..." over the city instead of dropping to the
+  title after a minute (`client/main.js` scheduleReconnect, reconnecting); a title that can't reach the city says it
+  may be updating.
+- **Tests that failed on main because the rules moved on, not the world:** `world3wild` - the stations' own roads are
+  kept off by the traffic on purpose (11-06: no traffic into a station's forecourt loop), so they are allowed among the
+  flagged roads; `world3mesa` - no porte-cochere over a resort's drive since the owner's 11-14 rule against overhangs over
+  entrances (`world3-strip.js` says so): the test now checks that rule instead of the old canopies.
+- **The hop at a walk-in's door** (the owner, 11-25 00:22, the gun shop / hardware pair): filmed in a running World v3
+  game (`/tmp/door` frames, not kept). The server's walk in is smooth (no fence, no ledge, no step: checked on all three
+  Pier Street doors - and only 11 of 6,025 doors in the world have any fence across the way out, none a shop); the baked
+  ground has no step either. What reads as a hop is the page: the doorway's tiles are floor, so the moment you step into
+  them you count as inside (`main.js` walkInAt), but until the shop's cut-away bake is ready the outside stays drawn and
+  you show as an x-ray silhouette up on its roof, above the sign - in the 3/4 view, a jump up and over the front. For
+  the renderer's work (logged in the pre-beta list): keep the walker drawn at the door, or the roof faded, until the
+  inside is ready - or start the cut-away bake sooner.
+
+## 2026-11-26 · The dog runs: owners and their dogs off the lead, playing fetch (the owner, 11-25 00:47) - branch `rules-1126`
+"The dog run area doesnt have any dogs or NPCs walkings dogs or playing fetch with dogs". World v3's dog runs (the
+fenced places `world3-fenceexits.js` finds by their DOG RUN sign or agility gear) are now an activity spot
+(`activities.js` 'dogrun': by day 85%, at night 15%, one round a player): two or three owners stood about inside, each
+with a dog off the lead (`server/systems/dogrun.js`): it noses about the run, a new spot every few seconds; now and
+then its owner throws a tennis ball across the run (a K.BALL 'tennis', drawn as the tennis ball), it runs for it, brings
+it back in its mouth and hops about its owner (APOSE.happy), then off again (`shared/rules.js` DOGRUN). An owner scared
+off their spot calls the dog back onto the lead (personas.js walks it at heel). Each dog's game is its own; the group
+stays together (his rule for animal groups, 11-25). Not done from the same note: more dog walkers by district, cats on
+stoops and in alleys. Test: `world3server.test.js` (the dog runs found and filled, every stage of fetch seen, the lead
+back on a scare).
+
+## 2026-11-26 · Anything small in the air casts a round shadow below it (the pre-beta list C, "Shadows") - branch `rules-1126`
+A ball in flight (a tennis ball at the dog run, a basketball, a thrown grenade) drew the shadow march's column under it;
+now a small round shadow on the ground away from the sun by its height, fainter higher up, at night and in rain
+(`client/art2/game/host.js` `_airShadow`, `blobShadow`) - the rule birds and leaping fish already had (their own shapes).
+Page only. Also: the comments added to physics.js / mapcore.js today trimmed to keep the page's city code inside its
+380 KB budget (it was 381).
+
+## 2026-11-26 · Street cats on the stoops and down the alleys; more dog walkers (the owner, 11-25 00:47) - branch `rules-1126`
+"I dont see a lot of dogs or cats or NPCs walking dogs in the cities either". A stray cat (black, grey or ginger) on
+about a third of the walk-ups' front steps and a third of the alleys, by the wall a third of the way down
+(`activities.js` 'cat' spots, by day 55%, at night 70%, two round a player at most; `dogrun.js` catStep): sat still,
+looking about now and then; anyone within 70 px and it darts 80-140 px away from them and sits again; left in peace it
+pads back to its spot (`DOGRUN.cats`). Nobody's lost it (pets.js leaves strays be). The dog walkers (personas.js) out
+more: by day 2 -> 3, two round a place at most (was one). Test: `test/streetcats.test.js`.
+
+## 2026-11-27 · The busy four-ways unknot: the gridlock test passes (the pre-beta list C, "traffic jams at busy junctions") - branch `prebeta-1127`
+`test/gridlock.test.js` (ten minutes of heavy traffic at Midtown's lit and unlit four-ways) failed on main at both.
+- **The unlit four-way locked for good** (264 s at the head of a queue, 9 a minute through): a sedan already across its
+  line and in the box's books - backed off a knot onto its road in front of its line - still ran the at-the-line check,
+  and so waited its turn behind a van that had come up to its line first; the van waited for it, as one in the box
+  across its way. Now one already in the box never waits for anyone still at their line - only for one that went in
+  before it, across its way (`junctionbox.js` boxFree). The same jam: 17 s, 27 a minute.
+- **The lit one: two passers-by stood in the road took turns holding a taxi** ~50 s - it crept past the one it had waited
+  for and stopped for the other. Now a car creeping past people on foot in its way nudges every one of them aside, not
+  just the first (and puts them back in the world's spatial index as it moves them: it didn't) (`traffic.js` the creep).
+- Measured on a saved real build (`tools/gridlocksim.mjs --load`), seeds 3, 5, 7, 11, 13, 23: main jams past the test's
+  30 s at seed 7 at both junctions; now all pass but one: at seed 3 a chase and a mugging by the lit junction left three
+  cars driverless in the road, and a box truck turning out of the box stood behind one 41 s (logged in the pre-beta
+  list: traffic should get round them, or they should be cleared).
+- The tool: `--snap-box` (snapshots only of what stands still inside the box) and `--on-tick probe.mjs` (a probe called
+  every tick, on exactly the run the tool makes - a separate script setting up the same run drifted off it).
+Tests: `gridlock.test.js` (all 3), the traffic tests (trafficbox, lights, passersby, pedunstick, reroute, roadends,
+trafficwalls, airtraffic).
+
+## 2026-11-27 · Skateboards: carried off rough ground, never stranded; the bail's one board (the owner, 11-17 21:26 / 21:32) - branch `prebeta-1127b`
+"Ride a skateboard off the pavement onto grass and it stops; you can't pick it up ... the board is left stranded"; "a
+tiny pale placeholder board flies out ... then the board you can pick up again is a different, full-size one".
+- **Rough ground**: rolled onto grass, dirt or sand you step off with the board in your hand (any board you were on: yours,
+  a rack's, a free one) - none left lying there; back on a road, a sidewalk or a plaza the vehicle button and you're on it
+  again (`skate.js` after -> `gear.js` carry). A board nobody owns lying on rough ground: the action button picks it up
+  (on smooth ground the prompt stays "Get on the skateboard"). One that isn't yours never goes in your bag - the action
+  button sets it down ("Put the skateboard down"), so does getting into a vehicle; a park's carried out of the park goes
+  back on its rack, as when it's ridden out.
+- **The bail**: the board you were on - never a stand-in - skids off from under you at once, spinning, easing off to where
+  it stops (`skate.js` slide, over the same 1.2 s it used to wait before a second board appeared); a snapped one breaks
+  there (the page's SNAPPED as it stops) and is gone. The page's flying stand-in (`main.js` 'bail', the 22x8 board image)
+  is gone; a board still skidding can't be got on or picked up.
+- **The Guide**: a Skateboards entry (Getting around) - it had none.
+Tests: `skate.test.js` (three new: onto the grass in hand and back on; nobody's board picked up and set down, never
+bagged; the bail's one board), `ridegear.test.js` (the wear and the snap), guide, perf, core, bikes, ftue, homeups, surf,
+blades.
+
+## 2026-11-27 · The `ads` branch merged, ads switched off; the Employment Center live (the owner's go, 11-27)
+The branch of 11-16/17 (DEVLOG entries of those days: the Employment Center, office work, the job computer, rewarded
+ads behind `CLA_ADS`) brought up to date with ten days of main and merged. Ads stay off - `CLA_ADS` unset - until the
+owner's ad account is approved; then the setting (deploy/set-keys.sh) turns on Google's test ads, then real ones.
+- Merged by hand: deploy/set-keys.sh (both: the ads keys and the line at the door), server/legal.js (main's privacy line,
+  "no ads" still said while they're off), shared/guide.js (both rules lists; main's fishing entry and the job computer's),
+  shared/map.js (the done hook hands on both `walkInRoom` and `WALK_IN`), shared/shoprooms.js (the charter office and
+  the Employment Center's room both).
+- The Employment Center still finds its corner free on today's world (Park East Avenue at 22nd Street): built, its
+  walk-in and the job computer (`world3jobcenter.test.js` 3/3). A world update: the world3 and art3 keys change - the
+  re-bake (~5 h) carries every identical chunk over.
+Tests: docs/tasks/ADS-MERGE-TESTS-2026-11-27.txt.
+

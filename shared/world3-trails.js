@@ -20,6 +20,7 @@
 // For the whole-world build only (shared/world3-world.js calls buildTrails3 from its done hook, after the water bodies;
 // the page and the city worker never import this module). Deterministic: integer costs and hashes, Math's trig only
 // inside generateCity (withDeterministicMath).
+import { reliefMetres } from './mapcore.js';
 import { TILE, T } from './constants.js';
 
 const RES = 32;   // (the designed places' reserve bit: naturesites.js)
@@ -63,7 +64,7 @@ export function routeTiles(m, a, b, cost, free, o = {}) {
   for (let y = 0; y < BH; y++) for (let x = 0; x < BW; x++) {
     let s = 0, n = 0;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const tx = bx0 + x + dx, ty = by0 + y + dy; if (inF(tx, ty)) { s += m.relief[idx(tx, ty)]; n++; } }
-    z[y * BW + x] = s / n;
+    z[y * BW + x] = reliefMetres(s / n);
     const i = idx(bx0 + x, by0 + y);
     c[y * BW + x] = free(bx0 + x, by0 + y) && !wetT(m.tiles[i]) && cost(i) === 0 && !(m.reserve[i] & (1 | 2 | 8)) && m.tiles[i] !== T.BUILDING && m.tiles[i] !== T.WALL ? 20 : cost(i);
   }
@@ -254,7 +255,7 @@ export function buildTrails3(m, H3) {
     }
     return s;
   };
-  const relAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); let s = 0, n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (inF(tx + dx, ty + dy)) { s += m.relief[idx(tx + dx, ty + dy)]; n++; } return n ? s / n : 0; };
+  const relAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); let s = 0, n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (inF(tx + dx, ty + dy)) { s += m.relief[idx(tx + dx, ty + dy)]; n++; } return n ? reliefMetres(s / n) : 0; };
   const tileAtPx = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return inF(tx, ty) ? m.tiles[idx(tx, ty)] : -1; };
   const deck = [];   // (the bridges' deck tiles over the water)
   // lay a line: the dirt under it, the growth off it, bridges where it crosses water

@@ -111,21 +111,21 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
     // move stick along the bottom, on the left half: the owner, 2026-11-12). The emote button beside it (the owner,
     // 2026-11-13: emotes apart from chat) the same way - in the bottom band, on the left half, on nothing else: next to it
     // along the bottom on its side, over it upright (the right thumb's cluster starts at the middle there)
-    const touch = dev === 'touch';
+    const touch = dev === 'touch', narrow = h > w && w < 380, sl = r.keep.find((k) => k.name === 'stick-l');   // (narrow: a 360-px phone upright - over the move stick's rest, side by side: pre-beta quick wins)
     for (const [nm, what] of [['talk', 'chat'], ['emote', 'emote']]) {
       const b = r.keep.find((k) => k.name === nm);
       if (touch !== !!b) row.push(`${tag}: the thumb's ${what} button ${b ? 'shown' : 'missing'}`);
-      if (b && (b.x1 - b.x0 < 44 || b.y1 - b.y0 < 44 || b.y1 < h - 60 || b.x1 > w / 2)) row.push(`${tag}: the thumb's ${what} button isn't by the left thumb (${b.x0},${b.y0}-${b.x1},${b.y1})`);
+      if (b && (b.x1 - b.x0 < 44 || b.y1 - b.y0 < 44 || (narrow ? !sl || b.y1 > sl.y0 - 6 || b.y1 < sl.y0 - 20 : b.y1 < h - 60) || b.x1 > w / 2)) row.push(`${tag}: the thumb's ${what} button isn't by the left thumb (${b.x0},${b.y0}-${b.x1},${b.y1})`);
     }
     const talk = r.keep.find((k) => k.name === 'talk'), emo = r.keep.find((k) => k.name === 'emote');
-    if (talk && emo && !(h > w ? Math.abs(emo.x0 - talk.x0) <= 2 && emo.y1 <= talk.y0 && talk.y0 - emo.y1 <= 12 : Math.abs(emo.y1 - talk.y1) <= 2 && emo.x0 >= talk.x1 && emo.x0 - talk.x1 <= 12)) row.push(`${tag}: the emote button isn't beside the chat button (${emo.x0},${emo.y0} by ${talk.x0},${talk.y0})`);
-    const want = touch ? 'b-phone,b-map,b-menu' : 'b-phone,b-map,b-chat,b-emo,b-menu';   // (the emotes beside chat on a desktop: 11-13)
+    if (talk && emo && !(h > w && !narrow ? Math.abs(emo.x0 - talk.x0) <= 2 && emo.y1 <= talk.y0 && talk.y0 - emo.y1 <= 12 : Math.abs(emo.y1 - talk.y1) <= 2 && emo.x0 >= talk.x1 && emo.x0 - talk.x1 <= 12)) row.push(`${tag}: the emote button isn't beside the chat button (${emo.x0},${emo.y0} by ${talk.x0},${talk.y0})`);
+    const want = touch ? 'b-phone,b-map,b-menu' : 'b-phone,b-map,b-chat,b-emo,b-bag,b-menu';   // (the bag on a desktop or a pad: pre-beta quick wins)   // (the emotes beside chat on a desktop: 11-13)
     if (nav.map((b) => b.name).join() !== want) { row.push(`${tag}: the row is ${nav.map((b) => b.name)}`); continue; }
     if (!dbg) row.push(`${tag}: no debug button`);
     if (nav.some((b) => b.label)) row.push(`${tag}: words on the buttons ${nav.map((b) => b.label)}`);
-    if (nav.map((b) => b.name2).join() !== (touch ? 'Phone,Map,Menu' : 'Phone,Map,Chat,Emotes,Menu')) row.push(`${tag}: names ${nav.map((b) => b.name2)}`);
+    if (nav.map((b) => b.name2).join() !== (touch ? 'Phone,Map,Menu' : 'Phone,Map,Chat,Emotes,Bag,Menu')) row.push(`${tag}: names ${nav.map((b) => b.name2)}`);
     const keys = nav.map((b) => b.key).join();
-    if (dev === 'kbm' ? keys !== 'P,M,T,B,ESC' : keys !== (touch ? ',,' : ',,,,')) row.push(`${tag}: key badges ${keys}`);
+    if (dev === 'kbm' ? keys !== 'P,M,T,B,I,ESC' : keys !== (touch ? ',,' : ',,,,,')) row.push(`${tag}: key badges ${keys}`);
     const m = nav[nav.length - 1];
     if (w - m.x1 > 30 || m.y1 > (h > w ? h * 0.2 : h * 0.4) + (r.sc.cam || 0)) row.push(`${tag}: the menu isn't in the top-right zone (${m.x0},${m.y0}-${m.x1},${m.y1})`);
     for (const [i, a] of nav.entries()) {
@@ -172,11 +172,12 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
       if (jb.form === 'chip' && (jh > (touch ? 48 : 40) || (touch && jh < 44))) info.push(`${tag}: the job chip ${jh} px tall`);
       if (jb.form === 'big' && jh > 132) info.push(`${tag}: the job card ${jh} px tall`);
     }
-    // the notes: two at most, one line each, never in the middle third
+    // the notes: two at most, two lines each at most (since 11-16 a note's words wrap to a second line rather than being
+    // cut mid-word - the owner's "new to yo_"; past two lines the rest is in the Log), never in the middle third
     const notes = r.read.filter((b) => b.name.startsWith('note'));
     if (notes.length > 2) info.push(`${tag}: ${notes.length} notes`);
     for (const n of notes) {
-      if (n.y1 - n.y0 > 34) info.push(`${tag}: ${n.name} more than a line (${n.y1 - n.y0} px)`);
+      if (n.y1 - n.y0 > 54) info.push(`${tag}: ${n.name} more than two lines (${n.y1 - n.y0} px)`);
       if (on(n, third)) info.push(`${tag}: ${n.name} in the middle third (${n.x0},${n.y0}-${n.x1},${n.y1})`);
     }
     // the hint strip clear of the middle too (it comes and goes over the bottom)
@@ -260,7 +261,7 @@ test('a small phone upright: the cluster\'s buttons apart, the prompt\'s card cl
   const all = await measureAll(list), bad = [];
   assert.equal(all.length, list.length, 'every state measured');
   for (const r of all) {
-    const tb = r.keep.filter((k) => k.name.startsWith('tb.')), pc = r.read.find((q) => q.name === 'prompt');
+    const tb = r.keep.filter((k) => k.name.startsWith('tb.') || k.name === 'talk' || k.name === 'emote' || k.name === 'stick-l'), pc = r.read.find((q) => q.name === 'prompt');   // (chat and the emotes too: at 360 they ran into FIRE and FIRE ON - pre-beta quick wins)
     if (!pc) { bad.push(`${r.sc.st}: no prompt`); continue; }
     bad.push(...spacing(r, tb));
     if (pc.y0 < r.sc.h / 2 || pc.x0 < 0 || pc.x1 > r.sc.w) bad.push(`${r.sc.st}: the card isn't low between the thumbs (${pc.x0},${pc.y0}-${pc.x1},${pc.y1})`);

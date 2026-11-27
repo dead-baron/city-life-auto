@@ -4,9 +4,9 @@
 // (voxel.js), 1 voxel = 1 world px (a person stands ~42); x along the front (east at heading 0), y across, z up.
 import { Vox } from './voxel.js';
 import { GBuf, F_LEAF, F_NOCAST, F_GROUND, hash, vnoise } from './gbuf.js';
-import { ramp } from './palette.js';
+import { ramp, natRamp } from './palette.js';
 
-const R = (c, n = 6, k) => ramp(c, n, k);
+const R = (c, n = 6, k) => natRamp(c, n, k);   // (nature's ramps: palette.js NAT)
 // thatch: palm-leaf bundles in courses - a dark seam under each, lighter straw ends, a few frayed tips
 const thatchMat = (m, base = '#b8904a', seed = 3) => m.mat({ ramp: R(base), k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 ? -1.1 : 0) + (hash(Math.round(x / 2), Math.round(y / 2) + Math.round(z), seed) - 0.5) * 0.9 });
 // a hipped thatch roof over [x0, x1] x [y0, y1] from eave height z0, rising at slope k, overhanging by o; the eaves

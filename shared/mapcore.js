@@ -308,9 +308,18 @@ Object.defineProperty(CityMap.prototype, 'frame', {
 // Swimming: in open water, or under a bridge deck having swum in. Up on the highway deck you
 // are never swimming, whatever is below.
 export function isSwimming(map, ped) {
-  if ((ped.lz || 0) > 0.35 || ped.sky) return false;   // (sky: falling from an aircraft, up over it - server skydive.js)
+  if ((ped.lz || 0) > 0.35 || ped.sky || ped.onTrain) return false;   // (sky: skydive.js; onTrain: riders over water)
   const t = map.tileAtPx(ped.x, ped.y);
   return WATER_T[t] === 1 || (t === T.BRIDGE && !!ped.under);
+}
+
+// Under a deck over the water: a bridge's tiles, or water under the highway's deck (art2 host.js draws boats under it).
+export function underDeckAt(map, x, y) {
+  const t = map.tileAtPx(x, y);
+  if (t === T.BRIDGE) return true;
+  if (WATER_T[t] !== 1 || !map.deck || !map.inside) return false;
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  return map.inside(tx, ty) && !!map.deck[map.idx(tx, ty)];
 }
 
 // Soaking: swimming in one of the hot springs' pools (map.springs ellipses, Granite Hot Springs).
@@ -482,7 +491,9 @@ export const BREAKABLE = new Set([
   'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b', 'cactus', 'sigpole',
   'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'bollard', 'crates', 'acunit', 'trashpile', 'atm', 'billboard',
   'tent', 'picnic', 'upole', 'dspeaker', 'scope',
+  'fenceline', 'chainfence', 'yfence', 'rail', 'hedgerun',
 ]);
+export const FENCE_PROPS = new Set(['fenceline', 'chainfence', 'yfence', 'rail', 'hedgerun']);
 export const HEAVY_PROPS = new Set(['fuelpump', 'tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole', 'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'acunit', 'billboard', 'upole']);
 
 // The terrain class a wild district really grows: the little sea islands (Lighthouse Rock, the Islets) are never
@@ -545,3 +556,11 @@ export const inCanyonRock = (x, y) => CANYON.shapes.some((s) => inPoly(s.poly, x
   for (let y = 0; y < CANYON.h; y++) { let r = ''; for (let x = 0; x < CANYON.w; x++) r += inCanyonRock(x + 0.5, y + 0.5) ? '#' : 's'; rows.push(r); }
   if (SCENE_MASKS.canyon) SCENE_MASKS.canyon = { w: CANYON.w, h: CANYON.h, rows };
 }
+
+// The relief layer's bytes (m.relief, World v3 8.22): a metre each up to RELIEF.knee, RELIEF.high of a byte per metre
+// above it. Granite Peaks stands to 363 m: a byte of plain metres left its highest quarter at 255 - level to
+// everything that reads it, no slope shaded, no ledge drawn (found 11-25, building the summits). Each byte is
+// dithered (4 x 4): a 4 x 4 mean, then reliefMetres, gives the height back to a fraction of a metre.
+export const RELIEF = { knee: 160, high: 0.4 };
+export const reliefByte = (h) => (h <= RELIEF.knee ? h : RELIEF.knee + (h - RELIEF.knee) * RELIEF.high);
+export const reliefMetres = (v) => (v <= RELIEF.knee ? v : RELIEF.knee + (v - RELIEF.knee) / RELIEF.high);

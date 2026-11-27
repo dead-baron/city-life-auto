@@ -7,6 +7,7 @@
 import * as vehicles from './systems/vehicles.js';
 import * as trains from './systems/trains.js';
 import * as prison from './systems/prison.js';
+import { founderSync } from './founder.js';
 
 const envPw = typeof process !== 'undefined' && process.env ? process.env.CLA_DEV_PASSWORD : '';
 export const DEV_PASSWORD = envPw || 'GODMODE';
@@ -46,6 +47,7 @@ export function enter(world, p, grantedBy) {
   if (p.devMode) return;
   p.devMode = true;
   p.meDirty = true;
+  founderSync(p);   // (the owner in admin mode: his founder look - server/founder.js)
   world.notify(p, grantedBy
     ? `${grantedBy.name} gave you Dev Debug Mode: tap 🛠 at the top of the screen for the debug menu. Your progress carries on as normal - whatever you get in dev mode is yours to keep.`
     : 'Dev Debug Mode ON - tap 🛠 at the top of the screen (or Options) for the debug menu. Your progress carries on as normal: whatever you do in dev mode stays when you leave it.', 'warn');
@@ -57,8 +59,10 @@ export function exit(world, p, quiet = false) {
   if (!p.devMode) return;
   p.devMode = false;
   if (p.spectating) p.spectating = false;
+  p.watch = null;
   p.invincible = false;
   p.meDirty = true;
+  founderSync(p);
   if (!quiet) world.notify(p, 'Dev Debug Mode OFF - you keep everything you have now.', 'good');
 }
 
@@ -119,7 +123,7 @@ export function playerList(world, viewer) {
     if (!q.conn) continue;
     const ped = q.ped;
     const role = q.badge ? 'police' : q.hunter ? 'hunter' : q.wanted > 0 ? 'criminal' : 'citizen';
-    const e = { n: q.name, r: role, w: q.wanted || 0, me: q === viewer ? 1 : 0, dm: q.devMode ? 1 : 0, god: q.invincible ? 1 : 0, ...(q.guest ? { gu: 1 } : null) };
+    const e = { n: q.name, r: role, w: q.wanted || 0, me: q === viewer ? 1 : 0, dm: q.devMode ? 1 : 0, god: q.invincible ? 1 : 0, ...(q.guest ? { gu: 1 } : null), ...(q.founder ? { fo: 1 } : null) };
     if (ped && !ped.hidden) e.d = world.map.districtAt(ped.x, ped.y).name;
     if (dev) { e.id = q.pid; if (ped) { e.x = Math.round(ped.x); e.y = Math.round(ped.y); } e.dead = ped && ped.dead ? 1 : 0; }
     out.push(e);

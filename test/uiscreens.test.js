@@ -66,7 +66,7 @@ test('settings (UIC-06): tabs along the top; Chat and Legal are slots; the Dange
 
 test('the phone (UIC-02..05): pixel tiles, the Guide\'s place, Places opens in place, Jobs has its filters and START', () => {
   const ph = read('client/phone.js');
-  assert.match(ph, /\['camera', 'Camera'\], \['bug', 'Report bug'\], \['guide', 'Guide'\]\];/, 'the Guide last (Report bug before it, 11-15)');
+  assert.match(ph, /\['bug', 'Report bug'\], \['guide', 'Guide'\]\];/, 'the Guide last (Report bug before it, 11-15)');
   assert.match(ph, /screen === 'guide'/);
   assert.match(ph, /<span class="ph-tile">\$\{pix\(APP_PIX\[k\]\)\}<\/span>/);
   assert.match(ph, /data-grp="\$\{g\.id\}" aria-expanded/, 'Places: a kind opens under itself');
@@ -108,7 +108,9 @@ test('a desktop\'s screens scale with the window (the 11-04 review): one zoom on
   assert.equal(uiScale(1920, 1080), 1.6); assert.equal(uiScale(1366, 768), 1.25); assert.equal(uiScale(1024, 600), 1);
   assert.match(CSS, /body:not\(\.touch\) #hub:not\(\[data-tab=map\]\) \.hub-frame, body:not\(\.touch\) #menu \.panel, body:not\(\.touch\) \.jc-pop, body:not\(\.touch\) #d-panel \{ zoom: var\(--zk, 1\); \}/, 'the panels, not the map or the HUD, and never on a phone');
   const bag = read('client/bag.js');
-  assert.match(bag, /s\.innerHTML = glyph\(glyphOfWeapon\(id, \(WEAPONS\[id\] \|\| \{\}\)\.type\), Math\.round\(h \* 1\.15\)\);/, 'a weapon: its class\'s glyph, not the thin top-down sprite');
+  // (11-21: a weapon's own pixel picture - client/itemart.js - and its class's glyph for one without; never the thin
+  // top-down sprite)
+  assert.match(bag, /s\.innerHTML = weaponIcon\(id\) \|\| glyph\(glyphOfWeapon\(id, \(WEAPONS\[id\] \|\| \{\}\)\.type\), Math\.round\(h \* 1\.15\)\);/, 'a weapon: its own picture, else its class\'s glyph, not the thin top-down sprite');
   assert.ok(!/fittedIcon/.test(bag));
 });
 

@@ -6,9 +6,9 @@
 // Voxel models (voxel.js) unless noted; sprites are GBufs anchored at their foot (.ax, .ay).
 import { Vox } from './voxel.js';
 import { GBuf, F_WATER, F_NOCAST, F_LEAF, F_ROCKLEAF, F_GLASS, F_GROUND, F_THIN, hash, bayer, vnoise } from './gbuf.js';
-import { MAT, ramp } from './palette.js';
+import { MAT, ramp, natRamp } from './palette.js';
 
-const R = (c, n = 6, k) => ramp(c, n, k);
+const R = (c, n = 6, k) => natRamp(c, n, k);   // (nature's ramps: no near-black shade - palette.js NAT)
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
 const pick = (Rm, t, x, y, d = 0.6) => Rm[Math.max(0, Math.min(Rm.length - 1, Math.round(t * (Rm.length - 1) + bayer(x, y) * d)))];
 const nz = (x, y, z) => { const l = Math.hypot(x, y, z) || 1; return [x / l, y / l, z / l]; };
@@ -630,16 +630,17 @@ export function driftShade(w = 70, d = 50) {
 }
 // wooden steps up the face of a cliff (len deep, rising h to the top at the north end), on two stringers, with a
 // post every few steps and a rope rail either side
-export function cliffStairs(len = 120, h = 80, w = 28) {
+export function cliffStairs(len = 120, h = 80, w = 28, stone = 0) {   // (stone: a summit's steps - granite treads, no posts, no rope)
   const m = new Vox(w + 6, len + 4, h + 26);
-  const tread = m.mat({ ramp: MAT.woodDock, k: 3, shade: (x, y) => (Math.round(y) % 9 === 0 ? -1.2 : 0) + (hash(Math.floor(y / 9), Math.round(x / 8), 6) - 0.5) * 0.6 });
-  const str = m.mat({ ramp: MAT.woodDark, k: 3 }), post = m.mat({ ramp: MAT.woodDark, k: 3, flag: F_THIN }), rope = m.mat({ ramp: R('#d8c49a'), k: 3, flag: F_THIN });
+  const tread = m.mat({ ramp: stone ? MAT.stone : MAT.woodDock, k: 3, shade: (x, y) => (Math.round(y) % 9 === 0 ? -1.2 : 0) + (hash(Math.floor(y / 9), Math.round(x / 8), 6) - 0.5) * 0.6 });
+  const str = m.mat({ ramp: stone ? MAT.stone : MAT.woodDark, k: stone ? 1 : 3 }), post = m.mat({ ramp: MAT.woodDark, k: 3, flag: F_THIN }), rope = m.mat({ ramp: R('#d8c49a'), k: 3, flag: F_THIN });
   const zAt = (y) => Math.max(0, (len - y) / len * h);                                    // y 0 = the top (north), len = the foot
   for (let y = 0; y < len; y++) {
     const z = Math.floor(zAt(y) / 6) * 6;                                                 // 6 px risers
     m.box(3, y + 2, Math.max(0, z - 2), w + 3, y + 3, z + 2, tread);
     m.box(1, y + 2, Math.max(0, zAt(y) - 6), 3, y + 3, zAt(y) + 2, str); m.box(w + 3, y + 2, Math.max(0, zAt(y) - 6), w + 5, y + 3, zAt(y) + 2, str);
   }
+  if (stone) return m;
   for (let y = 4; y < len; y += 22) for (const x of [1, w + 3]) m.box(x, y, zAt(y), x + 2, y + 2, zAt(y) + 20, post);
   for (const x of [1.5, w + 3.5]) for (let y = 4; y < len - 1; y++) { const k = ((y - 4) % 22) / 22, sag = Math.sin(k * Math.PI) * 3; m.box(x, y, zAt(y) + 17 - sag, x + 1, y + 1, zAt(y) + 18.4 - sag, rope); }
   return m;
@@ -678,10 +679,10 @@ export function shipwreck(L = 220, W = 64, Hh = 40, heel = 0.38) {
 }
 // a sea arch (along x): two rough legs of dark layered rock standing in the surf and the span between them, the
 // opening facing +y; barnacles and wet rock at the waterline, a cap of grass and thrift on top, a gull's perch
-export function seaArch(w = 150, d = 56, h = 96, seed = 3) {
+export function seaArch(w = 150, d = 56, h = 96, seed = 3, dry = 0) {   // (dry: the desert's arch - red sandstone, bare: no wet foot, barnacles or turf)
   const m = new Vox(w, d, h + 6);
-  const rock = m.mat({ ramp: R('#6a6260'), k: 3, shade: (x, y, z) => (Math.round(z + hash(Math.round(x / 9), 1, seed) * 3) % 7 === 0 ? -0.9 : 0) + (hash(Math.round(x / 3), Math.round(z / 2) + Math.round(y / 3), seed) - 0.5) * 0.7 });
-  const wet = m.mat({ ramp: R('#3e3a3a'), k: 2 }), barn = m.mat({ ramp: R('#cfc8b8'), k: 3 }), grass = m.mat({ ramp: R('#6a8a3a'), k: 3, flag: F_ROCKLEAF }), pink = m.mat({ ramp: R('#e890b0'), k: 3, flag: F_ROCKLEAF });   // (plants on the rock: gbuf.js)
+  const rock = m.mat({ ramp: R(dry ? '#c0603a' : '#6a6260'), k: 3, shade: (x, y, z) => (Math.round(z + hash(Math.round(x / 9), 1, seed) * 3) % 7 === 0 ? -0.9 : 0) + (hash(Math.round(x / 3), Math.round(z / 2) + Math.round(y / 3), seed) - 0.5) * 0.7 });
+  const cap = dry ? m.mat({ ramp: R('#cc7446'), k: 3 }) : 0, wet = dry ? rock : m.mat({ ramp: R('#3e3a3a'), k: 2 }), barn = dry ? rock : m.mat({ ramp: R('#cfc8b8'), k: 3 }), grass = dry ? cap : m.mat({ ramp: R('#6a8a3a'), k: 3, flag: F_ROCKLEAF }), pink = dry ? cap : m.mat({ ramp: R('#e890b0'), k: 3, flag: F_ROCKLEAF });   // (plants on the rock: gbuf.js)
   const cy = d / 2, open0 = w * 0.3, open1 = w * 0.7, archTop = h * 0.62;
   m.fill((x, y, z) => {
     const n = hash(Math.round(x / 4), Math.round(z / 4), seed + 1), n2 = hash(Math.round(x / 9), Math.round(y / 6), seed + 2);

@@ -13,13 +13,18 @@
 //   start(o) / stop() (main.js), server(ev) (client/music/stage.js: the set's result, a gig's set starting)
 import { chart, judge, newTally, tally, accuracy, jamNotes, TRACK, BEAT_TRACK, GRADE_NAMES, LANES, PADS, mood } from '../../shared/music.js';
 import { RHYTHM } from '../../shared/rules-music.js';
+import { MUSIC_ITEMS } from '../../shared/music.js';
+const INST_NAME = Object.fromEntries(Object.entries(MUSIC_ITEMS).map(([k, v]) => [k, v.name]));
 import { MUSIC_KEYS, KB, PAD } from '../../shared/controls.js';
 import { current as stageNow } from './stage.js';
 import * as stageMod from './stage.js';
 
-// two screens: the lanes upright at the right of the city (the dancer and the crowd stay in view), the jam's pads low
-const LAYOUT = { lanes: [200, 240], jam: [320, 150] }, LANE_W = 34, LINE_Y = 206, LANE_X0 = 12;
-let W = 320, H = 150;
+// two screens: the lanes upright at the right of the city (the dancer and the crowd stay in view), the jam's pads one
+// compact strip along the foot of the screen, see-through, under your character (the owner, 11-16: "When I'm trying to
+// play an instrument I can't see what I'm doing on the screen") - the gig's track list grows it upward while it's open
+const LAYOUT = { lanes: [200, 240], jam: [400, 72] }, LANE_W = 34, LINE_Y = 206, LANE_X0 = 12;
+export const PAD_ROW = { x0: 8, w: 48, y0: 18, h: 50 };   // the eight pads in a row: the first's left, each one's width, the row's top and height
+let W = 400, H = 72;
 const LANE_COL = ['#ff5ac8', '#5ae8ff', '#7aff7a', '#ffd24a'], ARROW = ['←', '↓', '↑', '→'];
 const PAD_KEYS = 'ASDFGHJK', LANE_PAD = [0, 2, 4, 6];
 let G = null, SND = null;
@@ -30,8 +35,8 @@ function css() {
   if (document.getElementById('mus-css')) return;
   const st = document.createElement('style');
   st.id = 'mus-css';
-  st.textContent = '#arcade.mus{background:transparent;align-items:flex-end;pointer-events:auto}#arcade.mus .arc-frame{background:rgba(10,8,24,.74);margin-bottom:1.5vh;padding:8px 10px;gap:4px;max-width:96vw}#arcade.mus #arc-cv{width:min(94vw,calc(34vh*320/150),640px);height:auto;aspect-ratio:320/150;background:transparent}'
-    + '#arcade.mus.lanes{justify-content:flex-end}#arcade.mus.lanes .arc-frame{margin:0 3vw 2vh 0}#arcade.mus.lanes #arc-cv{width:auto;height:min(58vh,520px);aspect-ratio:200/240}#arcade.mus #arc-hint{max-width:min(94vw,640px);text-align:center;line-height:1.3}#arcade.mus.lanes #arc-hint{max-width:min(40vw,320px)}@media (max-height:500px){#arcade.mus.lanes #arc-cv{height:74vh}#arcade.mus #arc-cv{width:min(70vw,calc(52vh*320/150))}#arcade.mus #arc-hint{font-size:9px}}';
+  st.textContent = '#arcade.mus{background:transparent;align-items:flex-end;pointer-events:auto}#arcade.mus .arc-frame{background:rgba(10,8,24,.42);margin-bottom:max(6px,env(safe-area-inset-bottom));padding:4px 8px;gap:2px;max-width:96vw;border-color:rgba(226,189,87,.45)}#arcade.mus:not(.lanes){pointer-events:none}#arcade.mus:not(.lanes) .arc-frame{pointer-events:auto}#arcade.mus #arc-cv{width:min(94vw,calc(22vh*400/72),720px);height:auto;aspect-ratio:400/72;background:transparent}#arcade.mus.pick #arc-cv{aspect-ratio:400/150;width:min(94vw,calc(40vh*400/150),720px)}'
+    + '#arcade.mus.lanes{justify-content:flex-end}#arcade.mus.lanes .arc-frame{margin:0 3vw 2vh 0}#arcade.mus.lanes #arc-cv{width:auto;height:min(58vh,520px);aspect-ratio:200/240}#arcade.mus #arc-hint{max-width:min(94vw,640px);text-align:center;line-height:1.3}#arcade.mus.lanes #arc-hint{max-width:min(40vw,320px)}@media (max-height:500px){#arcade.mus.lanes #arc-cv{height:74vh}#arcade.mus:not(.lanes) #arc-cv{width:min(76vw,calc(26vh*400/72))}#arcade.mus #arc-hint{font-size:9px}}';
   document.head.appendChild(st);
 }
 
@@ -68,7 +73,7 @@ export function stop() {
   const S = stage(); if (S && S.play === api) S.play = null;
   G = null;
 }
-const api = { server(ev) { if (!G) return; if (ev.go) { G.mode = 'gig'; G.key = ev.go.key; G.minor = ev.go.minor; beginSet(ev.go.track, ev.go.seed, ev.go.t0, ev.go.setS); } if (ev.res) { G.res = ev.res; if (G.mode === 'gig') { G.mode = 'jam'; G.set = null; G.key = 57; G.minor = true; } } } };
+const api = { server(ev) { if (!G) return; if (ev.go) { G.mode = 'gig'; G.key = ev.go.key; G.minor = ev.go.minor; beginSet(ev.go.track, ev.go.seed, ev.go.t0, ev.go.setS); } if (ev.res) { G.res = ev.res; G.resAt = performance.now(); if (G.mode === 'gig') { G.mode = 'jam'; G.set = null; G.key = 57; G.minor = true; } } } };
 export const server = (ev) => api.server(ev);
 export const _state = () => G;   // (tests and the capture scripts)
 
@@ -117,6 +122,7 @@ function press(q) {
     return;
   }
   // the jam: the gig's track picker open, else the pads
+  if (G.res) G.res = null;   // (a set's result: any key or tap puts it away and plays on)
   if (G.pick >= 0) {
     const n = G.picks.length;
     if (q.code === 'ArrowUp' || q.code === 'KeyW' || q.pad === 12) G.pick = (G.pick + n - 1) % n;
@@ -126,12 +132,14 @@ function press(q) {
     else if (q.x !== undefined) { const i = Math.floor((q.y - 22) / Math.min(14, 116 / n)); if (i >= 0 && i < n) { G.o.send({ t: 'mus', a: 'gig', track: G.picks[i] }); G.pick = -1; } else G.pick = -1; }
     return;
   }
-  if (q.code === 'Enter' || (q.x !== undefined && q.x > W - 70 && q.y < 24)) { G.pick = 0; return; }
-  if (q.x !== undefined && q.x < 70 && q.y < 24) { G.chordOn = !G.chordOn; return; }
+  if (q.code === 'Enter' || (q.x !== undefined && q.x > W - 70 && q.y < PAD_ROW.y0)) { G.pick = 0; return; }
+  if (q.x !== undefined && q.x < 70 && q.y < PAD_ROW.y0) { G.chordOn = !G.chordOn; return; }
   if (q.code) { const i = MUSIC_KEYS.pads.indexOf(q.code); if (i >= 0) playPad(i); return; }
   if (q.pad !== undefined) { const i = MUSIC_KEYS.padPads.indexOf(q.pad); if (i >= 0) playPad(i); return; }
-  if (q.x !== undefined) { const c = Math.floor((q.x - 40) / 60), r = q.y > 86 ? 1 : q.y > 26 ? 0 : -1; if (c >= 0 && c < 4 && r >= 0) playPad(r * 4 + c); }
+  if (q.x !== undefined) { const i = padAt(q.x, q.y); if (i >= 0) playPad(i); }
 }
+// the pad under a tap (art px in the strip; -1 off the pads)
+export function padAt(x, y) { const i = Math.floor((x - PAD_ROW.x0) / PAD_ROW.w); return y >= PAD_ROW.y0 - 2 && y <= PAD_ROW.y0 + PAD_ROW.h + 2 && i >= 0 && i < PADS ? i : -1; }
 // the pad: buttons as they go down; the chord held on LT; RB / the view button opens the gig picker in the jam
 function poll() {
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
@@ -148,22 +156,51 @@ function poll() {
 
 // ---- drawing ------------------------------------------------------------------------------------------------------
 function draw() {
-  const lanes = !!G.set && G.mode !== 'jam';
-  [W, H] = LAYOUT[lanes ? 'lanes' : 'jam'];
-  G.ov.classList.toggle('lanes', lanes);
-  const hint = lanes ? `${KB.lanes} · ${PAD.lanes[0]} · tap the lanes · Esc / B: stop` : `${KB.pads} or tap: play · ${KB.chord} / ${PAD.chord[0]}: chord · ENTER / VIEW: gig · Esc / B: put it away`;
+  if (G.res && G.mode === 'jam' && performance.now() - (G.resAt || 0) > 8000) G.res = null;   // (and it goes by itself)
+  const lanes = !!G.set && G.mode !== 'jam', picking = !lanes && (G.pick >= 0 || !!G.res);   // (the track list, a set's result: the taller card)
+  [W, H] = lanes ? LAYOUT.lanes : picking ? [400, 150] : LAYOUT.jam;
+  G.ov.classList.toggle('lanes', lanes); G.ov.classList.toggle('pick', picking);
+  const hint = lanes ? `${KB.lanes} · ${PAD.lanes[0]} · tap the lanes · Esc / B: stop` : `${KB.pads} or tap · ${KB.chord} / ${PAD.chord[0]}: chord · ENTER / VIEW: gig · Esc / B / ✕: put it away`;
   if (G.hint && G.hint.textContent !== hint) G.hint.textContent = hint;
   const { cv, g } = G, dpr = devicePixelRatio || 1, r = cv.getBoundingClientRect();
-  const k = Math.max(1, Math.min(4, (r.width * dpr) / W)), bw = Math.round(W * k), bh = Math.round(H * k);
+  const k = Math.max(1, Math.min(4, Math.floor((r.width * dpr) / W))), bw = Math.round(W * k), bh = Math.round(H * k);   // (a whole number: every pixel of the art a whole block of the screen's - no blur at the edges)
   if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
-  g.setTransform(k, 0, 0, k, 0, 0);
+  g.setTransform(k, 0, 0, k, 0, 0); g.imageSmoothingEnabled = false;
   g.clearRect(0, 0, W, H);
   g.textAlign = 'center'; g.textBaseline = 'middle';
   if (G.set && (G.mode === 'rhythm' || G.mode === 'gig')) drawSet(g);
   else drawJam(g);
   if (G.res) drawResult(g);
 }
-function txt(g, s, x, y, size, col, align = 'center') { g.font = `bold ${size}px monospace`; g.textAlign = align; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(s, x + 1, y + 1); g.fillStyle = col; g.fillText(s, x, y); }
+// (the owner, 11-22: "the arrows with shadows on it, just looks blurry and hard to read ... more like an SNES looking beat
+// saber or dance dance revolution": text in the game's pixel face at its own grid (8 or 16 px), a solid one-pixel shadow,
+// whole pixels only; the arrows are pixel sprites - ARROW_MASK, a dark rim, the lane's colour, a lit edge - not glyphs)
+function txt(g, s, x, y, size, col, align = 'center') {
+  const px = size > 11 ? 16 : 8;
+  g.font = `bold ${px}px "CLA Pixel", monospace`; g.textAlign = align;
+  x = Math.round(x); y = Math.round(y);
+  g.fillStyle = '#0b0816'; g.fillText(s, x + 1, y + 1); g.fillStyle = col; g.fillText(s, x, y);
+}
+// an arrow pointing up, 11 x 11; drawn turned for its lane (0 left, 1 down, 2 up, 3 right)
+const ARROW_MASK = ['.....#.....', '....###....', '...#####...', '..#######..', '.#########.', '###########', '....###....', '....###....', '....###....', '....###....', '....###....'];
+const at = (dir, i, j) => (dir === 2 ? [i, j] : dir === 1 ? [i, 10 - j] : dir === 0 ? [j, i] : [10 - j, i]);
+function pixArrow(g, cx, cy, dir, body, s = 1, rim = '#0b0816', hollow = false) {
+  const x0 = Math.round(cx - 5.5 * s), y0 = Math.round(cy - 5.5 * s);
+  const on = (i, j) => i >= 0 && j >= 0 && i < 11 && j < 11 && ARROW_MASK[j][i] === '#';
+  g.fillStyle = rim;
+  for (let j = -1; j <= 11; j++) for (let i = -1; i <= 11; i++) {
+    if (on(i, j)) continue;
+    if (on(i - 1, j) || on(i + 1, j) || on(i, j - 1) || on(i, j + 1)) { const [u, v] = at(dir, i, j); g.fillRect(x0 + u * s, y0 + v * s, s, s); }
+  }
+  for (let j = 0; j < 11; j++) for (let i = 0; i < 11; i++) {
+    if (!on(i, j)) continue;
+    const edge = !on(i - 1, j) || !on(i + 1, j) || !on(i, j - 1) || !on(i, j + 1);
+    if (hollow && !edge) continue;
+    const [u, v] = at(dir, i, j);
+    g.fillStyle = !hollow && edge && (!on(i, j - 1) || !on(i - 1, j)) ? '#ffffff' : body;
+    g.fillRect(x0 + u * s, y0 + v * s, s, s);
+  }
+}
 function drawSet(g) {
   const st = G.set, ts = songNow(), now = performance.now();
   // the lanes, their line, the arrows at it (lit when pressed)
@@ -172,17 +209,14 @@ function drawSet(g) {
     g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(x + 1, 0, LANE_W - 2, H);
     const lit = now - (G.flash[l] || 0) < 120;
     g.fillStyle = lit ? LANE_COL[l] : 'rgba(255,255,255,.18)'; g.fillRect(x + 2, LINE_Y - 1, LANE_W - 4, 3);
-    txt(g, ARROW[l], x + LANE_W / 2, LINE_Y + 14, 14, lit ? '#fff' : LANE_COL[l]);
+    pixArrow(g, x + LANE_W / 2, LINE_Y + 1, l, lit ? LANE_COL[l] : '#5a5f7a', 2, '#0b0816', !lit);   // (the receptor on the line: hollow, filled when hit)
   }
   // the notes coming down
   for (const n of st.notes) {
     const dt = n.t - ts;
     if (dt > RHYTHM.leadS || dt < -0.25 || n.g === 0 || n.g === 1 || n.g === 2) continue;
     const y = LINE_Y - (dt / RHYTHM.leadS) * (LINE_Y - 4), x = LANE_X0 + n.lane * LANE_W;
-    g.fillStyle = n.g === 3 ? 'rgba(120,120,130,.6)' : LANE_COL[n.lane];
-    g.fillRect(x + 4, y - 5, LANE_W - 8, 10);
-    g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x + 4, y - 5, LANE_W - 8, 2);
-    txt(g, ARROW[n.lane], x + LANE_W / 2, y + 1, 9, '#1a1424');
+    pixArrow(g, x + LANE_W / 2, Math.round(y), n.lane, n.g === 3 ? '#6a6f80' : LANE_COL[n.lane], 2);   // (a falling note: the lane's arrow)
   }
   // the count-in, the grade, the score, the combo, the hype
   const cx = LANE_X0 + LANE_W * LANES / 2;
@@ -203,17 +237,20 @@ function drawSet(g) {
 function drawJam(g) {
   const now = performance.now();
   const ch = G.chordOn || G.padChord;
-  txt(g, `${ch ? '■' : '□'} CHORD`, 8, 12, 9, ch ? '#ffd24a' : '#b8bcd8', 'left');
-  txt(g, 'GIG ▶', W - 8, 12, 10, '#7aff7a', 'right');
-  for (let i = 0; i < PADS; i++) {
-    const c = i % 4, r = i >> 2, x = 40 + c * 60, y = 28 + r * 60, lit = G.lastPad === i && now - G.padAt < 160;
-    g.fillStyle = lit ? LANE_COL[c] : 'rgba(255,255,255,.1)'; g.fillRect(x + 4, y, 52, 54);
-    g.strokeStyle = LANE_COL[c]; g.lineWidth = 1; g.strokeRect(x + 4.5, y + 0.5, 51, 53);
-    txt(g, PAD_KEYS[i], x + 30, y + 27, 14, lit ? '#1a1424' : '#fff');
+  if (G.pick < 0 && !G.res) {
+    txt(g, `${ch ? '■' : '□'} CHORD`, 8, 9, 8, ch ? '#ffd24a' : '#b8bcd8', 'left');
+    txt(g, G.inst ? (INST_NAME[G.inst] || '').toUpperCase() : '', W / 2, 9, 7, '#d8dcf0');
+    txt(g, 'GIG ▶', W - 8, 9, 9, '#7aff7a', 'right');
+    for (let i = 0; i < PADS; i++) {
+      const c = i % 4, x = PAD_ROW.x0 + i * PAD_ROW.w, y = PAD_ROW.y0, lit = G.lastPad === i && now - G.padAt < 160;
+      g.fillStyle = lit ? LANE_COL[c] : 'rgba(255,255,255,.08)'; g.fillRect(x + 2, y, PAD_ROW.w - 4, PAD_ROW.h);
+      g.strokeStyle = LANE_COL[c]; g.lineWidth = 1; g.strokeRect(x + 2.5, y + 0.5, PAD_ROW.w - 5, PAD_ROW.h - 1);
+      txt(g, PAD_KEYS[i], x + PAD_ROW.w / 2, y + PAD_ROW.h / 2, 13, lit ? '#1a1424' : '#fff');
+    }
   }
   if (G.pick >= 0) {
     const n = G.picks.length, rh = Math.min(14, 116 / n);
-    g.fillStyle = 'rgba(8,6,20,.94)'; g.fillRect(60, 4, 200, 22 + n * rh);
+    g.fillStyle = 'rgba(8,6,20,.94)'; g.fillRect(W / 2 - 100, 4, 200, 22 + n * rh);
     txt(g, 'A GIG TO...', W / 2, 13, 9, '#ffe28a');
     G.picks.forEach((id, i) => txt(g, `${i === G.pick ? '▶ ' : ''}${TRACK[id].title}`, W / 2, 28 + i * rh, Math.min(9, rh - 2), i === G.pick ? '#7aff7a' : '#d8dcf0'));
   }

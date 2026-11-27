@@ -9,7 +9,7 @@
 // most drivers wait, a few gamble, and you can smash straight through the arms.
 // The mail train carries a strongbox: the long run through Dry Creek is robbery country (World v3: the Red Rock Desert's
 // - robberyCountry, below).
-import { inAnyView } from '../view.js';
+import { inAnyView, viewRect } from '../view.js';
 import { K, T } from '../../shared/constants.js';
 import {  } from '../../shared/rules.js';
 import { IN } from '../../shared/input.js';
@@ -349,9 +349,16 @@ export function nearSomeone(world, t) {
   for (const p of world.players.values()) {
     const q = p.ped;
     if (q && (by(q, a) || by(q, b) || by(q, c0) || by(q, c1))) return true;
+    // (a camera away from the player - the cinematic mode's scene or follow shot: what it looks at counts too. The owner,
+    // 11-23: the train in a station shot never left after BOARDING - its cars stood frozen, the player far off)
+    if ((p.dirCam || p.cineF) && viewRect(world, p, VR)) {
+      const inV = (e) => !!e && e.x > VR.x0 - NEAR_PX && e.x < VR.x1 + NEAR_PX && e.y > VR.y0 - NEAR_PX && e.y < VR.y1 + NEAR_PX;
+      if (inV(a) || inV(b) || inV(c0) || inV(c1)) return true;
+    }
   }
   return false;
 }
+const VR = {};
 export function update(world, dt) {
   if (!world.trains || !world.trains.length) return;
   const lazy = !!world.rails;   // (World v3's loops)
@@ -1387,6 +1394,7 @@ export function interaction(world, p) {
     return hit ? { label: `Climb onto the ${carLabel(world, hit)}`, run: () => climbOn(world, ped, hit) } : null;
   }
   for (const t of world.trains) {
+    if (farFrom(world, t, ped.x, ped.y, 3000)) continue;   // (a train in at a station a long way off: not this one - every player asks, five times a second)
     const st = stationAt(world, t);
     if (!st) continue;
     if (st.deck) {
@@ -1505,8 +1513,13 @@ function atEntrance(st, ped) {
 }
 
 // A car you could grab onto from here: close alongside and not much faster than you.
+// how far along a train runs from its first car's middle (px): no car of it is further from that car than this
+const spanOf = (t) => { const c = t.cars[t.cars.length - 1]; return c ? c.off - t.cars[0].off + c.def.L / 2 : 0; };
+// (this train nowhere near (x, y): its first car further off than the train is long, and `pad` more)
+const farFrom = (world, t, x, y, pad) => { const h = t.cars.length ? world.get(t.cars[0].id) : null; return !!h && Math.abs(h.x - x) + Math.abs(h.y - y) > (spanOf(t) + pad) * 1.5; };
 function climbable(world, ped, x, y, reach, vx, vy) {
   for (const t of world.trains) {
+    if (farFrom(world, t, x, y, reach + 200)) continue;   // (every player in a car asks, five times a second)
     for (let ci = 0; ci < t.cars.length; ci++) {
       const e = world.get(t.cars[ci].id);
       if (!e || e.sub || e.el || Math.hypot(e.x - x, e.y - y) > t.cars[ci].def.L / 2 + reach) continue;

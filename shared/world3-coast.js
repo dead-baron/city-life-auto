@@ -313,3 +313,78 @@ export function coastByHand3(m, H3) {
   for (const [t, x, y, r, ex] of props) H3.addProp(m, t, x, y, r, ex);
   return out;
 }
+
+// ---- Sea stacks stand as the sea left them (the art pass, 2026-11-25; the owner, 11-23: "the sea stacks in a line";
+// 11-25 18:14, of rock drawn by code: "vary the sizes ... not all so uniform") ---------------------------------------
+// Counted 11-25: 17 stacks; four off Redwood Cove stood on one column of tiles (x 491.5), and the Egret coast's three
+// coves each had the same three at the same offsets. Each stack is re-sited within `reach` tiles of where it stood
+// (further - to reach + 6 - only when two neighbours on one line leave it nowhere nearer) -
+// on open sea `open` tiles clear of land, `apart` tiles from any other, never the third of a line (no three within
+// `span` tiles lying within `off` tiles of one line) - and takes a size and a shape of its own; a gull standing on one
+// goes with it. Deterministic: integer hashes. (The ferries' lanes are laid before this and run well offshore; a
+// stack moves a few tiles at most and stays in the shallows it stood in.)
+export const STACKS3 = { reach: 5, open: 2, apart: 7, span: 30, off: 2.5, r: [0.75, 1.35], h: [0.6, 1.15], shapes: 12 };
+const hs = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+export const inLine3 = (A, Q, B, S = STACKS3) => {   // (is Q the third of a line with A and B?)
+  const d = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+  if (Math.max(d(A, B), d(A, Q), d(Q, B)) > S.span) return false;
+  let P = [A, Q, B]; const far = [[0, 1], [0, 2], [1, 2]].sort((u, v) => d(P[v[0]], P[v[1]]) - d(P[u[0]], P[u[1]]))[0], mid = P[3 - far[0] - far[1]], a = P[far[0]], b = P[far[1]], L = d(a, b) || 1;
+  return Math.abs((b[0] - a[0]) * (a[1] - mid[1]) - (a[0] - mid[0]) * (b[1] - a[1])) / L < S.off;
+};
+export function stacksApart3(m, H3) {
+  const out = { stacks: 0, moved: 0, gulls: 0 };
+  if (!H3 || !H3.addProp || !H3.removeProps) return out;
+  const S = STACKS3, W = m.w, HH = m.h, T_SEA = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= HH) return false; const i = y * W + x, t = m.tiles[i]; return (t === T.WATER || t === T.DEEP) && !m.land[i] && !(m.lake && m.lake[i]) && !(m.river && m.river[i]); };
+  const clear = (x, y) => { for (let dy = -S.open; dy <= S.open; dy++) for (let dx = -S.open; dx <= S.open; dx++) if (!T_SEA(x + dx, y + dy)) return false; return true; };
+  const old = m.props.filter((p) => p && p.t === 'seastack').sort((a, b) => a.x - b.x || a.y - b.y), placed = [], adds = [], gone = new Set();
+  out.stacks = old.length;
+  for (const p of old) {
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    const ok = (c) => clear(c[0], c[1]) && placed.every((q) => Math.hypot(q[0] - c[0], q[1] - c[1]) >= S.apart) && !placed.some((a, i) => placed.some((b, j) => j > i && inLine3(a, c, b, S)));
+    let c = null;
+    for (const R of [S.reach, S.reach + 3, S.reach + 6]) {   // (two neighbours on one line close a cone behind them: then it goes further)
+      const cands = [];
+      for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) cands.push([tx + dx, ty + dy, hs(tx + dx, ty + dy, 7701) + (dx === 0 && dy === 0 ? -1 : 0)]);   // (where it stood first, if that is good)
+      cands.sort((a, b) => a[2] - b[2]);
+      if ((c = cands.find(ok))) break;
+    }
+    if (!c) { c = [tx, ty]; out.stuck = (out.stuck || 0) + 1; }
+    placed.push([c[0], c[1]]);
+    const k = hs(tx, ty, 7702), r = Math.round((p.r || 26) * (S.r[0] + k * (S.r[1] - S.r[0]))), h = Math.round((p.h || 150) * (S.h[0] + hs(tx, ty, 7703) * (S.h[1] - S.h[0])) / 10) * 10;
+    const nx = (c[0] + 0.5) * TILE, ny = (c[1] + 0.5) * TILE;
+    if (c[0] !== tx || c[1] !== ty) out.moved++;
+    gone.add(p.x + ',' + p.y);
+    adds.push(['seastack', nx, ny, r, { s: 1 + Math.floor(hs(tx, ty, 7704) * S.shapes), r, h }]);
+    for (const g of m.props) if (g && g.t === 'gull' && Math.abs(g.x - p.x) < 2 * TILE && Math.abs(g.y - p.y) < 2 * TILE) { gone.add(g.x + ',' + g.y); adds.push(['gull', g.x + nx - p.x, g.y + ny - p.y, 0, { a: g.a, z: Math.round(h * 0.9) }]); out.gulls++; }
+  }
+  H3.removeProps(m, (x, y) => gone.has(x + ',' + y));
+  for (const [t, x, y, r, ex] of adds) H3.addProp(m, t, Math.round(x), Math.round(y), r, ex);
+  return out;
+}
+
+// ---- Knees in the marsh (the art pass, 2026-11-25; N7 "wetlands", NK1-D; the plan: "cypress knees in the marsh") ---
+// The knees were drawn on 11-21 (client/art2/flora.js cypressKnees) and never planted. Along the marsh's own water's
+// edge - inside its landmark's box, a land tile with water beside it, nothing standing there already - a huddle of
+// knees on one tile in `one` (eight: a huddle here and there - a plant: shrub_a, species `knees`; not solid). (The world's 'cypress' trees are Italian
+// cypresses in gardens: a first rule that gave knees to every cypress by water put them round swimming pools.)
+export const KNEES3 = { one: 8, pad: 4 };
+export function marshKnees3(m, H3) {
+  const out = { edge: 0, knees: 0 };
+  if (!H3 || !H3.addProp) return out;
+  const W = m.w, HH = m.h, wet = (x, y) => x >= 0 && y >= 0 && x < W && y < HH && (m.tiles[y * W + x] === T.WATER || m.tiles[y * W + x] === T.DEEP);
+  for (const L of (m.landmarks || []).filter((l) => l.type === 'marsh')) {
+    const x0 = Math.floor(L.x / TILE) - KNEES3.pad, y0 = Math.floor(L.y / TILE) - KNEES3.pad, x1 = Math.ceil((L.x + L.w) / TILE) + KNEES3.pad, y1 = Math.ceil((L.y + L.h) / TILE) + KNEES3.pad;
+    const taken = new Set(); for (const p of m.props) if (p && p.x >= x0 * TILE && p.x < x1 * TILE && p.y >= y0 * TILE && p.y < y1 * TILE) taken.add(Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE));
+    for (let y = Math.max(1, y0); y < Math.min(HH - 1, y1); y++) for (let x = Math.max(1, x0); x < Math.min(W - 1, x1); x++) {
+      const i = y * W + x, t = m.tiles[i];
+      if ((t !== T.GRASS && t !== T.DIRT) || !m.land[i] || taken.has(i) || (m.bld && m.bld[i] >= 0)) continue;
+      const wx = wet(x - 1, y) ? -1 : wet(x + 1, y) ? 1 : 0, wy = wet(x, y + 1) ? 1 : wet(x, y - 1) ? -1 : 0;
+      if (!wx && !wy) continue;
+      out.edge++;
+      if (hs(x, y, 7801) * KNEES3.one >= 1) continue;
+      H3.addProp(m, 'shrub_a', Math.round((x + 0.5 + wx * 0.3) * TILE), Math.round((y + 0.5 + wy * 0.3) * TILE), 0, { sp: 'knees', k: 1 });
+      out.knees++;
+    }
+  }
+  return out;
+}

@@ -131,7 +131,7 @@ C.onMessage({ t: 'contacts', l: [{ id: 'lou1', n: 'Big Lou', how: 'crew', crew: 
 const ph = document.getElementById('ph-screen');
 let refocused = 0;
 C.renderApp(ph, { refocus: () => refocused++, title: (t) => { out.appTitle = t; } });
-out.appTabs = [...ph.querySelectorAll('.seg button')].map((b) => b.textContent);
+out.appTabs = [...ph.querySelectorAll('.seg[role=tablist] button')].map((b) => b.textContent);
 out.appRows = [...ph.querySelectorAll('[data-cmh]')].map((b) => b.dataset.cmh);
 ph.querySelector('[data-cmh="lou1"]').click();
 out.threadTitle = out.appTitle;
@@ -164,6 +164,32 @@ out.setRows = set.querySelectorAll('input[data-ch]').length;
 out.muteList = [...set.querySelectorAll('[data-un]')].map((b) => b.dataset.a + ':' + b.dataset.un);
 set.querySelector('input[data-ch="faction"]').click();
 set.querySelector('[data-un]').click();
+out.setWho = [...set.querySelectorAll('[data-who]')].map((b) => b.dataset.who + (b.classList.contains('on') ? '*' : ''));
+// friends (11-15): a request at the top of Messages; a friend's star, first; Blocked (n) and its Unblock; who can text me;
+// a thread's Add friend and Remove contact; a block's Undo
+C.onMessage({ t: 'modres', ok: true, note: 'x', state: { mutes: [], blocks: ['bad1'], names: { bad1: 'Badguy' }, who: 'met' } });
+C.onMessage({ t: 'contacts', l: [{ id: 'fr1', n: 'Pal', how: 'met', fr: 1, on: false, at: 1 }, { id: 'lou1', n: 'Big Lou', how: 'crew', crew: 1, on: true }, { id: 'zed1', n: 'Zed', how: 'met', on: true, at: 5 }], rq: [{ id: 'new1', n: 'Newbie', at: Date.now() - 1000 }] });
+ph.querySelector('[data-cmt="msgs"]').click();
+out.rqRows = [...ph.querySelectorAll('[data-fra]')].map((b) => b.dataset.fra);
+out.rowsF = [...ph.querySelectorAll('[data-cmh]')].map((b) => b.dataset.cmh);
+out.star = [...ph.querySelectorAll('[data-cmh] .fr')].length;
+out.blockedRow = ph.querySelector('[data-cmb]') && ph.querySelector('[data-cmb]').textContent;
+out.whoSeg = [...ph.querySelectorAll('[data-cmwho]')].map((b) => b.dataset.cmwho + (b.classList.contains('on') ? '*' : ''));
+ph.querySelector('[data-fra]').click();
+ph.querySelector('[data-cmwho="friends"]').click();
+ph.querySelector('[data-cmb]').click();
+out.blockedTitle = out.appTitle;
+out.blockedList = [...ph.querySelectorAll('[data-cmub]')].map((b) => b.dataset.cmub);
+ph.querySelector('[data-cmub]').click();
+out.backBlocked = C.appBack();
+ph.querySelector('[data-cmh="zed1"]').click();
+out.zedBtns = [...ph.querySelectorAll('[data-cmf]')].map((b) => b.dataset.cmf);
+ph.querySelector('[data-cmf="ask"]').click();
+ph.querySelector('[data-cmx="block"]').click();
+await wait(30);
+out.undo = document.querySelector('.cht-undo') ? document.querySelector('.cht-undo').textContent : null;
+document.querySelector('.cht-undo button').click();
+C.appBack();
 // a phone's keyboard: the visual viewport shrinks, the sheet rides on top of it and folds its log away
 if (touch) {
   C.open();
@@ -235,12 +261,13 @@ test('chat\'s data: the quick lines (the crew\'s are the Crew app\'s), the reaso
 test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, mute / block / report, the Messages app, Settings', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
   const o = await run('kbm', '1280,720');
   assert.ok(o.inboxAsked, 'what came while away is asked for on joining');
-  assert.equal(o.bubbles, 2, 'speech only: an emote has no words over the head; a long line none (the server says: bb)');
+  assert.equal(o.bubbles, 3, 'speech only: an emote has no words over the head; a long line its start (the owner, 11-22)');
+  assert.ok(o.bubLines.some((l) => l.length === 1 && /\u2026$/.test(l[0]) && l[0].length <= 45), 'the long line cut at a word, with an ellipsis: ' + JSON.stringify(o.bubLines));
   assert.deepEqual(o.bubLines[0], ['nice car', 'want to race?'], 'two lines at most in a bubble, the newest last');
   assert.ok(o.bubApart, 'two speakers side by side: their bubbles kept apart');
   assert.ok(o.bubAbove, 'above the speaker');
   assert.match(o.bubFont, /CLA Pixel/, 'in the game\'s pixel face');
-  assert.equal(o.feed.length, 2, 'two lines in the feed on a desktop');
+  assert.equal(o.feed.length, 4, 'four lines in the feed on a desktop (the owner, 11-22: chat you can see is going on)');
   assert.ok(o.feed.every((l) => !l.includes(EMOTES.laugh.text)), 'a laugh: no log spam');
   assert.deepEqual(o.pops, ['url("data:image/png;base64'], 'its pixel balloon over the head');
   assert.deepEqual(o.balloonOn, [true, false], 'the bounty skull gives way there only');
@@ -276,7 +303,7 @@ test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, m
   assert.deepEqual(o.sent.filter((m) => m.t === 'emote').map((m) => m.e + (m.m !== undefined ? ':' + m.m : '')), ['dance:6', 'clap', 'wave', 'salute'], 'the picker\'s dance and emote, /wave, the phone\'s screen');
   assert.ok(o.sent.some((m) => m.t === 'typing' && m.on === 1), 'typing on Near: the dots for the people near');
   assert.equal(o.whoTitle, 'Marisol');
-  assert.deepEqual(o.whoButtons, ['mute', 'block', 'report']);
+  assert.deepEqual(o.whoButtons, ['fask', 'mute', 'block', 'report'], 'Add friend, then mute, block, report');
   assert.deepEqual(o.reasons, REPORT_WHY);
   assert.ok(o.whoGone);
   const mods = o.sent.filter((m) => m.t === 'mod').map((m) => `${m.a}:${m.id}${m.why ? ':' + m.why : ''}`);
@@ -300,6 +327,22 @@ test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, m
   assert.deepEqual(o.muteList, ['unmute:mar1']);
   assert.ok(o.sent.some((m) => m.t === 'chatset' && m.off && m.off.faction === true), 'a channel switched off');
   assert.ok(mods.includes('unmute:mar1'));
+  // friends, privacy, unblock (11-15)
+  assert.deepEqual(o.setWho, ['met*', 'friends'], 'Settings > Chat: who can text me');
+  assert.deepEqual(o.rqRows, ['new1'], 'a friend request at the top of Messages');
+  assert.deepEqual(o.rowsF, ['fr1', 'lou1', 'zed1'], 'friends first, then crew, then online');
+  assert.equal(o.star, 1, 'a friend\'s star');
+  assert.match(o.blockedRow, /Blocked \(1\)/);
+  assert.deepEqual(o.whoSeg, ['met*', 'friends']);
+  assert.equal(o.blockedTitle, 'Blocked');
+  assert.deepEqual(o.blockedList, ['bad1']);
+  assert.ok(o.backBlocked, 'back out of Blocked');
+  assert.deepEqual(o.zedBtns, ['ask', 'forget'], 'a contact\'s thread: Add friend, Remove contact');
+  assert.match(o.undo, /Blocked Zed\.\s*Undo/);
+  const fr = o.sent.filter((m) => m.t === 'friend').map((m) => `${m.a}:${m.id}`);
+  assert.deepEqual(fr, ['yes:new1', 'ask:zed1']);
+  assert.ok(o.sent.some((m) => m.t === 'chatset' && m.who === 'friends'), 'who can text me sent');
+  assert.ok(mods.includes('unblock:bad1') && mods.includes('block:zed1') && mods.indexOf('unblock:zed1') > mods.indexOf('block:zed1'), 'Unblock, a block and its Undo');
 });
 
 test('chat on a phone (Pixel 7 on its side): no keyboard until the line is tapped, the touch controls away, the sheet on top of the keyboard', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {

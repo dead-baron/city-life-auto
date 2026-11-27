@@ -1,6 +1,6 @@
 // Feeding the ducks (the owner's notes part 2: "Feed ducks grapes and it gives you good samaritan points (has a daily
 // cap but still significant, have to buy the grapes)"). The town ponds' tame ducks and geese (wildlife.js parkDucks)
-// within DUCKS.reach of you, a Bunch of Grapes in your bag (a corner store, a gas station, the market - or picked in
+// within DUCKS.reach of you, a Bunch of Grapes in your inventory (a corner store, a gas station, the market - or picked in
 // the vineyard): the action button throws them in. The nearest few paddle over to where they land and eat
 // (wildlife.js 'tograpes', 'nibble'), and you're a good Samaritan for it: DUCKS.sam points a feed, up to DUCKS.dayCap a
 // day (the real day: profile.duckDay / duckSam) - after that they still eat, and you get a kind word. A feed every

@@ -267,6 +267,45 @@ export const ICONS = {
   vinyl: '..#####..|.#######.|###***###|##*#+#*##|##*+++*##|##*#+#*##|###***###|.#######.|..#####..',
 };
 
+// ---- the hanging picture signs' pictures (the owner's pick of 11-26, report-92; after the concept BF2): 14 x 14 at the
+// art pixel, a letter of PIC_PAL a pixel ('.' clear), each with the ground its panel has. Made by tools/signpics.py
+// (drawn there with a few shapes; what it prints goes between the marks). PIC_OF: a trade's picture (signStyle's
+// trades; a trade with no line here has no picture sign).
+/* pics:begin */
+export const PIC_PAL = { k: [16, 19, 28], w: [250, 248, 240], c: [243, 234, 210], g: [150, 156, 170], d: [90, 96, 110], r: [214, 60, 60], R: [150, 36, 44], o: [226, 160, 74], O: [112, 60, 36], y: [226, 189, 87], Y: [168, 126, 44], G: [96, 176, 80], n: [40, 110, 62], b: [84, 156, 226], B: [38, 92, 168], p: [240, 130, 170], u: [150, 100, 220], s: [200, 230, 255] };
+export const PICS = {
+  book: ['n', '..............|..............|..............|kkk...kk...kkk|kcckkkkkkkkwwk|kccccckkwwwwwk|kcdddckkwdddwk|kccccckkwwwwwk|kcdddckkwdddwk|kccccckkwwwwwk|kccccckkwwwwwk|kkkkcckkwwkkkk|.RRRRRRRRRRRR.|..............'],
+  cup: ['O', '..............|.....c.c......|......c.c.....|.....c.c......|..............|...kkkkkkk....|...kOOOOOkww..|...kwwwwwk..w.|...kwwwwwk..w.|...kwwwwwk..w.|...kkkkkkkww..|..wwwwwwwww...|.ccccccccccc..|..............'],
+  burger: ['c', '..............|.....kkkk.....|...kkoocokk...|..kocooooook..|..koooooocok..|.kooooooooook.|.kkkkkkkkkkkk.|.GGGGGGGGGGGG.|..yyyyyyyyyy..|.OOOOOOOOOOOO.|.OOOOOOOOOOOO.|.oooooooooooo.|.oooooooooooo.|.kkkkkkkkkkkk.'],
+  balls: ['k', '..............|...yyyyyyyy...|......yy......|......yy......|..YYY.yy.YYY..|.YcyyY..YcyyY.|.YyyyY..YyyyY.|.YyyyY..YyyyY.|..YYYYYY.YYY..|....YcyyY.....|....YyyyY.....|....YyyyY.....|.....YYY......|..............'],
+  record: ['c', '.....kkkk.....|...kkkkkkkk...|..kkkddddkkk..|.kkkdkkkkkkkk.|.kkdkkrrkkkkk.|kkkkkrrrrkkkkk|kkkkrrccrrkkkk|kkkkrrccrrkkkk|kkkkkrrrrkdkkk|.kkkkkrrkdkkk.|.kkkkkdddkkkk.|..kkkkkkkkkk..|...kkkkkkkk...|.....kkkk.....'],
+  washer: ['B', '.kkkkkkkkkkkk.|.kwwwwwwwwwwk.|.kwrwbwwdddwk.|.kggggggggggk.|.kwwwwwwwwwwk.|.kwwwkkkkwwwk.|.kwwkbssbkwwk.|.kwkbsbbbbkwk.|.kwksbbbbbkwk.|.kwkbbbbbbkwk.|.kwkbbbbbbkwk.|.kwwkbbbbkwwk.|.kwwwkkkkwwwk.|.kkkkkkkkkkkk.'],
+  pole: ['c', '....kkkkkk....|....kkkkkk....|....krwwBk....|....kwwBBk....|....kwBBrk....|....kBBrrk....|....kBrrwk....|....krrwwk....|....krwwBk....|....kwwBBk....|....kwBBrk....|....kBBrrk....|....kkkkkk....|....kkkkkk....'],
+  bottle: ['c', '......yy......|......yy......|.....knnk.....|.....knnk.....|.....kkkk.....|.....knnk.....|.....knnk.....|....knnnnk....|....kcccck....|....kcRRck....|....kcccck....|....kcccck....|....knnnnk....|....kkkkkk....'],
+  glass: ['k', '.........GG...|.cccccccccGcc.|..cssssssssc..|...rrrrrrrr...|...csssssc....|....cssssc....|.....cssc.....|......cc......|......cc......|......cc......|......cc......|......cc......|...cccccccc...|..............'],
+  apple: ['c', '...........G..|.......OGGGG..|.......O.GG...|.....kOkk.G...|...kkrRRrkk...|..krrrrrrrrk..|.krrprrrrrrrk.|.krrprrrrrrrk.|.krrrrrrrrrrk.|.krrrrrrrrrrk.|.krrrrrrrrrrk.|..krrrrrrrrk..|...kkrrrrkk...|.....kkkk.....'],
+  plate: ['R', '..............|ccc.........cc|ccc..gggg...cc|ccc.gwwwwg..cc|ccc.gwggwg..cc|.c.gwgwwgwg.cc|.c.gwgwwgwg.cc|.c.gwgwwgwg.c.|.c.gwgwwgwg.c.|.c..gwggwg..c.|.c..gwwwwg..c.|.c...gggg...c.|.c..........c.|..............'],
+  dress: ['c', '.....dddd.....|......dd......|....kkkkkk....|....kppppk....|....kpppk.....|.....kppk.....|.....RRRR.....|....kppppk....|....kppppk....|...kppppppk...|...kppppppk...|..kppppppppk..|..kwppwppwpk..|.kkkkkkkkkkkk.'],
+  hammer: ['c', '..............|.kkkkkkkkkk...|.kwwwwwwwwddd.|.kggggggggddd.|.kkkkkkkkkk...|.....kkk......|.....kok......|.....kok......|.....kok......|.....kok......|.....kok......|.....kok......|.....kok......|.....kkk......'],
+  palette: ['k', '..............|..............|....YYYYYY....|..YYooooooYY..|.YooooyyobboY.|.YorroyyobboY.|YoorrooooooooY|YooooooookoooY|YooGGoookkkooY|.YoGGooookooY.|.YooouuoooooY.|..YYouuoooYY..|....YYYYYY....|..............'],
+  flower: ['c', '.....RRR......|....RpppR.....|..RRRpppRRR...|.RpppRpRpppR..|.RpppRyypppR..|.RpppyyyyppR..|..RRRyyyyRR...|..RpppyyppR...|..RpppRpppR...|..RpppnnppR...|...RRRnnRR....|....G.nn.G....|.....GnnG.....|......nn......'],
+  pretzel: ['c', '..............|..OOOO..OOOO..|.O.oo.OO.oo.O.|.Ow..oOOo.woO.|Oo....oo....oO|Oo....oo....oO|Oo....oo....oO|.Oo..oOOo..oO.|.O.oo.OO.oo.O.|..OOwO..OwOO..|..o...w....o..|..Ooo....ooO..|...OOooooOO...|.....OOOO.....'],
+  cross: ['w', '..............|.....nnnn.....|.....nGnn.....|.....nGnn.....|.....nGnn.....|.nnnnnGnnnnnn.|.nGGGGGGGGGGn.|.nnnnnGnnnnnn.|.nnnnnGnnnnnn.|.....nGnn.....|.....nGnn.....|.....nGnn.....|.....nnnn.....|..............'],
+  sight: ['k', '......cc......|.....cccc.....|...cc.cc.cc...|..c...cc...c..|..c...cc...c..|.c..........c.|ccccc.rr.ccccc|ccccc.rr.ccccc|.c..........c.|..c...cc...c..|..c...cc...c..|...cc.cc.cc...|.....cccc.....|......cc......'],
+  bag: ['c', '......kk......|.....k..k.....|....k....k....|....k....k....|..kkkkkkkkkk..|..krrrrrrrrk..|..kRRRRRRRRk..|..krrrrrrrrk..|..krrwwwwrrk..|..krrwwwwrrk..|..krrwwwwrrk..|..krrrrrrrrk..|..krrrrrrrrk..|..kkkkkkkkkk..'],
+  fish: ['B', '..............|..............|..............|.............w|...wwww.....ww|.wwssbsww..wsw|wskssbssswwssw|wssssbssswsssw|wssssbssswwssw|.wwssbsww..wsw|...wwww.....ww|.............w|..............|..............'],
+  ring: ['k', '..............|....wwwwww....|.....wsssw....|.....wwww.....|.....yyyy.....|....yYYYYy....|...yY....Yy...|..yY......Yy..|..yY......Yy..|..yY......Yy..|..yY......Yy..|...yY....Yy...|....yYYYYy....|.....yyyy.....'],
+};
+/* pics:end */
+export const PIC_OF = { books: 'book', cafe: 'cup', diner: 'burger', pawn: 'balls', records: 'record', laundromat: 'washer', barber: 'pole', liquor: 'bottle', bar: 'glass',
+  tavern: 'glass', grocer: 'apple', restaurant: 'plate', boutique: 'dress', hardware: 'hammer', gallery: 'palette', florist: 'flower', bakery: 'pretzel', pharmacy: 'cross',
+  gunshop: 'sight', mart: 'bag', tackle: 'fish', marine: 'fish', jeweller: 'ring' };
+// a picture as [ground rgb, rows of rgb or null]
+export function picBitmap(key) {
+  const P = PICS[key];
+  return P ? { ground: PIC_PAL[P[0]], rows: P[1].split('|').map((r) => [...r].map((ch) => (ch === '.' ? null : PIC_PAL[ch]))) } : null;
+}
+
 // ---- the trades: face, sibling palettes (panel, ink[, outline]), icon and its tile (bg, icon, accent, dark), how
 // the board is lit after dark: 'panel' a lightbox, 'ink' lit letters, 'neon' tubes, 'flood' lamps on it --------------
 const N = (h) => ({ p: '#16141e', i: h, neon: true });   // (a neon palette: tubes of hue h on a dark backing)
@@ -343,14 +382,15 @@ export function palOf(q, T = {}) {
 // (by its name's words first - the most telling - then the shop's POI kind, its store's trade, the window's kind, the
 // building's archetype)
 const WORDS = [
+  [/NAIL (BAR|SALON)/, 'salon'], [/JUICE|SMOOTHIE|MATCHA/, 'cafe'], [/(FISH|RAW) BAR/, 'restaurant'], [/\bCAR RENTAL|RIDE RENTALS/, 'office'], [/(SHOE|WATCH|CLOCK|PHONE) REPAIR|COBBLER|LOCKSMITH/, 'mart'],   // (11-26: a nail bar read as a hardware shop, a juice bar as a bar, a shoe repair as a garage)
   [/\bCLINIC|MEDICAL|URGENT CARE|HEALTH|INFIRMARY|WELLNESS/, 'clinic'], [/\bHOSPITAL/, 'hospital'], [/PHARMAC|\bDRUG|APOTHECAR|CHEMIST/, 'pharmacy'],
   [/LAUNDR|\bSUDS\b|\bWASH|CLEANERS/, 'laundromat'], [/\bPAWN|\bLOANS?\b|CASH 4/, 'pawn'], [/\bGUN|FIREARM|\bARMS\b|AMMO|\bSIGHTS\b|\bRANGE\b/, 'gunshop'],
-  [/HARDWARE|\bTOOL|\bNAIL\b|LUMBER/, 'hardware'], [/LIQUOR|SPIRITS|\bBEER WINE/, 'liquor'], [/\bMOTEL|MOTOR LODGE|MOTOR INN/, 'motel'],
+  [/HARDWARE|\bTOOL|LUMBER/, 'hardware'], [/LIQUOR|SPIRITS|\bBEER WINE/, 'liquor'], [/\bMOTEL|MOTOR LODGE|MOTOR INN/, 'motel'],
   [/SNACK|DINER|BURGER|\bGRILL|FRIES|HOT DOG|PIZZA|TACO|\bEATS?\b|BBQ|CHICKEN|SHACK/, 'diner'], [/ICE CREAM|SCOOP|FROZEN|GELATO|CREAMERY/, 'icecream'],
   [/NOODLE|\bWOK\b|SUSHI|RAMEN|DRAGON|BISTRO|TRATTORIA|KITCHEN|STEAK|OYSTER/, 'restaurant'], [/CINEMA|THEATER|THEATRE|PICTURE|DRIVE-IN|MOVIES/, 'cinema'],
   [/\bBOWL|\bLANES\b/, 'cinema'], [/ARCADE|\bGAMES\b/, 'arcade'], [/\bBANK|SAVINGS|\bTRUST\b|CREDIT UNION/, 'bank'], [/\bHOTEL|\bSUITES\b|\bINN\b/, 'hotel'],
-  [/TAVERN|\bPUB\b|\bALE\b|WINERY|WINE BAR|SALOON|BREWERY/, 'tavern'], [/TATTOO|\bINK\b/, 'tattoo'], [/RECORDS|VINYL|\bSPIN\b/, 'records'],
-  [/\bBAR\b|LOUNGE|\bTAP\b|COCKTAIL|KARAOKE|\bJAZZ/, 'bar'], [/\bCLUB\b|DISCO|NIGHTCLUB/, 'club'], [/BOUTIQUE|COUTURE|FASHION|VELVET|ATELIER/, 'boutique'],
+  [/TAVERN|\bPUB\b|\bALE\b|WINERY|WINE BAR|SALOON|BREWERY|BREWING/, 'tavern'], [/TATTOO/, 'tattoo'], [/RECORDS|VINYL|\bSPIN\b/, 'records'],
+  [/\bBAR\b|LOUNGE|\bTAP\b|COCKTAIL|KARAOKE|\bJAZZ/, 'bar'], [/\bCLUB\b|\bDISCO\b|NIGHTCLUB/, 'club'], [/BOUTIQUE|COUTURE|FASHION/, 'boutique'],
   [/BAKERY|\bBAKE|PASTRY|DONUT|BREAD|PRETZEL/, 'bakery'], [/CAFE|COFFEE|ESPRESSO|\bBEAN|\bBREW|ROAST|\bTEA\b/, 'cafe'],
   [/SALON|BEAUTY|\bNAILS\b|\bHAIR|SHEARS|\bSPA\b/, 'salon'], [/BARBER/, 'barber'], [/FLORIST|FLOWER|BLOOM|PETAL/, 'florist'], [/\bBOOK/, 'books'],
   [/JEWEL|DIAMOND|BRILLIANT|\bGOLD\b/, 'jeweller'], [/TACKLE|\bBAIT/, 'tackle'], [/\bSURF/, 'surf'], [/SKATE|KICKS|KICKFLIP|SNEAKER/, 'street'],
@@ -358,7 +398,7 @@ const WORDS = [
   [/GROCER|MARKET|PRODUCE|\bFARM\b|FISH/, 'grocer'], [/\bDELI\b|\bMART\b|BODEGA|QUICK|\bSTOP\b|24-7|GENERAL STORE|CONVENIENCE/, 'mart'],
   [/\bAUTO|MOTORS?\b|GARAGE|TIRE|REPAIR|PAINT|BODY SHOP|SALVAGE/, 'auto'], [/\bFUEL|\bGAS\b|PETROL|SERVICE STATION/, 'gas'], [/PARKING/, 'parking'],
   [/POLICE|SHERIFF|PRECINCT/, 'police'], [/\bFIRE\b/, 'fire'], [/SCHOOL|ACADEMY|COLLEGE/, 'school'], [/\bPOST OFFICE/, 'post'],
-  [/COURT|CITY HALL|MUSEUM|LIBRARY|ASSAY|TOWN HALL/, 'civic'], [/GALLERY|STUDIO/, 'gallery'], [/MARINA|CHARTER|RENTAL|BOATS?\b|DIVE\b/, 'marine'],
+  [/COURT|CITY HALL|MUSEUM|LIBRARY|ASSAY|TOWN HALL/, 'civic'], [/GALLERY/, 'gallery'], [/MARINA|CHARTER|RENTAL|BOATS?\b|DIVE\b/, 'marine'],
   [/\bLODGE\b/, 'hotel'],
 ];
 const KIND = { hospital: null, pharmacy: 'pharmacy', convenience: 'mart', grocery: 'grocer', market: 'grocer', fishmarket: 'grocer', farmstand: 'grocer', fruitstand: 'grocer',

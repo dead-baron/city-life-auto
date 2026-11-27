@@ -12,7 +12,7 @@ export * from './lookcore.js';
 // ---- random looks -------------------------------------------------------------------------------------------------------
 const rint = (r, n) => Math.floor(r() * n) % n;
 const rpick = (r, a) => a[rint(r, a.length)];
-const pieceList = (slot, base, style) => PIECES.filter((p) => p && p.slot === slot && fits(p, base) && !p.d.issued && !p.d.gift && (!style || p.tags.includes(style)));   // (never an issued uniform, nor a season's gift)
+const pieceList = (slot, base, style) => PIECES.filter((p) => p && p.slot === slot && fits(p, base) && !p.d.issued && !p.d.gift && !p.d.pp && !p.d.dr && (!style || p.tags.includes(style)));   // (never an issued uniform, a season's gift, a piece only the polish pass draws, or a draped piece - the owner, 11-19: not until they read better)
 const EVERYDAY_GLASSES = ['sun', 'round', 'frames', 'browline', 'rimless', 'roundsun'];   // (the glasses anyone might have on; the rest by style)
 const NEUTRAL = ['white', 'black', 'charcoal', 'grey', 'navy', 'denim', 'cream', 'khaki', 'brown', 'tan', 'olive'].map(col);
 // A whole random look from a seed. base: 'm' | 'f' | null (either); style: a STYLES id to dress in (null: any).
@@ -24,7 +24,7 @@ export function randomLook(seed, base = null, style = null) {
   for (const k of ['shape', 'eyes', 'brows', 'nose', 'lips']) L.face[k] = rint(r, FACE_OPTS[k].length);
   L.face.eyeColor = rpick(r, [0, 0, 1, 1, 2, 3, 4, 5, 6, 7]);
   L.face.freckles = r() < 0.15 ? 1 : 0; L.face.mole = r() < 0.12 ? 1 : 0; L.face.dimples = r() < 0.15 ? 1 : 0;
-  const styles = HAIR_STYLES.map((h, i) => [h, i]).filter(([h]) => h[1].includes(base));
+  const styles = HAIR_STYLES.map((h, i) => [h, i]).filter(([h]) => h[1].includes(base) && !h[3]);   // (not the polish pass's styles: lookcore.js)
   L.hair.style = rpick(r, styles)[1];
   L.hair.color = L.body.age >= 4 && r() < 0.7 ? rpick(r, [12, 13]) : r() < 0.08 ? 14 + rint(r, 5) : rint(r, 12);
   L.hair.facial = base === 'm' && r() < 0.45 ? 1 + rint(r, FACIAL_HAIR.length - 1) : 0;
@@ -81,8 +81,8 @@ export const STARTERS = [
 
 // ---- the police's uniform (CC5) --------------------------------------------------------------------------------------------
 // A look in the uniform by rank (shared/rules.js POLICE_RANKS: 0 Officer .. 5 Chief of Police), keeping the body, face and
-// hair: the patrol shirt and the police cap; a sergeant's chevrons; from lieutenant the dress uniform and the braided cap;
-// the chief's white gloves. kind 'rookie': a light blue shirt and a ball cap; 'k9': a tactical vest over the shirt and a
+// hair: the patrol shirt - light blue (the owner, 2026-11-19: the concepts' clearest police read) - and the police cap; a sergeant's chevrons on navy; from lieutenant the dress uniform and the braided cap;
+// the chief's white gloves. kind 'rookie': a ball cap; 'k9': a tactical vest over the shirt and a
 // ball cap. shades: sunglasses (half the street's officers wear them).
 export function policeLook(L, rank = 0, kind = null, shades = false) {
   const V = validLook(L) || emptyLook('m'), O = V.outfit;
@@ -91,7 +91,7 @@ export function policeLook(L, rank = 0, kind = null, shades = false) {
     O.set = item('Dress uniform'); O.hat = item("Officer's cap"); O.shoes = item('Oxfords', 'black');
     if (rank >= 5) O.jewel = item('Dress gloves');
   } else {
-    O.top = item(rank >= 2 ? "Sergeant's shirt" : 'Uniform shirt', kind === 'rookie' ? 'sky' : 'navy', 'gold');
+    O.top = rank >= 2 ? item("Sergeant's shirt", 'navy', 'gold') : item('Uniform shirt', 'sky', 'navy');
     O.bottoms = item('Uniform pants', 'navy');
     O.shoes = item('Work boots', 'black');
     O.hat = kind === 'rookie' || kind === 'k9' ? item('Baseball cap', 'navy', 'gold') : item('Police cap');

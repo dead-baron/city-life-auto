@@ -104,6 +104,9 @@ export class WSConnection extends EventEmitter {
     return true;
   }
 
+  // a tick's messages to one page in one write (net.js send: the snapshot, the events, 'me' - not a syscall each)
+  cork() { if (this.open) this.socket.cork(); }
+  uncork() { if (this.socket.writableCorked) this.socket.uncork(); }
   sendText(str) { return this._send(0x1, Buffer.from(str, 'utf8')); }
   sendBinary(u8) { return this._send(0x2, Buffer.from(u8.buffer, u8.byteOffset, u8.byteLength)); }
   sendJSON(obj) { return this.sendText(JSON.stringify(obj)); }

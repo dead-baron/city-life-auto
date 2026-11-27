@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { TILE, T } from '../shared/constants.js';
-import { DISTRICTS } from '../shared/mapcore.js';
+import { DISTRICTS, reliefByte, reliefMetres } from '../shared/mapcore.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { reliefOf3, reliefCliffs, HIGH_SPOTS, LOOKOUT_MESA, CLIFF_SLOPE, tableEdge, GORGE } from '../shared/world3-relief.js';
 import { DESERT, HOLLOW } from '../shared/world3-desert.js';
@@ -99,6 +99,13 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
   let peak = 0;
   for (let y = 0; y < 760; y += 4) for (let x = 0; x < 2300; x += 4) peak = Math.max(peak, R[y * W + x]);
   check(peak >= 180, `the peaks' top ${peak} m`);
+  // no ground at the layer's ceiling (11-25: 132,603 tiles - 23.2% of Granite Peaks - stood over 255 m and read 255:
+  // level to everything, no slope shaded, no ledge drawn; mapcore.js RELIEF: a part of a byte per metre above its knee)
+  let ceiling = 0, land = 0;
+  for (let i = 0; i < W * H; i++) if (m.land[i]) { land++; if (R[i] >= 255) ceiling++; }
+  check(ceiling === 0, `land at the relief layer's ceiling: ${ceiling} of ${land} tiles`);
+  check(reliefMetres(peak) >= 300 && reliefByte(m.world3.relief.top) <= 250, `the peaks stand ${reliefMetres(peak).toFixed(0)} m (the build's top ${m.world3.relief.top} m, its byte ${reliefByte(m.world3.relief.top).toFixed(0)})`);
+  for (const h of [0, 12.5, 159, 160, 161, 250, 363]) check(Math.abs(reliefMetres(reliefByte(h)) - h) < 1e-9, `the relief's bytes and metres agree at ${h} m`);
   // (the North Ridge: dropped - v3b has none, world3-skeleton.js)
   // (the gorge: v3b's below the woods' big falls - its floor at the middle of GORGE's middle stretch, the land 50 tiles
   // either side of it)

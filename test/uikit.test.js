@@ -15,7 +15,7 @@ const root = /:root \{([\s\S]*?)\n\}/.exec(CSS)[1];
 
 test('UIK-00 1: the swatches - the navy plate at 85%, the panel\'s gradient, gold, cream, dim, money, danger, info, heat, steel', () => {
   assert.match(root, /--plate: rgba\(15, 24, 48, \.85\);/, 'navy plate #0F1830 at 85%');
-  assert.match(root, /--panel-bg: linear-gradient\(180deg, #15223f, #0d162d\);/, 'the panel #15223F -> #0D162D');
+  assert.match(root, /--panel-bg: #111b38;/, 'the panel a flat navy (look C, the owner\'s pick of 11-26; it was #15223F -> #0D162D)');
   for (const [k, v] of Object.entries({ gold: '#e2bd57', cream: '#f3ead2', dim: '#a6aec4', money: '#6cd06c', danger: '#ff6b5a', info: '#5ab0ff', heat: '#ffa63d', steel: '#4f86c6' })) assert.match(root, new RegExp(`--${k}: ${v};`), k);
   assert.match(root, /--plate-rim: var\(--gold\);/, 'the plates\' gold rim');
   assert.match(root, /--fs-1: 12px; --fs-2: 14px; --fs-3: 16px; --fs-4: 20px; --fs-5: 28px; --fs-6: 40px;/, 'UIK-00 2: the type scale');
@@ -33,7 +33,7 @@ test('UIK-00 3-6: plates, buttons in their states, the controls and the feedback
   assert.match(CSS, /\.rbtn > \.kchip \{ position: absolute; right: -7px; top: -7px;/, 'the key badge on the round button\'s corner (4E)');
   assert.match(CSS, /\.tab\.on, \.tab\[aria-selected=true\] \{ background: var\(--gold\); color: var\(--ink\)/, 'the tab you\'re on, gold (5A)');
   // the HUD wears them: the round buttons, the plates
-  for (const id of ['b-phone', 'b-map', 'b-chat', 'b-emo', 'b-menu']) assert.match(HTML, new RegExp(`<button id="${id}" class="rbtn"`));
+  for (const id of ['b-phone', 'b-map', 'b-chat', 'b-emo', 'b-bag', 'b-menu']) assert.match(HTML, new RegExp(`<button id="${id}" class="rbtn"`));
   // (Direction A, the owner 2026-11-12: every panel navy, a near-black edge, a gold rim inside, a hard shadow, square)
   assert.match(CSS, /#rclock, #hud-stat, #vchip, #job, \.hchip, #weapon, #hud-btns button, #b-dev, #helpbox, #rob, #hints \{ background: var\(--pad-navy\); border: 2px solid var\(--pad-ink\); border-radius: 0; box-shadow: var\(--pn-rim\), var\(--pn-drop\); \}/, 'one panel for all of the HUD');
   assert.match(root, /--pad-navy: #141a33; --pad-ink: #0b1020; --pad-gold: #f6c945;/, 'its colours');
@@ -72,7 +72,7 @@ test('the HUD\'s plates use the pixel icons, its round buttons the line icons', 
   const lines = [...HTML.matchAll(/data-gl="([a-z0-9-]+)"/g)].map((m) => m[1]);
   for (const n of lines) assert.ok(GLYPH_NAMES.includes(n), `index.html's line icon ${n}`);
   const row = hud.slice(hud.indexOf('<div id="hud-btns">'), hud.indexOf('<div id="hud-stat">'));
-  assert.deepEqual([...row.matchAll(/data-(?:gl|ic)="([a-z0-9-]+)"/g)].map((m) => m[1]).slice(0, 5), ['smartphone', 'map', 'message-circle-more', 'smile', 'menu'], 'the system buttons: Lucide\'s phone, map, chat, the emotes and menu (11-05; chat in the row since Direction A, 11-12; the emotes on a desktop, 11-13)');
+  assert.deepEqual([...row.matchAll(/data-(?:gl|ic)="([a-z0-9-]+)"/g)].map((m) => m[1]).slice(0, 6), ['smartphone', 'map', 'message-circle-more', 'smile', 'backpack', 'menu'], 'the system buttons: Lucide\'s phone, map, chat, the emotes, the bag and menu (11-05; chat in the row since Direction A, 11-12; the emotes on a desktop, 11-13; the bag, pre-beta quick wins)');
   assert.doesNotMatch(row, /<svg/, 'filled in by the page');
   assert.match(read('client/hud.js'), /paintIcons\(document\)/, 'the HUD fills them in');
 });
@@ -88,7 +88,7 @@ test('the touch buttons: see-through discs with a colored ring, plain symbols an
   for (const n of GLYPH_NAMES) {
     const g = glyph(n);
     assert.match(g, new RegExp(`^<svg class="pi24 gl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${GLYPH_STROKE}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">`), n);
-    const d = g.match(/<path class="h" d="([^"]+)"\/><path d="([^"]+)"\/>/);
+    const d = g.match(/<path class="h" d="([^"]+)"\/><path class="ln" d="([^"]+)"\/>/);
     assert.ok(d && d[1] === d[2], `${n}: the line over its halo`);
   }
   for (const w of Object.values(WEAPONS)) assert.ok(GLYPH_NAMES.includes(glyphOfWeapon(w.id, w.type)), w.id);
@@ -96,7 +96,9 @@ test('the touch buttons: see-through discs with a colored ring, plain symbols an
   // ring in the palette's own color; the switches navy with the gold rim
   assert.match(root, /--pad-fire: #e8434b; --pad-act: #f6c945; --pad-roll: #4aa8ff; --pad-car: #3ccf6e;/);
   assert.match(root, /--disc: rgba\(20, 26, 51, \.55\); --disc-on: rgba\(20, 26, 51, \.8\);/, 'see-through, darker pressed');
-  for (const [slot, c] of [['fire', 'fire'], ['act', 'act'], ['roll', 'roll'], ['car', 'car']]) assert.match(CSS, new RegExp(`#tbtns \\[data-slot=${slot}\\] \\{ --acc: var\\(--pad-${c}\\); \\}`), slot);
+  for (const [slot, c] of [['fire', 'fire'], ['roll', 'roll']]) assert.match(CSS, new RegExp(`#tbtns \\[data-slot=${slot}\\] \\{ --acc: var\\(--pad-${c}\\); \\}`), slot);
+  // (ACT and the vehicle button by action, not slot: the vehicle button takes ACT's spot with nothing to act on - 11-15)
+  for (const [b, c] of [['action', 'act'], ['vehicle', 'car']]) assert.match(CSS, new RegExp(`#tbtns \\[data-slot\\]\\[data-b=${b}\\] \\{ --acc: var\\(--pad-${c}\\); \\}`), b);
   assert.match(CSS, /#tbtns button\.face \{ border: 3px solid var\(--acc\); background: var\(--disc\);/, 'the ring in its color, the disc see-through');
   assert.match(CSS, /#tbtns button \{[^}]*border: 2px solid var\(--pad-ink\); background: var\(--pad-navy\); box-shadow: var\(--pn-rim\)[^}]*font: 700 var\(--fs-w2\) var\(--pixel\);/, 'the switches: navy, the gold rim, a word in CLA Pixel');
   assert.match(CSS, /#tbtns \.w \{[^}]*font: 700 var\(--fs-w2\) var\(--pixel\); color: var\(--white\); text-shadow: 1px 0 0 var\(--pad-ink\), -1px 0 0 var\(--pad-ink\), 0 1px 0 var\(--pad-ink\), 0 -1px 0 var\(--pad-ink\)/, 'the words white with an even 1 px outline: centred');

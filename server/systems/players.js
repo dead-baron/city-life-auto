@@ -18,6 +18,7 @@ import * as vehicles from './vehicles.js';
 import * as carhits from './carhits.js';
 import * as combat from './combat.js';
 import * as tank from './tank.js';   // (H58)
+import * as trunk from './trunk.js';
 import * as cargo from './cargo.js';
 import * as skate from './skate.js';   // (riding a skateboard: the owner, 2026-10-17)
 import * as armor from './armor.js';   // (a heavy vest: a slower run - armor.js)
@@ -28,6 +29,7 @@ import * as bounties from './bounties.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as fishing from './fishing.js';   // (the rod, the bite, the fight: task #277)
+import { takeable } from '../../shared/fish.js';
 import * as picking from './picking.js';
 import * as foraging from './foraging.js';
 import * as hunting from './hunting.js';
@@ -134,6 +136,7 @@ import * as carsoccer from './carsoccer.js';
 import * as bathhouse from './bathhouse.js';
 import * as showers from './showers.js';
 import * as evhooks from './eventhooks.js';   // (the event calendar's offers: a gang war's sides - calevents.js)
+import { poiAt } from '../pois.js';   // (the place you're at, through a grid: World v3's thousands of places)
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -542,7 +545,7 @@ export function purgeAccount(world, prof) {
   for (const [id, owner] of [...(world.homeOwner || [])]) if (owner === pid) world.homeOwner.delete(id);
   for (const v of [...world.entities.values()]) if (v.kind === K.VEH && v.owner === pid) { if (!v.seats.some((s) => s)) world.remove(v); else { v.owner = null; v.ownerName = null; v.despawnable = true; v.descVer = (v.descVer || 0) + 1; } }
   starter.forget(world, pid);
-  for (const q of store.all()) { const c = q.acct && q.acct.chat; if (c && c.contacts && c.contacts[pid]) delete c.contacts[pid]; }
+  for (const q of store.all()) { const c = q.acct && q.acct.chat; if (c && c.contacts && c.contacts[pid]) delete c.contacts[pid]; if (c && c.freq && c.freq[pid]) delete c.freq[pid]; if (c && c.fsent) delete c.fsent[pid]; }
   store.remove(pid);
 }
 
@@ -648,7 +651,7 @@ function inputsOf(world, p, dt) {
     if (drivingV && !drivingV.wreckAt && !drivingV.scripted && !drivingV.onDeck) drivingV.ownStepTick = world.tick;
     for (let k = 0; k < n; k++) {
       let inp;
-      if (p.inputQ.length) { inp = p.inputQ.shift(); p.ack = inp.seq; p.lastInput = inp; p.starve = 0; }
+      if (p.inputQ.length) { inp = p.inputQ.shift(); p.ack = inp.seq; p.lastInput = inp; p.starve = 0; p.inSteps = (p.inSteps || 0) + 1; }   // (inSteps: the movement audit's clock - anticheat.js)
       else if (p.conn && (p.starve || 0) < HOLD_TICKS) { p.starve = (p.starve || 0) + 1; break; }
       else inp = p.conn ? p.lastInput : { seq: p.ack, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
       if (!ped || ped.dead || ped.removed) { p.prevBits = inp.bits; continue; }
@@ -776,7 +779,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (ped.rollT > 0 && (p.badge || p.hunter) && !ped.board) tackle(world, ped);   // (an ollie isn't a tackle)
   const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || tennis.input(world, p, ped, inp, pressed) || bowling.input(world, p, ped, inp, pressed, dt) || firefighter.hose(world, p, ped, inp, pressed, dt);   // (the hose by your fire engine: firefighter.js) (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
   const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && !ped.board && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
-  if ((pressed & IN.FIRE) && !kicked && !swung && ped.held && !ped.board) world.notify(p, `Your hands are full - put the ${ped.held.k === 'surf' ? 'surfboard' : 'skateboard'} in your bag first (the action button).`, 'warn');   // (a board in your hand: gear.js)
+  if ((pressed & IN.FIRE) && !kicked && !swung && ped.held && !ped.board) world.notify(p, `Your hands are full - put the ${ped.held.k === 'surf' ? 'surfboard' : 'skateboard'} in your inventory first (the action button).`, 'warn');   // (a board in your hand: gear.js)
   if ((inp.bits & IN.FIRE) && !kicked && !swung && !ped.board && !ped.held) {   // (on a board: step off to fight)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
     else if (!ped.fishing) {
@@ -855,11 +858,15 @@ function tackle(world, ped) {
 
 // ---------------------------------------------------------------------------
 // Context-sensitive interaction (GDD §13: E key manages context interactions)
-// with a rod, facing the water (or still in a boat): fish here - press and hold to charge the cast (fishing.js)
+// with a rod IN HAND, facing the water from the bank, a dock or a boat sitting still (never swimming): fish here - press
+// and hold to charge the cast (fishing.js). A rod in the bag only: no prompt - the first time by the water, the
+// first-time moment says to take it out (ftue.js MOMENTS.rod); the Guide has the rest (the owner, 11-16).
 function fishHere(world, p, ped) {
   if (!fishing.canFish(p) || ped.fishing) return null;
   const spot = fishing.spotFor(world, ped);
-  return spot ? { label: spot.boat ? 'Fish over the side (hold to cast)' : 'Fish here (hold to cast)', run: () => fishing.begin(world, p, spot) } : null;
+  if (!spot) return null;
+  if (!fishing.rodInHand(ped)) { ftue.moment(world, p, 'rod'); return null; }
+  return { label: spot.boat ? 'Fish over the side (hold to cast)' : 'Fish here (hold to cast)', run: () => fishing.begin(world, p, spot) };
 }
 export function findInteraction(world, p) {
   const ped = p.ped;
@@ -930,6 +937,10 @@ export function findInteraction(world, p) {
     if (target) return { label: `Detain ${target.player.name} (collect the bounty)`, run: () => bounties.detain(world, ped, target) };
   }
 
+  {   // at the back of a vehicle of yours, standing still: its trunk (trunk.js)
+    const tr = trunk.interaction(world, p);
+    if (tr) return tr;
+  }
   const bag = cargo.nearestBag(world, ped, true);
   if (bag) return { label: cargo.bagLabel(bag, p), run: () => cargo.lootBag(world, p, bag) };
 
@@ -995,7 +1006,7 @@ export function findInteraction(world, p) {
   if (hire) return hire;
   const table = casinofloor.interaction(world, p, economy.openMenu);   // a casino's table or slot machine, a bar's card table (casinofloor.js)
   if (table) return table;
-  const poi = world.map.poiNear(ped.x, ped.y);
+  const poi = poiAt(world.map, ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
     const label = economy.poiLabel(world, p, poi);
     if (label) return { label, run: () => economy.openMenu(world, p, poi) };
@@ -1193,7 +1204,7 @@ function armorBar(prof) { const A = armor.worn(prof); return A ? [Math.round(A.p
 export function buildMe(world, p) {
   const ped = p.ped;
   const prof = p.profile;
-  const weapons = Object.keys(prof.weapons).filter((id) => WEAPONS[id]).map((id) => ({
+  const weapons = takeable(prof).filter((id) => WEAPONS[id]).map((id) => ({   // (a rod in the bag: the rod's slot - shared/fish.js)
     id, ammo: prof.weapons[id] || 0, mag: ped ? (ped.mag[id] || 0) : 0,
   }));
   const inv = {};

@@ -14,13 +14,17 @@ import { sendHTML, cookies, setCookie, esc, createRateLimiter, readForm } from '
 import { safeEqual } from './auth.js';
 import { FTUE_STEPS } from './analytics.js';
 import { createStaffPlayers, ACTIONS } from './staffplayers.js';
+import { consolePage, consoleScript, CONSOLE_CSP } from './adminconsole.js';
+import { WINDOWS } from './analytics.js';
+import { names as COUNTRY_NAMES } from './geo.js';
+import { randomBytes as rb } from 'node:crypto';
 
 const LINK_TTL_MS = 60e3, SESSION_TTL_MS = 3600e3;
 
 // texts: { perf() -> string, errors() -> string } - the devices' reports and the pages' errors (server/perfreports.js),
 // read at /admin/perf and /admin/clienterrors by admins and the owner (the owner's call, 11-04: not public any more)
 // world, store, act(actor, msg) -> the staff command's reply, said(p) -> their recent chat lines: the players page (none: off)
-export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, news = null, mailAddress = '', publicUrl, ip, now = Date.now, stats = null, texts = null, world = null, store = null, act = null, said = null }) {
+export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, news = null, mailAddress = '', publicUrl, ip, now = Date.now, stats = null, texts = null, world = null, store = null, act = null, said = null, geo = null, status = null }) {
   const links = new Map(), sessions = new Map();
   const rl = createRateLimiter(now);
   const secure = publicUrl.startsWith('https://');
@@ -41,7 +45,7 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
 
   const shell = (title, body, w, head = '') => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">${head}<title>${esc(title)} - City Life Auto</title>
 <style>body{font:14px/1.4 system-ui,sans-serif;background:#14161a;color:#e8e8e8;margin:16px}a{color:#8cc8ff}table{border-collapse:collapse;margin:8px 0 20px;font-size:13px}td,th{border:1px solid #333;padding:3px 7px;text-align:left;vertical-align:top}th{background:#22252b}h1{font-size:20px}h2{font-size:16px;margin-top:24px}.n{text-align:right;font-variant-numeric:tabular-nums}.bad{color:#ff8a80}.ok{color:#9be29b}nav a{margin-right:14px}.bar{display:inline-block;height:9px;background:#5b9bd5;vertical-align:middle}.wide{overflow-x:auto}form.act{display:inline-block;margin:0 10px 10px 0;padding:6px 8px;border:1px solid #333;background:#1b1e23}form.act input,form.act select{background:#22252b;color:#e8e8e8;border:1px solid #444;padding:3px 5px;margin-right:6px}button{background:#2d4f73;color:#fff;border:0;padding:5px 11px;cursor:pointer;font:inherit}button.danger{background:#8a2b2b}</style>
-<nav>${allowed(w.role, 'players') ? '<a href="/admin/players">Players</a>' : ''}${allowed(w.role, 'dashboard') ? '<a href="/admin/dashboard">Dashboard</a>' : ''}${allowed(w.role, 'adminlog') ? '<a href="/admin/log">Admin log</a>' : ''}${news && allowed(w.role, 'news') ? '<a href="/admin/news">News list</a>' : ''}${allowed(w.role, 'reviews') ? '<a href="/admin/reviews">Review list</a>' + (bugs ? '<a href="/admin/bugs">Bug reports</a>' : '') + '<a href="/admin/perf">Devices</a><a href="/admin/clienterrors">Page errors</a>' : ''} · signed in as ${esc(w.name)} (${esc(w.role)})</nav><h1>${esc(title)}</h1>${body}`;
+<nav>${allowed(w.role, 'console') ? '<a href="/admin/"><b>Console</b></a>' : ''}${allowed(w.role, 'players') ? '<a href="/admin/players">Players</a>' : ''}${allowed(w.role, 'dashboard') ? '<a href="/admin/dashboard">Dashboard</a>' : ''}${allowed(w.role, 'adminlog') ? '<a href="/admin/log">Admin log</a>' : ''}${news && allowed(w.role, 'news') ? '<a href="/admin/news">News list</a>' : ''}${allowed(w.role, 'reviews') ? '<a href="/admin/reviews">Review list</a>' + (bugs ? '<a href="/admin/bugs">Bug reports</a>' : '') + '<a href="/admin/perf">Devices</a><a href="/admin/clienterrors">Page errors</a>' : ''} · signed in as ${esc(w.name)} (${esc(w.role)})</nav><h1>${esc(title)}</h1>${body}`;
   const table = (head, rows) => `<table><tr>${head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>${rows.map((r) => `<tr>${r.map((c) => (typeof c === 'number' ? `<td class="n">${c.toLocaleString('en-US')}</td>` : `<td>${c}</td>`)).join('')}</tr>`).join('') || `<tr><td colspan="${head.length}">nothing yet</td></tr>`}</table>`;
   const when = (t) => (t ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') : '');
   const j = (v) => (v === undefined ? '' : esc(typeof v === 'string' ? v : JSON.stringify(v)));
@@ -61,10 +65,18 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
     return `<p>${verdict} Newest first, the last 300${q ? `, for ${esc(q)}` : ''}. Filter: add ?q=&lt;account id or action&gt;.</p>`
       + table(['when (UTC)', 'who', 'role', 'what', 'target', 'before', 'after', 'note', 'ok'], list.map((e) => [when(e.at), e.who ? `${esc(e.who.n)}<br><small>${esc(e.who.id)}</small>` : '', esc(e.who && e.who.role), esc(e.what), e.target ? `${esc(e.target.n || '')}<br><small>${esc(e.target.id || '')}</small>` : '', j(e.before), j(e.after), esc(e.note || ''), e.ok ? '<span class="ok">yes</span>' : '<span class="bad">refused</span>']));
   }
-  function reviewsPage() {
-    const list = mod.reviews().slice(0, 200);
-    return '<p>Reports, filter hits, movement and economy flags, floods - newest first. Resolve them from the game (admin tools).</p>'
-      + table(['when (UTC)', 'kind', 'player', 'by', 'note', 'times', 'data', 'resolved'], list.map((r) => [when(r.at), esc(r.kind), r.who ? `${esc(r.who.n)}<br><small>${esc(r.who.id)}</small>` : '', r.by ? esc(r.by.n) : '', esc(r.note), r.n || 1, j(r.data), r.done ? `${when(r.done.at)} ${esc(r.done.by && r.done.by.n)}: ${esc(r.done.note)}` : `<small>${esc(r.id)}</small>`]));
+  // the review list: each open one checked off here - Resolved, Not a problem, Bug for later - or opened again (a POST with
+  // the session's token, as the bug reports; the admin log keeps who did what). The owner, 11-23.
+  const HOW = { fixed: 'resolved', ok: 'not a problem', bug: 'a bug for later' };
+  function reviewForm(w, r) {
+    const f = (a, label, cls = '') => `<form method="post" action="/admin/reviews" style="display:inline"><input type="hidden" name="csrf" value="${esc(w.s.csrf)}"><input type="hidden" name="id" value="${esc(r.id)}"><input type="hidden" name="a" value="${a}"><button type="submit"${cls ? ` class="${cls}"` : ''}>${label}</button></form>`;
+    return r.done ? `<small class="ok">${esc(HOW[r.done.how] || 'resolved')} ${esc(when(r.done.at))}${r.done.by ? ` by ${esc(r.done.by.n)}` : ''}</small> ${f('open', 'Open again')}` : `${f('fixed', 'Resolved')} ${f('ok', 'Not a problem')} ${f('bug', 'Bug for later')}`;
+  }
+  function reviewsPage(w) {
+    const all = mod.reviews(), list = [...all.filter((r) => !r.done), ...all.filter((r) => r.done)].slice(0, 200), flash = w.s.flash;
+    w.s.flash = null;
+    return `${flash ? `<p class="${flash.ok ? 'ok' : 'bad'}">${esc(flash.text)}</p>` : ''}<p>Reports, filter hits, movement and economy flags, floods - the open ones first, newest first. Check each one off here.</p>`
+      + table(['when (UTC)', 'kind', 'player', 'by', 'note', 'times', 'data', ''], list.map((r) => [when(r.at), esc(r.kind), r.who ? esc(r.who.n) : '', r.by ? esc(r.by.n) : '', esc(r.note), r.n || 1, j(r.data), reviewForm(w, r)]));   // (no account ids on the page: the owner's rule)
   }
   function dashboardPage() {
     const S = analytics.data, keys = Object.keys(S.days).sort().reverse();
@@ -158,6 +170,17 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
     return `${flash ? `<p class="${flash.ok ? 'ok' : 'bad'}">${esc(flash.text)}</p>` : ''}<p>${bugs.count} report${bugs.count === 1 ? '' : 's'}, <b>${bugs.open}</b> open${bugs.webhookOn ? ' · each one is posted to the Discord too' : ' · no Discord webhook set (BUG_WEBHOOK_URL): kept here only'}. Newest first${openOnly ? ', open ones only - <a href="/admin/bugs">all</a>' : ' - <a href="/admin/bugs?open=1">open ones only</a>'}${shown.length < (openOnly ? bugs.open : bugs.count) ? `, the newest ${shown.length}` : ''}.</p>`
       + (shown.map(card).join('') || '<p>No reports yet.</p>');
   }
+  async function reviewsPost(req, res, w) {
+    if (req.headers['sec-fetch-site'] === 'cross-site') { sendHTML(res, 403, 'Refused.'); return; }
+    const form = await readForm(req);
+    if (!form || typeof form.csrf !== 'string' || !w.s.csrf || !safeEqual(form.csrf, w.s.csrf)) { sendHTML(res, 403, 'This form is out of date - open the page again.'); return; }
+    const id = String(form.id || ''), a = String(form.a || ''), by = { id: w.pid, n: w.name };
+    const r = a === 'open' ? mod.reopen(id) : HOW[a] ? mod.resolve(id, by, '', a) : null;
+    if (r) log.append({ who: { id: w.pid, n: w.name, role: w.role }, what: a === 'open' ? 'review-open' : `review-${a}`, note: id.slice(0, 24), ok: true });
+    w.s.flash = { ok: !!r, text: r ? (a === 'open' ? 'Opened again.' : `Checked off: ${HOW[a]}.`) : 'No such entry, or already done.' };
+    res.writeHead(303, { location: '/admin/reviews', 'cache-control': 'no-store' });
+    res.end();
+  }
   async function bugsPost(req, res, w) {
     if (req.headers['sec-fetch-site'] === 'cross-site') { sendHTML(res, 403, 'Refused.'); return; }
     const form = await readForm(req);
@@ -169,8 +192,67 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
     res.end();
   }
 
+  // ---- the owner's console (/admin/: server/adminconsole.js draws it; the owner, 11-16: "an analytics page that gives me a
+  // real-time look at what's currently happening ... right now clicking in and out of different pages is clunky") ----
+  // /admin/api: what the page polls - now (who's on: no account ids, no addresses - each row a ref good for this session,
+  // /admin/go?ref= opens their page), trends (the rolling buckets: analytics.js trends, every window's totals and the asked
+  // window's chart), where (countries and regions), moderation (the review list, bug reports, the admin log's latest), server.
+  const NOFLAGS = new Map();
+  const DEV = { phone: 'phone', tablet: 'tablet', desktop: 'desktop', console: 'console', touch: 'phone' };
+  function refOf(w, pid) {
+    const R = (w.s.refs ||= { by: new Map(), of: new Map() });
+    let r = R.by.get(pid);
+    if (!r) { r = rb(6).toString('base64url'); R.by.set(pid, r); R.of.set(r, pid); }
+    return r;
+  }
+  function apiNow(w) {
+    const list = [], doing = {}, dist = {}, devs = {};
+    if (world) for (const q of world.players.values()) {
+      if (!q.conn) continue;
+      const x = SP ? SP.info(q.pid, NOFLAGS) : null, ped = q.ped;   // (no flags needed here: the review list isn't scanned per player)
+      const dv = DEV[q.devKind] || (q.device ? String(q.device).split(' ')[0] : '') || '?';
+      const what = x ? x.doing : '';
+      const row = { ref: refOf(w, q.pid), n: q.name, gu: q.guest ? 1 : 0, role: accounts.role(q.pid) || '', fo: q.founder ? 1 : 0, d: x ? x.district : '', c: q.cc ? q.cc.c : '', r: q.cc && q.cc.r ? q.cc.r : '', doing: what, sess: q.anStart ? now() - q.anStart : 0, dev: dv, w: q.wanted || 0, hp: ped && ped.maxHp ? Math.round((ped.hp / ped.maxHp) * 100) : 0, dm: q.devMode ? 1 : 0 };
+      list.push(row);
+      const k = what.replace(/ \(.*$/, '');
+      doing[k] = (doing[k] || 0) + 1; if (row.d) dist[row.d] = (dist[row.d] || 0) + 1; devs[dv] = (devs[dv] || 0) + 1;
+    }
+    list.sort((a, b) => b.sess - a.sess);
+    return { online: list.length, guests: list.filter((x) => x.gu).length, list, doing, dist, devs };
+  }
+  function apiModeration(w) {
+    const open = mod.openReviews(500), reports = open.filter((r) => r.kind === 'report');
+    const out = {
+      reviews: { open: open.length, reports: reports.length, latest: open.slice(0, 8).map((r) => ({ at: r.at, kind: r.kind, n: r.who ? r.who.n : '', by: r.by ? r.by.n : '', note: String(r.note || '').slice(0, 140), times: r.n || 1 })) },
+      bugs: bugs ? { count: bugs.count, open: bugs.open, latest: bugs.list().filter((r) => !r.done).slice(0, 6).map((r) => ({ at: r.at, kind: r.kind, n: r.name, gu: r.guest ? 1 : 0, t: String((r.text || '').split('\n')[0] || '').slice(0, 120), where: r.region || '', shot: !!r.shot })) } : null,
+    };
+    if (allowed(w.role, 'adminlog')) out.log = log.tail(12).map((e) => ({ at: e.at, who: e.who ? e.who.n : '', what: e.what, t: e.target ? e.target.n || '' : '', note: String(e.note || '').slice(0, 80), ok: e.ok !== false }));
+    return out;
+  }
+  // the Status tab's answer (server/status.js) - a fault in it mustn't take the console down with it
+  function safeStatus() { try { return status(); } catch (e) { return { level: 'warn', flags: [{ lvl: 'warn', text: `The status check itself failed: ${String((e && e.message) || e).slice(0, 120)}` }], art: { state: 'off' } }; } }
+  function apiServer() {
+    const st = stats ? stats() : {}, m = process.memoryUsage(), day = analytics.trends ? analytics.trends('24h') : null;
+    return { ...st, up: Math.round(process.uptime()), rss: Math.round(m.rss / 1048576), heap: Math.round(m.heapUsed / 1048576), heapMax: Math.round(m.heapTotal / 1048576), errors24: day ? day.er : 0, geo: geo ? { table: geo.table, credit: geo.credit } : null, status: status ? safeStatus() : null };
+  }
+  function api(w, url) {
+    const win = WINDOWS[url.searchParams.get('win')] ? url.searchParams.get('win') : '24h';
+    const out = { at: now(), me: { n: w.name, role: w.role }, now: apiNow(w), server: apiServer() };
+    if (url.searchParams.get('more') === '1') {
+      out.trends = analytics.trends ? analytics.trends(win) : null;
+      out.windows = analytics.trends ? Object.keys(WINDOWS).map((k) => { const t = analytics.trends(k); delete t.series; return t; }) : [];
+      const pl = analytics.places ? analytics.places(win) : { countries: [], regions: [], known: 0, unknown: 0 };
+      const codes = new Set([...pl.countries.map(([c]) => c), ...out.now.list.map((x) => x.c).filter(Boolean)]);
+      out.where = { win, ...pl, names: Object.fromEntries([...codes].map((c) => [c, COUNTRY_NAMES[c] || c])) };
+      out.moderation = apiModeration(w);
+      out.tools = { players: allowed(w.role, 'players'), log: allowed(w.role, 'adminlog'), reviews: allowed(w.role, 'reviews'), bugs: !!bugs && allowed(w.role, 'reviews'), news: !!news && allowed(w.role, 'news'), dashboard: allowed(w.role, 'dashboard') };
+    }
+    return out;
+  }
+
   async function handle(req, res, url) {
-    const path = url.pathname;
+    let path = url.pathname;
+    if (path === '/admin') path = '/admin/';
     if (!path.startsWith('/admin/')) return false;
     if (!rl.hit(`admin:${ip(req)}`, 120, 60e3)) { sendHTML(res, 429, 'Too many requests.'); return true; }
     if (path === '/admin/enter') {
@@ -182,12 +264,27 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
       sessions.set(sid, { pid: l.pid, exp: now() + SESSION_TTL_MS, csrf: randomBytes(24).toString('base64url'), flash: null });
       // the link is opened from the game's page, another site: a Strict cookie isn't sent on the redirect that follows a
       // cross-site navigation - so a small page of our own takes the next step, same-site (a meta refresh, no script)
-      sendHTML(res, 200, `<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/admin/${l.page}"><title>City Life Auto</title><body style="font:16px system-ui;background:#14161a;color:#eee"><p><a style="color:#8cc8ff" href="/admin/${l.page}">Continue</a></p>`, { 'set-cookie': setCookie('cla_admin', sid, { maxAge: SESSION_TTL_MS / 1000, path: '/admin', sameSite: 'Strict', secure }) });
+      const to = l.page === 'console' ? '' : l.page;
+      sendHTML(res, 200, `<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/admin/${to}"><title>City Life Auto</title><body style="font:16px system-ui;background:#14161a;color:#eee"><p><a style="color:#8cc8ff" href="/admin/${to}">Continue</a></p>`, { 'set-cookie': setCookie('cla_admin', sid, { maxAge: SESSION_TTL_MS / 1000, path: '/admin', sameSite: 'Strict', secure }) });
       return true;
     }
     const w = who(req);
     if (!w) { sendHTML(res, 401, 'Signed out - open this page from the game (Settings -> Account -> staff tools).'); return true; }
     const page = path.slice(7);
+    if (page === '' || page === 'console.js' || page === 'api' || page === 'go') {
+      if (!allowed(w.role, 'console')) { sendHTML(res, 403, 'Not for your role.'); return true; }
+      if (page === '') { sendHTML(res, 200, consolePage(w), { 'content-security-policy': CONSOLE_CSP }); return true; }
+      if (page === 'console.js') { res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }); res.end(consoleScript()); return true; }
+      if (page === 'go') {
+        const pid = w.s.refs && w.s.refs.of.get(url.searchParams.get('ref') || '');
+        res.writeHead(303, { location: pid && SP ? `/admin/players?id=${encodeURIComponent(pid)}` : '/admin/', 'cache-control': 'no-store' });
+        res.end();
+        return true;
+      }
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+      res.end(JSON.stringify(api(w, url)));
+      return true;
+    }
     if (page === 'players') {
       if (!SP) { sendHTML(res, 404, 'No such page.'); return true; }
       if (!allowed(w.role, 'players')) { sendHTML(res, 403, 'Not for your role.'); return true; }
@@ -229,7 +326,8 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
     const need = page === 'log' ? 'adminlog' : page === 'dashboard' ? 'dashboard' : page === 'reviews' ? 'reviews' : null;
     if (!need) { sendHTML(res, 404, 'No such page.'); return true; }
     if (!allowed(w.role, need)) { sendHTML(res, 403, 'Not for your role.'); return true; }
-    const body = page === 'log' ? logPage(req, url) : page === 'dashboard' ? dashboardPage() : reviewsPage();
+    if (page === 'reviews' && req.method === 'POST') { await reviewsPost(req, res, w); return true; }
+    const body = page === 'log' ? logPage(req, url) : page === 'dashboard' ? dashboardPage() : reviewsPage(w);
     sendHTML(res, 200, shell(page === 'log' ? 'Admin log' : page === 'dashboard' ? 'Analytics' : 'Review list', body, w));
     return true;
   }

@@ -264,24 +264,27 @@ export function collideAir(s, def, map) {
 // added to the generator, so the world's hash is the same). -> { pads: [{ x, y, kind, name, roof, alt, b }], strips:
 // [{ name, x, y, w, h, a }], aprons: [{ x, y, a, name }] } (px; strips' a: the way along them), cached on the map.
 const PAD_OK = new Set([T.PLAZA, T.LOT, T.GRASS, T.SIDEWALK, T.DIRT, T.SAND, T.FIELD]);
-function clearPad(m, x, y, r, avoid) {
+// a hospital's yard pad: never on the pavement (the audit's heliOffPad: "clear of the pavement"), looked for a little
+// further out (HOSP_PAD_R)
+const PAD_YARD = new Set([T.PLAZA, T.LOT, T.GRASS, T.DIRT, T.SAND, T.FIELD]), HOSP_PAD_R = 900;
+function clearPad(m, x, y, r, avoid, ok = PAD_OK) {
   if (avoid) for (const a of avoid) if (x + r > a.x && x - r < a.x + a.w && y + r > a.y && y - r < a.y + a.h) return false;   // (never on a runway)
   const t0x = Math.floor((x - r) / TILE), t1x = Math.floor((x + r) / TILE), t0y = Math.floor((y - r) / TILE), t1y = Math.floor((y + r) / TILE);
   for (let ty = t0y; ty <= t1y; ty++) for (let tx = t0x; tx <= t1x; tx++) {
-    if (!m.inside(tx, ty) || !PAD_OK.has(m.tileAt(tx, ty))) return false;
+    if (!m.inside(tx, ty) || !ok.has(m.tileAt(tx, ty))) return false;
     const props = m.solidProps.size ? m.solidProps.get(m.idx(tx, ty)) : null;
     if (props && props.some((p) => !p.off)) return false;
   }
   return true;
 }
 // the nearest clear spot (a circle r px across nothing solid, no road, no water) within maxR px of (x, y), or null
-export function findPadSpot(m, x, y, r = FLY.PAD_R, maxR = 640, avoid = null) {
-  if (clearPad(m, x, y, r, avoid)) return { x, y };
+export function findPadSpot(m, x, y, r = FLY.PAD_R, maxR = 640, avoid = null, ok = PAD_OK) {
+  if (clearPad(m, x, y, r, avoid, ok)) return { x, y };
   for (let d = TILE; d <= maxR; d += TILE) {
     const n = Math.max(8, Math.round(d / 12));
     for (let k = 0; k < n; k++) {
       const ang = (k / n) * Math.PI * 2, px = Math.round(x + Math.cos(ang) * d), py = Math.round(y + Math.sin(ang) * d);
-      if (clearPad(m, px, py, r, avoid)) return { x: px, y: py };
+      if (clearPad(m, px, py, r, avoid, ok)) return { x: px, y: py };
     }
   }
   return null;
@@ -322,7 +325,7 @@ export function airfields(m) {
   for (const h of m.hospitals || []) {
     const poi = (m.pois || [])[h.id], b = poi && poi.b !== undefined && poi.b >= 0 ? m.buildings[poi.b] : m.buildingAtPx(h.x, h.y - 60);
     if (b) pads.push({ x: (b.tx + b.tw / 2) * TILE, y: (b.ty + b.th / 2) * TILE, kind: 'hospital', name: `${h.name} roof pad`, roof: true, alt: bldTop(m, b), b: b.id });
-    const sp = findPadSpot(m, h.x, h.y + 80, FLY.PAD_R, 600);
+    const sp = findPadSpot(m, h.x, h.y + 80, FLY.PAD_R, HOSP_PAD_R, null, PAD_YARD);
     if (sp) pads.push({ x: sp.x, y: sp.y, kind: 'hospital', name: `${h.name} helipad`, roof: false, alt: 0 });
   }
   m._airfields = { pads, strips, aprons };

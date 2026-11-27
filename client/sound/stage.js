@@ -19,6 +19,19 @@ import { MUSIC_HEAR, MUSIC_GEAR } from '../../shared/rules-music.js';
 const R = Math.random;
 const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const LOOK = 0.3, TICK = 0.08, MAX_SOURCES = 2;
+// the recordings: their file list (lazily), Opus where the browser plays it (else the MP3), how far a stream may drift
+let SONGS = null, SONGS_P = null, OPUS_OK = null;
+const OPUS = () => { if (OPUS_OK === null) { try { OPUS_OK = !!new Audio().canPlayType('audio/ogg; codecs="opus"'); } catch { OPUS_OK = false; } } return OPUS_OK; };
+const SYNC_S = 0.35;
+// the speakers (hp, lp in Hz): a pocket radio's little cone (no bass, a boxy top), a boombox's (fuller), a car's from
+// inside (its own speakers) and from outside (the bass through the body and glass), the mat's and a gig's (full)
+const SPEAKER = { radio: { hp: 380, lp: 4200 }, boombox: { hp: 70, lp: 11000 }, carIn: { hp: 70, lp: 12000 }, carOut: { hp: 40, lp: 700 }, mat: { hp: 50, lp: 14000 }, none: { hp: 20, lp: 16000 } };
+// on for everyone (the owner, 11-22 13:12: "you can go for it"); the debug menu's *Recorded music* turns them off in one
+// browser (cla.recmusic '0': the synth's scores, as before) - to compare, or if one misbehaves
+export const recOn = () => { try { return localStorage.getItem('cla.recmusic') !== '0'; } catch { return true; } };
+// a recording at the title track's loudness (client/sound/track.js TARGET_LUFS, trackGain; a mono file plays 3 dB up),
+// under the chain's make-up of 4 (the synth's notes are written quiet)
+const recGain = (lufs, ch) => Math.pow(10, (-15 - (lufs + (ch === 1 ? 3 : 0))) / 20) / 4;
 export let live = null;   // (the one in use: client/music/play.js plays your own notes through it)
 
 // ---- the songbook ---------------------------------------------------------------------------------------------------
@@ -108,11 +121,11 @@ Object.assign(EVENT_SOUNDS, {
 export class StageSound {
   constructor(E) { this.E = E; this.ctx = E.ctx; this.vs = new Map(); this.jams = new Map(); this.next = 0; this.mobile = E.pool.max <= 12; live = this; }
   chain(pan = true) {
-    const c = this.ctx, inp = c.createGain(), lp = krate(c.createBiquadFilter()), pn = pan && c.createStereoPanner ? krate(c.createStereoPanner()) : null, lvl = c.createGain();
-    inp.gain.value = 4; lp.type = 'lowpass'; lp.frequency.value = 16000; lvl.gain.value = 0;
-    inp.connect(lp); if (pn) { lp.connect(pn); pn.connect(lvl); } else lp.connect(lvl);
+    const c = this.ctx, inp = c.createGain(), hp = krate(c.createBiquadFilter()), lp = krate(c.createBiquadFilter()), pn = pan && c.createStereoPanner ? krate(c.createStereoPanner()) : null, lvl = c.createGain();
+    inp.gain.value = 4; hp.type = 'highpass'; hp.frequency.value = 20; hp.Q.value = 0.8; lp.type = 'lowpass'; lp.frequency.value = 16000; lvl.gain.value = 0;
+    inp.connect(hp); hp.connect(lp); if (pn) { lp.connect(pn); pn.connect(lvl); } else lp.connect(lvl);
     lvl.connect(this.E.mix.mus);
-    return { inp, lp, pan: pn, lvl };
+    return { inp, hp, lp, pan: pn, lvl };
   }
   // each frame (sound/index.js frame): what's playing near, how loud and where, its notes scheduled ahead
   update(F, S, t, scene) {
@@ -127,9 +140,14 @@ export class StageSound {
       if (d >= range) continue;
       const inCar = s.kind === 'car' && s.att === myVeh, k = 1 - d / range;
       let g = (inCar ? 0.75 : 0.85 * k * k) * (s.kind === 'radio' ? 0.7 : 1), lp = inCar ? 16000 : 3500 + 12000 * k;
-      if (s.kind === 'car' && !inCar) { lp = Math.min(lp, 700); g *= 0.6; }
-      if (L.inside) { lp = Math.min(lp, 800); g *= 0.4; }
-      want.push({ s, g, lp, pan: inCar ? 0 : Math.max(-0.8, Math.min(0.8, (s.x - L.x) / 400)) });
+      // each sounds like what it comes out of (the owner, 11-22: "a night club's good speakers are clean; a cheap radio is
+      // not"): its speaker's band - SPEAKER - before the distance's muffle
+      const sp = SPEAKER[s.kind === 'car' ? (inCar ? 'carIn' : 'carOut') : s.kind] || SPEAKER.none;
+      let hp = sp.hp;
+      lp = Math.min(lp, sp.lp);
+      if (s.kind === 'car' && !inCar) g *= 0.6;
+      if (L.inside) { lp = Math.min(lp, 800); g *= 0.4; hp = Math.min(hp, 60); }
+      want.push({ s, g, lp, hp, pan: inCar ? 0 : Math.max(-0.8, Math.min(0.8, (s.x - L.x) / 400)) });
     }
     want.sort((a, b) => b.g - a.g);
     const keep = new Set();
@@ -174,12 +192,15 @@ export class StageSound {
     const broken = s.brAt !== null, wind = broken ? Math.max(0, 1 - (performance.now() / 1000 - s.brAt) / MUSIC_GEAR.windS) : 1;
     setp(v.c.lvl.gain, w.g * (broken ? wind : 1), t, 0.25);
     setp(v.c.lp.frequency, broken ? Math.max(200, w.lp * wind * wind) : w.lp, t, 0.2);
+    if (v.c.hp) setp(v.c.hp.frequency, w.hp || 20, t, 0.2);
     if (v.c.pan) setp(v.c.pan.pan, w.pan, t, 0.25);
     if (broken && wind <= 0) return;
-    if (s.track !== v.track) { this.stopFile(v); v.track = s.track; v.data = null; v.u = -1; }
+    const key = s.track + '/' + (recOn() && s.take || '');
+    if (key !== v.track) { this.stopFile(v); this.stopTake(v); v.track = key; v.data = null; v.u = -1; }
+    if (s.take && recOn()) { this.playTake(v, s, broken ? wind : 1); return; }
     const T = TRACK[s.track];
     if (T && T.file) { this.playFile(v, s, T, t, broken ? wind : 1); return; }
-    if (!v.data) { v.data = song(s.track); if (!v.data) return; v.u = -1; }
+    if (!v.data) { v.data = song(s.track); if (!v.data) return; v.u = -1; }   // (the score: v.track is 'id/')
     const secs = v.data.secs;
     // where the song is now (s.pos: the server's word for it) - picked up from there when it's somewhere else
     const posNow = v.ctxT0 !== undefined && v.u >= 0 ? v.pos0 + (t - v.ctxT0) * v.rate : null;
@@ -231,11 +252,49 @@ export class StageSound {
     }
     setp(v.file.src.playbackRate, Math.max(0.15, rate), t, 0.2);
   }
+  // the owner's recording (shared/music.js takeOf: which take; client/sound/songs.js: its files, loaded when first wanted):
+  // the full song streamed through an <audio> element - never decoded whole, so a radio and a club side by side don't fill a
+  // phone's memory - into the source's own chain (level, muffle, pan), kept where the song is for everyone: put back when
+  // it drifts more than SYNC_S from the shared clock's position
+  playTake(v, s, rate) {
+    if (!SONGS_P) SONGS_P = import('./songs.js').then((m) => { SONGS = m.SONGS; }).catch(() => { SONGS = false; });
+    if (!SONGS) return;
+    const T = SONGS.takes[s.take];
+    if (!T) return;
+    if (!v.el) {
+      const el = new Audio();
+      el.preload = 'auto';
+      try { el.preservesPitch = false; } catch { /* old browser */ }
+      el.src = new URL('../../' + (OPUS() ? T.full.opus : T.full.mp3), import.meta.url).href;
+      let node = null, g = null;
+      try {
+        node = this.ctx.createMediaElementSource(el); g = this.ctx.createGain();
+        g.gain.value = recGain(T.full.lufs, T.channels);
+        node.connect(g); g.connect(v.c.inp);
+      } catch { /* no route: leave it silent */ }
+      v.el = el; v.node = node; v.elG = g; v.elOk = false;
+      el.addEventListener('canplay', () => { v.elOk = true; }, { once: true });
+      el.addEventListener('error', () => { if (!el.dataset.mp3 && OPUS()) { el.dataset.mp3 = '1'; el.src = new URL('../../' + T.full.mp3, import.meta.url).href; } }, { once: false });
+    }
+    const el = v.el;
+    if (s.pos < 0) return;
+    const want = Math.min(s.pos, Math.max(0, T.full.seconds - 0.05));
+    if (!v.elOk) { try { el.currentTime = want; } catch { /* not seekable yet */ } return; }
+    el.playbackRate = Math.max(0.25, rate);
+    if (el.paused) { try { el.currentTime = want; } catch { /* - */ } el.play().catch(() => {}); return; }
+    if (rate >= 1 && Math.abs(el.currentTime - want) > SYNC_S) { try { el.currentTime = want; } catch { /* - */ } }
+  }
+  stopTake(v) {
+    if (!v.el) return;
+    try { v.el.pause(); v.el.removeAttribute('src'); v.el.load(); } catch { /* gone */ }
+    try { if (v.node) v.node.disconnect(); if (v.elG) v.elG.disconnect(); } catch { /* gone */ }
+    v.el = null; v.node = null; v.elG = null;
+  }
   stopFile(v) { if (v.file && v.file.src) { try { v.file.src.stop(); v.file.src.disconnect(); } catch { /* gone */ } } v.file = null; }
   fade(id, v, t) {
     setp(v.c.lvl.gain, 0, t, 0.3);
     if (!v.quiet) v.quiet = t;
-    else if (t - v.quiet > 2) { this.stopFile(v); try { v.c.lvl.disconnect(); } catch { /* gone */ } this.vs.delete(id); }
+    else if (t - v.quiet > 2) { this.stopFile(v); this.stopTake(v); try { v.c.lvl.disconnect(); } catch { /* gone */ } this.vs.delete(id); }
   }
   silence() { const t = this.ctx.currentTime; for (const [id, v] of this.vs) this.fade(id, v, t); if (this.busk) setp(this.busk.c.lvl.gain, 0, t, 0.3); }
   // someone's notes on their instrument (the 'jamn' event), from where they stand

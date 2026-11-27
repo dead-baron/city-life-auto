@@ -55,6 +55,49 @@ export function cutGBuf(G, which, gap = 5, glow = [255, 170, 90, 210]) {
   return O;
 }
 
+// A sprite knocked over (the owner, 11-23: "anything that a vehicle can knock over ... should have a visible reaction not
+// just disappear"): every pixel stood up at height z lies along the ground the way it fell (a, radians: the way the car
+// was going), out from its foot by that height - the thing's own picture lying flat, a few px thick (THICK), its top the
+// farthest out; lit from above. opt.shards: [colours] - n bits of it (glass, soil, planks) scattered round the foot and
+// ahead; opt.seed for where. The anchor stays on the same ground point.
+export function toppleGBuf(G, a, opt = {}) {
+  const { w, h } = G, ax = G.ax || 0, ay = G.ay || 0, c = Math.cos(a), sn = Math.sin(a), THICK = 3;
+  let zmax = 0;
+  for (let i = 0; i < w * h; i++) if (G.col[i * 4 + 3] && G.z[i] > zmax) zmax = G.z[i];
+  const pad = zmax + 16, O = new GBuf(w + pad * 2, h + pad * 2);
+  O.ax = ax + pad; O.ay = ay + pad;
+  // lowest first: what stood highest ends up on top, farthest out
+  const order = [];
+  for (let i = 0; i < w * h; i++) if (G.col[i * 4 + 3]) order.push(i);
+  order.sort((p, q) => G.z[p] - G.z[q]);
+  const lay = (X, Y, j, k, zz) => {
+    if (!O.inside(X, Y)) return;
+    const o = Y * O.w + X, q = o * 4;
+    for (let t = 0; t < 3; t++) O.col[q + t] = Math.round(G.col[j + t] * 0.9);
+    O.col[q + 3] = G.col[j + 3];
+    O.nrm[q] = 128 + (G.nrm[j] - 128) * 0.3; O.nrm[q + 1] = 128 + (G.nrm[j + 1] - 128) * 0.3; O.nrm[q + 2] = 240; O.nrm[q + 3] = 255;
+    O.z[o] = zz; O.flag[o] = G.flag[k] & ~(16 | 32);   // (no longer thin upright, nor a crown swaying)
+  };
+  for (const k of order) {
+    const x = k % w, y = (k / w) | 0, z = G.z[k], j = k * 4;
+    const gx = x - ax, gy = y - ay + z;   // (its ground point: screen y = Y - Z)
+    const fx = gx + c * z, fy = gy + sn * z * 0.85, zz = 1 + Math.min(THICK, Math.round(Math.abs(gx * sn - (y - ay) * c) * 0.1));
+    const X = Math.round(O.ax + fx), Y = Math.round(O.ay + fy - zz);
+    lay(X, Y, j, k, zz);
+    if (z > 1) lay(Math.round(X - c), Math.round(Y - sn * 0.85), j, k, zz);   // (no gaps along the length it fell)
+  }
+  if (opt.shards) {
+    const S = opt.shards, seed = opt.seed || 7;
+    const rnd = (i, k) => { const v = Math.sin(i * 127.1 + k * 311.7 + seed * 74.7) * 43758.5453; return v - Math.floor(v); };
+    for (let i = 0; i < (opt.n || 40); i++) {
+      const d = 4 + rnd(i, 1) * (zmax * 0.6 + 18), e = a + (rnd(i, 2) - 0.5) * 2.6, col = S[(rnd(i, 3) * S.length) | 0];
+      const X = Math.round(O.ax + Math.cos(e) * d), Y = Math.round(O.ay + Math.sin(e) * d * 0.85 - 1);
+      for (let q = 0; q < (rnd(i, 4) < 0.3 ? 2 : 1); q++) if (O.inside(X + q, Y)) { const o = Y * O.w + X + q, b = o * 4; O.col[b] = col[0]; O.col[b + 1] = col[1]; O.col[b + 2] = col[2]; O.col[b + 3] = 255; O.nrm[b] = 128; O.nrm[b + 1] = 128; O.nrm[b + 2] = 255; O.nrm[b + 3] = 255; O.z[o] = 1; O.flag[o] = 0; }
+    }
+  }
+  return O;
+}
+
 export class GBuf {
   constructor(w, h) {
     this.w = w | 0; this.h = h | 0;
@@ -110,7 +153,7 @@ export class GBuf {
   // A 1 px outline around the shape, in a dark, hue-tinted shade of the colour it borders (16-bit
   // selective outline). Only fills transparent pixels; `skipBottom` leaves the base open so objects
   // sit on the ground.
-  outline(dark = 0.45, skipBottom = false) {
+  outline(dark = 0.45, skipBottom = false, floor = 0) {   // (floor: nature's outlines never under this luminance - leaves 4 lower; palette.js NAT)
     const { w, h, col } = this;
     const add = [];
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -129,7 +172,9 @@ export class GBuf {
       const d = add[i], s = add[i + 1], dj = d * 4, sj = s * 4;
       const r = col[sj], g = col[sj + 1], b = col[sj + 2];
       // darker and shifted toward violet-blue
-      col[dj] = r * dark * 0.85 + 6; col[dj + 1] = g * dark * 0.8 + 4; col[dj + 2] = b * dark * 0.95 + 18; col[dj + 3] = 255;
+      let o0 = r * dark * 0.85 + 6, o1 = g * dark * 0.8 + 4, o2 = b * dark * 0.95 + 18;
+      if (floor) { const fl = this.flag[s] & F_LEAF ? floor - 4 : floor, l = o0 * 0.3 + o1 * 0.59 + o2 * 0.11; if (l < fl) { const k = fl / l; o0 = Math.min(255, o0 * k); o1 = Math.min(255, o1 * k); o2 = Math.min(255, o2 * k); } }
+      col[dj] = o0; col[dj + 1] = o1; col[dj + 2] = o2; col[dj + 3] = 255;
       for (let c = 0; c < 4; c++) this.nrm[dj + c] = this.nrm[sj + c];
       this.z[d] = this.z[s]; this.flag[d] = this.flag[s] & ~F_GROUND;
     }
