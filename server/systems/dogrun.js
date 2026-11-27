@@ -110,3 +110,39 @@ export function step(world, g, rng) {
 export function end(world, g) {
   for (const q of g.dogs || []) if (q.ball) { const b = world.get(q.ball); if (b && !b.removed) world.remove(b); }
 }
+
+// ---- the street cats (the owner, 11-25 00:47: "cats on stoops and in alleys"; activities.js 'cat' spots) ----------------
+// A stray sat on a walk-up's front step or down an alley by the wall: still, now and then looking about; someone comes too
+// close and it darts off a little way (CATS.shyPx, never toward them) and sits again; left in peace a while, it pads back
+// to its spot. A cat, not a dog: nobody walks it, nobody's lost it (pets.js leaves it be: no house, no home).
+const CAT_ARTS = ['cat_black', 'cat_grey', 'cat_ginger'];
+export function spawnCat(world, m, rng) {
+  const c = world.spawnPed(m.x, m.y, { hp: 30, archetype: 'pet:' + CAT_ARTS[Math.floor(rng() * CAT_ARTS.length) % CAT_ARTS.length], name: 'a cat', a: m.a, app: { bd: 1 } });
+  c.pet = { kind: 'cat', name: 'a cat', stray: true, mood: APOSE.sit, i: 0 };
+  return c;
+}
+export function catStep(world, g, rng) {
+  const cat = world.get(g.ids[0]), C = DOGRUN.cats, now = world.time, dt = 1 / 20;
+  if (!cat || cat.removed || cat.dead) return;
+  const q = (g.cat ||= { st: 'sit', until: now, tx: g.x, ty: g.y });
+  // anyone too close (on foot, moving or not): off it goes, away from them
+  if (q.st !== 'dart' && world.tick % 4 === 0) {
+    for (const e of world.query(cat.x, cat.y, C.shyPx, K.PED)) {
+      if (e === cat || e.pet || e.dead || e.vehId) continue;
+      const a = Math.atan2(cat.y - e.y, cat.x - e.x) + (rng() - 0.5) * 0.8, d = C.dartPx[0] + rng() * (C.dartPx[1] - C.dartPx[0]);
+      q.st = 'dart'; q.tx = cat.x + Math.cos(a) * d; q.ty = cat.y + Math.sin(a) * d; q.until = now + C.dartS; cat.pet.mood = 0;
+      break;
+    }
+  }
+  if (q.st === 'dart') {
+    if (move(world, cat, q.tx, q.ty, C.run, dt) < 6 || now >= q.until) { q.st = 'sit'; q.until = now + C.calmS; cat.vx = cat.vy = 0; cat.pet.mood = APOSE.sit; }
+    return;
+  }
+  if (q.st === 'sit') {
+    cat.vx = cat.vy = 0;
+    if (now >= q.until && Math.hypot(g.x - cat.x, g.y - cat.y) > 8) { q.st = 'home'; cat.pet.mood = 0; }
+    else if (now >= q.until) { q.until = now + C.calmS; cat.a += (rng() - 0.5) * 1.2; }   // (a look about)
+    return;
+  }
+  if (q.st === 'home' && move(world, cat, g.x, g.y, C.pad, dt) < 6) { q.st = 'sit'; q.until = now + C.calmS; cat.pet.mood = APOSE.sit; cat.vx = cat.vy = 0; }
+}

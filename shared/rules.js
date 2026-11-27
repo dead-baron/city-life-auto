@@ -1551,4 +1551,7 @@ export const STUN_RESIST = { full: 2, windowS: 60, after: 0.25 };
 // chance, each time it's done nosing about a spot, that its owner throws the ball; throwPx: how far (px); flightS: the
 // ball's time in the air; roamS: seconds at a spot nosing about; trot / run / back: its speed (of a person's walk) about
 // the run, after the ball, bringing it back; happyS: hopping about its owner with the ball dropped.
-export const DOGRUN = { throwChance: 0.45, throwPx: [120, 260], flightS: 0.9, roamS: [2, 5], trot: 0.7, run: 1.5, back: 1.1, happyS: 1.6 };
+// cats: the street cats on stoops and down alleys - shyPx: how close before one darts off, dartPx how far, dartS at most;
+// calmS: sat still that long before it looks about (or pads back to its spot, pad its speed); run its dart's speed.
+export const DOGRUN = { throwChance: 0.45, throwPx: [120, 260], flightS: 0.9, roamS: [2, 5], trot: 0.7, run: 1.5, back: 1.1, happyS: 1.6,
+  cats: { shyPx: 70, dartPx: [80, 140], dartS: 2.5, calmS: 6, run: 1.7, pad: 0.45 } };

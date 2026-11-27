@@ -98,7 +98,8 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   skaters: { day: 0.85, night: 0.4, cap: 1 },
   stoop: { day: 0.18, night: 0.45, cap: 2 },
   party: { day: 0.08, night: 0.55, cap: 1 },
-  dogrun: { day: 0.85, night: 0.15, cap: 1 },   // (a dog run's owners and their dogs off the lead, playing fetch: dogrun.js - the owner, 11-25)
+  dogrun: { day: 0.85, night: 0.15, cap: 1 },
+  cat: { day: 0.55, night: 0.7, cap: 2 },   // (a stray on a walk-up's step or down an alley: dogrun.js catStep - the owner, 11-25)   // (a dog run's owners and their dogs off the lead, playing fetch: dogrun.js - the owner, 11-25)
   roadcrew: { day: 0.9, night: 0, cap: 1 },
   site: { day: 0.9, night: 0, cap: 1 },   // (a building site's crew out front - batch 8)
   market: { day: 0.95, night: 0.75, cap: 2 },   // (a market lane's stall keepers and shoppers - the craft pass, 11-15)
@@ -311,6 +312,22 @@ export function spotsOf(map) {
     const x = (b.door.tx + 0.5) * TILE + 2, y = (b.ty + b.th) * TILE + 7;
     if (walkable(map, x, y + 6) && clear(x, y, 90)) { list.push({ k: 'stoop', x, y, a: Math.PI / 2, wild: false }); taken.push({ x, y }); }
   }
+  // the street cats: on about a third of the walk-ups' steps (beside where the neighbours sit), and a third of the alleys,
+  // by the wall a third of the way down
+  for (const b of map.buildings || []) {
+    if (!b || !b.hand || b.arch !== 'walkup' || b.back || !b.door || hsh(b.tx, b.ty, 517) > 0.34) continue;
+    const x = (b.door.tx + 0.5) * TILE + 22, y = (b.ty + b.th) * TILE + 6;
+    if (walkable(map, x, y)) list.push({ k: 'cat', x, y, a: Math.PI / 2, wild: false });
+  }
+  for (const e of (map.net && map.net.edges) || []) {
+    if (e.kind !== 'alley' || e.lvl || e.len < 6 * TILE) continue;
+    const q = pointAt(e.pts, e.len / 3);
+    if (hsh(q.x, q.y, 523) > 0.33) continue;
+    const side = hsh(q.x, q.y, 529) < 0.5 ? -1 : 1, off = Math.max(8, (e.hw || 40) - 12), x = q.x - q.ty * side * off, y = q.y + q.tx * side * off;
+    const t = map.tileAtPx(x, y);
+    if (PED_BLOCK[t] || t === T.WATER || t === T.DEEP || t === T.BRIDGE || !clear(x, y, 120)) continue;
+    list.push({ k: 'cat', x, y, a: Math.atan2(q.ty, q.tx), wild: false });
+  }
   // street dice: halfway down an alley in a rough part of town (the alley's asphalt is all road: its own check), the
   // three over the dice against one wall
   for (const e of (map.net && map.net.edges) || []) {
@@ -412,6 +429,8 @@ function members(s) {
   } else if (s.k === 'pickers') {   // down along the rows, picking into a crate
     out.push({ x: s.x - 22, y: s.y, a: s.a, arche: 'farmer', gt: 'kneel', pp: 'crate' });
     out.push({ x: s.x + 22, y: s.y + 6, a: s.a, arche: 'farmer', gt: 'kneel' });
+  } else if (s.k === 'cat') {       // a stray, sat (dogrun.js catStep)
+    out.push({ x: s.x, y: s.y, a: s.a, cat: true });
   } else if (s.k === 'dogrun') {    // two or three owners about the run, each with a dog off the lead (dogrun.js)
     out.push(...dogrun.members(s, rng));
   } else if (s.k === 'hoops') {     // two to four round the key, facing the rim (shooting around: hoopSpot)
@@ -572,6 +591,7 @@ export function fill(world, s, opts = {}) {
   }
   const g = { id: s.id, k: s.k, x: s.x, y: s.y, ids: [], at: world.time };
   for (const m of ms) {
+    if (m.cat) { g.ids.push(dogrun.spawnCat(world, m, rng).id); continue; }   // (a street cat: no person with it)
     const ped = spawnNpc(world, m.arche, m.x, m.y, 'civ');
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
@@ -767,7 +787,7 @@ export function update(world) {
   // every tick: away from their spot (running from trouble, stopped to watch it), the pose and the prop are put down -
   // nobody sits in mid air
   for (const g of A.values()) {
-    if (g.k === 'hoops') stepPickup(world, g); else if (g.k === 'pool') poolnpc.step(world, g, rng); else if (g.k === 'cards') casinofloor.step(world, g, rng); else if (g.k === 'dogrun') dogrun.step(world, g, rng);
+    if (g.k === 'hoops') stepPickup(world, g); else if (g.k === 'pool') poolnpc.step(world, g, rng); else if (g.k === 'cards') casinofloor.step(world, g, rng); else if (g.k === 'dogrun') dogrun.step(world, g, rng); else if (g.k === 'cat') dogrun.catStep(world, g, rng);
   }
   for (const g of A.values()) for (const i of g.ids) {
     const e = world.get(i);
@@ -782,7 +802,7 @@ function fillRound(world) {
   anchors.push(...cineEyes(world));   // (the cinematic mode following someone: round them too - view.js)
   // empty the groups nobody's near (or whose people are all gone)
   for (const [id, g] of A) {
-    g.ids = g.ids.filter((i) => { const e = world.get(i); return e && !e.removed && !e.dead && ((e.npc && e.npc.act) || (e.pet && e.pet.walked)); });
+    g.ids = g.ids.filter((i) => { const e = world.get(i); return e && !e.removed && !e.dead && ((e.npc && e.npc.act) || (e.pet && (e.pet.walked || e.pet.stray))); });
     const near = anchors.some((p) => Math.hypot(p.x - g.x, p.y - g.y) < ACT_DROP) || inAnyView(world, g.x, g.y, 64);
     if (g.ids.length && near) continue;
     if (!near) for (const i of g.ids) { const e = world.get(i); if (e && e.pet) { if (!inAnyView(world, e.x, e.y, 32)) world.remove(e); } else if (e && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e); else if (e) { e.npc.act = null; e.gt = e.pp = null; e.cv = null; e.fishing = null; e.chop = null; e.appVer = (e.appVer || 0) + 1; } }

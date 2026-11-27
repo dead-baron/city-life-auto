@@ -592,7 +592,7 @@ test('the event calendar on World v3: the armored truck run\'s routes on the roa
 test('the dog runs: owners and their dogs off the lead, playing fetch; scared off, the dogs go back on the lead (the owner, 11-25)', async () => {
   const acts = await import('../server/systems/activities.js');
   const runs = M.world3.fenceExits.places.filter((p) => p.kind === 'dogrun');
-  const spots = acts.spotsOf(M).filter((s) => s.k === 'dogrun');
+  const spots = acts.spotsOf(M).list.filter((s) => s.k === 'dogrun');
   assert.ok(runs.length >= 1 && spots.length >= Math.ceil(runs.length / 2), `dog runs ${runs.length}, filled spots ${spots.length}`);
   const w = new World(M, { npcBudget: 0, throwErrors: true });
   const s = spots[0], { p } = joinPlayer(w);

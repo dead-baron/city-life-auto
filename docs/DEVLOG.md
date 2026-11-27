@@ -28389,3 +28389,11 @@ now a small round shadow on the ground away from the sun by its height, fainter 
 (`client/art2/game/host.js` `_airShadow`, `blobShadow`) - the rule birds and leaping fish already had (their own shapes).
 Page only. Also: the comments added to physics.js / mapcore.js today trimmed to keep the page's city code inside its
 380 KB budget (it was 381).
+
+## 2026-11-26 · Street cats on the stoops and down the alleys; more dog walkers (the owner, 11-25 00:47) - branch `rules-1126`
+"I dont see a lot of dogs or cats or NPCs walking dogs in the cities either". A stray cat (black, grey or ginger) on
+about a third of the walk-ups' front steps and a third of the alleys, by the wall a third of the way down
+(`activities.js` 'cat' spots, by day 55%, at night 70%, two round a player at most; `dogrun.js` catStep): sat still,
+looking about now and then; anyone within 70 px and it darts 80-140 px away from them and sits again; left in peace it
+pads back to its spot (`DOGRUN.cats`). Nobody's lost it (pets.js leaves strays be). The dog walkers (personas.js) out
+more: by day 2 -> 3, two round a place at most (was one). Test: `test/streetcats.test.js`.
