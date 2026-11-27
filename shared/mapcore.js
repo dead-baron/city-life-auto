@@ -315,9 +315,11 @@ export function isSwimming(map, ped) {
 
 // Under a deck over the water: a bridge's tiles, or water under the highway's deck (art2 host.js draws boats under it).
 export function underDeckAt(map, x, y) {
-  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), t = map.tileAt(tx, ty);
+  const t = map.tileAtPx(x, y);
   if (t === T.BRIDGE) return true;
-  return WATER_T[t] === 1 && !!map.deck && map.inside(tx, ty) && !!map.deck[map.idx(tx, ty)];
+  if (WATER_T[t] !== 1 || !map.deck || !map.inside) return false;
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  return map.inside(tx, ty) && !!map.deck[map.idx(tx, ty)];
 }
 
 // Soaking: swimming in one of the hot springs' pools (map.springs ellipses, Granite Hot Springs).
