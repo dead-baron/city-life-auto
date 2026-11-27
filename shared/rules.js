@@ -1541,3 +1541,8 @@ export const SMASH_HURT = {
 // full health a second (no toughness): a healthy one comes through scorched and the fire goes out, a battered one's
 // engine dies and it goes up (DEAD_FIRE_S, DEAD_BOOM_S). Water puts it out (a wading vehicle - shared/physics.js wadeBand).
 export const VEH_FIRE = { exposeS: 2.5, coolRate: 0.5, burnS: 12, dps: 0.04, crashImpact: 220, crashBelow: 0.3, crashChance: 0.35, smoulderBelow: 0.15, smoulderPerS: 0.03 };
+
+// Pepper spray and the taser against players (the owner, 11-25 03:23: "no keeping a player down for good - full effect the
+// first time or two, then little for a while. NPCs matter less"; server combat.js stunFor): within windowS seconds of the
+// first, a player takes full stuns, the rest at after of their length (NPCs always the full stun).
+export const STUN_RESIST = { full: 2, windowS: 60, after: 0.25 };

@@ -28328,3 +28328,8 @@ fought back after you attacked them. Now self-defense is never against the polic
 and never when you started it - `onDamage` records who struck first (`started`) between a player and anyone (it did
 between two players only, for bounties). A clean character a stranger attacks first may still defend themselves.
 Test: `test/selfdefense.test.js`.
+
+## 2026-11-26 · Pepper spray and the taser wear off on players (the owner, 11-25: "no keeping a player down for good") - branch `rules-1126`
+`shared/rules.js` `STUN_RESIST`, `server/systems/combat.js` `stunFor`: a player takes the first two stuns in a minute in
+full; the rest last a quarter as long ("You shake it off faster"), until a minute has passed since the first. NPCs
+take the full stun every time. Test: `test/stunresist.test.js`.
