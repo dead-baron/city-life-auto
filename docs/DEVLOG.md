@@ -28438,3 +28438,23 @@ Tests: `skate.test.js` (three new: onto the grass in hand and back on; nobody's 
 bagged; the bail's one board), `ridegear.test.js` (the wear and the snap), guide, perf, core, bikes, ftue, homeups, surf,
 blades.
 
+## 2026-11-27 · Ready to make the repository private (the owner's go, 11-27): a player-only page, the server's code kept in
+The owner asked what leaving the repository public risks (a reskin on a portal, cheaters reading the server's checks,
+the roadmap readable; the page itself can always be copied) and said go. What's built - making it private stays his
+switch, `docs/PRIVATE-REPO.md` has the steps:
+- **The game server stops handing out its own code** (`server/index.js` STATIC_ROOTS: no `server/` - it was served for
+  the paused offline practice worker).
+- **The player-only page** (`tools/build-play.mjs <folder>`): index.html, version.json, the manifest and service worker,
+  `client/` (not the practice worker), `shared/`, `assets/`, `about/` - 880 files, 215 MB, an all-rights-reserved
+  LICENSE and a README; copies only what changed, removes what left; fails if anything the page imports isn't in it.
+- **Published by the game server as it updates** (`deploy/publish-play.sh`, from `auto-update.sh` once
+  `~/.cla-play-repo` is set): the new commit's page pushed to the public repository, then the usual wait for Pages,
+  then the restart - page first, as today; if publishing fails the server waits too.
+- **One command on the server** (`deploy/setup-private.sh`): two keys (read the private repository, write the public
+  one), SSH aliases, the remote switched, the first publish.
+- The plan keeps the address: the development repository is renamed `city-life-auto-dev` and made private, a new public
+  `city-life-auto` holds the page - same URL, so saved logins, Google and Discord sign-in carry on. Free on GitHub Free.
+- `LICENSE` (all rights reserved) in this repository too.
+Tests: `buildplay.test.js` (what's in, what's out, every import resolved, the copy, the server's roots); publish-play.sh
+run end to end against a local bare repository (published, then nothing to do the second time).
+
