@@ -96,10 +96,19 @@ export function occupants(world, n) {
 export function boxFree(world, v, n, inEdge, nx, ready) {
   const b = boxOf(world, n.id), now = world.time, ai = v.ai;
   const me = { in: inEdge, out: nx.edge, turn: nx.turn, long: v.def.L >= LONG_L };
+  // Already in the box (one backed off a knot onto its road in front of its line is still in its books): it goes before
+  // anyone still at their line - only one in there before it, across its way, holds it. (It used to wait its turn behind
+  // one at its line that it stood in the way of, which waited for it: the unlit four-way locked for good, 11-27.)
+  const occ = occupants(world, n), mine = occ.get(v.id);
+  if (mine) {
+    if (!ready) return false;
+    for (const [id, o] of occ) if (id !== v.id && (o.at < mine.at || (o.at === mine.at && id < v.id)) && conflict(me, o, n) && (o.out === me.out || !pastCrossing(world, n, world.get(id), o))) return false;
+    return true;
+  }
   const w0 = b.wait.get(v.id);
   b.wait.set(v.id, { ...me, at: ai.waitAt, seen: now, ready: ready ? now : (w0 ? w0.ready : -1e9) });
   if (!ready) return false;
-  for (const [id, o] of occupants(world, n)) if (id !== v.id && conflict(me, o, n) && (o.out === me.out || !pastCrossing(world, n, world.get(id), o))) return false;
+  for (const [id, o] of occ) if (id !== v.id && conflict(me, o, n) && (o.out === me.out || !pastCrossing(world, n, world.get(id), o))) return false;
   for (const [id, q] of b.wait) {
     if (id === v.id) continue;
     if (now - q.seen > WAIT_STALE) { b.wait.delete(id); continue; }

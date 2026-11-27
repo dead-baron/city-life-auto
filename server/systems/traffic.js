@@ -849,13 +849,17 @@ function steerTraffic(world, v, t) {
   // getting jammed in a spot" - a passer-by pinned against a lorry in the road, the cars behind waiting for ever.
   if (ai.creepUntil > now) {
     (ignore ||= new Set()).add(ai.creepPast); desired = Math.min(desired, PED_CREEP_PX);
-    // (nudged aside: off the car's line, a step at a time, onto open ground only)
-    const q = world.get(ai.creepPast), c = Math.cos(v.a), sn = Math.sin(v.a);
-    if (q && !q.dead && !q.vehId && !q.player) {
+    // (nudged aside: off the car's line, a step at a time, onto open ground only - everyone on foot in its way, not just
+    // the one it first waited for: two passers-by stood in the road took turns holding a taxi ~50 s, each blocking while
+    // it crept past the other - gridlock.test.js, 11-27)
+    const c = Math.cos(v.a), sn = Math.sin(v.a), fx = v.x + c * (v.def.L / 2 + 20), fy = v.y + sn * (v.def.L / 2 + 20);
+    for (const q of world.query(fx, fy, v.def.L / 2 + 40, K.PED)) {
+      if (q.dead || q.vehId || q.player) continue;
       const lx = (q.x - v.x) * c + (q.y - v.y) * sn, ly = -(q.x - v.x) * sn + (q.y - v.y) * c;
       if (lx > 0 && lx < v.def.L / 2 + 40 && Math.abs(ly) < v.def.W / 2 + 12) {
+        ignore.add(q.id);
         const sd = ly >= 0 ? 1 : -1, nx = q.x - sn * sd * 2.5, ny = q.y + c * sd * 2.5;
-        if (!PED_BLOCK[world.map.tileAtPx(nx, ny)]) { q.x = nx; q.y = ny; }
+        if (!PED_BLOCK[world.map.tileAtPx(nx, ny)]) { q.x = nx; q.y = ny; world.place(q); }
       }
     }
   }
