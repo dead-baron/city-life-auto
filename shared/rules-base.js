@@ -36,15 +36,8 @@ export const GARDEN_CROPS = {
   sunflower: { seeds: 7, days: 2, yield: 2, sell: 12, heal: 3 },
 };
 
-// Vehicles in the water (the owner, 11-24 21:40; shared/physics.js wade reads the depth, server/systems/vehicles.js acts on it).
-// slope: metres of depth per tile from the bank, by the water (the art's own measure, client/art2/water.js depthOf) -
-// the sea by its shore (sand shelves gently, rock and grass faster; a quay, a dock or a wall: deep at once), cap: the
-// deepest it gets. splash: water this shallow (m) a vehicle splashes through at speed. ford: how deep each can drive
-// through (m) - a vehicle's own def.ford wins (shared/vehicles.js): off-road ones (def.rough at most offroadRough: the
-// Trailcat, the tractor, the dirt bike, the tank...) ford deepest; trucks (mass at least truckMass) higher than cars;
-// bikes and bicycles less; boards and carts barely. Deeper than its ford it sinks, as before. While it wades, the engine
-// holds holdS seconds (offroadHoldS for an off-road one) before it floods and stalls; out of the water it dries dryRate
-// times as fast as it got wet; stalled, it tries again after restartS and runs retryS seconds more - time to get out.
+// Vehicles in the water (the owner, 11-24; shared/physics.js waterDepth, server vehicles.js wade; DEVLOG 11-26): slope m of
+// depth a tile from the bank, cap the deepest; splash m; ford m by vehicle (def.ford wins); the engine's hold / restart s.
 export const WADE = {
   slope: { sea: { sand: 0.22, rock: 0.55 }, lake: { k: 0.32, cap: 14 }, pond: { k: 0.55, cap: 3.2 }, river: { k: 0.25, cap: 3.4 } },
   splash: 0.3,

@@ -308,14 +308,12 @@ Object.defineProperty(CityMap.prototype, 'frame', {
 // Swimming: in open water, or under a bridge deck having swum in. Up on the highway deck you
 // are never swimming, whatever is below.
 export function isSwimming(map, ped) {
-  if ((ped.lz || 0) > 0.35 || ped.sky || ped.onTrain) return false;   // (sky: falling from an aircraft, up over it - server skydive.js; onTrain: riding a train over water - the owner, 11-25: "all the people on the train will do a swimming animation")
+  if ((ped.lz || 0) > 0.35 || ped.sky || ped.onTrain) return false;   // (sky: skydive.js; onTrain: riders over water)
   const t = map.tileAtPx(ped.x, ped.y);
   return WATER_T[t] === 1 || (t === T.BRIDGE && !!ped.under);
 }
 
-// Under a deck over the water: a bridge's own tiles, or open water under the elevated highway's deck (m.deck) - what's on
-// the water there (a boat, its wake, a swimmer) is drawn under the deck (client/art2/game/host.js; the owner, 11-25: boats
-// and their wakes drawn over a road deck - 6,500 tiles of water lie under the highway's decks in World v3).
+// Under a deck over the water: a bridge's tiles, or water under the highway's deck (art2 host.js draws boats under it).
 export function underDeckAt(map, x, y) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), t = map.tileAt(tx, ty);
   if (t === T.BRIDGE) return true;

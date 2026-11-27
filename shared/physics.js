@@ -479,23 +479,10 @@ export function vehForwardSpeed(s) {
   return s.vx * Math.cos(s.a) + s.vy * Math.sin(s.a);
 }
 
-// Vehicles in the water (the owner, 11-24 21:40: "it shouldn't just instantly sink in any depth of water and lose your
-// vehicle ... very shallow water just splashing a bit ... shallow water ... move a bit in the shallow water before
-// breaking down ... going into deeper water and then sinking beyond any return ... especially offroad vehicles").
-// How deep the water is under a point, read from the built map the same way on the server and the page (the page
-// predicts its own car's driving with it: shared/physics.js vehStep), and what that means for a land vehicle:
-//   waterDepth(m, x, y)  -> metres: 0 on dry ground, Infinity where it's deep at once (open deep water, or the water
-//                           off a quay, a dock, a seawall or a building - a car driven off the edge still goes down)
-//   fordOf(def)          -> metres of water the vehicle can drive through (WADE.ford, or the vehicle's own def.ford)
-//   wadeBand(m, x, y, def) -> WB.DRY, WB.SPLASH (it splashes through, nothing slows), WB.WADE (slowed; the engine
-//                           holds a while, then floods - server/systems/vehicles.js), WB.DEEP (it sinks, as before)
-// The depth grows with the distance to the bank (tiles), by the kind of water (WADE.slope, the art's own measure:
-// client/art2/water.js depthOf) - a creek stays shallow, a pond's middle is deep, a sandy beach shelves gently, rock
-// faster. Kept per map in a small cache of the tiles asked for (only where a vehicle is in the water). Arithmetic and
-// Math.sqrt only: the same answer in every JS engine.
-
+// Vehicles in the water (the owner, 11-24): the depth under a point from the bank (WADE: rules-base.js), the same on the
+// server and the page; DEVLOG 11-26.
 export const WB = { DRY: 0, SPLASH: 1, WADE: 2, DEEP: 3 };
-const WET = new Uint8Array(16); WET[T.WATER] = 1; WET[T.DEEP] = 1; WET[T.BRIDGE] = 1;   // (a bridge's tiles stand over water: no bank)
+const WET = new Uint8Array(16); WET[T.WATER] = 1; WET[T.DEEP] = 1; WET[T.BRIDGE] = 1;
 const QUAY = new Uint8Array(16); for (const t of [T.SIDEWALK, T.ROAD, T.PLAZA, T.BUILDING, T.DOCK, T.LOT, T.FLOOR, T.COUNTER]) QUAY[t] = 1;
 const CACHE = new WeakMap();   // map -> Map(tile key -> metres)
 const R = 12;                  // tiles: the bank is looked for this far round at most (further out: as deep as it gets)
@@ -516,12 +503,12 @@ function tileDepth(m, tx, ty) {
       }
     }
   }
-  const i = m.inside && m.idx && m.inside(tx, ty) ? m.idx(tx, ty) : -1;   // (an underground map has no such layers: its water reads as the sea's)
+  const i = m.inside && m.idx && m.inside(tx, ty) ? m.idx(tx, ty) : -1;
   const lake = i >= 0 && m.lake ? m.lake[i] : 0, river = i >= 0 && m.river ? m.river[i] : 0;
   const kind = lake === 2 ? 'pond' : lake ? 'lake' : river ? 'river' : 'sea';
   const S = WADE.slope[kind];
-  if (bt < 0) return S.cap ?? Infinity;   // (no bank within reach: the open water's middle)
-  if (QUAY[bt] && kind !== 'river') return Infinity;   // (off a quay, a dock or a wall: deep at once - a creek running under a road in its culvert is not)
+  if (bt < 0) return S.cap ?? Infinity;
+  if (QUAY[bt] && kind !== 'river') return Infinity;   // (off a quay: deep at once; not a creek)
   const shore = kind === 'sea' ? (bt === T.SAND ? S.sand : S.rock) : S.k;
   const dep = shore * (Math.sqrt(best) - 0.5);
   return S.cap ? Math.min(S.cap, dep) : dep;
@@ -546,7 +533,6 @@ export function fordOf(def) {
   if (def.kind === 'bike') return F.bike;
   return def.mass >= F.truckMass ? F.truck : F.car;
 }
-// a vehicle that fords this deep counts as an off-road one (it holds out longer before the engine floods)
 export const offroad = (def) => fordOf(def) >= WADE.ford.offroad;
 
 export function wadeBand(m, x, y, def) {
@@ -556,8 +542,6 @@ export function wadeBand(m, x, y, def) {
   if (d <= Math.min(WADE.splash, f)) return WB.SPLASH;
   return d <= f ? WB.WADE : WB.DEEP;
 }
-// the ground's grip and speed under a land vehicle in the water ([speed, grip] as shared/mapcore.js SURFACE has them):
-// splashing through, as on a packed track; wading, the deeper the slower - an off-road vehicle less so
 export function wadeSurface(m, x, y, def) {
   const d = waterDepth(m, x, y), f = fordOf(def);
   if (d <= Math.min(WADE.splash, f)) return WADE.splashSurf;

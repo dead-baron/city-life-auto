@@ -103,6 +103,13 @@ function birdShadow(s, w) {
   }
   return G;
 }
+// something small up in the air (a ball in flight, a thrown grenade): a round shadow on the ground below it, s px across -
+// the one rule for anything in the air (the pre-beta list C, "Shadows"; birds and leaping fish draw their own shapes)
+function blobShadow(s) {
+  const W = s + 2, G = gbuf(W, W, W >> 1, W >> 1), c = W / 2, rx = s / 2, ry = s / 2 * 0.62, rgb = [14, 16, 24];
+  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const x = (i + 0.5 - c) / rx, y = (j + 0.5 - c) / ry; if (x * x + y * y < 1) put(G, i, j, rgb, 0, UP_N, F_GROUND); }
+  return G;
+}
 // a happy pet's hops (px up): quick little bounces, a beat between them, each pet in its own time
 const petHop = (t, id) => { const k = (t * 2.4 + id * 0.37) % 1; return k < 0.55 ? Math.sin(Math.PI * k / 0.55) * 7 : 0; };
 // A wild animal's pose (actors.js ANIMAL_FRAMES) from what the server says it's doing (shared/fauna.js APOSE, the
@@ -2282,12 +2289,12 @@ export class World2 {
     void F;
   }
 
-  _small(kind, key, args, e, x, y, z0) {
+  _small(kind, key, args, e, x, y, z0, shadow = true) {
     let sk = this._spr('actors', kind, key, args);
     if (!sk) sk = e._v2k && this.E.hasSprite(e._v2k) ? e._v2k : null;
     if (!sk) return;
     e._v2k = sk;
-    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false;
+    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = shadow; o.tint = null; o.flipX = false;
     this.E.drawSprite(sk, x, y, z0, o); this.n.drawn++;
   }
 
@@ -2315,7 +2322,7 @@ export class World2 {
         if ((b.flags & 1) && Math.floor(now * 5) % 2) continue;   // about to vanish: it blinks
         const hi = quant(b.ra || 0, 16); this._small('bag', A.bagKey(b.d.t, hi, 16), [b.d.t, hi, 16], b, b.rx, b.ry, this._z0(b, false));
       }
-      for (const b of F.balls) { const t = b.d.t | 0, spin = quant(b.ra || 0, 4); this._small('ball', A.ballKey(t, spin), [t, spin], b, b.rx, b.ry, (b.extra || 0) * 2 + this._z0(b, false)); }
+      for (const b of F.balls) { const t = b.d.t | 0, spin = quant(b.ra || 0, 4), up = (b.extra || 0) * 2; if (up > 4) this._airShadow(b.rx, b.ry, up, 8); this._small('ball', A.ballKey(t, spin), [t, spin], b, b.rx, b.ry, up + this._z0(b, false), up <= 4); }   // (up in the air: a round shadow below it, not the shadow march's column)
       for (const pr of F.projs) {
         const N = 32, hi = quant(pr.ra, N), w = pr.d.w | 0;
         if (!this.projWarm.has(w)) { this.projWarm.add(w); for (let h = 0; h < N; h++) this.warmQ.unshift(['actors', 'proj', A.projKey(w, h, N), [w, h, N], -1]); }
@@ -2353,6 +2360,19 @@ export class World2 {
       const k = this._spr('actors', 'muzzle', A.muzzleKey(1, hi, 16, frm), [1, hi, 16, frm]);
       if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; this.E.drawSprite(k, f.x, f.y, f.z ?? 18, o); }   // (f.z: the barrel's height - main.js MUZZLE)
     }
+  }
+
+  // Something small up in the air (blobShadow): a round shadow s px across on the ground, away from the sun by its
+  // height, fainter higher up, at night and in the rain - as a bird's (_flyShadow)
+  _airShadow(x, y, z, s) {
+    const sky = this.F && this.F.sky;
+    if (!sky || !sky.sunDir || this.F.sub) return;
+    const al = 0.5 * (1 - sky.night) * (1 - 0.7 * Math.min(1, this.F.rain || 0)) * Math.max(0.3, 1 - z / 240);
+    if (al < 0.04) return;
+    const key = this._conv(`ash|${s}`, () => blobShadow(s), true);
+    if (!key) return;
+    const u = sky.sunDir, l = Math.hypot(u.x, u.y) || 1, d = z * Math.max(0.3, Math.min(2.5, sky.shadowLen)) / 0.62;
+    this.E.drawDecal(key, x + u.x / l * d, y + u.y / l * d, 0, al, 0);
   }
 
   // A flying bird's shadow (10-23: no column): its shape from above (span; k the wingbeat, -1 tucked) on the ground,

@@ -28382,3 +28382,10 @@ off their spot calls the dog back onto the lead (personas.js walks it at heel). 
 stays together (his rule for animal groups, 11-25). Not done from the same note: more dog walkers by district, cats on
 stoops and in alleys. Test: `world3server.test.js` (the dog runs found and filled, every stage of fetch seen, the lead
 back on a scare).
+
+## 2026-11-26 · Anything small in the air casts a round shadow below it (the pre-beta list C, "Shadows") - branch `rules-1126`
+A ball in flight (a tennis ball at the dog run, a basketball, a thrown grenade) drew the shadow march's column under it;
+now a small round shadow on the ground away from the sun by its height, fainter higher up, at night and in rain
+(`client/art2/game/host.js` `_airShadow`, `blobShadow`) - the rule birds and leaping fish already had (their own shapes).
+Page only. Also: the comments added to physics.js / mapcore.js today trimmed to keep the page's city code inside its
+380 KB budget (it was 381).
