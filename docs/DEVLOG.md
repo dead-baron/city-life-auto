@@ -28333,3 +28333,12 @@ Test: `test/selfdefense.test.js`.
 `shared/rules.js` `STUN_RESIST`, `server/systems/combat.js` `stunFor`: a player takes the first two stuns in a minute in
 full; the rest last a quarter as long ("You shake it off faster"), until a minute has passed since the first. NPCs
 take the full stun every time. Test: `test/stunresist.test.js`.
+
+## 2026-11-26 · The paramedic's uniform; job vehicles face a way out (the owner, 11-25) - branch `rules-1126`
+- **The uniform:** on shift you wear the catalogue's Paramedic uniform and work boots on your own body, face and hair
+  (`server/systems/paramedic.js` dress / undress); however the shift ends - done, quit, its time up, the ambulance lost
+  - your own clothes come back. Your saved look is never touched.
+- **Facing a way out** (the class: every job vehicle - `jobs.js` workTruck, `clearAlong`): a job's vehicle is put down
+  facing one of the four ways with a length and a half of open ground ahead (`WORK_TRUCK.runway`), the one along the
+  street first; a free one already there is taken only if it isn't parked nose-on to a wall. His ambulance had been
+  put down facing a brick wall in an alley. Test: `paramedic.test.js` (six hospitals).

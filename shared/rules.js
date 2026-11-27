@@ -966,7 +966,7 @@ export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana:
 // up to returnS seconds after the job ends (then it's the company's to collect); the job keeps it for you (never tidied
 // away) and a garage won't keep one.
 export const WORK_TRUCK_RETURN = 150;
-export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400 };
+export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400, runway: 1.5 };   // (runway: vehicle lengths of open ground ahead of a job's vehicle where it's put - jobs.js workTruck; the owner, 11-25)
 // A job's vehicle recalled (the owner, 2026-10-23: "Canceling a job should make you have to give up the vehicle like a
 // helicopter"; server jobs.js recall): a job that ends undone - cancelled, quit, expired, lost - and a return window run
 // out take back what the job issued. On the ground you're set down beside it outS seconds after (a moment to pull over);
