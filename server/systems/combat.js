@@ -743,7 +743,7 @@ export function update(world, dt) {
         collideCircle(e, PED_RADIUS, world.map, SWIM_BLOCK);
         if (world.map.levels) levelStep(world.map, e, PED_RADIUS);
         if (!e.dead) players.tumbleImpact(world, e, v0, dt, fr);
-      } else { e.vx *= 0.8; e.vy *= 0.8; e.x += e.vx * dt; e.y += e.vy * dt; if (world.map.levels) levelStep(world.map, e, PED_RADIUS); }
+      } else { e.vx *= 0.8; e.vy *= 0.8; e.x += e.vx * dt; e.y += e.vy * dt; collideCircle(e, PED_RADIUS, world.map, SWIM_BLOCK); if (world.map.levels) levelStep(world.map, e, PED_RADIUS); }   // (walls stop a punched or stunned one's stagger too: it slid them into a building, stuck there for good - 11-27)
     }
   }
 }

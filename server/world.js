@@ -11,6 +11,7 @@ import * as cargo from './systems/cargo.js';
 import * as law from './systems/law.js';
 import * as bounties from './systems/bounties.js';
 import * as npc from './systems/npc.js';
+import * as react from './systems/react.js';
 import * as traffic from './systems/traffic.js';
 import * as transit from './systems/transit.js';
 import * as ferries from './systems/ferries.js';
@@ -157,6 +158,7 @@ const SYSTEMS = [
   ['dealer', dealer.update],        // dealership lot stock      // police motor pool gates + restocking
   ['interiors', interiors.update],  // shop clerks / desk staff in walk-in buildings
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
+  ['react', react.update],          // the reaction ladder's loose ends, and a gun pointed at someone (react.js)
   ['slips', slips.update],          // after a rear-end: the drivers out having words or blows, then back in and away (slips.js)
   ['pets', pets.update],            // lost pets wandering, led home on a collar
   ['happenings', happenings.update], // a street fight, someone collapsing, a dropped wallet - now and then near someone
