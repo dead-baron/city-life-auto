@@ -7,9 +7,10 @@
 // (hopOff: it's put down at your feet - yours stays yours; a park's is left lying, gone once nobody's about, and the
 // park's rack fills again). On it you push - kick by kick, a little slower than a bike (shared/board.js BOARD: a short
 // hop, not a way across town) - carve, coast, brake and ollie (the page predicts it the same way). It rolls on anything
-// paved and on the docks; on grass, dirt or sand the wheels dig in and you step off. Run into a wall, a post or a car
-// hard and you bail: thrown down, a little hurt, the board shooting off ahead of you (the 'bail' event) - it lands a
-// moment later where it stopped. Knocked down any other way, into the water, a vehicle or a building, cuffed, on a train:
+// paved and on the docks; on grass, dirt or sand the wheels dig in and you step off - the board in your hand, to carry to
+// where you can ride again (the vehicle button there; gear.js). Run into a wall, a post or a car hard and you bail:
+// thrown down, a little hurt, and the board itself - the one you were on, never a stand-in - skids off ahead of you,
+// spinning, to where it stops (slide; the owner, 11-17: a tiny placeholder board flew out and a different one lay there). Knocked down any other way, into the water, a vehicle or a building, cuffed, on a train:
 // off the board. Your own board left lying where you're nowhere near goes home (tidy): bring it out again at home or at
 // a skate shop.
 // Parts 2 and 3 (the owner, 2026-10-18: "lets put in the skateboard moves"): the tricks (shared/skate.js - flips, grabs,
@@ -44,6 +45,7 @@ import { pointGrid } from '../pointgrid.js';
 import { store } from '../store.js';
 import * as combat from './combat.js';
 import * as dance from './dance.js';
+import * as gear from './gear.js';   // (rolled onto rough ground: the board into your hand - gear.js carry)
 
 export const riding = (ped) => !!(ped && ped.board);
 export const owns = (p) => !!(p && p.profile && p.profile.board);
@@ -104,11 +106,16 @@ export function hopOn(world, p, ped, deck = {}) {
 export function mount(world, p, ped, v) {
   const why = blocked(world, p, ped);
   if (why) { world.notify(p, why, 'warn'); return false; }
+  if (v.slide) return false;   // (a bail's board still skidding)
+  return hopOn(world, p, ped, takeUp(world, v, ped));
+}
+// a board on the ground taken up (to ride, or into a hand): the deck it is - a rack's keeps its place on the rack
+function takeUp(world, v, ped) {
   const sp = v.boardSpot != null ? boardSpots(world.map)[v.boardSpot] : null;
   const deck = { owner: v.owner || null, ownerName: v.ownerName || null, paint: v.paint, variant: v.variant, spot: v.boardSpot ?? null, park: sp && sp.kind === 'park' ? sp.park : null, wear: v.wear || 0, stolen: [...(v.stolenBy || [])] };
   world.remove(v);
-  if (deck.spot != null && world.boardParked) world.boardParked.set(deck.spot, ped.id);   // (its rack's place: taken while it's ridden)
-  return hopOn(world, p, ped, deck);
+  if (deck.spot != null && world.boardParked) world.boardParked.set(deck.spot, ped.id);   // (its rack's place: taken while it's ridden or carried)
+  return deck;
 }
 
 // Off: the board put down at your feet (drop false: it's gone - the dev menu moving you, a bail's that lands later)
@@ -163,7 +170,13 @@ export function bail(world, ped, into = 0, hurt = true) {
   let to = { x: ped.x, y: ped.y };
   for (let d = 0; d <= far; d += 8) { const x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d; if (!lieOk(world.map, x, y, a)) break; to = { x, y }; }
   const k = Math.max(0, Math.min(1, (into - BOARD.bailHit) / (BOARD.pushHard - BOARD.bailHit)));
-  if (!wearOut(world, ped, deck, RIDE_GEAR.wear + (hurt ? RIDE_GEAR.hard * k : 0), to)) (world.boardLand ||= []).push({ at: world.time + LAND_S, deck, x: to.x, y: to.y, a, lz: ped.lz || 0 });
+  const worn = wearOut(world, ped, deck, RIDE_GEAR.wear + (hurt ? RIDE_GEAR.hard * k : 0));   // (false: worn a little; 'fresh': a new one for the session; true: snapped)
+  // the board itself skids off from under you, spinning, to where it stops - a snapped one breaks there (slide)
+  const v = putDown(world, worn === true ? { paint: deck.paint, variant: deck.variant } : deck, { x: ped.x, y: ped.y }, a, ped.lz || 0);
+  if (v) {
+    v.slide = { x0: ped.x, y0: ped.y, x1: to.x, y1: to.y, a0: a, spin: (world.rand() < 0.5 ? -1 : 1) * (2.5 + world.rand() * 3), t0: world.time, T: LAND_S, snap: worn === true ? 1 : worn === 'fresh' ? 2 : 0, by: ped.id };
+    (world.boardSlides ||= []).push(v.id);
+  } else if (worn !== true) (world.boardLand ||= []).push({ at: world.time + LAND_S, deck, x: to.x, y: to.y, a, lz: ped.lz || 0 });   // (nowhere for it at your feet: it lands where it stops)
   if (!hurt) return;
   ped.downUntil = Math.max(ped.downUntil || 0, world.time + BAIL.downS);
   ped.tumbleUntil = Math.max(ped.tumbleUntil || 0, world.time + 0.4);
@@ -172,8 +185,9 @@ export function bail(world, ped, into = 0, hurt = true) {
 
 // A bail's wear on the board (rules.js RIDE_GEAR: a bail's, more the harder you hit): past warnAt its owner hears it's
 // cracking; at 1 it snaps - an owner's board gone for good (until they buy another), a park's back to its rack later - true
-// (no board lands). In a skate session (the rider's) a snapped board is replaced on the spot: a fresh one lands instead.
-function wearOut(world, ped, deck, add, at) {
+// (no board lands). In a skate session (the rider's) a snapped board is replaced on the spot: a fresh one lands instead -
+// 'fresh'. (The page hears it snap where the board stops: slide.)
+function wearOut(world, ped, deck, add) {
   const w0 = deck.wear || 0;
   deck.wear = Math.min(1, w0 + add);
   const owner = deck.owner ? world.players.get(deck.owner) : null, mine = owner && owner.profile.board ? owner.profile.board : null;
@@ -183,12 +197,11 @@ function wearOut(world, ped, deck, add, at) {
     return false;
   }
   const rider = ped.player, fresh = !!(rider && rider.skSession);
-  world.emit(at.x, at.y, { e: 'skbail', id: ped.id, x: Math.round(at.x), y: Math.round(at.y), snap: fresh ? 2 : 1 });   // (the page: SNAPPED - client/skate.js)
   if (fresh) {   // (the session's exception: a fresh board where it broke)
     deck.wear = 0;
     if (mine) mine.wear = 0;
     if (rider) world.notify(rider, 'Snapped! A fresh board for the session - right there where it landed.', 'info');
-    return false;
+    return 'fresh';
   }
   if (deck.spot != null && world.boardParked) world.boardParked.delete(deck.spot);   // (a park's: its rack fills again)
   if (mine) { delete owner.profile.board; store.touch(); world.notify(owner, 'Your skateboard snapped in two - it\'s done. Buy another at a skate, surf or sports shop.', 'bad'); }
@@ -202,11 +215,17 @@ function inPark(world, n, x, y) {
   return !q || (tx >= q.x - pad && ty >= q.y - pad && tx < q.x + q.w + pad && ty < q.y + q.h + pad);
 }
 function giveBack(world, p, ped) {
-  const deck = ped.board.deck, q = spots(world)[deck.park];
+  const deck = ped.board.deck;
   hopOff(world, ped, false);
+  giveBackDeck(world, p, deck);
+}
+// a park's board taken out past the park, ridden or carried (gear.js): back on its rack (put out once nobody's looking)
+export function giveBackDeck(world, p, deck) {
+  const q = spots(world)[deck.park];
   if (deck.spot != null && world.boardParked) world.boardParked.delete(deck.spot);
   world.notify(p, `That's ${q ? q.name.replace(/^The /, 'the ') : 'the park'}'s board - it only serves the park. Back on its rack it goes.`, 'info');
 }
+export const borrowedOut = (world, deck, x, y) => !!(deck && deck.park != null && !inPark(world, deck.park, x, y));
 
 // After the step (players.js applyInput): a hard hit throws you off, and so does a trick gone wrong; the water, a doorway
 // or rough ground takes you off; what the tricks did this step scores (score)
@@ -227,9 +246,11 @@ export function after(world, p, ped, dt) {
   if (air || grinding(ped)) return;   // (in the air, up on a rail: nothing under the wheels)
   if (boardGround(t) === 2) {
     ped.board.rough += dt;
-    if (ped.board.rough >= BAIL.roughS) {
-      hopOff(world, ped);
-      if (world.time - (p.boardNoteAt ?? -99) > NOTE_S) { p.boardNoteAt = world.time; world.notify(p, 'Too rough to ride - you step off.', 'info'); }
+    if (ped.board.rough >= BAIL.roughS) {   // (off, with the board in your hand - never left stranded on the grass: the owner, 11-17)
+      const deck = ped.board.deck;
+      hopOff(world, ped, false);
+      gear.carry(world, p, ped, deck);
+      if (world.time - (p.boardNoteAt ?? -99) > NOTE_S) { p.boardNoteAt = world.time; world.notify(p, 'Too rough to ride - you pick your board up. Back on a road, a sidewalk or a plaza, the vehicle button and you\'re on it again.', 'info'); }
     }
   } else ped.board.rough = 0;
 }
@@ -293,12 +314,27 @@ function beside(m, p, n) {
 }
 // a board on the ground, the dropped ones and yours: put out, landed, taken home (every tick - world.js SYSTEMS)
 export function update(world) {
+  if (world.boardSlides && world.boardSlides.length) world.boardSlides = world.boardSlides.filter((id) => slide(world, id));
   if (world.boardLand && world.boardLand.length) {   // (a bail's board landing where it stopped)
     const due = world.boardLand.filter((q) => world.time >= q.at);
     if (due.length) { world.boardLand = world.boardLand.filter((q) => world.time < q.at); for (const q of due) putDown(world, q.deck, q, q.a, q.lz); }
   }
   if (world.tick % 15 === 9) setOut(world);
   if (world.tick % 40 === 21) tidy(world);
+}
+// A bail's board skidding to where it stops (v.slide: from, to, its spin, how long): easing off, spinning down; there, a
+// snapped one breaks (the page: SNAPPED - client/skate.js) and is gone. true: still going.
+function slide(world, id) {
+  const v = world.get(id), s = v && !v.removed && v.slide;
+  if (!s) return false;
+  const u = Math.min(1, (world.time - s.t0) / s.T), f = 1 - (1 - u) * (1 - u);
+  v.x = s.x0 + (s.x1 - s.x0) * f; v.y = s.y0 + (s.y1 - s.y0) * f; v.a = s.a0 + s.spin * f; v.vx = 0; v.vy = 0;
+  world.place(v);
+  if (u < 1) return true;
+  v.slide = null;
+  if (s.snap) world.emit(v.x, v.y, { e: 'skbail', id: s.by, x: Math.round(v.x), y: Math.round(v.y), snap: s.snap });
+  if (s.snap === 1) world.remove(v);
+  return false;
 }
 // the boards at their spots round each player, put out where nobody's looking (as the carts: traffic.js)
 function setOut(world) {
@@ -367,12 +403,8 @@ export function bringOut(world, p, at) {
   delete prof.board.at;
   return putDown(world, { owner: p.pid, ownerName: p.name, paint: prof.board.paint, variant: prof.board.variant, wear: prof.board.wear || 0 }, spot, 0);
 }
-// your own board lying on the ground, picked up (gear.js: into your hand) - the deck it is, and it's off the ground
-export function pickUp(world, v) {
-  const deck = { owner: v.owner || null, ownerName: v.ownerName || null, paint: v.paint, variant: v.variant, wear: v.wear || 0 };
-  world.remove(v);
-  return deck;
-}
+// a board lying on the ground (yours, or nobody's) picked up (gear.js: into your hand) - the deck it is, off the ground
+export function pickUp(world, v, ped) { return takeUp(world, v, ped); }
 export { putDown, feet };
 // A skateboard in the bag (an old bag's, before 2026-10-24; one found in someone's pack): since 2026-11-04 it stays there -
 // your own board, carried (gear.js sync keeps profile.board in step with it)

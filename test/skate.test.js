@@ -555,3 +555,75 @@ test('the kick\'s frames and the tricks\' poses build, each frame its own; the b
   const back = boardIn({}, snap.self);
   for (const k of Object.keys(s)) assert.ok(Math.abs(back[k] - s[k]) < 1e-3, `${k}: ${back[k]} (sent ${s[k]})`);
 });
+
+// ---- carried, never stranded; the bail's one board (the owner, 11-17) -----------------------------------------------
+// "Ride a skateboard off the pavement onto grass and it stops; you can't pick it up ... the board is left stranded";
+// "a tiny pale placeholder board flies out ... then the board you can pick up again is a different, full-size one".
+import * as gear from '../server/systems/gear.js';
+const grassRun = () => {   // a paved run of 10 tiles ending at grass: [start x, y, the grass x]
+  for (let ty = M.y0 + 20; ty < M.y0 + M.h - 20; ty++) for (let tx = M.x0 + 20; tx < M.x0 + M.w - 20; tx++) {
+    if (M.tileAt(tx, ty) !== T.GRASS || M.tileAt(tx + 1, ty) !== T.GRASS || M.tileAt(tx + 2, ty) !== T.GRASS) continue;
+    let ok = true;
+    for (let k = 1; k <= 10 && ok; k++) for (const dy of [-1, 0, 1]) if (boardGround(M.tileAt(tx - k, ty + dy)) !== 0) ok = false;
+    if (ok) return [(tx - 10 + 0.5) * TILE, (ty + 0.5) * TILE, (tx + 1.5) * TILE];
+  }
+  return null;
+};
+test('rolled onto the grass you step off with the board in your hand - none left lying there; back on the pavement the vehicle button and you\'re on it', () => {
+  const g = grassRun();
+  assert.ok(g, 'a paved run onto the grass');
+  const p = rider(g[0], g[1]);
+  hold(p, 0.1, 1, 0, 0, IN.VEHICLE);
+  assert.ok(skate.riding(p.ped));
+  hold(p, 3, 1, 0);
+  assert.ok(!skate.riding(p.ped), 'onto the grass: off');
+  assert.ok(gear.holding(p.ped, 'skate'), 'the board in your hand');
+  assert.equal(boardsNear(p.ped.x, p.ped.y, 300).length, 0, 'none left lying on the grass');
+  hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+  assert.ok(!skate.riding(p.ped) && gear.holding(p.ped, 'skate'), 'on the grass the vehicle button can\'t put you on it: still in your hand');
+  assert.ok(!(p.profile.inventory.skateboard > 0), 'not yours: never in your bag');
+  teleport(W, p.ped, g[0], g[1]);
+  hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+  assert.ok(skate.riding(p.ped) && !p.ped.held, 'on the pavement: on it again');
+  leave(p);
+});
+test('a board nobody owns lying on the grass: the action button picks it up; it never goes in your bag - the action button sets it down', () => {
+  const g = grassRun();
+  const p = rider(g[2], g[1], { board: false });
+  const v = W.spawnVehicle('skateboard', g[2], g[1] + 10, 0, { npcOwned: false }); v.parked = false;
+  const gi = gear.groundInteraction(W, p);
+  assert.ok(gi && /Pick up the skateboard/.test(gi.label), `the prompt: ${gi && gi.label}`);
+  gi.run();
+  assert.ok(gear.holding(p.ped, 'skate') && v.removed, 'up off the grass into your hand');
+  const li = gear.lateInteraction(W, p);
+  assert.ok(li && /Put the skateboard down/.test(li.label), `not "in your inventory": ${li && li.label}`);
+  li.run();
+  assert.ok(!p.ped.held && !(p.profile.inventory.skateboard > 0), 'down again, nothing in the bag');
+  assert.equal(boardsNear(p.ped.x, p.ped.y, 60).length, 1, 'lying at your feet');
+  leave(p);
+  // on the pavement the prompt by one stays the one to get on it
+  const q = rider(ROAD.x + 300, ROAD.y);
+  assert.equal(gear.groundInteraction(W, q), null, 'on the pavement: no "pick up" - the vehicle button gets you on');
+  leave(q);
+});
+test('a bail: the board you were on skids off from under you, spinning, to where it stops - one board all the way', () => {
+  const p = rider(ROAD.x + 1500, ROAD.y);
+  hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+  assert.ok(skate.riding(p.ped));
+  const ped = p.ped; ped.a = 0; ped.vx = 320; ped.vy = 0;
+  const x0 = ped.x;
+  skate.bail(W, ped, 0, false);
+  let [b] = boardsNear(x0, ped.y, 40);
+  assert.ok(b && b.slide, 'the board itself, at once, where you were');
+  assert.equal(boardsNear(x0 + 80, ped.y, 160).length, 1, 'just the one');
+  const id = b.id, a0 = b.a, xs = [b.x];
+  for (let i = 0; i < 40; i++) { W.step(); const v = W.get(id); if (v) xs.push(v.x); }
+  b = W.get(id);
+  assert.ok(b && !b.removed && !b.slide, 'come to rest: the same board');
+  assert.ok(b.x - x0 > 40, `skidded off the way you were going (${Math.round(b.x - x0)} px)`);
+  assert.ok(xs.every((x, i) => i === 0 || x >= xs[i - 1] - 0.01), 'easing off, never back');
+  assert.ok(Math.abs(b.a - a0) > 1, 'spun on the way');
+  assert.ok(!(W.boardLand || []).length, 'no second board to land');
+  assert.equal(boardsNear(x0 + 80, ped.y, 160).length, 1, 'still just the one');
+  leave(p);
+});

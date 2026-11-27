@@ -1175,12 +1175,7 @@ function onEvent(ev) {
     case 'thud': sfx('thud', distVol(ev.x, ev.y)); break;
     case 'skbank': case 'skbail': if (S.skate) S.skate.onEvent(ev, fx); break;   // (a skate combo banked, or lost: client/skate.js)
     case 'ollie': { const e = S.ents.get(ev.id); if (e) { e._oa = now; e._od = ev.d || 0.55; e._oh = ev.h ?? 15; e._oh0 = ev.h0 || 0; } break; }   // (an air on a board: how long, how high - server skate.js)
-    case 'bail': {   // thrown off a skateboard (server skate.js): the board shoots off the way they were going, spinning, and lies there a moment
-      const a = ev.a || 0, sp = 60 + (ev.v || 0) * 0.55;
-      fx.chunk(boardImg(), 0, 0, 22, 8, 20, 7, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 70, (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 5), 1.6);
-      const c = fx.chunks[(fx.ci + fx.chunks.length - 1) % fx.chunks.length]; if (c) c.a = a;
-      break;
-    }
+    case 'bail': break;   // thrown off a skateboard: the board itself skids off on the server (skate.js slide) - no stand-in here (the owner, 11-17)
     case 'door': sfx('door', distVol(ev.x, ev.y)); break;
     case 'deposit': fx.ring(ev.x, ev.y - 20, 26, 'rgba(61,220,132,'); sfx('cash', distVol(ev.x, ev.y)); fx.floatText(ev.x, ev.y - 40, `Banked $${ev.n}`, '#3ddc84'); break;
     case 'loot': case 'cash': fx.ring(ev.x, ev.y, 20, 'rgba(120,255,160,'); sfx('cash', distVol(ev.x, ev.y)); if (ev.n) fx.floatText(ev.x, ev.y - 18, `+$${ev.n}`, '#7fe07f'); break;

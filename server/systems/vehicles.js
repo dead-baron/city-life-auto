@@ -655,7 +655,7 @@ export function acrossBridge(map, ped, v) {
 export function nearestVehicle(world, ped, range, noBoard = false) {   // (noBoard: past the skateboards on the ground)
   let best = null, bestD = Infinity;
   for (const v of world.query(ped.x, ped.y, range + 100, K.VEH)) {
-    if (!sameLevel(v.lz, ped.lz) || aircraft.inAir(v) || (noBoard && (v.def.board || v.def.surfboard)) || v.def.trailer) continue;   // (a trailer: never driven - rigs.js)   // (an aircraft overhead: out of reach - no Act prompt for it)
+    if (!sameLevel(v.lz, ped.lz) || aircraft.inAir(v) || (noBoard && (v.def.board || v.def.surfboard)) || v.def.trailer || v.slide) continue;   // (a trailer: never driven - rigs.js)   // (an aircraft overhead: out of reach - no Act prompt for it)
     if (acrossBridge(world.map, ped, v)) continue;   // (up on a bridge's deck and down on the water under it: out of reach)
     const h = circleVsObb(ped.x, ped.y, range, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
     if (!h) continue;

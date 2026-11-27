@@ -5,7 +5,10 @@
 //     feet, lying on the ground or at home. In your hand (the bag's Use, the quick wheel, or the action button by it
 //     lying on the ground) it takes a hand: no fighting or shooting with it. The vehicle button rides it from your hand;
 //     the action button puts it back in the bag. A skate park's rack boards are only borrowed (skate.js after), and a
-//     board wears with each bail till it snaps (skate.js wearOut).
+//     board wears with each bail till it snaps (skate.js wearOut). Any board you can ride you can carry (the owner, 11-17:
+//     a board left stranded on the grass): rolled onto rough ground you step off with it in your hand, and the action
+//     button picks up one lying about that's yours or nobody's (a rack's, a free one by a shop) - one that isn't yours
+//     never goes in your bag: the action button sets it down, and a park's carried out of the park goes back on its rack.
 //   - A surfboard (surf.js) the same: in your inventory or your hand you swim like anyone; in the sea the action button (or
 //     the vehicle button with it in hand) sets it down and you're on it, paddling - faster than you swim. The action
 //     button slides you off again (it's in your hand), and up the beach you walk out with it. Set down on dry land (the
@@ -24,6 +27,7 @@
 import { K, T } from '../../shared/constants.js';
 import { WATER_T, PED_BLOCK, isSwimming } from '../../shared/mapcore.js';
 import { boardGround } from '../../shared/board.js';
+import { sameLevel } from '../../shared/levels.js';
 import { BLADES, RIDE_GEAR } from '../../shared/rules.js';
 import { ITEMS } from '../../shared/items.js';
 import { inAnyView } from '../view.js';
@@ -63,7 +67,7 @@ export function sync(world, p) {
   const prof = p.profile, inv = prof.inventory;
   if (!inv) return;
   // a skateboard: one in the bag is yours (an old bag's, one found in a pack: skate.js convert); gone from it, it's gone
-  if ((inv.skateboard || 0) > 0) { if (inv.skateboard > 1) inv.skateboard = 1; skate.convert(world, p); if (holding(p.ped, 'skate')) clearHeld(p.ped); }
+  if ((inv.skateboard || 0) > 0) { if (inv.skateboard > 1) inv.skateboard = 1; skate.convert(world, p); if (holding(p.ped, 'skate') && mine(p, p.ped.held.deck)) clearHeld(p.ped); }
   else if (prof.board && prof.board.at === 'bag') { delete prof.board; store.touch(); }
   // a surfboard the same (one in an older bag: yours, in the bag)
   if ((inv.surfboard || 0) > 0) {
@@ -93,6 +97,14 @@ function clearHeld(ped) {
   ped.appVer = (ped.appVer || 0) + 1;
   return h;
 }
+const sameLevelPed = (v, ped) => sameLevel(v.lz, ped.lz);
+const mine = (p, deck) => !!(deck && deck.owner === p.pid);   // (a board in your hand that's your own: the bag takes it)
+// a board you were riding into your hand (skate.js after: rolled onto rough ground)
+export function carry(world, p, ped, deck) {
+  if (ped.held) stow(world, p);
+  setHeld(ped, 'skate', deck || {});
+  p.meDirty = true;
+}
 const skateDeck = (p) => { const b = p.profile.board || {}; return { owner: p.pid, ownerName: p.name, paint: b.paint, variant: b.variant, wear: b.wear || 0 }; };
 // why your hands can't take a board now (null: they can)
 function busy(world, ped) {
@@ -120,7 +132,9 @@ export function take(world, p, k) {
 }
 // the board in your hand into the bag
 export function stow(world, p) {
-  const ped = p.ped, h = clearHeld(ped);
+  const ped = p.ped;
+  if (ped && ped.held && ped.held.k === 'skate' && !mine(p, ped.held.deck)) { setDown(world, p); return false; }   // (not yours: down at your feet)
+  const h = clearHeld(ped);
   if (!h) return false;
   const prof = p.profile;
   if (h.k === 'skate') { if (!prof.board) prof.board = { paint: h.deck.paint, variant: h.deck.variant }; prof.board.at = 'bag'; prof.board.wear = h.deck.wear || 0; }
@@ -139,11 +153,12 @@ export function setDown(world, p) {
 // skateboard - the vehicle button rides that). Someone else's stays where it is.
 export function pickUp(world, p, v) {
   const ped = p.ped, k = v.def.surfboard ? 'surf' : 'skate';
-  if (v.owner !== p.pid) { world.notify(p, `That's someone's ${NAME[k]}.`, 'warn'); return false; }
+  if (v.owner !== p.pid && !(k === 'skate' && !v.owner)) { world.notify(p, `That's someone's ${NAME[k]}.`, 'warn'); return false; }   // (a skateboard nobody owns - a rack's, a free one: anyone's to carry)
+  if (v.slide) return false;   // (a bail's board still skidding: skate.js)
   const why = busy(world, ped);
   if (why) { world.notify(p, why, 'warn'); return false; }
   if (ped.held) stow(world, p);
-  if (k === 'skate') setHeld(ped, k, skate.pickUp(world, v));
+  if (k === 'skate') setHeld(ped, k, skate.pickUp(world, v, ped));
   else { world.remove(v); p.profile.surfboard = { at: 'out' }; setHeld(ped, k); }
   p.meDirty = true;
   return true;
@@ -314,8 +329,10 @@ export function interaction(world, p) {
 export function groundInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.vehId || ped.dead || ped.board || ped.surf || isSwimming(world.map, ped)) return null;
-  const lying = world.query(ped.x, ped.y, 40, K.VEH).find((v) => v.def.board && v.owner === p.pid && !v.removed);
-  if (lying) return { label: 'Pick up your skateboard', run: () => pickUp(world, p, lying) };
+  // (yours anywhere; one nobody owns where it can't be ridden - on the grass, dirt or sand: elsewhere the prompt is to get on it)
+  const rough = (v) => boardGround(world.map.tileAtPx(v.x, v.y)) === 2 || boardGround(world.map.tileAtPx(ped.x, ped.y)) === 2;
+  const lying = world.query(ped.x, ped.y, 40, K.VEH).find((v) => v.def.board && !v.removed && !v.slide && sameLevelPed(v, ped) && (v.owner === p.pid || (!v.owner && rough(v))));
+  if (lying) return { label: lying.owner === p.pid ? 'Pick up your skateboard' : 'Pick up the skateboard', run: () => pickUp(world, p, lying) };
   if ((wearing(ped) || inBag(p, 'blades')) && !ped.carrying) {
     const b = benchBy(world, ped);
     if (b) return { label: `${wearing(ped) ? 'Take off' : 'Put on'} your rollerblades (sit, ${BLADES.laceS} s)`, run: () => lace(world, p, b, !wearing(ped)) };
@@ -326,6 +343,7 @@ export function lateInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.vehId || ped.dead) return null;
   if (ped.surf) return ped.surf.st === 'pad' ? { label: 'Slide off your surfboard', run: () => surf.stop(world, p, 'hand') } : null;
+  if (ped.held && ped.held.k === 'skate' && !mine(p, ped.held.deck)) return { label: 'Put the skateboard down', run: () => setDown(world, p) };   // (not yours: never in your bag)
   if (ped.held) return { label: `Put the ${NAME[ped.held.k]} in your inventory`, run: () => stow(world, p) };
   return null;
 }
@@ -378,7 +396,8 @@ export function update(world) {
       else if (world.time >= ped.lacing.until) laced(world, p, ped);
     }
     if (ped.held) {
-      if (ped.dead) setDown(world, p);
+      if (ped.held.k === 'skate' && skate.borrowedOut(world, ped.held.deck, ped.x, ped.y)) skate.giveBackDeck(world, p, clearHeld(ped).deck);   // (a park's board: it only serves the park)
+      else if (ped.dead) setDown(world, p);
       else if (ped.vehId || ped.hidden || ped.onTrain || ped.ride || ped.carrying || ped.cuffed || ped.board || ped.surf || ped.sky || ped.ug) stow(world, p);
     }
     grass(world, p, ped);
