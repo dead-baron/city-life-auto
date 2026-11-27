@@ -1546,3 +1546,9 @@ export const VEH_FIRE = { exposeS: 2.5, coolRate: 0.5, burnS: 12, dps: 0.04, cra
 // first time or two, then little for a while. NPCs matter less"; server combat.js stunFor): within windowS seconds of the
 // first, a player takes full stuns, the rest at after of their length (NPCs always the full stun).
 export const STUN_RESIST = { full: 2, windowS: 60, after: 0.25 };
+
+// The dog runs (server/systems/dogrun.js; the owner, 11-25): how a dog off its lead spends its time - throwChance: the
+// chance, each time it's done nosing about a spot, that its owner throws the ball; throwPx: how far (px); flightS: the
+// ball's time in the air; roamS: seconds at a spot nosing about; trot / run / back: its speed (of a person's walk) about
+// the run, after the ball, bringing it back; happyS: hopping about its owner with the ball dropped.
+export const DOGRUN = { throwChance: 0.45, throwPx: [120, 260], flightS: 0.9, roamS: [2, 5], trot: 0.7, run: 1.5, back: 1.1, happyS: 1.6 };

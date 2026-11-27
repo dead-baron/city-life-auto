@@ -57,6 +57,7 @@ import { wildStyle } from './wildlife.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { BUILDS } from '../entities.js';
 import { courtHoops } from '../../shared/hoops.js';
+import * as dogrun from './dogrun.js';
 import { pointAt } from '../../shared/geom.js';
 import { DISTRICTS } from '../../shared/mapcore.js';
 import { foodLayout, foodSeats } from '../../shared/foodrooms.js';
@@ -97,6 +98,7 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   skaters: { day: 0.85, night: 0.4, cap: 1 },
   stoop: { day: 0.18, night: 0.45, cap: 2 },
   party: { day: 0.08, night: 0.55, cap: 1 },
+  dogrun: { day: 0.85, night: 0.15, cap: 1 },   // (a dog run's owners and their dogs off the lead, playing fetch: dogrun.js - the owner, 11-25)
   roadcrew: { day: 0.9, night: 0, cap: 1 },
   site: { day: 0.9, night: 0, cap: 1 },   // (a building site's crew out front - batch 8)
   market: { day: 0.95, night: 0.75, cap: 2 },   // (a market lane's stall keepers and shoppers - the craft pass, 11-15)
@@ -280,6 +282,13 @@ export function spotsOf(map) {
     list.push({ k: 'skaters', x, y, a: 0, box, seats: q.seats || [], qps, wild: false }); taken.push({ x, y });
   }
   for (const q of map.partySpots || []) { list.push({ k: 'party', x: q.x, y: q.y, a: 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
+  // the dog runs (World v3's fenced places found by their DOG RUN sign or agility gear: shared/world3-fenceexits.js)
+  for (const q of (map.world3 && map.world3.fenceExits && map.world3.fenceExits.places) || []) {
+    if (q.kind !== 'dogrun' || !q.box) continue;
+    const [x0, y0, x1, y1] = q.box, run = [x0 * TILE + 20, y0 * TILE + 20, (x1 + 1) * TILE - 20, (y1 + 1) * TILE - 20], x = (run[0] + run[2]) / 2, y = (run[1] + run[3]) / 2;
+    if (run[2] - run[0] < 96 || run[3] - run[1] < 64 || !walkable(map, x, y)) continue;
+    list.push({ k: 'dogrun', x, y, a: 0, run, wild: false }); taken.push({ x, y });
+  }
   for (const q of map.vendorSpots || []) if (walkable(map, q.x, q.y)) list.push({ k: 'vendor', x: q.x, y: q.y, a: q.a || 0, wild: false });
   for (const q of map.hangSpots || []) if (walkable(map, q.x, q.y)) list.push({ k: 'hang', x: q.x, y: q.y, a: q.a || 0, n: q.n || 4, line: q.line || null, wild: false });
   for (const q of map.crewSpots || []) { list.push({ k: 'roadcrew', x: q.x, y: q.y, a: q.a || 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
@@ -403,6 +412,8 @@ function members(s) {
   } else if (s.k === 'pickers') {   // down along the rows, picking into a crate
     out.push({ x: s.x - 22, y: s.y, a: s.a, arche: 'farmer', gt: 'kneel', pp: 'crate' });
     out.push({ x: s.x + 22, y: s.y + 6, a: s.a, arche: 'farmer', gt: 'kneel' });
+  } else if (s.k === 'dogrun') {    // two or three owners about the run, each with a dog off the lead (dogrun.js)
+    out.push(...dogrun.members(s, rng));
   } else if (s.k === 'hoops') {     // two to four round the key, facing the rim (shooting around: hoopSpot)
     const n = 2 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) { const q = hoopSpot(s, i, n); out.push({ x: q.x, y: q.y, a: q.a, arche: rng() < 0.6 ? 'athlete' : 'casual', hoop: i }); }
@@ -580,6 +591,7 @@ export function fill(world, s, opts = {}) {
     const b = world.add({ id: world.newId(), kind: K.BALL, x: h.x, y: h.y, a: 0, z: 0, vx: 0, vy: 0, vz: 0, ballKind: 'pickup', cx: -1, cy: -1 });
     Object.assign(g, { ball: b.id, hold: 0, phase: 'dribble', t0: world.time, until: world.time + 1 + rng() * 2, turn: 0, spot: s });
   }
+  if (s.k === 'dogrun') dogrun.begin(world, g, s);   // (the dogs off their leads: dogrun.js)
   if (s.k === 'pool') { g.table = s.table; poolnpc.begin(world, g, rng); }
   if (s.k === 'cards') { g.floor = s.floor; casinofloor.begin(world, g, rng); }   // (the games at its tables: casinofloor.js)   // (a real game on the table: poolnpc.js)
   A.set(s.id, g);
@@ -755,7 +767,7 @@ export function update(world) {
   // every tick: away from their spot (running from trouble, stopped to watch it), the pose and the prop are put down -
   // nobody sits in mid air
   for (const g of A.values()) {
-    if (g.k === 'hoops') stepPickup(world, g); else if (g.k === 'pool') poolnpc.step(world, g, rng); else if (g.k === 'cards') casinofloor.step(world, g, rng);
+    if (g.k === 'hoops') stepPickup(world, g); else if (g.k === 'pool') poolnpc.step(world, g, rng); else if (g.k === 'cards') casinofloor.step(world, g, rng); else if (g.k === 'dogrun') dogrun.step(world, g, rng);
   }
   for (const g of A.values()) for (const i of g.ids) {
     const e = world.get(i);
@@ -775,6 +787,7 @@ function fillRound(world) {
     if (g.ids.length && near) continue;
     if (!near) for (const i of g.ids) { const e = world.get(i); if (e && e.pet) { if (!inAnyView(world, e.x, e.y, 32)) world.remove(e); } else if (e && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e); else if (e) { e.npc.act = null; e.gt = e.pp = null; e.cv = null; e.fishing = null; e.chop = null; e.appVer = (e.appVer || 0) + 1; } }
     if (g.ball) { const b = world.get(g.ball); if (b && !b.removed) world.remove(b); }   // (the pickup game's ball)
+    if (g.k === 'dogrun') dogrun.end(world, g);   // (a tennis ball still in play)
     A.delete(id);
     (world.actRest ||= new Map()).set(id, now + (g.ids.length ? 30 : 240));   // (emptied by a scare: a good while before it's on again)
   }

@@ -28370,3 +28370,15 @@ take the full stun every time. Test: `test/stunresist.test.js`.
   you show as an x-ray silhouette up on its roof, above the sign - in the 3/4 view, a jump up and over the front. For
   the renderer's work (logged in the pre-beta list): keep the walker drawn at the door, or the roof faded, until the
   inside is ready - or start the cut-away bake sooner.
+
+## 2026-11-26 · The dog runs: owners and their dogs off the lead, playing fetch (the owner, 11-25 00:47) - branch `rules-1126`
+"The dog run area doesnt have any dogs or NPCs walkings dogs or playing fetch with dogs". World v3's dog runs (the
+fenced places `world3-fenceexits.js` finds by their DOG RUN sign or agility gear) are now an activity spot
+(`activities.js` 'dogrun': by day 85%, at night 15%, one round a player): two or three owners stood about inside, each
+with a dog off the lead (`server/systems/dogrun.js`): it noses about the run, a new spot every few seconds; now and
+then its owner throws a tennis ball across the run (a K.BALL 'tennis', drawn as the tennis ball), it runs for it, brings
+it back in its mouth and hops about its owner (APOSE.happy), then off again (`shared/rules.js` DOGRUN). An owner scared
+off their spot calls the dog back onto the lead (personas.js walks it at heel). Each dog's game is its own; the group
+stays together (his rule for animal groups, 11-25). Not done from the same note: more dog walkers by district, cats on
+stoops and in alleys. Test: `world3server.test.js` (the dog runs found and filled, every stage of fetch seen, the lead
+back on a scare).

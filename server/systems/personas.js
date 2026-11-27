@@ -622,7 +622,7 @@ export function update(world, dt) {
       dog.npc.stopAt = 0; dog.npc.round = null; if (dog.pp === 'letters') dog.pp = null; if (dog.gt === 'kneel') dog.gt = null; dog.appVer = (dog.appVer || 0) + 1;
     }
     if (dog.kind === K.PED && dog.fishing && dog.fishing.npc && dog.npc && (dog.dead || (dog.npc.state !== 'wander' && dog.npc.state !== 'idle'))) dog.fishing = null;   // (trouble: the rod goes down)
-    if (dog.kind !== K.PED || !dog.pet || !dog.pet.walked) continue;
+    if (dog.kind !== K.PED || !dog.pet || !dog.pet.walked || dog.pet.run) continue;   // (pet.run: off the lead in a dog run - dogrun.js moves it)
     const w = world.get(dog.pet.walked);
     if (!w || w.removed || w.dead || w.vehId) {
       if (!inAnyView(world, dog.x, dog.y, 40)) { world.remove(dog); continue; }
