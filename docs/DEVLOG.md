@@ -28320,3 +28320,11 @@ server re-bakes (~5 h); players get a short reconnect.
   react as to gunfire, the police are called, the blast is the shooter's (`p.boomLive`). The first line stays the dev
   tool nobody reacts to. Not done (art, for the Fable list): the punching throw and glowing hands.
 - Test: `test/weapontune.test.js`.
+
+## 2026-11-26 · The stars that stopped coming: self-defense never against the police (the owner, 11-25: "Wanted level stops after a great deal of crime on a character made that day") - branch `rules-1126`
+Reproduced in a sim: once a cop had shot at you, killing that cop was "self-defense" (law.js immune: the victim had
+struck first) - so in a shootout no killing added heat, the stars cooled off and stopped; the same for a civilian who
+fought back after you attacked them. Now self-defense is never against the police, never for someone already wanted,
+and never when you started it - `onDamage` records who struck first (`started`) between a player and anyone (it did
+between two players only, for bounties). A clean character a stranger attacks first may still defend themselves.
+Test: `test/selfdefense.test.js`.
