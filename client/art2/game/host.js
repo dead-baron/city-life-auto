@@ -38,6 +38,7 @@ import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
 import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/constants.js';
 import { AIR_UP, washK } from '../../../shared/rules-page.js';
+import { PADDLE } from '../../../shared/rules-base.js';   // (a kayak's strokes: _paddleFr)
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate, underDeckAt } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { wadeBand, WB } from '../../../shared/physics.js';
@@ -1790,6 +1791,19 @@ export class World2 {
   // a tank's turret (H58: server tank.js): its own model at the hull's angle plus the turret's from it (the damage word's
   // top byte), over the pivot
   // (TURRET_TOP: the turret's top over the tank's ground - art2/vehicles.js 'tankturret', its aerial at 24 + 22)
+  // A kayak's stroke (people.js 'paddle': 0 left blade in, 1 pulled through, 2 right in, 3 through): yours where your
+  // paddling has it (the prediction's phase, shared/physics.js), anyone else's from how they're moving - still, the
+  // paddle rests where it was
+  _paddleFr(v, now) { return (v._pfr = this._paddleFr0(v, now)); }   // (kept on it for the splash of each stroke: sound/vehicles.js strokes)
+  _paddleFr0(v, now) {
+    const pr = this.S.pred;
+    if (pr && pr.s && this.S.ctrlId === v.id) return Math.floor((pr.s.pph || 0) * 4) & 3;
+    const dt = Math.min(0.2, Math.max(0, now - (v._pt ?? now))), sp = dt > 0 ? Math.hypot(v.rx - (v._px ?? v.rx), v.ry - (v._py ?? v.ry)) / dt : 0;
+    v._pt = now; v._px = v.rx; v._py = v.ry;
+    v._psp = (v._psp || 0) + (sp - (v._psp || 0)) * Math.min(1, dt * 4);
+    if (v._psp > 10 || Math.abs(v.av || 0) > 0.15) v._pph = ((v._pph ?? v.id * 0.37) + dt * PADDLE.rate * (0.55 + 0.45 * Math.min(1, v._psp / 160))) % 1;
+    return Math.floor((v._pph ?? 0) * 4) & 3;
+  }
   _turret(v, f, N, z0) {
     const A = this.A, a = v.ra + ((v.parent >>> 24) & 255) / 256 * TAU, hi = quant(a, N), st = A.vehState(f & (VF.WRECK | VF.BURN), 1, 1, 0);
     const d = v._tud || (v._tud = { m: v.d.m, p: v.d.p, vr: v.d.vr, tn: v.d.tn, tt: 1 });
@@ -2082,8 +2096,8 @@ export class World2 {
         const pass = (p.flags & PF.PASSENGER) !== 0, seat = !pass && def.seat !== undefined ? [def.seat, 0] : seats[p.back ? Math.min(seats.length - 1, 2 + nb++) : pass ? 1 : 0];   // (a bicycle: where its saddle is)
         const c = Math.cos(v.ra), s = Math.sin(v.ra), x = v.rx + c * seat[0] - s * seat[1], y = v.ry + s * seat[0] + c * seat[1];
         const pp = def.kind === 'boat' ? api.pedPose(p) : null, kneel = pp === 'kneel', angle = pp === 'fish';   // (angle: fishing over the side - you, or an angler's boat: server boats.js)
-        const d8 = dir8(kneel || angle ? p.ra ?? v.ra : v.ra), pose = def.cart ? (pass ? 'cartsit' : kick >= 0 ? 'cartkick' : 'cartride') : def.pedal ? 'pedal' : kneel ? 'kneel' : angle ? 'fish' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
-        const fr = pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : pose === 'cartkick' ? kick : pose === 'cartride' ? Math.floor(now * 2 + v.id) & 1 : pose === 'cartsit' && (v._csp || 0) > def.max * 0.55 && (now + v.id * 1.7) % 5 < 1.4 ? 1 : angle && api.fishFrame ? api.fishFrame(p) : 0, wpn = def.cart ? 0 : p.extra | 0;   // (in the basket at speed: now and then both arms up - CC02)
+        const d8 = dir8(kneel || angle ? p.ra ?? v.ra : v.ra), pose = def.cart ? (pass ? 'cartsit' : kick >= 0 ? 'cartkick' : 'cartride') : def.pedal ? 'pedal' : def.paddle && !pass ? 'paddle' : kneel ? 'kneel' : angle ? 'fish' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
+        const fr = pose === 'paddle' ? this._paddleFr(v, now) : pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : pose === 'cartkick' ? kick : pose === 'cartride' ? Math.floor(now * 2 + v.id) & 1 : pose === 'cartsit' && (v._csp || 0) > def.max * 0.55 && (now + v.id * 1.7) % 5 < 1.4 ? 1 : angle && api.fishFrame ? api.fishFrame(p) : 0, wpn = def.cart ? 0 : p.extra | 0;   // (in the basket at speed: now and then both arms up - CC02)
         const was = this.sprPrio;
         if (p.id === myPed) this.sprPrio = -3;
         const bo = bladeOpt(p, wpn);

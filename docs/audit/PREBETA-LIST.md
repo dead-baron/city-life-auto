@@ -204,6 +204,7 @@ Fable chat's world-art work. The table as it stood:
 | The raceway (Westport oval) and the water races | Three laps for anything with wheels; a jetski sprint and a boat classic at Pelican Key; join at the start, checkpoints, forfeits | Markers that belong (not floating cones), the grid, better tracks (design first) | Keep the races; the markers are art - put them on the Fable list |
 | Tennis | A game against the club pro on any court: serve, rallies, tennis scoring | Rackets in hand with a swing (art and animation) | Keep - the swing is the people pass |
 | Kayak racing | The Redwood River Run: gates down the river, kayaks hired at its dock (races.js, world3-riverrun.js); the MX park's dirt laps too | Sitting in it, paddle strokes (C: Kayak) | Hide the race until the paddling's done; keep kayaks to ride |
+| | **DONE 11-27:** paddled (strokes, glide, slow turns; seated, the double paddle) - the race is back (DEVLOG 11-27) | | |
 | The cinema (Grand Theatre) | Tickets, seats, films on the screen, NPCs watching (no lobby music since 11-17) | The owner's redesign (section "The cinema", 11-17) | Owner's call: keep as is for the beta, redesign after |
 
 

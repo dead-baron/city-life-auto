@@ -1511,6 +1511,7 @@ export const FENCE_SMASH = { low: 150, tall: 230, lowKeep: 0.85, tallKeep: 0.7 }
 
 
 export { WADE } from './rules-base.js';   // (vehicles in the water: shared/physics.js wade - its note is in rules-base.js)
+export { PADDLE } from './rules-base.js';   // (a kayak's strokes: shared/physics.js - its note is in rules-base.js)
 
 // What a vehicle smashes hurts it, by how solid it is and how fast it hit (the owner, 11-25 01:00: "you can run over
 // infinite things apparently ... after running through enough destructible objects (judging on the size and impact ...
