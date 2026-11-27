@@ -28458,3 +28458,28 @@ switch, `docs/PRIVATE-REPO.md` has the steps:
 Tests: `buildplay.test.js` (what's in, what's out, every import resolved, the copy, the server's roots); publish-play.sh
 run end to end against a local bare repository (published, then nothing to do the second time).
 
+## 2026-11-27 · NPC reactions, part 1: civilians climb a ladder instead of fight-or-flee (the owner's go, 11-27)
+His note (11-25 00:33): "not just automatically attack ... sometimes take cover, react not with violence first, react
+scared and run off, react cautious". The design (docs/tasks/NPC-REACTIONS-DESIGN-2026-11-26.md) in four parts; this is
+the first - civilians on foot (`server/systems/react.js`, `REACT` in shared/rules.js):
+- **Temperament** (once per person): timid (seniors, socialites, executives), ordinary, tough (builders, athletes,
+  hustlers, the personas' tough ones), armed (carrying a gun). A rough district (tier rough / red) makes about half a
+  notch bolder, a rich one (lux) a notch more timid; each person a notch either way now and then (seeded by who they are).
+- **How bad it is** sets where they start: a shove (fists) 1, a weapon (a blade swung at them, a gun pointed at them) 2,
+  gunfire 3. The same person again within 20 s: a step further.
+- **The steps:** back off / warn - hands up (the art's 'handsup' pose: `hu` in the descriptor), backing away facing you,
+  a word ("Whoa, easy!"); a tough one squares up instead ("Back off.") and swings if you step in or hit again. Run, hide
+  or call it in - away, or down behind a parked car (round its end if it's in the way) or tucked against a wall close by
+  on the far side, crouched (`cr`: the 'kneel' pose); some on the phone as they go (the call is law.js's witness report).
+  Draw - an armed one holds the gun on you ("Drop it!"), no shot, then lowers it; again and it's a fight. Fight.
+- **Where:** hit (npc.js onAttacked - after the police, gangs, bikers, bouncers, counter staff, a gang war's and a street
+  fight's own ways, all as they were), shots near them (onGunfire: the tough stare from further off, the filming kept),
+  carjacked (onCarjacked: the timid run screaming, most back off, the tough and the armed come for you), and a gun
+  pointed at them (react.js update: a player aiming within 260 px and 0.35 rad - hands up, "Don't shoot!").
+- Word bubbles kept to two at a time within 300 px. The Guide: "How people react" (Crime).
+- **Found on the way:** an NPC knocked down or stunned on its feet slid with no walls (combat.js: the airborne slide
+  collided, this one didn't) - a punch could push someone into a building, stuck there for good (both fighters froze in
+  a street fight, `brawls.test.js`). It collides now.
+Tests: `npcreact.test.js` (7: timid / ordinary, tough, armed, gunfire and cover, a gun pointed, carjacks, temperament);
+brawls, reactions, core, streetlife, activities, crime, law, police, custody, struggle, gangs, bikers, nightclubs,
+personas and others (~280).

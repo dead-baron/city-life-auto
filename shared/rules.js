@@ -1555,3 +1555,33 @@ export const STUN_RESIST = { full: 2, windowS: 60, after: 0.25 };
 // calmS: sat still that long before it looks about (or pads back to its spot, pad its speed); run its dart's speed.
 export const DOGRUN = { throwChance: 0.45, throwPx: [120, 260], flightS: 0.9, roamS: [2, 5], trot: 0.7, run: 1.5, back: 1.1, happyS: 1.6,
   cats: { shyPx: 70, dartPx: [80, 140], dartS: 2.5, calmS: 6, run: 1.7, pad: 0.45 } };
+
+// ---- NPC reactions: a ladder, not fight-or-flee (the owner's go, 11-27; docs/tasks/NPC-REACTIONS-DESIGN-2026-11-26.md;
+// server/systems/react.js) - part 1, civilians on foot. Every reaction climbs the same steps - 2 back off / warn, 3 run,
+// hide or call it in, 4 draw (an armed one: the weapon on you, no shot yet), 6 fight - and a person's temperament says
+// how far up they go: timid (0) stop at 3, ordinary (1) at 2 for a shove and 3 for worse, tough (2) warn and then use
+// their fists, armed (3: carrying a weapon) draw first. How bad it is (sev: 1 a shove, 2 a weapon - a blade swung, a gun
+// pointed at them - 3 gunfire) sets where they start. Again from the same one within memoryS: a step further.
+export const REACT = {
+  // the temperament by kind of person (the rest ordinary); a persona's tough ones are tough (personas.js)
+  temper: { senior: 0, socialite: 0, executive: 0, drunk: 1, sweeper: 1, casual: 1, hustler: 2, construction: 2, athlete: 2 },
+  rough: 0.55, lux: 0.55,     // a rough district (tier rough / red) makes someone a notch bolder this often, a rich one (lux) a notch more timid
+  spread: 0.15,               // and each person their own way: a notch either side this often (seeded by who they are)
+  memoryS: 20,                // the same one again within this: a step further up
+  warnS: 2.4, warnPx: 38,     // backing off, hands up or squared up: how long; closer than this and it's over - run (or a tough one swings)
+  backPx: 0.4,                // backing off: at this share of a walk
+  hidePx: 70, hideS: 9,       // cover within this (a parked car, a wall) on the far side from the trouble: crouched there this long
+  hideChance: 0.6,            // of those who'd run with cover that close, this many hide instead
+  callChance: [0.5, 0.35, 0.15, 0.1],   // by temperament: on the phone to the police as they run or hide (the call is law.js's witness report)
+  callS: 6,
+  drawS: [1.6, 2.6],          // armed: the weapon up and on them this long before any shot (step 4) - unless they hit again
+  aimPx: 260, aimCone: 0.35,  // a gun pointed at someone within this and this many radians of them: they've seen it (sev 2)
+  sayGap: 1.6, sayNear: 300, saySame: 2,   // word bubbles: no more than this many within this many px in this many seconds
+  lines: {
+    warn: ['Whoa, easy!', 'Hey - I don\'t want trouble!', 'Okay, okay!', 'Take it easy!'],
+    tough: ['Back off.', 'Walk away.', 'You want some?', 'Not today.'],
+    draw: ['Drop it!', 'Back off - now!', 'Don\'t make me do this!'],
+    aim: ['Don\'t shoot!', 'Please - easy!', 'Whoa whoa whoa!'],
+    hide: ['Get down!', 'Somebody call the cops!'],
+  },
+};

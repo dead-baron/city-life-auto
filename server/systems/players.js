@@ -1187,6 +1187,7 @@ export function pedFlags(world, ped) {
   if (now < ped.aimUntil) f |= PF.AIM;
   if (ped.rollT > 0) f |= PF.ROLL;
   if (ped.carrying || ped.handsUp) f |= PF.CARRY; // carry pose doubles as hands-up for a held-up clerk
+  { const dk = (ped.handsUp ? 1 : 0) | (ped.crouch ? 2 : 0); if (dk !== (ped._dk | 0)) { ped._dk = dk; ped.appVer = (ped.appVer || 0) + 1; } }   // (hands up, crouched behind cover: in the descriptor - hu, cr - so it's sent again when they change: react.js)
   if (ped.vehId) f |= PF.INVEH;
   if (ped.bleeding || ped.limpUntil > now) f |= PF.BLEED; // (a limp leaves the same trail of blood)
   if (ped.player && ped.player.ghostUntil) f |= PF.GHOST;
