@@ -28301,7 +28301,10 @@ server re-bakes (~5 h); players get a short reconnect.
   (speed / 100)^1.5 / sqrt(mass), then the vehicle's toughness, on its front: a sedan into a tree at 400 px/s loses
   about a quarter of its health, a bench a twelfth, a bag nothing; twenty trash cans at speed do more than a tree. A
   horse tramples through unhurt; a bicycle minds only what weighs 0.5 or more (as before: only the heavy things).
-  Before, only the heavy kinds hurt at all, at most 14 a hit. Test: `smash.test.js` (every breakable kind has a weight).
+  Before, only the heavy kinds hurt at all, at most 14 a hit. **A player's vehicle only** (found by the whole suite:
+  the director's street race stopped, its racers wrecked by the furniture they plough through): the NPCs' and the
+  scenes' drivers keep the old dent from the heavy things. Test: `smash.test.js` (every breakable kind has a weight; an
+  NPC's car as before), `racers.test.js`.
 - **Fire** (`VEH_FIRE`, vehicles.js `ignite`, `flameOn`, `fireTick`): a flamethrower on a vehicle for 2.5 s of jet
   (cooling out of it) sets it alight; a hard crash (impact 220+) that leaves it under 30% catches it one time in three;
   under 15% it may catch on its own (3% a second). Alight it burns 12 s at 4% of its full health a second - a healthy

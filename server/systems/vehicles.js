@@ -6,7 +6,7 @@ import { K, T, VF, WEATHER } from '../../shared/constants.js';
 import { ugMapOf } from '../../shared/underground.js';
 import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput, horseWind } from '../../shared/physics.js';
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
-import { PED_BLOCK, WATER_T } from '../../shared/map.js';
+import { PED_BLOCK, WATER_T, HEAVY_PROPS } from '../../shared/map.js';
 import { sameLevel, levelStep } from '../../shared/levels.js';
 import { wadeBand, offroad, WB } from '../../shared/physics.js';
 import { WADE } from '../../shared/rules-base.js';
@@ -371,9 +371,13 @@ export function noteHit(v, zone, amt) {
 export const zoneAt = (v, x, y) => hitZone(v.x, v.y, v.a, v.def.L / 2, v.def.W / 2, x, y);
 export const zoneFrom = (v, dx, dy) => hitZone(v.x, v.y, v.a, 1, 1, v.x + dx, v.y + dy);
 // What a vehicle smashed hurts it (rules.js SMASH_HURT): by the kind's weight and the speed it hit at, on its front
+// - a player's: the NPCs' and the scenes' drivers (traffic, a street race, a chase) keep the old dent from the heavy things only,
+// so a race or a scene isn't stopped by the furniture it ploughs through (racers.test.js)
 export function smashHurt(world, v, kind, sp) {
-  const H = SMASH_HURT, w = H.w[kind] ?? H.def;
-  if (w <= 0 || !(sp > 0) || v.def.horse || (v.def.pedal && w < H.pedalMin)) return 0;   // (a horse tramples through unhurt; a bicycle only minds the solid things)
+  const H = SMASH_HURT, w = H.w[kind] ?? H.def, drv = v.seats[0] ? world.get(v.seats[0]) : null;
+  if (!(sp > 0) || v.def.horse) return 0;   // (a horse tramples through unhurt)
+  if (!drv || !drv.player) { if (!HEAVY_PROPS.has(kind)) return 0; const d = Math.min(14, sp * 0.03) / Math.sqrt(v.def.mass); damageVehicle(world, v, d, null); return d; }
+  if (w <= 0 || (v.def.pedal && w < H.pedalMin)) return 0;   // (a bicycle only minds the solid things)
   const dmg = w * H.k * Math.pow(sp / H.ref, H.pow) / Math.sqrt(v.def.mass);
   damageVehicle(world, v, dmg, null, false, false, zoneFrom(v, Math.cos(v.a) * 10, Math.sin(v.a) * 10));
   return dmg;
