@@ -28265,3 +28265,11 @@ blocks); of 2,391 pairs of neighbours along a street 171 had the same deck and t
   3050,1670,3080,1682 --out a.png --rect 3255,1836,3286,1846 --out b.png` (tiles) and read `a-lit.png`. No test file of
   its own beyond the lint row. Not run after it: perf (the bake's code grew by about 3 KB from 1,126 of 1,150),
   roofsigns, signclear. Water towers, gardens and billboards are as they were (tanks on 57% of walk-ups).
+
+## 2026-11-26 · The art batch goes live (the owner's word of 13:31) - `fable-art-1124` merged to `main`
+The gate of the handover, in order: the roofs of "Roofs" (472cc2b) rendered on the two streets (darkscan, before and
+after) - fewer AC rows, neighbours differ, nothing broken, kept; `main` had not moved; the whole suite on c7ae6cb, 467
+files - 8 fail, all on main too, flaky or CPU timing under load (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`); a
+look in a running World v3 game at 1280x720 and 915x412 (a street at noon, a shop window, the menus and the
+Inventory in look C). Not seen in play: NPCs through a shop window, night, the shark, the cats, cloud shadows. The
+server re-bakes (~5 h); players get a short reconnect.

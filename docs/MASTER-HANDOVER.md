@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-26 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-26 evening PST, the Opus 5.5 chat: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -107,6 +107,7 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 Chats that can run side by side: 4 with any other; nothing else safely.
 
 ## 6. Where things stand (2026-11-24, 09:00 PST - the Opus part of the pre-beta is done)
+**DONE 11-26 evening (the Opus 5.5 chat): the art batch is merged to `main` and live** - the gate passed: the roofs rendered and kept (before/after on the two streets), the whole suite on c7ae6cb (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`: no failure of the batch's own), a look in a running World v3 game at 1280x720 and phone size. The server re-bakes for about five hours. Next in this chat: the remaining beta items (`docs/audit/PREBETA-LIST.md`). The block below is the record of how it was taken live.
 **TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of
 13:31: "I'd like to push all the art we have now live". Everything is on branch `fable-art-1124`, pushed, tree clean.
 To put it live, in this order: (1) `node tools/nature/darkscan.mjs` on two streets and LOOK at the roofs (the last
@@ -280,7 +281,7 @@ its own storage, at risk; cargo crates always visible; REMOVE ALL (not "take it 
 and towels change only at home, a bathhouse or a shower.
 **Known failing on main too:** calendar's armored run "leaves from its bank" (date-dependent), gridlock, scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
 picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz, arrests (hiding in a shop: failed
-once under load, passes alone and as a file). Follow-ups: two
+once under load, passes alone and as a file), reputation ("a crime seen", about one run in three; 11-26). Follow-ups: two
 north doors at Northshore Beaches under trees.
 **Waiting on the owner:** a look at the batch in play; whether clothes should go in the stash after all. (Decided 11-24: finish or hide, the balance proposals, the page budget - DECISIONS.) **Done 11-23 night:** the server's disk
 grown to 146 GB (105 GB free) - he did it, Oracle console + growpart.
