@@ -1,7 +1,7 @@
 // The desert by hand, part 1: Mirage Lake (the nature program, 2026-10-21; the handcraft research's desert notes and the
 // concepts N4-B, N4-C and SC3-F: "an oasis ... a fall into a turquoise pool, palms", "a murky seep pool under a palo
 // verde"). The lake south of the North Coast Road lay in the bare sand as a stiff octagon, the desert's dirt to its
-// edge. Now its rim wavers round in slow lobes; a green belt of grass, reeds and cattails rings its north and east
+// edge. Now its rim wavers round in slow lobes, with a bay, a point and a cove of its own (11-24: it had read as an oval); a green belt of grass, reeds and cattails rings its north and east
 // shores under desert fan palms, date palms and a palo verde or two; a pale beach of white sand lies along its south
 // and west shores with a plank jetty out from it and a rowboat tied up; boulders here and there. The camp at the end
 // of the Mirage Track (Mirage Camp) stands north of it as it was.
@@ -16,6 +16,11 @@ export const MIRAGE3 = {
   grow: 1.12,      // the new rim: this much the lake's own radii, wavering
   belt: 3,         // the green belt: tiles from the water (north and east)
   beach: 3,        // the white beach: tiles from the water (south and west)
+  // the shore's features: [bearing from the lake's middle (0 east, pi/2 south), how far out (+) or in (-), how wide]
+  // the offshoot (the owner, 11-24 21:40: "a little offshoot cove on the lake comes out the left side"): rounds of
+  // water [x, y in the lake's radii from its middle, radius in tiles] - a short neck out of the west shore to a cove
+  arm: [[-0.98, -0.3, 2.1], [-1.2, -0.27, 1.8], [-1.42, -0.2, 2.0], [-1.66, -0.1, 3.1]],
+  shore: [[3.05, -0.36, 0.3], [2.2, 0.26, 0.2], [0.85, -0.3, 0.26], [0.1, 0.18, 0.4], [-2.25, -0.2, 0.25]],
 };
 
 export function mirageByHand3(m, H3) {
@@ -38,8 +43,17 @@ export function mirageByHand3(m, H3) {
   for (const i of water) { const x = i % W, y = (i - x) / W; vx += (x - cx) * (x - cx); vy += (y - cy) * (y - cy); }
   const rx = Math.sqrt(vx / water.size) * 2 * M.grow, ry = Math.sqrt(vy / water.size) * 2 * M.grow;
   const lake0 = m.lake ? m.lake[[...water][0]] : 0, dist0 = m.dist[[...water][0]], zone0 = m.zone ? m.zone[[...water][0]] : 0;
-  // the new rim: an ellipse wavering in six slow lobes (eased between)
-  const rim = (x, y) => { const dx = x + 0.5 - cx, dy = y + 0.5 - cy, a = Math.atan2(dy / ry, dx / rx), u = ((a + Math.PI) / (Math.PI * 2)) * 6, j = Math.floor(u), f = u - j, e = f * f * (3 - 2 * f), w0 = hh(j % 6, 7, 1101), w1 = hh((j + 1) % 6, 7, 1101); return Math.sqrt((dx / rx) * (dx / rx) + (dy / ry) * (dy / ry)) / (0.86 + 0.24 * (w0 + (w1 - w0) * e)); };
+  // the new rim. It was an ellipse wavering in six slow lobes - within a twelfth of a true oval all round, and it read
+  // as one (the owner, 11-23: "the lake a perfect oval"; 11-24: "it was mirage lake"). Now: the six lobes, a finer
+  // waver of eleven over them, and the shore's own features (MIRAGE3.shore) - a bay bitten into the west shore, a sandy
+  // point on the south-west, a cove on the south-east, the east shore bellied out, a notch in the north-west.
+  const lobes = (a, n, s) => { const u = ((a + Math.PI) / (Math.PI * 2)) * n, j = Math.floor(u), f = u - j, e = f * f * (3 - 2 * f), w0 = hh(j % n, 7, s), w1 = hh((j + 1) % n, 7, s); return w0 + (w1 - w0) * e; };
+  const rim = (x, y) => {
+    const dx = x + 0.5 - cx, dy = y + 0.5 - cy, a = Math.atan2(dy / ry, dx / rx);
+    let k = (0.86 + 0.24 * lobes(a, 6, 1101)) * (0.94 + 0.12 * lobes(a, 11, 1109));
+    for (const [a0, amp, wd] of M.shore) { let d = a - a0; if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2; k *= 1 + amp * Math.exp(-(d / wd) * (d / wd)); }
+    return Math.sqrt((dx / rx) * (dx / rx) + (dy / ry) * (dy / ry)) / k;
+  };
   const changed = new Set();
   const bx0 = Math.floor(cx - rx * 1.6 - 8), bx1 = Math.ceil(cx + rx * 1.6 + 8), by0 = Math.floor(cy - ry * 1.6 - 8), by1 = Math.ceil(cy + ry * 1.6 + 8);
   const plain = (i) => (m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND || m.tiles[i] === T.GRASS) && m.land[i] && !(m.reserve[i] & ~(KEEP | LUSH)) && !(m.bld && m.bld[i] >= 0);
@@ -47,7 +61,15 @@ export function mirageByHand3(m, H3) {
     if (!inF(x, y)) continue;
     const i = idx(x, y), r = rim(x, y);
     if (r <= 1 && !water.has(i) && plain(i)) { m.tiles[i] = T.WATER; m.land[i] = 0; if (m.lake) m.lake[i] = lake0; if (m.river) m.river[i] = 0; m.dist[i] = dist0; if (m.zone) m.zone[i] = zone0; m.reserve[i] |= RES; water.add(i); changed.add(i); out.added++; }
-    else if (r > 1.08 && water.has(i) && m.tiles[i] === T.WATER) { m.tiles[i] = T.SAND; m.land[i] = 1; if (m.lake) m.lake[i] = 0; if (m.river) m.river[i] = 0; m.reserve[i] |= RES; water.delete(i); changed.add(i); out.removed++; }
+    else if (r > 1.08 && water.has(i) && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP)) { m.tiles[i] = T.SAND; m.land[i] = 1; if (m.lake) m.lake[i] = 0; if (m.river) m.river[i] = 0; m.reserve[i] |= RES; water.delete(i); changed.add(i); out.removed++; }
+  }
+  for (const [k, [ax, ay, ar]] of M.arm.entries()) {
+    const ox = cx + ax * rx, oy = cy + ay * ry;
+    for (let y = Math.floor(oy - ar - 2); y <= oy + ar + 2; y++) for (let x = Math.floor(ox - ar - 2); x <= ox + ar + 2; x++) {
+      if (!inF(x, y)) continue;
+      const i = idx(x, y), d = Math.hypot(x + 0.5 - ox, y + 0.5 - oy) / (ar * (0.86 + 0.28 * hh(x >> 1, y >> 1, 1110 + k)));
+      if (d <= 1 && !water.has(i) && plain(i)) { m.tiles[i] = T.WATER; m.land[i] = 0; if (m.lake) m.lake[i] = lake0; if (m.river) m.river[i] = 0; m.dist[i] = dist0; if (m.zone) m.zone[i] = zone0; m.reserve[i] |= RES; water.add(i); changed.add(i); out.added++; out.arm = (out.arm || 0) + 1; }
+    }
   }
   // the shores: distance from the water over the land round it
   const dist = new Map(), bq = [];

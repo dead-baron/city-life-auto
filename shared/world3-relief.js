@@ -27,7 +27,7 @@ import { TILE, T } from './constants.js';
 import { BIOMES, LANDMARKS, HIGHWAYS } from './world3-skeleton.js';
 import { WATER3 } from './world3-land.js';
 import { peakHeight, TREE_LINE } from './world3-biomes.js';
-import { DISTRICTS } from './mapcore.js';
+import { DISTRICTS, reliefByte } from './mapcore.js';
 import { GROUND3 } from './world3-layout.js';
 import { AIRSTRIPS3 } from './world3-wild.js';   // (the tables keep off Lucky Mesa's strip: used in the build only - the two modules import each other)
 import { cliffSolid } from './cliffshape.js';
@@ -620,10 +620,10 @@ export function buildRelief3(m, L, addProp) {
   }
   // the tables, for the bake (its cap rock on each top, the talus at the foot) and the dressing (no small mesas on them)
   m.tables = tables.map((t) => ({ x: t.x, y: t.y, rx: t.rx, ry: t.ry, s: t.s }));
-  // m.relief: metres per tile, ordered-dithered
+  // m.relief: metres per tile, ordered-dithered (above RELIEF.knee a part of a byte per metre: mapcore.js reliefByte)
   const rel = new Uint8Array(N);
   let top = 0;
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, h = z[i]; if (h > top) top = h; rel[i] = clamp(Math.floor(h + BAYER[(y & 3) * 4 + (x & 3)]), 0, 255); }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, h = z[i]; if (h > top) top = h; rel[i] = clamp(Math.floor(reliefByte(h) + BAYER[(y & 3) * 4 + (x & 3)]), 0, 255); }
   m.relief = rel;
   return { cell: RELIEF_CELL, top: Math.round(top), tables: tables.length, mesas: tables.filter((t) => t.mesa).length, tableList: tables.map((t) => ({ x: t.x, y: t.y, rx: t.rx, ry: t.ry, h: t.h, mesa: t.mesa, s: t.s })), cliffs, faces, bare, outcrops, cut, fill, falls: fallsOf3(m).map((f) => f.name) };
 }

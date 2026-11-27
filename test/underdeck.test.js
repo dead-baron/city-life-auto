@@ -72,3 +72,26 @@ test('blood from someone afloat under a deck clouds the water under it; up on th
   fx.decal(3, 160, 400, 0, 12, '#111', 0, 0.7);
   assert.equal(stains(), 1);
 });
+
+// A bridge stands on piers (the owner, 11-25: a bridge over open water read as a causeway with a hard edge - "it
+// should be a bridge that things can go under ... a passable channel underneath"). Every PIER.gap px along a deck
+// over the water a pier's nose shows beyond its edge either side (north-south decks), or a pier's column stands down
+// under its face (east-west decks); nothing is painted as foam round them.
+test('a bridge over the water stands on piers, spaced along it', async () => {
+  const { PIER, pierNose } = await import('../client/art2/game/groundbake.js');
+  const { F_WATER } = await import('../client/art2/gbuf.js');
+  assert.ok(pierNose(0, 1) && pierNose(PIER.len - 1, PIER.out) && !pierNose(PIER.len, 1) && !pierNose(5, PIER.out + 1) && pierNose(PIER.gap * 3 + 2, 2) && pierNose(-PIER.gap + 1, 1));
+  assert.ok(PIER.gap >= 128 && PIER.gap <= 320 && PIER.out >= 3 && PIER.out <= 8, 'piers a few tiles apart, a few px proud of the deck');
+  const m = generateCity(1337), CH = 768;
+  // every chunk with a good stretch of bridge over the water: pier pixels in it (ground at PIER.z beside water)
+  const cells = new Map();
+  for (let ty = 0; ty < m.h; ty++) for (let tx = 0; tx < m.w; tx++) if (m.tiles[m.idx(tx, ty)] === T.BRIDGE) { const k = Math.floor(tx * TILE / CH) + ',' + Math.floor(ty * TILE / CH); cells.set(k, (cells.get(k) || 0) + 1); }
+  const big = [...cells].filter(([, n]) => n >= 60).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  assert.ok(big.length >= 1, 'a bridge to look at');
+  let piers = 0;
+  for (const [k] of big) {
+    const [cx, cy] = k.split(',').map(Number), G = bakeGround(m, cx, cy, { quality: 2 });
+    for (let y = 1; y < CH - 1; y++) for (let x = 1; x < CH - 1; x++) { const i = y * CH + x; if (G.z[i] === PIER.z && !(G.flag[i] & F_WATER) && ((G.flag[i - 1] & F_WATER) || (G.flag[i + 1] & F_WATER) || (G.flag[i + CH] & F_WATER))) piers++; }
+  }
+  assert.ok(piers > 40, `pier pixels standing in the water beside the decks (${piers})`);
+});

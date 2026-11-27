@@ -9,8 +9,9 @@
 //                  front/roof standing up over the room (the Neon Strip casino: the next building's facade over its floor)
 //   frontNames     a shop's sign naming none of the places behind it, or a trade word on it (PHARMACY, BAR, HOTEL...) none of
 //                  its places is (a pharmacy under "Neon Nights")
-//   lobbyDoor      a home's (an apartment's lobby) door at a shop front: the shop's sign over it, its spot beside the shop's
-//                  place or under a shop sign with no place of its own (the 24-7 Market: "Into Southside Apt #3173's lobby")
+//   lobbyDoor      a home's door at a shop front with no door of its own drawn there: its spot on the shop's window, under
+//                  the shop's sign (the 24-7 Market: "Into Southside Apt #3173's lobby"; shared/world3-flatdoors.js gives
+//                  each a pier and a door at the end of the front)
 //   rampCrossesRoad a freeway ramp below deck height over a ground-level road that isn't its own junction (an embankment
 //                  across the street)
 //   railOverWater  a railing or fence run whose span leaves the land: a stretch of it over open water, not on a dock or a
@@ -39,6 +40,7 @@ import { TIDY3, strayBags } from '../../shared/world3-tidy.js';
 import { railWetRun } from '../../shared/world3-railtrim.js';
 import { cropWhy } from '../../shared/world3-croptidy.js';
 import { signWrong } from '../../shared/world3-signfix.js';
+import { frontHomes, atFlatDoor, ownLobby } from '../../shared/world3-flatdoors.js';
 import { plantKind, plantWalkHit } from '../../shared/world3-walks.js';
 import { airfields } from '../../shared/flight.js';
 import { FLY } from '../../shared/flight.js';
@@ -145,8 +147,23 @@ export function auditRows(M, rows, seen) {
     if (!b || b.gone || b.tw === undefined) continue;
     const shopSign = b.art && b.art.shop && b.art.shop.sign && b.art.shop.sign.text;
     const texts = [shopSign, ...(b.signs || []).map((q) => q.text)].filter(Boolean);
-    if (!texts.length) continue;
     const biz = bizOf(b.id), homes = (placesOf.get(b.id) || []).filter((p) => p.kind === 'home');
+    // (a flat over a shop has a door of its own - shared/world3-flatdoors.js, the build's rule: a pier at the end of the
+    // front with the flat's door in it, the home's spot at it; a lobby front with no business behind it, or one the homes
+    // are named for, is theirs. Until 11-26 the row took only a front with a sign and no place it counted - 161 of the
+    // 391 fronts with a flat's spot on the shop's window)
+    if (b.art && b.art.shop && homes.length) {
+      const fh = frontHomes(b, homes);
+      seen.flatFronts = (seen.flatFronts || 0) + (fh.length ? 1 : 0);
+      if (!ownLobby(b, fh, (placesOf.get(b.id) || []).some((p) => p.kind !== 'home'))) for (const h of fh) {
+        const at = shopSign ? `"${up(shopSign)}"` : `${b.name || 'a shop'}'s front`;
+        // (and its spot never beside a business's own: at the shop's door the prompt read "Into ...'s lobby" - the owner, 11-17)
+        const near = biz.find((p) => Math.abs(p.x - h.x) < 3 * TILE && Math.abs(p.y - h.y) < 2 * TILE);
+        if (!atFlatDoor(b, h)) add('lobbyDoor', { what: `${h.label}'s door at ${at}`, x: h.x, y: h.y, why: 'no door of its own on the shop front' });
+        else if (near) add('lobbyDoor', { what: `${h.label}'s door at ${at}`, x: h.x, y: h.y, why: `its spot beside ${near.label}'s (${near.kind})` });
+      }
+    }
+    if (!texts.length) continue;
     if (shopSign) seen.shopFronts++;
     if (biz.length) {   // (shared/world3-signfix.js signWrong: the build renames a wrong shop sign by the same rule)
       for (const t of new Set(texts.map(up))) {
@@ -154,14 +171,6 @@ export function auditRows(M, rows, seen) {
         if (!w) continue;
         const kinds = new Set(biz.map((p) => (p.casino ? 'casino' : p.kind))), wrongTrade = t.split(' ').filter((x) => TRADE[x] && !TRADE[x].split(' ').some((k) => kinds.has(k)));
         add('frontNames', { what: `"${t}" over ${biz.map((p) => `${p.label} (${p.kind})`).join(', ')}`, x: (b.tx + b.tw / 2) * TILE, y: (b.ty + b.th) * TILE, why: w === 'trade' ? `${wrongTrade.join(', ')} on the sign` : 'the sign names none of its places' });
-      }
-    }
-    if (shopSign && homes.length) {
-      const foot = (b.ty + b.th) * TILE;
-      for (const h of homes) {
-        if (h.y < foot - TILE) continue;   // (a lobby at the side or the back: right)
-        const near = biz.find((p) => Math.abs(p.x - h.x) < 3 * TILE && Math.abs(p.y - h.y) < 2 * TILE);
-        if (near || !biz.length) add('lobbyDoor', { what: `${h.label}'s lobby door at "${up(shopSign)}"`, x: h.x, y: h.y, why: near ? `beside ${near.label} (${near.kind})` : 'a shop front with no place of its own' });
       }
     }
   }

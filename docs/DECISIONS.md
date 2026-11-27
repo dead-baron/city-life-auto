@@ -126,6 +126,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Ads account (AdSense / Ad Placement API) is the owner's sign-up. (11-03; launch-plan 11-03) - OPEN: when.
 
 ## HUD and controls
+- The buttons over the street get pixel icons too (the owner, 11-26 11:00, asked whether the HUD's and the touch buttons' line icons should follow the menus': "Buttons over street should get pixel icons yes"). One icon set everywhere; the aim stick's see-through knob keeps a dark edge round its icon. And look C goes live with the art batch, not as its own change ("Look C can go with the art batch"). (11-26; chat, DEVLOG 11-26)
+- The UI's look is C: hard pixel frames and pixel icons (the owner, 11-26 09:00, on `report-82` to `report-84` - A today, B hard frames with the line icons kept, C hard frames and pixel icons: "I think C looks good for the UI"). Every screen follows, with a lint (`tools/uistyle/hardpixel.js` was the preview; to build into the game's own CSS and icons). (11-26; chat)
 - The "Before you play" screen has no 13+ checkbox: its text says playing confirms 13+ (under 18 with permission) and either button (Accept / Essential only) confirms it; analytics as a small note, the two buttons equally easy. Shown once. (11-20; chat)
 - Car soccer: no goal replay (it confused) - a goal shows GOAL! and the scorer, the ball stays in the net, then kick-off puts the ball and every car back at the start. (11-17 21:05; chat)
 - Minimal HUD: a dot or one fading line, never a new on-screen panel; new UI lives in the phone. (10-24; agent-rules, chat)
@@ -149,6 +151,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - On touch the prompt's card has no button chip (the ACT button says the verb; nothing on the card looks pressable), sits in clear space - upright above the cluster's buttons, never under one - and is two lines at most, never cut in a word. (11-14; chat: "it looks like you're supposed to press the popup because it has a button in it", DEVLOG 11-14)
 - Touch buttons never touch: 6 px clear between any two, 12 round ACT (its pulse ring), at every layout; the sticks unchanged. (11-14; chat: "the act or look button overlaps the other button so it's a little too close together", DEVLOG 11-14)
 - Right aim stick stays in the corner, action buttons on arcs round it; in portrait a tight thumb cluster. (11-12; queue, DEVLOG 11-06)
+- The UI's style (the owner, 11-24 09:39: "is there still a UI pass to make all the buttons and UI and icons and everything look right and blend in well with the authentic SNES art style we're shooting for? Some UI still looks overly polished and not that 16-bit SNES style we want (like frames and some text and some icons etc)"; and "Right now the inventory just has placeholder vector icons for clothes items"): a UI style pass is part C of the Fable art pass - every screen set beside the UI kit (UIK-00) and UIC-01..21 for its frames, type and icons; and every clothing piece gets a picture of itself in the Inventory (today one line glyph a slot with a colour dot, `client/bag.js` `SLOT_GLYPH`). OPEN: whether the buttons', apps' and HUD's clean line icons become pixel icons (the next line, 11-06, kept the line set) - his pick from a sheet, since it sets a look. (11-24; chat)
 - The Clean (Lucide) icon line kept; the pixel icon set does NOT ship (branch pixelicons unmerged). (11-06; queue)
 - Item and weapon pictures: every item and weapon has its own pixel picture after IC1-IC5 (`client/itemart.js`), shown in the bag (tiles, details, quick bar) and the quick wheel - the owner picked the pixel pictures from the side-by-side sheet (11-21: "Items are looking good"), with a second pass on the ones he named: a traditional pickaxe and axe, feathers that read as feathers, mushrooms that read as mushrooms, a geode with shine and sparkle, raw meat that reads as meat; the weapons polished again (katana, sword, knife, hunting knife, fists, the bow aiming forward, plasma blade, bat, sledgehammer, crowbar, flamethrower). SUPERSEDES, for items and weapons only, "the pixel icon set does NOT ship" (11-06): the buttons, the apps and the HUD keep the clean line set. His 09:55 notes: the steaks tell apart (a slight colour variation), a better pickaxe, a katana that reads as one, the hunting knife a buck knife, the bat a bat and not a club, the silencer visibly attached to the silenced pistol rather than one long barrel. Goes live after his review. (11-21 09:27, 09:55; chat, DEVLOG 11-21)
 - HIT shows what you hit with (fist bare-handed, else the weapon). (11-05; DEVLOG 11-05)
@@ -178,6 +181,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The title screen's CHARACTER is the character creator: body, face and hair change freely there; clothes from what you own. In the city, body and face at the mirror at home, hair at a barbershop; wanted, cuffed or in uniform, no change anywhere. (11-17; chat: "customize your character and have it commit in the main menu")
 - Everyone has a starter wardrobe of everyday pieces (rules.js STARTER_WARDROBE) on top of what they own; the creator previews everything, padlocked pieces showing their store, and Done puts on what you own and leaves the locked pieces off, saying which. (11-17; chat)
 ## Art direction
+- Picture signs: some shops, not all - today's name boards and hanging picture signs together (the owner, 11-26 11:02, on `report-92` - the concept BF2, A today's name board with a small trade mark, B a picture sign hung out over each shop, C the picture large in a crest over the board: "I think a combination of A and B is good, not every shop in the world needs the sign, but it looks good when some do"). (11-26; chat, DEVLOG 11-26)
+- Hotels' entrance canopies: some carry the name, not all (the owner, 11-26 09:00, on `report-87` - every hotel's and motel office's name moved onto its cloth canopy: "I think it's okay some signs are on the canopies, don't want it to be all the canopies though"). Built so: a hotel with a name of its own (The Bridgeview, Grand Neon Hotel - 16 places) carries it on its canopy's front edge; an OFFICE, a plain HOTEL, an airport's DEPARTURES (35) keep the board on the wall over a plain canopy low enough to stand under it. `statics.js` `ownNameless`, `HOTEL_CANOPY.low`. (11-26; chat, DEVLOG 11-26)
+- A soft lip colour: A, none, stays for everyone (the owner, 11-26 09:00, on `report-85`: "I think A was okay without the mouth, but C was okay too if we want to have some with mouths? But A was probably fine."). Nothing is changed. C (a faint two-pixel mouth) is the one to use if some figures are given mouths later - not built. (11-26; chat)
+- The art pass's merge and re-bake wait for more of the city (the owner, 11-26 09:00: "I think we can wait a little longer for the merge and rebake until we've got a little more art to go with it (you're doing the city right now and id really like that to be part of the merge and bake)"). The branch keeps collecting; the gate (suite, a running-game look) is run again before the merge. (11-26; chat)
 - 16-bit SNES pixel art with modern lighting and atmosphere (Octopath Traveler, Eastward for environment and light), a GTA vibe. (10-05; chat)
 - Not true top-down: vehicles 3/4 angled, people and building fronts slightly angled, like the concepts. (10-05; chat)
 - Claude's code generators are the backbone; the owner's concepts are the targets ("treat concepts as real places"). (10-31; chat, DEVLOG 10-31)
@@ -284,6 +291,241 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Nothing grows through a fence (the owner, 11-21 12:20: plants "across sidewalks or through fences"; the lupines through the pasture's rail fence in the day's own picture): the page's undergrowth, drifts and beds leave every tile a fence, wall or hedge line crosses (`statics.js` `fenceLine` -> `addGreenery`; `test/undergrowth.test.js`). The audit had no row for it (its fence row is railings over water). (11-21; chat)
 - The nature concepts as scenes (11-21 11:48): "recreating scenes from all the nature concepts as close as we can get it (but keeping our art style and colors) and then recycling those props and prop variations throughout all the appropriate biomes and regions and locations" - and a full kit that makes the world "natural and alive and immersive and believable" while performance stays good across the devices. Approved 12:12 ("That sounds good to me"): an audit first, piece by piece, of the nature sheets against what the game has, then the pieces built by biome and placed by rule - pine/oak forest and meadow first, then redwood, mountain, desert, coast and jungle, the water's edges last. The audit (project doc `claude/nature-audit-2026-11-21.md`) found most of the scenes already built by October's nature program: per biome the work is their look at the art pixel, the same kit spread by rule beyond the hand-made places, and a short list of missing pieces. Solid pieces are server-placed props, walk-through ones a rule in the page's undergrowth; the whole batch on `nature` for one re-bake. (11-21 11:48, 12:12; chat, DEVLOG 11-21)
 - The plants' painted light (11-21 11:48, his question on the oaks' dark lower right; picked 11-22 09:15): the left-right light is the game's sun alone (`client/art2/flora.js` `SIDE` 0) - "shouldn't it all work with the in-game light?". A plant's picture keeps its shape and its up-down shading; the side it is lit from follows the sun through the day. (11-22; chat, the sheet `plants-light.png`)
+- The Fable art pass's order (the owner, 11-24 09:25: "We were working on the nature pass first so I want to make sure that gets prioritized to finish it up ... for the city wide ... it should be a bigger pass too to see what artwork can use a polish and how things are placed in world to feel hand crafted and close to the concepts"; 09:39: "I think this order is looking good let's do it"): the order of 11-21 08:05 stands - nature finished first (water, then the biomes in the order of 11-21 12:12), then buildings and districts as one concept-led pass a district at a time (the shared kit of fronts, signs, roofs and landmarks; the cinema; the craft pass's waves), then the people's faces, the UI's style and the clothing pictures, the game art, vehicles last. Later notes (11-22, 11-23) are folded into the place they belong to; each part's first report names the concepts opened for it. (11-24; chat, project doc `claude/art-pass-plan-2026-11-24.md`)
+- Mouths (the owner, 11-24 09:39: "I think mouths I noted are tied to makeup actually ... my character had black lipstick on. If that's working as intended then I think we're good with how mouths work"): it is as intended - the small faces have no mouth (11-19, `POLISH.mouthOn`), painted lips (lipstick, glam, goth, a clown's) always show. What stays to do is a face polish: painted lips drawn the same in every frame and direction ("drawn consistently if we do have lipstick"), fewer stray pixels, features that read - without overwriting the earlier character work ("Please don't break things during this"): each fix measured against a snapshot of every figure, as on 11-20. SUPERSEDES the 11-23 note's "a softer, thinner line or none". (11-24; chat)
+  - The owner, 11-25 01:34, playing the live build: "The player characters and mouths might already work just fine
+    ... I do notice my mouth because I think im using black lipstick and it makes some funny and good expressions I
+    think a mouth like this might work how it is now but maybe a very soft lipstick option or default mouth option.
+    Either way if we give expression to the mouth if the NPC does have a mouth we want to make sure the mouth is
+    expressive and built into any other animations or idle movement or emotes or anything." So: painted lips stay as
+    they are; to add in the faces step (plan C.1) - a very soft lip colour (a tone or two off the skin) as a makeup
+    choice, and whether it is the default is his pick from a sheet; and wherever a face has a mouth, the mouth takes
+    part in the emotes, the idle and the other animations (smile, open, flat), held in place over every frame.
+    The 11-19 rule (no mouth on the small faces unless painted) stands until he picks.
+- The sea deeper blue offshore, a shelf of clear shallows along the sand (the water pass, 11-24): kept - the owner,
+  11-24 14:37, on the pictures: "I think the new sea looks fine."
+- The redwood forest opened up (the owner, 11-24 18:00: "I'd like to give you some creative flexibility on the redwood
+  forest because currently it's not working as well as I think it could ... if a decision I've made conflicts with
+  polishing and maybe overhauling the redwood area let me know"): an overhaul, proposed in
+  `docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md` - the giants as trunks with no crown in the walking view, crossings
+  square to the water, a fern kit, finds placed by hand rules and never hidden. It would replace his crown mix of
+  11-21 15:39; the tree treatment is his pick from variants before it is rolled out.
+  - The owner, 11-24 18:13: "I want to go with your suggestion for the redwood area. Let's power through this area." -
+    the overhaul is approved as a whole.
+  - The giants as trunks: REJECTED on sight (the owner, 11-24 18:47: "I don't think the disolve looks good ... what I
+    see is not looking good compared to what we have already"). Built two ways (a cut top; a top thinned out upward),
+    neither committed. The giants keep their tops. The lesson kept: a new look goes to him as variants first, even
+    after "go with your suggestion".
+  - OPEN, his pick from `report-13` / `report-14`: A the trees as they are; B every giant's crown carried high (today's
+    form over paths: boughs from 0.76 of its height, fullness 0.5); C a small crown higher still (0.82, 0.45, 0.7 as
+    wide); D smaller again (0.86, 0.4, 0.55). The rest of the overhaul (crossings, water, ferns, finds, places) does
+    not wait on it.
+- The water's bank (the owner, 11-24 21:40: "The ridge along the river is a little too uniform like just a brown
+  outline to the river edge ... it can blend in with the water in some places, it can be a rocky/stone beach, it can
+  be dirt and sand beach, it can just blend in with the vegetation into the water, it should be a good natural mix
+  just line in nature but not just this perfect brown outline between the land and water"): wild banks vary along
+  the shore by rule (groundbake.js `bankKind`); designed ground (lawns, parks, golf) keeps its lip.
+- Crossings (the owner, 11-24 21:40: "The stones in the water between trails is a great detail. All the stones look
+  about the same so some variation in the stone would be good ... it doesnt just have to be stones that connect paths
+  it can be some fallen logs or makeshift log/stick/natural bridges"): stones vary; a narrow path may take a fallen
+  log; a makeshift stick bridge is a piece still to draw.
+- Vehicles in water (the owner, 11-24 21:40): never an instant loss in shallow water - splash, slow, stall, and sink
+  only in deep water; off-road vehicles ford deeper. Logged for the pre-beta (`docs/audit/PREBETA-LIST.md`); not built
+  in the art pass.
+- Natural lakes get natural shapes (the owner, 11-24 21:40: "The lake looks better like this so this would be
+  acceptable ... For these natural lakes like this some natural shape looks better"); Mirage Lake's offshoot cove on
+  its west side added at his suggestion.
+- The dark on plants (the owner, 11-24 22:23: "Its not an outline ... Its the dark/basically black shading on the
+  underside of this art that makes it stick out ... These should be reacting to global lighting"): measured - 102 of
+  121 plant kinds have over 15% of their pixels near-black when lit at noon, painted dark and turned from the sun at
+  once. The fix proposed (a floor under a leaf's painted shade; light that wraps round leaves in the light pass) is
+  his pick from `report-26` (B, C, D). OPEN. Brought forward from the plan's "11-23, across biomes" line; before the
+  pre-beta.
+  - The owner, 11-24 23:06, on B/C/D: "looks better between B and C but its not right yet, it seems drawn differently
+    than other art in the game, can we compare this to the style anchors ... it might be taking a concept too literally
+    ... look at the original fern in A and however this was created I think is how the world art is being created to
+    react to the lighting in-game better?" Compared and measured: he is right on both counts. (1) The concept sheet
+    NK1-M's plants go to black (38 to 55% of a plant under 50/255; its darkest tenth is 3, 5, 8) and the plants copied
+    that; the style anchor R1-D's darkest green is 25, 57, 45 - never black, and green, where the plants' darks lean
+    blue. The anchor rules (DECISIONS: colours game-wide from R1-D), so the concept was taken too literally. (2) The
+    sword fern has its form painted and every leaf pixel facing up, so the game's light falls on it evenly (9% under
+    50); the other plants carry rounded surface directions, so the light shades them a second time on top of the
+    paint. Proposed (`report-30`, `report-31`; E, F, G): every plant made as the fern is - leaf surfaces turned up
+    (three quarters, or fully), the form left to the paint - and no leaf tone below the anchor's dark green, pulled to
+    its hue. Near-black falls from 27% of a plant to 15% (E), 8% (F), 7% (G); kinds over 15%: 102 -> 58 / 18 / 16.
+    Cast shadows, time of day and weather still fall on plants as on everything. OPEN: his pick of E, F or G.
+- Banks, again (the owner, 11-24 23:18: "I do like the 'after banks' work here but that harder edge from before i
+  called the brown outline could still be a good detail in some areas ... Lets try blending the surface and underwater
+  art between land and water, some more stones on land, some less stones in water, a few harder edges, some softer
+  transition between land and water, a good blend of things ... apply this logic across rivers/streams/creeks and
+  land"): built the same hour (groundbake.js: the bank going under in tongues, stones on banks; fewer rocks in running
+  water); the earth lip kept on about a fifth of a wild shore.
+- Review pictures are at the game's pixel (the owner, 11-24 23:26 / 23:31, on seeing two pixel sizes in close-ups
+  rendered at the world pixel): from here every picture for him is rendered at 1 art pixel and enlarged whole.
+  Whether the ground - painted finer and halved by the bake - reads soft beside plants drawn at the art pixel is to
+  be judged in a running game; redrawing the ground materials at the art pixel would be its own piece of work.
+- Wild flowers (the owner, 11-24 23:37, on the lupines / foxgloves: "all the stems are so straight it kind of feels
+  out of place in the world (unless its part of a garden or flower pot)"): the spike flowers get natural variation -
+  leaning, curved, uneven stems, leaves at the foot - and a wider variety; the straight form stays for gardens and
+  pots. Not built yet (the bake's code budget).
+- The project to go private before marketing (the owner, 11-24 23:40): logged with a plan in
+  `docs/audit/PREBETA-LIST.md`; his to schedule - not art.
+- Plants lit evenly, never black - built (the owner, 11-25 00:04: "you can still see many plants with the dark
+  shadow on it ... Can we identify these and others across the entire environment/nature art packs and make sure
+  they dont have these hard shadows baked into them?"): `flora.js` `leafLight` on every plant the world places
+  (variant F of `report-30`: leaf pixels turned three quarters up, no leaf tone under the style anchor's dark green);
+  `test/leaflight.test.js` holds all 121 kinds. The lighting standard for nature art from here: the form is in the
+  paint within the anchor's range, leaf surfaces face up, the game's light does the rest.
+- One pixel size, and sizes are drawn, not resampled (the owner, 11-25 00:04: "when you resize and flip horizontally
+  ... is that where pixel size lost consistency? ... Can different variations/sizes be redrawn with the right pixel
+  size?"): checked - every plant kind is made at the art pixel at each of its sizes (floraArt runs the maker at the
+  size; a mirror is exact), tested (test/floraart.test.js). What differs is how finely a plant is drawn on that grid
+  (a fir in clumps of two or three pixels, a fern in single pixels) and that the ground and the voxel props are made
+  at the world pixel and halved by the bake.
+- NPC and wildlife behaviour, the shop door's hop and the shop signs (the owner, 11-25 00:22 / 00:33): logged in
+  `docs/audit/PREBETA-LIST.md`; the quail family rule - group behaviours stay whole - recorded with it.
+- The open ground round you is never hidden (the owner, 11-25 01:13: "Could we have more buildings go transparent
+  when they're blocking an alley or street"; 01:24: "when you're on the street you can still see behind the buildings
+  so nobody can hide ... it would be good to see the entire street and sidewalk from anywhere in the street here, or
+  a wider range. Whatever would help people play the game and not have trouble seeing behind buildings"): built
+  page-side (host.js `_fades`; `FADE_REACH` 20 tiles along, `FADE_ACROSS` 7 up and down) - the street, sidewalk or
+  alley you stand on is followed out from your tile, and every building whose picture lies over that ground fades.
+  A building faced from its own street keeps its front - so the alley BEHIND the row you face stays hidden until you
+  step into it: opening that too would ghost the shopfronts, and is his call. Not seen in a running game.
+- A faded building is all but clear (the owner, 11-25 03:05, on the live see-through streets: "we need the buildings
+  to be totally transparent like as transparent as it is around my character. Maybe a little bit of gradient or
+  dissolve around the edges but it should be really clear you can see past these building blocks ... And have a good
+  transition kind of like how we have for entering buildings now"): engine.js `GHOST` 0.6 -> 0.94, a rim that
+  dissolves in over 12 px along its outline and its footprint (`GHOST_EDGE`, `EDGE_PX`); the eased transition as it
+  was (0.35 s in, 0.5 s out). This replaces the 10-23 "a ghost, not the whole of it at once"; a thin thing (a mast's
+  hut, a tree) keeps its lighter ghost. On the branch; live on his word.
+- The bake's code budget 1,100 -> 1,150 KB (the owner, 11-25 16:51: "lets raise the bake limit. is that an issue?" -
+  Claude's answer: no; it is code a browser fetches once per build, in a worker, off the first screen; the bake's
+  time and a chunk's weight have their own budgets and do not move).
+- The bake's code budget 1,080 -> 1,100 KB (the owner, 11-25 03:05: "Yes raise the bake code limit as you need").
+- The fern kit approved (the owner, 11-25 03:05: "Fern looks good to me, I would go easy on the gold bracken and use
+  it sparingly and in places that would make sense logically, and sometimes in little clusters but mostly just good
+  detail to add in sparingly among the other green fern").
+- The project stays public for now (the owner, 11-25 03:05: "If this can cause performance or connection or any issues
+  for the players Id rather just focus on getting a clean fun great game out first and just make it bet best and
+  first known ... even if some people try cloning"): Claude's answer recorded in PREBETA-LIST - no effect on players
+  once done, about a day, a deploy risk while it is done; the one cheap step (stop sending server source to browsers)
+  can be taken on its own. His call when; not scheduled.
+- The giant redwoods' tops are a mix of three (the owner, 11-25 03:20: "can we do a mix of all three (A and both J
+  column and J ragged?)"): the tapering spire as it was, a column under a round top, a column under a ragged top -
+  two of each among a giant's six shapes (statics.js `RW_TOP`). The young redwoods keep their cones.
+- Art with the dark shadow painted in is redrawn from its source, not corrected afterwards (the owner, 11-25 03:29:
+  "the art that has the super dark shadow drawn into it all of those just need to be redrawn from scratch ... trying
+  to get rid of it seems to change the color of the asset and it doesnt blend in with the other nature in the area
+  ... lets get a list and redraw all of them and just let me know what needed the redraw"). So: the palettes' shade
+  tones and the painters' shading are what change; no lift of the finished picture; a census over the baked world
+  (tools/nature/darkscan.mjs) and a list of what was redrawn.
+- Knees do not grow by swimming pools (the owner, 11-25 20:20: "Knees showing up in pools? ... just wanted to point
+  that out"). The rule that put them there - round any `cypress` by water; the world's cypress is the garden's
+  Italian one - was withdrawn before it was pushed; knees grow along Egret Marsh's own water's edge only.
+- Hoodoos are natural formations, no two alike (the owner, 11-25 18:14, on a screenshot of a found stand - four banded
+  columns under round flat caps: "there very unnatural and look odd. I'm not totally sure what they are but we should
+  make these look a lot more natural and very the stacks more naturally like natural formations and vary the sizes
+  we have them at so they're not all so uniform and perfectly flat and round like this"). The rule for every rock
+  formation drawn by code: no lathe-turned shape, no perfect disc, sizes mixed, a reader knows what it is.
+- The desert's tables keep their stepped cliff faces - look A (the owner, 11-25 17:18, of A as built and B one sheer
+  wall with a flat cap, `report-65`: "For table edge I think A does look better"). The mountains' B is granite's
+  only; B for sandstone is not built.
+- The mountains' crags are look B (the owner, 11-25 07:19, of three variants: "B for the mountain/cliffs is best, also
+  were not doing snow yet so let's not do any snow for now"): a granite cliff one sheer wall half as tall again, its
+  top the grey of the rock behind it, that rock in big light slabs rising in ledges along the land's contours. No
+  snow is drawn on the benches. (Claude's question whether this meant "the world's existing snowfields" was wrong:
+  no snow has been drawn since 10-17 - the ground above the snow line is pale cut granite and scree; shown to him
+  11-25 09:15.)
+- The El and the highway decks do NOT go see-through for now (the owner, 11-25 09:03, on the picture under a deck:
+  "The highway/bridge transparency not sure that's right yet, maybe we leave that alone for now"): statics.js
+  `DECK_SEE` false - the rule and its test are kept for when he says.
+- The summits are built as knobs of rock from the plan (the owner, 11-25 09:03: "Build the summit from plans" -
+  docs/tasks/MOUNTAIN-LOOK-2026-11-25.md).
+- The redwoods get a network of creeks like Fernwater Creek (the owner, 11-25 09:03: "Creek looks good let's go with
+  it").
+- Summit Tarn may be changed (the owner, 11-25 13:33, to "a wall of rock behind its north shore?": "Yes you can change
+  the summit tarn if you think it looks or works better").
+- Water under a road reads as a bridge: the road going over it, the water lined up either side (the owner, 11-25
+  13:33, on a creek's stone headwalls: "it doesnt look like the stream is goin under the road, just looks like its
+  leading into a skinny concrete structure. Lets make sure water under roads looks more like a bridge with the road
+  going over it, or just have the water line up correctly so its clear it goes under the road"). The same eye for the
+  trains' tunnel mouths ("the tunnel entrance and exit doesnt quite line up with what the tunnel is leading into").
+- Cloud shadows: yes, to try (the owner, 11-25 15:10, on the still `report-43`: "I think the cloud looks okay let's try
+  it out").
+- The shark gets another pass (the owner, 11-25 15:10: "The shark could use another pass on it let's try to make it
+  look better").
+- A cat's nose is one pixel (the owner, 11-25 16:18: "Can we go back to having one pixel for the cat's nose? I think it
+  became two wide with the last push"). It keeps to the middle under the eyes - the left of the two middle pixels,
+  the face being an even number of pixels wide.
+- A cat's nose sits where the white cat's does - a clear row under the eyes, nothing pale above it (the owner, 11-25
+  16:00: "dont think the pink nose showed up in the right place for the grey cat (looks right on the white cat).
+  Black cat cant see the nose, not sure if it wont work to have a black nose on black fur though so if its not going
+  to work dont worry about it"). The black cat keeps its faint black nose; no more is done to it.
+- The grey cat's nose is pink and the black cat's black (the owner, 11-25 15:52, after seeing the black cat with none
+  and the grey with a black one: "lets give the grey cat a pink nose and the black cat an actual black nose"). This
+  replaces the noses of the line below; its centring stands.
+- The black cat has no nose and the grey cat a black one; a cat's nose sits centred under its eyes from the front
+  (the owner, 11-25 15:48: "the black cat can have a black nose (or no nose since its all black cat face) and grey
+  could have a black nose. The nose on the black cat and the grey cat seem off center from the front view").
+- The cats' nose is a light pink (the owner, 11-25 15:42: "slightly more light pink, right now its too dark red").
+- The cats, settled for now (the owner, 11-25 15:26, on the first try): "the before cats looked better but can we keep
+  them like that in the face and snout but just add a little nose to them? And make the tail a little thinner and
+  longer like a cats tail (or variations if we have a long hair cat in the mix vs a short haired cat)" - done so: the
+  face and head as they were, a small pink nose, a thin long tail carried up and hooked (ginger, calico) or out low
+  with the tip curled up (black, tabby); the long-haired white cat keeps its plume (`report-56`).
+- The cats, again (the owner, 11-25 15:22, on their sheet): "the cat could be better with a longer cat like tail and
+  a cuter face. The dog looks really good in game and I think it has a nose and a bit more detailed, can we try to
+  match the cuteness with the cat but make sure it looks like a cat?" - a first try shown the same hour (`report-55`).
+- The cats (his question of 11-25 15:10, "Did we already fix the cats ... faces and tail were off"): yes - redrawn
+  twice on 11-21 after his notes of 09:27 and 09:55 (a flat wide face that is its eyes, ears set wide, a thin tail up
+  behind with a hooked tip), live since the 11-22 merge; shown to him again 11-25 (`report-53`).
+- The road over a creek: good as shown in `report-51` - the creek up to the road either side, a rail on each edge -
+  with the rails a little longer and joined to the street (the owner, 11-25 14:52: "I think it looks good how it is
+  now except the railings should be a little longer and connected to the street (right now you see the top one have
+  water under it and not connected to the street"). No stronger deck asked for.
+- A stream joins the larger water it runs toward (the owner, 11-25 13:35, on a stream that ended in a pool at the
+  sea's edge: "Lets make sure streams and flowing water is still connecting to the larger bodies of water its going
+  towards, doesnt just close off right before the open water").
+- Faces and lips, when the art pass reaches them (part C): look only, and fix only what is plainly off (the owner,
+  11-25 12:45: "these might already be working okay so lets be careful not to try to over fix or over polish and
+  make it not better than it already is. Would be okay to do a pass on it just to consider if something is off and
+  could be fixed"). No redraw of the faces; anything beyond a plain fault is shown to him first.
+- The summits as built, the high mountains' shading and the creek network are good (the owner, 11-25 11:57, on
+  `report-46` to `report-49`: "This looks good lets keep moving forward"). The whole suite and the re-bake: asked by
+  him whether now or after more art - Claude's answer: art while he is here, the gate when he stops for the day; no
+  merge before his word on that.
+- The re-bake comes after the summits and the creek network are in (the owner, 11-25 09:30: "Let's rebake after the
+  summits and Creek work"): the art branch goes out then, in one re-bake - not before, and not held for the rest of
+  the art polish.
+- Live 11-25 09:10 (PR #49, his word "Push the transparent buildings and emotes"): faded buildings all but clear;
+  emotes run through their frames.
+- WebGL2 stays a requirement (the owner, 11-24 21:40: "which i dont want to change because that seems standard on
+  the consoles we are aiming for").
+- The lake that was "a perfect oval" (his note of 11-23) is Mirage Lake (the owner, 11-24 18:13: "I think it was
+  mirage lake that was very oval in shape yes. It's one that shows up in the cinematics"): its shore to be reshaped
+  (`shared/world3-mirage.js`, a hand-made place), its beach, palms and jetty kept right, the cinematics that show it
+  reshot after.
+- The art pass's checks (the owner, 11-24 14:35: "Keep a list of things to check and I will check them when we push
+  everything live, but since a lot of this is a world art update i think we should wait until we get all the art done
+  first, or at least a large chunk"): what wants his eye is kept in `docs/tasks/ART-CHECK-LIST.md` (project copy
+  `claude/art-check-list.md`), each line with where to look and what was changed; the art collects on its branch and
+  goes live in large batches, not piece by piece. One exception proposed to him the same hour: a look that is baked in
+  and that later work builds on (so far: the sea deeper blue offshore) is better judged from the pictures sent when it is
+  made - changing it after a batch is live costs another re-bake.
+- The art batch goes live now (the owner, 11-26 13:31: "I'd like to push all the art we have now live"; it replaces
+  his 09:00 word that the merge waits for more of the city): branch `fable-art-1124` to `main` once the gate has run -
+  the whole suite and a look in a running game - by the next chat (Opus 5.5; his Fable 5.2 usage for the week is
+  spent). The steps: `docs/MASTER-HANDOVER.md` section 6, "TAKING THIS OVER".
+- No people painted in a shop's window (the owner, 11-26 12:40, of the busts in the glass - a clerk at each till,
+  diners in the booths: "We shouldnt have just static humans in windows, if its a mannequin for a clothing shop or
+  something thats cool, but if we have humans in the window we want it to be actual NPCs through the window, not
+  static images of humans"): the shop fronts paint none (`client/art2/buildings.js` `storefront`;
+  `test/shopwindows.test.js` holds it). A mannequin is goods and stays. People seen through a window are to be real
+  NPCs - not built: the street draws a shop's painted front, and the people inside a walk-in are seen only from in
+  the room (logged in `docs/audit/PREBETA-LIST.md`).
+- A shop's window shows its trade's goods (11-26, the shared kit's audit #2; built in the existing manner, no new
+  look): `buildings.js` `GOODS_OF`; the lint's `windowTrade` holds it at 0.
 - Outlines, one rule (11-21 11:11: "some have dark outlines and others dont"): everything that stands up - people, animals, vehicles, props, every plant - has the art spec's outline (one art pixel, a dark tone of the colour beside it, never black, none along the foot); the ground and what is strewn on it have none. No softer outline for one family of plants. (11-21 11:11; chat, DEVLOG 11-21)
 ## Music and sound
 - No soundtrack over play: music lives in the world (venues, shops, radios); only the main menu (maybe the tutorial) has soundtrack. (10-08; DEVLOG 10-08, chat)
@@ -389,19 +631,6 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   click, at the cursor) - as on a pad; right button held unarmed or with a melee weapon: block. Not twin-stick (the gun up
   whenever the mouse had moved, 11-13 to 11-23). The owner, 11-23 21:37: "You used to only hold up the weapon when you
   were aiming ... hold right click and that's when you would aim". (11-23)
-
-- The open ground round you is never hidden (the owner, 11-25 01:13: "Could we have more buildings go transparent
-  when they're blocking an alley or street"; 01:24: "when you're on the street you can still see behind the buildings
-  so nobody can hide ... it would be good to see the entire street and sidewalk from anywhere in the street here, or
-  a wider range"; 01:35: "Id like this to go out"): every building whose picture lies over the street, sidewalk or
-  alley you stand on fades (host.js `_fades`; `FADE_REACH` 20 tiles along, `FADE_ACROSS` 7 up and down). A building
-  faced from its own street keeps its front; opening the alley behind it from the street would ghost the shopfronts
-  and is his call.
-- A faded building is all but clear (the owner, 11-25 03:05, on the live see-through streets: "we need the buildings
-  to be totally transparent like as transparent as it is around my character. Maybe a little bit of gradient or
-  dissolve around the edges"; 09:03: "Push the transparent buildings and emotes"): engine.js `GHOST` 0.94 with a rim
-  that dissolves in over 12 px. This replaces the 10-23 "a ghost, not the whole of it at once"; a thin thing (a
-  mast's hut, a tree) keeps its lighter ghost.
 
 ## Vehicles and the car
 - Things a vehicle hits react, for the pre-beta (11-23 20:10, "anything that a vehicle can knock over or drive through or

@@ -14,6 +14,7 @@
 //   habitatAt: the big trout and bass hold there); the anglers of the wilds take its bank first (wildfolk.js); the fish
 //   are seen holding in it (client/art2/game/waterlife.js).
 // For the whole-world build only (world3-world.js's done hook, after the water bodies). Arithmetic and sqrt only.
+import { reliefMetres } from './mapcore.js';
 import { T } from './constants.js';
 
 // step: the samples' spacing along a channel (tiles); win: the fall measured over this many tiles; slope: the fall per
@@ -40,7 +41,7 @@ export function rapidsAndPockets3(m) {
   if (!V || !Array.isArray(V.ch) || !m.relief) return out;
   const W = m.w, H = m.h, rel = m.relief;
   const at = (x, y) => { const tx = Math.round(x), ty = Math.round(y); return tx >= 0 && ty >= 0 && tx < W && ty < H ? ty * W + tx : -1; };
-  const hAt = (x, y) => { let s = 0, n = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const j = at(x + dx, y + dy); if (j >= 0) { s += rel[j]; n++; } } return n ? s / n : 0; };   // (the relief is dithered: a 5 x 5 mean)
+  const hAt = (x, y) => { let s = 0, n = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const j = at(x + dx, y + dy); if (j >= 0) { s += rel[j]; n++; } } return n ? reliefMetres(s / n) : 0; };   // (the relief is dithered: a 5 x 5 mean)
   const openRiver = (i) => i >= 0 && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP) && m.river[i] && !(m.lake && m.lake[i]);
   const placed = [];
   // a pocket of radius r at (x, y) tiles: all its water open river water, nothing built near, no other pocket close

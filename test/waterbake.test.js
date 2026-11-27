@@ -131,3 +131,32 @@ test('lily pads float a sliver over the water, so the fish drawn on the water pa
   assert.ok(found > 1000, `lily pads floating over the ponds' water (${found} px)`);
   assert.ok(cast < found * 0.2, `casting no shadow from that height (${cast} px that do: reeds)`);
 });
+
+// The sea's edge is not painted white (the owner, 11-25, of the shore seen in play: "the scattered white idle wave
+// near the shores just show as static images instead of animated water ripples/effects/surface. The waves seem to
+// work fine just the effect near the very surface of the water in shallow water right on the shore is that static
+// white effect ... we want that moving but subtle and natural and animated, or can be removed if it isnt needed").
+// The bake drew crests in white within 30 px of a beach, a white wash line at the waterline and a scalloped white band
+// beyond it - still pictures under the waves the engine runs in from the surf's distance. Now the baked sea by a
+// beach has no white in it: the waves and the swash are the moving ones alone (engine.js, from groundbake.js surf).
+test('the baked sea by a beach has no painted white: the waves that move are the engine\'s', async () => {
+  const { generateCity } = await import('../shared/map.js');
+  const { T, TILE } = await import('../shared/constants.js');
+  const { bakeGround } = await import('../client/art2/game/groundbake.js');
+  const { F_WATER } = await import('../client/art2/gbuf.js');
+  const m = generateCity(1337), CH = 768, cells = new Map();
+  for (let ty = 1; ty < m.h - 1; ty++) for (let tx = 1; tx < m.w - 1; tx++) {
+    if (m.tiles[m.idx(tx, ty)] !== T.SAND) continue;
+    const wet = (x, y) => { const t = m.tiles[m.idx(x, y)]; return t === T.WATER || t === T.DEEP; };
+    if (wet(tx + 1, ty) || wet(tx - 1, ty) || wet(tx, ty + 1) || wet(tx, ty - 1)) { const k = Math.floor(tx * TILE / CH) + ',' + Math.floor(ty * TILE / CH); cells.set(k, (cells.get(k) || 0) + 1); }
+  }
+  const beach = [...cells].sort((a, b) => b[1] - a[1]).slice(0, 2);
+  assert.ok(beach.length && beach[0][1] >= 8, 'a beach on the sea to look at');
+  let sea = 0, white = 0;
+  for (const [k] of beach) {
+    const [cx, cy] = k.split(',').map(Number), G = bakeGround(m, cx, cy, { quality: 2 });
+    for (let i = 0; i < CH * CH; i++) { if (!(G.flag[i] & F_WATER)) continue; sea++; const j = i * 4; if (Math.min(G.col[j], G.col[j + 1], G.col[j + 2]) > 196) white++; }
+  }
+  assert.ok(sea > 20000, `sea pixels by the beach (${sea})`);
+  assert.ok(white / sea < 0.002, `painted white in the sea by a beach: ${white} of ${sea} pixels (${(white / sea * 100).toFixed(2)}%)`);
+});

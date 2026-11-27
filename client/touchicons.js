@@ -370,19 +370,89 @@ const OWN = {
 };
 const VG = { ...LU, ...OWN };
 export const GLYPH_NAMES = Object.keys(VG);
+// The same glyphs as pixel icons (the UI's look C, the owner's pick of 11-26): each on a grid of 12 x 12 - two of the
+// line set's units to a pixel, one pixel to a line - as 36 hex digits, 12 rows of 12 bits, the top row first. Made
+// from the paths by tools/uistyle/glyphgrid.py (--write puts them between the marks); one redrawn by hand is listed in
+// that tool's OWN and kept. The menus show these; the buttons over the street keep the line (style.css .gl).
+const gSvgs = new Map();
+const VP = {
+/* px:begin */
+  smartphone: '0003fc2042042042042042042042442043fc', map: '0000003ee6ba4924924924924925d677c000', menu: '0000003fc0000003fc3fc0000003fc000000',
+  target: '0000f818c27268b57555557568b27218c0f8', crosshair: '0000f81ac2226034017074016032221ac0f8', swords: '00070e59a6c63641b00d83681b8204000000',
+  'rotate-cw': '0000f230e20e40e40040240220430c0f0000', 'volume-2': '0000000c01c2742c4ac4bc4a7421c00c0000',
+  siren: '0000000000000f010850a1681683fc2043fc', flashlight: '0001fc1041fc1040880880a80880880880f8',
+  'circle-stop': '0001f82044024f24924924f24022041f8000', 'arrow-big-up': '00000006009010820439c0900900900f0000',
+  'arrow-big-down': '0000000f009009009039c204108090060000', 'arrow-big-up-dash': '00000006009010820439c0900f00000f0000',
+  redo: '0000000000000f230e20e40e400000000000', sparkles: '0000220770520503de6033de050750570720',
+  'fast-forward': '0000007385ac4e64634214634e65ac738000', 'log-out': '0003007004004084044fe404408400700300',
+  'car-front': '0000000f01f82047fe40250a4027fe204000', shield: '00007038e20220220220220230618c0f8000',
+  backpack: '0000700d81fc2022fa2022fa28a2fa28a3fe', 'chevron-right': '000000000040020010010020040000000000',
+  hammer: '0000f806c02402207309e124240480700200', bomb: '00000e0fb30d20740240240240220430c0f0', flame: '0000000600a009004834c3c42042041080f0',
+  'fishing-rod': '0003c023021820c20420620238e10a00e002', 'door-open': '0003fc2c42c42c42e42c42c42c42c47fe040',
+  smile: '0000f818c20269340140140167320218c0f8', 'message-circle-more': '0000f818c2026034014a940140360240c7f8',
+  sailboat: '0000e00d01483442423fe0403fe2023fe0f8', 'train-front': '0200f818c28a28a27220228a3061fc104000',
+  package: '0000f038c66671e4f246246246236c0f0000', 'package-check': '0000601986c673e59a46046046266c1e0060',
+  house: '0000f019830c4024624f24924924927fe000', 'dollar-sign': '0000200f81201201f007c0240241f8020000',
+  coins: '00001c02204904914922249c4804102201c0', landmark: '00007018c3fe3fe0001541541541540003fe', banknote: '0000000007ff4014715554714017ff000000',
+  'lock-open': '0000f01981001003fc7fe4024024024027fe', link: '00001e0210010e11022044384004203c0000',
+  'heart-pulse': '0000883fe4014114513fe3261ac0d8070000', bed: '0000004007fe7ff5015015017ff401000000',
+  armchair: '0000003fc20420470e5fa4f24027fe204000', utensils: '00254e54a55a55a7da11a10e102102102000', wrench: '00001c02c05b05f04d0c21bc3606c0580700',
+  paintbrush: '0020070690d20c432461638c1f81900e0000', 'gamepad-2': '0000003fe2024855d14814714f9306000000',
+  dices: '0000180240120057f14124544105104107f0', eye: '0000000f030c66649249266630c0f0000000', 'pen-line': '00000f0190330660cc1983302604c079e000',
+  sprout: '00000e0120123dc2201e00200200201fc000', axe: '0000600d00880460a213225c480d00600000', pickaxe: '0001f011e1d20620670f91bd3656c7580700',
+  lightbulb: '000070088104104104088000000070000070', 'shower-head': '0000003e0320250284328080020040000000',
+  shirt: '00018c68b4714013061041041041041041fc', 'paw-print': '0000600f006e00a3ee4304176151170900e0',
+  'eighth-notes': '00000e07208208208208209e39249e480300', hourglass: '0003fc1081081980f00600f01981081083fc',
+  footprints: '0003c024025e25229239228a38e10a00e004', briefcase: '0000f80887ff4894894894894894897ff000',
+  'car-taxi-front': '0000600f01f82047fe40250a4027fe204000', 'circle-dot': '0000f818c20260340142140160320218c0f8',
+  fist: '0000000000003fe2aa2023f22121740f8000', bat: '00000000e01a01602c070060080100200000', knife: '00000400c01c0340680d80f01e0380300000',
+  'hunting-knife': '00000000e0320660c40881903e0380300000', crowbar: '000000038028008010020040080100100000',
+  sledgehammer: '00001802c02603303907e0e01c0380300000', nightstick: '00000000600a0140280500a01402c0320000',
+  sword: '00000000600e0140281d00a00e0120000000', katana: '0000080180180300700e01e01c0300000000',
+  'plasma-blade': '00000000600a0140280d00e01e0380100000', 'heavy-flashlight': '00001803c05e04e0c41b8340280700200000',
+  taser: '0000020127fc43f7fa292280280380000000', 'pepper-spray': '0000001801c03c02403c02402402403c0000', bow: '0000801c01203102147fe2143101201c0080',
+  'fire-bow': '0000801c01263162177fd21d3161201c0080', grenade: '0001002803f80fc19c16c1f81681980f0000',
+  bazooka: '0000000003807ff4057ff0f00e00c0000000', 'sam-launcher': '00000030c69e5ee3ce338478798200000000',
+  flamethrower: '00200200600700d00d7f65187f01f81f8000', pistol: '0000000007fc4067fe2202e0280680780000',
+  'service-pistol': '0000000007fe4067fc27c2c0280780000000', 'silenced-pistol': '0000000007ff43f7ff2c02c0280700000000',
+  revolver: '0000000001fe1bf3be3e03c0300300300000', smg: '0000000003f860c7f81f01f01f0030000000', rifle: '0000000001f0f1ebf0e60860000000000000',
+  'assault-rifle': '0000000001fef1ebf0e50870030000000000', 'patrol-rifle': '0000000e05f071e5f0160060000000000000',
+  'police-assault-rifle': '0000001e07f2f1eff0d60060000000000000', 'marksman-rifle': '0000001f01007feffee0c80c000000000000',
+  'hunting-rifle': '0000003f03e0ffebe0e00000000000000000', 'varmint-rifle': '0000000c01e07ff7e06c0000000000000000',
+  shotgun: '0000000001ff77f5fe7fc400000000000000', 'riot-shotgun': '0000000003ff27f3fc3bc280380300000000',
+  'auto-fire': '00000026436c36c76e76e76e76e76e36c000', hose: '00000c01e0120720ec340380280400400000', spikes: '0000000000000000001241243fe3fe000000',
+  roll: '0000000000000f010820c20e0040007fe000',
+/* px:end */
+};
+export function addGlyphPx(o) { Object.assign(VP, o); gSvgs.clear(); }
+// a pixel glyph's bitmap as a path on the line set's 24 grid: a 2 x 2 square a pixel, a row's run in one piece
+export function pxPath(hex) {
+  let d = '';
+  for (let y = 0; y < 12; y++) {
+    const r = parseInt(hex.substr(y * 3, 3), 16);
+    for (let x = 0; x < 12; x++) if ((r >> (11 - x)) & 1) { let n = 1; while (x + n < 12 && ((r >> (11 - x - n)) & 1)) n++; d += `M${x * 2} ${y * 2}h${n * 2}v2h-${n * 2}z`; x += n; }
+  }
+  return d;
+}
+export const glyphPx = (name) => VP[name] || null;
 // more of the set, from the module that draws them (client/bag.js: the things in the bag - loaded with it, off the page's
 // first load)
-export function addGlyphs(o) { for (const [k, d] of Object.entries(o)) { if (!VG[k]) GLYPH_NAMES.push(k); VG[k] = d; } }
+export function addGlyphs(o) { for (const [k, d] of Object.entries(o)) { if (!VG[k]) GLYPH_NAMES.push(k); VG[k] = d; } gSvgs.clear(); }
 // the line's width in grid units (11-05: 2, 2.5 and 3, with and without a halo, compared at the real sizes over the
 // street - docs/DEVLOG.md): Lucide's own 2 thins out at 28 px on a see-through disc, 3 clogs the small ones (the
 // backpack's pocket, the coins' figures); 2.5, and a dark halo under it (style.css .gl .h) on the see-through discs
 // only - the accent discs and the HUD's plates are solid
 export const GLYPH_STROKE = 2.5;
-const gSvgs = new Map();
-// '<svg class="pi24 gl">' for a glyph: the line in the button's text color (currentColor), over its halo
+// '<svg class="pi24 gl">' for a glyph: the line in the button's text color (currentColor), over its halo - and the same
+// glyph as a pixel icon (.px) in the same box; style.css shows the one or the other by where it stands (the menus the
+// pixels, the buttons over the street the line). A glyph with no bitmap yet ('nopx') shows its line everywhere.
 export function glyph(name, px = 0) {
-  if (!gSvgs.has(name)) { const d = VG[name] || VG['circle-dot']; gSvgs.set(name, `<path class="h" d="${d}"/><path d="${d}"/>`); }
-  return `<svg class="pi24 gl" viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ''} fill="none" stroke="currentColor" stroke-width="${GLYPH_STROKE}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${gSvgs.get(name)}</svg>`;
+  if (!gSvgs.has(name)) {
+    const k = VG[name] ? name : 'circle-dot', d = VG[k], b = VP[k];
+    gSvgs.set(name, [`<path class="h" d="${d}"/><path class="ln" d="${d}"/>${b ? `<path class="px" fill="currentColor" stroke="none" shape-rendering="crispEdges" d="${pxPath(b)}"/>` : ''}`, b ? '' : ' nopx']);
+  }
+  const [body, cls] = gSvgs.get(name);
+  return `<svg class="pi24 gl${cls}" viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ''} fill="none" stroke="currentColor" stroke-width="${GLYPH_STROKE}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 }
 // what you hold, as its glyph (the weapon button, HIT and the bag: shared/items.js WEAPONS' id, else its type)
 const WEAPON_GLYPH = { fists: 'fist', bat: 'bat', knife: 'knife', huntknife: 'hunting-knife', crowbar: 'crowbar', sledge: 'sledgehammer', baton: 'nightstick',

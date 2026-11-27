@@ -153,7 +153,7 @@ export class GBuf {
   // A 1 px outline around the shape, in a dark, hue-tinted shade of the colour it borders (16-bit
   // selective outline). Only fills transparent pixels; `skipBottom` leaves the base open so objects
   // sit on the ground.
-  outline(dark = 0.45, skipBottom = false) {
+  outline(dark = 0.45, skipBottom = false, floor = 0) {   // (floor: nature's outlines never under this luminance - leaves 4 lower; palette.js NAT)
     const { w, h, col } = this;
     const add = [];
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -172,7 +172,9 @@ export class GBuf {
       const d = add[i], s = add[i + 1], dj = d * 4, sj = s * 4;
       const r = col[sj], g = col[sj + 1], b = col[sj + 2];
       // darker and shifted toward violet-blue
-      col[dj] = r * dark * 0.85 + 6; col[dj + 1] = g * dark * 0.8 + 4; col[dj + 2] = b * dark * 0.95 + 18; col[dj + 3] = 255;
+      let o0 = r * dark * 0.85 + 6, o1 = g * dark * 0.8 + 4, o2 = b * dark * 0.95 + 18;
+      if (floor) { const fl = this.flag[s] & F_LEAF ? floor - 4 : floor, l = o0 * 0.3 + o1 * 0.59 + o2 * 0.11; if (l < fl) { const k = fl / l; o0 = Math.min(255, o0 * k); o1 = Math.min(255, o1 * k); o2 = Math.min(255, o2 * k); } }
+      col[dj] = o0; col[dj + 1] = o1; col[dj + 2] = o2; col[dj + 3] = 255;
       for (let c = 0; c < 4; c++) this.nrm[dj + c] = this.nrm[sj + c];
       this.z[d] = this.z[s]; this.flag[d] = this.flag[s] & ~F_GROUND;
     }

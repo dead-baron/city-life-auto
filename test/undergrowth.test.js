@@ -69,23 +69,30 @@ test('no undergrowth, drift or bed stands in a tile a fence runs through: pastur
 
 test('a wild rock does not stand alone, nor a fallen log: stones and undergrowth at their feet', () => {
   const near = (items, p, r) => items.filter((it) => isCover(it) && Math.abs(it.x - p.x) < r && Math.abs(it.y - p.y) < r);
-  const look = (t, every, wild) => {
+  // (a log at a made place - a fire ring's seat, a stump clearing's, a camp's - lies on ground that place keeps bare
+  // (the map's reserve, bit 32): the rule is the wild log's, lying in the undergrowth. The check sampled every fifth log
+  // and only ran from twenty: World v3 had 94 logs, nineteen sampled - it had never run. Every wild log now: there are
+  // 13 (11-24), 6 with undergrowth along them - too few to hold to a share, so it is printed, and judged from twenty
+  // as before. The wild logs themselves are the art pass's step A3 - docs/tasks/ART-PASS-PLAN-2026-11-24.md.)
+  const made = (p) => !!(M.reserve[M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))] & 32);
+  const look = (t, every, wild, skip = null) => {
     const out = [];
     let n = 0;
     M.props.forEach((p, pi) => {
-      if (!p || p.t !== t || n++ % every || out.length >= 150) return;
+      if (!p || p.t !== t || (skip && skip(p)) || n++ % every || out.length >= 150) return;
       const items = staticItems(M, Math.floor(p.x / CH), Math.floor(p.y / CH)), own = items.find((it) => it.pi === pi);
       if (!own || (wild && !/^rk:/.test(own.key))) return;   // (rk: a wild rock; a town's boulder is the town's)
       out.push(near(items, p, 72));
     });
     return out;
   };
-  const rocks = look('boulder', 23, true), logs = look('log', 5, false);
+  const rocks = look('boulder', 23, true), logs = look('log', 1, false, made);
   assert.ok(rocks.length >= 60, `wild rocks looked at (${rocks.length})`);
   const share = (L, f) => L.filter(f).length / L.length;
   const withAny = share(rocks, (q) => q.length > 0), withStones = share(rocks, (q) => q.some((it) => /^stones/.test(it.recipe.sp)));
   assert.ok(withAny > 0.6, `rocks with something at the foot: ${(withAny * 100).toFixed(0)}%`);
   assert.ok(withStones > 0.3, `rocks with loose stones beside them: ${(withStones * 100).toFixed(0)}%`);
+  console.log(`# wild logs ${logs.length}: with undergrowth along them ${logs.filter((q) => q.length > 0).length}`);
   if (logs.length >= 20) {
     const by = share(logs, (q) => q.length > 0), shrooms = share(logs, (q) => q.some((it) => it.recipe.sp === 'toadstools'));
     assert.ok(by > 0.6, `logs with undergrowth along them: ${(by * 100).toFixed(0)}%`);

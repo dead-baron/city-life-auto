@@ -50,16 +50,16 @@ const SHIRT = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
 const START_CSS = `#creator.cc-start .cc-left, #creator.cc-start .cc-foot, #creator.cc-start .cc-tabs { display: none; }
 #creator.cc-start .cc-panel { height: auto; max-height: 100%; }
 #creator.cc-start .cc-page { display: flex; flex-direction: column; gap: var(--s3); touch-action: auto; }
-#creator .cc-stages { display: flex; gap: var(--s2); overflow-x: auto; overflow-y: hidden; padding: var(--s2) 6px 10px; scroll-snap-type: x proximity; background: radial-gradient(ellipse at 50% 0, var(--navy3), transparent 70%), var(--navy); border: 2px solid var(--gold-a); border-radius: var(--r2); }
+#creator .cc-stages { display: flex; gap: var(--s2); overflow-x: auto; overflow-y: hidden; padding: var(--s2) 6px 10px; scroll-snap-type: x proximity; background: var(--navy); border: 2px solid var(--gold-a); border-radius: var(--r2); }
 #creator .cc-stage { position: relative; flex: 0 0 164px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: var(--s1); padding: var(--s4) var(--s1) var(--s2); min-height: 300px; background: var(--shade); border: 2px solid var(--line); border-radius: var(--r2); color: var(--dim); font: 600 var(--fs-1) var(--ui); cursor: pointer; scroll-snap-align: center; touch-action: manipulation; overflow: hidden; transition: border-color var(--t1) var(--ease), background var(--t1) var(--ease); }
 #creator .cc-stage .cc-th { position: relative; width: 150px; height: 230px; border-radius: 0; }
 #creator .cc-stage:not(.on) .cc-th { filter: brightness(.6) saturate(.8); }
-#creator .cc-stage.on { border-color: var(--gold); background: linear-gradient(180deg, var(--gold-t), transparent 70%), var(--shade); box-shadow: 0 0 0 2px var(--ink), 0 0 14px var(--gold-a); color: var(--cream); }
-#creator .cc-stage.on::before { content: ''; position: absolute; left: 50%; top: -4px; width: 130%; height: 84%; transform: translateX(-50%); background: linear-gradient(180deg, var(--gold-a), transparent); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); pointer-events: none; }
+#creator .cc-stage.on { border-color: var(--gold); background: var(--pick), var(--shade); box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--gold-a); color: var(--cream); }
+#creator .cc-stage.on::before { content: ''; position: absolute; left: 50%; top: -4px; width: 130%; height: 84%; transform: translateX(-50%); background: var(--gold-t); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); pointer-events: none; }
 #creator .cc-plate { position: relative; font: 700 var(--fs-2) var(--ui); color: var(--dim); white-space: nowrap; }
 #creator .cc-stage.on .cc-plate { margin-top: -10px; padding: 2px 10px; background: var(--gold); border-radius: var(--r1); box-shadow: 0 0 0 2px var(--ink); color: var(--ink); }
 #creator .cc-stage .cc-q { margin: auto 0; font: 700 var(--fs-6) var(--pixel); color: var(--gold); text-shadow: var(--lift); }
-#creator .cc-new { position: sticky; right: 0; z-index: 1; justify-content: center; gap: 10px; border: 2px dashed var(--cream-a); background: var(--navy); box-shadow: -10px 0 12px var(--ink); color: var(--cream); font: 700 var(--fs-2) var(--ui); }
+#creator .cc-new { position: sticky; right: 0; z-index: 1; justify-content: center; gap: 10px; border: 2px dashed var(--cream-a); background: var(--navy); box-shadow: -6px 0 0 var(--ink); color: var(--cream); font: 700 var(--fs-2) var(--ui); }
 #creator .cc-new b { font: 700 var(--fs-6)/1 var(--pixel); color: var(--gold); text-shadow: var(--lift); }
 #creator .cc-pick { display: flex; flex-direction: column; align-items: center; gap: var(--s2); }
 #creator .cc-pick .cc-btn { width: min(520px, 100%); gap: 14px; }

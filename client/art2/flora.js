@@ -17,13 +17,15 @@
 //
 //   FLORA = { name: (seed) => sprite | Vox }   plus every maker exported by name.
 import { GBuf, F_LEAF, F_GROUND, F_WET, F_WATER, hash, mulberry32, step } from './gbuf.js';
-import { ramp } from './palette.js';
+import { natRamp, lumFloor } from './palette.js';
 import { Vox } from './voxel.js';
 
 const PI = Math.PI, TAU = PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-// foliage ramps: 8 steps from deep blue-green pockets through saturated mids to warm yellow lit tips, the
-// hue swinging hard toward yellow as it brightens and staying saturated (the concept sheets' clumps)
+// foliage ramps: 8 steps from a deeper tone of the leaf's own green through saturated mids to warm yellow lit tips,
+// the hue swinging toward yellow as it brightens. The shade side (11-25, LEAF_PAINT): half way to black at most (it
+// was 72%), leaning a little to blue-green (it swung 42% of the way), no tone under the style anchor's darkest green.
+export const LEAF_PAINT = { cap: 0.5, shiftD: 0.6, floor: 46, pocket: 0.16, core: 0.24, back: 0.1, under: 0.75 };
 function hsl(c) {
   const r = c[0] / 255, g = c[1] / 255, b = c[2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
   if (mx === mn) return [0, 0, l];
@@ -41,13 +43,13 @@ export function FOL(c, o = {}) {
   const n = o.n ?? 8, k = o.k ?? 3, out = [], cool = o.cool ?? 195, warm = o.warm ?? 54;
   for (let i = 0; i < n; i++) {
     const t = i - k;
-    if (t < 0) { const u = -t / k; out.push(rgb(toward(h, cool, (o.shiftD ?? 0.42) * u), Math.min(1, s * (1 + 0.15 * u)), l * (1 - (o.dark ?? 0.72) * u))); }
+    if (t < 0) { const u = -t / k; out.push(lumFloor(rgb(toward(h, cool, (o.shiftD ?? 0.42) * LEAF_PAINT.shiftD * u), Math.min(1, s * (1 + 0.15 * u)), l * (1 - Math.min(o.dark ?? 0.72, LEAF_PAINT.cap) * u)), LEAF_PAINT.floor)); }
     else if (t > 0) { const u = t / (n - 1 - k); out.push(rgb(toward(h, warm, (o.shift ?? 0.8) * u), Math.min(1, s * (1 + 0.05 * u)) * (1 - (o.desat ?? 0.1) * u), l + (1 - l) * (o.light ?? 0.5) * u)); }
     else out.push(rgb(h, s, l));
   }
   return out;
 }
-const RR = (c, n = 6, k = 3, o = {}) => ramp(c, n, k, o);
+const RR = (c, n = 6, k = 3, o = {}) => natRamp(c, n, k, o);   // (nature's ramps: palette.js NAT)
 const BARK = RR('#6a4a32', 7, 3, { dark: 0.66, light: 0.45 });
 const BARK_RED = RR('#9a4e2e', 7, 3, { dark: 0.68, light: 0.5, shift: 0.2 });
 const BARK_GREY = RR('#8a8478', 7, 3, { dark: 0.6, light: 0.5, shift: 0.18 });
@@ -74,10 +76,9 @@ export function floraBare(fn) { const o = BARE; BARE = true; try { return fn(); 
 let CAN = false;
 // VARY: each shape of a plant its own build - on for the plants the world plants (floraArt), off for a maker called on
 // its own (the kit sheets keep the sheet's proportions). bv: a factor round 1 from the plant's seed (i: which measure,
-// amt: how far either way); bu: 0..1 from the seed, or -1 with VARY off. The owner, 2026-11-21: "a lot of variety
-// throughout the world in nature" - more shapes of one build (the same height, the same lean) didn't read as variety.
+// amt: how far either way); bu: 0..1 from the seed, or -1 with VARY off.
 let VARY = false, TINT = 0;
-const SIDE = 0;   // (how much of the painted light comes from the upper left, 0..1: none - the side light is the game's sun alone, the owner 11-22; DECISIONS, Art direction)
+const SIDE = 0;   // (painted side light, 0..1: none - the game's sun alone, 11-22)
 // tc: the colour of a plant's flowers or berries - the first of the list for a maker called on its own, else the one the
 // stand it grows in has (floraArt's tint: statics.js gives a drift of flowers one colour, with a few strays). All of
 // them the palette's own reds, oranges, yellows, pinks, purples, blues and whites.
@@ -93,16 +94,30 @@ const ds = (fn, ...a) => { const c = CAN; CAN = false; try { return fn(...a); } 
 const nu = (n, k = 0.6) => (U === 1 ? n : Math.max(1, Math.round(n * k)));
 const CQ = () => Math.pow(U, 0.4), zu = (o) => (o && o.z > 0 ? { ...o, z: Math.max(1, o.z * U) } : o);
 const sq = () => Math.sqrt(SIZE), tk = () => Math.pow(SIZE, 0.8), uq = () => Math.sqrt(U);   // (uq: what a leaf cluster shrinks by at the art pixel - less than the plant, so its clumps stay readable)
-// floraArt(k, fn): a plant made at the art pixel (docs/art-v2/SPEC.md "Scale": 1 art pixel = 2 world px), as the giant
-// redwoods are (redwoods.js giantRedwoodArt). The maker runs at half the asked size and comes back marked ap2 = 2: the
-// chunk bake lays each of its pixels over 2 x 2 world px, its heights doubled (chunkbake.js compositeDepth2), on the art
-// grid - so the game shows the picture as it was painted, its clumps of leaves lit on top and dark underneath, a stem
-// one art pixel wide, where a world-px picture halved kept one texel of four (speckle).
+// floraArt(k, fn): a plant made at the art pixel (docs/art-v2/SPEC.md "Scale": 1 art pixel = 2 world px). The maker
+// runs at half the asked size - every size of a plant is drawn, never resampled - and comes back marked ap2 = 2: the
+// chunk bake lays each pixel over 2 x 2 world px on the art grid (chunkbake.js compositeDepth2).
 export function floraArt(k, fn, tint = 0) {
   const u0 = U, v0 = VARY, t0 = TINT; U = 0.5; VARY = true; TINT = tint | 0;
   let G;
   try { G = floraScale(k * 0.5, fn); if (G && G.render) G = G.render(0); } finally { U = u0; VARY = v0; TINT = t0; }
   if (G && G.w && !G.ap2) { G.ax = (G.ax || 0) * 2; G.ay = (G.ay || 0) * 2; G.ap2 = 2; }
+  return G;
+}
+// Every plant faces the game's light evenly (11-25): leaf pixels turned three quarters toward the sky, as the sword
+// fern's are drawn, bark and stems a little - the form is the light pass's to give, by the hour. The tones are the
+// painters' own (LEAF_PAINT, palette.js NAT): nothing here changes a colour.
+export const BARK_LOOK = { flat: 0.15, dark: 50 }, LEAF_LOOK = { flat: 0.75, dark: 46 };
+export function leafLight(G) {
+  if (!G || !G.col || G.lit) return G;
+  const c = G.col, n = G.nrm;
+  for (let i = 0, j = 0; i < G.w * G.h; i++, j += 4) {
+    if (!c[j + 3] || !n[j + 3]) continue;
+    const K = G.flag[i] & F_LEAF ? LEAF_LOOK.flat : BARK_LOOK.flat;
+    const x = (n[j] / 127.5 - 1) * (1 - K), y = (n[j + 1] / 127.5 - 1) * (1 - K) + 0.3 * K, z = (n[j + 2] / 127.5 - 1) * (1 - K) + 0.95 * K, l = Math.hypot(x, y, z) || 1;
+    n[j] = (x / l + 1) * 127.5; n[j + 1] = (y / l + 1) * 127.5; n[j + 2] = (z / l + 1) * 127.5;
+  }
+  G.lit = 1;
   return G;
 }
 // an ap2 sprite spread out to world px (the kit sheets and the tools, which lay sprites down 1 : 1)
@@ -126,9 +141,14 @@ export function artDouble(G) {
 
 // ---- canvas, pixels, finishing -------------------------------------------------------------------------
 // a sprite canvas: foot (anchor) at the middle of the bottom, `below` rows left under it for bases
+// (hidden room round a maker's canvas - ROOM_X a side, ROOM_Y on top; G.ox, G.oy - so nothing drawn past it is cut
+// off flat: 41 plants were, 11-24, test/floraclip.test.js. done() crops it away.)
+const ROOM_X = 24, ROOM_Y = 40;
 function sprite(w, h, below = 4) {
-  const G = new GBuf(Math.ceil(uu(w)), Math.ceil(uu(h)));
-  G.ax = G.w >> 1; G.ay = G.h - 1 - Math.ceil(uu(below)); G.lz = new Int16Array(G.w * G.h).fill(-1);
+  const w0 = Math.ceil(uu(w)), h0 = Math.ceil(uu(h)), mx = Math.ceil(uu(ROOM_X)), my = Math.ceil(uu(ROOM_Y));
+  const G = new GBuf(w0 + mx * 2, h0 + my);
+  G.ox = mx; G.oy = my;
+  G.ax = w0 >> 1; G.ay = h0 - 1 - Math.ceil(uu(below)); G.lz = new Int16Array(G.w * G.h).fill(-1);
   if (UD()) { G.du = U; G.ax /= U; G.ay /= U; }   // (a maker in world px reads its foot in world px; done() puts it back)
   return G;
 }
@@ -138,14 +158,16 @@ function px(G, x, y, c, n, f = F_LEAF, z = -1) { pxn(G, x, y, c, n[0], n[1], n[2
 function pxn(G, x, y, c, nx, ny, nz, f = F_LEAF, z = -1) {
   if (UD()) { if (z < 0 && G.root) z = Math.max(1, (G.root.b + G.root.y - y) * U); else if (z > 0) z = Math.max(1, z * U); x *= U; y *= U; }
   x = Math.round(x); y = Math.round(y);
-  if (x < 0 || y < 0 || x >= G.w || y >= G.h) return;
   if (z < 0 && G.root) z = Math.max(1, Math.round(G.root.b + G.root.y - y));   // standing on raised or flat ground
+  if (G.ox) { x += G.ox; y += G.oy; }   // (the room round the canvas: sprite())
+  if (x < 0 || y < 0 || x >= G.w || y >= G.h) return;
   const i = y * G.w + x, j = i * 4, l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+  c = lumFloor(c, f & F_LEAF ? LEAF_PAINT.floor : BARK_LOOK.dark);   // (no pixel of a plant is written under the floor: a flower's dark heart, a seam - a deep tone, not black)
   G.col[j] = c[0]; G.col[j + 1] = c[1]; G.col[j + 2] = c[2]; G.col[j + 3] = 255;
   G.nrm[j] = (nx / l * 0.5 + 0.5) * 255; G.nrm[j + 1] = (ny / l * 0.5 + 0.5) * 255; G.nrm[j + 2] = (nz / l * 0.5 + 0.5) * 255; G.nrm[j + 3] = 255;
   G.emi[j + 3] = 0; G.flag[i] = f; if (G.lz) G.lz[i] = z;
 }
-const has = (G, x, y) => { x = Math.round(uu(x)); y = Math.round(uu(y)); return x >= 0 && y >= 0 && x < G.w && y < G.h && G.col[(y * G.w + x) * 4 + 3] > 0; };
+const has = (G, x, y) => { x = Math.round(uu(x)) + (G.ox || 0); y = Math.round(uu(y)) + (G.oy || 0); return x >= 0 && y >= 0 && x < G.w && y < G.h && G.col[(y * G.w + x) * 4 + 3] > 0; };
 // GBuf.outline(dark, true) without per-pixel allocations: each empty pixel left of, right of or above the shape
 // (not under its bottom edge) takes a dark, violet-shifted copy of that neighbour
 function outline(G, dark) {
@@ -160,7 +182,8 @@ function outline(G, dark) {
   }
   for (let k = 0; k < n; k += 2) {
     const d = pairs[k], q = pairs[k + 1], dj = d * 4, sj = q * 4;
-    col[dj] = col[sj] * dark * 0.85 + 6; col[dj + 1] = col[sj + 1] * dark * 0.8 + 4; col[dj + 2] = col[sj + 2] * dark * 0.95 + 18; col[dj + 3] = 255;
+    const oc = lumFloor([col[sj] * dark * 0.85 + 6, col[sj + 1] * dark * 0.8 + 4, col[sj + 2] * dark * 0.95 + 18], flag[q] & F_LEAF ? LEAF_PAINT.floor : BARK_LOOK.dark);   // (never under the floor)
+    col[dj] = oc[0]; col[dj + 1] = oc[1]; col[dj + 2] = oc[2]; col[dj + 3] = 255;
     nrm[dj] = nrm[sj]; nrm[dj + 1] = nrm[sj + 1]; nrm[dj + 2] = nrm[sj + 2]; nrm[dj + 3] = nrm[sj + 3];
     z[d] = z[q]; flag[d] = flag[q] & ~F_GROUND;
   }
@@ -171,6 +194,9 @@ function outline(G, dark) {
 // The ground and what is strewn on it have none.)
 function done(G, ol = 0.42) {
   if (G.du) { G.ax = Math.round(G.ax * G.du); G.ay = Math.round(G.ay * G.du); G.du = 0; }
+  if (G.ox) { G.ax += G.ox; G.ay += G.oy; G.ox = 0; G.oy = 0; }
+  // (test/floraclip.test.js counts what touches the canvas's top row and side columns before the crop)
+  if (globalThis.__FLORA_CLIP) { let t = 0, sd = 0; for (let x = 0; x < G.w; x++) if (G.col[x * 4 + 3]) t++; for (let y = 0; y < G.h; y++) { if (G.col[y * G.w * 4 + 3]) sd++; if (G.col[(y * G.w + G.w - 1) * 4 + 3]) sd++; } globalThis.__FLORA_CLIP(t, sd, G); }
   if (ol) outline(G, ol);
   const n = G.w * G.h;
   for (let i = 0; i < n; i++) if (G.col[i * 4 + 3]) G.z[i] = G.lz && G.lz[i] >= 0 ? G.lz[i] : Math.max(1, G.ay - Math.floor(i / G.w));
@@ -273,7 +299,8 @@ function massCone(cx, yTop, yBot, rb, rnd, cs, dens = 1.4, round = 0.25) {
   }
   return out;
 }
-// one cluster: a leafy clump lit on the upper left, falling into a dark pocket at the lower right
+// one cluster: a leafy clump lighter on top, its lower rim a tone deeper where clumps overlap (LEAF_PAINT.pocket: it
+// fell into a dark pocket, 0.3)
 function cluster(G, c, R, o, seed) {
   const r = c.r, rr = Math.ceil(r * 1.25 + 1), shape = o.leaf || 'round';
   for (let dy = -rr; dy <= rr; dy++) for (let dx = -rr; dx <= rr; dx++) {
@@ -289,7 +316,7 @@ function cluster(G, c, R, o, seed) {
     const X = Math.round(c.x + dx), Y = Math.round(c.y + dy), e = q / lim;
     const sx = lx * SIDE;   // (SIDE: how much of the painted light comes from the left - the sun's side is the game's to light)
     let t = c.g + (-sx * 0.5 - ly * (0.62 + (1 - SIDE) * 0.2)) * (o.contrast ?? 0.4);
-    if (e > 0.62 && sx + ly > 0.15) t -= 0.3;                                 // the shaded rim: dark pockets where clumps overlap
+    if (e > 0.62 && sx + ly > 0.15) t -= LEAF_PAINT.pocket;                                 // the shaded rim: dark pockets where clumps overlap
     else if (e > 0.55 && sx + ly < -0.55 + (1 - SIDE) * 0.12) t += 0.22;      // the lit tip
     const hh = hash(X, Y, seed + 1);
     if (hh > 0.94 && ly < 0.2) t += 0.12; else if (hh < 0.03) t -= 0.12;      // single leaves catching or losing the light
@@ -319,10 +346,10 @@ function paintClusters(G, cls, o) {
   cls.sort((a, b) => a.d - b.d);
   if (o.core) for (const c of cls) {
     const r = c.r * 1.05;
-    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r) { const X = Math.round(c.x + dx), Y = Math.round(c.y + dy); if (!has(G, X, Y)) px(G, X, Y, step(c.R || R, 0.06 + (hash(X, Y, seed) > 0.8 ? 0.12 : 0), X, Y, 0.5), sN(c.gu * 0.5, 0.5, 0.4), F_LEAF, o.z ?? -1); }
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r) { const X = Math.round(c.x + dx), Y = Math.round(c.y + dy); if (!has(G, X, Y)) px(G, X, Y, step(c.R || R, LEAF_PAINT.core + (hash(X, Y, seed) > 0.8 ? 0.1 : 0), X, Y, 0.5), sN(c.gu * 0.5, 0.5, 0.4), F_LEAF, o.z ?? -1); }
   }
   const back = cls.filter((c) => c.w < (o.backW ?? 0.32)), front = cls.filter((c) => c.w >= (o.backW ?? 0.32));
-  for (const c of back) cluster(G, { ...c, g: c.g - 0.18 }, R, o, seed);
+  for (const c of back) cluster(G, { ...c, g: c.g - LEAF_PAINT.back }, R, o, seed);
   if (o.mid) o.mid();
   if (o.snow) for (const c of front) c.snow = c.gv < 0.4 && rnd() < o.snow;
   for (const c of front) {
@@ -556,9 +583,7 @@ function litter(G, cx, foot, r, cols, seed, n = 30) {
 export function conifer(seed = 1, o = {}) {
   if (!CAN) return cv(conifer, seed, o);
   const rnd = mulberry32(seed * 3301 + (o.k || 0) * 7 + 9);
-  // (with VARY a shape is one of four builds, so two of a kind side by side read as two trees - the owner, 11-21: a
-  // young one, short and slim; an old one, its lower trunk bare and its top thin; a ragged one, gaps in its boughs
-  // and off the plumb; the tree as it was)
+  // (with VARY one of four builds, 11-21: young - short and slim; old - bare below, thin on top; ragged; as it was)
   const cls = bu(seed, 6), young = cls >= 0 && cls < 0.2, old = cls >= 0.2 && cls < 0.38, ragged = cls >= 0.38 && cls < 0.54;
   const h = (o.h ?? 120) * SIZE * bv(seed, 1, 0.15) * (young ? 0.72 : 1), r = (o.r ?? 30) * SIZE * bv(seed, 2, 0.16) * (young ? 0.84 : 1), form = o.form || 'cone', R = o.R || FOL('#33663a'), B = o.B || BARK;
   const G = sprite(r * 2 + 30, h + 16, 5), cx = G.ax, foot = G.ay, top = foot - h, tw = (o.tw ?? 2.6) * tk() * (young ? 0.8 : 1);
@@ -634,17 +659,17 @@ export function shrub(seed = 1, o = {}) {
 }
 // snow resting on the tops of a sprite's foliage: pixels whose pixel above is empty (or snow) turn white
 function snowCap(G, k = 0.6, seed = 1) {
-  const W = G.w, H = G.h, mark = new Uint8Array(W * H);
-  for (let x = 0; x < W; x++) {
-    let run = 0;
-    for (let y = 0; y < H; y++) {
-      const i = y * W + x, a = G.col[i * 4 + 3];
+  const W = G.w, H = G.h, mark = new Uint8Array(W * H), ox = G.ox || 0, oy = G.oy || 0;   // (x, y below: the maker's own, the canvas's room taken off)
+  for (let bx = 0; bx < W; bx++) {
+    let run = 0; const x = bx - ox;
+    for (let by = 0; by < H; by++) {
+      const i = by * W + bx, a = G.col[i * 4 + 3], y = by - oy;
       if (!a) { run = 0; continue; }
       if (run === 0 && (G.flag[i] & F_LEAF) && hash(x >> 1, y >> 2, seed) < k) run = 2 + (hash(x, y, seed + 1) * 2.5 | 0);
       if (run > 0) { mark[i] = run; run--; if (run === 0) run = -1; }
     }
   }
-  for (let i = 0; i < W * H; i++) if (mark[i]) { const x = i % W, y = (i / W) | 0; px(G, x, y, step(SNOW, 0.45 + mark[i] * 0.12 - (hash(x, y, 2) > 0.85 ? 0.15 : 0), x, y, 0.3), [-0.15, -0.2, 1], 0, G.lz[i]); }
+  for (let i = 0; i < W * H; i++) if (mark[i]) { const x = i % W - ox, y = ((i / W) | 0) - oy; px(G, x, y, step(SNOW, 0.45 + mark[i] * 0.12 - (hash(x, y, 2) > 0.85 ? 0.15 : 0), x, y, 0.3), [-0.15, -0.2, 1], 0, G.lz[i]); }
 }
 
 // ---- city plants (E3a) ---------------------------------------------------------------------------------------
@@ -1090,28 +1115,36 @@ export const huckleberry = (seed = 1) => shrub(seed, { w: 24, h: 28, R: FOL('#4a
 export const wildBerry = (seed = 1) => shrub(seed, { w: 24, h: 30, R: FOL('#4a7c2c'), cs: 2.8, fruit: { R: RR(tc(['#c8282a', '#3a2a5a', '#e8882a']), 5, 2, { light: 0.6 }), n: 14, r: 1.2 }, flowers: { R: RR('#f4f0e8', 5, 3, { dark: 0.3 }), k: 0.05, kind: 'star' }, k: 4 });
 // tall flower spikes over a basal rosette: foxglove, lupine, paintbrush. o: n, h, R (flower ramp), kind
 // ('bells' | 'pea' | 'brush'), L (leaf ramp), leaves ('broad' | 'palm' | 'fine'), rocks, w
+export const SPIKE_WILD = { fan: 0.2, own: 0.26, max: 0.3, nod: 0.16, short: 0.25 };   // (lean in px per px of height: out from the clump, its own; the tip's nod; how many are short)
 export function spikes(seed = 1, o = {}) {
   const rnd = mulberry32(seed * 151 + (o.k || 0)), w = (o.w ?? 16) * bv(seed, 1, 0.15), G = sprite(w * 2 + 18, (o.h ?? 30) * (VARY ? 1.15 : 1) + 18, 5), cx = G.ax, foot = G.ay;
   const L = o.L || FOL('#3e7a2a'), P = o.R;
   if (o.leaves === 'broad') for (let i = 0; i < 9; i++) { const a = -PI / 2 + (i / 8 - 0.5) * 2.8; bigLeaf(G, cx + Math.cos(a) * 3, foot - 2, a, 9 + rnd() * 4, 2.6, L, { shape: 'lance', droop: 0.06, seed, vein: 2.4 }); }
   else { const cls = massEll([{ x: cx, y: foot - 5, r: w * 0.85, ry: 5.5 }], rnd, o.leaves === 'fine' ? 2.2 : 2.8, 1.5); paintClusters(G, cls, { R: L, seed, leaf: o.leaves === 'palm' ? 'maple' : o.leaves === 'fine' ? 'fine' : 'round', core: true }); }
   const n = Math.max(2, Math.round((o.n ?? 5) * bv(seed, 2, 0.3))), sp = [], hS = bv(seed, 3, 0.14);
-  for (let i = 0; i < n; i++) sp.push({ x: cx + (i / Math.max(1, n - 1) * 2 - 1) * w * 0.72 + (rnd() - 0.5) * w * 0.3, h: (o.h ?? 30) * hS * (0.55 + rnd() * 0.5), y: foot - 2 - rnd() * 6 });
+  // (the owner, 11-24 23:37: "really vertical, all the stems are so straight it kind of feels out of place in the world
+  // (unless its part of a garden or flower pot)". A wild stand grows as it will - SPIKE_WILD: each stem leans out from
+  // the clump and its own way, bows, nods at the tip, and one in four is a short one; o.straight keeps a bed's rows.)
+  for (let i = 0; i < n; i++) {
+    const u = n > 1 ? i / (n - 1) * 2 - 1 : 0, short = !o.straight && rnd() < SPIKE_WILD.short, h = (o.h ?? 30) * hS * (short ? 0.3 + rnd() * 0.2 : 0.55 + rnd() * 0.5);
+    const lean = o.straight ? 0 : clamp(u * SPIKE_WILD.fan + (rnd() - 0.5) * SPIKE_WILD.own, -SPIKE_WILD.max, SPIKE_WILD.max), nod = o.straight ? 0 : (rnd() - 0.3) * SPIKE_WILD.nod * Math.sign(lean || rnd() - 0.5);
+    sp.push({ x: cx + u * w * 0.72 + (rnd() - 0.5) * w * 0.3, h, y: foot - 2 - rnd() * 6, lean, nod });
+  }
   sp.sort((a, b) => a.y - b.y);
   for (const s of sp) {
-    const top = s.y - s.h, R = pickR(P, rnd);
-    stem(G, s.x, s.y, s.x, top + 2, L, 0.4);
+    const top = s.y - s.h, R = pickR(P, rnd), xo = (v) => s.lean * v + s.nod * (v / s.h) * (v / s.h) * s.h;   // (v: px above the stem's foot)
+    for (let v = 0; v < s.h - 2; v++) px(G, s.x + xo(v), s.y - v, step(L, 0.4 + v / s.h * 0.15, Math.round(s.x + xo(v)), Math.round(s.y - v), 0.3), [-0.3, 0.5, 0.6], F_LEAF);
     const len = o.kind === 'brush' ? s.h * 0.35 : s.h * 0.55;
     for (let k = 0; k < len; k++) {
-      const Y = top + k, t = k / len, wd = o.kind === 'brush' ? 1.6 + t * 1.2 : (o.kind === 'pea' ? 0.6 + t * 1.8 : 1.2 + t * 1.6);
+      const Y = top + k, t = k / len, wd = o.kind === 'brush' ? 1.6 + t * 1.2 : (o.kind === 'pea' ? 0.6 + t * 1.8 : 1.2 + t * 1.6), sx = s.x + xo(s.h - k);
       for (let q = -Math.ceil(wd); q <= wd; q++) {
         if (o.kind === 'bells' && (k % 3 === 2 || (Math.abs(q) > wd - 0.8 && k % 3 === 0))) continue;
         if (o.kind === 'brush' && hash(q, k, seed) < 0.15) continue;
         const sh = 0.62 - q / (wd + 1) * 0.3 + (k % 2 && o.kind === 'pea' ? -0.15 : 0) + (o.kind === 'bells' && k % 3 === 1 ? -0.25 : 0) - (o.kind === 'pea' ? t * 0.2 : 0) + (k < 2 ? 0.1 : 0);
-        px(G, s.x + q, Y, step(R, sh, s.x + q | 0, Y, 0.2), sN(q / (wd + 1), 0.2, 0.9));
+        px(G, sx + q, Y, step(R, sh, sx + q | 0, Y, 0.2), sN(q / (wd + 1), 0.2, 0.9));
       }
     }
-    if (o.kind === 'pea' || o.kind === 'bells') px(G, s.x, top - 1, step(L, 0.6, 0, 0, 0), [0, 0, 1]);
+    if (o.kind === 'pea' || o.kind === 'bells') px(G, s.x + xo(s.h), top - 1, step(L, 0.6, 0, 0, 0), [0, 0, 1]);
   }
   if (o.rocks) pebbles(G, cx, foot, o.rocks, w, seed);
   return done(G);

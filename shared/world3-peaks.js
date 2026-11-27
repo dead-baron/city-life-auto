@@ -17,6 +17,8 @@
 import { TILE, T } from './constants.js';
 import { peakHeight, SNOW_LINE, TREE_LINE } from './world3-biomes.js';
 import { routeTiles } from './world3-trails.js';
+import { cliffSolid } from './cliffshape.js';
+import { RELIEF, reliefMetres } from './mapcore.js';
 
 const RES = 32, D_PEAKS = 48;
 const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -27,9 +29,25 @@ export const PEAKS3 = {
   meadows: { n: 5, step: 8, spacing: 110, r: [11, 15], h: [TREE_LINE - 0.1, SNOW_LINE - 0.04], flat: 10, keep: 30, names: ['Marmot Meadow', 'Columbine Basin', 'Heather Bench', 'Paintbrush Flat', 'Saxifrage Meadow'] },
   // n summits at least `spacing` apart: a knob (higher than the ground `knob` tiles round it every way) between the
   // heights h (just under the snow line, or at it)
-  summits: { n: 3, step: 6, spacing: 200, knob: 14, h: [SNOW_LINE - 0.08, SNOW_LINE + 0.02], keep: 24, names: ['Cairn Peak', 'Eagle Knob', 'Windy Col'] },
+  // (z: a summit is a top of the land itself - at least this many metres up in its relief, and the truest tops first:
+  // the ones that stand highest over the ground round them. Was: by the biome's height alone - "Cairn Peak" lay on a
+  // foothill at 92 m, 250 m under the mountains' top, and had the telescope. The land has two such tops clear of the roads
+  // and places; a third summit, if none is left, is the best by the old rule - Cairn Peak stays on its spur. The names in
+  // that order: the trail's summit, with the telescope, first)
+  summits: { n: 3, step: 6, spacing: 200, knob: 14, h: [SNOW_LINE - 0.08, SNOW_LINE + 0.02], z: 300, keep: 24, names: ['Eagle Knob', 'Windy Col', 'Cairn Peak'] },
+  // a summit is a knob of rock (the owner, 11-25 09:03: "Build the summit from plans" - docs/tasks/MOUNTAIN-LOOK-2026-11-25.md):
+  // a level shelf (half-widths in tiles) for the cairn, the bench and the telescope, a crown of solid rock round it -
+  // a ring crown[0] tiles thick on its north half, a block on its south half that ends crown[1] tiles south of the
+  // shelf in a straight foot (the west half `step` tiles shorter), so a wide cliff wall stands either side of the way
+  // up (first built as a round: its south edge curved, the walls came out two thin pillars and the knob read as a
+  // disc of paving); `rise` metres over the ground round it; the way up a cleft `ramp` tiles either side of the
+  // middle, stone steps in it; the land coming back to its own over `apron` tiles outside
+  // (deep: tiles of rock behind a wall's foot its face is given - with its height the rock it is drawn over: a face
+  // 5 deep reached 7 rows north, onto the shelf, and was not put)
+  knob: { shelf: [5, 4], crown: [3, 5], rise: 16, ramp: 1, step: 1, apron: 3, face: 90, deep: 2 },
   trail: { name: 'Summit Trail', cairnEvery: 30, road: 260, reach: 460 },   // (road: how far to look for its start - a road or a trail; reach: the summit at most this far from the hut)
 };
+const DITHER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);   // (shared/world3-relief.js's)
 const VEG = /^(tree_|redwood|shrub_|bush_|flowers_|log$|boulder|outcrop|rwstump|rwlog)/;
 // the designed places up in the mountains the snow leaves bare round (shared/world3-world.js's snowfields: the landmarks'
 // types) - the Ridge Trail Hunting Camp sat in the snow
@@ -52,7 +70,7 @@ export function buildPeaks3(m, H3) {
   const nearPlace = (tx, ty, r) => places.some(([x, y, pr]) => Math.hypot(x - tx, y - ty) < pr + r);
   const ground = (i) => { const t = m.tiles[i]; return m.dist[i] === D_PEAKS && m.land[i] && (t === T.GRASS || t === T.DIRT) && !(m.reserve[i] & ~128) && (m.bld ? m.bld[i] < 0 : true); };
   const fits = (tx, ty, R) => { for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { if (dx * dx + dy * dy > R * R) continue; if (!inF(tx + dx, ty + dy) || !ground(idx(tx + dx, ty + dy))) return false; } return true; };
-  const flatOver = (tx, ty, R) => { let lo = 1e9, hi = -1e9; for (let dy = -R; dy <= R; dy += 2) for (let dx = -R; dx <= R; dx += 2) { const r = m.relief[idx(tx + dx, ty + dy)]; if (r < lo) lo = r; if (r > hi) hi = r; } return hi - lo; };
+  const flatOver = (tx, ty, R) => { let lo = 1e9, hi = -1e9; for (let dy = -R; dy <= R; dy += 2) for (let dx = -R; dx <= R; dx += 2) { const r = reliefMetres(m.relief[idx(tx + dx, ty + dy)]); if (r < lo) lo = r; if (r > hi) hi = r; } return hi - lo; };
   // the growth and the loose rock by 8-tile cell (taken off where a meadow, a summit's vista or the trail goes)
   const VC = 8 * TILE, vgrid = new Map();
   for (const p of m.props) if (p && VEG.test(p.t)) { const k = Math.floor(p.x / VC) * 65536 + Math.floor(p.y / VC); let a = vgrid.get(k); if (!a) vgrid.set(k, (a = [])); a.push(p); }
@@ -142,6 +160,9 @@ export function buildPeaks3(m, H3) {
   });
 
   // ---- the summits ----
+  // (the land's own height in metres, a 5 x 5 mean; how far a place stands over the highest ground on two rings round it)
+  const zs = (tx, ty) => { let a = 0, n = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (inF(tx + dx, ty + dy)) { a += m.relief[idx(tx + dx, ty + dy)]; n++; } return reliefMetres(a / n); };
+  const promOf = (tx, ty) => { let hi = -1e9; for (const R of [14, 24]) for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6; hi = Math.max(hi, zs(Math.round(tx + Math.cos(a) * R), Math.round(ty + Math.sin(a) * R))); } return zs(tx, ty) - hi; };
   const S = PEAKS3.summits, sc = [];
   for (let ty = by0; ty <= by1; ty += S.step) for (let tx = bx0; tx <= bx1; tx += S.step) {
     if (!inF(tx, ty) || m.dist[idx(tx, ty)] !== D_PEAKS) continue;
@@ -149,24 +170,100 @@ export function buildPeaks3(m, H3) {
     if (h < S.h[0] || h > S.h[1]) continue;
     let knob = true;
     for (let k = 0; k < 8 && knob; k++) { const a = k * Math.PI / 4, x = Math.round(tx + Math.cos(a) * S.knob), y = Math.round(ty + Math.sin(a) * S.knob); if (inF(x, y) && peakHeight(x, y) > h) knob = false; }
-    if (knob) sc.push({ tx, ty, h });
+    if (knob) sc.push({ tx, ty, h, prom: promOf(tx, ty) });
   }
-  sc.sort((a, b) => b.h - a.h || a.tx - b.tx);
+  for (const c of sc) c.top = zs(c.tx, c.ty) >= S.z ? 1 : 0;
+  sc.sort((a, b) => b.top - a.top || (a.top ? b.prom - a.prom : b.h - a.h) || a.tx - b.tx || a.ty - b.ty);
+  // the knob: the shelf, the crown of rock round it, the ramp south, the relief raised, the walls on its south faces
+  const KN = PEAKS3.knob;
+  const KRM = Math.max(...KN.shelf) + Math.max(...KN.crown) + 2 + KN.apron;
+  const knobShape = ({ tx, ty }) => {
+    const [sx, sy] = KN.shelf, [cn, cs] = KN.crown, S = sy + cs, WD = sx + cn + 1;   // (the block's foot row, its half width)
+    const rs = (a) => 1 / Math.sqrt((Math.cos(a) / sx) ** 2 + (Math.sin(a) / sy) ** 2);
+    const ring = (a) => rs(a) + cn + hh(Math.round(a * 5), tx + ty, 931) * 1.6;
+    const foot = (dx) => S - (dx < 0 ? KN.step : 0);
+    const rock = (dx, dy) => (dy <= 1 ? Math.hypot(dx, dy) <= ring(Math.atan2(dy, dx)) : Math.abs(dx) <= WD - (hh(dy, tx + ty, 933) < 0.35 ? 1 : 0) && dy <= foot(dx));
+    // 0 outside, 1 the shelf, 2 the crown, 3 the way up, 4 the apron
+    const part = (dx, dy) => {
+      const r = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+      if (r <= rs(a)) return 1;
+      if (Math.abs(dx) <= KN.ramp && dy > 0 && dy <= S + 1) return 3;
+      if (rock(dx, dy)) return 2;
+      return (dy <= 1 ? r <= ring(a) + KN.apron : Math.abs(dx) <= WD + KN.apron && dy <= S + KN.apron) ? 4 : 0;
+    };
+    // how far out from the shelf's edge, 0 to 1 at the knob's own edge
+    const out = (dx, dy) => { const a = Math.atan2(dy, dx); return Math.max(0, Math.min(1, (Math.hypot(dx, dy) - rs(a)) / (dy <= 1 ? cn + 0.8 : Math.abs(dx) <= sx ? foot(dx) - sy + 0.5 : cs + 1))); };
+    return { rs, part, out, S };
+  };
+  // (it fits where its shelf, crown and ramp are open mountain ground - and the ground south of the ramp's foot too)
+  const knobFits = (c) => {
+    const { part } = knobShape(c), { tx, ty } = c;
+    for (let dy = -KRM; dy <= KRM + 4; dy++) for (let dx = -KRM; dx <= KRM; dx++) { const q = dy > KRM ? (Math.abs(dx) <= 2 ? 3 : 0) : part(dx, dy); if (q && q < 4 && (!inF(tx + dx, ty + dy) || !ground(idx(tx + dx, ty + dy)))) return false; }
+    return true;
+  };
+  const knobAt = (c) => {
+    const { tx, ty } = c, RM = KRM, { rs, part, out: far, S } = knobShape(c);
+    if (!knobFits(c)) return null;
+    const crown = new Set(), keep = new Set();
+    for (let dy = -RM; dy <= RM; dy++) for (let dx = -RM; dx <= RM; dx++) {
+      const q = part(dx, dy); if (!q || !inF(tx + dx, ty + dy)) continue;
+      const i = idx(tx + dx, ty + dy);
+      const up = q === 1 ? KN.rise : q === 2 ? KN.rise * (1 - 0.8 * far(dx, dy)) : q === 3 ? KN.rise * Math.max(0, 1 - (dy - rs(Math.PI / 2)) / (S + 1 - rs(Math.PI / 2))) : KN.rise * 0.1;
+      // (metres into the layer's bytes: part of a byte per metre above its knee, dithered as the layer is)
+      m.relief[i] = Math.min(255, m.relief[i] + Math.floor(up * (m.relief[i] >= RELIEF.knee ? RELIEF.high : 1) + DITHER[((ty + dy) & 3) * 4 + ((tx + dx) & 3)]));
+      if (q === 2) { m.tiles[i] = T.WALL; m.reserve[i] |= 32; crown.add(i); } else if (q === 1 || q === 3) { keep.add(i); m.tiles[i] = T.DIRT; m.reserve[i] |= RES | 192; }   // (192: bare rock - nothing grows on the shelf or the steps: statics.js coverAt)
+    }
+    // the walls: each run (up to 8 tiles) of the crown's outer edge that faces south takes a cliff face - if every tile
+    // its rock is drawn over is the crown's or plain ground outside it (never the shelf or the ramp)
+    let faces = 0;
+    for (let dy = 1; dy <= RM; dy++) {
+      let run = 0;
+      for (let dx = -RM; dx <= RM + 1; dx++) {
+        const i = inF(tx + dx, ty + dy) ? idx(tx + dx, ty + dy) : -1, foot = i >= 0 && dx <= RM && Math.abs(dx) > KN.ramp + 1 && crown.has(i) && !crown.has(i + W) && !keep.has(i + W);
+        if (foot && run < 8) { run++; continue; }
+        if (run >= 2) {
+          const x0 = tx + dx - run; let depth = 1; while (depth < KN.deep && crown.has(idx(x0 + (run >> 1), ty + dy - depth))) depth++;
+          const cx = (x0 + run / 2) * TILE, cy = (ty + dy + 1) * TILE;
+          // (a face's outline is ragged by its seed: the first of a few seeds, at full height then lower, whose rock
+          // lies on the crown or on open ground outside it - never on the shelf or the way up)
+          face: for (const h of [KN.face, 60]) for (let t = 0; t < 8; t++) {
+            const fs = (x0 * 7 + ty + dy + t * 13) % 50 + 1, at = cliffSolid(cx, cy, run * TILE, depth * TILE, h, fs);
+            if (at.some(([ax, ay]) => !inF(ax, ay) || keep.has(idx(ax, ay)) || (!crown.has(idx(ax, ay)) && !ground(idx(ax, ay))))) continue;
+            for (const [ax, ay] of at) { const j = idx(ax, ay); if (!crown.has(j)) { m.tiles[j] = T.WALL; m.reserve[j] |= 32; crown.add(j); } }
+            P('cliff', cx, cy, 0, { w: run * TILE, d: depth * TILE, h, s: fs, relief: 1 });
+            faces++;
+            break face;
+          }
+        }
+        run = foot ? 1 : 0;
+      }
+    }
+    // the steps up the ramp
+    const top = rs(Math.PI / 2), foot = S + 1;
+    P('stairs', (tx + 0.5) * TILE, (ty + 0.5 + foot) * TILE, 0, { len: Math.round((foot - top) * TILE), h: 24, w: 46, k: 'stone' });
+    return { crown: crown.size, faces, part, S };
+  };
   const summits = [];
   for (const c of sc) {
     if (summits.length >= S.n) break;
     if (summits.some((q) => Math.hypot(q.tx - c.tx, q.ty - c.ty) < S.spacing) || meadows.some((q) => Math.hypot(q.tx - c.tx, q.ty - c.ty) < q.R + 20)) continue;
-    if (nearRoad(c.tx, c.ty, 10) || nearPlace(c.tx, c.ty, S.keep) || !fits(c.tx, c.ty, 4)) continue;
+    if (nearRoad(c.tx, c.ty, 10) || nearPlace(c.tx, c.ty, S.keep) || !fits(c.tx, c.ty, 4) || !knobFits(c)) continue;
     summits.push(c);
   }
   summits.forEach((c, k) => {
     const X = (c.tx + 0.5) * TILE, Y = (c.ty + 0.5) * TILE, name = S.names[k % S.names.length];
+    clearVeg(X, Y, (Math.max(...KN.shelf) + Math.max(...KN.crown) + 5) * TILE);
+    const kn = knobAt(c);
     clearVeg(X, Y + 2 * TILE, 4 * TILE);
     P('cairn', X, Y, 10, { v: k, big: 1 });
     P('pbench', X - 10, Y + 2.6 * TILE, 0, { a: Math.PI / 2 });
     if (k === 0) P('scope', X + 64, Y + 2.2 * TILE, 6);
-    for (let j = 0; j < 4; j++) P('boulder', X + (hh(c.tx, j, 95) - 0.5) * 7 * TILE, Y + (hh(j, c.ty, 96) - 0.3) * 5 * TILE, 14, { s: 20 + Math.round(hh(c.tx, c.ty, 97 + j) * 16) });
-    out.summits.push({ kind: 'summit', name, x: Math.round(X), y: Math.round(Y), h: Math.round(c.h * 1000) / 1000 });
+    for (let j = 0; j < 4; j++) {
+      const bx = (hh(c.tx, j, 95) - 0.5) * 7, by = (hh(j, c.ty, 96) - 0.3) * 5;
+      if (kn && kn.part(Math.round(bx), Math.round(by)) !== 1) continue;   // (on a knob: the shelf's own loose rock only - none on the steps, none standing on the crown)
+      P('boulder', X + bx * TILE, Y + by * TILE, 14, { s: 20 + Math.round(hh(c.tx, c.ty, 97 + j) * 16) });
+    }
+    out.summits.push({ kind: 'summit', name, x: Math.round(X), y: Math.round(Y), h: Math.round(c.h * 1000) / 1000, ...(kn && { knob: { crown: kn.crown, faces: kn.faces, shelf: KN.shelf, foot: kn.S + 1, ramp: KN.ramp } }) });
   });
 
   // ---- the Summit Trail: from the road (or trail) nearest the hut's meadow, through it past the hut, up to the nearest summit ----

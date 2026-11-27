@@ -42,11 +42,11 @@ export const ANIMALS = {
   chihuahua: { len: 12, h: 10, w: 6.5, coat: '#e0a050', belly: '#f0d8a8', ears: 'big', tail: 'curl', snout: 2, head: 4.2, collar: '#c83030' },
   terrier: { len: 17, h: 13.5, w: 8.5, coat: '#7a7c84', muzzle: '#b4b6bc', ears: 'flop', tail: 'up', tailN: 7, snout: 3.2, head: 4.6, fluffy: 1, beard: 1, collar: '#3a8a46', tongue: 1 },
   dalmatian: { len: 25, h: 20, w: 10, coat: '#f2f0ec', patch: '#26262c', pattern: 'dots', earC: '#26262c', ears: 'flop', tail: 'down', snout: 4, head: 5, collar: '#c83030', tongue: 1 },
-  catBlack: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', coat: '#302e38', eye: '#e8c83a', ears: 'cat', tail: 'cat', snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
-  catTabby: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#e8c440', coat: '#8a8c90', patch: '#4a4c52', pattern: 'tabby', muzzle: '#d8d8d4', ears: 'cat', tail: 'cat', tailBands: '#4a4c52', snout: 0.9, head: 4.5, cat: 1, collar: '#3a8a46' },
-  catGinger: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#e08a3a', patch: '#b85a20', pattern: 'tabby', belly: '#f4dcb8', muzzle: '#f4e4cc', ears: 'cat', tail: 'cat', tailBands: '#b85a20', snout: 0.9, head: 4.5, cat: 1, collar: '#3a6ab0' },
-  catCalico: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#5a9a3a', coat: '#f2ece2', patch: '#d8783a', patch2: '#2a2830', pattern: 'calico', headC: '#d8783a', muzzle: '#f4f0ea', blaze: '#f4f0ea', ears: 'cat', tail: 'cat', tailC: '#d8783a', snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
-  catWhite: { len: 18, h: 11.5, w: 8.5, legK: 0.85, catFace: 1, hup: 0.7, nose: '#e8909a', eye: '#4a9ad0', coat: '#f2eee8', ears: 'cat', tail: 'feather', snout: 0.9, head: 4.7, cat: 1, fluffy: 1, collar: '#b04a9a' },
+  catBlack: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#0b0a0e', coat: '#302e38', eye: '#e8c83a', ears: 'cat', tail: 'cat', tailLow: 1, snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
+  catTabby: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f6adbb', eye: '#e8c440', coat: '#8a8c90', patch: '#4a4c52', pattern: 'tabby', muzzle: '#d8d8d4', ears: 'cat', tail: 'cat', tailLow: 1, tailBands: '#4a4c52', snout: 0.9, head: 4.5, cat: 1, collar: '#3a8a46' },
+  catGinger: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f6adbb', eye: '#5a9a3a', coat: '#e08a3a', patch: '#b85a20', pattern: 'tabby', belly: '#f4dcb8', muzzle: '#f4e4cc', ears: 'cat', tail: 'cat', tailBands: '#b85a20', snout: 0.9, head: 4.5, cat: 1, collar: '#3a6ab0' },
+  catCalico: { len: 18, h: 11.5, w: 7.5, legK: 0.8, catFace: 1, hup: 0.7, nose: '#f6adbb', eye: '#5a9a3a', coat: '#f2ece2', patch: '#d8783a', patch2: '#2a2830', pattern: 'calico', headC: '#d8783a', muzzle: '#f4f0ea', blaze: '#f4f0ea', ears: 'cat', tail: 'cat', tailC: '#d8783a', snout: 0.9, head: 4.5, cat: 1, collar: '#c83030' },
+  catWhite: { len: 18, h: 11.5, w: 8.5, legK: 0.85, catFace: 1, hup: 0.7, nose: '#f6adbb', eye: '#4a9ad0', coat: '#f2eee8', ears: 'cat', tail: 'feather', snout: 0.9, head: 4.7, cat: 1, fluffy: 1, collar: '#b04a9a' },
   cow: { len: 48, h: 31, w: 19, coat: '#f2f0ec', patch: '#26262c', pattern: 'spots', ears: 'side', earC: '#26262c', tail: 'thin', snout: 6, head: 8, hup: 0.5, muzzle: '#e8b4ac', nose: '#b87878', horns: 'short', udder: 1 },
   horse: { len: 50, h: 36, w: 14, coat: '#8a4a26', belly: '#8a4a26', mane: '#2a1e1a', ears: 'up', tail: 'long', snout: 9, head: 6, neck: 18, socks: '#f2eee8' },
   sheep: { len: 27, h: 19, w: 15, coat: '#ece2c8', headC: '#34303a', muzzle: '#34303a', legC: '#34303a', earC: '#34303a', eye: '#e8e0c8', ears: 'side', tail: 'stub', snout: 3, head: 5.2, hup: 0.5, fluffy: 2 },
@@ -93,45 +93,77 @@ function legendOf(A) {
 }
 
 // extra room behind the rump for the long tails (so they stay inside the model)
-const TAIL_ROOM = { longcat: 14, fox: 9, paddle: 8, otter: 8, squirrel: 3, cat: 4 };
+const TAIL_ROOM = { longcat: 14, fox: 9, paddle: 8, otter: 8, squirrel: 3, cat: 12 };
 // A great white (server/systems/sharks.js) seen from above as it swims: its long dark shape just under the water, the
 // dorsal fin standing out of it and the top of the tail beating side to side (phase); biting, the head up out of the
 // water, the jaws wide; dead, rolled belly up. +x is its nose, as every animal's.
 function sharkModel(pose, phase) {
-  const L = 118, W = 34, H = 24, cy = W / 2, cx = 62, m = new Vox(L, W, H);
-  const dark = m.mat({ ramp: ramp('#2a4250', 5, 2), k: 1 }), back = m.mat({ ramp: ramp('#5c6a74', 6, 3), k: 3 }), belly = m.mat({ ramp: ramp('#dcdcd6', 6, 3), k: 3 });
+  // (11-25, the owner: "The shark could use another pass on it let's try to make it look better" - it swam as a dark
+  // torpedo with a stub of a tail. Now a shark's own shape from above: a pointed snout, widest at the shoulders, a long
+  // taper to a narrow tail stock; broad swept pectoral fins, small pelvic fins; its back a tone lighter where it lies
+  // just under the surface; the dorsal fin tall, a small second one near the tail; the tail's upper lobe a tall
+  // swept blade.)
+  const O = 10, L = 132, W = 58, H = 26, cy = W / 2, m = new Vox(L, W, H);
+  const dark = m.mat({ ramp: ramp('#2a4250', 5, 2), k: 1 }), mid = m.mat({ ramp: ramp('#44606f', 5, 2), k: 2 }), back = m.mat({ ramp: ramp('#5c6a74', 6, 3), k: 3 }), belly = m.mat({ ramp: ramp('#dcdcd6', 6, 3), k: 3 });
   const mouth = m.mat({ ramp: ramp('#8a2a2a', 5, 2), k: 2 }), teeth = m.mat({ ramp: ramp('#f4f2ea', 4, 2), k: 1 }), eye = m.mat({ ramp: ramp('#101418', 3, 1), k: 1 });
   const sway = Math.sin((phase + 0.25) * Math.PI * 2) * 4;   // (two swim frames: the tail one side, then the other)
-  // (the body's width along it: the blunt snout, the deep middle, the narrow tail stock)
-  const half = (u) => (u > 0.82 ? 13 * Math.sqrt(Math.max(0, (1 - u) / 0.18)) : u > 0.35 ? 13 : 4 + 9 * (u / 0.35));
+  // (the body's half width along it, tail 0 to nose 1: the narrow stock, the swell to the shoulders, the pointed snout)
+  const half = (u) => { if (u < 0.1) return 2.5 + u * 15; if (u < 0.55) { const t = (u - 0.1) / 0.45, e = t * t * (3 - 2 * t); return 4 + 9 * e; } if (u < 0.7) return 13; return Math.max(1, 13 * (1 - Math.pow((u - 0.7) / 0.3, 1.7))); };
+  const X = (u) => O + 6 + u * 98;
   if (pose === 'dead') {
-    for (let x = 6; x < 104; x++) { const u = (x - 6) / 98, hw = half(u) * 0.9; m.box(x, cy - hw, 0, x + 1, cy + hw, 3, back); m.box(x, cy - hw * 0.8, 3, x + 1, cy + hw * 0.8, 6, belly); }
-    for (const sd of [-1, 1]) m.box(58, cy + sd * 12, 1, 70, cy + sd * 17, 3, back);   // (the pectorals out flat)
+    for (let x = O + 6; x < O + 104; x++) { const u = (x - O - 6) / 98, hw = half(u) * 0.9; m.box(x, cy - hw, 0, x + 1, cy + hw, 3, back); m.box(x, cy - hw * 0.8, 3, x + 1, cy + hw * 0.8, 6, belly); }
+    for (const sd of [-1, 1]) for (let k = 0; k < 12; k++) m.box(O + 62 - k * 0.6, cy + sd * (11 + k), 1, O + 73 - k * 1.3, cy + sd * (12 + k), 3, back);   // (the pectorals out flat)
     m.smooth = 1; patchHidden(m); return m;
   }
   const bite = pose === 'bite';
-  // the shape under the water: the body, the pectoral fins out to the sides, the tail's lower lobe (all dark: deep)
-  for (let x = 6; x < 104; x++) {
-    const u = (x - 6) / 98, hw = half(u), off = u < 0.35 ? sway * (1 - u / 0.35) : 0;
-    if (bite && u > 0.62) continue;   // (the head's up out of the water, drawn below)
+  // the shape under the water: the body (the tail end swinging), its back a tone lighter along the middle
+  for (let x = O + 6; x < O + 104; x++) {
+    const u = (x - O - 6) / 98, hw = half(u), off = u < 0.35 ? sway * (1 - u / 0.35) : 0;
+    if (bite && u > 0.86) continue;   // (the snout's tip is up out of the water; the body runs on under the raised head)
     m.box(x, cy + off - hw, 0, x + 1, cy + off + hw, 2, dark);
+    if (u > 0.14 && u < 0.93 && hw > 4) m.box(x, cy + off - hw * 0.5, 2, x + 1, cy + off + hw * 0.5, 2.7, mid);
   }
-  for (const sd of [-1, 1]) for (let k = 0; k < 14; k++) m.box(66 - k * 0.9, cy + sd * (12 + k * 0.55), 0, 68 - k * 0.9, cy + sd * (13.5 + k * 0.55), 2, dark);
-  for (let k = 0; k < 12; k++) m.box(6 - k * 0.4, cy + sway - 2 - k * 0.6, 0, 8 - k * 0.4, cy + sway + 2 - k * 0.6, 1, dark);
-  // the dorsal fin: a tall swept-back triangle out of the water, a little ahead of the middle
-  for (let z = 2; z < 18; z++) { const t = (z - 2) / 16, x0 = 58 - t * 7, x1 = 58 + (1 - t) * 16 - t * 4; m.box(x0, cy - 1, z, x1, cy + 1, z + 1, z > 15 ? dark : back); }
-  // the top of the tail: its upper lobe beating side to side, out of the water
-  for (let z = 1; z < 10; z++) { const t = (z - 1) / 9; m.box(4 - t * 4, cy + sway * 1.4 - 1, z, 9 - t * 3, cy + sway * 1.4 + 1, z + 1, back); }
+  // the pectoral fins: broad at the root, swept back to a point; the small pelvic fins further back
+  for (const sd of [-1, 1]) {
+    for (let k = 0; k < 15; k++) m.box(O + 63 - k * 0.6, cy + sd * (12 + k) - 0.5, 0, O + 75 - k * 1.3, cy + sd * (12 + k) + 0.5, 2, dark);
+    for (let k = 0; k < 5; k++) m.box(O + 32 - k * 0.5, cy + sd * (7 + k) - 0.5, 0, O + 38 - k * 1.1, cy + sd * (7 + k) + 0.5, 1.5, dark);
+  }
+  // the tail under the water: its lower lobe trailing
+  for (let k = 0; k < 9; k++) m.box(O + 5 - k * 0.7, cy + sway - 1.5, 0, O + 8 - k * 0.5, cy + sway + 1.5, 1, dark);
+  // the dorsal fin: a tall swept-back triangle out of the water, a little ahead of the middle; a small second one aft
+  for (let z = 2; z < 20; z++) { const t = (z - 2) / 18, x0 = O + 58 - t * 9, x1 = O + 58 + (1 - t) * 17 - t * 6; m.box(x0, cy - 1, z, Math.max(x0 + 1, x1), cy + 1, z + 1, z > 17 ? dark : back); }
+  for (let z = 2; z < 6; z++) { const t = (z - 2) / 4; m.box(O + 26 - t * 3, cy + sway * 0.3 - 0.7, z, O + 31 - t * 4, cy + sway * 0.3 + 0.7, z + 1, back); }
+  // the top of the tail: its upper lobe a tall blade swept back, beating side to side, out of the water
+  for (let z = 1; z < 17; z++) { const t = (z - 1) / 16; m.box(O + 5 - t * 11, cy + sway * 1.4 - 1, z, O + 10 - t * 9 + (1 - t) * 1.5, cy + sway * 1.4 + 1, z + 1, z > 14 ? dark : back); }
   if (bite) {
-    // the head up out of the water at the bite: the snout raised, the jaws open, the rows of teeth, the black eye
-    for (let x = 66; x < 112; x++) {
-      const u = (x - 66) / 46, hw = 12 * (1 - u * u * 0.7), up = 3 + u * 10;
-      m.box(x, cy - hw, up + 5, x + 1, cy + hw, up + 9, back);                   // (the upper jaw, grey)
-      if (u < 0.85) m.box(x, cy - hw * 0.9, 1, x + 1, cy + hw * 0.9, 3 + u * 2, belly);   // (the lower jaw, white)
-      if (u > 0.15 && u < 0.92) m.box(x, cy - hw * 0.75, 3 + u * 2, x + 1, cy + hw * 0.75, up + 5, mouth);
-      if (x % 3 === 0 && u > 0.2 && u < 0.9) for (const sd of [-1, 1]) { m.box(x, cy + sd * hw * 0.8 - 0.5, up + 3, x + 1, cy + sd * hw * 0.8 + 0.5, up + 5, teeth); m.box(x, cy + sd * hw * 0.75 - 0.5, 3 + u * 2, x + 1, cy + sd * hw * 0.75 + 0.5, 5 + u * 2, teeth); }
+    // the head up out of the water at the bite (redrawn 11-25, the owner: "when it opens it mouth to attack part of its
+    // head disappear and looks off" - the head was a flat slab over a gap in the body): a cone of a snout, rounded
+    // across, grey above and white under; the lower jaw dropped, the mouth red between them, teeth along both jaws'
+    // edges, the black eye, the gill slits behind it. The body under the water runs on beneath it (above).
+    const HX0 = O + 64, HX1 = O + 113;
+    for (let x = HX0; x < HX1; x++) {
+      const u = (x - HX0) / (HX1 - HX0), hw = 12.5 * (1 - Math.pow(u, 2.4) * 0.82), rise = 2 + u * 9, th = 6 - u * 3.2;
+      for (let y = -Math.ceil(hw); y <= hw; y++) {
+        const v = y / hw; if (v < -1 || v > 1) continue;
+        const zt = rise + 8 - v * v * 3.2, zu = zt - th * (1 - v * v * 0.35);      // (the upper jaw's top and its underside)
+        m.box(x, cy + y, Math.max(2, zu), x + 1, cy + y + 1, zt, Math.abs(v) > 0.86 && u > 0.1 ? belly : back);
+        if (u < 0.84) {
+          const zl = 2.2 + u * 1.2 - v * v * 1.2;                                  // (the lower jaw, white, shorter than the snout)
+          m.box(x, cy + y, 0, x + 1, cy + y + 1, zl, belly);
+          if (u > 0.1 && Math.abs(v) < 0.82 && zu > zl + 0.6) m.box(x, cy + y, zl, x + 1, cy + y + 1, zu, mouth);
+        }
+      }
+      // teeth: a row along each jaw's edge, every other px, longer at the front
+      if (u > 0.16 && u < 0.97 && (x & 1)) for (const sd of [-1, 1]) {
+        const yy = cy + sd * hw * 0.84, zt = rise + 8 - 0.7 * 3.2, zu = zt - th * 0.83;
+        m.box(x, yy - 0.5, zu - 1.6 - u, x + 1, yy + 0.5, zu, teeth);
+        if (u < 0.82) m.box(x, yy - 0.5, 2 + u * 1.2, x + 1, yy + 0.5, 3.4 + u * 1.6, teeth);
+      }
     }
-    for (const sd of [-1, 1]) m.box(84, cy + sd * 9 - 0.5, 13, 86, cy + sd * 9 + 1, 15, eye);
+    for (const sd of [-1, 1]) {
+      m.box(O + 86, cy + sd * 10 - 0.6, 11.2, O + 88, cy + sd * 10 + 0.6, 12.8, eye);
+      for (let g = 0; g < 3; g++) m.box(O + 69 + g * 3, cy + sd * 12.2 - 0.3, 5.5, O + 70 + g * 3, cy + sd * 12.2 + 0.3, 9.5, dark);   // (gill slits)
+    }
   }
   m.smooth = 1;
   patchHidden(m);
@@ -173,7 +205,9 @@ export function animalModel(kind, o = {}) {
   const dark = m.mat({ ramp: ramp(darkC, 5, 2), k: 1 }), hoofM = m.mat({ ramp: ramp(darkC, 5, 2), k: 1, limb: 1, thin: 1 });
   // (the features: each its own material, a pixel each in the game's picture - drawn over `as`, the coat under it)
   const feat = (c, flat = 1, x = null) => m.mat({ ramp: ramp(c, 5, 2), k: 1, feat: 1, flat, as: base, ...x });
-  const nose = feat(A.nose || darkC, 1, { min: 1, name: 'nose' }), eyeC = A.legend ? '#6a6a7a' : A.eye || '#1c161c', eyeMin = A.head < 3.6 ? 1 : 2, eyes = [feat(eyeC, A.eye ? 2 : 1, { name: 'eyeL', side: -1, min: eyeMin }), feat(eyeC, A.eye ? 2 : 1, { name: 'eyeR', side: 1, min: eyeMin })];   // (a small head's eye: whatever shows of it)
+  // (a cat's nose: its own light pink - the ramp's middle tone, not the darker step every other nose takes, which came out
+  // a dark red; the owner, 11-25 15:42: "slightly more light pink, right now its too dark red")
+  const nose = feat(A.nose || darkC, A.catFace ? 2 : 1, { min: 1, name: 'nose', ...(A.catFace && { center: 1 }) }), eyeC = A.legend ? '#6a6a7a' : A.eye || '#1c161c', eyeMin = A.head < 3.6 ? 1 : 2, eyes = [feat(eyeC, A.eye ? 2 : 1, { name: 'eyeL', side: -1, min: eyeMin }), feat(eyeC, A.eye ? 2 : 1, { name: 'eyeR', side: 1, min: eyeMin })];   // (a small head's eye: whatever shows of it)
   const limbOf = new Map(), asLimb = (mt) => { if (!limbOf.has(mt)) limbOf.set(mt, m.mat({ ...m.mats[mt], ...LIMB })); return limbOf.get(mt); };
   const thinOf = new Map(), asThin = (mt) => { if (!thinOf.has(mt)) thinOf.set(mt, m.mat({ ...m.mats[mt], ...THIN })); return thinOf.get(mt); };
   const face = A.face ? R(A.face) : A.mask ? R(A.mask) : base;
@@ -190,7 +224,8 @@ export function animalModel(kind, o = {}) {
     if (A.pattern === 'saddle' && z > bz + bodyR * 0.1 && x < x1 - 4) return patch;
     if (A.pattern === 'dots' && z > bz - bodyR * 0.8 && (x | 0) % 7 < 4 && (y | 0) % 7 < 4 && (z | 0) % 7 < 4 && hash(((x | 0) / 7) | 0, (((y | 0) / 7) | 0) * 31 + (((z | 0) / 7) | 0), 7) > 0.1) return patch;   // (a dalmatian's: an art pixel each, apart)
     if (A.pattern === 'tabby' && z > bz - bodyR * 0.35 && (((x - x0) % 7) + 7) % 7 < 3) return patch;   // (bands down the flanks, an art pixel wide)
-    if (A.pattern === 'calico') { const h = hash(Math.floor(x / 6), Math.floor((y + z) / 6), 9); if (h > 0.72) return patch; if (h < 0.18) return patch2; }
+    if (A.pattern === 'calico') { const h = hash(Math.floor((x - (A.tail === 'cat' ? TAIL_ROOM.cat - 4 : 0)) / 6), Math.floor((y + z) / 6), 9);   // (her patches where they were before her tail's room grew, 11-25)
+      if (h > 0.72) return patch; if (h < 0.18) return patch2; }
     if (A.pattern === 'rump' && x < x0 + 5 && z > bz - bodyR * 0.6) return patch;                       // an elk's pale rump
     if (A.pattern === 'flank' && z < bz + bodyR * 0.2 && z > bz - bodyR * 0.5 && x > x0 + 3) return patch;   // a grey fox's rusty sides
     if (A.pattern === 'fawn' && z > bz - bodyR * 0.1 && x > x0 + 2 && x < x1 - 2 && hash(Math.floor(x / 2.2), Math.floor(y / 2.2) * 17 + Math.floor(z / 2.2), 11) > 0.8) return patch;   // a fawn's spots along the back
@@ -275,7 +310,12 @@ export function animalModel(kind, o = {}) {
   // snout and nose (a moose's long drooping one; a bear's paler muzzle)
   const sx = hx + HD * 0.7, sz = hz - HD * 0.25 - (A.droop ? 1.6 : 0);
   m.ell(sx + A.snout * 0.5, cy, sz, A.snout * 0.7 + 1, HD * (A.droop ? 0.62 : 0.5), HD * (A.droop ? 0.55 : 0.42), A.muzzle ? R(A.muzzle) : A.mask ? R('#d8d4d0') : A.belly && !A.cat && !A.legend ? belly : coat(sx, cy, sz));
-  if (!A.catFace) m.box(sx + A.snout + 0.5, cy - 1, sz, sx + A.snout + 1.8, cy + 1, sz + 1.5, nose);   // (a cat's face is its eyes: a nose pixel beside one read as a second eye)
+  // (a cat's pale muzzle stays beside and under its nose: seen from the front its top showed as a pale row between
+  // the eyes and the nose, which read as a white nose with the pink under it - 11-25, the owner, of the grey cat: "dont
+  // think the pink nose showed up in the right place ... looks right on the white cat", whose muzzle is its coat's white)
+  if (A.catFace && A.muzzle) { const mz = R(A.muzzle), hc = A.headC ? R(A.headC) : coat(hx, cy, hz + 4); m.fill((x, y, z) => (z >= sz - 0.4 && m.get(x | 0, y | 0, z | 0) === mz ? hc : -1), Math.floor(sx - 2), Math.floor(cy - HD - 1), Math.floor(sz - 1), Math.ceil(sx + A.snout + 3), Math.ceil(cy + HD + 1), Math.ceil(sz + HD)); }
+  if (!A.catFace) m.box(sx + A.snout + 0.5, cy - 1, sz, sx + A.snout + 1.8, cy + 1, sz + 1.5, nose);
+  else if (!A.noNose) m.box(sx + A.snout + 0.3, cy - 0.7, sz - 1.5, sx + A.snout + 1.3, cy + 0.7, sz - 0.4, nose);   // (a cat's: small, pink, low on the face under the eyes - 11-25, the owner: "a cuter face ... the dog ... has a nose"; on 11-21 one level with an eye read as a second eye)
   if (eatfish) {   // (AN5: the fish crosswise in its jaws, silver, the tail fin out to one side, a bite gone - wag: the chewing)
     const fx = sx + A.snout * 0.55, fz = sz - HD * 0.35 - (o.wag || 0) * 0.6;
     m.ell(fx, cy + 1, fz, 1.7, 4.8, 1.6, R('#dce6ee')); m.ell(fx, cy + 1, fz + 0.9, 1.2, 4.4, 0.7, R('#5a7a8c'));
@@ -348,12 +388,15 @@ export function animalModel(kind, o = {}) {
     }, Math.floor(hx - 18), Math.floor(Math.min(by, by + s * 14) - 1), Math.floor(bzz - 1), Math.ceil(hx + 8), Math.ceil(Math.max(by, by + s * 14) + 1), Math.ceil(bzz + 16));
   }
   if (A.beard) m.ell(sx + A.snout * 0.35, cy, sz - HD * 0.5, 1.5, 1.4, 2, A.muzzle ? R(A.muzzle) : base);
-  if (A.collar) { const col = R(A.collar), cx = Math.round(x1 + (hx - x1) * 0.25); for (let z = Math.floor(bz); z < m.h; z++) for (let y = 0; y < W; y++) for (const x of [cx, cx + 1]) { const i = m.idx(x, y, z); if (m.v[i] && z < hz - HD * 0.5) m.v[i] = col; } }
+  if (A.collar) { const col = R(A.collar), cx = Math.round(x1 + (hx - x1) * 0.25); for (let z = Math.floor(bz); z < m.h; z++) for (let y = 0; y < W; y++) for (const x of A.catFace ? [cx, cx + 1, cx + 2] : [cx, cx + 1]) { const i = m.idx(x, y, z); if (m.v[i] && z < hz - HD * 0.5) m.v[i] = col; } }
   // tail
   const tx = x0, tz = bz + bodyR * 0.5;
   const tail = (pts, r) => pts.forEach(([dx, dz, dy = 0], i) => m.ell(tx - dx, cy + dy, tz + dz, r(i), r(i), r(i), asThin(A.tail === 'ringed' ? (i % 2 ? R('#2a282c') : base) : A.tailBands && (i >> 1) % 2 ? R(A.tailBands) : A.tailC ? R(A.tailC) : coat(tx - dx, cy, tz + dz + 6))));
   const wag = Math.sin((o.wag ?? phase) * Math.PI * 4) * 1.2;
-  if (A.tail === 'cat') tail([...Array(20)].map((_, i) => { const u = i / 19; return [0.6 + u * 3 + (u > 0.75 ? (u - 0.75) * 9 : 0) + wag * 0.3 * u, Math.sin(Math.min(1, u * 1.25) * Math.PI * 0.5) * 7.6 - (u > 0.8 ? (u - 0.8) * 5 : 0), u * 5]; }), () => 0.95);   // (up behind and hooked back at the tip, a little to one side: below the ears from the front)
+  // a cat's tail (11-25, the owner: "a little thinner and longer like a cats tail (or variations if we have a long hair
+  // cat in the mix vs a short haired cat)"): thin and long - carried up behind with the tip hooked back, or (tailLow)
+  // out low behind and curling up at its tip; the long-haired white cat keeps its plume ('feather')
+  if (A.tail === 'cat') tail([...Array(30)].map((_, i) => { const u = i / 29; return A.tailLow ? [0.5 + u * 10.5 + wag * 0.3 * u, -1.2 + u * u * u * 4.6, u * 2.5] : [0.6 + u * 4.4 + (u > 0.7 ? (u - 0.7) * 11 : 0) + wag * 0.3 * u, Math.sin(Math.min(1, u * 1.2) * Math.PI * 0.5) * 11 - (u > 0.78 ? (u - 0.78) * 8 : 0), u * 5]; }), () => 0.72);
   else if (A.tail === 'up') tail([...Array(A.tailN || 12)].map((_, i) => [i * 0.45 - wag * 0.25 * (i / 10) * (i / 10) - (i > 7 ? (i - 7) * 0.5 : 0), i * 0.85]), () => 1.25);
   else if (A.tail === 'curl') tail([...Array(10)].map((_, i) => [1.5 - Math.cos(i * 0.6) * 2.4, 2.5 + Math.sin(i * 0.6) * 3]), () => 1.4);
   else if (A.tail === 'down') tail([...Array(9)].map((_, i) => [i * 0.6, -i * 0.7]), () => 1.25);
@@ -590,6 +633,10 @@ function renderArt(m, heading, opt) {
     if (b[1] - a[1] < 2 && on(b[1] + 1, b[2])) b[1]++;
     if (b[1] - a[1] < 2 && on(a[1] - 1, a[2])) a[1]--;
   }
+  // a cat's nose seen from the front sits midway under its eyes (11-25, the owner: "the nose on the black cat and the
+  // grey cat seem off center from the front view" - a feature lands on the pixel its samples average to, which can
+  // be a pixel to one side of the eyes' middle)
+  { const ns = put.find((q) => q[0].name === 'nose' && q[0].center); if (ns && eL && eR && eL[2] === eR[2] && Math.abs(eL[1] - eR[1]) >= 2 && Math.abs(ns[1] - (eL[1] + eR[1]) / 2) <= 1.5) ns[1] = Math.floor((eL[1] + eR[1]) / 2); }   // (one pixel, the owner 11-25 16:18; the eyes stand an even gap apart, so the middle is two pixels: the nose takes the left of them, never one further out)
   for (const [M, qx, py] of put) {
     if (!on(qx, py)) continue;   // (only over the animal itself)
     const j = (py * G.w + qx) * 4, col = M.ramp[Math.min(M.ramp.length - 1, M.flat ?? 1)];

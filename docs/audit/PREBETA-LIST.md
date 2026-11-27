@@ -11,8 +11,8 @@ Status from the DEVLOG and the branches; the sections below hold each item's det
 here: the pre-beta art and UI and batch 1 of the 11-22 notes (live 11-22), the new people, your music, the quick bar,
 rooms lit at night, the console's Status tab (live 11-23).
 1. **The world batch** (section A, `prebeta-world2`) - ready apart from the Old Downtown casino fronts (in hand); then
-   your word to put it live (one re-bake, ~5 h - watch it on the Status tab). For Fable after it: lobbyDoor,
-   signCovered, the ATM booths, roof billboards cut off, ATMs under awnings, the boardwalk bends, a taller neighbour drawn
+   your word to put it live (one re-bake, ~5 h - watch it on the Status tab). For Fable after it: lobbyDoor (done 11-26 on
+   `fable-art-1124`: a door of its own for each flat over a shop, 0), signCovered, the ATM booths, roof billboards cut off, ATMs under awnings, the boardwalk bends, a taller neighbour drawn
    over a room you're in (the renderer), rail bridges.
 2. **Server and loading** (F) - the art kept across restarts (check on the Status tab at the next restart: it should
    stay "Up to date"); phones drawing missing art themselves during a redraw (the stutter); a "Server updating"
@@ -459,3 +459,189 @@ bus stop, then they should go flying off while the bench or object they're on ge
   furniture, shared/map.js), their picture from the 11-22 art pass reading as a plain white and blue box. For the Fable
   art pass: a phone box that reads as one (the handset, glass, a PHONE sign). To confirm in the game: he'll send the
   district of one that doesn't fit.
+
+## Found by the Fable art pass (11-24) - not art, not touched
+- `test/world3wild.test.js` fails: "the tracks flagged notraffic (24; others: Northshore Station Road, Lucky Mesa
+  Station Road, ...)" - the stations' roads count as tracks there. It fails the same on branch `fable-art-1124` before
+  its world change (commit bef7671), so it comes from the world batch, not the art. Not checked on `main` itself.
+- Cars jammed nose to tail on Coral Cay's jungle track (seen twice in the water recorder's films of the rainforest).
+
+## Vehicles in shallow water (owner, 11-24 21:40 - noted for the pre-beta; a game rule, not art)
+"I've noticed that when vehicles hit water they instantly sink ... it would be a better experience if vehicles can hit
+shallow water and manage to move a bit in the shallow water before breaking down, or going into deeper water and then
+sinking beyond any return, or just splashing a bit in very shallow water but it doesn't slow them down a bit ... it
+shouldn't just instantly sink in any depth of water and lose your vehicle. So if we do have these natural bridges
+across paths I dont want vehicles (especially offroad vehicles) to instantly sink and become un-usable."
+To build (server physics, with a splash on the page): depth bands from the water's own depth (the art already has
+one: client/art2/water.js depthOf; the server needs its own from tiles - distance to the bank, creek / pool / lake) -
+very shallow: splashes, no slowing; shallow: slowed, a spray, the engine holds for a while and stalls if it stays in,
+restartable out of the water; deep: sinks, as now. Off-road vehicles ford deeper than road cars. A creek's stepping
+stones and log crossings (bridge tiles) are walked, not driven: a car meets the creek beside them - so a woods creek
+(shared/world3-creeks.js) must be fordable by this rule before the creek network goes live. Guide entry and a
+first-time moment with it (CLAUDE.md "teach the new thing").
+
+## Keep the development project private; publish only what a player needs (owner, 11-24 23:40 - before marketing)
+The owner asked whether to do anything, before posting and bringing in a beta crowd, to make the game harder to clone
+(a note from another assistant he had look at the site). Checked in the code on 11-24 (not tested against the live site):
+- The repository `dead-baron/city-life-auto` is public: the server, the tools, every design and decision document, the
+  concepts and the unreleased branches can be downloaded by anyone. There is no project license (only the fonts',
+  icons' and prompt glyphs' own).
+- The game server sends its own source to any browser: `server/index.js` `STATIC_ROOTS = ['client/', 'shared/',
+  'assets/', 'server/']` (all of `server/` but `server/config*`, `server/auth*` and `chatwords.json`), kept for the
+  offline practice worker - which is switched off (CLAUDE.md "Offline practice is paused").
+- No secrets were found tracked: `server/config.js` reads them from the environment or `data/secret.key`, and `data/`
+  is ignored. Not a full audit - the history was not searched.
+- `docs/` (DECISIONS, the handover, the plans) is public with the repo; GitHub Pages serves the page from the repo
+  root (docs/DEPLOY.md), and the Oracle updater pulls `main` from it.
+To do, in this order (each step tested before the next):
+1. Stop serving `server/` to browsers (and leave the practice worker out) - with a test that no `/server/...` path
+   answers. `shared/` stays: the page needs the map's runtime; consider serving only the runtime files.
+2. A player-only build: a folder (or a small public repo) with exactly what the page loads - index.html, version.json,
+   `client/`, the `shared/` runtime, `assets/` - made by a script, with a test listing what may be in it. GitHub
+   Pages (or the Oracle server itself) publishes that, not the development repo.
+3. Give the Oracle updater read access to the private repo (a deploy key), check a deploy and a rollback.
+4. Then make the development repo private. On GitHub Free that unpublishes its Pages site, so step 2 comes first.
+   Copies and forks made before stay public.
+5. A copyright line on the page and in the build; the owner to decide on a license text with a lawyer if he wants
+   one (not a decision for Claude).
+What this cannot do: a browser game must send its page code and its art to players, so those can always be copied;
+ideas and mechanics are free to imitate. What it keeps private: the authoritative simulation, the world generator,
+the tools, the plans and everything unreleased.
+
+## The owner's notes while playing the live build (11-25 00:22 - 00:33) - logged, not acted on in the art pass
+- **A hop at a shop's doorway** (the gun shop / hardware pair, a walk-in front): "it looks like i have to jump across
+  something underneath the doorway here, my player pauses and hops over something underneath the entry sign so I dont
+  know what it is thats under there." To find: what solid or step lies under the fascia at a walk-in's door (a kerb, a
+  planter's or a rail's solid, the room's threshold) - a class check over every walk-in door: nothing solid and no step
+  on the line from the pavement through the door.
+- **Shop name signs** (same picture): "like how these signs show up they're nice and easy to read and might make a good
+  standard sign angle and size and visibility, but it covers you walking through the door, or at least the overhang
+  does" - keep that legibility as the standard (angle, size, contrast), in styles that fit the district, the building
+  and its purpose, with variety; and never hide the player going through the door (the sign or its overhang fades or
+  sits above the door's opening). For part B's shared kit (shopfronts and signs) - with the standing rules "no big
+  overhangs over entrances" and "nothing meant to be seen is hidden".
+- **NPC behaviour** (00:33): "more animated and complex ... not just automatically attack (right now it seems like an
+  instant pull out weapon and shoot reaction) ... sometimes take cover, react not with violence first, react scared
+  and run off, react cautious, react professional and skilled ... interactions and violence and fighting and driving
+  and being police or on the job". Server-side (the AI systems); a design first: temperaments by role and district,
+  a reaction ladder (notice, warn, flee / call / draw, take cover, fight), skill tiers for police and guards.
+- **Pets and wildlife**: the same variety of behaviour where it fits - but nothing that works on purpose may break:
+  "I love the details like the quail family sticks together ... I wouldn't want to break any carefully crafted systems
+  ... we accidentally over-randomize the individual animal behavior and they all react differently and break up the
+  group". Rule for that work: group behaviours (families, flocks, herds) are decided for the group, variation is
+  between groups and kinds, and each existing behaviour gets a test before anything round it changes.
+- **Dogs at the dog run and in the city** (00:47): "The dog run area doesnt have any dogs or NPCs walkings dogs or
+  playing fetch with dogs ... I dont see a lot of dogs or cats or NPCs walking dogs in the cities either. Are these
+  already in the game and just need to be spawned in more places". Checked: they are in the game - a dog walker with
+  three dogs on leads is one of the street personalities (`server/systems/personas.js` `dogs`, capped at one at a
+  time), lost pets (`pets.js`), police dogs (`k9.js`), a hunter's dog (`activities.js`). Nothing is spawned AT a dog
+  run (the world marks them: `shared/world3-fenceexits.js` 'dogrun'), there is no fetch, and no cats walk the
+  streets. To build: an activity at every dog run (owners on the benches, dogs off the lead, fetch), more walkers by
+  district, cats on stoops and in alleys.
+- **Vehicles take damage from what they smash** (01:00, an ambulance through a planted median): "you can run over
+  infinite things apparently ... things are destructible and vehicles aren't super fragile, but after running through
+  enough destructible objects (judging on the size and impact ... crashing into a tree vs. driving over a garbage
+  bag) the damage would be comparable." With the 11-23 "vehicles smash things" item: each knockable kind a weight
+  (a bag nothing, a planter or a sign a little, a lamp post or a tree a real hit and a stop), damage by weight and
+  speed, in `shared/rules.js`.
+- **The playtest tool cannot photograph World v3 in the running game** (found 11-25): `tools/playtest.py` gives up
+  waiting before the v3 server is up (220 s) and does not get past the first-time question ("What brings you to
+  town?"), so the art pass's pictures are offline renders. A dev switch to skip the first-time flow and a longer
+  server wait would give real game pictures of any place.
+- **The swimmer's water effect** (02:00): "the water fx when a playeer swims looks like a placeholder, it doesnt match
+  the art style of the game or how other objects react to water" - thin smooth white rings trailing behind the
+  swimmer (anti-aliased circles), where boats have pixel wakes and foam. Art: for the water pass's leftovers
+  (ripples and wakes) - a swimmer's wake and splashes in the game's pixel, as the boats' are drawn.
+- **Things passing through bridges** (02:36, a road bridge over open water in rain): "A lot of weird things going on
+  in the water under bridges too. Just the way things are passing through the bridge, it doesn't happen on all
+  bridges though." In the picture a boat and its wake, a police boat and the ring effect are drawn OVER the road
+  deck instead of under it. To find: which bridges (a deck whose span is not marked so for the page - host.js draws a
+  boat part-way under a deck beneath it; this one reads as ground-level road), then one rule for every bridge:
+  boats, wakes, swimmers and their effects under the deck, with a test over all bridges.
+- **Live 11-25: see-through buildings along your street or alley** (PR #48, page-side) - on `main` on his word; the
+  art branch carries the same code.
+
+## The owner's notes from playing on desktop and phone (PDF "City Life Auto Prebeta v2", 11-25 03:23)
+"Dont interrupt the current plan just take note and add appropriately ... if its something to fix now lets do it, if
+its something that can wait lets make note of it and revisit at the right time." Sorted:
+
+**Art and the page - taken into the art pass (docs/tasks/ART-CHECK-LIST.md has their state):**
+- **See under elevated structures** (a railroad bridge over a street in his picture): "It would help if players can
+  see under elevated platforms like this railroad bridge, but im sure highways and maybe some other structures ...
+  like we do behind buildings, letting the player see a wide range under a bridge like this."
+- **Mountains**: "Mountain areas can look better than this right? We need to get some big rock structure and mountain
+  side and cliffs and rocky terrain systems in because this doesnt look good when we create these mountainous areas
+  with a group of 4 similar shaped rocks stacked in a row ... water chunks that blend into the mountainous area
+  above and foothills below and just a better looking mountain cliff rocky area in general and across the other
+  mountain/cliff/rocky areas that are put together like this." A new look: variants to him first.
+- **A double yellow line merging into another** on a desert road (two centre lines running into each other, by the
+  hospital there): "Does not look right and its right outside this hospital so a lot of people will see it."
+- **A road bridge over open water** (seen while spectating): the deck's edge against the water "is too hard"; land
+  may run out a way with the bridge, "but eventually the bridge goes over water and there is a passable channel
+  underneath for boats and swimmers and fish and animals". And the white idle marks in the shallows by the shore "just
+  show as static images instead of animated water ripples ... we want that moving but subtle and natural and
+  animated, or can be removed if it isnt needed."
+- **The shark**: "not right yet, doesn't look updated, when it opens it mouth to attack part of its head disappear".
+- **Faceplant, lying down, sleeping**: "it just leans forward but not falling flat on their face (as well as lying
+  down or sleeping, it doesn't lay all the way down)".
+- **"Where to?"**: "You dont need to say there's a cheap car to be had near each one." Done 11-25 (ftue.js).
+- **Cloud shadows** passing over the world: "Or maybe not a good detail to add not sure." An idea: a still to show him
+  before anything is built.
+
+**Game rules and features - logged, not for the art pass:**
+- **Boom Tester**: a punching animation, the shot leaving flaming or glowing hands; it should blow up most vehicles in
+  one or two hits ("A rocket or explosive or grenade or boom tester should blow up most vehicles in a single hit,
+  maybe two it's three if it's especially armored"); and two versions - today's, to which NPCs do not react and which
+  earns no record, and one that "acts as a real in game weapon" with NPCs reacting as to gunfire.
+- **Vehicles and fire**: badly damaged vehicles sometimes catch fire; fire weapons set a vehicle alight only after
+  enough exposure; a burning vehicle goes out or explodes. (With "Vehicles smash things" above.)
+- **SAM**: two hits, three at most, to bring down a full-health helicopter; a plane about two, by how easy the lock is.
+- **Flamethrower**: far longer range - "at least a quarter way across the screen" on desktop.
+- **Wanted level stops** after a great deal of crime on a character made that day: no more stars. A bug to find
+  (a cap, a cooldown, or the new-character protection?) - reproduce on a fresh character first.
+- **Pepper spray and taser against players**: no keeping a player down for good - full effect the first time or two,
+  then little for a while. NPCs matter less.
+- **Ambulance job**: wear a paramedic outfit for the job, your own clothes back when it ends or you quit; and the
+  ambulance must spawn where it can drive off forward (his spawned nose-on to a brick wall in an alley).
+- **Prison**: ideas from The Escapists games - things to do inside, meeting a crime group or a boss who gives work
+  outside, a small training bonus inside (strength, cardio) under the in-game daily cap; escapes, jobs, routines.
+- **Photo mode**: a camera you set up (zoom, local settings), clean stills and video; shots into a public Discord pile
+  that he or moderators approve into a gallery channel; perhaps a gallery in the game.
+- **Events**: NPC bank and store robberies (hands up, or run, or fight back for Samaritan points if no innocent is
+  hurt); rare streakers, tackled by security or police; a rare streaker at a sports event.
+
+### 11-25, seen during the mountains' water (the art pass; logged, not acted on)
+- Granite Hot Springs: the rocks round its pools are near-black (7.9% of the place's picture under 35 of 255 at noon) -
+  for the nature redraw's list (art, part A).
+- Summit Tarn's outflow ends on the scree after 20 tiles; south of it a road, then a band of rock 40 tiles deep. A
+  cascade down the band is the fix (art + world, part A, the mountains' water).
+
+### 11-25 13:33, the owner's notes while looking at the mountain streams ("prioritize correctly dont let me stop the plan")
+- **Train riders swim for a few seconds** ("in some places the train might be registering as in water and all the
+  people on the train will do a swimming animation for a few seconds then go back to normal"). A system fault (the
+  riders' pose is taken from the tile under the car - a bridge or a causeway over water): systems, package 3. To find:
+  every stretch of track over water tiles, counted from the data; a test that a rider's pose never reads the ground.
+- **The train going into a tunnel** ("you see the front of the train go through the tunnel entrance and still looks
+  like its above ground before your screen transitions underground so we need to hide the front part of the train in
+  front of you as it goes into the tunnel"). Page drawing: the cars past the portal are not drawn above ground (cut at
+  the portal's line). Art pass, part B (transit), or sooner if a transit pass comes first.
+- **Tunnel mouths and what they lead into do not line up** (the trains' portals; his words under DECISIONS, "Water
+  under a road"). The class: every portal and every water-under-road crossing - the arrival bores (16), the subway's
+  mouths, the town creeks' and county roads' culverts. The creeks' own crossings are a bridge deck now (11-25); the
+  rest in part B (transit) with the same rule: what goes in is seen to go under.
+
+### 11-25, seen during the desert pass (the art pass; logged, not acted on)
+- **Dusty Hollow: a concrete door path laid across the ghost town's gravel street** (a grey slab strip from a door to
+  the far side, tiles 5342-5343 x 1807-1810) and big plain brown roofs. Part B (buildings, door paths).
+- **The desert highway's edge is saw-toothed** (`asphalt_worn`: blue-grey triangles along both edges, seen at tiles
+  5078-5122 x 1984-2016). Part B (roads).
+- **The scrub's plant pick leans to the list's middle**: `pickW` on a clumping noise takes brittlebush (2 of 15 by
+  weight) four times as often as creosote (4 of 15) - 17,853 to 4,335 in a count over the desert. Every weighted list
+  drawn this way does the same. Nature, with the variety pass (part A 3).
+- **Hammocks standing free on a lawn** (West Hills' yards, tiles 1358-1402 x 2444-2476: 54 hammocks in the world, his
+  11-23 note "hammocks too long"): a hammock wants two trees or posts. Part B (yards), with the hammock's length.
+
+- **People seen through shop windows** (the owner, 11-26 12:40: "if we have humans in the window we want it to be
+  actual NPCs through the window, not static images of humans"): the painted busts are gone (art pass, 11-26). Real
+  ones would want the street to draw the people inside a walk-in's room behind its glass - today they are drawn only
+  from in the room, and a shop that is no walk-in has nobody inside. For his call: wanted, and for which shops.

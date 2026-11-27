@@ -18,13 +18,14 @@
 import { WEAPONS, ITEMS, BLADE_COLORS } from '../shared/items.js';
 import { keyName } from './glyphs.js';
 import { input } from './input.js';
-import { glyph, glyphOfWeapon, addGlyphs } from './touchicons.js';
+import { glyph, glyphOfWeapon, addGlyphs, addGlyphPx } from './touchicons.js';
 import { PIECES, SLOTS as LOOK_SLOTS, CLOTH, decodeLook, encodeLook, lookArt } from '../shared/lookcore.js';
 import { loadout, SLOT_NAMES } from '../shared/loadout.js';
 import { INSTRUMENTS } from '../shared/music.js';
 import { person } from './art2/people.js';
 import { packGBuf, downsample2 } from './art2/gbuf.js';
 import { itemIcon, weaponIcon } from './itemart.js';
+import { piecePixels } from './piecepic.js';
 
 // a weapon's picture in a tile: its class's line icon (pistol, rifle, knife, bat...: the touch buttons' family,
 // client/touchicons.js) - the top-down sprites are thin bars or blocks at this size and read as broken art (11-04 review)
@@ -214,10 +215,77 @@ addGlyphs({
   glasses: 'M2 15a4 4 0 1 0 8 0a4 4 0 1 0-8 0M14 15a4 4 0 1 0 8 0a4 4 0 1 0-8 0M10 15a2 2 0 0 1 4 0M2.5 13 5 7c.7-1.3 1.4-2 3-2M21.5 13 19 7c-.7-1.3-1.5-2-3-2',
   jacket: 'M8 3 4 6v15h5V9M16 3l4 3v15h-5V9M8 3l4 4 4-4M12 7v14',
 });
+// (their pixel icons - the UI's look C: tools/uistyle/glyphgrid.py --write)
+addGlyphPx({
+/* px:begin */
+  'briefcase-medical': '0000f80887ff5055055255255055057ff000', 'waves-horizontal': '0000001ce7380000007fe0000001ce738000',
+  umbrella: '0000201fc3066024017ff020020020038010', bandage: '0000000007ff5055555055555057ff000000', coffee: '0000000000007fe40a40b40a40e4087f81e0',
+  'cup-soda': '0000300200201fc1041041ec0b80880880f8', wine: '0000f00901081081f81080f00600600600f0',
+  'fishing-hook': '00000000018228740e40c4102201c0000000', fish: '0000f065877e59259159159277e678070000',
+  handbag: '0200f80881fc3fe28a2024014014017ff000', 'scroll-text': '0007fc50673633613613610617f1411ff000',
+  gem: '0001fc25268b7ff68b2521540f80f8070020', cog: '0000200f81cc34627265f2723461cc0f8020', wallet: '0007fc4047fe40240640f40f4064027fe000',
+  apple: '0000201fc2224014014014012022021fc088', citrus: '0003002805c05205f05384d42d633d18307c', grape: '00103b1ef16e17b3cb25e3f27964bc7e0000',
+  sandwich: '00000007018c3067ff4017ff4cd7ff000000', croissant: '0000d01fc22763561f3986e82783c01401c0',
+  droplet: '00000006006009010830c2042042041080f0', flower: '00039c6664624f239c39c4f246266639c000', leaf: '00000600e0f21022032022c238670c4f0000',
+  trophy: '0001fc70750550530618c0f80700d818c3fe', drill: '0007f041c41741c7f02a02e02807c04603c0', cherry: '00003803c07a04f0490cc7ff4214216733de',
+  'leafy-green': '00003e1c910130b41142144228230e388470', bean: '00001c0220610611a13e14024024042181e0', shell: '0003fc2c65bb54555557568b27218c0f8000',
+  triangle: '0000700500880881043062026034017ff000', bone: '00000c01601303106e0d83b0460640340180', feather: '00003c0420821122222442f83103e0400000',
+  shovel: '00000600b00900e0100203c06404404c0780', 'cooking-pot': '00007009e0f83800007ff2022022022023fe',
+  beef: '00007808c13415637620740a4327c42181e0', drumstick: '00001e02304108308f0881d87704c0280180', ham: '00000e00b0191ff38c44c4284982181100e0',
+  soup: '0000001481480420027fe4026062041f80f0', beer: '0000e07bc4043f82082ae2aa2ae2a82083f8', 'glass-water': '0001fc1041041041e413c1041041041f8070',
+  ticket: '0000007ff4016032022026034017ff000000', popcorn: '0001fc3562023fe2522522522521541541fc',
+  'hard-hat': '0000200701dc3562022027ff4017ff000000', lamp: '0000f818c1041042023fe0200200f80880f8', wand: '000010000000092000040090100200000000',
+  battery: '0000000007fc4044054054054047fc000000', fuel: '0003f06106127f161161d6156156177f0000', mountain: '0000800c014c1741242022022024017ff000',
+  carrot: '00001003802c0fe11e30c3384304605c0600', salad: '00000403e3c22922b67fe4026062041f80f0', wheat: '00202f07a0de1dc36257c5885f02205c0000',
+  'boom-box': '0003fe2022027ff4015dd5555dd4017ff000', radio: '000000000202603575555575603202000000', guitar: '00000600500f07c0983a84084304202201c0',
+  'cassette-tape': '0000007ff4015dd5555fd4014f95057ff000', 'flame-kindling': '0000600b00581481881980f00001f81f8000',
+  pants: '0001fc1041fc1241241241241741741543de', dress: '0000f00900f00f00901981081081082043fc', cap: '0000000000601f82046064027fe000000000',
+  glasses: '00000018c30620238e47145145138e000000', jacket: '0000883562222222fa2fa2fa2fa2fa3fe000',
+/* px:end */
+});
 const SLOT_GLYPH = { top: 'shirt', jacket: 'jacket', bottoms: 'pants', set: 'dress', shoes: 'footprints', hat: 'cap', glasses: 'glasses', jewel: 'gem', bag: 'backpack', under: 'shirt', socks: 'footprints' };
 const freePiece = (P) => !!P && P.price === 0 && !P.d.issued && !P.d.gift;   // (shared/wardrobe.js free: everyone's)
 const hexOf = (c) => (CLOTH[c] || CLOTH[0])[0];
-const pieceTile = (it, px) => `${glyph(SLOT_GLYPH[PIECES[it.id].slot] || 'shirt', px)}<i class="iv-dot" style="--c:${hexOf(it.c)};--t:${hexOf(it.t)}"></i>`;
+// A piece's tile: the piece itself (concept UIC-19; the art pass, 11-25), drawn by the game's own people art in the
+// colours it is worn in - client/piecepic.js - at a whole number of the game's pixels. Drawn one at a time off the
+// frame the Inventory opens in (a queue; a tile shows its slot's glyph with the colour dot until its picture is there,
+// and for good where the piece has no picture of its own: a bare chest, a backpack seen from the front, a thin chain).
+const PP = new Map(), PPQ = [];
+// (PP_FIT: on the figure's slots a picture may stand a quarter over its glyph's box - the button round it has the room -
+// so a tee is two pixels to the game's one, not one; in the grid it keeps to its box, the name is under it. PP_RIM: one hard pixel of cream round the piece, as a sticker's edge: black
+// jeans on the navy tile were not to be seen - looked at in the page, 11-25)
+export const PP_FIT = 1.25, PP_OVER = 4, PP_RIM = [232, 220, 192, 255];   // (PP_OVER: px a picture may pass its box by, so a tee with its rim - 16 px - is still two to one in a box of 30)
+export function ppRim(R) {
+  const w = R.w + 2, h = R.h + 2, px = new Uint8ClampedArray(w * h * 4), on = (x, y) => x >= 0 && y >= 0 && x < R.w && y < R.h && R.px[(y * R.w + x) * 4 + 3] > 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const o = (y * w + x) * 4, sx = x - 1, sy = y - 1;
+    if (on(sx, sy)) { const i = (sy * R.w + sx) * 4; px[o] = R.px[i]; px[o + 1] = R.px[i + 1]; px[o + 2] = R.px[i + 2]; px[o + 3] = 255; }
+    else if (on(sx - 1, sy) || on(sx + 1, sy) || on(sx, sy - 1) || on(sx, sy + 1)) { px[o] = PP_RIM[0]; px[o + 1] = PP_RIM[1]; px[o + 2] = PP_RIM[2]; px[o + 3] = PP_RIM[3]; }
+  }
+  return { w, h, px };
+}
+const ppLater = () => setTimeout(ppNext, 30);   // (between the page's frames: a picture is a figure drawn twice. Not requestIdleCallback: with the game drawing behind the Inventory the page is seldom idle, and the pictures waited seconds - seen in the test browser)
+const ppImg = (u, px) => { const k = Math.max(1, Math.floor((px + PP_OVER) / Math.max(u.w, u.h))); return `<img class="iv-pp" alt="" src="${u.url}" width="${u.w * k}" height="${u.h * k}" style="image-rendering:pixelated">`; };
+function ppNext() {
+  const q = PPQ[0];
+  if (!q) return;
+  let u = null;
+  try {
+    const R = piecePixels(q.it);
+    if (R) { const Q = ppRim(R), cv = document.createElement('canvas'); cv.width = Q.w; cv.height = Q.h; const g = cv.getContext('2d'), id = g.createImageData(Q.w, Q.h); id.data.set(Q.px); g.putImageData(id, 0, 0); u = { url: cv.toDataURL(), w: Q.w, h: Q.h }; }
+  } catch (e) { console.warn('[inventory] piece picture', e); }
+  PP.set(q.k, u); PPQ.shift();
+  if (u) for (const el of document.querySelectorAll(`[data-pp="${q.k}"]`)) el.outerHTML = ppImg(u, +el.dataset.px || 26);
+  if (PPQ.length) ppLater();
+}
+const pieceGlyph = (it, px) => `${glyph(SLOT_GLYPH[PIECES[it.id].slot] || 'shirt', px)}<i class="iv-dot" style="--c:${hexOf(it.c)};--t:${hexOf(it.t)}"></i>`;
+const pieceTile = (it, px0, fit = 1) => {
+  const px = Math.round(px0 * fit), k = `${it.id}:${it.c | 0}:${it.t | 0}:${it.p | 0}`, u = PP.get(k);
+  if (u) return ppImg(u, px);
+  if (u === null) return pieceGlyph(it, px0);
+  if (!PPQ.some((q) => q.k === k)) { PPQ.push({ k, it: { id: it.id, c: it.c, t: it.t, p: it.p } }); if (PPQ.length === 1) ppLater(); }
+  return `<span style="display:contents" data-pp="${k}" data-px="${px}">${pieceGlyph(it, px0)}</span>`;
+};
 
 // the figure: your look as the city draws it (person() at the game's size, put on the art grid), one canvas a pose, kept
 const SPR = new Map();
@@ -450,7 +518,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
       cols[ci].innerHTML = col.map(([s, label]) => {
         const it = O && (s === 'top' && O.set ? O.set : O[s]), P = it && PIECES[it.id], under = s === 'bottoms' && O && O.set;
         return `<div class="iv-slot${it ? '' : ' empty'}${it && sel === 'p:' + it.id ? ' sel' : ''}" data-s="${s}"><small>${s === 'top' && O && O.set ? 'OUTFIT' : label}</small>`
-          + (it ? `<button class="iv-sb" data-k="p:${it.id}" title="${esc(P.name)}" aria-label="${esc(P.name)}">${pieceTile(it, 26)}</button><button class="iv-off" data-off="${O.set && s === 'top' ? 'set' : s}" aria-label="Take off the ${esc(P.name)}"${s === 'under' ? ' title="At home, a bathhouse or a shower"' : ''}>✕</button>`
+          + (it ? `<button class="iv-sb" data-k="p:${it.id}" title="${esc(P.name)}" aria-label="${esc(P.name)}">${pieceTile(it, 26, PP_FIT)}</button><button class="iv-off" data-off="${O.set && s === 'top' ? 'set' : s}" aria-label="Take off the ${esc(P.name)}"${s === 'under' ? ' title="At home, a bathhouse or a shower"' : ''}>✕</button>`
             : `<button class="iv-sb" data-k="" disabled aria-label="${label}: nothing">${under ? '<em>with the outfit</em>' : glyph(SLOT_GLYPH[s], 22)}</button>`) + '</div>';
       }).join('');
     });
@@ -458,7 +526,7 @@ export function createBag({ el, send, me, refocus, leave, stash = () => null, lo
     for (const b of el.querySelectorAll('[data-off]')) b.onclick = () => send({ t: 'look', a: 'off', s: b.dataset.off === 'set' ? 'top' : b.dataset.off });
   }
   function stats(m) {
-    const st = stamina(), arm = m.arm, row = (ic, name, v, max, col) => `<div class="iv-stat"><span class="iv-sl">${glyph(ic, 16)}${name}</span><span class="iv-bar"><i style="width:${max ? Math.round(Math.max(0, Math.min(1, v / max)) * 100) : 0}%;background:${col}"></i></span><b>${max ? Math.round(v) : '-'}</b></div>`;
+    const st = stamina(), arm = m.arm, row = (ic, name, v, max, col) => `<div class="iv-stat"><span class="iv-sl">${glyph(ic, 12)}${name}</span><span class="iv-bar"><i style="width:${max ? Math.round(Math.max(0, Math.min(1, v / max)) * 100) : 0}%;background:${col}"></i></span><b>${max ? Math.round(v) : '-'}</b></div>`;
     $q('.iv-stats').innerHTML = row('heart-pulse', 'HEALTH', m.hp || 0, m.maxHp || 100, 'var(--danger)') + row('shield', 'ARMOR', arm ? arm[0] : 0, arm ? arm[1] : 0, 'var(--info)') + row('footprints', 'STAMINA', st ? st[0] : 0, st ? st[1] : 0, 'var(--money)');
   }
 

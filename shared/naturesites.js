@@ -501,6 +501,13 @@ function sentinelStones(m, H) {
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x / TILE - CX, q.y / TILE - CY + 3) < 9) dropProp(m, i); });
   for (let ty = CY - 10; ty <= CY + 6; ty++) for (let tx = CX - 7; tx <= CX + 7; tx++) { const i = at(tx, ty); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) m.reserve[i] |= RES; }
+  // (the ring's ground: a round of green turf on the scree, ragged - the stones stood on bare rock their own grey; the
+  // art pass, 11-24. The sward is the map's lush grass, reserve bit 128.)
+  for (let ty = CY - 7; ty <= CY + 7; ty++) for (let tx = CX - 8; tx <= CX + 8; tx++) {
+    const dx = (tx + 0.5 - CX) / 6.4, dy = (ty + 0.5 - CY) / 5.6, i = at(tx, ty);
+    if (dx * dx + dy * dy > 0.72 + hash2(tx >> 1, ty >> 1, 3907) * 0.45 || !(m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) || m.dist[i] !== D) continue;
+    m.tiles[i] = T.GRASS; m.reserve[i] |= 128;
+  }
   // the ring: ten stones, the third one fallen
   for (let k = 0; k < 10; k++) {
     const a = k / 10 * Math.PI * 2 + 0.2, r = 3.6 + hash2(k, 1, 3901) * 0.3, x = CX + Math.cos(a) * r, y = CY + Math.sin(a) * r * 0.9;

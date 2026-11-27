@@ -16,6 +16,7 @@
 // - buildWest(m, addProp) (from the dress hook, before the biomes' dressing - what it builds is kept from it, reserve 4).
 // - westDone(m): the summary (m.world3.west).
 import { TILE, T } from './constants.js';
+import { cliffSolid } from './cliffshape.js';
 
 export const WEST_IDS = { egret: 65 };
 const Z = 65;
@@ -479,7 +480,15 @@ export function buildWest(m, addProp) {
         const x = cliffX(y);
         if (Math.abs(y - ky - 8) <= 1) continue;   // (the stairs' gap)
         for (let j = 0; j < 2; j++) if (open(x + j, y)) { m.tiles[y * W + x + j] = T.WALL; m.reserve[y * W + x + j] |= 4; rock++; }
-        if ((y - ky) % 6 === 0) addProp(m, 'cliffwall', (x - 0.4) * TILE, (y + 0.5) * TILE, 0, { len: 6 * TILE, h: 74 + (Math.abs(y) % 3) * 8, d: 56, s: y }), out.props++;
+        // (11-25: the band's rock was a wall piece six tiles long every six rows - south-facing pieces down a west-facing
+        // shore, a column of square turf-topped blocks; the owner that day, of rock drawn by code: "not all so uniform".
+        // Now a scarp of basalt along the band itself: a boulder or an outcrop every other row, each its own size, a
+        // little off the line)
+        if ((y - ky) % 2 === 0) {
+          if (hh(y, 3, 915) < 0.5) addProp(m, 'boulder', (x + 0.5 + hh(y, 1, 915) * 1.2) * TILE, (y + 0.5) * TILE, 14, { s: 34 + Math.round(hh(y, 2, 915) * 26), style: 'basalt' });
+          else addProp(m, 'outcrop', (x + 1 + (hh(y, 1, 915) - 0.5)) * TILE, (y + 0.7) * TILE, 20, { w: 70 + Math.round(hh(y, 4, 915) * 56), d: 44 + Math.round(hh(y, 5, 915) * 22), h: 40 + Math.round(hh(y, 6, 915) * 40), s: Math.abs(y), style: 'basalt' });
+          out.props++;
+        }
       }
       const gx = cliffX(ky + 8);
       addProp(m, 'stairs', (gx - 1) * TILE, (ky + 8.6) * TILE, 0, { len: 2 * TILE + 16, h: 70, w: 30 }); out.props++;
@@ -549,7 +558,11 @@ export function buildWest(m, addProp) {
       for (const py of [cy - 14, cy + 14]) {
         const x = coastX(py, sx);
         for (let yy = py - 2; yy <= py + 2; yy++) for (let j = -1; j < 12; j++) if (open(x + j, yy)) { m.tiles[yy * W + x + j] = T.WALL; m.reserve[yy * W + x + j] |= 4; }
-        addProp(m, 'cliffwall', (x + 5) * TILE, (py + 2.6) * TILE, 0, { len: 12 * TILE, h: 80, d: 60, s: py }); out.props++;
+        // (11-25: the point's rock is a headland of crags - a `cliff` drawn rough, statics.js rg -, not one straight
+        // wall piece with a turf top; solid where it stands: cliffshape.js)
+        const hx = (x + 5.5) * TILE, hy = (py + 3) * TILE, hw = 12 * TILE, hd = 4 * TILE, hH = 76 + (Math.abs(py) % 3) * 14;
+        for (const [qx, qy] of cliffSolid(hx, hy, hw, hd, hH, Math.abs(py))) if (open(qx, qy)) { m.tiles[qy * W + qx] = T.WALL; m.reserve[qy * W + qx] |= 4; }
+        addProp(m, 'cliff', hx, hy, 0, { w: hw, d: hd, h: hH, s: Math.abs(py), st: 'basalt', rough: 1 }); out.props++;
       }
       // sea stacks in the cove's mouth, driftwood on the sand
       for (const [dy, d, r, h] of [[-8, 10, 22, 120], [5, 16, 16, 90], [12, 7, 26, 140]]) { const tx = coastX(cy + dy, sx) - d, ty = cy + dy; if (sea(tx, ty)) { addProp(m, 'seastack', tx * TILE, ty * TILE, r, { s: (tx + ty) % 4 + 1, r, h }); out.stacks++; out.props++; } }

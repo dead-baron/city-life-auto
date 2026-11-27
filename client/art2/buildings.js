@@ -26,7 +26,7 @@
 import { MAT, ramp as ramp0 } from './palette.js';
 import { GBuf, hash, vnoise, bayer, step, F_GLASS, F_LEAF } from './gbuf.js';
 import { drawText, textWidth } from './font.js';
-import { layoutSign, paintBoard, paintLine, lineMask, palOf, legible, boardFor } from './signfont.js';
+import { layoutSign, paintBoard, paintLine, lineMask, palOf, legible, boardFor, picBitmap } from './signfont.js';
 import { DOOR_COLS } from '../../shared/doors.js';
 import { dressFacade } from './facadedress.js';
 
@@ -397,11 +397,14 @@ export function makeBuilding(spec) {
   for (const a of spec.arches || []) arch(G, a, d + H, night, seed);
   if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
   for (const bl of spec.blades || []) blade(G, bl, d + H, night, H);
+  if (spec.picSign && !(spec.shop && spec.shop.sign && spec.shop.sign.moved)) picSign(G, spec.picSign, d + H, night);   // (a picture sign hung out over the shop)
   if (spec.cross) medSign(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night, spec.cross.k);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
   // (the boards with words last: never cut by a cross, a cup, a blade - textClipped)
   // (a plaque where the shop's sign goes: up clear of it while there's room, else none)
-  const sgn = shopAt && spec.shop.sign && spec.shop.sign.text ? spec.shop.sign : null;
+  // (a sign moved up onto what stands in front of it - a false front, a porte-cochere, a canopy: statics.js - is not
+  // painted again on the wall behind)
+  const sgn = shopAt && spec.shop.sign && spec.shop.sign.text && !spec.shop.sign.moved ? spec.shop.sign : null;
   const sbox = sgn ? signBox(sgn, sgn.x ?? 4, shopAt.winTop - 2, sgn.w ?? w - 8) : null;
   for (const pq of spec.plaques || []) {
     if (!sbox || !pq || !pq.text) { plaque(G, pq, d + H, night); continue; }
@@ -834,76 +837,247 @@ export function liveDoor(G, x0, y0, w, h, style, night, c = 0) {
   }
 }
 
+// ---- the windows by trade (11-26, the shared kit's audit #2) ----------------------------------------------------------
+// The window a trade's shop shows: [the windows that suit it] - the first where the front's own (shop.kind) is none of
+// them (statics.js sets shop.goods once the sign's trade is known: a pharmacy no longer shows a mart's shelves, a gun
+// shop a pawnbroker's guitars, a clinic a row of bottles). A trade not here keeps its front's own window.
+export const GOODS_OF = {
+  pharmacy: ['pharmacy'], gunshop: ['gunshop'], hardware: ['hardware'], barber: ['barber'], sports: ['sports'], tackle: ['tackle'], bakery: ['bakery'],
+  clinic: ['clinic', 'lobby'], jeweller: ['jeweller'], marine: ['tackle', 'lobby'], laundromat: ['laundry'], books: ['books'], records: ['records'],
+  florist: ['florist'], gallery: ['gallery'], salon: ['salon'], tattoo: ['salon'], liquor: ['liquor'], pawn: ['pawn'], arcade: ['arcade'],
+  boutique: ['clothes'], outdoor: ['clothes', 'mart'], street: ['clothes', 'arcade'], surf: ['clothes'],
+  // (food and drink: any of their three rooms, as the front was planned - a tiki bar's counter, a sports bar that sells coffee)
+  cafe: ['cafe', 'diner', 'bar'], icecream: ['cafe', 'diner'], diner: ['diner', 'cafe', 'bar'], restaurant: ['diner', 'cafe', 'bar'], roadhouse: ['diner', 'bar'],
+  bar: ['bar', 'diner'], tavern: ['bar', 'diner'], grocer: ['mart', 'diner', 'cafe'],
+};
+export const goodsOf = (trade, kind) => { const g = GOODS_OF[trade]; return !g || g.includes(kind) ? kind : g[0]; };
+const AWNING_HIDES = 12;   // (the head of the glass an awning covers: these rooms are drawn in what shows under it)
+let HOT = null;   // (a lit thing in a window - a cross, a pole, a stone under a spot: its own glow over the room's)
+const TEAM = [[200, 50, 50], [40, 80, 170], [240, 190, 50], [40, 130, 80], [240, 120, 40], [90, 50, 130]];
+const GEMS = [[200, 240, 255], [255, 150, 190], [120, 230, 160], [255, 226, 130], [150, 170, 255]];
+// (x, y: the sprite's pixel; iy: down from the window's head, or from the awning's edge; H2: the height that shows - 39,
+// 27 under an awning: each room fits both; a pane is 30 px between mullions)
+const GOODS = {
+  pharmacy(x, y, iy, H2, seed, night) {   // white shelves of small boxes, a green cross lit in the glass, the counter
+    let c = step(ramp('#dcebe6', 5, 2), 0.62, x, y, 0.3);
+    const sh = iy % 10, lx = (x - 4) % 60, ax = lx - 24, ay = iy - 3;
+    if (iy >= H2 * 0.76) c = iy < H2 * 0.76 + 2 ? [60, 150, 140] : [238, 242, 240];
+    else if (sh < 2) c = [176, 196, 194];
+    else if (sh > 3 && (x & 3) < 3) { const g = hash(x >> 2, (iy / 10) | 0, seed + 21); c = g > 0.74 ? [86, 170, 160] : g > 0.6 ? [224, 96, 96] : g > 0.46 ? [110, 150, 214] : g > 0.36 ? [240, 214, 120] : [248, 248, 244]; }
+    if (ax >= 0 && ax < 12 && ay >= 0 && ay < 12 && (ax >= 4 && ax < 8 || ay >= 4 && ay < 8)) { c = [70, 220, 124]; HOT = [60, 230, 120, 110 + night * 110]; }
+    return c;
+  },
+  gunshop(x, y, iy, H2, seed) {   // long guns racked along the board, the pistols on felt in the glass counter
+    let c = step(ramp('#8a8062', 5, 2), 0.5 + (iy / H2) * 0.1, x, y, 0.4);
+    const top = Math.floor((H2 - 14) / 11) * 11;
+    if (iy < top) {
+      const row = Math.floor(iy / 11), ly = iy % 11, lx = (x - 4 + row * 15) % 40;
+      if (ly >= 3 && ly < 5 && lx >= 13 && lx < 37) c = [28, 28, 34];                                           // the barrel
+      else if (ly >= 3 && ly < 8 && lx >= 3 && lx < 13 && ly - 3 <= (13 - lx) * 0.6 + 1.5) c = ly < 5 ? [164, 104, 54] : [134, 82, 42];   // the stock
+      else if (ly >= 5 && ly < 7 && lx >= 13 && lx < 23) c = lx < 17 ? [28, 28, 34] : [140, 86, 44];               // the guard, the fore-end
+      else if (ly >= 8 && ly < 10 && (lx >= 24 && lx < 26 || lx >= 34 && lx < 36)) c = [196, 192, 178];          // the pegs under it
+    } else if (iy < top + 2) c = MAT.chrome[3];
+    else if (iy < top + 12) {
+      const ly = iy - top - 2, lx = (x - 4) % 15;
+      c = step(ramp('#4a8a62', 5, 2), 0.5, x, y, 0.2);
+      if (ly >= 2 && ly < 4 && lx >= 3 && lx < 12) c = [26, 26, 30]; else if (ly >= 4 && ly < 8 && lx >= 3 && lx < 6) c = [112, 70, 38];
+    } else c = step(ramp('#6a4a30', 5, 2), 0.5, x, y, 0.3);
+    return c;
+  },
+  hardware(x, y, iy, H2, seed) {   // tools hung on the pegboard, tins of paint on the shelves under them
+    let c = step(ramp('#b89a6a', 5, 2), 0.56, x, y, 0.3);
+    const top = Math.floor(H2 * 0.54);
+    if (iy < top) {
+      const cell = Math.floor((x - 4) / 10), lx = (x - 4) % 10, g = hash(cell, 1, seed + 23), ly = iy - 3;
+      if ((x & 3) === 0 && (iy & 3) === 0) c = [146, 118, 78];                                             // the board's holes
+      if (ly >= 0 && ly < 15) {
+        if (g > 0.72) { if (ly < 4 && lx >= 1 && lx < 9) c = [150, 156, 166]; else if (ly >= 4 && lx >= 4 && lx < 6) c = [156, 104, 56]; }                       // a hammer
+        else if (g > 0.48) { if (ly < 5 && lx >= 2 && lx < 8) c = [206, 60, 50]; else if (ly >= 5 && lx >= 2 && lx < 8 - ((ly - 5) >> 1)) c = [196, 202, 206]; }   // a saw
+        else if (g > 0.26) { if (ly < 4 ? (lx >= 2 && lx < 8 && !(ly < 2 && lx >= 4 && lx < 6)) : (lx >= 4 && lx < 6)) c = [172, 178, 186]; }                  // a wrench
+        else if (g > 0.1) { const r = Math.hypot(lx - 4.5, ly - 7); if (r > 2 && r < 4.6) c = [238, 190, 50]; }                                             // a coil of cord
+      }
+    } else {
+      const ly = (iy - top) % 10, row = Math.floor((iy - top) / 10), lx = (x - 4) % 8, g = hash(Math.floor((x - 4) / 8), row, seed + 25);
+      if (ly < 2) c = MAT.metalDark[3];
+      else if (lx >= 1 && lx < 7 && ly >= 3) c = ly === 3 ? [214, 218, 222] : ly >= 5 && ly < 8 ? [[204, 64, 54], [60, 110, 180], [240, 200, 70], [70, 150, 90], [240, 240, 234]][Math.floor(g * 5)] : [182, 188, 194];
+      else c = step(ramp('#8a7450', 5, 2), 0.4, x, y, 0.3);
+    }
+    return c;
+  },
+  barber(x, y, iy, H2, seed, night) {   // round-topped mirrors in dark wood, red leather chairs on chrome, a check floor - and the pole in the glass
+    let c = step(ramp('#e6dcc8', 5, 2), 0.6, x, y, 0.4);
+    const pane = Math.floor((x - 4) / 30), lx = (x - 4) % 30, mx = lx - 14.5, mb = Math.floor(H2 * 0.48);
+    const arch = (r, t) => iy >= t && iy < mb && Math.abs(mx) < r && (iy >= t + r || Math.hypot(mx, iy - t - r) < r);
+    if (arch(9, 3)) c = arch(7, 5) && iy < mb - 2 ? step(ramp('#9ab4c4', 5, 2), 0.72 - iy / H2 * 0.5, x, y, 0.3) : [98, 62, 38];
+    else if (iy >= mb && iy < mb + 2 && Math.abs(mx) < 11) c = [98, 62, 38];                                  // the shelf under it
+    else if (iy >= H2 * 0.56 && iy < H2 * 0.8 && Math.abs(mx) < 6) c = iy < H2 * 0.62 ? [196, 52, 54] : [164, 38, 44];   // the chair's back and seat
+    else if (iy >= H2 * 0.68 && iy < H2 * 0.74 && Math.abs(mx) < 9) c = MAT.chrome[3];                         // its arms
+    else if (iy >= H2 * 0.8 && iy < H2 * 0.9 && (Math.abs(mx) < 1.5 || iy >= H2 * 0.86 && Math.abs(mx) < 5)) c = MAT.chrome[2];   // its foot
+    if (iy >= H2 * 0.9) c = (((x >> 2) + (iy >> 2)) & 1) ? [34, 32, 34] : [232, 230, 224];
+    if (pane % 3 === 1 && lx >= 24 && lx < 29 && iy >= 3 && iy < H2 * 0.72) {                                   // the pole: red, white and blue, capped in chrome
+      const t = iy - 3, n = Math.floor(H2 * 0.72) - 3;
+      if (t < 3 || t >= n - 3) c = MAT.chrome[3];
+      else { const s = (lx + iy) % 9; c = s < 3 ? [220, 50, 54] : s < 6 ? [246, 246, 242] : [50, 84, 190]; HOT = [...c, 70 + night * 110]; }
+    }
+    return c;
+  },
+  sports(x, y, iy, H2, seed) {   // pennants along the top, a rail of team shirts, the balls on the shelf under them
+    let c = step(ramp('#d6d2c6', 5, 2), 0.6, x, y, 0.4);
+    const pen = H2 >= 34 ? 9 : 0, top = pen + 15;   // (no room for the pennants under an awning)
+    if (iy < pen) { const lx = (x - 4) % 10, k = Math.floor((x - 4) / 10); if (iy >= 1 && Math.abs(lx - 4.5) < (9 - iy) * 0.55) c = TEAM[Math.floor(hash(k, 2, seed + 27) * 6)]; }
+    else if (iy < top) {
+      const lx = (x - 4) % 15, k = Math.floor((x - 4) / 15), ly = iy - pen - 1, col = TEAM[Math.floor(hash(k, 3, seed + 29) * 6)];
+      if (ly < 1) c = MAT.chrome[2];
+      else if (ly >= 2 && ly < 14 && (lx >= 3 && lx < 12 || ly < 6 && lx >= 1 && lx < 14) && !(ly < 4 && lx >= 6 && lx < 9)) c = ly >= 6 && ly < 11 && lx >= 6 && lx < 9 ? [246, 246, 240] : ly === 13 ? col.map((v) => v * 0.75) : col;
+    } else {
+      const ly = iy - top, lx = (x - 4) % 10, k = Math.floor((x - 4) / 10), g = hash(k, 4, seed + 31), r = Math.hypot(lx - 4.5, ly - 6.5);
+      if (ly < 2) c = step(ramp('#8a6a48', 5, 2), 0.6, x, y, 0);
+      else if (r < 4.4 && ly < 12) c = g > 0.62 ? (lx === 4 || lx === 5 || ly === 6 ? [130, 64, 30] : [230, 124, 50]) : g > 0.3 ? (((lx >> 1) + (ly >> 1)) % 3 === 0 ? [44, 44, 50] : [244, 244, 240]) : (ly === 6 || ly === 7 ? [240, 238, 230] : [150, 90, 52]);
+      else if (ly >= 12) c = step(ramp('#8a6a48', 5, 2), 0.4, x, y, 0.2);
+    }
+    return c;
+  },
+  tackle(x, y, iy, H2, seed) {   // rods stood along the wall, a net hung up, floats and coolers under them
+    let c = step(ramp('#6e8c8a', 5, 2), 0.46 + (iy / H2) * 0.14, x, y, 0.5);
+    const pane = Math.floor((x - 4) / 30), lx = (x - 4) % 30, top = Math.floor(H2 * 0.6);
+    if (iy < top) {
+      if (pane % 3 === 2) { if (iy > 2 && lx > 3 && lx < 27 && ((lx + iy) % 6 < 2 || (lx - iy + 60) % 6 < 2)) c = [226, 218, 190]; }             // the net
+      else { const rod = Math.floor(lx / 6), rx = lx % 6, t0 = 2 + Math.floor(hash(pane, rod, seed + 33) * 6); if (rx >= 2 && rx < 4 && iy >= t0) c = iy < t0 + 5 ? [206, 204, 196] : iy >= top - 9 && iy < top - 5 ? ((rod + pane) & 1 ? [210, 62, 50] : [60, 110, 176]) : [50, 40, 34]; }
+    } else if (iy < top + 2) c = step(ramp('#8a6a48', 5, 2), 0.6, x, y, 0);
+    else {
+      const ly = iy - top - 2, cx = (x - 4) % 10, bx = (x - 4) % 20, k = Math.floor((x - 4) / 20);
+      if (ly < 8) { if (Math.hypot(cx - 4.5, ly - 3.5) < 3.6) c = ly < 4 ? [224, 66, 48] : [246, 244, 238]; }                                           // the floats
+      else if (bx >= 2 && bx < 18) c = k & 1 ? (ly < 10 ? [50, 96, 70] : [70, 130, 92]) : (ly < 10 ? [60, 112, 176] : [234, 240, 242]);                // a tackle box, a cooler
+    }
+    return c;
+  },
+  bakery(x, y, iy, H2, seed) {   // loaves on the racks, the cakes in the glass case
+    let c = step(ramp('#a8744a', 5, 2), 0.5, x, y, 0.3);
+    const top = Math.floor((H2 - 15) / 11) * 11;
+    if (iy < top) {
+      const sh = iy % 11, lx = (x - 4) % 10, g = hash(Math.floor((x - 4) / 10), (iy / 11) | 0, seed + 35), ex = (lx - 4.5) / 4.8, ey = (sh - 5) / 3.8;
+      if (sh >= 9) c = [222, 180, 122];
+      else if (g > 0.12 && ex * ex + ey * ey < 1) c = sh < 4 ? [250, 214, 140] : sh >= 7 ? [190, 124, 58] : ((lx === 3 || lx === 6) && sh < 6 ? [196, 130, 60] : [236, 184, 104]);
+    } else if (iy < top + 2) c = MAT.chrome[3];
+    else if (iy < top + 14) {
+      const ly = iy - top - 2, lx = (x - 4) % 10, g = hash(Math.floor((x - 4) / 10), 7, seed + 37);
+      c = [214, 228, 228];
+      if (lx >= 1 && lx < 9 && ly >= 4 && ly < 11) c = ly < 7 ? (g > 0.62 ? [255, 250, 240] : g > 0.3 ? [244, 150, 172] : [104, 62, 40]) : [226, 174, 106];
+      else if (lx >= 4 && lx < 6 && ly >= 2 && ly < 4 && g > 0.3) c = [216, 44, 58];
+    } else c = step(ramp('#f0ece0', 5, 2), 0.6, x, y, 0.2);
+    return c;
+  },
+  clinic(x, y, iy, H2, seed) {   // a waiting room: the strip lights, the desk, posters over a row of chairs, a plant
+    let c = step(ramp('#dbe6ea', 5, 2), 0.62, x, y, 0.3);
+    const pane = Math.floor((x - 4) / 30), lx = (x - 4) % 30;
+    if (iy < 3) c = lx > 5 && lx < 25 ? [252, 252, 246] : [190, 200, 204];
+    else if (iy >= H2 * 0.88) c = [196, 206, 210];
+    else if (pane % 3 === 0) {
+      const ax = lx - 10, ay = iy - 5;
+      if (iy >= H2 * 0.56) c = iy < H2 * 0.56 + 2 ? [246, 248, 248] : [70, 130, 180];
+      else if (ax >= -2 && ax < 12 && ay >= -1 && ay < 9) c = ax >= 0 && ax < 10 && ay >= 0 && ay < 8 && (ax >= 3 && ax < 7 || ay >= 2 && ay < 6) ? [60, 140, 196] : [248, 248, 244];
+    } else {
+      const cx = lx % 10, ly = iy - Math.floor(H2 * 0.58);
+      if (ly >= 0 && ly < 12 && lx < 30) { if (cx >= 1 && cx < 9 && ly < 8) c = ly < 5 ? [76, 158, 166] : [56, 126, 136]; else if ((cx === 2 || cx === 7) && ly >= 8) c = [124, 132, 138]; }
+      else if (pane % 3 === 1 && lx >= 6 && lx < 18 && iy >= 4 && iy < 14) c = iy < 8 ? [[224, 96, 96], [86, 170, 160], [240, 200, 90]][pane % 3] : ((iy & 3) === 0 && lx > 7 && lx < 16 ? [170, 176, 180] : [248, 248, 244]);
+      if (pane % 3 === 2 && lx >= 20 && lx < 28) { if (iy >= H2 * 0.7 && iy < H2 * 0.88) c = [176, 104, 62]; else if (Math.hypot(lx - 24, iy - H2 * 0.56) < 6) c = (lx + iy) % 3 === 0 ? [50, 110, 64] : [78, 150, 88]; }
+    }
+    return c;
+  },
+  jeweller(x, y, iy, H2, seed, night) {   // dark velvet: necklaces on their busts, rings on the stands, the stones under the spots
+    let c = step(ramp('#2c2540', 5, 2), 0.42 + (iy / H2) * 0.12, x, y, 0.5);
+    const lx = (x - 4) % 15, k = Math.floor((x - 4) / 15), g = hash(k, 5, seed + 39), tall = H2 >= 34, top = tall ? 23 : 14, mx = lx - 7, ly = iy - (tall ? 5 : 1);
+    const gem = () => { c = GEMS[Math.floor(hash(x >> 1, iy >> 1, seed + 41) * 5)]; HOT = [...c, 90 + night * 110]; };
+    if (iy < 3) { if (lx >= 6 && lx < 9) { c = [255, 244, 210]; HOT = [255, 236, 190, 120 + night * 60]; } else c = [52, 48, 62]; }
+    else if (iy < top) {
+      if (g > 0.42 && tall) {
+        if (ly >= 1 && ly < 15 && Math.abs(mx) < (ly < 4 ? 2 : Math.min(6, 2 + (ly - 4)))) { c = [238, 230, 216]; if (ly >= 5 && ly < 12 && Math.abs(Math.abs(mx) - (11 - ly) * 0.75) < 1) c = [246, 212, 96]; if (ly >= 11 && ly < 13 && Math.abs(mx) < 1.5) gem(); }
+      } else if (ly >= 3 && ly < 15 && lx >= 2 && lx < 13) {
+        const sx = (lx - 2) % 4, sy = (ly - 3) % 4;
+        if (sy >= 2 && sx < 2) c = [246, 212, 96]; else if (sy < 2 && sx < 2) gem(); else c = [58, 50, 80];
+      }
+    } else if (iy < top + 2) c = [222, 186, 92];
+    else if (iy < top + 12) { const sx = (x - 4) % 6, sy = (iy - top - 2) % 5; c = [40, 36, 60]; if (sx >= 2 && sx < 4 && sy >= 2 && sy < 4) gem(); }
+    else c = step(ramp('#5a4230', 5, 2), 0.5, x, y, 0.3);
+    return c;
+  },
+};
+// every window storefront draws: the fourteen painted in it, these, and a mart's shelves for any other
+export const WINDOWS = ['arcade', 'bar', 'lobby', 'liquor', 'pawn', 'diner', 'cafe', 'books', 'records', 'laundry', 'clothes', 'florist', 'gallery', 'salon', ...Object.keys(GOODS), 'mart'];
+
 function storefront(G, w, d, H, gH, spec, seed, night, fy) {
-  const shop = spec.shop, y0 = d + H;
+  const shop = spec.shop, y0 = d + H, wk = shop.goods || shop.kind, aw = shop.awning ? AWNING_HIDES : 0;
   const winTop = fy(gH - signLift(spec) - 18), winBot = y0 - 7;
   const doorW = shop.doorW || (shop.kind === 'arcade' ? 30 : 22), doorX = shop.door === 'right' ? w - doorW - 10 : shop.door === 'left' ? 10 : (shop.door | 0);
+  // (a flat over the shop - shop.flat { x, w, h, pier }: a pier of the building's own wall at that end of the front, the
+  // flat's painted door in it; the shop's glass, its riser and its awning keep to the shop's side of it)
+  const [p0, p1] = flatPier(shop, w), pier = (x) => x >= p0 && x < p1;
   // windows with the interior
   for (let y = winTop; y < winBot; y++) for (let x = 4; x < w - 4; x++) {
-    if (x >= doorX - 2 && x < doorX + doorW + 2) continue;
+    if (x >= doorX - 2 && x < doorX + doorW + 2 || pier(x)) continue;
     const mull = (x - 4) % 30 === 0 || y === winTop || y === winBot - 1;
     if (mull) { setC(G, x, y, step(MAT.metalDark, y === winTop ? 0.25 : 0.55, x, y, 0)); continue; }
     const iy = y - winTop, H2 = winBot - winTop;
-    let c;
-    if (shop.kind === 'arcade') {                                                                   // arcade cabinets with glowing screens
+    let c, hot = null;
+    if (wk === 'arcade') {                                                                   // arcade cabinets with glowing screens
       c = step(ramp('#3a2a5a', 5, 2), 0.3 + (iy / H2) * 0.3, x, y, 0.8);
       const cab = Math.floor((x - 4) / 16), lx = (x - 4) % 16;
       if (lx > 2 && lx < 13 && iy > H2 * 0.2) { const hue = [[255, 80, 200], [80, 220, 255], [255, 220, 80], [120, 255, 140]][cab % 4]; c = iy < H2 * 0.55 && lx > 4 && lx < 11 ? hue : [40, 30, 60]; if (iy < H2 * 0.55 && lx > 4 && lx < 11) glow(G, x, y, [...hue, 100 + night * 120]); }
-    } else if (shop.kind === 'bar') {                                                               // a dim bar: a pool table, bottles, warm lamps
+    } else if (wk === 'bar') {                                                               // a dim bar: a pool table, bottles, warm lamps
       c = step(ramp('#6a4228', 5, 2), 0.3 + (iy / H2) * 0.3, x, y, 0.8);
       if (iy < 4 && (x % 30) < 8) c = [255, 210, 130];
       if (iy > H2 * 0.55 && iy < H2 * 0.8 && Math.abs(((x - 4) % 60) - 30) < 16) c = (Math.abs(((x - 4) % 60) - 30) > 13 || iy < H2 * 0.58 || iy > H2 * 0.77) ? [90, 56, 30] : [40, 120, 70];
       if (iy > H2 * 0.15 && iy < H2 * 0.4 && x % 3 === 0 && (x % 60) > 40) c = [[60, 130, 70], [150, 90, 40], [200, 200, 210]][x % 9 / 3 | 0];
-    } else if (shop.kind === 'lobby') {                                                                    // hotel lobby: marble, gold light
+    } else if (wk === 'lobby') {                                                                    // hotel lobby: marble, gold light
       c = step(ramp('#d8b07a', 5, 2), 0.5 + (iy / H2) * 0.3 + ((x >> 3) % 3 === 0 ? -0.1 : 0), x, y, 0.8);
       if (iy < 3) c = step(ramp('#f4e2b0', 5, 2), 0.8, x, y, 0);
       if (iy > 3 && iy < 9 && Math.abs(((x - 4) % 60) - 30) < 6 - (iy - 3)) c = [255, 236, 170];   // chandeliers
       if (iy > H2 * 0.7) c = step(ramp('#7a5236', 5, 2), 0.5, x, y, 0.4);                           // desk / floor
-    } else if (shop.kind === 'liquor') {                                                            // rows of bottles
+    } else if (wk === 'liquor') {                                                            // rows of bottles
       c = step(ramp('#6a5a4a', 5, 2), 0.35 + (iy / H2) * 0.3, x, y, 0.8);
       const shelf = iy % 11;
       if (shelf === 0) c = MAT.metal[3];
       else if (shelf > 2 && (x % 3) < 2) { const g = hash(x >> 1, (iy / 11) | 0, seed + 3); const B = g > 0.75 ? [60, 130, 70] : g > 0.5 ? [150, 90, 40] : g > 0.3 ? [210, 160, 60] : g > 0.15 ? [200, 210, 214] : [120, 40, 50]; c = shelf === 6 ? [230, 226, 210] : shelf < 4 ? B.map((v) => v * 0.7) : B; }
-    } else if (shop.kind === 'pawn') {                                                              // guitars, TVs, gold
+    } else if (wk === 'pawn') {                                                              // guitars, TVs, gold
       c = step(ramp('#7a6a58', 5, 2), 0.35 + (iy / H2) * 0.3, x, y, 0.8);
       const cell = Math.floor((x - 4) / 14), row = Math.floor(iy / 14), g = hash(cell, row, seed + 5), lx = (x - 4) % 14, ly = iy % 14;
       if (ly === 0) c = MAT.metalDark[3];
       else if (g > 0.66 && lx > 2 && lx < 12 && ly > 2 && ly < 11) { c = (lx === 3 || ly === 3 || lx === 11 || ly === 10) ? [40, 40, 46] : [70, 120, 170]; if (c[2] === 170) glow(G, x, y, [120, 180, 255, 60 + night * 80]); }
       else if (g > 0.4 && Math.abs(lx - 7) < (ly > 7 ? 4 : 2) && ly > 1) c = ly < 7 ? [96, 60, 36] : [176, 100, 44];
       else if (g < 0.15 && ly > 8 && (x + iy) % 3 === 0) c = [240, 206, 90];
-    } else if (shop.kind === 'diner' || shop.kind === 'cafe') {
+    } else if (wk === 'diner' || wk === 'cafe') {
       c = step(ramp('#c08a50', 5, 2), 0.4 + (iy / H2) * 0.35, x, y, 0.8);
       if (iy > H2 * 0.62) c = step(MAT.dinerRed, 0.4 + (x % 16 < 2 ? -0.2 : 0), x, y, 0.4);            // booth seats
       if (iy > H2 * 0.55 && iy < H2 * 0.62) c = MAT.chrome[3];                                          // table tops
       if (iy < 4) c = step(ramp('#e8d8b0', 5, 2), 0.6, x, y, 0.3);                                     // pendant lamps
-    } else if (shop.kind === 'books') {                                                             // shelves of spines, a table of new ones
+    } else if (wk === 'books') {                                                             // shelves of spines, a table of new ones
       c = step(ramp('#5a3e2a', 5, 2), 0.35, x, y, 0.6);
       const shelf = iy % 9;
       if (shelf === 0) c = step(ramp('#7a5434', 5, 2), 0.6, x, y, 0);
       else if (iy < H2 * 0.7 && shelf > 1) { const g = hash(x >> 1, (iy / 9) | 0, seed + 7); c = g > 0.12 ? [[150, 50, 44], [40, 70, 120], [60, 110, 70], [200, 180, 120], [110, 60, 90], [210, 120, 50]][Math.floor(g * 60) % 6].map((v) => v * (shelf < 3 ? 0.7 : 1)) : c; }
       else if (iy >= H2 * 0.78) c = (x >> 3) % 2 ? [226, 214, 190] : [120, 150, 180];
-    } else if (shop.kind === 'records') {                                                           // posters up top, the bins of sleeves below
+    } else if (wk === 'records') {                                                           // posters up top, the bins of sleeves below
       c = step(ramp('#3a3440', 5, 2), 0.35 + (iy / H2) * 0.2, x, y, 0.8);
       const px2 = Math.floor((x - 4) / 22);
       if (iy > 2 && iy < H2 * 0.42 && (x - 4) % 22 > 3 && (x - 4) % 22 < 19) { const g = hash(px2, 1, seed + 9); c = [[220, 70, 60], [240, 200, 70], [60, 160, 200], [230, 120, 180], [90, 200, 120]][Math.floor(g * 5)]; if (((x + iy) % 7) < 2) c = c.map((v) => v * 0.6); }
       else if (iy > H2 * 0.58 && iy < H2 * 0.85) { const g = hash(x >> 2, 3, seed + 11); c = (x % 4) === 0 ? [30, 26, 34] : [[200, 60, 50], [40, 40, 44], [230, 220, 200], [60, 110, 170], [220, 170, 60]][Math.floor(g * 5)]; }
       else if (iy >= H2 * 0.85) c = [120, 84, 52];
-    } else if (shop.kind === 'laundry') {                                                           // a row of washers, their round doors, dryers above
+    } else if (wk === 'laundry') {                                                           // a row of washers, their round doors, dryers above
       c = step(ramp('#cfd6d8', 5, 2), 0.6, x, y, 0.5);
       const lx = (x - 4) % 20, row = iy < H2 * 0.48 ? 0 : 1, ly = row ? iy - H2 * 0.5 : iy - 2, cy = row ? H2 * 0.23 : H2 * 0.2;
       if (lx < 2) c = [150, 158, 164];
       else if (Math.hypot(lx - 10, ly - cy) < 6) c = Math.hypot(lx - 10, ly - cy) < 4.6 ? (row ? [70, 110, 150] : [60, 64, 72]) : [190, 196, 200];
       else c = row ? [236, 238, 236] : [214, 218, 220];
-    } else if (shop.kind === 'clothes') {                                                           // racks of clothes on hangers, a mannequin
+    } else if (wk === 'clothes') {                                                           // racks of clothes on hangers, a mannequin
       c = step(ramp('#e4dccc', 5, 2), 0.55 + (iy / H2) * 0.15, x, y, 0.6);
       if (iy === 5) c = MAT.chrome[2];
       else if (iy > 5 && iy < H2 * 0.75) { const g = hash(x >> 2, 5, seed + 13); if (g > 0.18) c = [[150, 40, 50], [40, 50, 90], [210, 200, 180], [60, 90, 70], [190, 140, 80], [30, 30, 36], [170, 120, 160]][Math.floor(g * 70) % 7].map((v) => v * (iy > H2 * 0.7 ? 0.8 : 1)); }
       if (Math.abs(((x - 4) % 90) - 70) < 4 && iy > 3) c = iy < 8 ? [230, 214, 196] : [240, 236, 228];
-    } else if (shop.kind === 'florist') {                                                           // buckets of flowers, greenery behind
+    } else if (wk === 'florist') {                                                           // buckets of flowers, greenery behind
       c = step(ramp('#4a7040', 5, 2), 0.35 + (iy / H2) * 0.25, x, y, 0.8);
       if (iy > H2 * 0.3 && iy < H2 * 0.8 && hash(x >> 1, iy >> 1, seed + 15) > 0.45) c = [[230, 70, 90], [250, 210, 70], [245, 245, 240], [200, 90, 200], [250, 140, 60]][Math.floor(hash(x >> 2, iy >> 2, seed + 16) * 5)];
       if (iy >= H2 * 0.8) c = ((x >> 3) & 1) ? [90, 90, 96] : [150, 110, 70];
-    } else if (shop.kind === 'gallery') {                                                           // white walls, canvases hung in a line under the track lights, a plinth
+    } else if (wk === 'gallery') {                                                           // white walls, canvases hung in a line under the track lights, a plinth
       c = step(ramp('#f2f0ea', 5, 2), 0.62 + (iy / H2) * 0.1, x, y, 0.3);
       const lx = (x - 4) % 46, cw2 = 16 + Math.floor(hash(Math.floor((x - 4) / 46), 2, seed + 17) * 14), g = hash(Math.floor((x - 4) / 46), 3, seed + 19);
       if (iy < 3) c = (x % 12) < 3 ? [255, 240, 200] : [60, 60, 66];                                 // the track and its spots
@@ -913,13 +1087,14 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
         c = fr ? [40, 36, 34] : (lx - 8) < cw2 * (0.3 + g * 0.4) ? P[k] : (iy > H2 * 0.4 ? P[(k + 2) % 6] : P[(k + 4) % 6]);
       } else if (g > 0.6 && Math.abs(lx - 38) < 4 && iy > H2 * 0.55) c = iy < H2 * 0.7 ? [180, 90, 60] : [236, 234, 228];   // a sculpture on its plinth
       if (iy >= H2 * 0.88) c = step(ramp('#b8b0a4', 5, 2), 0.55, x, y, 0.2);                          // the polished floor
-    } else if (shop.kind === 'salon') {                                                             // mirrors along the back, the chairs in front of them
+    } else if (wk === 'salon') {                                                             // mirrors along the back, the chairs in front of them
       c = step(ramp('#e8e2dc', 5, 2), 0.6, x, y, 0.4);
       const lx = (x - 4) % 30;
       if (lx > 6 && lx < 24 && iy > 3 && iy < H2 * 0.55) c = (lx > 8 && lx < 22 && iy > 5) ? step(ramp('#a8c0cc', 5, 2), 0.6 - iy / H2 * 0.4, x, y, 0.3) : [200, 170, 110];
       else if (lx > 9 && lx < 21 && iy > H2 * 0.6 && iy < H2 * 0.9) c = [40, 36, 40];
       else if (iy >= H2 * 0.9) c = (((x >> 2) + (iy >> 2)) & 1) ? [30, 30, 32] : [230, 230, 226];
-    } else {
+    } else if (GOODS[wk]) { HOT = null; c = GOODS[wk](x, y, Math.max(0, iy - aw), H2 - aw, seed, night); hot = HOT; }
+    else {
       c = step(ramp('#a88a64', 5, 2), 0.35 + (iy / H2) * 0.35, x, y, 0.8);
       const shelf = iy % 10;
       if (shelf === 0) c = MAT.metalDark[3];
@@ -930,17 +1105,16 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     // lit from inside: the glow carries the room's own colours (warmed), so after dark the interior reads through the
     // glass - shelves, the counter, the booths - rather than one flat bright pane (2026-10-09, R1-C/E)
     glow(G, x, y, [Math.min(255, c[0] * 0.75 + 50), Math.min(255, c[1] * 0.7 + 36), Math.min(255, c[2] * 0.6 + 18), 22 + night * 74]);
+    if (hot) glow(G, x, y, hot);
     G.flag[y * G.w + x] |= F_GLASS;
   }
   // security grille over the glass (bars), and a neon OPEN sign in the window
   if (shop.grille) for (let y = winTop; y < winBot; y++) for (let x = 4; x < w - 4; x++) {
-    if (x >= doorX - 2 && x < doorX + doorW + 2) continue;
+    if (x >= doorX - 2 && x < doorX + doorW + 2 || pier(x)) continue;
     if ((x - 4) % 5 === 0 || (y - winTop) % 15 === 0) setC(G, x, y, step(MAT.metalDark, (x - 4) % 5 === 0 ? 0.55 : 0.75, x, y, 0));
   }
-  // people inside the windows (busts), and the clerk at the counter
-  const people = shop.people ?? (shop.kind === 'diner' ? 4 : 0);
-  for (let i = 0; i < people; i++) { const px = 16 + ((i * 37 + seed * 11) % Math.max(20, w - 40)); if (px > doorX - 12 && px < doorX + doorW + 12) continue; bust(G, px, winTop + 10, [ [180, 60, 60], [60, 110, 180], [230, 200, 80], [90, 150, 90] ][i % 4], seed + i * 3, 0.8); }
-  if (shop.clerk !== false && shop.kind !== 'diner') bust(G, shop.door === 'right' ? doorX - 30 : doorX + doorW + 30, winTop + 9, shop.clerkShirt || [40, 130, 110], seed + 99, 1);
+  // (no people painted in the glass - the owner, 11-26: "We shouldnt have just static humans in windows"; a mannequin
+  // is goods. shop.people, shop.clerk and clerkShirt are still in the plans and draw nothing)
   const L = shop.openSign && OPEN_L(), oxAt = openSignX(shop, w);   // (only where it fits beside the door: a kiosk's cut it in half - 11-14)
   if (L && oxAt !== null) {   // a neon OPEN in the window
     const col = shop.openSign.col || [255, 60, 70];
@@ -950,10 +1124,11 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, ox, oy, { lit: 'neon', night });
   }
   // stall riser under the windows
-  for (let y = winBot; y < y0; y++) for (let x = 2; x < w - 2; x++) if (!(x >= doorX && x < doorX + doorW)) setC(G, x, y, step(shop.kind === 'diner' ? MAT.dinerRed : MAT.stone, 0.4 + (y === winBot ? 0.35 : 0), x, y, 0.4));
+  for (let y = winBot; y < y0; y++) for (let x = 2; x < w - 2; x++) if (!(x >= doorX && x < doorX + doorW) && !pier(x)) setC(G, x, y, step(wk === 'diner' ? MAT.dinerRed : MAT.stone, 0.4 + (y === winBot ? 0.35 : 0), x, y, 0.4));
   if (shop.live) liveDoor(G, doorX, y0 - 50, doorW, 50, shop.live, night, shop.doorC | 0);
   else door(G, doorX, y0 - 50, doorW, 50, shop.open !== false, night, seed);
   if (shop.kind === 'arcade') arcadeDoor(G, doorX, y0, doorW, night);
+  if (shop.flat) flatDoor(G, shop.flat, y0, winTop, night, seed);
   // (the sign itself is painted by makeBuilding once the face is dressed: signBoard)
   // striped fascia band above the windows
   if (!(shop.sign && shop.sign.text) && shop.band) for (let y = winTop - 22; y < winTop - 2; y++) for (let x = 2; x < w - 2; x++) { const k = y - (winTop - 22); setC(G, x, y, k < 3 || k > 17 ? MAT.paintWhiteCar[k < 3 ? 4 : 2] : step(ramp(shop.band[Math.floor((k - 3) / 5) & 1], 5, 2), 0.6 - ((k - 3) % 5 === 4 ? 0.2 : 0), x, y, 0)); }
@@ -964,12 +1139,37 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     // the pavement (so people under it are covered and it casts its shadow from the right height)
     const top = winTop - 2, depth = 13, vTop = y0 - top + 2;
     for (let y = 0; y < depth; y++) for (let x = 0; x < w; x++) {
+      if (pier(x)) continue;
       const Y = top + y, stripe = Math.floor(x / 6) % 2 === 1;
       G.put(x, Y, step(stripe ? cb : ca, 0.8 - y / depth * 0.4, x, Y, 0.5), [0, 0.6, 0.8], vTop - y * 0.3, null, 0);
     }
-    for (let x = 0; x < w; x++) { const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], vTop - depth * 0.3 - k, null, 0); } }
+    for (let x = 0; x < w; x++) { if (pier(x)) continue; const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], vTop - depth * 0.3 - k, null, 0); } }
   }
   return { winTop };
+}
+// A flat's own door at a shop front (shop.flat: shared/world3-flatdoors.js says which end, statics.js where along this
+// front). flatPier: the wall kept for it - from the door's pier to that end of the front - as [x0, x1), or [0, 0).
+export function flatPier(shop, w) {
+  const f = shop && shop.flat;
+  if (!f) return [0, 0];
+  const pr = f.pier ?? 6;
+  return f.x + f.w / 2 < w / 2 ? [0, f.x + f.w + pr] : [f.x - pr, w];
+}
+// does a shop's sign read the same on a board wNew px wide as on one wFull wide - the same face, lines and picture?
+export function shopSignFits(sign, wFull, wNew) {
+  const A = boardFor(sign, wFull), B = boardFor(sign, wNew);
+  return !B.cut && A.face === B.face && A.icon === B.icon && A.h === B.h && A.lines.join('|') === B.lines.join('|');
+}
+// the door itself: painted, hinged (liveDoor: the page opens it), a stone lintel over it, a lit number plate beside
+// its head on the shop's side, a stone step
+function flatDoor(G, f, y0, winTop, night, seed) {
+  const h = f.h || 46, top = y0 - h;
+  liveDoor(G, f.x, top, f.w, h, 'hinge', night, f.c | 0);
+  for (let k = 0; k < 3; k++) for (let x = f.x - 2; x < f.x + f.w + 2; x++) setC(G, x, top - 1 - k, step(MAT.stone, 0.85 - k * 0.2, x, k, 0.3));
+  for (let x = f.x - 1; x < f.x + f.w + 1; x++) setC(G, x, y0 - 1, step(MAT.stone, 0.7, x, y0, 0.3));
+  // a small lamp over the door: a brass shade, its glow after dark
+  const lx = f.x + (f.w >> 1) - 2, ly = Math.max(winTop + 1, top - 9);
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { setC(G, lx + x, ly + y, y === 0 ? [150, 118, 58] : [250, 226, 150]); if (y) glow(G, lx + x, ly + y, [255, 214, 130, 30 + night * 150]); }
 }
 const clampI = (v, a, b) => Math.max(a, Math.min(Math.max(a, b), v));
 const OPEN_L = () => layoutSign('OPEN', 27, { face: 'civic', lines: 1 });
@@ -1091,24 +1291,6 @@ function neonIcon(G, x0, y0, icon, col, night) {
   // dark backing plate
   for (let y = -2; y < 28; y++) for (let x = -2; x < 28; x++) if (G.inside(x0 + x, y0 + y) && hash(x, y, 1) < 0) setC(G, x0 + x, y0 + y, [30, 30, 40]);
   for (const [x, y] of pts) { const X = x0 + x, Y = y0 + y; setC(G, X, Y, col.map((v) => Math.min(255, v * 0.55 + 115))); glow(G, X, Y, [col[0], col[1], col[2], 170 + night * 85]); }
-}
-
-// head and shoulders of someone inside (a clerk at the till, a diner in a booth)
-function bust(G, cx, cy, shirt, seed, scale = 1) {
-  const skin = MAT.skin[Math.floor(hash(seed, 3, 1) * 5)], hair = MAT.hair[Math.floor(hash(seed, 4, 1) * 4)];
-  const sh = ramp(shirt, 5, 2);
-  for (let y = 0; y < 22; y++) for (let x = -9; x <= 9; x++) {
-    const X = cx + x, Y = cy + y;
-    if (!G.inside(X, Y)) continue;
-    let c = null;
-    const hx = x / 4.8, hy = (y - 5.5) / 5.5;
-    if (hx * hx + hy * hy <= 1) c = y < 3 ? hair[2] : step(skin, 0.62 - x * 0.05, X, Y, 0.4);
-    if (y < 2 && Math.abs(x) < 5) c = hair[1];
-    if (Math.abs(x) >= 4 && y < 6 && hx * hx + hy * hy <= 1) c = hair[1];
-    if (y === 6 && (x === -2 || x === 2)) c = [36, 26, 36];
-    if (y >= 11 && Math.abs(x) <= 8 - Math.max(0, 13 - y)) c = step(sh, 0.62 - x * 0.04, X, Y, 0.4);
-    if (c) setC(G, X, Y, c);
-  }
 }
 
 // ---- weathering, graffiti and signs -----------------------------------------------------------------
@@ -1356,6 +1538,28 @@ function blade(G, b, yG, night, H = 999) {
   for (let n = 0; n < t.length; n++) {
     const M = lineMask(t[n], 'civic'), lx = x0 + 2 * Math.floor((wA - M.w) / 2), ly = y0 + 2 * (3 + n * 8);
     paintLine((x, y, c, e) => facePx(G, x, y, c, e), t[n], 'civic', lx, ly, { 1: b.paint ? fg : hot }, b.paint ? {} : { 1: [...col, 170 + Math.round(night * 30)] });
+  }
+}
+
+// A picture sign hung out over a shop (the owner, 11-26, of report-92: "a combination of A and B is good, not every shop
+// in the world needs the sign, but it looks good when some do"; signfont.js PICS, statics.js says which fronts): an
+// iron bar off the wall, two hangers, a square board in the picture's ground with a gold line inside its frame, the
+// trade's picture on it at the art pixel. ps: { pic, x (the board's left, facade px), v (its foot's height) }. Lit a
+// little after dark, as a painted sign under a street's light is.
+export const PICSIGN = { s: 18, hang: 2 };   // (the board's side and its hangers' length, art px)
+export function picSignBox(ps) { const x0 = Math.floor(ps.x / 2) * 2; return [x0 - 2, ps.v, x0 + PICSIGN.s * 2 + 2, ps.v + (PICSIGN.s + PICSIGN.hang) * 2]; }
+function picSign(G, ps, yG, night) {
+  const B = picBitmap(ps.pic);
+  if (!B) return;
+  const S = PICSIGN.s, x0 = Math.floor(ps.x / 2) * 2, y0 = Math.floor((yG - ps.v - S * 2) / 2) * 2, ink = MAT.metalDark[2], gold = [226, 189, 87];
+  const cell = (ax, ay, c, e) => { for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) facePx(G, x0 + ax * 2 + i, y0 + ay * 2 + j, c, e); };
+  for (let ax = -1; ax <= S; ax++) cell(ax, -PICSIGN.hang, MAT.metalDark[1], null);                     // the bar
+  for (const ax of [3, S - 4]) for (let ay = -PICSIGN.hang + 1; ay < 0; ay++) cell(ax, ay, MAT.metalDark[1], null);   // the hangers
+  const glowOf = (c) => [c[0], c[1], c[2], 26 + Math.round(night * 64)];
+  for (let ay = 0; ay < S; ay++) for (let ax = 0; ax < S; ax++) {
+    const edge = ax === 0 || ay === 0 || ax === S - 1 || ay === S - 1, line = ax === 1 || ay === 1 || ax === S - 2 || ay === S - 2;
+    const px = !edge && !line ? B.rows[ay - 2] && B.rows[ay - 2][ax - 2] : null, c = edge ? ink : line ? gold : px || B.ground;
+    cell(ax, ay, c, edge ? null : glowOf(c));
   }
 }
 

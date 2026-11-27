@@ -375,7 +375,7 @@ export function buildDesert(m, addProp) {
     keep(ax - 14, ay - 10, ax + 24, ay + 16);
     addProp(m, 'seaarch', ax * TILE, ay * TILE, 0, { w: 200, d: 64, h: 130, a: 0 });
     out.arch = [ax, ay];
-    for (const [dx, dy, h] of [[16, 6, 120], [19, 9, 96], [14, 11, 84], [21, 3, 70], [-8, 10, 100]]) if (prop('outcrop', ax + dx, ay + dy, 14, { w: 34, d: 30, h, s: 60 + dx, style: 'sandstone' })) out.hoodoos = (out.hoodoos || 0) + 1;
+    for (const [dx, dy, h] of [[16, 6, 120], [19, 9, 96], [14, 11, 84], [21, 3, 70], [-8, 10, 100]]) if (prop('hoodoo', ax + dx, ay + dy, 13, { h: Math.round(h * 0.8), s: 60 + dx })) out.hoodoos = (out.hoodoos || 0) + 1;
     landmark('Lookout Mesa', 'lookout', lx - 24, ly - 24, lx + 24, ly + 16);
     landmark('Red Rock Arch', 'arch', ax - 14, ay - 10, ax + 24, ay + 16);
   }

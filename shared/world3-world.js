@@ -45,12 +45,16 @@ import { buildTrails3 } from './world3-trails.js';
 import { buildDirt3 } from './world3-dirt.js';
 import { buildCaves3 } from './world3-caves.js';
 import { buildClearings3, forageInSight3 } from './world3-clearings.js';
+import { buildWayside3 } from './world3-wayside.js';
+import { footbridges3 } from './world3-footbridges.js';
+import { woodsCreeks3, peakCreeks3 } from './world3-creeks.js';
 import { buildPeaks3, THAW } from './world3-peaks.js';
-import { coastByHand3 } from './world3-coast.js';
+import { coastByHand3, stacksApart3, marshKnees3 } from './world3-coast.js';
 import { tropic3 } from './world3-tropic.js';   // (the nature showcase: Coral Cay's east lobe as NA1-E, Macaw Cove as SC3-H)
 import { mirageByHand3 } from './world3-mirage.js';
-import { fallsInView3 } from './world3-falls.js';
-import { redwoodsByHand3 } from './world3-redwoods.js';
+import { fallsInView3, fallsFeet3 } from './world3-falls.js';
+import { deadfall3 } from './world3-deadfall.js';
+import { redwoodsByHand3, thinRedwoods3, hollowGiants3, rootCaves3 } from './world3-redwoods.js';
 import { ledgeFalls3 } from './world3-ledgefalls.js';
 import { beachCamps3 } from './world3-camps.js';
 import { driveTree3 } from './world3-drivetree.js';
@@ -61,8 +65,9 @@ import { boatsAfloat3 } from './world3-boats.js';
 import { railTrim3 } from './world3-railtrim.js';
 import { badBays3 } from './parkcheck.js';
 import { clearDoorSteps3 } from './world3-doorsteps.js';
-import { cropScraps3, farmsOffBeach3 } from './world3-croptidy.js';
+import { cropScraps3, farmsOffBeach3, stripsOffShore3 } from './world3-croptidy.js';
 import { frontNames3 } from './world3-signfix.js';
+import { flatDoors3 } from './world3-flatdoors.js';
 import { festoonThin3 } from './world3-festoons.js';
 import { deckRoots3 } from './world3-deckroots.js';
 import { plazaFill3 } from './world3-plazafill.js';
@@ -319,6 +324,8 @@ export function worldOpts(asked) {
       m.world3.peaks = buildPeaks3(m, H3);   // (Granite Peaks by hand, part 1: the alpine meadows, the stone hut and its spring, the summits' cairns, the Summit Trail - world3-peaks.js)
       m.world3.tarn = tarnByHand3(m, H3);   // (Granite Peaks by hand, part 2: Summit Tarn's shore, beach and camp; Eagle Crag - world3-tarn.js)
       m.world3.coast = coastByHand3(m, H3);   // (the coasts by hand, part 1: North Cape's tidepool shelf, its blowhole and seal rock; Redwood Cove dug back into the woods, its horn's tidepools - world3-coast.js)
+      m.world3.stacks = stacksApart3(m, H3);   // (no three sea stacks in a line, each its own size: world3-coast.js, 11-25)
+      m.world3.knees = marshKnees3(m, H3);   // (knees along the marsh's water's edge: world3-coast.js, 11-25)
       m.world3.tropic = tropic3(m, H3);   // (the nature showcase, 2026-10-31: Coral Cay's wild east lobe after the owner's NA1-E and SC3-H - its black-rock spine and falls, the inner lagoon, the mangrove inlet, the beach bar, Macaw Cove, the islet - and the kit on Wreck Beach and Tiki Point: world3-tropic.js)
       m.world3.beachCamps = beachCamps3(m, H3);   // (secluded camps on the wild coasts' beaches, the few most out of the way - world3-camps.js)
       m.world3.mirage = mirageByHand3(m, H3);   // (the desert by hand, part 1: Mirage Lake's rim, its green belt and palms, its white beach and jetty - world3-mirage.js)
@@ -332,9 +339,18 @@ export function worldOpts(asked) {
       m.world3.compound = desertCompound3(m, H3);   // (the Syndicate's compound out in the desert, not in Highland Woods - the owner, 10-16: world3-compound.js)
       m.world3.desertWaters = desertWaters3(m, H3);   // (the desert's waters: tinajas in the slickrock at the cliffs' feet, seep pools in the dam's dry wash - world3-tinajas.js)
       m.world3.redwoods = redwoodsByHand3(m, H3);   // (the nature showcase: Redwood Creek Falls, Hidden Pool and the Giants Loop by the owner's concepts, their kit spread to the woods' other falls, glades and trails - world3-redwoods.js)
+      m.world3.woodsCreeks = woodsCreeks3(m, H3);   // (the redwood overhaul, 11-24: a creek laid by the land's own heights, its riffles, pools and stepping stones - world3-creeks.js)
+      m.world3.peakCreeks = peakCreeks3(m, H3);   // (the mountains' streams and tarns by the creeks' rule, Summit Tarn's outflow run on down - world3-creeks.js CREEKS3.alp, 11-25)
       m.world3.redrock = desertKit3(m, H3);   // (the red rock desert by hand - the nature showcase, 10-31: every tinaja a waterhole in a dry wash, the trailhead on the highway, the pull-offs, the Red Rock Trail's start, Mirage Camp and the arch dressed from the kit - redrock.js)
+      m.world3.redwoodThin = thinRedwoods3(m, H3);   // (the art pass, 11-24: no redwood's trunk right behind another's - world3-redwoods.js)
+      m.world3.hollows = hollowGiants3(m);   // (NS1-A's hollow trunk: one old giant in twenty-five carries a fire hollow at its foot - world3-redwoods.js, 11-25)
+      m.world3.wayside = buildWayside3(m, H3);   // (the art pass, 11-24: the woods' and the meadows' found places - ruins, an oak with a bench, a fire ring, a dry-stone wall and its gate, an oak with a swing: world3-wayside.js; after every place made by hand)
       m.world3.fallsView = fallsInView3(m, H3);   // (the falls chain, part 1: no tree standing where it would hide a fall - world3-falls.js)
+      m.world3.fallsFeet = fallsFeet3(m, H3);   // (the falls chain, part 2: a fall lands in water, not on a strip of bank - world3-falls.js, 11-25)
+      m.world3.deadfall = deadfall3(m, H3);   // (the woods' fallen logs by rule - the world had 13 wild ones: world3-deadfall.js, 11-25)
+      m.world3.rootCaves = rootCaves3(m, H3);   // (NS1-A's root cave: a fallen giant's root mass with a dark way in, a few to the grove - world3-redwoods.js, 11-25)
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)
+      m.world3.footbridges = footbridges3(m, H3);   // (the redwood overhaul, 11-24: every footbridge decked, on its banks, met by its path and in sight - world3-footbridges.js)
       m.world3.wrecks = sunkenWrecks3(m);   // (sunken boats on the bed where the water's clear: rowboats in the lakes, a skiff and a sloop in the sea's shallows - world3-wrecks.js)
       m.world3.showers = outdoorShowers3(m, H3);   // (nat5: an outdoor shower on every public beach, a shower block at each campground, showers by the pools - world3-showers.js)
       m.world3.mansions = moreMansions3(m);   // (the finest villa of each rich district a mansion too - the owner, 10-16: "More than one mansion": world3-mansions.js)
@@ -366,8 +382,10 @@ export function worldOpts(asked) {
       m.world3.railTrim = railTrim3(m);   // (no railing or fence out over open water - the audit's railOverWater: world3-railtrim.js)
       m.world3.badBays = badBays3(m);   // (no parking space whose car would stand on a pavement, a lawn or a pier - the audit's parked: parkcheck.js)
       m.world3.farmsOffBeach = farmsOffBeach3(m);   // (the farms back from the beach - the owner, 11-22 16:45: world3-croptidy.js)
+      m.world3.stripsOffShore = stripsOffShore3(m);   // (the art pass, 11-24: no planted row on the sand or at the sea's edge - world3-croptidy.js)
       m.world3.cropScraps = cropScraps3(m);   // (no stray crop scrap in a town or by a beach - the audit's cropInTown: world3-croptidy.js)
       m.world3.frontNames = frontNames3(m);   // (a shop's sign names what's behind it - the audit's frontNames: world3-signfix.js)
+      m.world3.flatDoors = flatDoors3(m);   // (a flat over a shop: its own door in a pier at the end of the front, the home's spot at it - the audit's lobbyDoor: world3-flatdoors.js)
       m.world3.festoonThin = festoonThin3(m);   // (no curtain of hanging lights - the audit's festoonDensity: world3-festoons.js)
       m.world3.deckRoots = deckRoots3(m);   // (a pier's root on dry land, no sliver of sea on the grass - the audit's beachWater: world3-deckroots.js)
       m.world3.plazaFill = plazaFill3(m, H3);   // (no oversized empty plazas - the audit's bigEmptyPlaza: world3-plazafill.js)

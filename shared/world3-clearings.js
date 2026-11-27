@@ -151,7 +151,8 @@ export function buildClearings3(m, H3) {
 // The woods' finds in sight (the camera looks north: what stands south of a spot, up to its height, is drawn over it):
 // a giant redwood's trunk hides what's just behind it, its crown what's further back; a pine the same, smaller. Each
 // spot hidden so is moved to the nearest open ground within a few tiles that nothing hides; with none, it's left out.
-const COVER = { giantL: [70, 770, 125], giant: [54, 660, 105], giantS: [40, 555, 88], redwood2: [16, 365, 50] };   // (trunk half-width, height, crown half-width - px: client/art2/game/statics.js)
+export const COVER = { giantL: [70, 770, 125], giant: [54, 660, 105], giantS: [40, 555, 88], redwood2: [16, 365, 50] };   // (trunk half-width, height, crown half-width - px: client/art2/game/statics.js)
+export const TREE_COVER = [12, 190, 46];   // (a pine, an oak: the same three)
 export function forageInSight3(m) {
   const out = { moved: 0, dropped: 0, seen: 0 };
   const list = m.forage || [];
@@ -161,7 +162,7 @@ export function forageInSight3(m) {
   const G = new Map(), GC = 8 * TILE;
   for (const p of m.props) {
     if (!p) continue;
-    const c = p.t === 'redwood' ? COVER[p.sp] || COVER.giant : p.t === 'tree_a' || p.t === 'tree_b' ? [12, 190, 46] : null;
+    const c = p.t === 'redwood' ? COVER[p.sp] || COVER.giant : p.t === 'tree_a' || p.t === 'tree_b' ? TREE_COVER : null;
     if (!c) continue;
     const s = p.k && p.t === 'redwood' ? Math.min(1, p.k) : 1, e = [p.x, p.y, c[0] * s, c[1] * s, c[2] * s];
     const k = Math.floor(p.x / GC) * 65536 + Math.floor(p.y / GC); let a = G.get(k); if (!a) G.set(k, (a = [])); a.push(e);

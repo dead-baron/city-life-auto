@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-24 morning (the pre-beta chat, Opus 5.5 - its part done; next: the Fable 5.2 art chat). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-26 evening PST, the Opus 5.5 chat: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -97,16 +97,159 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 | # | Package | Starts from | Read first | State |
 |---|---|---|---|---|
 | 1 | Merge and go-live of the finished art and UI | `main` | `docs/tasks/PREBETA-HANDOVER.md` | **Done 11-22:** PR #1 merged (the art re-bakes once, ~5 h), PR #2 the new people on for everyone (the old kept on branch `people-before-polish`). Claude now merges its own PRs when tests pass (DECISIONS, Process, 11-22 13:12); the world batch and the beta launch still need his word. |
-| 2 | The world batch (the audit's placement fixes, `egret`, the nature pass's solid pieces, the 11-22 rows) | branch **`prebeta-world2`** (main and `nature-world` merged in, 11-22 night) | `docs/audit/REPORT.md`, `docs/audit/PREBETA-LIST.md` (A and the 11-22 section), the DEVLOG's "World batch" entries on that branch | **Live 11-23 (PR #25, the re-bake following):** egret; walkways clear of plants (plantOnWalk 2,914 -> 0, planterOnWalk 422 -> 0, plantOnPath -> 0); bin bags by a bin (44 -> 0); door paths round to the pavement (doorOnGrass 372 -> 89); every boat drivable (deadBoat 103 -> 3: beached canoes left as a detail); railings on the shore (railOverWater 110 -> 0); no parking space on a pavement (parked 124 -> 0); farms back from the beach (cropInTown 49 -> 0); shop signs name what's behind them (frontNames 7 -> 0); no curtain of hanging lights (festoonDensity 9 -> 0); hospital helipads on open ground (heliOffPad 10 -> 1); the arrival tunnels go into a hill (portalOnFlat 16 -> 0); pier roots on dry land (beachWater 4 -> 0); fountains and groves in the big empty plazas (bigEmptyPlaza 14 -> 0); walk-ins beside a counter at the wall get rooms (wallOnly 17 -> 12); the sea cave's rock hill (`nature-world`). Found and fixed by the whole suite on the branch: the Red Rock trailhead's 4x4s and the MX pits' trucks parked again (gravel holds a car; `parkcheck.js` parkExempt - one answer for build, lint, server: the server had never parked either, on main too), a shrunk field squared at the valley's edge, no fountain on the Waves Arena's pitch, no tree crown over a door or sign (10 -> 0), the boats' tests. Lint 42/42; the whole suite run on the branch (`docs/tasks/PREBETA-TESTS.txt`, its last section: every failure looked at); before / after pictures looked at (`tools/regress/`: the expected changes only - boats now the server's, trees drawn as other kinds as the prop list moved, one fix: the tunnel hill's shading made smaller). Going live re-bakes the art (~5 h; identical chunks carry over). **Left, why:** northDoor 19 (the Strip's and Old Downtown's casino blocks want re-planning - his call); rampCrossesRoad 9 (freeway ramps re-routed: road-network work, a pass of its own); wallOnly 12 (too small for a room, or hand-built - Greenfield Park's Lane Mart and Park West Coffee need a room laid late, with the café's tables: his say first, the arrival's first scene); doorOnGrass 89. **For Fable (art):** lobbyDoor 161 (recommendation: the apartment its own lobby door beside the shop front), signCovered 158, atmStray 52 (a booth - decided 16:45) and N18 (an ATM under an awning: awnings are picked by the art), N23 (roof billboards cut off: `client/art2/game/statics.js` billboardOnRoof - the board's lower half behind a roof drawn in front), dockOverlap 5 (the marsh boardwalk's bends want a landing piece), interiorOverlap 25 (inside a walk-in, a taller building south of it is drawn up over the room - the page should fade or cut that front while you're in), railOverWaterArt 18 (rail bridges). **Asked 16:48, open:** more bin bags outside the bins in the rough districts? |
+| 2 | The world batch (the audit's placement fixes, `egret`, the nature pass's solid pieces, the 11-22 rows) | branch **`prebeta-world2`** (main and `nature-world` merged in, 11-22 night) | `docs/audit/REPORT.md`, `docs/audit/PREBETA-LIST.md` (A and the 11-22 section), the DEVLOG's "World batch" entries on that branch | **Live 11-23 (PR #25, the re-bake following):** egret; walkways clear of plants (plantOnWalk 2,914 -> 0, planterOnWalk 422 -> 0, plantOnPath -> 0); bin bags by a bin (44 -> 0); door paths round to the pavement (doorOnGrass 372 -> 89); every boat drivable (deadBoat 103 -> 3: beached canoes left as a detail); railings on the shore (railOverWater 110 -> 0); no parking space on a pavement (parked 124 -> 0); farms back from the beach (cropInTown 49 -> 0); shop signs name what's behind them (frontNames 7 -> 0); no curtain of hanging lights (festoonDensity 9 -> 0); hospital helipads on open ground (heliOffPad 10 -> 1); the arrival tunnels go into a hill (portalOnFlat 16 -> 0); pier roots on dry land (beachWater 4 -> 0); fountains and groves in the big empty plazas (bigEmptyPlaza 14 -> 0); walk-ins beside a counter at the wall get rooms (wallOnly 17 -> 12); the sea cave's rock hill (`nature-world`). Found and fixed by the whole suite on the branch: the Red Rock trailhead's 4x4s and the MX pits' trucks parked again (gravel holds a car; `parkcheck.js` parkExempt - one answer for build, lint, server: the server had never parked either, on main too), a shrunk field squared at the valley's edge, no fountain on the Waves Arena's pitch, no tree crown over a door or sign (10 -> 0), the boats' tests. Lint 42/42; the whole suite run on the branch (`docs/tasks/PREBETA-TESTS.txt`, its last section: every failure looked at); before / after pictures looked at (`tools/regress/`: the expected changes only - boats now the server's, trees drawn as other kinds as the prop list moved, one fix: the tunnel hill's shading made smaller). Going live re-bakes the art (~5 h; identical chunks carry over). **Left, why:** northDoor 19 (the Strip's and Old Downtown's casino blocks want re-planning - his call); rampCrossesRoad 9 (freeway ramps re-routed: road-network work, a pass of its own); wallOnly 12 (too small for a room, or hand-built - Greenfield Park's Lane Mart and Park West Coffee need a room laid late, with the café's tables: his say first, the arrival's first scene); doorOnGrass 89. **For Fable (art):** lobbyDoor 161 (done 11-26 on `fable-art-1124`: 0), signCovered 158 (11-26: 68), atmStray 52 (a booth - decided 16:45) and N18 (an ATM under an awning: awnings are picked by the art), N23 (roof billboards cut off: `client/art2/game/statics.js` billboardOnRoof - the board's lower half behind a roof drawn in front), dockOverlap 5 (the marsh boardwalk's bends want a landing piece), interiorOverlap 25 (inside a walk-in, a taller building south of it is drawn up over the room - the page should fade or cut that front while you're in), railOverWaterArt 18 (rail bridges). **Asked 16:48, open:** more bin bags outside the bins in the rough districts? |
 | 3 | Systems and UI fixes, by area (NPCs, vehicles, minigames, menus) | `main` | `docs/audit/PREBETA-LIST.md` sections C-D and the 11-22 section, `docs/audit/REPORT2.md` | Batch 1 live (PR #1); N7 the quick bar live (PR #5: a strip over the weapon plate on a keyboard; touch and pad keep the wheel). Open: N13 the hospital "robbers" (confirm in play), the gridlock test (a busy four-way: a car waits 37-53 s at the head of a queue, the limit 30 - failing on main; traffic tuning). Done 11-22 night: N14 rooms lit inside at night (PR #11, client only), hudlayout (one note at a time on a small phone on its side) and the prison test (the stash) (PR #12). |
 | 4 | Music and the instrument sound pack | `main` | `docs/tasks/MUSIC-HANDOVER.md` (the 11-22 sections), DECISIONS "Music and sound" | **Live 11-22 (PRs #3, #4):** all 56 approved takes as files (loop + full song, Opus + MP3); radios, tapes, car radios stream the full songs, takes rotating 70/30 in sync; shops, lobbies, drive-in, night club, casino, roadhouse loop theirs; each source its speaker sound. The debug menu's *Recorded music* turns them off on one screen. Next: the gigs and the mat to the recordings (charts from the measured beats - N9, N15, N10 tips), the city's neon bars (storefronts with no room: no music yet), the 20 optional takes when he places them. |
 | 5 | Checks that stop regressions | `main` after 1 | `tools/regress/README.md` | Half built 11-22: 55 fixed places, shots and a diff (`tools/regress/`); a guard column for the 11-22 notes (their triage table). Still: a guard column for the older notes in the register. |
-| 6 | **The Fable 5.2 art pass (next)** - the 11-23 notes' art list; the cinema redesigned (lobby + separate auditoriums: world and art, before the beta - the owner 11-24); car soccer's arena art (branch `arenaart`); the races' markers and grid; tennis's swing and the people pass; mouths; the UI art and item icons (N2); the hospitals' and storefronts' design (N20); the playing animations on the beat (N15); water at sunset and in rain, buildings and districts, vehicles; then the cinematics reshot on the final art | `main` (and branch `nature` for the earlier art pass) | `docs/tasks/PREBETA-NOTES-2026-11-23.md` section 3, `docs/audit/PREBETA-LIST.md` ("Art on Fable", the 11-24 sections), `claude/nature-status-2026-11-21.md`, the style targets in `docs/art-v2/targets/` | Next chat. |
+| 6 | **The Fable 5.2 art pass (in hand, 11-24)** - in the order of 11-21 08:05, confirmed 11-24 09:39 (DECISIONS, Art direction): **A. nature finished first** (water at sunset, night and in rain and the open water notes; then the biomes - forest and meadow, redwood, mountain, desert, coast and jungle, the water's edges - each place beside its concepts); **B. buildings and districts, one concept-led pass a district at a time** (the shared kit of fronts, signs, roofs and landmarks; the cinema redesigned - lobby + separate auditoriums, before the beta; then the craft pass's waves, `claude/world-craft-pass-2026-11-14.md`); **C.** the people's faces (painted lips drawn the same in every frame, stray pixels), the UI's style pass and clothing pictures for the Inventory, the art the finish-or-hide items wait on (car soccer's arena, the races' markers and grid, tennis's swing), the smash art, the playing animations on the beat (N15), vehicles last; then the cinematics reshot. The 11-22 and 11-23 notes are folded into the place they belong to, never a pass of their own. | `main` (branch `fable-art-1124`) | **`claude/art-pass-plan-2026-11-24.md`** (the order, the concept families per part, the rules carried), `claude/nature-status-2026-11-21.md` and the other four nature documents of 11-21, `claude/world-craft-pass-2026-11-14.md`, `claude/concept-audit-2026-11-03.md`, `docs/tasks/PREBETA-NOTES-2026-11-23.md` section 3, `docs/audit/PREBETA-LIST.md` ("Art on Fable", the 11-24 sections), the style targets in `docs/art-v2/targets/` | **In hand (11-25 16:45; the desert begun - section 6), all on branch `fable-art-1124`, nothing of it live but PRs #48 and #49:** water done; forest and meadow; the redwood overhaul part-way (rooms, footbridges, the fern kit planted, the giants' tops a mix of three, **the creek network**); nature redrawn without the painted shadow (`claude/nature-redraw-2026-11-25.md`); the mountains' crags in look B, **the summits built as knobs, the high mountains shaded** (`claude/mountain-look-2026-11-25.md`). **His word 11-25 09:30: re-bake after the summits and the creeks - both are in; the gate (whole suite, a running-game look) then the merge.** **11-26 04:50:** part A is done but its leftovers (the mission ruin's size, farm yards, summit switchbacks - ART-CHECK-LIST); of B the cinema is rebuilt and the shared kit audited (`docs/tasks/SHARED-KIT-AUDIT-2026-11-26.md`); of C the lips' fix and the Inventory's clothing pictures are in, the UI's look and a soft lip colour wait on his pick. The whole suite has run (`docs/tasks/ARTPASS-TESTS-2026-11-26.txt`); the running-game look and his word for the merge are what is left of the gate. The list for his eye: `claude/art-check-list.md`. Section 6 has the detail. |
 | 7 | Launch steps | `main` | `docs/audit/PREBETA-LIST.md` section H, `claude/launch-plan-2026-11-03.md` | On his word "launch the beta". |
 
 Chats that can run side by side: 4 with any other; nothing else safely.
 
 ## 6. Where things stand (2026-11-24, 09:00 PST - the Opus part of the pre-beta is done)
+**DONE 11-26 evening (the Opus 5.5 chat): the art batch is merged to `main` and live** - the gate passed: the roofs rendered and kept (before/after on the two streets), the whole suite on c7ae6cb (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`: no failure of the batch's own), a look in a running World v3 game at 1280x720 and phone size. The server re-bakes for about five hours. Next in this chat: the remaining beta items (`docs/audit/PREBETA-LIST.md`). The block below is the record of how it was taken live.
+**TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of
+13:31: "I'd like to push all the art we have now live". Everything is on branch `fable-art-1124`, pushed, tree clean.
+To put it live, in this order: (1) `node tools/nature/darkscan.mjs` on two streets and LOOK at the roofs (the last
+commit, "Roofs", was never rendered - if it looks wrong, `git revert` that one commit); run `test/perf.test.js`,
+`roofsigns`, `signclear`; (2) merge `main` into the branch if it moved; (3) the whole suite, one heavy file at a time
+(`docs/tasks/ARTPASS-TESTS-2026-11-26.txt` is the last full run, on 033be77: compare failures with it and with "Known
+failing on main too" below; `visaudit`'s one extra door under a tree is undetermined); (4) a look in a running World
+v3 game (`tools/nature/README.md` has the recipe) - streets, a shop window, a roof, the menus in look C, a phone
+size; (5) tell him what failed and what was not seen, then open the PR to `main` and merge it (his word is given, for
+the art as it stands after the gate); the server re-bakes for about five hours and players get a short reconnect.
+The page-code items (shark, cats, cloud shadows, UI look C) ride in the same merge. **Left for Fable next week, not
+for now:** night signs and lit rooms (a new look: variants for his pick first), the districts' waves, ATMs' booths,
+murals, paving, vehicles, the cinematics reshot. Rule-led rows Opus can take from `docs/tasks/SHARED-KIT-AUDIT-2026-11-26.md`
+if he asks: the lint's open rows (`signCovered` 68, `atmStray` 52). The project copy of this file is one edit
+behind (it lacks this block and the roofs line).
+**The art pass, 2026-11-25 16:40 PST (the Fable 5.2 chat; branch `fable-art-1124`, pushed; the DEVLOG's 11-24 and 11-25
+entries have each piece):**
+- **Live:** PR #48 (11-25 01:35, his word) - the buildings over your street, sidewalk or alley go see-through; PR #49
+  (09:10, his word) - they fade all but clear, and emotes run through their frames.
+- **On the branch, baked - goes out with ONE re-bake (~5 h) on his word:** the water pass; fields' edges, found places,
+  trails; redwood rooms, footbridges, Fernwater Creek (a sample: he said "I believe so" to a network, wants to look at
+  `report-39` first), wild banks, Mirage Lake's shore; **nature redrawn at the source** (palette.js `natRamp`,
+  flora.js `LEAF_PAINT`, ground.js `NP`: 114 of 129 plant kinds, rocks, the forest floor - his word of 11-25 03:29:
+  redraw, do not correct afterwards); the fern kit planted (`fernKind`), wild spike flowers leaning, the giants'
+  tops a mix of three, a stick bridge; a fork's centre lines; the El and highway decks fade from the ground; bridges
+  on piers; no painted white at the sea's edge.
+- **On the branch, page code - no re-bake, live on his word:** the shark's bite redrawn; the shark reshaped; the
+  cats (the face as before, a one-pixel nose - light pink, the black cat's black -, thin long tails; his words of
+  15:26-16:18 in DECISIONS); cloud shadows by day with a debug switch. As a PR from a branch off `main` with only
+  those files (`client/art2/animals.js`, `lightgame.js`, `engine.js`, `devcats.js`, `devmenu.js`); the
+  art hash does not move with them (checked: the same from c08e750 to 4a41a9a - `animals.js` counts in the bake's
+  code size only).
+- **The desert, begun 11-25 16:30 (baked, with the re-bake):** bloom a rare patch, reeds out of the ghost town's
+  street, a desert river's strip in rushes, a seep's ring and cracked earth as dry mud (`test/desertflora.test.js`).
+  **Decided 17:18:** the tables' cliff faces stay A, stepped (B, one wall, not built). 17:10: 28 found places by rule in the desert (playa, hoodoos, saguaros, joshua trees -
+  `report-66`; a world change). 17:30: the hoodoo drawn as a banded column under a cap (12 places), the desert's arch red
+  sandstone. 18:10: the tin shack and rusted pickup, a fifth found place (30 in the desert).
+  Left: the mission ruin's size (a step of its own), a seep's square pool (with the water's edges). **18:14, his
+  note:** the hoodoos looked unnatural - redrawn as weathered rock, mixed sizes (DECISIONS: the rule for every rock
+  formation drawn by code).
+- **The coast and jungle, begun 11-25 18:00 (baked, with the re-bake):** a tideline of wrack on wild sea beaches,
+  shells thinned, tide-pool shelves in dark basalt, no reeds on the sea's shingle (`test/coastart.test.js`). Left
+  (ART-CHECK-LIST): the bluffs at North Cape and the Egret coves (square wall pieces), cypress knees, the
+  fishing rocks' gear. 19:35: the sea stacks re-sited by rule (no three in a line, mixed sizes, twelve shapes) and
+  the sea cave's rock a headland of crags (`report-72`). 20:30: North Cape's bluff a scarp of basalt, the Egret
+  coves' horns rough headlands, knees along the marsh's edge (`report-73`). Left on the coast: Coral Cay's pool
+  and stream above the falls (not built: the spine above the falls is tall rock, water there would be hidden).
+  **Overnight 11-25 to 11-26 (his word 20:54: "keep on moving through as much art polish as we can tonight ... I
+  will check in in about 8 hours"; read as: art goes on, nothing to `main` without his word):** a fall lands in
+  water (`fallsFeet3`, `report-75`); boulders and outcrops under his rock rule, a desert pool's lobed rim, riffles
+  broken (`report-76`); 215 fallen logs in the woods by rule, hollow giants and root caves in the redwoods
+  (`report-77`); **the cinema rebuilt** - a compact inside at the door, four screens (`report-78`). Not built, his
+  call (ART-CHECK-LIST): the mission ruin bigger (its voxel model's memory), The Palace as a second cinema.
+  From 23:20 the whole suite runs on commit 033be77 in a separate copy (`/tmp/wt-before`, results
+  `/tmp/ww/suite-results.txt`, about five hours); while it runs only page-side art is worked on, so that commit is
+  what the re-bake would take. After it, page-side only: painted lips hold their place over a walk (`report-79`;
+  found for his eye: the eyes' own spacing varies a pixel); **clothing pictures on the Inventory's tiles** (part C3,
+  `client/piecepic.js`, `report-80`, `report-81-all-pieces`; 334 of 390 pieces) - both touch `people.js`, which is in
+  the art hash, so they ride with the re-bake; their own tests pass, the suite's run does not cover them.
+  **Three picks wait on him, nothing changed in the game for any:** the UI's look - A today, B hard pixel frames,
+  C hard frames and pixel icons (`report-82` to `84`; `tools/uistyle/`, `tools/uishots.py` `UISHOT_JS`); a soft lip
+  colour A-D (`report-85`, `tools/lipsheet.mjs`); the eyes' spacing over a walk. **Part B step 1 is written:**
+  `docs/tasks/SHARED-KIT-AUDIT-2026-11-26.md` - what of the shared kit is built (signs by trade, banks' porticos,
+  interiors), what is there and not measured (roofs, murals, paving, window goods), what is not (picture signs,
+  night signs, lit rooms, the lint's `signCovered` 157) and a proposed order. **Its first row is done (11-26 morning):**
+  a flat over a shop has its own door - 391 fronts, `lobbyDoor` 161 -> 0 (`shared/world3-flatdoors.js`, `report-86`).
+  Then `signCovered` 157 -> 68: a hotel's entrance canopy is cloth with its name on the front edge (it was the
+  forecourt's white slab over the name, 50 places), a moved sign is not painted behind, cones stand out from the
+  boards (`report-87`; the 68 left are listed in the DEVLOG). Then N23: a sign on a roof is seen whole or is not
+  there (`clearRoofSigns`, the lint's `roofSignCut` 28 -> 0).
+  **His words of 11-26 09:00 (DECISIONS):** the merge and re-bake WAIT for more of the city; **the UI's look is C**
+  (hard pixel frames and pixel icons - to build into every screen with a lint; not started); lips stay A; the
+  canopies a mix - a named hotel's name on its canopy, an OFFICE or a plain HOTEL on the wall over a low plain one
+  (`report-88`). **11-26 midday: the UI's look C is built** (page code, commit "The UI's look C": `style.css` tokens
+  and notches, pixel icons for all 160 glyphs in the menus, the lint in `test/uitokens.test.js`, `report-89` to `91`;
+  the buttons over the street have the pixel icons too - his word of 11:00). **Look C goes live with the art batch**
+  (his word, 11:00): no PR of its own. **Picture signs built** (his pick of 11:02: A and B together, some shops -
+  234 hanging signs, 21 pictures; `report-92` the pick, `report-93` built). **Shop windows by trade built** (nine
+  new rooms, a named shop shows its own trade's: `buildings.js` `GOODS_OF`, the lint's `windowTrade` 0; 33 boards
+  whose name was read as the wrong trade put right) and **no people painted in shop windows** (his word, 12:40: "We
+  shouldnt have just static humans in windows ... if we have humans in the window we want it to be actual NPCs
+  through the window" - the busts are gone, real NPCs through the glass logged for his call; `report-94`). Next in
+  the city: roofs - counted 11-26 (a row of big AC units on 42.5% of 5,462 flat roofs, any AC row on 81%; 266 of
+  2,391 neighbour pairs carry the same kinds of kit; the decks' materials still to be read - the count took
+  `spec.roof`, which is only flat or metal), then the fix; night signs and lit rooms (variants for his pick first). A process left
+  running does not live past the end of a turn here: the suite only moves while a turn is open (found 00:37).
+  **The suite finished 04:27** (`docs/tasks/ARTPASS-TESTS-2026-11-26.txt`): 452 of 460 files clean. Two failures
+  were the night's own and are fixed on the head (the hollow giants painted near black - `leaflight`; LIVE blades on
+  playhouses - the lint's `bladeBiz`); `firefighter` passes alone; `gridlock`, `scenes` 8, `world3mesa`,
+  `world3wild` and `visaudit` fail on main too - but `visaudit` has ONE DOOR MORE hidden under a tree than main's
+  record (4 against 3; which is new is not determined). Main (PR #49) is merged into the branch, every conflict to
+  the branch's side. **What is left of the gate:** a look in a running World v3 game; then his word, the PR, the
+  re-bake (~5 h). The bake's code: 1,126 of 1,150 KB (11-26 13:45). **The bake's code budget is 1,150 KB** (his word of 16:51; at 1,098.1).
+- **Decided 11-25 07:19:** the mountains' crags are look B, no snow drawn (in).
+- **Decided 11-25 09:03:** build the summits as knobs from the plan; lay the creek network ("Creek looks good let's go
+  with it"); the El's and the decks' see-through OFF for now (`DECK_SEE` false); **PR #49 live** - faded buildings all
+  but clear, emotes run through their frames.
+- **Decided 11-25 09:30:** "Let's rebake after the summits and Creek work" - both are now on the branch (below): the
+  branch goes to `main` in ONE re-bake (~5 h) once the gate is clean - the whole suite (never run on this branch:
+  456 files, 54 of them a World v3 build of ~5 min each, one at a time) and a look in a running World v3 game.
+- **Built 11-25 09:30-12:00 (his words of 09:03), on the branch, baked:** the summits as knobs of rock (Eagle Knob 358 m
+  with the telescope and the Summit Trail, Windy Col 340 m, Cairn Peak on its spur at 106 m: a shelf, solid rock round
+  it, two crag walls and stone steps in a cleft between them; the walked granite ground); **the relief layer's bytes
+  reach the mountains' top** (mapcore.js `RELIEF`: 23.2% of Granite Peaks read 255 - flat, unshaded; now shaded and
+  ledged, a look he first sees in `report-49`); the hill's darkest shade 0.64 (was 0.55); **the creek network** (8
+  creeks, 1,418 tiles, 36 pools, 3 ponds; no creek meets a road, so the culvert rule is laid but unseen). Pictures
+  sent: `report-46` to `report-49`.
+- **11-25 11:57, his word on `report-46` to `-49`: "This looks good lets keep moving forward."** The gate and the
+  re-bake: art while he is here, the gate when he stops for the day (Claude's answer to his question; no merge
+  before his word on that). **12:45:** faces and lips - look only, do not over-polish (DECISIONS).
+- **Built 11-25 12:00-13:40, on the branch, baked:** the mountains' streams (`CREEKS3.alp`: six, one under a road in
+  a culvert with stone headwalls - `report-50`); for both creek networks a pond only where there is room, a creek
+  runs on into water within 12 tiles. Next in the mountains' water: Summit Tarn's outflow as a cascade down the rock
+  band, falls over cliff bands, Summit Tarn in a cirque (show him first). 
+- **11-25 13:33-15:30, his notes on the streams (DECISIONS):** a stream runs on into the water it reaches (`reach` 16
+  tiles); a road over a creek is a bridge - deck tiles, a rail on each edge joined to the street, no headwalls
+  (`report-51`; 14:52: "looks good how it is now" with longer rails); Summit Tarn may be changed - a cirque of rock
+  behind its north shore and a lower pool where its outflow ended (world3-tarn.js `TARN3.cirque`); the outflow's
+  cascade down the rock band was tried five ways and is off (`CREEKS3.alp.tarnOn`). Logged for their turn
+  (PREBETA-LIST, 11-25 13:33): train riders swimming, the train's front above ground past a tunnel mouth, tunnel
+  mouths that do not line up.
+- **15:10, his word:** cloud shadows - yes, try it (to build: page code, the light pass); the shark - another pass (to
+  do: page code); the cats - asked whether fixed: yes, 11-21, shown again (`report-53`).
+- **Waiting on him (11-26 10:40):** (the merge waits for more city art, his word of 09:00; the UI is C; lips A) the
+  eyes' spacing; the mission ruin bigger; The Palace as a second cinema; a pool above Coral Cay Falls; the redwoods
+  stood apart; the banks; whether the tideline wants to be heavier; the shark, cats and cloud shadows live (page code).
+- **Next in the plan:** a look in a running World v3 game, then on his word the PR and the re-bake; part B by
+  `docs/tasks/SHARED-KIT-AUDIT-2026-11-26.md`'s order (the lint's open rows first), then the districts' waves; part
+  C after his picks; vehicles; the cinematics reshot. Not done from the summit plan: switchbacks, the bench turned
+  to the view. Not done in nature: the farm yards, Summit Tarn's cascade.
+- **Tools made:** `tools/nature/darkscan.mjs` (the near-black census over the baked world; `--who`, `--place`, `--prop`,
+  `--seabridge`), `tools/nature/paintscan.mjs`, `tools/causeways.mjs`; a running-game picture recipe in
+  `tools/nature/README.md` (v3 needs the server started first, ~4 min).
+- **Not done / not verified (11-26):** nothing baked on the branch has been seen in a running game; no film watched
+  on the cinema's new screens; the clothing pictures' speed on a real phone is not known; the ferries were not
+  checked against the sea stacks that moved. (As of 11-25 afternoon, before the suite ran:) Some 300 tests round the changes pass, and a wider batch
+  ran 11-25 morning (core, biz, calmstreets, custodyride, contacts2w3, ftue, guide, dmath, mapwindow, firstcar: 108
+  pass, 1 fail - calmstreets' Midtown test under load; it passes run alone; world3wayside, world3server, cliffs pass);
+  the bake's code stands at 1,098.1 of 1,150 KB; nothing baked was seen in a running
+  game; the El's fade only by unit test; PR #48's deploy was never confirmed from the live site.
+- **His PDF of play notes (11-25):** `claude/prebeta-notes-2026-11-25.md` - art ones taken in, game-rule ones logged.
+
 **The plan the owner agreed (11-23 15:37):** Opus 5.5 finished everything that isn't art; now a new chat on **Fable 5.2**
 does the art pass; then the cinematics are reshot on the final art; then the beta's walkthrough, load test and launch.
 **Live on main (PRs #29-#46):** art that vanishes in view; cinematics groundwork; shadows over water; **PR #35, the
@@ -123,8 +266,8 @@ re-bake is done.
 weather.js drawRain - the budget has room now); P8's cinematic scripted cars and jams; the UI pass's three findings
 (Inventory slots under 44 px on phones, its frame empty a moment on first open, the pause menu's second column in a
 narrow desktop window); PREBETA-LIST C's other items; the walkthrough (G).
-**Next: the Fable 5.2 chat** - package 6 above. The cinema's redesign is in it (world + art; the owner wants it before
-the beta). Then the cinematics (PREBETA-NOTES-2026-11-23 section 2: reshoot, wildlife first, new behaviour scenes) and
+**Now: the Fable 5.2 chat** - package 6 above, nature first (the owner, 11-24 09:25: "We were working on the nature pass first
+... make sure that gets prioritized"). The cinema's redesign is in its part B (world + art; the owner wants it before the beta). Then the cinematics (PREBETA-NOTES-2026-11-23 section 2: reshoot, wildlife first, new behaviour scenes) and
 C4's variants.
 
 **Live today (main, PRs #17-#32):** the quick bar a keyboard's only; the ellipsis and touch ammo; the Inventory (character,
@@ -138,7 +281,7 @@ its own storage, at risk; cargo crates always visible; REMOVE ALL (not "take it 
 and towels change only at home, a bathhouse or a shower.
 **Known failing on main too:** calendar's armored run "leaves from its bank" (date-dependent), gridlock, scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
 picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz, arrests (hiding in a shop: failed
-once under load, passes alone and as a file). Follow-ups: two
+once under load, passes alone and as a file), reputation ("a crime seen", about one run in three; 11-26). Follow-ups: two
 north doors at Northshore Beaches under trees.
 **Waiting on the owner:** a look at the batch in play; whether clothes should go in the stash after all. (Decided 11-24: finish or hide, the balance proposals, the page budget - DECISIONS.) **Done 11-23 night:** the server's disk
 grown to 146 GB (105 GB free) - he did it, Oracle console + growpart.

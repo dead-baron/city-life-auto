@@ -26984,34 +26984,1292 @@ phone on 4G. tools/perf.mjs; DECISIONS (performance budgets).
 No world or art change: the hashes are as before, so the P5 re-bake runs on. Tests: hidden, races, goals, ftue,
 guide, perf, phones, world3rapids, world3marsh, world3woods, riders, activities.
 
-## 2026-11-25 · The open ground round you is never hidden (see-through buildings along your street or alley)
-The owner's two screenshots from the live build: an Old Town alley with the one building over him a ghost and its
-neighbours solid; a street at night with the far sidewalk under the roofs of the row to its south ("see the entire
-street and sidewalk from anywhere in the street ... so nobody can hide"). `host.js` `_fades` had one rule - the
-building whose picture covers your own figure fades. Added: the ground you stand on is followed out from your tile (a
-flood over tiles that are not a building or a wall: `FADE_REACH` 20 tiles either way along, `FADE_ACROSS` 7 up and
-down), and every building whose picture lies over two or more tiles of it, north of its own foot, fades. So the row
-whose roofs hang over the street you are on goes see-through for the length of the block, and a whole alley opens when
-you step into it; a building faced from its own street lies over none of your ground and keeps its front (the alley
-behind it stays hidden until you step in). Worked out when you change tile, and now and then as chunks arrive - not
-every frame. Page-side only: no world or art change, no re-bake, no server restart. `test/alleyfade.test.js`.
-Live on the owner's word (11-25 01:35: "Id like this to go out"). Tuning: the two numbers.
-Tested: the 33 test files that load host.js, the budgets, the map-window and determinism checks (192 pass); run in a
-local game (today's world): at ground under a building's picture that building and its neighbour over the same
-ground fade, no frame errors. NOT run to the end: the whole suite - on the build machine it did not finish in half an
-hour; three tests that failed under that load (biz, core, calmstreets) pass alone; custodyride, cliffs and
-contacts2w3 timed out unrun (server and world tests; nothing in server/ or shared/ loads host.js).
+## 2026-11-24 · The water pass, 1: what the recorder saw at sunset, at night and in rain - on branch `fable-art-1124`
+The art pass (work package 6, docs/tasks/ART-PASS-PLAN-2026-11-24.md) starts where nature stopped on 11-21: water.
+The recorder (tools/nature/waterwatch.sh) had only ever run at a clear midday; it now films each kind of water body at
+several hours and weathers in one run (`MODES`, default noon / sunset / night clear, noon / night in rain), tells the
+water's pixels once at clear noon (it told them by their blue, wrong after dark), sets how wet the page draws things
+outright (the ease takes minutes at a headless page's frame rate) and saves its pictures straight from the canvas
+(tools/playtest.py `save:`). 17 places x 5 looks, set beside the concepts (W1, BE5, the ES and E2 sheets). What it
+showed, and what changed - nothing here is live: it rides the nature re-bake, on the owner's word.
+- **The shore wave was a ruled line racing in** (the owner, 11-23: "waves forming out of a straight hard edge"): born
+  whole on the 47-px contour, the band crossed in 2.2 s. Now (lightgame.js waterSurf) a 9 s cycle with the run in over
+  3.8 s, the front scalloped by two noises, in lengths with gaps, a faint swell far out that fades up, white only near
+  the sand.
+- **Long shadows on the sea** - the Ferris wheel's across the bay at sunset, the stacks', the boats'. The 11-23 rule
+  (P3) tested "water and not ground", which is only a fall's sheet: the sea, lakes and rivers are baked ground | water.
+  Now `openWater()`: water that is not a puddle - and not a pool, a hot spring or a pond (inland water with a pond's
+  word), which sit among paving and lawns and take their trees' shadows like the ground round them.
+  test/watershadow-gl.test.js used a flag the game never bakes; it now lights the game's own four (sea, fall, puddle,
+  pool).
+- **Sunset water was flat and dark** against W1 / BE5: with the sun low and still lit the sea glitters - more cells,
+  longer on, in the sun's own colour (`glintCol`), turned down a step after the first pictures. The owner's eye wanted
+  on it. test/calmwater.test.js mirrors it: more than by day, no rows, no sheet.
+- **The sea cut into cells with ruled edges** (a dark rectangle and an azure block off the surf beach): depth and look
+  come from the one nearest land tile. water.js waterPx reads the sea's far field at a point moved by slow noise (to
+  about two tiles) and dithers the look wider; bedPx lets seagrass and coral begin at a wandering distance from shore,
+  thinning in ("underwater details with a hard edge near shore"). The edges wander now; the blocks are still there -
+  the depth steps where the nearest shore stops being sand (depthOf by the one nearest tile). Left: blend it wide.
+- **Koi stood on the water** (the 'koi' prop was baked over it): no longer drawn (statics.js); a marked koi pond gets
+  live koi (waterlife.js koiPond).
+- **Moon jellies in the botanical garden's lily pond** (the "white blotches" of the 11-21 list): 103 small waters the
+  map lists as no lake, pond or river read as sea, and got the shore's fish. A small water of its own (flooded out,
+  under POCKET = 600 tiles) gets a pond's (waterlife.js pocket); its class stays the map's - a fish keeps to water of
+  its own class (the salmon tests caught the first try, which changed it).
+- **The hot springs were a white shape after dark** (and cream at sunset): a spring or a pool laid in the ground was
+  baked as open sea - no word, no inland flag - and the spring's cream glow over the whole pool fed the bloom. Both are
+  still inland water with a pond's word now (groundbake.js; a pool that is a sprite has been since 10-22), the spring's
+  glow dim and its own; its bubbles keep theirs.
+Flicker (median % of water pixels jumping between frames 0.1 s apart) before, by place: 0 to 2 everywhere but the
+jungle (35% at noon on Coral Cay: leaf edges swaying, not water - for the coast and jungle step). After: the same by
+day; at sunset the sea reads 1.2 to 3.5 where it read 0.3 to 0.8 - that is the glitter twinkling, as meant (the
+3.5, off the surf beach, was measured before the glitter was turned down a step; the pier read 1.4 after).
+Tests: watershadow-gl, calmwater, world3waterbodies (the small waters' fish - seen to fail without the fix -, a koi
+pond's koi, a spring's bake), waterlife, water, waterbake, poolwater, pool, surf, desertwaters, bathhouse,
+bathhouses2, perf, mapwindow, dmath. Not run: the whole suite. Looked at in a running game (headless, the local
+copy): pier, surf beach, cove, garden pond, hot springs, pool, before and after. Not yet looked at after the change:
+lakes, rivers, marsh, oasis, rain (shader paths they share were seen at the sea); no phone.
+Left in water: the salmon's leap; water beside docks; reflections, ripples and wakes against the concepts; a harbour
+for the recorder ('marina' finds a shop street). Seen on the way, not art: cars jammed on Coral Cay's jungle track.
 
-## 2026-11-25 · Faded buildings all but clear; emotes run through their frames (page code, live on the owner's word)
-The owner, 11-25 09:03: "Push the transparent buildings and emotes".
-- **See-through** (his word of 03:05: "we need the buildings to be totally transparent like as transparent as it is
-  around my character. Maybe a little bit of gradient or dissolve around the edges"): engine.js `GHOST` 0.6 -> 0.94,
-  and a rim that dissolves in over 12 px along the outline and the footprint of what fades (`GHOST_EDGE`, `EDGE_PX`).
-  This replaces the 10-23 "a ghost, not the whole of it at once"; thin things keep their lighter ghost.
-  test/seethrough.test.js.
-- **Emotes** (his note: a faceplant "just leans forward but not falling flat", lying down and sleeping the same):
-  art2/game/peds.js loaded art2/poses.js only while the emotes' table was empty, and the emote wheel's portraits
-  (client/portrait.js) fill that table on their own - so the page never had the frame timing, and every emote stood
-  on its first frame. The poses are now asked for until this module has them. test/emotes.test.js (in a process of
-  its own; fails on the old code). Seen in a local game: flat on the face; lying flat.
-No re-bake (version.json's world and art hashes unchanged), no server restart.
+## 2026-11-24 · The water pass, 2: the sea's blocks - on branch `fable-art-1124`
+Left by part 1: the dark rectangle and the azure block off the surf beach, their edges wandering but still there. The
+sea's slope (depth per tile out) was the one nearest land tile's - 0.22 off sand, 0.55 off rock, 1.4 off a quay, rock's
+where no land lay within 24 tiles - so the depth stepped along a ruled line wherever that tile changed kind or ran
+out. Now (water.js coastSlopes) every kind of coast within 24 tiles counts by how near it is (1 / d^3, one distance
+transform a kind on landField's grid - exact, nothing that depends on the chunk's window), and from 10 to 22 tiles
+out every coast's slope comes to the same. Right by the shore the nearest coast's own still rules (the shallows by a
+beach, deep at a quay). Seen at the pier, the surf beach and the cove, noon and sunset: no blocks; a shelf of clear
+shallows along the sand, then deep. A change of look with it, for the owner's eye: the sea is a deeper blue offshore -
+the wide turquoise that reached 20 tiles out off a sandy coast now ends nearer in (two numbers, FAR0 / FAR1, bring it
+back; the test's count of see-through sea off Sunset Beach went 459,916 -> 399,121 px).
+Test: world3waterbodies - between neighbouring sea tiles four tiles out and more the slope never steps (0.071 at
+most over 7,114 pairs; a change of coast was 0.33 and more). Also run: waterbake, water, surf, world3water, calmwater,
+poolwater, desertwaters, perf (the bake's budget holds with the three transforms), mapwindow, dmath. Not run: the
+whole suite. Not looked at: harbours and quays (the recorder has no harbour place yet), the islands, a phone.
+
+## 2026-11-24 · The water pass, 3: the salmon's leap - on branch `fable-art-1124`
+The owner, 11-23: "the salmon leaping (tail, splash)". Filmed at the gorge and at a river falls (a page script that
+keeps the frames with a fish in the air; `near falls` is new in server/dev.js for it), and the sprites drawn large.
+- **The tail.** A fish in the air was the swimming fish's shape from above, held stiff: a bar with a one-pixel stem
+  and a twig fork. Out of the water it is now seen from the side (waterlife.js leapPx): arched, back up, a flank with
+  a pale belly, an eye, a dorsal fin and a broad forked tail that flicks (three sprites a direction). Every fish that
+  leaps - salmon, trout, mullet, bass, carp, chub, the silver fish, koi - not the salmon alone. And it points the
+  way it goes on the screen: nose up rising, over on its side at the top, nose down into the water.
+- **The splash.** A leap marked the water with one ring and a few of the page's drops. `_splash`: rings, spray
+  thrown up and soon gone, foam flecks left on the water - where it leaves, where it lands, and against the falling
+  water at each stage of a climb.
+- **The climb.** A salmon "up the face in stages" climbed from wherever it lay in the pool: through the air over the
+  water - or, at the gorge, over a strip of dry bank, because that falls lands 76 px short of its pond. A climb now
+  starts with a leap across the pool to the foot of the falls ('in'), well inside the curtain, and only where the
+  foot is in the fish's own water within a leap (CLIMB.foot, CLIMB.reach); elsewhere it leaps at the falls and falls
+  back. The gorge's dry foot is a world fault, listed for the biomes' batch with the other falls like it
+  (docs/tasks/ART-PASS-PLAN-2026-11-24.md).
+Page-side: no re-bake. Tests (test/waterlife.test.js, each seen to fail on the old code): the climb's foot is in the
+pool the fish left, a leap away, and the stages go up from it; a leaping fish has its length, a flank, a tail broader
+than its wrist that differs between the two beats; a splash throws spray, leaves foam and rings. Also run: perf (the
+page's budgets - waterlife loads lazily), mapwindow, world3waterbodies, guide, devtp, devplay. Not run: the whole
+suite. Seen in a running game (headless): a leap and fall back at the gorge, a climb's first stages at a river
+falls. Not seen: a climb's last leap over the top, the other species' leaps, a phone.
+
+## 2026-11-24 · Plants cut off by their own canvas (41 of them) - on branch `fable-art-1124`
+The owner, 11-23: "sunflowers cut at the top". Each plant maker in client/art2/flora.js draws on a canvas of a size it
+names, and the tallest sunflowers' heads ran past theirs. Counted over every species and twelve shapes each, before
+the crop that hides it: 41 species drew past their canvas and were sliced flat there - not the sunflowers alone but
+the tops of the hibiscus, the bougainvillea, the salal, the creosote, the berry shrubs, the hydrangea, the roses and
+the hedges (5 to 10 art pixels of crown gone), the pampas's plumes and the juniper and prickly pear at the sides.
+sprite() now gives every canvas room round it that the makers don't know of (G.ox / G.oy: pxn and has() shift by it,
+done() folds it into the anchor and crops), so a maker's own coordinates are as they were. Checked against a
+checkout of the commit before, every species x 12 shapes as the bake makes them: 1,122 of 1,548 pictures byte for
+byte the same (every tree among them); the other 426 are the 49 species that were cut, now whole; none still cut;
+every one still inside the room its item claims in a chunk (floraExt).
+Test: `test/floraclip.test.js` (flora.js tells it, through globalThis.__FLORA_CLIP, what a plant left on the canvas's
+outermost row and columns: nothing; and each picture fits floraExt). Baked art: a new art hash, with the nature
+re-bake. Seen: the twelve worst as sprites lit at noon, before and after. Not seen: in the game. Found with it, not
+fixed: the redwood sorrel's carpet is 25 px past its item's room (it was before) - a chunk's edge can cut it.
+
+## 2026-11-24 · The water pass: the whole recorder run again, after - on branch `fable-art-1124`
+All 17 places at five looks with parts 1 to 3 in (85 films, set beside the first run's). Lakes, the tarn, rivers,
+creeks, the marsh, the oasis and rain - not looked at since the changes - show nothing broken: the same water by day,
+no long shadows on open water at sunset or under the moon (a lake at night reads a little brighter for it), the hot
+springs as water at every hour. Flicker by day as before (0.2 to 2% of water pixels). Higher where it is meant: the
+sea at sunset (the glitter: 1.1 at the pier, 5.3 off the surf beach). Not water at all, and not to be read: 'marina'
+(a shop street), 'pond' (a creek under redwoods, the frame a few pixels off the first run's) and 'rainforest' (leaf
+edges). The recorder still needs a harbour and a real pond among its places.
+
+## 2026-11-24 · The woods' and the meadows' found places (34 of them) - on branch `fable-art-1124`
+The nature audit of 11-21, forest and meadow: "the small found places of NS1-B outside Highland Woods", "a dry-stone
+wall and gate; an oak with a swing; a stile" - and five pieces drawn that day and never placed (props-rural.js:
+dryStoneWall, fieldGate, stile, ropeSwing, woodRuins). Found on the way: the game's rule for small scenes off the road
+(naturesites.js waysideFinds: a camp, a picnic spot, a cairn) names the first city's districts, none of World v3's -
+the whole world had not one.
+`shared/world3-wayside.js` (called from world3-world.js after every place made by hand): little scenes a short walk
+off a trail or a road (6 to 56 tiles), never on one, 36 tiles apart, each on level open ground of its own, clear of
+roads, water, buildings, fields, orchards and crop rows, and of everything made or named. In Highland Woods, among
+pine and oak (not in a redwood grove - those are NS1-A's, the redwood step), 18: the ruins of a house, an old oak
+with a bench and a fingerpost, a fire ring with log seats, a mossy log with ferns and its mushrooms (two forage
+spots each). In Willow Valley's open meadow, 16: a dry-stone wall with a field gate, the same with a stile through
+it and berry bushes, an oak with a rope swing, beehives by sunflowers, a windmill over its trough. The growth is
+cleared off each one's ground and no tree is left standing in front of it.
+The five pieces are world props now ('ruins', 'drywall', 'fgate', 'stile', 'rswing': statics.js), solid by the world's
+circles - a wall stops you, its stile is the way through, a ruin's doorway is open. The ruins are built 1.4 times
+their first drawing (woodRuins' k): at the first size they read as a hut.
+Seen: all 34 rendered as the game draws them (tools/area-shot.mjs), twice - the first pass had an oak with a swing in
+an orchard and a windmill in a lavender field (the farmed strips are grass tiles), a windmill in a thicket (the
+valley's forest ground), flower "lawn" pieces that read as panels, and a bench end-on; all fixed, by rule. Not seen: in
+a running game; after dark.
+Tests: `test/world3wayside.test.js` (enough of each kind; each on its own clear ground; its pieces there; walls solid
+and the stile open; nothing tall in front). `test/undergrowth.test.js`: its log check ran for the first time (it
+sampled every fifth log and needed twenty: the world had 94, now 110) and failed - most logs lie at made places that
+keep their ground bare. It now takes the wild logs only, every one: 13, 6 with undergrowth along them - too few to
+hold to a share, so it prints them; the wild logs are step A3's. Also run: placementlint (its rows hold), dmath,
+mapwindow, perf, and the world tests most likely to notice: world3clearings, world3woods, world3world, world3server,
+world3wild, foraging, finds, wildfolk, nature, world3redwoods, stocktanks - 83 of 84 pass. The one that fails,
+world3wild's "the tracks flagged notraffic (24; others: ... Station Road ...)", fails the same on the commit before
+this work (checked in a second checkout): the stations' roads, not the art pass's - logged for the pre-beta list, not
+touched. Not run: the whole suite.
+A world change (version.json world3 94ff65ee -> 051ab6cf): it goes with the nature batch, on the owner's word.
+No Guide entry: scenery to come across, no new thing to do (the mushrooms are the forage that exists).
+
+## 2026-11-24 · Fields with edges, rows off the shore, the off-road trails as trails - on branch `fable-art-1124`
+The owner, 11-23: "the farm (the flower row, hand-crafted fields)", "the off-road trail (a blended start, a real
+trail)". Found in the game first (tools/area-shot.mjs: the Dry Creek co-op, Lake Road's fields, the lavender and
+sunflower strips, the Red Rock Trail, the Highland Enduro) and set beside D13, FA4, NS1-E and MX2.
+- **A field's edge** (groundbake.js fieldEdge). A crop ended on its tiles' edges: wheat against plough, lavender
+  soil against meadow, in ruled lines and square steps. Round every field now a ragged verge of the grass beside it
+  (a baulk of dry grass between two crops), then the headland - turned earth where the tractor turns - then the crop.
+  A field's own stubble against its standing wheat is no edge. All 156 fields and the 513 planted strips' soil.
+- **The planted rows off the shore** (world3-croptidy.js stripsOffShore3). Three rows of sunflowers stood on North
+  Cape's cobbles with the sea a tile off, lavender on a beach: 65 of the 513 strips had sand under them (the rows are
+  planted before the coasts are shaped; farmsOffBeach3 knows a beach by its district). A strip keeps 3 tiles off any
+  sand and off the sea (a lake's or a river's bank is a farm's own): cut back to its longest stretch that does, gone
+  under 6 tiles, its plants with the ground it loses. A world change.
+- **The off-road rides** (groundbake.js rutPx; m.tracks with `ride`: the Red Rock Trail, the Highland Enduro, Giant's
+  Gate's lane). Each was one band of dirt tiles painted edge to edge - a grey stripe across the desert that began in a
+  blot at its sign. Drawn per pixel now, as the canyon's two-rut tracks were: two ruts worn dark, the crown between
+  them the ground's own with worn patches, shoulders thinning to a ragged edge - one rut down the middle for a bike's
+  single track (hw <= 26: the enduro) - pale on sand and rock, dark earth in the woods. Over its first and last 96 px
+  it narrows and thins to nothing; no round cap past either end. (The canyon's own tracks get the same ends.)
+- **A country car park's edge** (lotEdge): its gravel gives way raggedly to the ground beside it (the enduro's
+  trailhead lot was a ruled rectangle in the ferns); a road or paving beside it keeps its edge.
+Seen: each of these rendered as the game draws it, before and after. Not seen: in a running game; Giant's Gate's lane
+and the canyon's tracks after the change; a field's edge at night. Not done of his note: "the flower row" is read
+here as the rows on the shore and the rows' ruled soil - if he meant a particular row, it wants his pointer (on the
+check list). The farms' yards against D13 (a barn yard with tyre tracks, hay, a tractor) are the farm's own pass:
+not started.
+Tests: `test/groundedges.test.js` (the three functions on made-up tiles: verge, headland, crop; ragged; none at a
+field's own stubble; the lot's edge not against paving; two ruts or one, the fade, no cap); the rows off the shore in
+`test/world3wayside.test.js` (for its world build). The art and the world hashes change: with the nature batch.
+In the built world: 66 strips cut back, 30 gone, 497 plants with them, of 513 strips. Run and passing (88 tests):
+world3wayside, placementlint (its rows hold), perf (the bake's budgets), harvestart, world3dirt, redrock,
+world3kestrel, undergrowth, mapwindow, dmath, waterbake, groundedges. Not run: the whole suite.
+
+## 2026-11-24 · The redwoods stood apart (2,915 trunks out from behind others) - on branch `fable-art-1124`
+The nature status of 11-21: "Redwood woods still denser than concept N1". Rendered first (the Giants Loop, Hidden Pool,
+a plain stretch of grove, the Highland Way) and counted: by number the grove is N1's already - a median of two giants
+to a 16 x 16-tile patch, four at the ninetieth percentile - but a trunk stands 17 to 24 tiles tall in this view, and
+6,559 of the 16,546 redwoods (40%) had another standing right in front of their trunk. Trunk on trunk reads as a
+brown wall, the floor between unseen.
+`thinRedwoods3` (shared/world3-redwoods.js, called after the redwoods' places made by hand): taken from the south, a
+redwood goes if a kept one stands within 6 tiles in front of it with their trunks overlapping. The trees of a place
+made by hand - on ground that place keeps: the Giants Loop's giants, a clearing's fairy ring, Giant's Gate - all
+stay. 2,915 gone (18%), 13,631 standing; 22% still have a trunk in front further off than 6 tiles (was 40%).
+What it does not change, on purpose: where a redwood carries its crown. The lower boughs are most of what still
+covers the floor in a plain stretch of grove, and that mix is the owner's of 11-21 15:39 ("use C for areas it's
+covering the paths but in other areas a combo of A or B"). If he wants the deep grove opener still, more high crowns
+there is the next lever - his call (on the check list, with the picture).
+Also counted, of the 11-21 note "the fern layer covers the floor, the creek and the paths": of 8,731 undergrowth
+pieces in the chunks round six redwood places, 179 (2%) reach over a dirt path by their width and 3 over water - the
+paths and the creek read clear in the pictures. Nothing changed there.
+Not done: the walk-in hollow trunk and the root cave (NS1-A) - new pieces, each a place to walk into: not started.
+Seen at Hidden Pool, not explained: a lighter straight-edged patch on the glade's floor in the offline picture (a
+light shaft, or the offline picture's own way of drawing one) - to look at in a running game before anything is
+touched.
+Test: test/world3redwoods.test.js (no wild redwood right behind another; more than 12,000 still standing). A world
+change: with the nature batch, on the owner's word.
+Run and passing: world3redwoods, world3wayside (the found places as before: 18 and 16), world3clearings,
+world3woods, undergrowth, placementlint, wildfolk, foraging, perf, dmath. Not run: the whole suite.
+
+## 2026-11-24 · The Sentinel Stones read; the oval ponds counted - on branch `fable-art-1124`
+The mountain step, begun. The nature status of 11-21: "standing stones barely read". Rendered: ten pale grey posts on
+pale grey scree, shoulder-high. Now (props-rural.js standingStone, a class - every standing stone) dark weathered
+granite, banded, darker at the foot, patches of pale lichen, moss at the base; a stone that stands (taller than a
+headstone) is drawn 1.5 times its height and a fifth broader (statics.js MSTONE_UP), the altar and the fallen one as
+laid; and the ring stands on a ragged round of green turf (naturesites.js sentinelStones: the map's lush grass). Seen
+rendered, before and after. Tests: the stones in test/world3wayside.test.js (for its world build); nature (the ring's
+own test), perf. The turf is a world change (both worlds' hashes: naturesites.js is the first city's too).
+"The lake a perfect oval" (11-23): counted over the 59 lake and pond bodies - how far each shore is from its box's
+ellipse. The most oval are city parks' ponds made by hand as ellipses (Westport's 69 x 26 with a footbridge straight
+across, the Stadium's two retention ponds, Northgate's Linden Park basin - that one a paved formal pool, an oval on
+purpose) and Mirage Lake (an egg). Summit Tarn and the farm ponds have wavering shores already. No change made: each
+is a hand-made place with its rails, reeds and bridges set on its ellipse - the districts' pass, or sooner where the
+owner says which lake he meant (on the check list).
+Paused here on the owner's word of 18:00: the redwood forest first (docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md).
+
+
+## 2026-11-24 · The redwoods' rooms; the trunks-only look tried and dropped - on branch `fable-art-1124`
+The overhaul's first step (the giants as trunks with no crown, approved with the whole proposal at 18:13) was built two
+ways - a cut top with a few boughs hanging in, then a top outlined whole and thinned out upward by an ordered dither -
+rendered in the grove, the Giants Loop and at Giant's Gate, and dropped on the owner's word at 18:47 ("I don't think
+the disolve looks good ... not looking good compared to what we have already"). Nothing of it is in the code. Variants
+of the tree as it is (the crown higher and smaller) are with him to pick from: docs/DECISIONS.md, the check list.
+
+Kept from it, because the measuring found them in today's trees:
+- **A redwood's picture inside its room.** A giant's roots reach 86 px below its foot (the middle size 68) and every
+  redwood's item claimed 60; the second growth's widest crowns reach 110 px out of a claimed 100. A picture beyond its
+  room is cut at a chunk's edge. `statics.js` `redwoodRoom(art)` (the species' fourth number: the roots' reach) is what
+  the item claims now; `test/redwood-art.test.js` holds all nine placed pictures, twelve shapes each, to it.
+- Counted, for the crossings and the water (docs/tasks/REDWOOD-OVERHAUL-2026-11-24.md part 5): three footbridges in
+  Highland Woods, two of them wrong; 1,248 tiles of water in 1.8 million of land.
+
+Not run: the whole test suite (the redwood, fade, flora and budget tests pass). Not seen in a running game.
+
+## 2026-11-24 · Every footbridge walked and seen (the redwood overhaul, step 2) - on branch `fable-art-1124`
+The owner, 18:00: "a lot of bridges over streams aren't at the right angle or they don't actually let you walk over
+them". Counted in the built world: thirteen footbridges over water (seven plank bridges, four log bridges, one creek
+site's own, one rope bridge), three of them in Highland Woods. The rope bridge over the gorge keeps the trails' own
+deck and is not in this pass; of the other twelve:
+- **Three were pictures only**: the Stadium park's bridge across its pond and West Hills' two over the creek had
+  water tiles under them and no deck - you walked into the pond under the bridge.
+- **Three log stubs** stood where a trail steps onto a road's bridge over a lake, ending in the water.
+- **The Giants Loop's** ended on grass a tile and a half from its trail; **Highland Way's** had a giant redwood drawn
+  over its south end; a log bridge on a lake's edge ended short of its bank.
+`shared/world3-footbridges.js` `footbridges3`, one pass after every place is made: bridge tiles under the whole deck;
+an end over water carried on to its bank (4 lengthened); a short bridge with no bank within reach taken out (3); a
+worn link from an end to the path near it, dirt or paving as the path is (2); no tree left standing where it is drawn
+over a deck (10 props out with the links' undergrowth). `test/world3wayside.test.js` checks every footbridge left (9:
+twelve less the three stubs): no open water under it, its ends on land, a path at both, nothing tall over it.
+The angle: one bridge sits 26 degrees off square to its river (Highland Way's); left as laid - with the trees off it,
+it reads. A world change (world3 hash): it goes with the nature batch.
+Seen: offline renders of each bridge. Not seen: in a running game; the stubs' spot after they went.
+Counted for step 3: Highland Woods has 1,248 tiles of water in 1.8 million of land - new creeks, not repairs.
+
+## 2026-11-24 · A woods creek laid by the land: the sample (the redwood overhaul, step 3) - on branch `fable-art-1124`
+Highland Woods had 1,248 tiles of water in 1.8 million of land; its three creeks are short pieces at the hand-made
+places. `shared/world3-creeks.js` `woodsCreeks3` lays a creek by rule: from a spring it steps down the map's own
+heights (m.relief, a 7 x 7 mean; never back up; off roads, lots, buildings and the made places' ground) to water that
+is already there; the line wanders a little and is curved; narrow at the spring, wider at its mouth; where the ground
+steps down a riffle (white water) and a pool below it with a deep middle, mossy boulders and ferns round it; boulders
+in the run and on its banks and ferns along it by hash; where it meets a path, the path's tiles under it become
+stepping stones on deck tiles; no small tree and no redwood trunk left standing over it; its spring no nearer a road
+than 14 tiles. It is one of the map's running waters (m.waters.ch, with its rapids and pools) and a site
+('woodscreek': name, line, pools - for the finds and the fishing to come).
+ONE creek is laid, the sample for the owner's eye: Fernwater Creek, 283 tiles from the woods west of the Giants Loop
+down to the lake in the Pine Lake hills - 615 tiles of water (half as much again as the whole forest had), 7 riffles
+and pools, 2 path crossings. Counted for a network: of 2,956 test springs on a 24-tile grid, 495 reach water (median
+60 tiles), 1,497 end in a hollow (a pond there is the next rule), 661 meet a road (they want a culvert).
+`test/world3wayside.test.js`: it runs downhill, is one water from spring to mouth, has its pools, nothing stands in
+it, every stone is on a deck tile; and no trail's line anywhere runs over open water.
+Seen: offline renders of four stretches. Not seen: in a running game (the water's motion, the fish, walking the
+stones); its mouth at the lake; night. The whole test suite has not been run. A world change: with the nature batch.
+
+## 2026-11-24 · The fern kit: nine kinds, drawn, not yet planted (the redwood overhaul, step 4) - on branch `fable-art-1124`
+The owner: "I'd really love to improve the ferns and make a lot of variety of ferns". The woods had two ferns (flora.js
+`fern`, also as bracken; redwoods.js `swordFernArt`): every bed was one plant repeated. `client/art2/ferns.js` draws
+nine kinds from one frond painter (a midrib that rises and arches, leaflets in pairs by a length profile, lacy or
+plain; thin stems drawn after the outline so they keep their one pixel), all at the art pixel: sword (and a small
+one), an old tussock of several crowns, lady (a vase of plumes), maidenhair (fans on black wiry stems), bracken (a
+triangle of a frond on a stalk; green, and gone gold), deer (a flat combed rosette, thin fertile fronds standing in
+it), chain (the giant, coarse and dark), fiddleheads (coiled croziers), licorice (a one-sided tuft for a log or a
+rock). `test/ferns.test.js`: each draws inside its canvas on its foot, no black, twelve seeds twelve plants differing
+in size and fullness, and the kinds differ in build (the test caught the lady fern and the bracken cut by their
+canvas at some seeds). `tools/nature/sprites.mjs` draws a maker that is not a world plant yet ({ mod, fn, a }).
+NOT in the bake (statics.js SPECIES) and not planted: the sheet is with the owner first. To come on his word: the
+kinds into the plant table (the bake's code is at its budget - 1,080 of 1,080 KB - so that is a budget decision or a
+trim), laid in drifts by how wet the ground is (thick and mixed along creeks and in hollows, bracken on dry ground).
+Seen: the sheet lit at noon, and a mock-up bed composed from the sprites - not the game's own floor.
+
+## 2026-11-24 · The sample creek: a spring among rocks, reeds kept to a creek's banks - on branch `fable-art-1124`
+Two things seen in the sample's own pictures. **The spring** ended in a channel's blunt cut end with its boulders off to
+one side: now a small round head pool with five mossy boulders ringed round its upstream side and ferns between them
+(`shared/world3-creeks.js`). **Reeds**: the ground bake stood reed beds wherever water was shallow - right for a pond,
+but a creek is shallow from side to side, so beds grew across it and filled its pools; it read as a marsh.
+`groundbake.js` `reedAt`: beds across still water as before; along running water's banks only (within 12 px); a
+creek's pool (a channel's calm pocket) clear but for its very edge. A class fix: every creek and river in the world -
+an art change, with the nature re-bake. `test/groundedges.test.js` holds the rule. The bake's code was 1 KB over its
+budget with it (1,081 of 1,080): two of today's comments trimmed, no budget raised.
+Seen: the spring, a run, the crossing's pool. Not seen: other creeks and rivers after the rule; a running game.
+
+## 2026-11-24 · Mirage Lake is no longer an oval - on branch `fable-art-1124`
+The owner, 11-23: "the lake a perfect oval"; 11-24 18:13: "I think it was mirage lake ... It's one that shows up in
+the cinematics". Its rim (shared/world3-mirage.js, 10-21) was an ellipse wavering in six slow lobes: measured against
+the oval that fits it best on 72 bearings, the shore lay within a twelfth of it all round (sd 0.042, 0.91 to 1.07).
+Now the six lobes carry a finer waver of eleven and the shore has features of its own (`MIRAGE3.shore`): a bay bitten
+into the west shore, a sandy point on the south-west, a cove on the south-east, the east shore bellied out, a notch in
+the north-west; a bay may cut into the old water (deep tiles too). Sd 0.083, 0.76 to 1.16. The green belt, the palms,
+the white beach, the jetty and its rowboat follow the new shore by the same rules as before.
+`test/world3desert.test.js`: the shore strays from its oval (sd, least and most), and the jetty stands in the water.
+Not done: the other near-ovals counted on 11-24 are the city parks' ornamental ponds (Westport's, the Stadium's two,
+Northgate's basin) - theirs with the districts. The cinematics that show the lake want reshooting (they are reshot at
+the end of the art pass). Seen: one offline render at half size. A world change: with the nature batch.
+
+## 2026-11-24 · Banks in a natural mix, stones that differ, a log for a crossing, Mirage Lake's cove - on branch `fable-art-1124`
+The owner's notes of 21:40 on the sample creek and the lake (docs/DECISIONS.md).
+- **Banks.** Every soft bank had one look: a brown earth lip on the land and a brown face on the water side - an
+  outline round all inland water. `groundbake.js` `bankKind`: along a wild shore (meadow, dry and alpine grass,
+  forest floor, pasture, dirt) the bank is, by a slow noise, grown over to the water (43% of the shore: no lip, no
+  face), an earth lip as before (18%), shingle (18%: the wash's pale gravel, 7 to 29 px wide, bare of ground cover)
+  or a bar of dirt with wet sand at its edge (21%); a change of kind about every 150 px. Lawns, parks, golf and the
+  beaches keep what they had. A class change for every wild river, creek, lake and pond: an art change, with the
+  re-bake. `test/groundedges.test.js`.
+- **Stones.** `water.js` `steppingStone`: each seed its own - long or round, turned any way, low or proud, four in
+  ten capped with moss; eight shapes (were four), sizes 7 to 16 (the creek's were 11 to 13), a small one beside a
+  small one now and then.
+- **Crossings.** `world3-creeks.js`: a real crossing has the path's ground on both banks; a path only clipped by the
+  creek keeps its ground (stones where the creek's own run lies on it). A path under two tiles wide crossing no more
+  than seven may take a fallen log (the 'logbridge' piece; `footbridges3` carries it to its banks and links its
+  ends), half the time; else stepping stones. The sample's one crossing (the Mast Ridge Trail's) stays stones.
+- **Mirage Lake.** An offshoot off its west shore (`MIRAGE3.arm`): a short neck out to a round cove, the beach
+  following it. Its shore against its oval: sd 0.187 (was 0.083; 0.042 before today).
+- The bake's code is at its budget to the byte (1,080.50 KB gzipped): five of today's comments were cut down to make
+  room. The fern kit, a stick bridge or the plants' shade floor will not fit without the owner raising it.
+Also `tools/nature/sprites.mjs`: LEAF_WRAP / LEAF_SKY to try the leaf light's numbers (the plants' dark undersides:
+measured, variants with the owner - nothing of it in the game's code yet).
+Seen: offline renders (the crossing, a stretch, the creek's mouth, the lake at half size). Not seen: a running game;
+other rivers and lakes with the new banks; shingle at full size. The whole suite has not been run.
+
+## 2026-11-25 · Plants lit evenly, never black; soft banks blended into the water - on branch `fable-art-1124`
+**The dark on plants** (the owner, 11-24 22:23 to 11-25 00:04: "the dark/basically black shading on the underside of
+this art ... Can we identify these and others across the entire environment/nature art packs"). Measured over all 121
+plant kinds, lit as the game lights them at noon: 102 had over 15% of their pixels near-black. Two causes at once: the
+paint went to black (after the concept sheet NK1-M, whose plants are 38-55% under 50/255; the style anchor R1-D's
+darkest green is 25, 57, 45), and the leaf pixels carried rounded surface directions, so the light pass shaded the
+underside again. The sword fern, which he pointed to as right, has its form in its paint and every pixel facing up.
+`flora.js` `leafLight` (called for every plant the world places: statics.js makeFlora) makes all of them so: leaf
+normals turned three quarters toward up, and leaf tones under 72 pressed up to 46 and pulled to the anchor's dark
+green (`LEAF_LOOK`, four numbers). The outline on leaves becomes that dark green too. Leaves near-black at noon: 0%
+in every kind (`test/leaflight.test.js`); kinds over 15% near-black: 102 -> 18, and those by their bark, cones,
+twigs, stones or cactus skin (pinned). Cast shadows, the hour and the weather still fall on plants as on everything.
+Not done: bark and cactus skin (the giants' trunks are 18-26% near-black on their shaded side) - to judge in the game.
+**Pixel size** (his question of 00:04): every plant kind is made at the art pixel at each of its sizes (the maker is
+run at the size, never resampled; a mirror is exact) - checked, test/floraart.test.js. The close-ups shown on 11-24
+were rendered at the world pixel, twice as fine as the game draws: pictures for him are at the art pixel from now.
+**Banks** (his note of 23:18): `groundbake.js` - a soft wild bank goes damp, then under the water, in tongues
+(`BANK_IN` 13 px of water show the bank through); pebbles and rocks stamped along banks; `water.js` fewer boulders
+standing in creeks and rivers; the sample creek's own moved to its banks. The earth lip stays on about a fifth.
+The bake's code budget: still 1,080 KB - twelve comments from this pass cut down to fit. Not raised.
+Seen: plant sheets with the game's noon light; offline renders at the art pixel. NOT seen in the running game: five
+tries to photograph World v3 in the local game failed on the tool (PREBETA-LIST). The whole suite has not been run.
+
+## 2026-11-25 · The open ground round you is never hidden - on branch `fable-art-1124`
+The owner's two screenshots: an Old Town alley with the one building over him a ghost and its neighbours solid; a
+street at night with the far sidewalk under the roofs of the row to its south ("see the entire street and sidewalk
+from anywhere in the street ... so nobody can hide"). `host.js` `_fades` had one rule - the building whose picture
+covers your own figure fades. Added: the ground you stand on is followed out from your tile (a flood over tiles that
+are not a building or a wall: `FADE_REACH` 20 tiles either way along, `FADE_ACROSS` 7 up and down), and every
+building whose picture lies over two or more tiles of it, north of its own foot, fades. So the row whose roofs hang
+over the street you are on goes see-through for the length of the block, and a whole alley opens when you step into
+it; a building faced from its own street lies over none of your ground and keeps its front. Worked out when you
+change tile (a few hundred tile reads), not every frame. Page-side: no re-bake. `test/alleyfade.test.js`.
+Not seen in a running game: how much of a city street ghosts at once, at an intersection, and from a vehicle.
+
+## 2026-11-25 · A faded building is all but clear; the bake's code budget 1,100 KB - on branch `fable-art-1124`
+**See-through** (the owner on the live build, 03:05: "totally transparent like as transparent as it is around my
+character. Maybe a little bit of gradient or dissolve around the edges"). `engine.js`: `GHOST` 0.6 -> 0.94 - where a
+building fades, 94% of the street shows (it was 60%: roofs' gear lay faintly over the alley); along the rim of what
+fades (within `EDGE_PX` 12 px of its footprint, and where its picture ends: eight taps of the building-index texture)
+it dissolves in from `GHOST_EDGE` 0.5, so its shape stays readable. Thin things keep `GHOST_THIN`. The transition is
+the eased one it had. `test/seethrough.test.js` updated to the new rule (it asserted "semi-transparent, never gone",
+10-23); the GL test passes. Seen in a local game (today's world): the sidewalk behind a roof fully visible.
+Page-side: no re-bake.
+**Budget**: the bake's code 1,080 -> 1,100 KB (tools/perf.mjs), the owner's word of 03:05. Why: the plants' even
+light, the banks and the stones were fitted in by cutting comments (it stood at 1,080.5); the fern kit (about 6 KB),
+natural wild flowers and a stick bridge do not fit.
+**Capturing the running game**: the first-time dialogs can be hidden from a playtest step (an eval that sets the
+dialog's panel to display none), which gives real game pictures - tools/nature/README.md.
+
+## 2026-11-25 · Nature redrawn without the painted shadow - on branch `fable-art-1124`
+The owner, 03:29: art with the dark shadow drawn in is to be redrawn from scratch, with a list; the lift of the
+finished picture changed colours and did not blend. Found: the shadow was in the shared palettes (leaf shade to 28% of
+the leaf's lightness and 42% toward blue-green; bark, stone and props to about 35%, toward violet; the forest soil
+from #121012) and in the clump painter (a dark pocket, a dark core). Redrawn at the source - palette.js `natRamp` /
+`NAT` / `lumFloor`, flora.js `FOL` / `LEAF_PAINT` and the one pixel writer, ground.js `NP`, terrain.js, redwoods.js,
+ferns.js, the redwood / wild / tropic / desert prop kits, water.js RB - and the lift removed (`leafLight` only turns
+normals; it changes no colour). 114 of 129 plant kinds needed it; all plant pixels painted under the
+floor 15.4% -> 0.0%. The forest spot he circled: 21.8% of the land under 50 at noon -> 4.1% (under 35: 10.2% -> 0.1%).
+Tools: `tools/nature/darkscan.mjs` (the census over the baked world, by place, `--who` by kind of art),
+`tools/nature/paintscan.mjs` (each plant kind). Tests: test/leaflight.test.js rewritten to the source rule (no leaf
+under 46, no bark under 50, the even light changes no colour). The full account and the list:
+docs/tasks/NATURE-REDRAW-2026-11-25.md. Baked art: live with the re-bake, on his word.
+Also: the giants' tops a mix of three (statics.js `RW_TOP`), his PDF of play notes logged (PREBETA-LIST).
+
+## 2026-11-25 · The fern kit is planted - on branch `fable-art-1124`
+The owner approved the kit (03:05: "Fern looks good to me ... go easy on the gold bracken"). statics.js: ten kinds in
+the plant table (`fSword` ... `fClump`, made by ferns.js at the art pixel), and `fernKind` - which fern grows where
+in the woods: at a bank the lady fern and maidenhair; near water lady and chain fern; on the ordinary floor sword and
+deer fern in drifts, an old tussock or fiddleheads now and then; in a sunlit gap bracken, and only there the gold - a
+small cluster where a noise runs high, else one frond in twenty-five. `floraExt` claims the room below a foot that a
+kind needs (the tussock and the chain fern hang 40 px under theirs). test/ferns.test.js: the rule (gold never on wet
+or shaded ground, under 5% of ferns, every kind grows somewhere) and each kind's picture inside its room. The bake's
+code: 1,089 of 1,100 KB.
+
+## 2026-11-25 · A fork's centre lines no longer run side by side - on branch `fable-art-1124`
+The owner's note (PDF, a desert road by the Eastern Desert First Aid Station): "What is up with this double yellow lane
+merge on this street? Does not look right". Two roads leaving a junction some 25 degrees apart each painted its
+double yellow up to the junction's trim, so for the length their pavements overlap the two ran side by side into one.
+groundbake.js `forkTrim`: at a junction of three or more roads, a road within 60 degrees of another starts its lines
+where its middle comes out of the other's pavement (the other's half width over the sine of the angle, at most 480
+px) - unless it is the one that carries straight on through the junction, which keeps them. Every fork in the world,
+not this one. test/groundedges.test.js (a Y, a T, a crossroads, a symmetric Y, a very sharp fork); seen at the first
+aid station's fork. Ground paint: with the re-bake.
+
+## 2026-11-25 · You can see under the El and the highway decks - on branch `fable-art-1124`
+The owner's note (PDF): "It would help if players can see under elevated platforms like this railroad bridge, but im
+sure highways and maybe some other structures ... like we do behind buildings, letting the player see a wide range
+under a bridge like this." The El's deck pieces (and its inclines from head height) and the highway decks are now
+fade items like buildings (statics.js `EL_FADE`, `DECK_FADE`: ids between the buildings' and the trees'; `fy`, a deck's
+foot line, read by chunkbake.js): on the ground under or beside one, the pieces over the street you stand on fade
+along it by the same open-ground rule (host.js `_fades`), clear round you, their rim kept; the bents and piers stay.
+Up on the deck or a platform (`UP_Z`) or riding the train, it stays under you. A deck fades as a building does, not
+as a thin mast. test/alleyfade.test.js; seen in a local game under a highway deck (today's world has no El: the El
+itself is untested in a running game). Baked: with the re-bake.
+
+## 2026-11-25 · The mountains' look: three variants on trial - on branch `fable-art-1124`
+The owner's note: a crag reads as "a group of 4 similar shaped rocks stacked in a row". Why: each run of a cliff band
+got a stepped lump of its own, and the solid rock behind was flat cobbles. On trial behind a switch only the picture
+tool sets (`globalThis.__CRAG`; the game draws what it drew): statics.js `cliff` as a sheer wall (terrain.js style
+`crag`: its top the grey of the rock behind, its clefts a tone deeper - `bare`), ground.js `crag` in big light slabs,
+groundbake.js `reliefOn` drawing ledges on rock along the land's contours (every 4 m, the face where the ground falls
+toward the viewer) and, at 3, snow on the benches above 150 m. docs/tasks/MOUNTAIN-LOOK-2026-11-25.md has the three
+pictures' account and what a pick leads to. tools/nature/darkscan.mjs: `--prop type@box` finds where a kind of prop
+stands thickest; `CRAG=n`.
+
+## 2026-11-25 · Wild spike flowers grow as they will - on branch `fable-art-1124`
+The owner, 11-24 23:37, of the purple spike flowers: "really vertical, all the stems are so straight it kind of feels
+out of place in the world (unless its part of a garden or flower pot) ... Can give a more natural version of these
+flowers". flora.js `spikes` (foxglove, lupines, alpine lupine, paintbrush): each stem leans out from the clump and
+its own way (`SPIKE_WILD`: up to 0.3 px a px of height), bows, nods at the tip, and one in four is a short one; the
+flower follows its stem. `o.straight` keeps a bed's rows upright for a garden. Their items claim the wider room
+(statics.js SPECIES; test/floraart.test.js caught the foxglove 4 px out of its room). Picture: report-40.
+
+## 2026-11-25 · Bridges stand on piers; the sea's edge is not painted white - on branch `fable-art-1124`
+From the owner's notes (a road bridge over the sea, seen while spectating: its edge "too hard", "it should be a
+bridge that things can go under ... a passable channel underneath"; and the white in the shallows "just show as
+static images instead of animated").
+- **Is any road laid on the sea as land?** No: tools/causeways.mjs counts road tiles with open water on both sides -
+  21 in the whole world, no run of ten; 47,898 tiles are bridge. The bridges are bridges; they did not look it.
+- **Piers and a shadow** (groundbake.js `PIER`, `pierNose`, `DECK_LEE` 14 -> 30): every 192 px along a deck over the
+  water a pier's nose shows 7 px beyond its edge either side (decks running north-south), or a pier's column stands
+  down under its face (east-west); the water in a north-south deck's lee is darker by the deck and eases out.
+  test/underdeck.test.js. The fringe of shallows and foam along the deck in his picture is the live build's: on the
+  branch the shelf lies along sandy beaches only (11-24).
+- **No painted white at the sea's edge** (water.js): the crests drawn white within 30 px of a beach, the white wash
+  line and the scalloped white band beyond it were still pictures under the engine's moving waves and swash - 3.43%
+  of the sea's pixels by a beach painted white, now none (test/waterbake.test.js, under 0.2%). The lattice keeps a
+  lighter water there, the waterline a pale wet edge. Left as they were: the white of a creek's riffles and rapids
+  and round rocks (still pictures too - to look at with the creeks).
+tools/nature/darkscan.mjs `--seabridge n` finds the long bridges over open water. Baked: with the re-bake. Not seen
+in a running game.
+
+## 2026-11-25 · The shark's bite redrawn - on branch `fable-art-1124`
+The owner's note: "Shark animal is not right yet, doesn't look updated, when it opens it mouth to attack part of its
+head disappear and looks off". animals.js `sharkModel`: biting, the body under the water stopped at 62% of its length
+and a flat grey slab stood over the gap. Now the body runs on under the head, and the head is one: a cone of a snout
+rounded across, grey above and white under, the lower jaw dropped, the mouth red between, teeth along both jaws, the
+eye, gill slits. test/animalart.test.js (in all eight directions the biting shark is no smaller than the swimming
+one; white and red show). Picture: report-41. Actors' art: no re-bake. Not seen in a running game.
+
+## 2026-11-25 · Emotes run through their frames: a faceplant falls flat - on branch `fable-art-1124`
+The owner's note: "Faceplant lose still not working it just leans forward but not falling flat on their face (as well
+as lying down or sleeping, it doesn't lay all the way down)". Seen in a local game: 4 s into a faceplant the player's
+sprite was `emfaceplant` frame 0. Cause: the page's people module (art2/game/peds.js) loaded art2/poses.js only while
+the emotes' table was empty - and the emote wheel's portraits (client/portrait.js) load poses.js on their own, which
+fills that table. So once the wheel had been near, peds.js never got the module for itself: no frame timing
+(`emoteAt`) and no frame counts in its sprite keys, and every emote stood on its first frame - the first lean of a
+faceplant, the start of sitting down for lie and sleep. Fix: the poses are asked for until this module has them.
+test/emotes.test.js (in a process of its own, the poses loaded first by someone else: fails on the old code).
+Seen in a local game after: flat on the face; lying flat. Page code: no re-bake; live with the page on his word.
+
+## 2026-11-25 · The licorice fern by logs; a stick bridge; a cloud-shadow still - on branch `fable-art-1124`
+- statics.js: beside a log or a mossy rock in the woods the cover is now and then the kit's licorice fern
+  (`fLicorice`), the fern that grows there. test/ferns.test.js (its room).
+- props-garden.js `stickBridge(len, s)`: six poles lashed with cord, three builds; shared/world3-creeks.js
+  `CREEKS3.sticks`: 40% of a creek's log crossings are one (a `logbridge` prop with `k: 'sticks'` - the same deck to
+  walk). The sample creek has no log crossing, so none stands yet: with the network. test/naturepieces.test.js.
+- A still of a cloud's shadow passing over Lakeside Greens for the owner's eye (`report-43`; his note: "Maybe
+  occasional cloud shadows passing through the world? Or maybe not a good detail to add not sure"). Nothing built.
+
+## 2026-11-25 · The mountains' crags: look B, no snow - on branch `fable-art-1124`
+The owner's pick (07:19): "B for the mountain/cliffs is best, also were not doing snow yet so let's not do any snow
+for now". The trial's switch is gone and B is what the bake draws: statics.js `cliff` (granite: `cliffH` / `CRAG_TALL`
+1.5, terrain.js style `crag`, one sheer wall), ground.js `crag` (big light slabs), groundbake.js `reliefOn` (`LEDGE`:
+a bench every 4 m of height along the land's contours on rock). C's snow is taken out. The desert's sandstone and the
+coasts' basalt pieces are as they were. test/crags.test.js. With the re-bake.
+
+## 2026-11-25 · Talus at a crag's foot; ledges on the steep open slopes - on branch `fable-art-1124`
+Following the owner's pick of look B. groundbake.js `talus` (a pass between the edges and the decor; `TALUS`): south
+of solid rock that stands 3 m or more over the ground below (from M.relief), the wild ground - the mountains' brown
+scree too - is pale broken stone for 54 to 100 px, its edge ragged and dithered out, the earth showing between the
+stones; the decor strews fallen stones over it, thickest by the wall. `reliefOn`: the mountains' open ground shows
+the rock's ledges where it is steeper than 0.4 m a tile, at 45% strength (`LEDGE.rib`, `LEDGE.soft`). statics.js
+`cliffH`: a cliff run under five tiles wide keeps its own height (taller it stood like a pillar by Summit Tarn).
+test/crags.test.js (the numbers, the pass order); test/cliffs.test.js passes with the walls as drawn. Seen at the
+crag at tiles 684, 588 and at Summit Tarn. No bake-level test of the apron (it needs a World v3 build: by picture
+and the census tool). The summits as knobs: a plan in docs/tasks/MOUNTAIN-LOOK-2026-11-25.md, not built. The bake's
+code: 1,095 of 1,100 KB.
+
+## 2026-11-25 · PR #49 live; the El's and the decks' see-through off for now - on branch `fable-art-1124`
+The owner, 09:03: "Push the transparent buildings and emotes" - PR #49 merged to main (engine.js `GHOST` 0.94 and its
+rim; peds.js the emotes' poses; version.json's world and art hashes unchanged; 27 tests on the main copy). "The
+highway/bridge transparency not sure that's right yet, maybe we leave that alone for now" - statics.js `DECK_SEE`
+false: the El's pieces and the highway decks carry no fade ids, the rule and its test stay. "Build the summit from
+plans"; "Creek looks good let's go with it" - next. His question about snowfields: none is drawn (10-17: the ground
+above the snow line is pale cut granite and scree) - Claude's earlier wording was wrong; corrected in DECISIONS.
+
+## 2026-11-25 · The summits built as knobs of rock; the relief's bytes reach the mountains' top - on branch `fable-art-1124`
+The owner, 09:03: "Build the summit from plans" (docs/tasks/MOUNTAIN-LOOK-2026-11-25.md).
+- **Found on the way - the relief layer ran out of room.** `m.relief` is a byte of metres per tile and Granite Peaks
+  stands to 363 m: 132,603 land tiles (23.2% of the district) read 255 - level to everything that reads the layer, no
+  slope shaded, no ledge drawn on the highest quarter of the mountains, and nothing could be raised there. Now a
+  metre a byte up to 160 m and 0.4 of a byte per metre above (shared/mapcore.js `RELIEF`, `reliefByte`,
+  `reliefMetres`); nothing under 160 m changes. Read back as metres by the ground bake (the hillshade, the ledges, the
+  talus), the trails' router, the rapids, the waysides' and the meadows' level-ground checks. 0 land tiles at the
+  ceiling (test/world3relief.test.js). What changes that he has not seen: the high mountains now show their slopes
+  and ledges (look B, as approved, where it was flat by this fault); the alpine meadows and the Summit Trail are
+  chosen and routed on true heights (the same five meadows by name; the trail 204 tiles, was 240).
+- **A summit is a top of the land**: chosen by the relief's own height (300 m and up, the ones standing highest over
+  the ground round them first), the knob having to fit. The land has two such tops clear of roads and places: Eagle
+  Knob (358 m with its knob; the Summit Trail's, the telescope now here) and Windy Col (340 m). Cairn Peak stays where
+  it was, by the old rule - it lies on a spur at 106 m, not a mountain top (it had the telescope).
+- **The knob** (shared/world3-peaks.js `PEAKS3.knob`): a level shelf 10 x 8 tiles for the cairn, the bench and the
+  telescope; solid rock round it - a ring 3 tiles thick on the north half, a block on the south half that ends in a
+  straight foot 5 tiles south of the shelf (the west half a tile shorter); the relief raised 16 m; a cliff wall (the
+  crag look) on each half of the foot; between them a cleft 3 tiles wide with stone steps (props-wild.js
+  `cliffStairs`'s new stone kind: granite treads, no posts or rope); the Summit Trail's router finds the cleft by
+  itself (rock is closed to it). Built three times before it read as a rock top: as a round, its south edge curved,
+  the walls came out two thin pillars and it looked like a disc of paving with a wooden ladder across it; then the
+  west wall was missing (a face 5 tiles deep is drawn over 7 rows - onto the shelf - so it was not put: `deep` 2).
+- **The ground**: a new ground, the walked granite (ground.js `granite`, groundbake.js `GRANITE`): worn smooth and
+  gritty, a crack wandering over it, a tuft by a crack - not a crag's slabs, which are the rock that stops you. On a
+  summit's shelf and its way up (the summit's own numbers, carried on its site), and in patches above the old snow
+  line where the quarry's cut slabs were (none within 17 tiles of a summit: the knob's outline stays its own).
+  Nothing grows on the shelf or the steps (reserve bits 192, statics.js `coverAt`). No snow anywhere.
+- Tests: test/world3peaks.test.js (each knob: its crown, its walls, the steps, the rise over the ground round it, the
+  walk up from the south to the cairn never through rock, the bench and telescope on open ground; two summits on real
+  tops), test/world3relief.test.js (the ceiling; bytes and metres agree), test/crags.test.js (the walked granite),
+  test/cliffs.test.js, test/world3rapids.test.js, test/world3wayside.test.js pass. The bake's code: 1,096 of 1,100 KB.
+- **The shade**: seen on the steepest ground over 270 m (86 m of fall in 44 tiles), half the scree came out under 50
+  of 255 once the slope was shaded. groundbake.js `LEDGE.shade` 0.64: the darkest a slope turned from the light is
+  shaded (was 0.55, everywhere - the steepest shaded slopes of every hill are a little lighter); `LEDGE.dark` 0.45: a
+  ledge's face on such a slope no darker than that of the rock's colour. There: 19.8% under 50 before these two, 8.2%
+  after (the style anchor: 10.6%). Not raised as a budget: two looks' numbers, tested in test/crags.test.js.
+- `tools/nature/darkscan.mjs --steep m` finds the steepest high ground to look at; the tool is in tools/nature/README.md.
+- Not done from the plan: switchbacks (the cleft is straight, 6 tiles of steps); the bench is not turned to the
+  longest view. Not seen in a running game. The whole suite not run.
+
+## 2026-11-25 · The woods' creek network - on branch `fable-art-1124`
+The owner, 09:03: "Creek looks good let's go with it." shared/world3-creeks.js `CREEKS3.net`: after Fernwater Creek
+(unchanged: 283 tiles, 7 pools, the same crossing) seven more by the same rule - springs tried on a 56-tile grid over
+Highland Woods, the highest first, 110 tiles apart, each run down the land to the first water (the river, the lake, a
+creek laid before it: Thimbleberry Run joins Salamander Creek, Huckleberry Run joins Dipper Creek's pond) or to a
+hollow, where it ends in a pond (three: Mossy Fork, Owl Hollow Creek, Dipper Creek). A creek goes round rock, is not
+laid along a path, through a lot, a field or a building, and would pass a road in a culvert (the road's tiles stay
+road) - none of the seven meets a road, so no culvert is laid and that part is untested in the world. From the data:
+8 creeks, 1,418 tiles of run, 3,345 tiles of water, 36 pools, 2 path crossings (stepping stones), 3 ponds; 9 springs
+tried, 2 with no way down. First try wound round a hollow's floor for 500 tiles (a scribble): a trace that gets no
+further than 12 tiles in 12 steps has reached the floor - the pond goes where that began. test/world3wayside.test.js
+(each creek downhill, one water along its own run, a way over at every path, a culvert wherever road lies under its
+line, its pond, names and springs apart). A car driven into a creek is in water as in any river (the shallow-water
+work is on the pre-beta list). Not seen in a running game.
+
+## 2026-11-25 · The mountains' streams - on branch `fable-art-1124`
+The plan's next part of nature, the mountains' water (docs/tasks/MOUNTAIN-LOOK-2026-11-25.md item 5; the owner's
+note: "water chunks that blend into the mountainous area above and foothills below"). Counted first: Granite Peaks -
+572,588 tiles of land - held 691 tiles of water: one tarn (Summit Tarn, its falls and a 20-tile outflow that ends on
+the scree), the hot springs' pools, and not one running water of the map's 82. The relief's bytes now reaching the
+tops (the entry above), the creeks' rule works there: shared/world3-creeks.js `CREEKS3.alp`, `peakCreeks3` - six
+streams from springs high on the scree down to the sea, a river, a creek in the woods below (Granite Fork passes
+under the road in a culvert and joins Dipper Creek's water in the foothills) or a tarn in a hollow. The mountains'
+own: a spring may rise on scree; a path there is a trail's own tiles (the scree is dirt too); bare granite boulders,
+no ferns; clear alpine water; granite outcrops on a tarn's far shore. From the data: 6 streams, 1,128 tiles of run,
+2,718 tiles of water, 30 pools, 1 culvert, 1 tarn; 23 springs tried (12 with no way down - they go round rock - 3
+over ground they may not take, 1 short, 1 too long under a road).
+- **The culvert seen for the first time** (the woods' creeks meet no road): the piece first used drew nothing - the
+  creek stopped at the road. Now a stone headwall with its arch on each edge of the road (statics.js `culvhead`,
+  the art's `culvert`).
+- **For both networks**: a creek that would end in a hollow within 12 tiles of water runs on into it, unless the way
+  is over a rise (a hollow behind a beach's berm keeps its pond); a pond is laid only where the hollow has room (40
+  tiles) - one ended in 21 tiles of water hemmed by rock; pools, ponds and springs take scree in the mountains (the
+  first tarn laid was a sliver: only grass was taken). The creeks read the land in metres (`reliefMetres`). The
+  woods' eight creeks come out as they were (1,418 tiles, 36 pools, 3 ponds).
+- **Not done**: Summit Tarn's outflow run on - it ends 19 tiles short of a road and a band of rock 40 tiles deep; it
+  wants a cascade down the band, with the falls' own piece. Summit Tarn set in a cirque (a rock wall behind it): a
+  change to a place made by hand - to show him first. Streams over cliff bands as waterfalls. Seen on the way and
+  not touched: Granite Hot Springs' pool rocks are near-black (7.9% of that picture under 35 of 255) - one for the
+  redraw's list.
+- test/world3wayside.test.js: the creeks' checks run over both networks (`checkCreeks`). The bake's code: 1,096.4 of
+  1,100 KB. Not seen in a running game.
+
+## 2026-11-25 · Streams join the water they run to; a road over a creek is a bridge - on branch `fable-art-1124`
+The owner, 13:33 and 13:35, on the mountain streams' pictures (his words in DECISIONS).
+- **"Doesnt just close off right before the open water"** (a stream ended in a pool a few tiles from the sea): a
+  creek that would end in a hollow within 16 tiles of water runs on into it, cutting through whatever lip lies
+  between (`CREEKS3` `reach`; the rule of an hour before kept the pond where the way was over a rise - gone). Marmot
+  Run reaches the sea (the mountains: 6 streams, 1,131 tiles, 29 pools, no tarn left of the rule's); in the woods Owl
+  Hollow Creek reaches the bay (the woods: 8 creeks, 1,421 tiles, 2 ponds).
+- **"Looks like its leading into a skinny concrete structure"** (the stone headwalls at Granite Fork's road): the
+  headwalls are gone (statics.js `culvhead` with them). Where a creek passes under a road the road's tiles over it
+  are a bridge's (22 at Granite Fork: the bake draws a deck there, the water either side right up to it) and a rail -
+  the creek bridges' stone kerb and timber posts, an existing piece - lies along each edge of the road, the way the
+  road runs there. Honest state: it reads as water going under, not yet strongly as a bridge - the deck is asphalt
+  like the road. A stronger deck (a paler slab, parapets) is the next step if he wants it.
+- **Tried and switched off: Summit Tarn's outflow as a cascade** (`CREEKS3.alp.tarnOn`, off). The code lets a stream
+  run over a band of the land's rock (white water all the way, a fall where it comes out through a cliff face) and
+  the outflow does come down the band; below it the land leads it beside a road to a junction where it has no room
+  to end. Five tries; not laid, nothing of it in the world. Needs the junction solved by hand, with the tarn's cirque.
+- Logged from the same message (docs/audit/PREBETA-LIST.md): train riders swimming for a few seconds; the train's
+  front drawn above ground past a tunnel's mouth; tunnel mouths that do not line up.
+- test/world3wayside.test.js: no creek's line on a plain road tile; deck tiles and two rails for every road passed.
+  Not seen in a running game.
+
+
+## 2026-11-25 · Summit Tarn in a cirque, a lower pool; the creek bridge's rails joined to the street - on branch `fable-art-1124`
+- **The rails** (the owner, 14:52: "looks good how it is now except the railings should be a little longer and
+  connected to the street (right now you see the top one have water under it"): each rail lies on the road's own
+  edge - the first and last of its tiles under the creek - and is 44 px longer. A piece on a street is taken off by
+  the clutter pass (that is how one of the first pair went missing): the rails are marked hand-laid.
+- **Summit Tarn** (the owner, 13:33: "you can change the summit tarn if you think it looks or works better"):
+  shared/world3-tarn.js `TARN3.cirque` - a crescent of the mountain's rock behind the north shore, 5 tiles back from
+  the water so the turf, the slabs and the outcrops stay in front of it, 159 tiles of rock, the land raised 14 m,
+  five cliff walls toward the tarn; the beach and the camp on the west and the cabin's meadow on the east left open
+  (the span is cut short of both). Eagle Crag moved 5 tiles north-west to clear it (its own search). Where the
+  outflow ended on the scree: a lower pool (38 tiles, deep in the middle) with granite on its lip - the stream ends
+  in water, not in nothing. The cascade on down the rock band stays off.
+- Tests: test/world3peaks.test.js (the cirque's rock and walls, the camp and the cabin open, the pool),
+  test/world3wayside.test.js (two rails for every road passed), test/cliffs.test.js pass. Not seen in a running game.
+
+## 2026-11-25 · The shark reshaped; the cats' nose, head and tail - page code, on branch `fable-art-1124`
+- **The shark** (the owner, 15:10: "could use another pass on it let's try to make it look better"): it swam as a
+  dark torpedo with a stub of a tail. client/art2/animals.js `sharkModel`: a pointed snout, widest at the shoulders, a
+  long taper to a narrow tail stock; broad swept pectoral fins and small pelvic fins; its back a tone lighter along
+  the middle, where it lies just under the surface; a taller dorsal fin, a small second one aft; the tail's upper
+  lobe a tall blade swept back. The bite of this morning is kept (its test passes). Picture: `report-54`.
+- **The cats** (the owner, 15:22: "a longer cat like tail and a cuter face ... the dog ... has a nose"): a small pink
+  nose low on the face under the eyes (on 11-21 a nose level with an eye read as a second eye and was taken off), the
+  head a size bigger, the tail half as long again, up behind and hooked. A first try for his eye: `report-55`, the
+  cats before and after beside two dogs. They are 17 art pixels tall: a face is two eyes and a nose.
+- Page code: no re-bake. test/animalart.test.js and test/perf.test.js (the page's budget) pass. Not seen in a game.
+- **The cats, second try the same hour** (the owner, 15:26: "the before cats looked better ... keep them like that in
+  the face and snout but just add a little nose ... the tail a little thinner and longer"): the head back to its
+  size; the small nose stays; the tail thin (0.72, was 0.95) and long, in two carriages - up behind and hooked
+  (ginger, calico) or out low with the tip curled up (`tailLow`: black, tabby); the long-haired white cat keeps its
+  plume. The calico's patches are laid from where the model's origin was (her tail's room moved it and with it her
+  patches). Picture: `report-56`.
+- **The cats' nose a light pink** (the owner, 15:42: "right now its too dark red"): a feature pixel takes the ramp's
+  darker step - (244, 45, 129) for this pink; a cat's nose takes the ramp's middle tone, its own colour (246, 173, 187).
+
+## 2026-11-25 · Cloud shadows - page code, on branch `fable-art-1124`
+The owner, 15:10, on the still of 11-25 (`report-43`): "I think the cloud looks okay let's try it out."
+client/art2/game/lightgame.js `CLOUD`: big soft shadows drifting over the land by day. They are the sun's: the light
+pass's sun visibility is multiplied by a slow two-octave noise anchored to the world (cells 1,500 px across, drifting
+9 px a second east-south-east), so a shadow dims the sun's direct light and takes the shade's cool tint, and lies on
+ground, roofs, crowns and water alike. How much of the sun a cloud takes is a preset's number, blended with the day
+like the rest: noon and afternoon 0.36, morning 0.3, golden 0.28, dawn 0.2, sunset 0.18, rain's overcast 0.1; night,
+dusk, storm, fog and indoors none (the default). From the noise worked out again in the test: 31.5% of the land is
+touched by a shadow at a time, 18.6% at half strength or more. A switch in the debug menu ("Cloud shadows", your
+screen, reloads; `cla.clouds`).
+- Cost: eight hashes and two smoothsteps a lit pixel, beside the sun's own ray march (to 110 steps): not measured on
+  a phone. No new texture, no extra pass. Page code: no re-bake.
+- Seen in a local game at noon, switched off and on in the same frame (`report-58`: under the redwoods, where the
+  canopy's own shade hides most of it - it will read plainer on open ground, which was not photographed).
+- test/cloudshadow.test.js (the presets by day only, the shader's rule from the source, the land's share, the
+  switch); the lighting tests and test/perf.test.js pass.
+- **The cats, 15:48** (the owner: the black cat no nose, the grey a black one, "off center from the front view"): the
+  black cat's nose is left off (`noNose`), the tabby's is black. Seen from the front a cat's eyes stand an even gap
+  apart, so no single pixel is the middle: the nose is drawn on both middle pixels (renderArt, a feature's `center`).
+  The collar is a voxel wider on cats so it shows on both middle pixels too. The low-carried tail's tip stays under
+  the head's top (from the front it stood up between the ears as a spike). Picture: `report-59`.
+- **The cats, 15:52** (the owner: "the grey cat a pink nose and the black cat an actual black nose"): the tabby's nose
+  is the cats' light pink again; the black cat's is `#0b0a0e`, a step under its coat's darkest tone (`noNose` stays
+  in the code, unused). On a black face it is two pixels a little darker than the fur round them - there, but faint
+  at the game's size. Picture: `report-60`.
+
+- **The cats, 16:00** (the owner: the grey cat's pink nose not "in the right place ... looks right on the white cat"):
+  every cat's nose is two rows under the eyes, but on the cats with a pale muzzle (tabby, ginger, calico) the muzzle's
+  top showed as a pale row between the eyes and the nose - a white nose with pink under it. A cat's muzzle above its
+  nose's top now takes the head's colour (`animalModel`, after the snout), so the nose stands alone as on the white
+  cat. Tried and not kept: a wider muzzle for pale pads either side of the nose (a four-pixel pale band, a wide
+  mouth). The black cat's nose stays as it is. Picture: `report-61`.
+- **The cats, 16:18** (the owner: "go back to having one pixel for the cat's nose"): the nose of 15:48 took both
+  middle pixels under the eyes; it is one again - the left of the two, never one further out, which is what had
+  read as off-centre. Picture: `report-62`.
+
+
+## 2026-11-25 · The desert, first pass: bloom a rare patch, dry mud flat, no reeds in a street - on branch `fable-art-1124`
+
+The plan's next biome (ART-PASS-PLAN part A). Counted from the built world first: the Red Rock Desert and its towns
+are 3,065,627 tiles (dirt 1.89 M, sand sheets 0.77 M, rock 170,049, of it 168,934 relief cliff), relief to 90 m, 130
+tables, 2,380 cliff faces, 22,713 props (2,198 mesquite, 1,009 palo verde, 250 joshua trees, 3,035 cacti of nine
+kinds, 1,138 boulders, 487 outcrops), 29 places (the oasis, Mirage Lake, the mission, 5 tinajas, 2 seeps, 6 stock
+tanks, the trail). Twelve places baked and lit (`tools/nature/darkscan.mjs`) beside NR1-B, NS1-C, SC3-F: none dark
+(0.8-8.7% under 50). What was wrong, by class, and what is fixed here (all baked art: with the re-bake):
+
+- **Flower beds everywhere.** The bake's rule made 22.8% of the desert a bloom patch with a plant on 30% of its
+  tiles, four in five of them a flower bed: 39% of the desert's small plants (68 of 176 per 1,000 tiles). The concepts
+  show scrub with a rare yellow bush. Now `DESERT_BLOOM { zone: 0.84, share: 0.2 }` (`statics.js desertCover`): a
+  patch is about 7% of the desert, brittlebush first, the many-coloured bed the rarest - beds 4.4% of the plants.
+- **Reeds in Dusty Hollow's street** and on the jeep tracks' gravel: gravel took desert scrub only in district 50;
+  now in the desert's towns too (`dry`).
+- **A desert river's green strip grew lupines, foxgloves and berry shrubs** (the bank's tiles are the water's
+  district, 13): beside the desert it grows rushes, tall grass, reeds, dry grass (`NAT_SP.desertBank`). The strip
+  stays green - "lush even in dry country" is the banks' rule.
+- **A seep's ring was the marsh's dark mud with blue puddles** (a stain round the pool): the desert's cracked mud, as
+  `world3-tinajas.js` always said.
+- **Cracked earth read as cobblestones** (domed plates, heavy shade - on the tables' tops it looked paved): flat
+  plates with thin cracks (`ground.js earthCracked`), as NS1-C's playa.
+
+`test/desertflora.test.js` (new: the bloom's share by counting over the desert's box, the gravel and bank rules, the
+seep's ring). The bake's code is 1,098.1 of 1,100 KB after this (the cats' work took 1.2 KB of it: `animals.js` is
+in the bake's closure) - the next addition of any size needs the owner's word on the budget.
+Not done, listed in `docs/tasks/ART-CHECK-LIST.md`: the tables' cliff faces (a look for him to pick), the mission
+(small), the playa, the tin shack, a seep's square pool. Logged for part B: a concrete door path across Dusty
+Hollow's street; the desert highway's saw-toothed edge.
+
+## 2026-11-25 · The desert's found places; the bake's code budget 1,100 -> 1,150 KB - on branch `fable-art-1124`
+
+- **Found places in the Red Rock Desert** (the plan's step (d): small places of the biome's kit, spread by rule;
+  NS1-C, NR1-B). `shared/world3-wayside.js` knew the woods and the valley; district 50 is a third set on the desert's
+  bare dirt (not the sand sheets), level, off the tables' rock, 6 to 56 tiles off a road or trail: **28 places, 7
+  each** - a cracked playa with a dead snag and tumbleweed (the pan painted by the ground bake from `m.tinajas`,
+  the list a seep's ring is in: no new bake code), a stand of 3-4 hoodoos, saguaros round a rock pile, joshua trees
+  among boulders. 62 found places in the world now (34). A world change: with the batch.
+  `test/world3wayside.test.js` (its pieces by kind; the same ground, distance and nothing-in-front rules).
+- **The bake's code budget raised to 1,150 KB** (`tools/perf.mjs`; the owner, 16:51). Why: 1,098.1 of 1,100 after
+  the desert's first pass, with the desert's tin shack and rusted pickup (new art), cliff look B if he picks it, and
+  the coast and jungle still to draw. What it costs: a browser fetches the bake's code once per build, in a worker,
+  after the first screen - 50 KB more is under 5% of it. The bake's time (`bakeX`) and a kept chunk's weight are
+  budgets of their own and are untouched.
+- **A hoodoo drawn as one** (17:20; NR1-B, NS1-C): the five by the arch and the found places' stands were tall thin
+  `outcrop`s - dark spires. `props-desert.js hoodoo(h, seed)`: a voxel column of banded sandstone (four tones in
+  bands 5-11 px thick, each a little off the last), waisted to a neck under a flat slab cap of red rock, a skirt of
+  fallen rock at its foot; 60 to 100 px, four seeds. Prop `hoodoo` (statics.js), placed by `world3-desert.js` (5)
+  and `world3-wayside.js` (7 stands of 3-4). `test/desertflora.test.js`: the cap overhangs the neck, it flares at
+  the foot, it is banded, each height and seed its own picture. (First drawn at a voxel an art pixel: a voxel is a
+  world pixel, so it stood half size in the baked world - seen there, not on the sprite sheet; drawn at twice the
+  voxels.)
+- **The desert's arch is sandstone** (17:30; seen while looking at the hoodoos): the natural arch by the lookout is
+  the `seaarch` prop - dark layered rock, a wet foot, barnacles, turf and thrift on top - standing in the red
+  desert. The bake picks by where an arch stands (`statics.js`, as it does a boulder's stone): in the desert
+  `seaArch(..., dry)` - red sandstone, bare. One arch in the desert today; the sea's unchanged
+  (`test/desertflora.test.js`).
+- **The tables' cliff faces stay as built** (the owner, 17:18: A). Nothing to change; B's trial code was never in.
+  The bake's code after the hoodoo and the arch: 1,099.0 of 1,150 KB.
+- **The tin shack and the rusted pickup** (17:40-18:10; NS1-C's fourth panel): a fifth desert found place, 6 of
+  each kind now (30 in the desert, 64 in the world). `props-desert.js tinShack(seed)` - plank walls under a gable of
+  corrugated iron, rust in streaks down from the ridge and up from the eaves with bare tin between, a lean-to on
+  posts, a door, a window, a stove pipe - and `rustPickup(seed)` - an open bed, a cab with the dark where its glass
+  was, a hood falling to the grille, flat tyres; rust on iron uses the plain ramp (nature's ramp lifts it to the
+  desert's own orange, and the pickup vanished into the ground). Props `tinshack`, `rustpickup` (statics.js; the
+  pickup at any of 16 headings). `world3-wayside.js` 'tinshack': the shack (its walls 15 solid circles), the pickup
+  at an angle before it (3), two drums, tyres, a dead snag. First baked at a cottage's footprint it read as a hut
+  beside the desert's plants; drawn a third bigger. Tests: `test/world3wayside.test.js` (its pieces, both solid,
+  the pickup clear of the shack), `test/desertflora.test.js` (tin and rust both show on the roof; the pickup rust
+  all over and darker than the ground).
+- **Not done in the desert, and why:** the mission ruin's size (its model is 236 x 196 x 132 voxels and shared with
+  today's world: twice the size is 49 M voxels in one sprite - a step of its own, with a look at the bake's time);
+  a seep's square-cornered pool (every small pond's shore: the water's-edges step of the plan).
+
+## 2026-11-25 · The coast, first pass: a tideline, basalt tide-pool shelves; hoodoos as natural rock - on branch `fable-art-1124`
+
+**The hoodoos again** (the owner, 18:14, on a screenshot of a stand: "very unnatural ... vary the sizes ... not all so
+uniform and perfectly flat and round"). The first ones were a column turned on a lathe under a disc, four tones in
+even bands, four seeds, all near one size. `props-desert.js hoodoo(h, seed)` now builds each of beds of rock stacked
+one on another - each bed its own lumpy outline (three waves round its edge), thickness (3.5 to 12.5 px), tone and a
+little off the last -, the whole leaning up to 6 px, thick or thin (girth 0.72 to 1.34), and topped one of four ways:
+a tilted slab, a boulder left balanced, a stepped pair of slabs, or nothing (a spire). Twelve seeds, heights 30 to
+120 px in steps of 6. A found stand is 3 to 5 of them - one tall (84-114), the rest 36 to 78 - standing irregularly,
+no two the same picture (`world3-wayside.js`). `test/desertflora.test.js`: every height and seed its own picture,
+some capped and some spires, most lopsided, thick and thin, some leaning. DECISIONS has the rule for every rock
+formation drawn by code.
+
+**The coast and jungle, counted first** (one world build): sand by district - Sandpiper Coast 100,876 tiles, Egret
+Coast 62,725, Northshore Beaches 50,321, Willow Valley 36,014, Highland Woods 27,918, Gull Harbor 26,895, Coral Cay
+12,817; jungle floor 18,484 tiles on Coral Cay (22,853 with its coves); tide-pool shelf 1,932 tiles on Coral Cay,
+405 Granite Peaks, 233 Highland Woods, 222 the desert's coast; 17 sea stacks, 408 column stacks, 363 mangroves, 54
+hammocks, 48 pieces of driftwood, 22 coast falls; places: Coral Cay Falls, Macaw Cove, Mangrove Inlet, North Cape's
+and Redwood Cove's tide pools, the sea cave, Egret Marsh's boardwalk, Wreck and Bonfire beaches. Twelve places baked
+and lit beside NS1-F, NS1-G, NR1-C: Coral Cay's falls, Macaw Cove, Mangrove Inlet, the marsh and Wreck Beach stand
+up well. What was wrong, by class, and what is fixed here (baked art: with the re-bake):
+
+- **A wild beach was bare sand to the water.** The tideline (`groundbake.js WRACK`, `wrackW`): on sand within reach
+  of the sea, a band 9 px wide wandering between 24 and 44 px up from the water - above the swash - where the decals
+  pass lays heaps of kelp (`ground.js` cover `wrack`, new), a strand of seaweed, a shell in ten.
+- **"Shells too thick"** (the owner, 11-23): a beach's shells 0.02 -> 0.007 a cell, pebbles 0.03 -> 0.02.
+- **A tide-pool shelf was the rocky shore's pale rounded cobbles** with the pools as pale blobs on it: its own
+  ground `BASALT` (`ground.js basaltShelf`: flat blocks of dark basalt, wet joints, rockweed in patches, a
+  barnacle), starfish and weed on it; the pools now read as water in dark rock (NR1-C, NS1-F). The material is added
+  last so the others keep their numbers.
+- **Reeds on the sea's shingle** (the pebble beach by the sea cave): no shore plants on a gravel bar within four
+  tiles of the sea.
+
+`test/coastart.test.js` (new). Seen and not yet fixed (ART-CHECK-LIST): the sea cave's rock is a round drum of
+stepped rings; three sea stacks stand in a line off Redwood Cove and all stacks are thin; North Cape's bluffs are
+square grass-topped blocks; no cypress knees in the marsh; no rock fishing spot's gear. Logged for part B: hammocks
+standing free on a lawn.
+- **Sea stacks** (19:00; his notes of 11-23 "the sea stacks in a line" and 11-25 18:14 on rock drawn by code).
+  Counted: 17; the four off Redwood Cove stood on one column of tiles (x 491.5) and the Egret coast's three coves
+  each had the same three at the same offsets (two of those triples 1.4 tiles off a line). `world3-coast.js
+  stacksApart3` (`STACKS3`): after the coasts are built every stack is re-sited within 5 tiles of where it stood -
+  (to 11, only when two neighbours on one line leave it nowhere nearer: the cove's fourth went 8 tiles) -
+  open sea 2 tiles round it, 7 tiles from any other, never the third of a line (`inLine3`: three within 30 tiles
+  lying within 2.5 tiles of one line) - and takes its own radius (0.75-1.35 of what it had), height (0.6-1.15) and one
+  of twelve shapes; a gull standing on one moves with it. The rock itself (`terrain.js seaStack`): it was one thin
+  pillar stepped in four even rings; now by its seed a tower with a shoulder, a broad block with a horn, or twin
+  stacks on one foot, basalt broken into columns at the top, 4 to 7 rocks thrown down round its foot; kelp and turf
+  on it cut to a third (with more faces to hang on, the rock went under them).
+- **The sea cave's rock** (the Redwood Caverns' sea mouth; the plan's "sea cave placeholder"): one mass stepped in
+  even rings - a drum. A `cliff` prop with `rough` (world3-caves.js; statics.js recipe `rg`) is drawn as a headland:
+  a low apron on the same outline (so what is solid is as before), a tall crag at the middle of its front where the
+  way in is, five lesser crags of their own heights either side, boulders on the apron. The ground under a rock
+  of dark stone is dark basalt (`groundbake.js darkRock`): with the apron low, the crags' pale granite slabs showed
+  round the rock's back as a collar.
+- Tests: `test/world3wayside.test.js` (the stacks: in the sea, solid, apart, no three in a line, no two one size and
+  shape, a gull's stack under it), `test/coastart.test.js` (`inLine3` on the two layouts found; twelve seeds twelve
+  rocks, broad and narrow; the cave's skyline against the drum's, its tallest crag at the front's middle).
+- Not done on the coast: North Cape's bluffs (`world3-west.js`: a west-facing shore dressed with south-facing wall
+  pieces every six rows - a column of square blocks; it wants the bluff drawn another way, a step of its own);
+  cypress knees; the fishing rocks' gear.
+- **The west coast's bluffs** (19:50; counted: 27 `cliffwall` pieces in the world - 10 at the Redwood River's falls
+  and 2 on the relief, which face south as a wall should and stay; 9 at North Cape and 6 at the Egret coves' horns).
+  North Cape's shore runs north to south, and its rock band was dressed with south-facing wall pieces six tiles
+  long, one every six rows: a column of square turf-topped blocks. `world3-west.js`: a scarp along the band itself
+  - a basalt boulder or an outcrop every other row, each its own size, a little off the line (25 pieces; the
+  stairs' gap as before). The coves' horns - one straight twelve-tile wall piece each - are `cliff` props drawn
+  rough (the sea cave's recipe), solid where they stand (`cliffshape.js cliffSolid`).
+- **Knees in the marsh** (N7, NK1-D; the plan's "cypress knees in the marsh"): the knees were drawn on 11-21
+  (`flora.js cypressKnees`) and never planted. `world3-coast.js marshKnees3`: along the marsh's own water's edge
+  (inside its landmark's box, a land tile beside water with nothing on it) a huddle on one tile in eight - a plant,
+  species `knees` (statics.js). **A wrong first rule, caught in the baked picture:** knees round every `cypress`
+  within two tiles of water - but the world's `cypress` is the Italian cypress of gardens, and 166 of them stand by
+  swimming pools; the rule and a voxel model made for it are gone.
+- **The fishing rocks' gear** was there already (rods and a cooler at both points: world3-coast.js) - off the list.
+- Tests: `test/world3wayside.test.js` (knees by water and by their cypress; no wall piece left on the west coast;
+  seven rough headlands; the cape's scarp of mixed pieces), `test/coastart.test.js` (the knees' art).
+
+## 2026-11-25 · A fall lands in water (the water's edges, begun) - on branch `fable-art-1124`
+
+- **Counted** over the world's 49 falls (a scan south from each one's foot): 20 stood 8 px or more from water. Of
+  those, the ledge falls' 8-40 px is their own rock lip; Granite Hot Springs' three cascades fall onto its flagged
+  paths; one small fall by a footbridge has its creek beside it, not below. The class that reads wrong - open grass
+  or sand between the foot and the water it falls toward: Fern Gorge 52 px (the strip of dry bank seen on 11-24; its
+  salmon could only leap and fall back), Macaw Falls 28, the Redwood River's two end falls 32, a ledge fall at
+  Macaw Cove 128 px of beach from the sea. (A sixth, the water park's little fall on its pool's palm island, is a
+  built basin's: the first run cut a murky channel through the island - seen in the render - so a swimming pool's
+  water is left out of the rule.)
+- **`world3-falls.js fallsFeet3`** (`FEET3`; the falls chain, part 2): for every fall prop, past up to two tiles of
+  its own rock, grass or sand and then water within six tiles becomes that water - as wide as the fall, one tile wide
+  where it is more than two tiles (a rill across the beach), three tiles at least under a fall a tile wide (one
+  tile of water is drawn as mostly bank: the gorge's first render still showed shingle under the foam) - taking the
+  pool's own kind (lake, river or sea) and its pond's box; what grew there goes. Dirt, roads, decks and rock are
+  never flooded. Result: 34 fall props looked at, 5 short, 14 tiles to water.
+- `test/world3wayside.test.js`: no fall with dry grass or sand before its water; the gorge's fall has water within
+  three tiles of its lip.
+- **Not done, and why - Coral Cay's pool and stream above the falls** (the plan's jungle item): above the falls
+  stands the island's spine, rock masses 50 to 214 px tall drawn up the screen; water laid on the ground between
+  them is hidden behind the rock south of it, and the game has no water surface at height. The concept (NS1-G's
+  first panel) shows the fall coming over the rock with jungle above and no stream either. It wants a piece of its
+  own - a pool drawn into a rock's top - if he wants it; logged in ART-CHECK-LIST.
+
+## 2026-11-25 · Wild rock under the rock rule; a desert pool's rim; riffles broken - on branch `fable-art-1124`
+The plan's A3 ("rocks ... brought under the variety test") and the rest of the water's edges. The owner's rock rule
+(DECISIONS 11-25 18:14) set against every rock drawn by code.
+- **Counted:** the world holds 6,322 boulders (56 sizes) and 1,482 outcrops (241 sizes; 743 granite, 488 sandstone,
+  202 lava, 49 basalt). A boulder was one dome with a smaller one always at its right shoulder, four pictures a size;
+  an outcrop one blob stepped in three rings each inside the last - a tiered cake, and a sandstone boulder over 28 px
+  the same cake; every ledge of every outcrop wore the same green turf, red rock too.
+- **`terrain.js boulder`** (`BOULDER.kinds` 5): by its seed a lone lump, a lump with a shoulder on either side, a
+  long low slab, a split pair, a tall tooth with a low one against it - each lump's size from the seed.
+- **`terrain.js outcrop`** (`OUTCROP` kinds 5, tall 2): a low apron on the old outline (what the map holds solid is
+  still under rock) with masses set off its middle - a head with a shoulder, a ridge with a notch, two heads and a
+  saddle, a fin with fallen blocks, a table with one corner up - and loose rocks at its foot; a mass has one step
+  or two, and stands no taller than twice its width (the first sheet had chimneys). A recipe's own steps (the
+  jungle's black rock) keep the one mass.
+- `statics.js`: `ROCK_SEEDS` 4 -> 8 pictures a size; the desert's stone (`DRY_ROCK`) wears thin dry tufts and no
+  moss, the rest thinner turf (0.06 -> 0.035).
+- **A desert pool's rim** (`groundbake.js tinaTrim`, `TINA_RIM`): a seep two tiles across was a square with eased
+  corners; water past the pool's lobed rim is drawn as its ring's ground (cracked mud, slickrock). Seven pools.
+- **Riffles** (`water.js RAPID_BREAK` 0.38): at the art pixel a riffle's churn was flat white blobs ten pixels
+  across; 38% of a churn's pixels, in short dashes, now show the water paled with air.
+- `test/rockart.test.js` (new: every seed its own rock, squat and upright, lopsided, tops left and right; outcrops'
+  high points off the middle; no three-ring cake; dry stone without green; the riffles' break),
+  `test/desertwaters.test.js` (the rim: corners trimmed, lobed, a playa untouched).
+Looked at: sheets of 16 boulders and 8 outcrops a stone before and after; a seep, a tinaja, two riffles and three
+rock fields in a baked render. Bake code 1,106 KB of 1,150. Baked: with the re-bake. Not seen in a running game.
+
+## 2026-11-25 · The woods' deadfall; the redwoods' hollow trunks and root caves - on branch `fable-art-1124`
+The plan's A3 ("the wild logs: 13 in the whole world") and the redwoods' two missing set pieces (NS1-A).
+- **Counted:** 110 fallen logs in the world, 97 of them a made place's seats; Highland Woods' 33,000 pines, firs,
+  cedars and oaks and Granite Peaks' 3,400 mountain trees over a floor with no fallen wood. A hundred tiles of
+  woods hold 5 to 20 trees.
+- **`shared/world3-deadfall.js deadfall3`** (new; `DEADFALL`): about one log to forty trees by cells of ten tiles,
+  on open grass with a tree close by, off every path, road and water, no two within nine tiles - and none where a
+  tree to its south would be drawn over it (the first run laid 253 and a render showed none: they lay under the
+  firs' boughs). 215 laid (206 in Highland Woods, 9 in Granite Peaks), mossy, 120 to 220 px long, thicker than a
+  camp's seat (`statics.js` `p.wild`), solid. The ground bake already grows ferns, toadstools and the licorice fern
+  along a log: `test/undergrowth.test.js` now runs its log rule for the first time (150 looked at, 143 with
+  undergrowth along them).
+- **Hollow trunks** (`world3-redwoods.js hollowGiants3`, `HOLLOW`; `statics.js` species `giantLF`, `giantF` and
+  their high-crowned twins): `redwoods.js` had drawn a fire scar since the first giants and no tree carried it. One
+  big giant in 25 where its foot shows (nothing standing within 150 px south of it), no two within 14 tiles: 241 of
+  6,964. The scar redrawn - it read as a flat grey tent: a ragged lip, a rim of charred wood, near black inside, no
+  root across its mouth.
+- **Root caves** (`redwoods.js rootCave`, `ROOTCAVE`; prop `rootcave`; `world3-redwoods.js rootCaves3`): the
+  torn-up root mass of a fallen giant grown over - a lopsided mound of packed earth, seven to ten thick roots
+  bending out from round a dark way in, a few broken ends standing over it, moss and sprays on its shoulders. Six
+  shapes. 28 in the groves (one cell of 36 tiles in twelve at most), on open grass among at least four redwoods, no trunk in
+  front of the way in, a fern at each shoulder; solid. The first version was a striped fan (a disc); the second a
+  porcupine of straight spikes.
+- `test/world3wayside.test.js` (deadfall: off paths, a tree by it, in sight, apart; hollows: a big giant, nothing
+  in front, apart; root caves: open grass, among redwoods, in sight, several shapes), `test/rockart.test.js` (the
+  root cave's dark way in and lopsided mound; the hollow's dark at the foot of the same tree).
+**Not built, and why - the mission ruin made bigger:** its voxel model is 236 x 196 x 132; a voxel model's normals
+take 17 bytes a voxel while its chunk bakes - 104 MB today, the largest in the game. At 1.6 times the size (a church
+beside the tin shack) that is 425 MB in a page that bakes for itself. It wants either the model split in two (the
+front and gable; the walls and cloister - about 180 MB) or the voxel kit keeping normals for surface voxels only.
+Logged in the check list as his call.
+Looked at: sheets of the hollows and six root caves; two root caves, two hollow giants and two logs in a baked
+render. Baked: with the re-bake. Not seen in a running game.
+
+## 2026-11-25 · The cinema rebuilt: a compact inside at the door, four screens - on branch `fable-art-1124`
+Part B's first place (the owner, 11-24: "before the beta"; the pick agreed in the art pass plan, from IN14).
+- **What was there** (counted, World v3): The Grand Theater on Fountain Square is 40 x 59 tiles; its whole inside
+  was floor - two screens five tiles deep across the back and fifty rows of red carpet between them and the door
+  (2,166 tiles; picture `report-78`, left).
+- **`shared/cinema.js`**: `cinemaBox` - the inside is the whole of a small building (the first city's, unchanged:
+  two screens) and in a big one a box at the door, 23 tiles wide about the door and 19 deep. `cinemaLayout` takes
+  `tiers`: with the room, four screens - two a side of the hall, the far pair behind the near pair, a wall between
+  with the hall through it; each screen's door at its own walkway row. Rooms 0 and 1 stay the far pair. `filmFor`:
+  four screens start on four films (the first two as before). `CINE.LOBBY_T` 7 rows of lobby. 379 tiles of floor (it was 2,166);
+  228 seats. The rest of the building stays shut.
+- **`statics.js`**: each screen's own wall on the hall's side; the wall between the pairs; posters on the counter's
+  side of the poster wall too; the lobby's things from IN14 where it has three rows past the counter - brass posts
+  with velvet ropes before the counter, two benches across from it, a plant either side of the hall's mouth
+  (drawn only); what is cut open beside the box drawn as the dark of shut rooms, not a grey floor.
+- **A sign names what is behind it** (`theatreBlade`): every `theatre` building wore a CINEMA blade and one has
+  screens (11 theatre buildings in World v3). CINEMA over the cinema only; a cabaret says CABARET, a playhouse SHOWS, a club's building LIVE (11-26: the
+  placement lint's `bladeBiz` row caught the first version's LIVE on six playhouses; its theatre words no longer
+  allow CINEMA).
+- The server (`server/systems/cinema.js`) and the page's film (`client/cinema.js`) already went by the rooms'
+  list: no change.
+- `test/cinema.test.js`: a 40 x 59 building, door south and north - four screens, the box's size, at the door,
+  every seat walked to from the door, a wall behind every screen, the hall through the wall between; four films;
+  a small building keeps its whole inside and two screens; the blade's words.
+**Left:** The Palace as a second cinema from the same layout (the plan's ripple) - the server holds one cinema
+(`m.cinema`); it wants a list. The Grand Theater's outside: a 40 x 59-tile box with a gravel roof the size of a
+field - a district matter (Fountain Square), with part B's "no huge plain buildings".
+Looked at: the cut-away before and after from the page's own chunk bake (`tools/area-shot.mjs --cut`). Not seen in
+a running game; no film watched on the new screens.
+
+## 2026-11-25 · Painted lips hold their place over a walk (the faces' look) - on branch `fable-art-1124`
+Part C1, a look only (the owner, 11-25 12:45: "be careful not to try to over fix"; his note of 11-23: painted lips
+"in the run cycle ... jump about the face").
+- **Measured** (a probe in `people.js face()`, `info.face`: where the eyes and the mouth were stamped): on a figure
+  with lipstick facing the camera, over one walk the mouth sat a pixel left or right of the eyes' middle and two or
+  three rows under them from frame to frame - the eyes and the mouth were each rounded to the pixel grid on their own.
+- **Fixed, that fault only:** with both eyes showing the mouth goes by the eyes - under their middle (of two middle
+  columns the left), the rows between rounded once from the head's own measure. In profile (one eye) as it was.
+- **Isolated** (his rule of 11-20 16:51): the twelve starting looks, eight directions, idle and the four walks -
+  2,688 frames against the commit before: 55 changed, all the one figure's with painted lips, about 3 px each; the
+  eleven without make-up not a pixel. `test/facehold.test.js` (new).
+- **Found, not touched - for his eye:** the two eyes are each rounded on their own too, so facing the camera they
+  stand three columns apart in some frames of a walk and four in others. Tying one eye to the other would change
+  every figure in the game: shown to him first (`report-79` shows the heads at 10x).
+`people.js` is in the art hash (the bake draws people too - checked by stamping: the hash moved), so this goes
+with the re-bake. The people's tests pass (74). Not seen in a running game.
+
+## 2026-11-26 · Clothing pictures on the Inventory's tiles (part C3) - on branch `fable-art-1124`
+The art pass plan's C3 (concept UIC-19: a tile shows the piece itself). Counted: 390 pieces in 11 slots, 40 colours;
+every tile showed one line glyph for its slot with a colour dot.
+- **`client/piecepic.js`** (new; `piecePixels`): no drawn set. The game's own people art draws a bare figure and the
+  same figure wearing the piece, from the front; what the piece put on the figure - a pixel that differs, in a
+  colour the bare figure has nowhere - is its picture. In the colours it is worn in. Two bare figures (a light skin
+  in dark underwear, a dark skin in light; the second drawn only when the first shows little) so a cream top or a
+  brown boot is not lost on a skin of its own tone. **334 of 390 pieces have a picture**: every top (but the bare
+  chest), jacket, bottoms, set, hat, pair of glasses, mask, underwear and socks; a bag worn on the back is drawn
+  from behind (17 of 32 bags and hand things); of the jewellery 7 of 45 - a thin chain, ear studs, a watch, a pair
+  of bangles are a few pixels at the game's size and keep their slot's glyph (a picture needs 16 pixels there).
+- **`client/bag.js`**: a tile is the picture at a whole number of the game's pixels (two to one on the figure's
+  slots, inside its box in the grid), a hard one-pixel cream rim round it (black jeans on the navy tile were not to
+  be seen - looked at in the page), drawn one at a time in the page's idle time; the glyph with its dot until then
+  and where there is no picture. `people.js polishOn`: the bare figures are kept by it.
+- `tools/piecesheet.mjs` + `piecesheet.py`: the sheet of every piece, from the same maker (`RES=3` draws from the
+  close-up figure, for a big tile some day).
+- `test/piecepic.test.js` (new): a tee, jeans, shoes, a hat as pictures that fit a tile; red is red; nothing for a
+  bare chest; nine pieces in ten have one; the tile's rules. The page's budgets hold (`test/perf.test.js`).
+Looked at in the real page (`tools/uishots.py`, the Inventory at desk, phone landscape and portrait, before and
+after: the audit's counts are the same - no new overlap or small target). `uishots.py` takes `UISHOT_WAIT`.
+**Not known:** how long a picture takes on a real phone. In the test browser (no graphics card, the suite running
+beside it) they came in one after another over several seconds. The shops' rows already show each piece on your own figure (`creator.js th`):
+nothing to add there. `people.js` is in the art hash: with the re-bake.
+
+## 2026-11-26 · The UI style pass: the pick sheet (part C2) - on branch `fable-art-1124`
+The owner, 11-24: "Some UI still looks overly polished and not that 16-bit SNES style we want (like frames and some
+text and some icons)". The plan: one sheet for his pick before any screen is changed (DECISIONS 11-06 kept the clean
+line icons). Nothing in the game's CSS is changed by this.
+- **Counted** (`client/style.css`): 192 rounded corners through four radius variables (4 px, 10 px, a pill, 28 px),
+  153 shadows, 36 gradients; the type is CLA Pixel on every screen shot (the audit's fonts).
+- **Three looks of the same screens** (the Inventory, Settings, Pause; `tools/uishots.py` now runs a script in the
+  page before each shot - `UISHOT_JS` - so a look is tried without touching the game's CSS): **A** today; **B** hard
+  pixel frames (`tools/uistyle/hard.js`: square frames with a one-step notch out of each corner, a heavier gold
+  rim on the window, flat fills for gradients, a hard black drop for the soft shadows; round buttons and toggles
+  stay round as in UIK-00) with the line icons kept; **C** the same with pixel icons (`pixel.js`: every line glyph
+  redrawn on a grid of two screen pixels to one, one pixel to a line - a preview made from the line icons
+  themselves; the real set would be drawn by hand on that grid).
+- Pictures: `report-82-ui-pick-inventory`, `report-83-ui-pick-settings`, `report-84-ui-pick-close` (2x).
+After his pick: the look goes into `style.css` by its variables, every screen shot at four sizes, and a lint so a
+soft frame or an off-face font cannot come back.
+
+## 2026-11-26 · A soft lip colour: the pick sheet - on branch `fable-art-1124`
+The owner, 11-25 01:34: painted lips work as they are; "add a very soft lip colour" - a default or a choice, his pick
+from a sheet. `tools/lipsheet.mjs` + `lipsheet.py` draw the twelve starting looks' heads at 8x, facing the camera and
+turned a little, four ways: A none (today: the small faces have no mouth, DECISIONS 11-19), B faint and one pixel,
+C faint and two pixels, D soft and two pixels - the lip's colour taken 62% (B, C) or 40% (D) of the way to the skin's
+lit tone; a man's from the skin's own shadow. Painted lips are untouched in all four. The variants live in the tool:
+nothing in the game is changed. Picture: `report-85-soft-lips-pick`. After his pick it is one number in
+`peoplepolish.js` (and, if a choice, a row in the look screen); the mouth in emotes and the idle comes after it.
+
+## 2026-11-26 · The hollow's dark lifted to the plants' floor (found by the suite) - on branch `fable-art-1124`
+The whole suite, run on the night's commit, failed `test/leaflight.test.js`: "giantLF 0: a pixel painted at 13". The
+hollow giants' inside was painted [16, 12, 14] - against the owner's rule of 11-25 that no plant is painted near
+black. The hollow is now the darkest brown the floor allows ([72, 47, 41], luminance 54), its charred rim a step
+lighter; in `report-77` it is still black. A root cave's way in is a hole in the ground, not a plant's wood: a
+cave's dark (`CAVE_DARK`), as the rock caves have. The near-black count at noon takes a hollow giant with its own
+kind, held to five points over it (`leaflight.test.js`); `rockart.test.js` counts the hollow by its own colour.
+
+## 2026-11-26 · A flat over a shop has its own door (part B, the lint's `lobbyDoor`) - on branch `fable-art-1124`
+The lint held `lobbyDoor` at 161: "Midtown Apt #32's lobby door at THE TRESTLE TAP". The hand plans say "a flat
+over the shop, its own door at the other end of the front" (`world3-hand.js`), and only the home's spot was made -
+it stood on the shop's window, under the shop's sign, with no door drawn. The old row took only a front with a sign
+and no place it counted; by the rule itself there were **391** such fronts in World v3 (80 each in Midtown and the
+Arts District, 69 on the Neon Strip, 44 in Northgate, 36 in Old Town ...).
+- **The build** (`shared/world3-flatdoors.js` `flatDoors3`, in the done hook after the signs are named): each such
+  front gets `art.shop.flat` - a door 18 px wide, 7 px in from one end of the front - at the end nearest the spot
+  the plan gave when the shop's own doorway (a walk-in's, where the interiors cut it) and an ATM in the wall leave
+  it a pier and 4 px of window; else the other end (38 moved); else none (0). The home's spot and its record move to
+  the door. A lobby front with no business behind it, or one the homes are named for (Coral Court), is the flats' own
+  way in (9). Result: 382 doors, 9 lobbies, 0 without.
+- **The art** (`buildings.js` `storefront`, `flatPier`, `flatDoor`): from the door's pier to that end of the front
+  the building's own wall shows - no shop glass, people, riser, grille or awning - with a painted hinged door in it,
+  a stone lintel and step and a small lamp. The bake (`statics.js`) places it along the section, keeps the window's
+  OPEN sign off it, brings the door with the live ones (it opens as a walk-up's does; another paint than the
+  shop's), and keeps the shop's board over the shop where its words read the same on the shorter board
+  (`shopSignFits`: the same face, lines and picture - else the board stays the front's width).
+- **The lint** (`tools/audit/worldrows.mjs`) now uses the build's rule: a home at a shop front with no door of its
+  own, or with its spot beside a business's (the 24-7 Market's "Into Southside Apt #3173's lobby", 11-17). Held at
+  **0** (`tools/placementlint.mjs`; was 161).
+- `test/flatdoors.test.js` (the rule on one-building maps; the art: no glass in the pier, a door with its knob, the
+  shop's window unchanged; World v3: every front's door at an end, clear of the doorway and the ATMs, each home at
+  it, the lint's row empty; the bake brings the door, hinged, apart from the shop's). Also run on the change:
+  placementlint 43/43 (doorBlocked still 13, signCovered 157), doors, signs, signfix, shopmarks, doorsbake 15/15,
+  perf 6/6, walkinfront 2/2, world3doors and plainblocks 18/18, world3server and doorways 24/24.
+- A world change and a bake change: they ride with the branch's one rebuild and re-bake. Not seen in a running game.
+
+## 2026-11-26 · A front's words kept clear (part B, the lint's `signCovered` 157 -> 68) - on branch `fable-art-1124`
+What covered what, counted from the lint's rows (157): a **hotel's own entrance canopy over its name** 50 (the bake
+stood the filling stations' white forecourt slab before every hotel, motel office and airport concourse), a topiary
+**cone** by a door 20, a sign **already moved** onto a false front or a porch and still painted behind it 10, the
+rest street furniture, trees and runs of lights.
+- **A hotel's entrance canopy** (`props-rural.js` `entryCanopy`, `statics.js` `addLots`, `HOTEL_CANOPY`): cloth in
+  the front's awning colour (else one of five house colours), a little crowned, a scalloped valance with a pale trim,
+  two brass posts at the front, a lamp under it. It is as wide as the hotel's name needs (96 to 300 px, within the
+  front) and the name stands on its front edge - the rule the casinos' porte-cocheres already had (`coverSign`, from
+  `coverFronts`). I picked this over lowering the slab: a canopy under the board would be lower than the door.
+- **A moved sign is not painted on the wall behind** (`buildings.js`): it was hidden there, or showed twice.
+- **A cone by a shop's door** stands 18 px out where the front has a board (`CONE_AT_BOARD`; 11 as the other pots
+  elsewhere): its box is 64 px tall and reached 5 px into the words.
+- **The window's OPEN and the shop's board keep clear of what stands tall before the front** (`frontTall`: a phone
+  box, a lamp post, a power pole, a forecourt's pumps; `clearStretch`): the OPEN goes to the door's other side or is
+  left out; the board takes the widest clear stretch of the front where its words read the same on the shorter board
+  (`shopSignFits`) - the same rule that keeps it off a flat's door. This helped little for the boards (1 phone box of
+  8): most names do not fit a shorter board as they stand, and I did not let a name change its lines or lose its
+  picture to dodge a pole.
+- **Left, 68** (`tools/placementlint.mjs`, held there): trees and palms 23, a run of lights across a board 9, phone
+  boxes 7, the el's piers 7, forecourt canopies and porches over an OPEN 9, lamps and poles 9, a place's badge over
+  an OPEN 3, a hospital's canopy 1. The trees are `sightlines3`'s leftovers (the world); the el's piers stand where
+  the el stands. The lint's rows now carry the covering item's key and the building.
+- `test/signclear.test.js` (a moved sign not painted; the canopy is cloth, not the pale slab - the old one is 84%
+  pale grey by the same count; the cone's tip under the board; `frontTall` and `clearStretch` on small maps). Run on
+  the change: placementlint 43/43, flatdoors 4/4, perf 6/6, signs, doors, signfix, shopmarks, foodrooms, smash 25/25,
+  binbags, townwork, world3clutter, world3desert, doorsbake 16/16, walkinfront 2/2.
+- A bake change: it rides with the branch's re-bake. Not seen in a running game. Pictures: `report-86`, `report-87`.
+
+## 2026-11-26 · A sign on a roof is seen whole or isn't there (N23) - on branch `fable-art-1124`
+The owner, 11-22: "These signs on the top of these buildings are cut off through the roof." The bake's rule is that the
+higher surface wins, so a billboard at the back of a roof whose foot is behind something taller showed as a strip of
+board standing out of it. Counted from the drawn pixels with a new lint row, `roofSignCut`: **28 of 664** roof signs
+(billboards 325, neon names 217, picture signs 122) - 18 billboards cut by their own roof (most on a roof that is
+pitched: the kit was laid for a flat deck; the rest behind a smokestack, a tank or another sign), 8 signs behind a
+taller building to the south, 2 neon names behind the big neon name on their own front.
+- **The build** (`statics.js` `clearRoofSigns`, in `addBuildings`, which now makes every building's spec and roof kit
+  before it puts any): a roof sign is taken off - a neon's glow with it - when its board's foot would be hidden by
+  its roof's pitch, its building's upper block, a taller piece of its own roof's kit in front, the big neon name on
+  its front, or another building in front. One line of arithmetic per volume (`hidesAt`: along a line of sight the
+  nearer surface is the higher one). It goes by each piece's box, so it is stricter than the drawing: 45 signs are
+  taken off (619 stand), and wherever it lets a sign stand none of the board is hidden.
+- **The lint** (`tools/placementlint.mjs` `roofSignRows`): each sign's board pixels against its own building's sprite
+  and every building item in front that rises over it. Held at **0**. `seen.roofSigns` is in the lint's own check.
+- I took signs off rather than move them: a billboard is one of several things a roof may carry, and moving one
+  means laying the roof out again round it.
+- `test/roofsigns.test.js` (the rule on small sets of buildings - a tank, a pitched roof, a taller neighbour south,
+  north and across a wide street, an upper block, a neon behind the front's name; in the drawn pixels: a smokestack
+  in front cuts the board, `roofSigns` says where each sign is drawn, and what the rule lets stand is whole).
+
+## 2026-11-26 · His words of 09:00: the canopies a mix, UI look C, lips A, the merge waits
+- **"It's okay some signs are on the canopies, don't want it to be all the canopies though."** A hotel with a name of
+  its own carries it on its canopy (16); an OFFICE, a plain HOTEL, an airport's DEPARTURES - ARRIVALS (35) keep the
+  board on the wall over a plain cloth canopy 38 px high, low enough to stand under the board (`ownNameless`,
+  `HOTEL_CANOPY.low`). `signCovered` stays 68. Picture: `report-88`.
+- **UI look C** (hard pixel frames, pixel icons): decided; to build into the game's CSS and icons, every screen, with
+  a lint. Not started.
+- **Lips: A stays** (no mouth); C if some figures get mouths later. Nothing changed.
+- **The merge and re-bake wait** for more of the city.
+- Run on both changes: placementlint 44/44 (`roofSignCut` 0, `signCovered` 68, `lobbyDoor` 0), roofsigns 3/3,
+  signclear, flatdoors, perf, signs, doors 29/29, walkinfront, doorsbake, cinema, alleyfade, seethrough 18/18.
+  Bake changes: with the branch's re-bake. Not seen in a running game.
+
+## 2026-11-26 · The UI's look C built into the game (part C2) - on branch `fable-art-1124`, page code
+The owner, 11-26 09:00, of A today / B hard frames / C hard frames and pixel icons: "I think C looks good for the UI."
+The preview (`tools/uistyle/hardpixel.js`) patched three screens from outside; this puts the look into the sheet and
+the icon set themselves, so every screen has it.
+- **Frames** (`client/style.css`): the tokens carry it - `--r1`, `--r2`, `--r4` are 0 (192 radius rules were already
+  on the tokens; a full round, `--r3`, stays for the round buttons, UIK-00 4D), `--shadow` and `--plate-sh` are hard
+  drops, `--panel-bg` a flat navy. A panel's corners are notched 4 px, a button's, a chip's and a cell's 2 px
+  (`--notch4`, `--notch2`). A notched box is cut to its shape, so what the kit drew round a box on hover or focus -
+  a ring, an outline - is drawn inside it (`--ring-in`, `--ring-in2`: the title's buttons, the looks screen's, a
+  drop target in the bag). The switch is square with a square knob. The phone full-screen on a phone has no notch.
+- **No blur, no soft fill**: 16 blurred shadows made hard (area names and warnings over the world take the ink halo
+  they already had; glows became rings), the bars a flat fill with a two-pixel lit edge, the looks screen's and the
+  Inventory's spotlights flat. Kept soft, each with its reason in the lint: scrims and vignettes over the world
+  (light, not a frame), the title's neon sign, the arrival board's LEDs, an arcade cabinet, a scroll edge's mask.
+- **Pixel icons** (`client/touchicons.js` `glyph`, `VP`; `client/bag.js`): all 160 line glyphs also as a 12 x 12
+  bitmap - two of the line set's units to a pixel, one pixel to a line - made from the paths by
+  `tools/uistyle/glyphgrid.py` (the browser's own path drawing read as coverage per cell, the half-pixel shift with
+  the fewest half-covered cells kept; `--write` puts them in the modules; a glyph redrawn by hand goes in its `OWN`).
+  One `<svg>` carries the line and the pixels; the sheet shows pixels in the menus and the line on the buttons over
+  the street (`#hud`, `#touch`, `#wheel`) - **the HUD's and the touch buttons' icons are unchanged**: he judged C
+  from the menus, and the line there was tuned over the street on 11-05. Menu icon sizes are multiples of 12 px.
+  No new file on the page's first load (86 of 86): the bitmaps sit in the two modules. Page code 541 -> 544 KB of 560.
+- **The lint** (`test/uitokens.test.js`, three new tests over every rule of the sheet and of the seven panels that
+  carry their own CSS): the radii; no blurred shadow, no gradient fill outside a list of allowances that must each
+  still match a rule; the notches and the inside rings; every glyph has a bitmap that is drawn, fills its box and
+  is no other glyph's; the menus' icon sizes. `tools/uishots.py` audits the same on the real page, per shot
+  (`style`: soft corners, blur, gradients, line icons left in a menu).
+- **Looked at** (the real page, headless): 13 screens at desktop, a phone upright and a phone sideways - 0 soft
+  corners, 0 blurred shadows, 0 line icons in a menu on every one; the press audit (too small, cut off, overlapping,
+  covered) is the same as before the change at all three sizes. Pictures: `report-89`, `report-90`, `report-91`.
+- **Not looked at** (the lint covers their rules; no picture taken): the title's buttons (no game server in the
+  title shot), shop menus, job cards, the arcade, the character creator past its first screen, the death map on a
+  phone sideways; a real phone. Some of the made icons are muddy at 12 px (the long guns, sparkles, dice): to redraw
+  by hand.
+- Run: uitokens 10/10, uikit 7/7, acticons 12/12 and the 30 other test files that touch the menus, icons or the
+  sheet - 216 of 217 (the miss, `music` "instruments: played out loud", passes alone and without the change). The
+  art hash does not move: no re-bake.
+
+## 2026-11-26 · Pixel icons on the buttons over the street; the icons' dots - on branch `fable-art-1124`, page code
+The owner, 11-26 11:00: "Buttons over street should get pixel icons yes" (and look C goes live with the art batch).
+- `style.css`: the rule that kept the line inside `#hud`, `#touch` and `#wheel` is gone - one icon set everywhere. The
+  aim stick's see-through knob draws a dark edge round the pixels (four hard drop-shadows), as the line had its halo
+  there. The weapon plate's glyph and the knob's are 24 px (they were 30 / 22 and 26: not whole pixels to a cell).
+- `tools/uistyle/glyphgrid.py`: the line set draws a dot as a stroke of no length with a round cap, which the grid
+  lost - the smile had no face, the message bubble no dots, the phone no button. A dot is now a pixel of its own in
+  its cell (12 glyphs changed).
+- `test/uitokens.test.js`: no rule shows the line of a glyph that has its pixels; the sizes over the street are
+  multiples of 12. Looked at: the HUD at desktop, phone upright and sideways - 0 line icons, the press audit as before.
+
+## 2026-11-26 · Picture signs hung over some shops (part B; the concept BF2) - on branch `fable-art-1124`
+The audit's largest open gap: BF2's row of shops each under a big picture - a book, a cup, a record, a barber's pole.
+Shown to the owner as one Midtown street three ways (`report-92`: A today's name board with a small trade mark, B a
+picture sign hung out over each shop, C the picture large in a crest over the board; B and C mock-ups over a render).
+His word, 11:02: "I think a combination of A and B is good, not every shop in the world needs the sign, but it looks
+good when some do."
+- **The pictures** (`client/art2/signfont.js` `PICS`, `PIC_PAL`, `PIC_OF`; made by `tools/signpics.py`): 21, each
+  14 x 14 at the art pixel on its own ground - book, cup, burger, the pawnbroker's three balls, record, washer,
+  barber's pole, bottle, cocktail glass, apple, plate and cutlery, dress, hammer, palette, flower, pretzel, green
+  cross, sight, shopping bag, fish, ring - for 23 trades.
+- **The sign** (`buildings.js` `picSign`): an iron bar off the wall, two hangers, a square board 18 art px a side with
+  a gold line inside its frame; lit a little after dark. Not drawn on a front whose name went up onto a canopy.
+- **Which fronts** (`statics.js` `PIC_SIGNS`): one in three of the fronts it suits - a trade with a picture, two
+  floors or more of wall to hang it on, 4 tiles wide or more, no blade sign and no big neon name already there - at
+  the end of the front away from the door, clear of a fire escape, 4 art px over the name board, under the wall's
+  top (chosen after the street caps the building's height: ten stood over the top before that). **234 of the 1,731
+  fronts with a name board.** The name boards and their small trade marks are as they were.
+- **The lint** (`tools/placementlint.mjs` row `picSign`, held at 0): a picture sign off its wall, on its own board
+  or beside a blade sign; its own check wants more than 60 signs and fewer than four fronts in ten.
+  `test/picsigns.test.js` (every picture 14 x 14, in the palette, its own drawing, one for each trade named; on a
+  front only the sign's box changes and the picture's colours are in it; none when the name moved).
+- Run: placementlint 45/45, picsigns, signs, signclear, roofsigns, perf, flatdoors, doors 31/31, walkinfront,
+  doorsbake, cinema 9/9. Bake code 1,122 of 1,150 KB. A bake change: with the branch's re-bake. Picture: `report-93`.
+- Not done of the audit's row: picture signs on one-storey shops (no wall above the board to hang one on), the
+  window goods for seven more trades (pharmacy, gun shop, hardware, barber, sports, tackle, bakery).
+
+
+## 2026-11-26 · Shop windows by trade; no people painted in the glass (part B) - on branch `fable-art-1124`
+The shared kit's audit #2, counted first from the world's 2,447 shop fronts (each front's trade - what its sign is
+styled as - against the window it drew): a pharmacy showed a mart's shelves (13 of 16), a gun shop a pawnbroker's
+guitars (28 of 34), a hardware shop a mart's (33 of 39), a bakery a cafe's booths (20 of 21), a barber a salon
+(12 of 16), tackle and sports a mart's (all), and 15 of 20 clinics a mart's shelves, a cafe's booths or - Copper
+Gulch's - a row of liquor bottles.
+- **Nine windows drawn** (`client/art2/buildings.js` `GOODS`, in the manner of the fourteen there): pharmacy (white
+  shelves of boxes, a green cross lit in each second pane), gun shop (long guns racked on the board, pistols on felt
+  in the counter), hardware (tools on a pegboard, tins of paint), barber (round-topped mirrors, red leather chairs,
+  the pole turning colours in the glass), sports (pennants, a rail of team shirts, balls), tackle (rods, a hung net,
+  floats, coolers), bakery (loaves on racks, cakes in the case), clinic (a waiting room: desk, chairs, a plant),
+  jeweller (dark velvet, busts with necklaces, rings under the spots). The seven the audit named, and two the count
+  added. Under an awning - which hides the top 12 px of the glass - each room is drawn in the 27 px that show
+  (`AWNING_HIDES`): seen in the first bake, the pharmacy's cross and the gun shop's rack were behind the cloth.
+- **The window is the trade's** (`GOODS_OF`, `goodsOf`; `statics.js` `styleSign` sets `shop.goods` once the sign's
+  trade is known): 32 trades, each with the windows that suit it - the first where the front's own is none of them.
+  Food and drink keep any of their three rooms as the front was planned (a tiki bar's counter). 256 fronts changed.
+  The front's `kind` is as it was (its door, its OPEN sign): the window, the red riser of a diner go by the goods.
+- **Names read as the wrong trade** (`client/art2/signfont.js` `WORDS`; found in the same count - these boards had
+  the wrong face already): a nail bar read as a hardware shop and the Rusty Nail too (`NAIL`), juice bars as bars,
+  three DISCOUNT stores as night clubs (`DISCO`), shoe and watch repairs as garages, Quill & Ink (books) as a tattoo
+  parlour, brewing companies as cafes, Velvet Bakery and four ateliers as boutiques, Crema Studio (coffee) and Sole
+  Studio (shoes) as galleries; a board's cut name was read instead of the whole one (OVERTIME SPORTS GR - a grill -
+  as a sports shop: `signTrade` now reads the whole name, not its branch after a dash). 33 boards change face.
+  `shopKindOf` took STEEL BARREL SUPPLY for a bar (`BAR`): whole words now.
+- **No people painted in the glass** (the owner, 12:40, seeing the busts in the first pictures: "We shouldnt have
+  just static humans in windows ... if we have humans in the window we want it to be actual NPCs through the window"):
+  `storefront` painted a clerk at every till and one to four busts in most windows; both are gone, and `bust` with
+  them. `shop.people`, `clerk`, `clerkShirt` stay in the plans (shared code: the world's hash is untouched) and draw
+  nothing. The clothes shop's mannequin stays. Real people seen through a window: not built, logged.
+- **The lint** (`tools/placementlint.mjs` row `windowTrade`, held at 0): a shop whose window is another trade's, or a
+  kind the painter doesn't draw; its own check wants 2,000 windows seen and each new kind in the world.
+  `test/shopwindows.test.js` (5: every window named is drawn and its own; the table names real trades and windows;
+  the cross, the pole and the stones glow after dark; the misread names; no person painted, whatever the plan asks).
+- Run: placementlint 46/46 (`windowTrade` 0; 2,447 windows seen, 1,218 with a trade in the table), shopwindows 5/5,
+  perf, signs, signfix, signclear, picsigns, roofsigns, shopmarks, facades, doors, doorsbake, flatdoors, walkinfront.
+  Bake code 1,126 of 1,150 KB (the nine rooms in, the busts' painter out). A bake change: with the branch's re-bake.
+  Looked at in a bake of seven street stretches (`report-94`); not seen in a running game.
+- Not done: a grocer still shows a mart's shelves (78 fronts - they read as groceries), a restaurant a diner's
+  booths (66), no LOANS neon; 674 fronts with no name board keep the window they were planned with.
+- Roofs, counted and not yet changed (5,462 flat roofs): a row of two or more big AC units on 42.5% (the audit wants
+  under 40%), a row of any AC on 81% (walk-ups 93%, strips 100%); a water tank on 57% of walk-ups; of 2,391 pairs of
+  neighbours on a street 266 carry the same kinds of kit and 162 the same counts (Southside 58, the nightlife rows
+  44, the airport 30 of 32). The decks' materials are still to be read (the count took the wrong field).
+
+## 2026-11-26 · Roofs: fewer AC rows, no two neighbours alike (part B, the audit's #3) - on branch `fable-art-1124`
+Counted first over the world's 5,462 flat roofs: a row of AC units on 77% (every strip, 93% of walk-ups, 95% of mixed
+blocks); of 2,391 pairs of neighbours along a street 171 had the same deck and the same kinds of kit.
+- **A roof's character** (`statics.js` `ROOF_CYCLE`, `kitFor`): 'row' the block of units, 'few' one or two small ones
+  apart, 'none' no units - skylights, a washing line, planters, solar panels or pipes instead. Neighbours along a
+  street take the cycle's next (`roofRanks`), so no two share one; big buildings with plant to house keep a row more
+  often. **A row now stands on 1,471 roofs, 26.9%** (walk-ups 28%, mixed 31%, strips 31%, offices 53%).
+- **Decks** (`varyDecks`, `roofLook`): a roof that still looks like its neighbour takes another common deck of its
+  kind (gravel / tar / membrane; rubber / tar; paver / deck / membrane) - 32 swapped.
+- **The lint** (`tools/placementlint.mjs` row `roofTwin`, held at 4; 171 before): two neighbours with the same deck,
+  kit kinds and row. A yard's metal sheds are alike by nature and counted apart (78). Its own check wants a row on
+  15-40% of roofs.
+- Run: placementlint 47/47. **NOT LOOKED AT**: no roof was rendered after this change (the Fable chat's weekly usage
+  ran out at this point) - the first look is owed before the batch goes live: `node tools/nature/darkscan.mjs --rect
+  3050,1670,3080,1682 --out a.png --rect 3255,1836,3286,1846 --out b.png` (tiles) and read `a-lit.png`. No test file of
+  its own beyond the lint row. Not run after it: perf (the bake's code grew by about 3 KB from 1,126 of 1,150),
+  roofsigns, signclear. Water towers, gardens and billboards are as they were (tanks on 57% of walk-ups).
+
+## 2026-11-26 · The art batch goes live (the owner's word of 13:31) - `fable-art-1124` merged to `main`
+The gate of the handover, in order: the roofs of "Roofs" (472cc2b) rendered on the two streets (darkscan, before and
+after) - fewer AC rows, neighbours differ, nothing broken, kept; `main` had not moved; the whole suite on c7ae6cb, 467
+files - 8 fail, all on main too, flaky or CPU timing under load (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`); a
+look in a running World v3 game at 1280x720 and 915x412 (a street at noon, a shop window, the menus and the
+Inventory in look C). Not seen in play: NPCs through a shop window, night, the shark, the cats, cloud shadows. The
+server re-bakes (~5 h); players get a short reconnect.
