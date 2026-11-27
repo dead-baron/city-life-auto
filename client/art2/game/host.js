@@ -38,7 +38,7 @@ import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
 import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/constants.js';
 import { AIR_UP, washK } from '../../../shared/rules-page.js';
-import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate } from '../../../shared/mapcore.js';
+import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate, underDeckAt } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { wadeBand, WB } from '../../../shared/physics.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
@@ -1036,7 +1036,7 @@ export class World2 {
   // whether any of a hull's length (bow, middle, stern) lies under a bridge deck (bridge tiles over the water)
   _underDeck(x, y, a, L) {
     const M = this.map, c = Math.cos(a) * L * 0.5, s = Math.sin(a) * L * 0.5;
-    for (let k = -1; k <= 1; k++) if (M.tileAtPx(x + c * k, y + s * k) === TT.BRIDGE) return true;
+    for (let k = -1; k <= 1; k++) if (underDeckAt(M, x + c * k, y + s * k)) return true;   // (a bridge's tiles, or water under the highway's deck)
     return false;
   }
 
@@ -1890,7 +1890,7 @@ export class World2 {
     if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
     const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
     const z0 = (sky ? sky * SKY_LIFT : (car ? 0 : this._z0(p, L.swimming)) + lift) + extraZ, ap = E.ap || 1;
-    o.under = L.swimming && this.map.tileAtPx(p.rx, p.ry) === TT.BRIDGE ? UNDER_Z : 0;   // (swimming under a bridge)
+    o.under = L.swimming && underDeckAt(this.map, p.rx, p.ry) ? UNDER_Z : 0;   // (swimming under a bridge or the highway's deck)
     E.drawSprite(sk, (car ? car.rx + snapTo(p.rx - car.rx, ap) : p.rx) + hx, (car ? car.ry + snapTo(p.ry - car.ry, ap) : p.ry) + hy, z0, o);
     o.under = 0;
     this.n.drawn++;
@@ -2746,13 +2746,13 @@ export class World2 {
       if (age < 0 || age > LIFE) continue;
       const x = W.d[j], y = W.d[j + 1];
       if (x < x0 || x > x1 || y < y0 || y > y1) continue;
-      if (this.map.tileAtPx(x, y) === TT.BRIDGE) continue;   // (dropped under a bridge: the deck over it hides the foam - b1c)
+      if (underDeckAt(this.map, x, y)) continue;   // (dropped under a bridge or a highway deck: the deck over it hides the foam - b1c)
       const a = W.d[j + 2], hw = W.d[j + 4], sp = W.d[j + 5], f = 1 - age / LIFE, alpha = Math.pow(f, 1.3) * Math.min(1, sp / 300) * 0.9;
       const spread = hw * 0.8 + age * (10 + sp * 0.035), nx = -Math.sin(a), ny = Math.cos(a);
       for (let s = -1; s <= 1; s += 2) {
         const key = streak[(k + (s > 0 ? 1 : 0)) % 3];
         const qx = x + nx * spread * s, qy = y + ny * spread * s;
-        if (key && this.map.tileAtPx(qx, qy) !== TT.BRIDGE) E.drawDecal(key, qx, qy, a + s * 0.35, alpha, 0);
+        if (key && !underDeckAt(this.map, qx, qy)) E.drawDecal(key, qx, qy, a + s * 0.35, alpha, 0);
       }
       if (age < 1 && churn) E.drawDecal(churn, x, y, a, (1 - age) * alpha, 0);
     }

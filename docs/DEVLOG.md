@@ -28342,3 +28342,12 @@ take the full stun every time. Test: `test/stunresist.test.js`.
   facing one of the four ways with a length and a half of open ground ahead (`WORK_TRUCK.runway`), the one along the
   street first; a free one already there is taken only if it isn't parked nose-on to a wall. His ambulance had been
   put down facing a brick wall in an alley. Test: `paramedic.test.js` (six hospitals).
+
+## 2026-11-26 · Train riders never swim; boats under the highway's decks drawn under them (the owner's notes of 11-25) - branch `rules-1126`
+- **Riders swimming** (11-25 13:33): the swim flag the page draws from (`server/net.js`, `shared/mapcore.js` isSwimming)
+  read the tile under a rider - over track on water, everyone aboard swam for a few seconds. isSwimming is false for
+  anyone aboard a train, everywhere it's asked. Test: `test/trainswim.test.js`.
+- **Boats over a road deck** (02:36, "it doesn't happen on all bridges"): the renderer knew a bridge's own tiles but
+  not the 6,500 tiles of open water under the elevated highway's decks - boats, their wakes and foam, and swimmers
+  there were drawn over the deck. `mapcore.js underDeckAt` (a bridge tile, or water under `m.deck`), asked by
+  `client/art2/game/host.js` for all four. Test: `test/underdeck.test.js`.
