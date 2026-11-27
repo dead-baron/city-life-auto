@@ -47,7 +47,7 @@ export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHE
   if (v.dead || v.stalled) { const di = deadInput(v, v.input.steer || 0, v.input.hb); v.input.throttle = di.throttle; v.input.slide = false; } // (engine dead, or flooded in the water - wade(): it rolls to a stop)
   const pvx = v.vx, pvy = v.vy;   // (the way it was going: the end that hit the wall)
   // (a fence gone through fast: knocked flat - props.js breakProp, by whoever's driving)
-  env.smash = (i, a, sp) => breakFence(world, i, Math.cos(a) * sp, Math.sin(a) * sp, v.seats[0] ? world.get(v.seats[0]) : null);
+  env.smash = (i, a, sp) => { const p = world.map.props[i]; if (breakFence(world, i, Math.cos(a) * sp, Math.sin(a) * sp, v.seats[0] ? world.get(v.seats[0]) : null) && p) smashHurt(world, v, p.t, sp); };
   const impact = vehStep(v, v.input, dt, world.map, v.def, env);
   env.smash = null;
   if (v.def.cart && impact >= CART.hit) cartCrash(world, v, impact);   // (a shopping cart into anything: the one in the basket flies)
@@ -111,6 +111,7 @@ export function update(world, dt) {
     v.siren = !!((v.def.police || v.def.siren) && v.sirenOn && driver);
     if ((world.tick + v.id) % 4 === 0 && (v.siren || (v.hornUntil > now && driver && driver.player)) && v.def.kind !== 'air' && v.def.kind !== 'boat') npc.clearWay(world, v, v.siren);   // (people out of the road ahead: npc.js)
     v.beacon = !v.siren && !!((v.def.police || v.def.siren) && v.beaconOn);   // (the lights flashing with nobody at the wheel: an ambulance at a scene, a tow truck at work - no siren)
+    fireTick(world, v, dt, !!(v.wetT || v.sinkAt || (v.def.kind !== 'boat' && WATER_T[world.map.tileAtPx(v.x, v.y)])));   // (alight: burning down, or out - VEH_FIRE)
     // out of health: rolling to a stop, smoking, then on fire, then up it goes (killEngine)
     if (v.dead && !v.wreckAt) {
       if (now >= v.deadFireAt) v.burnUntil = now + 1;
@@ -325,6 +326,33 @@ function crashDamage(world, v, dmg, attackerPed, impact, zone = 0) {
   if (hard && (v.def.kind === 'bike' || v.dead || v.hp < v.def.hp * CRASH_BOOM_HP)) { explode(world, v, attackerPed); return; }
   const drv = v.seats[0] ? world.get(v.seats[0]) : null;
   damageVehicle(world, v, dmg * (1 - skills.pedBonus(drv, 'driving')), attackerPed, false, hard);   // (a driver who knows how to take a hit: skills.js)
+  // a hard knock on a battered vehicle can start a fire (VEH_FIRE)
+  if (impact > VEH_FIRE.crashImpact && !v.dead && !v.wreckAt && v.hp < v.def.hp * VEH_FIRE.crashBelow && world.rand() < VEH_FIRE.crashChance) ignite(world, v, attackerPed);
+}
+
+// ---- vehicles on fire (VEH_FIRE; the owner, 11-25) ----
+const burnable = (v) => !v.def.pedal && !v.def.horse && v.def.kind !== 'air' && !v.arena && !v.ferry;
+// set alight: it burns VEH_FIRE.burnS seconds, losing health (fireTick) - out after, or up it goes
+export function ignite(world, v, by = null) {
+  if (!burnable(v) || v.dead || v.wreckAt || v.onFire) return false;
+  v.onFire = world.time || 1e-3; v.burnUntil = Math.max(v.burnUntil || 0, world.time + VEH_FIRE.burnS);
+  if (by) v.lastAttacker = by.id;
+  for (const sid of v.seats) { const q = sid && world.get(sid); if (q && q.player) world.notify(q.player, 'Your vehicle is on fire - get out or get it out!', 'bad'); }
+  return true;
+}
+// a flamethrower's jet on it (combat.js flame): exposure builds; enough, and it's alight
+export function flameOn(world, v, by, s) {
+  if (!burnable(v) || v.dead || v.wreckAt) return;
+  v.fireExp = (v.fireExp || 0) + s;
+  if (v.fireExp >= VEH_FIRE.exposeS) ignite(world, v, by);
+}
+function fireTick(world, v, dt, wet) {
+  const F = VEH_FIRE, now = world.time;
+  if (v.fireExp) v.fireExp = Math.max(0, v.fireExp - F.coolRate * dt);
+  if (v.dead || v.wreckAt || !burnable(v)) { v.onFire = 0; return; }
+  if (v.onFire && (wet || !(v.burnUntil > now))) { v.onFire = 0; if (wet) v.burnUntil = 0; return; }   // (burned out - or doused)
+  if (v.onFire) { damageVehicle(world, v, F.dps * v.def.hp * dt, v.lastAttacker ? world.get(v.lastAttacker) : null, true); return; }
+  if (!wet && v.hp < v.def.hp * F.smoulderBelow && world.rand() < F.smoulderPerS * dt) ignite(world, v, null);
 }
 
 // ---- damage you can see (task #402; the owner: "dents and parts falling off as it worsens") ----
@@ -342,6 +370,14 @@ export function noteHit(v, zone, amt) {
 // the side of v a world point is on (VZ), or of the way something came at it (dx, dy: a direction, unit box)
 export const zoneAt = (v, x, y) => hitZone(v.x, v.y, v.a, v.def.L / 2, v.def.W / 2, x, y);
 export const zoneFrom = (v, dx, dy) => hitZone(v.x, v.y, v.a, 1, 1, v.x + dx, v.y + dy);
+// What a vehicle smashed hurts it (rules.js SMASH_HURT): by the kind's weight and the speed it hit at, on its front
+export function smashHurt(world, v, kind, sp) {
+  const H = SMASH_HURT, w = H.w[kind] ?? H.def;
+  if (w <= 0 || !(sp > 0) || v.def.horse || (v.def.pedal && w < H.pedalMin)) return 0;   // (a horse tramples through unhurt; a bicycle only minds the solid things)
+  const dmg = w * H.k * Math.pow(sp / H.ref, H.pow) / Math.sqrt(v.def.mass);
+  damageVehicle(world, v, dmg, null, false, false, zoneFrom(v, Math.cos(v.a) * 10, Math.sin(v.a) * 10));
+  return dmg;
+}
 export function shedParts(world, v) {
   const st = damageStage(v.hp / v.def.hp, !!v.dead, !!v.wreckAt);
   if (st <= (v.dst || 0)) return;
@@ -449,7 +485,7 @@ export function explode(world, v, attackerPed) {
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
-import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S, PLASMA_CUT, CART } from '../../shared/rules.js';
+import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S, PLASMA_CUT, CART, SMASH_HURT, VEH_FIRE } from '../../shared/rules.js';
 import { RIDER_KNOCK } from '../../shared/rules-play.js';
 import { VDMG, VZ, VPART, damageStage, packVehDamage, hitZone } from '../../shared/vehicles.js';
 import * as ferries from './ferries.js';

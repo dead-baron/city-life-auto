@@ -404,7 +404,7 @@ function flame(world, ped, w, aim) {
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > r + 12) continue;
     if (!world.map.los(ped.x, ped.y, o.x, o.y)) continue;
     if (o.kind === K.PED) { if (o.dead || o.vehId || o.sky || !hurtable(world, o)) continue; burning.ignite(world, o, ped); damage(world, o, w.dmg, ped, 'fire', aim); }
-    else if (!o.wreckAt && !o.removed && (o.alt || 0) < FLY.HIGH) vehicles.damageVehicle(world, o, w.dmg * 0.8, ped);
+    else if (!o.wreckAt && !o.removed && (o.alt || 0) < FLY.HIGH) { vehicles.damageVehicle(world, o, w.dmg * 0.8, ped); vehicles.flameOn(world, o, ped, w.cd); }   // (held on it long enough, it catches - vehicles.js VEH_FIRE)
   }
   law.gunfire(world, ped);
   npc.onGunfire(world, ped.x, ped.y, ped, 220);

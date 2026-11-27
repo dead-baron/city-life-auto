@@ -28293,3 +28293,17 @@ server re-bakes (~5 h); players get a short reconnect.
 - **Cost of going live:** physics.js is read by the World v3 build, so the world3 / art3 hashes move (the world is the
   same: pages fetch the city again, the server re-bakes and identical chunks carry over) - merged after the 11-26 art
   re-bake has finished.
+
+## 2026-11-26 · What a vehicle smashes hurts it; vehicles catch fire (the owner's notes of 11-25 01:00 and 03:23) - branch `rules-1126`
+- **Smash damage** (`shared/rules.js` `SMASH_HURT`, `server/systems/vehicles.js` `smashHurt`, called from `props.js`
+  smashFor and a fence gone through): every breakable kind has a weight - a bag of trash 0, a cone 0.03, a trash can
+  0.15, a bench 0.4, a bus shelter 0.7, a hydrant 0.9, a lamp post 1, a tree 1.2 - and the damage is weight x 12 x
+  (speed / 100)^1.5 / sqrt(mass), then the vehicle's toughness, on its front: a sedan into a tree at 400 px/s loses
+  about a quarter of its health, a bench a twelfth, a bag nothing; twenty trash cans at speed do more than a tree. A
+  horse tramples through unhurt; a bicycle minds only what weighs 0.5 or more (as before: only the heavy things).
+  Before, only the heavy kinds hurt at all, at most 14 a hit. Test: `smash.test.js` (every breakable kind has a weight).
+- **Fire** (`VEH_FIRE`, vehicles.js `ignite`, `flameOn`, `fireTick`): a flamethrower on a vehicle for 2.5 s of jet
+  (cooling out of it) sets it alight; a hard crash (impact 220+) that leaves it under 30% catches it one time in three;
+  under 15% it may catch on its own (3% a second). Alight it burns 12 s at 4% of its full health a second - a healthy
+  one comes through scorched and the fire goes out, a battered one's engine dies and it goes up as before. Water puts
+  it out. Bicycles, horses, aircraft and car soccer's cars never catch. Test: `test/vehfire.test.js`.
