@@ -120,9 +120,10 @@ street cats on stoops and down alleys, more dog walkers; small things in the air
 world3mesa tests brought up to his rules (station roads off-limits to traffic, no porte-cocheres); the doorway hop
 diagnosed (page: you show on the roof until the cut-away inside is ready - for the renderer's work). Design for his
 call: `docs/tasks/NPC-REACTIONS-DESIGN-2026-11-26.md` (project copy `claude/npc-reactions-design-2026-11-26.md`).
-**Going live:** physics.js is in the World v3 build's code, so the world3 / art3 keys move with the merge (the world is
-the same: pages fetch the city again, the server re-bakes, identical chunks carry over) - the merge waits for the art
-batch's re-bake to finish (`/stats` art.have of 45,864) and the whole suite on the branch's head.
+**LIVE 11-26 23:52 (PR #51)** after the art batch's re-bake finished (45,864 of 45,864) and the whole suite
+(`docs/tasks/RULES-TESTS-2026-11-26.txt`: every failure looked at; two the batch caused - the street race, a mock map -
+fixed before the merge). world3 b97fc68c8112, art3 5121068c96e1: the server re-bakes again (~5 h from 23:52;
+identical chunks carry over).
 **Still open from his lists (not started):** the gridlock test (traffic at a busy four-way, failing on main); the
 portrait phone layout (his approval of a design first); phone wires; kayak paddling, the skateboard, the Rusty Spur's
 pool, the Boom Tester's throw (art); the NPC reaction ladder (his call on the design); keep the project private (the
