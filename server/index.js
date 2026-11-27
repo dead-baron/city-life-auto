@@ -38,8 +38,9 @@ const MIME = {
   '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8',
 };
-// server/ is served so the offline practice worker can run the simulation in the browser
-const STATIC_ROOTS = ['client/', 'shared/', 'assets/', 'server/'];
+// What a browser may fetch from here: the page's own files. Not server/ - it was served for the offline practice
+// worker (paused: CLAUDE.md), which handed anyone the server's code (the owner's go, 11-27: docs/PRIVATE-REPO.md).
+const STATIC_ROOTS = ['client/', 'shared/', 'assets/'];
 
 useStore(new FileStore());
 // the private capture server (CLA_CAPTURE=1: server/capture.js): dev mode, this machine only unless HOST says otherwise, a
@@ -121,7 +122,7 @@ const server = createServer(async (req, res) => {
   if (path === '/' || path === '') path = '/index.html';
   const rel = normalize(path).replace(/^([/\\])+/, '');
   // (version.json too: a page played straight off this server checks it for updates - client/boot.js, update.js)
-  if (rel.includes('..') || rel.startsWith('server/config') || rel.startsWith('server/auth') || rel === 'server/chatwords.json' || !(rel === 'index.html' || rel === 'version.json' || STATIC_ROOTS.some((r) => rel.startsWith(r)))) {
+  if (rel.includes('..') || !(rel === 'index.html' || rel === 'version.json' || STATIC_ROOTS.some((r) => rel.startsWith(r)))) {
     res.writeHead(404); res.end('not found'); return;
   }
   const file = join(config.root, rel);
