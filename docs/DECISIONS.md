@@ -331,7 +331,10 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   log; a makeshift stick bridge is a piece still to draw.
 - Vehicles in water (the owner, 11-24 21:40): never an instant loss in shallow water - splash, slow, stall, and sink
   only in deep water; off-road vehicles ford deeper. Logged for the pre-beta (`docs/audit/PREBETA-LIST.md`); not built
-  in the art pass.
+  in the art pass. BUILT 11-26 (the Opus pre-beta chat; Claude's numbers, his to tune - shared/rules-base.js `WADE`): a car fords
+  0.5 m, a truck 0.7, a 4x4 / tractor / dirt bike 1 m; very shallow (0.3 m) is splashed through at speed; wading, the
+  engine floods after 8 s (30 s off-road), stalls where it is - never lost - and tries again after 15 s; off a quay,
+  a dock or a seawall it is deep at once.
 - Natural lakes get natural shapes (the owner, 11-24 21:40: "The lake looks better like this so this would be
   acceptable ... For these natural lakes like this some natural shape looks better"); Mirage Lake's offshoot cove on
   its west side added at his suggestion.

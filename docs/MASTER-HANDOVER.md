@@ -107,6 +107,27 @@ he says "make the handover", the chat does section 7, and he opens a new one.
 Chats that can run side by side: 4 with any other; nothing else safely.
 
 ## 6. Where things stand (2026-11-24, 09:00 PST - the Opus part of the pre-beta is done)
+**THE OPUS 5.5 PRE-BETA CHAT, 11-26 evening (his word 18:40: "Yes please begin and keep going forward without stopping"):**
+branch `rules-1126` (off `main` after PR #50), pushed; each piece has its DEVLOG entry of 11-26 and a test:
+shallow water (splash / wade / flood and stall / sink only deep - `shared/physics.js` waterDepth, wadeBand, `WADE`);
+smash damage by weight and speed (`SMASH_HURT`); vehicles catch fire (`VEH_FIRE`); grenades and the Boom Tester
+destroy a vehicle beside them, the SAM two hits, the flamethrower 340 px, the Boom Tester as a real weapon (debug menu);
+**the wanted-stars bug found and fixed** (self-defense never against the police, the wanted, or who started it - law.js
+immune); pepper spray / taser wear off on players (`STUN_RESIST`); the paramedic's uniform, every job vehicle put down
+facing open ground (`WORK_TRUCK.runway`); train riders never swim; boats / wakes / swimmers under the highway's decks
+drawn under them (`mapcore.js underDeckAt`); "Server updating" through a restart; the dog runs (fetch: `dogrun.js`);
+street cats on stoops and down alleys, more dog walkers; small things in the air cast a round shadow; the world3wild /
+world3mesa tests brought up to his rules (station roads off-limits to traffic, no porte-cocheres); the doorway hop
+diagnosed (page: you show on the roof until the cut-away inside is ready - for the renderer's work). Design for his
+call: `docs/tasks/NPC-REACTIONS-DESIGN-2026-11-26.md` (project copy `claude/npc-reactions-design-2026-11-26.md`).
+**Going live:** physics.js is in the World v3 build's code, so the world3 / art3 keys move with the merge (the world is
+the same: pages fetch the city again, the server re-bakes, identical chunks carry over) - the merge waits for the art
+batch's re-bake to finish (`/stats` art.have of 45,864) and the whole suite on the branch's head.
+**Still open from his lists (not started):** the gridlock test (traffic at a busy four-way, failing on main); the
+portrait phone layout (his approval of a design first); phone wires; kayak paddling, the skateboard, the Rusty Spur's
+pool, the Boom Tester's throw (art); the NPC reaction ladder (his call on the design); keep the project private (the
+player-only build first); the ads branch (his call); the feature walkthrough, then the launch steps.
+
 **DONE 11-26 evening (the Opus 5.5 chat): the art batch is merged to `main` and live** - the gate passed: the roofs rendered and kept (before/after on the two streets), the whole suite on c7ae6cb (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`: no failure of the batch's own), a look in a running World v3 game at 1280x720 and phone size. The server re-bakes for about five hours. Next in this chat: the remaining beta items (`docs/audit/PREBETA-LIST.md`). The block below is the record of how it was taken live.
 **TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of
 13:31: "I'd like to push all the art we have now live". Everything is on branch `fable-art-1124`, pushed, tree clean.

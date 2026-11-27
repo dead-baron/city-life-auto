@@ -67,3 +67,27 @@ test('someone sat on a bench a car smashes is thrown off', () => {
   assert.ok(e.airUntil > w.time, 'up in the air');
   assert.ok(e.vx > 100 && !e.gt && !e.npc.act, 'flung the way the car went, off the bench, out of its sit');
 });
+
+test('what a vehicle smashes hurts it by how solid it is and how hard it hit (SMASH_HURT): a tree a real hit, a bag nothing', async () => {
+  const { SMASH_HURT } = await import('../shared/rules.js');
+  const vehicles = await import('../server/systems/vehicles.js');
+  for (const t of BREAKABLE) assert.ok(SMASH_HURT.w[t] !== undefined, `${t} has a weight`);
+  const { p: drv } = joinPlayer(w);   // (a player at the wheel: the NPCs' cars keep the old dent - smashHurt)
+  const car = () => { const v = w.spawnVehicle('sedan', (P[0] + 10) * TILE, (P[1] + 12) * TILE, 0, { npcOwned: false }); v.seats[0] = drv.ped.id; return v; };
+  const hit = (kind, sp) => { const v = car(), hp = v.hp; vehicles.smashHurt(w, v, kind, sp); const lost = (hp - v.hp) / v.def.hp; w.remove(v); return lost; };
+  const tree = hit('tree_a', 400), bench = hit('bench_a', 400), can = hit('trashcan', 400), bag = hit('bags', 400);
+  assert.ok(tree > 0.15 && tree < 0.45, `a tree at speed: a real hit (${(tree * 100).toFixed(0)}%)`);
+  assert.ok(bench > 0.03 && bench < tree / 2, `a bench: a little (${(bench * 100).toFixed(0)}%)`);
+  assert.ok(can > 0 && can < bench, `a trash can: less (${(can * 100).toFixed(1)}%)`);
+  assert.equal(bag, 0, 'a bag of trash: nothing');
+  assert.ok(hit('tree_a', 150) < tree / 3, 'slower, much less');
+  // through enough of them the car is done for: twenty trash cans at speed hurt like a tree or two
+  const v = car(); for (let i = 0; i < 20; i++) vehicles.smashHurt(w, v, 'trashcan', 400);
+  assert.ok((v.def.hp - v.hp) / v.def.hp > tree, 'twenty trash cans add up');
+  w.remove(v);
+  // an NPC's car (a street race ploughing through): only the heavy things dent it, a little
+  const npcCar = w.spawnVehicle('sedan', (P[0] + 10) * TILE, (P[1] + 12) * TILE, 0, { npcOwned: false });
+  const h0 = npcCar.hp; vehicles.smashHurt(w, npcCar, 'trashcan', 400); assert.equal(npcCar.hp, h0, 'an NPC\'s car: a trash can nothing');
+  vehicles.smashHurt(w, npcCar, 'tree_a', 400); assert.ok(h0 - npcCar.hp < 14, 'a tree a dent');
+  w.remove(npcCar);
+});

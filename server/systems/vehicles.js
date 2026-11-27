@@ -6,8 +6,11 @@ import { K, T, VF, WEATHER } from '../../shared/constants.js';
 import { ugMapOf } from '../../shared/underground.js';
 import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput, horseWind } from '../../shared/physics.js';
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
-import { PED_BLOCK, WATER_T } from '../../shared/map.js';
+import { PED_BLOCK, WATER_T, HEAVY_PROPS } from '../../shared/map.js';
 import { sameLevel, levelStep } from '../../shared/levels.js';
+import { wadeBand, offroad, WB } from '../../shared/physics.js';
+import { WADE } from '../../shared/rules-base.js';
+import * as ftue from './ftue.js';   // (the first time a player's car wades: its moment)
 
 export const SINK_S = 3.2; // a car that drove into the water sinks, then blows up underwater
 import * as combat from './combat.js';
@@ -41,10 +44,10 @@ export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHE
     v.x += v.vx * dt; v.y += v.vy * dt; v.a += (v.av || 0) * dt;
     return;
   }
-  if (v.dead) { const di = deadInput(v, v.input.steer || 0, v.input.hb); v.input.throttle = di.throttle; v.input.slide = false; } // (engine dead: it rolls to a stop)
+  if (v.dead || v.stalled) { const di = deadInput(v, v.input.steer || 0, v.input.hb); v.input.throttle = di.throttle; v.input.slide = false; } // (engine dead, or flooded in the water - wade(): it rolls to a stop)
   const pvx = v.vx, pvy = v.vy;   // (the way it was going: the end that hit the wall)
   // (a fence gone through fast: knocked flat - props.js breakProp, by whoever's driving)
-  env.smash = (i, a, sp) => breakFence(world, i, Math.cos(a) * sp, Math.sin(a) * sp, v.seats[0] ? world.get(v.seats[0]) : null);
+  env.smash = (i, a, sp) => { const p = world.map.props[i]; if (breakFence(world, i, Math.cos(a) * sp, Math.sin(a) * sp, v.seats[0] ? world.get(v.seats[0]) : null) && p) smashHurt(world, v, p.t, sp); };
   const impact = vehStep(v, v.input, dt, world.map, v.def, env);
   env.smash = null;
   if (v.def.cart && impact >= CART.hit) cartCrash(world, v, impact);   // (a shopping cart into anything: the one in the basket flies)
@@ -87,7 +90,11 @@ export function update(world, dt) {
     if (v.def.horse) horses.keepDry(world, v);   // (a horse: never in the water - horses.js)
     // land vehicles that end up in the water sink (not a car on a ferry's deck)
     if (v.def.kind !== 'boat' && !v.def.horse && !v.def.floats && !v.onDeck && !aircraft.inAir(v)) {   // (a horse never goes in: physics.js; the floatplane floats)
-      if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
+      // how deep the water under it is (shared/physics.js wade): deeper than it can ford it sinks; shallower it splashes through,
+      // or wades - and floods its engine if it stays in (wade below)
+      const band = (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)] ? wadeBand(world.map, v.x, v.y, v.def) : WB.DRY;
+      if (!v.sinkAt && band === WB.DEEP) startSink(world, v);
+      else if (!v.sinkAt) wade(world, v, band, dt, driver);
       if (v.sinkAt) {
         v.vx *= Math.exp(-2.5 * dt); v.vy *= Math.exp(-2.5 * dt);
         v.input.throttle = 0;
@@ -104,6 +111,7 @@ export function update(world, dt) {
     v.siren = !!((v.def.police || v.def.siren) && v.sirenOn && driver);
     if ((world.tick + v.id) % 4 === 0 && (v.siren || (v.hornUntil > now && driver && driver.player)) && v.def.kind !== 'air' && v.def.kind !== 'boat') npc.clearWay(world, v, v.siren);   // (people out of the road ahead: npc.js)
     v.beacon = !v.siren && !!((v.def.police || v.def.siren) && v.beaconOn);   // (the lights flashing with nobody at the wheel: an ambulance at a scene, a tow truck at work - no siren)
+    fireTick(world, v, dt, !!(v.wetT || v.sinkAt || (v.def.kind !== 'boat' && WATER_T[world.map.tileAtPx(v.x, v.y)])));   // (alight: burning down, or out - VEH_FIRE)
     // out of health: rolling to a stop, smoking, then on fire, then up it goes (killEngine)
     if (v.dead && !v.wreckAt) {
       if (now >= v.deadFireAt) v.burnUntil = now + 1;
@@ -318,6 +326,33 @@ function crashDamage(world, v, dmg, attackerPed, impact, zone = 0) {
   if (hard && (v.def.kind === 'bike' || v.dead || v.hp < v.def.hp * CRASH_BOOM_HP)) { explode(world, v, attackerPed); return; }
   const drv = v.seats[0] ? world.get(v.seats[0]) : null;
   damageVehicle(world, v, dmg * (1 - skills.pedBonus(drv, 'driving')), attackerPed, false, hard);   // (a driver who knows how to take a hit: skills.js)
+  // a hard knock on a battered vehicle can start a fire (VEH_FIRE)
+  if (impact > VEH_FIRE.crashImpact && !v.dead && !v.wreckAt && v.hp < v.def.hp * VEH_FIRE.crashBelow && world.rand() < VEH_FIRE.crashChance) ignite(world, v, attackerPed);
+}
+
+// ---- vehicles on fire (VEH_FIRE; the owner, 11-25) ----
+const burnable = (v) => !v.def.pedal && !v.def.horse && v.def.kind !== 'air' && !v.arena && !v.ferry;
+// set alight: it burns VEH_FIRE.burnS seconds, losing health (fireTick) - out after, or up it goes
+export function ignite(world, v, by = null) {
+  if (!burnable(v) || v.dead || v.wreckAt || v.onFire) return false;
+  v.onFire = world.time || 1e-3; v.burnUntil = Math.max(v.burnUntil || 0, world.time + VEH_FIRE.burnS);
+  if (by) v.lastAttacker = by.id;
+  for (const sid of v.seats) { const q = sid && world.get(sid); if (q && q.player) world.notify(q.player, 'Your vehicle is on fire - get out or get it out!', 'bad'); }
+  return true;
+}
+// a flamethrower's jet on it (combat.js flame): exposure builds; enough, and it's alight
+export function flameOn(world, v, by, s) {
+  if (!burnable(v) || v.dead || v.wreckAt) return;
+  v.fireExp = (v.fireExp || 0) + s;
+  if (v.fireExp >= VEH_FIRE.exposeS) ignite(world, v, by);
+}
+function fireTick(world, v, dt, wet) {
+  const F = VEH_FIRE, now = world.time;
+  if (v.fireExp) v.fireExp = Math.max(0, v.fireExp - F.coolRate * dt);
+  if (v.dead || v.wreckAt || !burnable(v)) { v.onFire = 0; return; }
+  if (v.onFire && (wet || !(v.burnUntil > now))) { v.onFire = 0; if (wet) v.burnUntil = 0; return; }   // (burned out - or doused)
+  if (v.onFire) { damageVehicle(world, v, F.dps * v.def.hp * dt, v.lastAttacker ? world.get(v.lastAttacker) : null, true); return; }
+  if (!wet && v.hp < v.def.hp * F.smoulderBelow && world.rand() < F.smoulderPerS * dt) ignite(world, v, null);
 }
 
 // ---- damage you can see (task #402; the owner: "dents and parts falling off as it worsens") ----
@@ -335,6 +370,18 @@ export function noteHit(v, zone, amt) {
 // the side of v a world point is on (VZ), or of the way something came at it (dx, dy: a direction, unit box)
 export const zoneAt = (v, x, y) => hitZone(v.x, v.y, v.a, v.def.L / 2, v.def.W / 2, x, y);
 export const zoneFrom = (v, dx, dy) => hitZone(v.x, v.y, v.a, 1, 1, v.x + dx, v.y + dy);
+// What a vehicle smashed hurts it (rules.js SMASH_HURT): by the kind's weight and the speed it hit at, on its front
+// - a player's: the NPCs' and the scenes' drivers (traffic, a street race, a chase) keep the old dent from the heavy things only,
+// so a race or a scene isn't stopped by the furniture it ploughs through (racers.test.js)
+export function smashHurt(world, v, kind, sp) {
+  const H = SMASH_HURT, w = H.w[kind] ?? H.def, drv = v.seats[0] ? world.get(v.seats[0]) : null;
+  if (!(sp > 0) || v.def.horse) return 0;   // (a horse tramples through unhurt)
+  if (!drv || !drv.player) { if (!HEAVY_PROPS.has(kind)) return 0; const d = Math.min(14, sp * 0.03) / Math.sqrt(v.def.mass); damageVehicle(world, v, d, null); return d; }
+  if (w <= 0 || (v.def.pedal && w < H.pedalMin)) return 0;   // (a bicycle only minds the solid things)
+  const dmg = w * H.k * Math.pow(sp / H.ref, H.pow) / Math.sqrt(v.def.mass);
+  damageVehicle(world, v, dmg, null, false, false, zoneFrom(v, Math.cos(v.a) * 10, Math.sin(v.a) * 10));
+  return dmg;
+}
 export function shedParts(world, v) {
   const st = damageStage(v.hp / v.def.hp, !!v.dead, !!v.wreckAt);
   if (st <= (v.dst || 0)) return;
@@ -442,7 +489,7 @@ export function explode(world, v, attackerPed) {
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
-import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S, PLASMA_CUT, CART } from '../../shared/rules.js';
+import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S, PLASMA_CUT, CART, SMASH_HURT, VEH_FIRE } from '../../shared/rules.js';
 import { RIDER_KNOCK } from '../../shared/rules-play.js';
 import { VDMG, VZ, VPART, damageStage, packVehDamage, hitZone } from '../../shared/vehicles.js';
 import * as ferries from './ferries.js';
@@ -549,9 +596,31 @@ function blownOut(world, ped, v, attackerPed) {
   if (!ped.dead) { ped.bleeding = true; burning.ignite(world, ped, attackerPed); if (ped.player) world.notify(ped.player, 'Blown clear of the wreck - badly hurt. Heal up fast!', 'bad'); }
 }
 
+// In the shallows (the owner, 11-24 21:40: "move a bit in the shallow water before breaking down"): splashing through
+// costs nothing; wading wets the engine - holdS seconds of it (an off-road vehicle's offroadHoldS) and it floods and
+// stalls: no power, it rolls to a stop where it is, never lost. Stalled, it tries again after restartS with retryS
+// seconds in hand to get out; out of the water it dries. The page reads the stall from VF.STALL (it predicts no power).
+const wadeSay = (world, d, text, kind) => { if (d && d.player) world.notify(d.player, text, kind); };
+function wade(world, v, band, dt, driver) {
+  const W = WADE, hold = offroad(v.def) ? W.offroadHoldS : W.holdS;
+  if (band === WB.WADE) {
+    v.wetT = (v.wetT || 0) + dt;
+    if (driver && driver.player && !v.stalled) ftue.moment(world, driver.player, 'wade');
+    if (!v.stalled && v.wetT >= hold && !v.def.pedal) {
+      v.stalled = world.time || 1e-3; v.sirenOn = false;
+      world.emit(v.x, v.y, { e: 'splash', x: v.x, y: v.y, n: 14 });
+      wadeSay(world, driver, 'Water in the engine - it\'s flooded and stalled. Give it a moment, or wade out.', 'warn');
+    }
+  } else if (v.wetT) v.wetT = Math.max(0, v.wetT - dt * W.dryRate);
+  if (v.stalled && (band === WB.DRY || world.time - v.stalled >= W.restartS)) {
+    v.stalled = 0;
+    if (band !== WB.DRY) { v.wetT = Math.max(0, hold - W.retryS); wadeSay(world, driver, 'The engine coughs back to life - get it out of the water!', 'good'); }
+  }
+}
+
 // Drove off a dock or a bridge-less shore: everyone spills into the water and swims for it.
 function startSink(world, v) {
-  v.sinkAt = world.time;
+  v.sinkAt = world.time; v.stalled = 0;
   if (v.owner) insurance.wrecked(world, v, 'sunk');   // (insurance.js)
   v.sirenOn = false;
   world.emit(v.x, v.y, { e: 'splash', x: v.x, y: v.y, n: 30 });
@@ -801,6 +870,7 @@ export function vehFlags(world, v) {
   if ((v.burnUntil > world.time || (v.wreckAt && !v.def.pedal && world.time - v.wreckAt < 20)) && !v.def.horse) f |= VF.BURN;
   if ((v.hp < v.def.hp * 0.35 || v.dead) && !v.def.pedal && !v.def.horse) f |= VF.SMOKE;   // (a horse: no smoke)
   if (v.dead && !v.wreckAt) f |= VF.DEAD;
+  if (v.stalled && v.def.kind !== 'air') f |= VF.STALL | (v.def.pedal ? 0 : VF.SMOKE);   // (flooded: steam off the engine - wade())
   if (v.drift) f |= VF.DRIFT;
   if (v.hornUntil > world.time) f |= VF.HORN;
   if (v.bloody) f |= VF.BLOODY;

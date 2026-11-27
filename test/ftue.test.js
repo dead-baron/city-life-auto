@@ -23,6 +23,8 @@ import * as combat from '../server/systems/combat.js';
 import { FTUE_STEPS } from '../server/analytics.js';
 import * as transit from '../server/systems/transit.js';
 import { guideSections } from '../shared/guide.js';
+import { wadeBand, WB } from '../shared/physics.js';
+import { VEHICLES } from '../shared/vehicles.js';
 import { readFileSync } from 'node:fs';
 
 // a world with the analytics' funnel listened to (server/launch.js world.track)
@@ -373,6 +375,15 @@ test('the first-time moments fire once each, ever: wanted, knocked down, a shop,
     p.ped.weapon = 'rod';
     assert.ok(/Fish here/.test((players.findInteraction(w, p) || {}).label || ''), 'the rod out: the prompt');
     p.ped.weapon = 'fists'; }
+  // at the wheel in water a car can wade (shared/physics.js wadeBand; vehicles.js wade): the wading moment
+  { const m = w.map; let at = null;
+    for (let ty = m.y0 + 2; ty < m.y0 + m.h - 2 && !at; ty++) for (let tx = m.x0 + 2; tx < m.x0 + m.w - 2; tx++) { const x = tx * 32 + 16, y = ty * 32 + 16; if (wadeBand(m, x, y, VEHICLES.sedan) === WB.WADE) { at = { x, y }; break; } }
+    assert.ok(at, 'water a car wades');
+    teleport(w, p.ped, at.x - 40, at.y);
+    const v = w.spawnVehicle('sedan', at.x, at.y, 0, { npcOwned: false });
+    assert.ok(vehicles.tryEnter(w, p.ped)); gap();
+    assert.ok(tips().includes('wade'), 'the wading moment');
+    vehicles.ejectPed(w, p.ped, true); w.remove(v); }
   // knocked down
   combat.damage(w, p.ped, 9999, null, 'test');
   assert.ok(p.ped.dead);

@@ -200,7 +200,7 @@ export const PERSONAS = {
   punk:     { arche: 'hustler', look: 'punk', where: 'southside:2 oldtown:2 nightlife:2 redlight:2', day: 1, night: 2 },
   homeless: { arche: 'drunk', look: 'homeless', gt: 'push', pp: 'cart', speed: 0.8, where: 'park:2 southside:2 industrial:1 harbor:1 oldtown:1', day: 1, night: 1, cap: 1, poor: true, camp: true },
   phone:    { arche: 'executive', look: 'phone', pp: 'phone', speed: 0.7, where: 'towers:4 civic:2 commercial:2', day: 3, night: 0.3, bumps: true },
-  dogs:     { arche: 'casual', look: 'casual', pp: 'leads', speed: 0.8, where: 'park:3 houses:3 beach:1 luxury:2 commercial:1 apartments:1', day: 2, night: 0.3, cap: 1, dogs: 3 },   // (commercial, apartments: R1-A's and NP3's dog walker on Midtown's pavements - the craft pass, 11-15)
+  dogs:     { arche: 'casual', look: 'casual', pp: 'leads', speed: 0.8, where: 'park:3 houses:3 beach:1 luxury:2 commercial:1 apartments:1', day: 3, night: 0.4, cap: 2, dogs: 3 },   // (more of them: the owner, 11-25 - day 2 -> 3, cap 1 -> 2)   // (commercial, apartments: R1-A's and NP3's dog walker on Midtown's pavements - the craft pass, 11-15)
   dancer:   { arche: 'casual', look: 'dancer', gt: 'dance', where: 'beach:3 nightlife:3', day: 1, night: 1, cap: 1, dance: true },
   swim:     { arche: 'drunk', look: 'swim', gt: 'dance', where: 'beach:4', day: 1.5, night: 0, cap: 1, dance: true },
   // street life
@@ -622,7 +622,7 @@ export function update(world, dt) {
       dog.npc.stopAt = 0; dog.npc.round = null; if (dog.pp === 'letters') dog.pp = null; if (dog.gt === 'kneel') dog.gt = null; dog.appVer = (dog.appVer || 0) + 1;
     }
     if (dog.kind === K.PED && dog.fishing && dog.fishing.npc && dog.npc && (dog.dead || (dog.npc.state !== 'wander' && dog.npc.state !== 'idle'))) dog.fishing = null;   // (trouble: the rod goes down)
-    if (dog.kind !== K.PED || !dog.pet || !dog.pet.walked) continue;
+    if (dog.kind !== K.PED || !dog.pet || !dog.pet.walked || dog.pet.run) continue;   // (pet.run: off the lead in a dog run - dogrun.js moves it)
     const w = world.get(dog.pet.walked);
     if (!w || w.removed || w.dead || w.vehId) {
       if (!inAnyView(world, dog.x, dog.y, 40)) { world.remove(dog); continue; }

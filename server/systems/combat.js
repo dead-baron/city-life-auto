@@ -9,7 +9,7 @@ import { levelStep, sameLevel } from '../../shared/levels.js';
 import * as skills from './skills.js';
 import { WEAPONS, stepWeapon } from '../../shared/items.js';
 import { takeable } from '../../shared/fish.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT, VEHICLE_WEAPON, VEHICLE_WEAPON_DEFAULT, NPC_GUARD } from '../../shared/rules.js';
+import { STUN_RESIST, NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT, VEHICLE_WEAPON, VEHICLE_WEAPON_DEFAULT, NPC_GUARD } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -359,14 +359,25 @@ function backstabbable(world, attacker, victim) {
   return behind || (unaware && !(n && (n.role === 'cop' || n.role === 'gang')));
 }
 
+// A stun's length on someone (STUN_RESIST): a player takes the first one or two in a while in full, then only a little
+// of each - nobody is kept down for good with a can of spray; NPCs the full stun every time
+function stunFor(world, o, secs) {
+  if (!o.player) return secs;
+  const R = STUN_RESIST, now = world.time, h = (o.stunHist ||= []).filter((t) => now - t < R.windowS);
+  const k = h.length < R.full ? 1 : R.after;
+  h.push(now); o.stunHist = h;
+  if (k < 1 && now - (o.stunNoteAt ?? -99) > 8) { o.stunNoteAt = now; world.notify(o.player, 'You shake it off faster - it\'s not working on you like it did.', 'info'); }
+  return secs * k;
+}
 function taser(world, ped, w, aim) {
   const x2 = ped.x + Math.cos(aim) * w.range, y2 = ped.y + Math.sin(aim) * w.range;
   const target = traceTarget(world, ped, ped.x, ped.y, x2, y2, false);
   const ex = target ? target.x : x2, ey = target ? target.y : y2;
   world.emit(ped.x, ped.y, { e: 'taser', x1: ped.x, y1: ped.y, x2: ex, y2: ey });
   if (target && target.kind === K.PED && hurtable(world, target) && !mates(ped, target)) {   // (spawn protection, indoors, dev invincibility: no zap)
-    target.stunUntil = world.time + w.stun;
-    target.downUntil = world.time + w.stun;
+    const st = stunFor(world, target, w.stun);
+    target.stunUntil = world.time + st;
+    target.downUntil = world.time + st;
     target.rollT = 0;
     damage(world, target, w.dmg, ped, 'nonlethal', aim);
     law.subdue(world, ped, target);
@@ -384,7 +395,7 @@ function spray(world, ped, w, aim) {
     if (d > w.range + o.r) continue;
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 6) continue;
     if (!world.map.los(ped.x, ped.y, o.x, o.y) || !hurtable(world, o) || mates(ped, o)) continue;
-    o.stunUntil = Math.max(o.stunUntil || 0, now + w.stun);
+    o.stunUntil = Math.max(o.stunUntil || 0, now + stunFor(world, o, w.stun));
     o.rollT = 0;
     o.vx *= 0.2; o.vy *= 0.2;
     damage(world, o, w.dmg, ped, 'nonlethal', aim);
@@ -404,7 +415,7 @@ function flame(world, ped, w, aim) {
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > r + 12) continue;
     if (!world.map.los(ped.x, ped.y, o.x, o.y)) continue;
     if (o.kind === K.PED) { if (o.dead || o.vehId || o.sky || !hurtable(world, o)) continue; burning.ignite(world, o, ped); damage(world, o, w.dmg, ped, 'fire', aim); }
-    else if (!o.wreckAt && !o.removed && (o.alt || 0) < FLY.HIGH) vehicles.damageVehicle(world, o, w.dmg * 0.8, ped);
+    else if (!o.wreckAt && !o.removed && (o.alt || 0) < FLY.HIGH) { vehicles.damageVehicle(world, o, w.dmg * 0.8, ped); vehicles.flameOn(world, o, ped, w.cd); }   // (held on it long enough, it catches - vehicles.js VEH_FIRE)
   }
   law.gunfire(world, ped);
   npc.onGunfire(world, ped.x, ped.y, ped, 220);

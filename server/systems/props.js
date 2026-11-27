@@ -24,11 +24,10 @@ export function smashFor(world, v) {
     const p = map.props[i];
     const driver = v.seats[0] ? world.get(v.seats[0]) : null;
     breakProp(world, i, v.vx, v.vy, driver);
-    // heavy things (trees, lamp posts, hydrants) dent the car too
-    if (heavy) {
-      vehicles.damageVehicle(world, v, Math.min(14, sp * 0.03) / Math.sqrt(v.def.mass), null);
-      world.emit(v.x, v.y, { e: 'crash', x: p.x, y: p.y, p: Math.min(0.7, sp / 600) });
-    }
+    // it hurts the vehicle by how solid it was and how hard it hit (rules.js SMASH_HURT): a trash bag nothing, a bench a
+    // little, a tree or a lamp post a real hit
+    vehicles.smashHurt(world, v, p.t, sp);
+    if (heavy) world.emit(v.x, v.y, { e: 'crash', x: p.x, y: p.y, p: Math.min(0.7, sp / 600) });
   });
   // player-driven cars feel the hydrant spray per input step too (matches their prediction)
   if (v.ownStepTick === world.tick && world.geysers && world.geysers.length) geyserDrag(v, world.geysers.filter((q) => q.until > world.time), 1 / 20);

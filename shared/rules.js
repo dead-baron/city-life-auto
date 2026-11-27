@@ -966,7 +966,7 @@ export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana:
 // up to returnS seconds after the job ends (then it's the company's to collect); the job keeps it for you (never tidied
 // away) and a garage won't keep one.
 export const WORK_TRUCK_RETURN = 150;
-export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400 };
+export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400, runway: 1.5 };   // (runway: vehicle lengths of open ground ahead of a job's vehicle where it's put - jobs.js workTruck; the owner, 11-25)
 // A job's vehicle recalled (the owner, 2026-10-23: "Canceling a job should make you have to give up the vehicle like a
 // helicopter"; server jobs.js recall): a job that ends undone - cancelled, quit, expired, lost - and a return window run
 // out take back what the job issued. On the ground you're set down beside it outS seconds after (a moment to pull over);
@@ -1509,3 +1509,49 @@ export const RACERS = {
 // car like a wall. keep: the share of its speed the car keeps going through.
 export const FENCE_SMASH = { low: 150, tall: 230, lowKeep: 0.85, tallKeep: 0.7 };
 
+
+export { WADE } from './rules-base.js';   // (vehicles in the water: shared/physics.js wade - its note is in rules-base.js)
+
+// What a vehicle smashes hurts it, by how solid it is and how fast it hit (the owner, 11-25 01:00: "you can run over
+// infinite things apparently ... after running through enough destructible objects (judging on the size and impact ...
+// crashing into a tree vs. driving over a garbage bag) the damage would be comparable"; server props.js smashFor,
+// vehicles.js smashHurt). Damage = w (the kind's weight, def for one not listed) x k x (speed / ref)^pow / sqrt(mass),
+// then the vehicle's toughness (VEHICLE_TOUGH) - a sedan into a tree at 400 px/s loses about a quarter of its health, a
+// bench about a twelfth, a trash bag nothing.
+export const SMASH_HURT = {
+  k: 12, ref: 100, pow: 1.5, def: 0.2, pedalMin: 0.5,   // (pedalMin: a bicycle is hurt only by what weighs this much or more; a horse by nothing)
+  w: {
+    bags: 0, trashpile: 0, flowers_a: 0, flowers_big: 0, cone: 0.03, umbrella_r: 0.05, umbrella_b: 0.05, umbrella_g: 0.05, umbrella_y: 0.05,
+    produce_a: 0.05, produce_b: 0.05, tent: 0.05, shrub_a: 0.08, shrub_b: 0.08, bush_a: 0.08, bush_b: 0.08, bush_c: 0.08, potted: 0.1, planks: 0.1,
+    cactus: 0.15, trashcan: 0.15, news_a: 0.15, news_b: 0.15, news_c: 0.15, mailbox: 0.2, bikerack: 0.2, pallet: 0.15, pallet_b: 0.15, pallet_s: 0.15,
+    tires: 0.15, wheelbarrow: 0.15, cart: 0.15, crates: 0.2, scope: 0.15, dspeaker: 0.2, drum: 0.25, lumber: 0.25, barrier: 0.3, picnic: 0.3,
+    fenceline: 0.15, yfence: 0.15, hedgerun: 0.15, rail: 0.2, chainfence: 0.35,
+    bench_a: 0.4, bench_b: 0.4, bench_m: 0.4, pbench: 0.4, foodcart: 0.4, foodcart_b: 0.4, planter_sq: 0.45, planter_g: 0.45, planter_fl: 0.45,
+    pipes: 0.5, spool: 0.5, palm_s: 0.5, vend_a: 0.6, vend_cola: 0.6, vend_c: 0.6, acunit: 0.6, sandbags: 0.7, busstop: 0.7,
+    bollard: 0.8, phonebox: 0.8, fuelpump: 0.8, hydrant: 0.9, hydrant_y: 0.9, dumpster_s: 0.9, dumpster_m: 0.9, dump_g: 0.9, dump_b: 0.9, dump_o: 0.9,
+    atm: 0.9, lamp: 1, sigpole: 1, palm_a: 1, palm_b: 1, palm_c: 1, palm_d: 1, tree_a: 1.2, tree_b: 1.2, upole: 1.2, billboard: 1.2,
+  },
+};
+
+// Vehicles and fire (the owner, 11-25 03:23: "badly damaged vehicles sometimes catch fire; fire weapons set a vehicle
+// alight only after enough exposure; a burning vehicle goes out or explodes"; server vehicles.js ignite / fireTick):
+// a flamethrower on a vehicle for exposeS seconds (its exposure cools at coolRate a second out of the flames) sets it
+// alight; a hard crash (impact over crashImpact) that leaves it under crashBelow of its health catches it at crashChance;
+// under smoulderBelow it may catch on its own (smoulderPerS a second). Alight, it burns burnS seconds losing dps of its
+// full health a second (no toughness): a healthy one comes through scorched and the fire goes out, a battered one's
+// engine dies and it goes up (DEAD_FIRE_S, DEAD_BOOM_S). Water puts it out (a wading vehicle - shared/physics.js wadeBand).
+export const VEH_FIRE = { exposeS: 2.5, coolRate: 0.5, burnS: 12, dps: 0.04, crashImpact: 220, crashBelow: 0.3, crashChance: 0.35, smoulderBelow: 0.15, smoulderPerS: 0.03 };
+
+// Pepper spray and the taser against players (the owner, 11-25 03:23: "no keeping a player down for good - full effect the
+// first time or two, then little for a while. NPCs matter less"; server combat.js stunFor): within windowS seconds of the
+// first, a player takes full stuns, the rest at after of their length (NPCs always the full stun).
+export const STUN_RESIST = { full: 2, windowS: 60, after: 0.25 };
+
+// The dog runs (server/systems/dogrun.js; the owner, 11-25): how a dog off its lead spends its time - throwChance: the
+// chance, each time it's done nosing about a spot, that its owner throws the ball; throwPx: how far (px); flightS: the
+// ball's time in the air; roamS: seconds at a spot nosing about; trot / run / back: its speed (of a person's walk) about
+// the run, after the ball, bringing it back; happyS: hopping about its owner with the ball dropped.
+// cats: the street cats on stoops and down alleys - shyPx: how close before one darts off, dartPx how far, dartS at most;
+// calmS: sat still that long before it looks about (or pads back to its spot, pad its speed); run its dart's speed.
+export const DOGRUN = { throwChance: 0.45, throwPx: [120, 260], flightS: 0.9, roamS: [2, 5], trot: 0.7, run: 1.5, back: 1.1, happyS: 1.6,
+  cats: { shyPx: 70, dartPx: [80, 140], dartS: 2.5, calmS: 6, run: 1.7, pad: 0.45 } };

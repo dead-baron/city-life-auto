@@ -475,6 +475,7 @@ export function give(world, p, msg) {
   if (!q || !q.conn) return '[dev] That player isn\'t online.';
   const n = Math.max(1, Math.min(GIVE_MAX, Math.floor(Number(msg.n)) || 1));
   const kind = String(msg.kind || ''), id = String(msg.id || '').slice(0, 30);
+  if (kind === 'weapon' && id === 'boomtest') q.boomLive = !!msg.live;   // (the Boom Tester as a real weapon or the dev tool: boomtest.js)
   let what;
   if (kind === 'all') {
     for (const wid of Object.keys(WEAPONS)) if (wid !== 'fists') addThing(q, 'weapon', wid, n);

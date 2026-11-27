@@ -283,6 +283,9 @@ setInterval(() => {
   world.stats.tickMax = 0;
 }, 30000).unref();
 
+// about how long a restart keeps the city away (World v3 builds its world in about four minutes): the page keeps trying
+// that long, "Server updating" over the city, before it gives up to the title (the pre-beta list, F)
+const RESTART_BACK_S = 330;
 function shutdown(sig) {
   console.log(`[server] ${sig} received - saving and shutting down`);
   if (artCdn) artCdn.stop();
@@ -290,7 +293,7 @@ function shutdown(sig) {
   for (const p of world.players.values()) {
     try { custody.onLeave(world, p); custody.saveJail(world, p); casino.leave(p); } catch (e) { console.error('[server] keeping a sentence failed', e); }   // (casino.leave: a hand on the table played out and paid)   // (the cells, Prison Island: served on reconnecting)
     if (p.ped && !p.ped.dead) players.savePos(p, p.ped);
-    if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Server restarting - your progress is saved. Reconnecting...' }); } catch { /* closed */ } }
+    if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Server updating - your progress is saved. Back in a few minutes...', restart: 1, back: RESTART_BACK_S }); } catch { /* closed */ } }   // (restart: the page keeps reconnecting through it - main.js)
   }
   line.save([...world.players.values()].filter((p) => p.conn).map((p) => p.pid));   // (their places held for the restart: line.js)
   try { launch.stop(); } catch (e) { console.error('[server] saving the analytics failed', e); }

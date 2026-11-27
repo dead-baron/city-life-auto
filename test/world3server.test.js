@@ -588,3 +588,24 @@ test('the event calendar on World v3: the armored truck run\'s routes on the roa
   const t = M.tileAtPx(s.x, s.y);
   assert.ok(!PED_BLOCK[t] && t !== T.WATER && t !== T.DEEP, 'on the quay');
 });
+
+test('the dog runs: owners and their dogs off the lead, playing fetch; scared off, the dogs go back on the lead (the owner, 11-25)', async () => {
+  const acts = await import('../server/systems/activities.js');
+  const runs = M.world3.fenceExits.places.filter((p) => p.kind === 'dogrun');
+  const spots = acts.spotsOf(M).list.filter((s) => s.k === 'dogrun');
+  assert.ok(runs.length >= 1 && spots.length >= Math.ceil(runs.length / 2), `dog runs ${runs.length}, filled spots ${spots.length}`);
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const s = spots[0], { p } = joinPlayer(w);
+  teleport(w, p.ped, s.x, s.y + 900);
+  const g = acts.fill(w, s, { seen: true });
+  assert.ok(g && g.dogs && g.dogs.length >= 2, 'owners and their dogs');
+  const seen = new Set(), balls = new Set();
+  for (let i = 0; i < 20 * 40; i++) { w.step(); for (const q of g.dogs) { seen.add(q.st); if (q.ball) balls.add(q.ball); } }
+  for (const st of ['roam', 'chase', 'carry', 'happy']) assert.ok(seen.has(st), `a dog ${st}s (${[...seen]})`);
+  for (const q of g.dogs) { const d = w.get(q.dog); const [x0, y0, x1, y1] = s.run; assert.ok(d && d.x > x0 - 40 && d.x < x1 + 40 && d.y > y0 - 40 && d.y < y1 + 40, 'kept in the run'); }
+  // an owner scared off their spot: the dog back on the lead, the ball gone
+  const q = g.dogs[0], owner = w.get(q.owner), dog = w.get(q.dog);
+  owner.x += 300; w.place(owner);
+  w.step();
+  assert.ok(!dog.pet.run && q.st === 'off' && !q.ball, 'called back onto the lead');
+});

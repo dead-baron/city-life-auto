@@ -109,6 +109,14 @@ export function startFarm(world, p, poi) {
 // an arrow at the screen's edge and on the minimap: phone.jobTarget's veh) until you're in it, a garage won't keep it
 // (homes.js storeVehicle), and brought back to where it was issued once the job's done it pays WORK_TRUCK_RETURN
 // (truckInteraction / returnTruck). poi: the place it belongs to (named when you bring it back).
+// the ground from f0 to f1 vehicle lengths along heading a (its middle and both sides) is open to drive on
+function clearAlong(map, x, y, a, def, f0, f1) {
+  for (let f = f0; f <= f1 + 1e-6; f += 0.25) for (const g of [-0.5, 0, 0.5]) {
+    const px = x + Math.cos(a) * def.L * f - Math.sin(a) * def.W * g, py = y + Math.sin(a) * def.L * f + Math.cos(a) * def.W * g;
+    if (CAR_SPAWN_BLOCK[map.tileAtPx(px, py)]) return false;
+  }
+  return true;
+}
 export function workTruck(world, p, pad, model = 'flatbed', poi = null) {
   const def = VEHICLES[model];
   let v = null;
@@ -116,6 +124,7 @@ export function workTruck(world, p, pad, model = 'flatbed', poi = null) {
     if (q.model !== model || q.wreckAt || q.sinkAt || q.seats.some((x) => x) || q.cargo.some((c) => c) || q.owner || q.rentedBy || q.forSale || q.onEvent || q.towedBy) continue;
     if (q.issuedTo && q.issuedTo !== p.pid) continue;   // (someone else's job truck: theirs)
     if ((q.lz || 0) > 0.3) continue;
+    if (!clearAlong(world.map, q.x, q.y, q.a, def, 0.5, 0.5 + WORK_TRUCK.runway)) continue;   // (parked nose-on to a wall: not that one)
     v = q; break;
   }
   // (first on proper ground - the street, a car park: never up on the pavement or a promenade, shared/parkcheck.js - then,
@@ -125,12 +134,13 @@ export function workTruck(world, p, pad, model = 'flatbed', poi = null) {
     for (let k = 0; k < n && !v; k++) {
       const a = (k / n) * Math.PI * 2;
       const x = pad.x + Math.cos(a) * r, y = pad.y + Math.sin(a) * r;
-      const heading = Math.abs(Math.cos(a)) > 0.7 ? Math.PI / 2 : 0;
-      const ok = [-0.5, 0, 0.5].every((f) => [-0.5, 0.5].every((g) => {
-        const px = x + Math.cos(heading) * def.L * f - Math.sin(heading) * def.W * g, py = y + Math.sin(heading) * def.L * f + Math.cos(heading) * def.W * g;
-        return !CAR_SPAWN_BLOCK[world.map.tileAtPx(px, py)];
-      }));
-      if (!ok || (proper && parkWhy(world.map, x, y, heading, def.L, def.W)) || world.query(x, y, def.L, K.VEH).length) continue;
+      // (facing a way it can drive off: open ground for a length and a half ahead - the owner, 11-25: the ambulance spawned
+      // nose-on to a brick wall in an alley. Each of the four ways tried, the one along the street first)
+      const h0 = Math.abs(Math.cos(a)) > 0.7 ? Math.PI / 2 : 0;
+      const free = (heading, f0, f1) => clearAlong(world.map, x, y, heading, def, f0, f1);
+      if (!free(h0, -0.5, 0.5) || (proper && parkWhy(world.map, x, y, h0, def.L, def.W)) || world.query(x, y, def.L, K.VEH).length) continue;
+      const heading = [h0, h0 + Math.PI, h0 + Math.PI / 2, h0 - Math.PI / 2].find((h) => free(h, -0.5, 0.5 + WORK_TRUCK.runway) && (!proper || !parkWhy(world.map, x, y, h, def.L, def.W)));
+      if (heading === undefined) continue;
       v = world.spawnVehicle(model, x, y, heading, { npcOwned: false });
     }
   }

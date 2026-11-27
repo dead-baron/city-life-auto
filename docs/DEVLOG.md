@@ -28273,3 +28273,130 @@ files - 8 fail, all on main too, flaky or CPU timing under load (`docs/tasks/ART
 look in a running World v3 game at 1280x720 and 915x412 (a street at noon, a shop window, the menus and the
 Inventory in look C). Not seen in play: NPCs through a shop window, night, the shark, the cats, cloud shadows. The
 server re-bakes (~5 h); players get a short reconnect.
+
+## 2026-11-26 · Vehicles in shallow water: splash, wade, flood - sink only in deep water (the owner's 11-24 21:40 note) - branch `rules-1126`
+"it shouldn't just instantly sink in any depth of water and lose your vehicle" - and the creek network is live.
+- **The depth** (`shared/physics.js` `waterDepth`, `wadeBand`; numbers in `shared/rules-base.js` `WADE`): metres from the
+  distance to the bank by the kind of water, as the art measures it (`client/art2/water.js` depthOf) - a creek or river
+  0.25 m a tile (at most 3.4), a pond 0.55 (3.2), a lake 0.32, the sea 0.22 off sand and 0.55 off rock or grass; off a
+  quay, a dock, a seawall or a building deep at once (so a car driven off a pier still goes down, as `core.test.js`
+  has it); open deep water deep. Same answer on the server and the page (the page predicts its own car with it).
+- **Who fords what** (`fordOf`; a vehicle's own `def.ford` wins): a car 0.5 m, a truck (mass 2.4+) 0.7, a motorbike or
+  bicycle 0.35, boards and carts 0.15; off-road (`rough` 0.4 or less: the Trailcat 4x4, tractor, combine, tank, dirt
+  bike, mountain bike) 1 m.
+- **Bands:** splash (0.3 m or less): no slowing, spray off the wheels; wade: slower the deeper (an off-road vehicle
+  less so); the engine holds 8 s (30 s off-road), then floods and stalls where it is - no power, steam, never lost
+  (`VF.STALL`, ROTOR's bit, which only aircraft use; the page predicts no power) - and tries again after 15 s with 5 s
+  to get out; out of the water it dries. Deeper than its ford: sinks, as before.
+- Guide entry "Driving into water", a first-time moment `wade`. Tests: `test/wade.test.js` (5), the moment in
+  `ftue.test.js`. The code lives in physics.js, not a file of its own: the page's file count is at its budget (86).
+- **Cost of going live:** physics.js is read by the World v3 build, so the world3 / art3 hashes move (the world is the
+  same: pages fetch the city again, the server re-bakes and identical chunks carry over) - merged after the 11-26 art
+  re-bake has finished.
+
+## 2026-11-26 · What a vehicle smashes hurts it; vehicles catch fire (the owner's notes of 11-25 01:00 and 03:23) - branch `rules-1126`
+- **Smash damage** (`shared/rules.js` `SMASH_HURT`, `server/systems/vehicles.js` `smashHurt`, called from `props.js`
+  smashFor and a fence gone through): every breakable kind has a weight - a bag of trash 0, a cone 0.03, a trash can
+  0.15, a bench 0.4, a bus shelter 0.7, a hydrant 0.9, a lamp post 1, a tree 1.2 - and the damage is weight x 12 x
+  (speed / 100)^1.5 / sqrt(mass), then the vehicle's toughness, on its front: a sedan into a tree at 400 px/s loses
+  about a quarter of its health, a bench a twelfth, a bag nothing; twenty trash cans at speed do more than a tree. A
+  horse tramples through unhurt; a bicycle minds only what weighs 0.5 or more (as before: only the heavy things).
+  Before, only the heavy kinds hurt at all, at most 14 a hit. **A player's vehicle only** (found by the whole suite:
+  the director's street race stopped, its racers wrecked by the furniture they plough through): the NPCs' and the
+  scenes' drivers keep the old dent from the heavy things. Test: `smash.test.js` (every breakable kind has a weight; an
+  NPC's car as before), `racers.test.js`.
+- **Fire** (`VEH_FIRE`, vehicles.js `ignite`, `flameOn`, `fireTick`): a flamethrower on a vehicle for 2.5 s of jet
+  (cooling out of it) sets it alight; a hard crash (impact 220+) that leaves it under 30% catches it one time in three;
+  under 15% it may catch on its own (3% a second). Alight it burns 12 s at 4% of its full health a second - a healthy
+  one comes through scorched and the fire goes out, a battered one's engine dies and it goes up as before. Water puts
+  it out. Bicycles, horses, aircraft and car soccer's cars never catch. Test: `test/vehfire.test.js`.
+
+## 2026-11-26 · Weapons against vehicles: explosives one hit, the SAM two, a longer flamethrower; the Boom Tester as a real weapon (the owner's 11-25 notes) - branch `rules-1126`
+- **Grenades and the Boom Tester** go off beside a vehicle (its nearest part within three quarters of the blast) and it
+  is destroyed, as a rocket's always was - armored vehicles take two, the tank its own number (`size.wreck`:
+  `explosions.js` blastAt -> `combat.js` blast's rocket rule; `grenades.js`, `boomtest.js`). Before, a grenade took
+  about five to finish a sedan.
+- **The SAM** 230 -> 240: two hits for every helicopter and plane, three for the gunship (it took four).
+- **The flamethrower** reaches 340 px (was 150; "at least a quarter way across the screen"), a slightly narrower cone;
+  the page draws the jet to that length (`main.js` 'flame' reads `WEAPONS.flamer.range`).
+- **The Boom Tester as a real weapon:** a second line in the debug menu's Fire section gives it with `live` - people
+  react as to gunfire, the police are called, the blast is the shooter's (`p.boomLive`). The first line stays the dev
+  tool nobody reacts to. Not done (art, for the Fable list): the punching throw and glowing hands.
+- Test: `test/weapontune.test.js`.
+
+## 2026-11-26 · The stars that stopped coming: self-defense never against the police (the owner, 11-25: "Wanted level stops after a great deal of crime on a character made that day") - branch `rules-1126`
+Reproduced in a sim: once a cop had shot at you, killing that cop was "self-defense" (law.js immune: the victim had
+struck first) - so in a shootout no killing added heat, the stars cooled off and stopped; the same for a civilian who
+fought back after you attacked them. Now self-defense is never against the police, never for someone already wanted,
+and never when you started it - `onDamage` records who struck first (`started`) between a player and anyone (it did
+between two players only, for bounties). A clean character a stranger attacks first may still defend themselves.
+Test: `test/selfdefense.test.js`.
+
+## 2026-11-26 · Pepper spray and the taser wear off on players (the owner, 11-25: "no keeping a player down for good") - branch `rules-1126`
+`shared/rules.js` `STUN_RESIST`, `server/systems/combat.js` `stunFor`: a player takes the first two stuns in a minute in
+full; the rest last a quarter as long ("You shake it off faster"), until a minute has passed since the first. NPCs
+take the full stun every time. Test: `test/stunresist.test.js`.
+
+## 2026-11-26 · The paramedic's uniform; job vehicles face a way out (the owner, 11-25) - branch `rules-1126`
+- **The uniform:** on shift you wear the catalogue's Paramedic uniform and work boots on your own body, face and hair
+  (`server/systems/paramedic.js` dress / undress); however the shift ends - done, quit, its time up, the ambulance lost
+  - your own clothes come back. Your saved look is never touched.
+- **Facing a way out** (the class: every job vehicle - `jobs.js` workTruck, `clearAlong`): a job's vehicle is put down
+  facing one of the four ways with a length and a half of open ground ahead (`WORK_TRUCK.runway`), the one along the
+  street first; a free one already there is taken only if it isn't parked nose-on to a wall. His ambulance had been
+  put down facing a brick wall in an alley. Test: `paramedic.test.js` (six hospitals).
+
+## 2026-11-26 · Train riders never swim; boats under the highway's decks drawn under them (the owner's notes of 11-25) - branch `rules-1126`
+- **Riders swimming** (11-25 13:33): the swim flag the page draws from (`server/net.js`, `shared/mapcore.js` isSwimming)
+  read the tile under a rider - over track on water, everyone aboard swam for a few seconds. isSwimming is false for
+  anyone aboard a train, everywhere it's asked. Test: `test/trainswim.test.js`.
+- **Boats over a road deck** (02:36, "it doesn't happen on all bridges"): the renderer knew a bridge's own tiles but
+  not the 6,500 tiles of open water under the elevated highway's decks - boats, their wakes and foam, and swimmers
+  there were drawn over the deck. `mapcore.js underDeckAt` (a bridge tile, or water under `m.deck`), asked by
+  `client/art2/game/host.js` for all four. Test: `test/underdeck.test.js`.
+
+## 2026-11-26 · "Server updating" through a restart; two World v3 tests brought up to the owner's rules; the doorway hop diagnosed - branch `rules-1126`
+- **A restart for an update** (pre-beta list F): the server says so as it shuts down (`server/index.js` shutdown: the
+  'kicked' message with `restart` and `back`, 330 s - World v3 builds in about four minutes); the page keeps
+  reconnecting through it with "Server updating - back in a few minutes..." over the city instead of dropping to the
+  title after a minute (`client/main.js` scheduleReconnect, reconnecting); a title that can't reach the city says it
+  may be updating.
+- **Tests that failed on main because the rules moved on, not the world:** `world3wild` - the stations' own roads are
+  kept off by the traffic on purpose (11-06: no traffic into a station's forecourt loop), so they are allowed among the
+  flagged roads; `world3mesa` - no porte-cochere over a resort's drive since the owner's 11-14 rule against overhangs over
+  entrances (`world3-strip.js` says so): the test now checks that rule instead of the old canopies.
+- **The hop at a walk-in's door** (the owner, 11-25 00:22, the gun shop / hardware pair): filmed in a running World v3
+  game (`/tmp/door` frames, not kept). The server's walk in is smooth (no fence, no ledge, no step: checked on all three
+  Pier Street doors - and only 11 of 6,025 doors in the world have any fence across the way out, none a shop); the baked
+  ground has no step either. What reads as a hop is the page: the doorway's tiles are floor, so the moment you step into
+  them you count as inside (`main.js` walkInAt), but until the shop's cut-away bake is ready the outside stays drawn and
+  you show as an x-ray silhouette up on its roof, above the sign - in the 3/4 view, a jump up and over the front. For
+  the renderer's work (logged in the pre-beta list): keep the walker drawn at the door, or the roof faded, until the
+  inside is ready - or start the cut-away bake sooner.
+
+## 2026-11-26 · The dog runs: owners and their dogs off the lead, playing fetch (the owner, 11-25 00:47) - branch `rules-1126`
+"The dog run area doesnt have any dogs or NPCs walkings dogs or playing fetch with dogs". World v3's dog runs (the
+fenced places `world3-fenceexits.js` finds by their DOG RUN sign or agility gear) are now an activity spot
+(`activities.js` 'dogrun': by day 85%, at night 15%, one round a player): two or three owners stood about inside, each
+with a dog off the lead (`server/systems/dogrun.js`): it noses about the run, a new spot every few seconds; now and
+then its owner throws a tennis ball across the run (a K.BALL 'tennis', drawn as the tennis ball), it runs for it, brings
+it back in its mouth and hops about its owner (APOSE.happy), then off again (`shared/rules.js` DOGRUN). An owner scared
+off their spot calls the dog back onto the lead (personas.js walks it at heel). Each dog's game is its own; the group
+stays together (his rule for animal groups, 11-25). Not done from the same note: more dog walkers by district, cats on
+stoops and in alleys. Test: `world3server.test.js` (the dog runs found and filled, every stage of fetch seen, the lead
+back on a scare).
+
+## 2026-11-26 · Anything small in the air casts a round shadow below it (the pre-beta list C, "Shadows") - branch `rules-1126`
+A ball in flight (a tennis ball at the dog run, a basketball, a thrown grenade) drew the shadow march's column under it;
+now a small round shadow on the ground away from the sun by its height, fainter higher up, at night and in rain
+(`client/art2/game/host.js` `_airShadow`, `blobShadow`) - the rule birds and leaping fish already had (their own shapes).
+Page only. Also: the comments added to physics.js / mapcore.js today trimmed to keep the page's city code inside its
+380 KB budget (it was 381).
+
+## 2026-11-26 · Street cats on the stoops and down the alleys; more dog walkers (the owner, 11-25 00:47) - branch `rules-1126`
+"I dont see a lot of dogs or cats or NPCs walking dogs in the cities either". A stray cat (black, grey or ginger) on
+about a third of the walk-ups' front steps and a third of the alleys, by the wall a third of the way down
+(`activities.js` 'cat' spots, by day 55%, at night 70%, two round a player at most; `dogrun.js` catStep): sat still,
+looking about now and then; anyone within 70 px and it darts 80-140 px away from them and sits again; left in peace it
+pads back to its spot (`DOGRUN.cats`). Nobody's lost it (pets.js leaves strays be). The dog walkers (personas.js) out
+more: by day 2 -> 3, two round a place at most (was one). Test: `test/streetcats.test.js`.

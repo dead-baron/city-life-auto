@@ -81,15 +81,15 @@ test('World v3: Lucky Mesa - districts, the Strip and its streets on the network
     check(palms >= 6, `${R.name}: ${palms} palms`);
   }
   check(looks.size === MESA.resorts.length, `${looks.size} looks`);
-  // the Strip's plan (2026-10-20, LuckyMesa-B2): a drive loop round a fountain in front of each resort, its porte-cochere
-  // (the casino's marquee, the adobe's pergola); the cabanas; the two car parks; the skybridge's span and towers; the
+  // the Strip's plan (2026-10-20, LuckyMesa-B2): a drive loop round a fountain in front of each resort - no porte-cochere
+  // over it since 11-14 (the owner: no overhangs over building entrances); the cabanas; the two car parks; the skybridge's span and towers; the
   // median's palms and banner poles; the Neon Saguaro's cactus up its pylon; the bus stops
   const propsIn = (t, x0, y0, x1, y1) => m.props.filter((p) => p && p.t === t && p.x >= x0 * TILE && p.x < x1 * TILE && p.y >= y0 * TILE && p.y < y1 * TILE);
   for (const R of RESORTS) {
     const [x0, y0, x1, y1] = R.lot, fy0 = R.face === 'S' ? y1 - 8 : y0, fy1 = fy0 + 8;
     check(propsIn('fountain', x0, fy0, x1, fy1).length >= 1 || R.look === 'lake', `${R.name}: the fountain in its drive loop`);
     const py0 = R.face === 'S' ? y1 - 22 : y0, py1 = py0 + 22;   // (the Silver Lagoon's at the end of its drive past the lake)
-    check(propsIn('porte', x0, py0, x1, py1).length + propsIn('pergola', x0, py0, x1, py1).length >= 1, `${R.name}: its porte-cochere`);
+    check(propsIn('porte', x0, py0, x1, py1).length === 0, `${R.name}: no porte-cochere over its drive (the owner, 11-14: no overhangs over entrances - world3-strip.js)`);
   }
   const [sx0, sy0, sx1, sy1] = [5330, 552, 5552, 690];
   check(propsIn('cabana', sx0, sy0, sx1, sy1).length >= 12, `${propsIn('cabana', sx0, sy0, sx1, sy1).length} cabanas`);

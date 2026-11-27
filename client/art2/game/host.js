@@ -38,8 +38,9 @@ import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
 import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/constants.js';
 import { AIR_UP, washK } from '../../../shared/rules-page.js';
-import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate } from '../../../shared/mapcore.js';
+import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate, underDeckAt } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
+import { wadeBand, WB } from '../../../shared/physics.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
 import { BARRIER_PIECE } from '../../../shared/levels.js';
 import { pointAt } from '../../../shared/geom.js';
@@ -100,6 +101,13 @@ function birdShadow(s, w) {
     const wing = t < 1 && x > sx - cw * 0.55 && x < sx + cw * 0.45;
     if (body || tail || wing) put(G, i, j, rgb, 0, UP_N, F_GROUND);
   }
+  return G;
+}
+// something small up in the air (a ball in flight, a thrown grenade): a round shadow on the ground below it, s px across -
+// the one rule for anything in the air (the pre-beta list C, "Shadows"; birds and leaping fish draw their own shapes)
+function blobShadow(s) {
+  const W = s + 2, G = gbuf(W, W, W >> 1, W >> 1), c = W / 2, rx = s / 2, ry = s / 2 * 0.62, rgb = [14, 16, 24];
+  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const x = (i + 0.5 - c) / rx, y = (j + 0.5 - c) / ry; if (x * x + y * y < 1) put(G, i, j, rgb, 0, UP_N, F_GROUND); }
   return G;
 }
 // a happy pet's hops (px up): quick little bounces, a beat between them, each pet in its own time
@@ -1035,7 +1043,7 @@ export class World2 {
   // whether any of a hull's length (bow, middle, stern) lies under a bridge deck (bridge tiles over the water)
   _underDeck(x, y, a, L) {
     const M = this.map, c = Math.cos(a) * L * 0.5, s = Math.sin(a) * L * 0.5;
-    for (let k = -1; k <= 1; k++) if (M.tileAtPx(x + c * k, y + s * k) === TT.BRIDGE) return true;
+    for (let k = -1; k <= 1; k++) if (underDeckAt(M, x + c * k, y + s * k)) return true;   // (a bridge's tiles, or water under the highway's deck)
     return false;
   }
 
@@ -1889,7 +1897,7 @@ export class World2 {
     if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
     const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
     const z0 = (sky ? sky * SKY_LIFT : (car ? 0 : this._z0(p, L.swimming)) + lift) + extraZ, ap = E.ap || 1;
-    o.under = L.swimming && this.map.tileAtPx(p.rx, p.ry) === TT.BRIDGE ? UNDER_Z : 0;   // (swimming under a bridge)
+    o.under = L.swimming && underDeckAt(this.map, p.rx, p.ry) ? UNDER_Z : 0;   // (swimming under a bridge or the highway's deck)
     E.drawSprite(sk, (car ? car.rx + snapTo(p.rx - car.rx, ap) : p.rx) + hx, (car ? car.ry + snapTo(p.ry - car.ry, ap) : p.ry) + hy, z0, o);
     o.under = 0;
     this.n.drawn++;
@@ -1994,7 +2002,7 @@ export class World2 {
     if (def && def.horse) { this._horse(v, now, me, def); return; }   // (a horse: the animal's own sprite, its rider up in the saddle - #325)
     if (!def || !A || !A.vehicleKey || !A.vehState) return;
     const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
-    const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
+    const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1 && wadeBand(this.map, v.rx, v.ry, def) === WB.DEEP, sk = Math.min(1, (v.sinkT || 0) / 3);   // (shallower than it can ford: wading, not sinking - shared/physics.js wade)
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase, v.hp, v.parent);   // (parent: its damage word - task #402)
     if (st.cut) { this._vehCut(v, now, me, st, hi, N); return; }   // (cut in two by a plasma blade)
     if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);
@@ -2281,12 +2289,12 @@ export class World2 {
     void F;
   }
 
-  _small(kind, key, args, e, x, y, z0) {
+  _small(kind, key, args, e, x, y, z0, shadow = true) {
     let sk = this._spr('actors', kind, key, args);
     if (!sk) sk = e._v2k && this.E.hasSprite(e._v2k) ? e._v2k : null;
     if (!sk) return;
     e._v2k = sk;
-    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false;
+    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = shadow; o.tint = null; o.flipX = false;
     this.E.drawSprite(sk, x, y, z0, o); this.n.drawn++;
   }
 
@@ -2314,7 +2322,7 @@ export class World2 {
         if ((b.flags & 1) && Math.floor(now * 5) % 2) continue;   // about to vanish: it blinks
         const hi = quant(b.ra || 0, 16); this._small('bag', A.bagKey(b.d.t, hi, 16), [b.d.t, hi, 16], b, b.rx, b.ry, this._z0(b, false));
       }
-      for (const b of F.balls) { const t = b.d.t | 0, spin = quant(b.ra || 0, 4); this._small('ball', A.ballKey(t, spin), [t, spin], b, b.rx, b.ry, (b.extra || 0) * 2 + this._z0(b, false)); }
+      for (const b of F.balls) { const t = b.d.t | 0, spin = quant(b.ra || 0, 4), up = (b.extra || 0) * 2; if (up > 4) this._airShadow(b.rx, b.ry, up, 8); this._small('ball', A.ballKey(t, spin), [t, spin], b, b.rx, b.ry, up + this._z0(b, false), up <= 4); }   // (up in the air: a round shadow below it, not the shadow march's column)
       for (const pr of F.projs) {
         const N = 32, hi = quant(pr.ra, N), w = pr.d.w | 0;
         if (!this.projWarm.has(w)) { this.projWarm.add(w); for (let h = 0; h < N; h++) this.warmQ.unshift(['actors', 'proj', A.projKey(w, h, N), [w, h, N], -1]); }
@@ -2352,6 +2360,19 @@ export class World2 {
       const k = this._spr('actors', 'muzzle', A.muzzleKey(1, hi, 16, frm), [1, hi, 16, frm]);
       if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; this.E.drawSprite(k, f.x, f.y, f.z ?? 18, o); }   // (f.z: the barrel's height - main.js MUZZLE)
     }
+  }
+
+  // Something small up in the air (blobShadow): a round shadow s px across on the ground, away from the sun by its
+  // height, fainter higher up, at night and in the rain - as a bird's (_flyShadow)
+  _airShadow(x, y, z, s) {
+    const sky = this.F && this.F.sky;
+    if (!sky || !sky.sunDir || this.F.sub) return;
+    const al = 0.5 * (1 - sky.night) * (1 - 0.7 * Math.min(1, this.F.rain || 0)) * Math.max(0.3, 1 - z / 240);
+    if (al < 0.04) return;
+    const key = this._conv(`ash|${s}`, () => blobShadow(s), true);
+    if (!key) return;
+    const u = sky.sunDir, l = Math.hypot(u.x, u.y) || 1, d = z * Math.max(0.3, Math.min(2.5, sky.shadowLen)) / 0.62;
+    this.E.drawDecal(key, x + u.x / l * d, y + u.y / l * d, 0, al, 0);
   }
 
   // A flying bird's shadow (10-23: no column): its shape from above (span; k the wingbeat, -1 tucked) on the ground,
@@ -2745,13 +2766,13 @@ export class World2 {
       if (age < 0 || age > LIFE) continue;
       const x = W.d[j], y = W.d[j + 1];
       if (x < x0 || x > x1 || y < y0 || y > y1) continue;
-      if (this.map.tileAtPx(x, y) === TT.BRIDGE) continue;   // (dropped under a bridge: the deck over it hides the foam - b1c)
+      if (underDeckAt(this.map, x, y)) continue;   // (dropped under a bridge or a highway deck: the deck over it hides the foam - b1c)
       const a = W.d[j + 2], hw = W.d[j + 4], sp = W.d[j + 5], f = 1 - age / LIFE, alpha = Math.pow(f, 1.3) * Math.min(1, sp / 300) * 0.9;
       const spread = hw * 0.8 + age * (10 + sp * 0.035), nx = -Math.sin(a), ny = Math.cos(a);
       for (let s = -1; s <= 1; s += 2) {
         const key = streak[(k + (s > 0 ? 1 : 0)) % 3];
         const qx = x + nx * spread * s, qy = y + ny * spread * s;
-        if (key && this.map.tileAtPx(qx, qy) !== TT.BRIDGE) E.drawDecal(key, qx, qy, a + s * 0.35, alpha, 0);
+        if (key && !underDeckAt(this.map, qx, qy)) E.drawDecal(key, qx, qy, a + s * 0.35, alpha, 0);
       }
       if (age < 1 && churn) E.drawDecal(churn, x, y, a, (1 - age) * alpha, 0);
     }

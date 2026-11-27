@@ -5,7 +5,7 @@ import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_L
 import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, FENCE_PROPS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
-import { pedStep, vehStep, driveInput, setFences } from '../shared/physics.js';
+import { pedStep, vehStep, driveInput, setFences, wadeBand, WB } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
@@ -293,7 +293,7 @@ function connect() {
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
   S.ws = ws;
-  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
+  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; S.updatingUntil = 0; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
     S.lastMsgAt = performance.now();   // (the probe after coming back into view: update.js onVisible)
     if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"spawnat"')) { spawnAt(ev.data); return; }   // (never held: the city waits for it)
@@ -365,25 +365,28 @@ function scheduleReconnect(why, toTitle = false) {
   S.ws = null;
   S.connectFailed = true;
   if (S.playing && S.everConnected && !S.lostAt) S.lostAt = performance.now();
-  if (!toTitle && S.playing && S.everConnected && performance.now() - S.lostAt < RECONNECT_IN_GAME_MS) reconnecting(true);
+  const updating = (S.updatingUntil || 0) > performance.now();   // (the server said it was restarting for an update: it's a few minutes, not lost)
+  if (!toTitle && S.playing && S.everConnected && (updating || performance.now() - S.lostAt < RECONNECT_IN_GAME_MS)) reconnecting(true, updating);
   else {
     reconnecting(false);
     $('title').classList.remove('hidden');
     $('hud').classList.add('hidden');
     $('t-resume').classList.add('hidden');
     $('play').disabled = true;
-    $('t-status').textContent = S.everConnected
+    $('t-status').textContent = updating ? 'The server is updating to a new version - back in a few minutes. Your progress is saved; you\'ll go straight back in.'
+      : S.everConnected
       ? `${why}. Retrying in ${Math.round(S.reconnectIn / 1000)}s... (if you were mid-fight you have 30s before your ghost drops loot)`
-      : `The online city isn't reachable right now (retrying every few seconds).${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
+      : `The online city isn't reachable right now - it may be updating (a few minutes). Retrying every few seconds.${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
   }
   clearTimeout(S.reconnectT);
   S.reconnectT = setTimeout(connect, retryDelay(S.reconnectIn, document.hidden, performance.now() - (S.visibleAt ?? -1e9)));
   S.reconnectIn = Math.min(15000, S.reconnectIn * 1.6);
 }
-function reconnecting(on) {
+function reconnecting(on, updating = false) {
   let el = document.getElementById('reconn');
   if (!on) { if (el) el.classList.add('hidden'); return; }
-  if (!el) { el = document.createElement('div'); el.id = 'reconn'; el.setAttribute('role', 'status'); el.textContent = 'Reconnecting...'; document.body.appendChild(el); }
+  if (!el) { el = document.createElement('div'); el.id = 'reconn'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = updating ? 'Server updating - back in a few minutes...' : 'Reconnecting...';
   el.classList.remove('hidden');
 }
 // The page going into the background (a phone switching apps, another tab): the server is told it's away - it sends
@@ -542,7 +545,8 @@ function onText(m) {
     case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.on('Transit', m); if (S.bigmap) mapwp.refreshLegend(); break;
     case 'logoff': onLogoff(m); break;   // (the pause list's LOG OFF: the server's count - UI-10)
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
-    case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; S.refusedWhy = m.reason; break;
+    case 'kicked': if (m.restart) { S.updatingUntil = performance.now() + (m.back || 300) * 1000; break; }   // (the server restarting for an update: keep reconnecting through it - scheduleReconnect)
+      S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; S.refusedWhy = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     case 'line': inLine(m); break;   // the city's full: waiting at the door, in at our turn (server/line.js)
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
@@ -622,7 +626,7 @@ function reconcile(s) {
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
     if (def.kind === 'air' && !S.airMod) { S.pred = null; loadAir(); return; }   // (flying: predicted once render/aircraft.js is in)
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), ug: S.ugLayer || 0 };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), stalled: def.kind !== 'air' && !!(e.flags & VF.STALL), ug: S.ugLayer || 0 };
     S.pred = { kind, s: st, def, prev: null };
     if (def.kind === 'air') { Object.assign(st, { alt: s.self.rdy, vz: s.self.stamina, spool: s.self.rollT, bank: s.self.rdx, slip: 0, spin: 0, launch: 0 }); S.pred.air = true; }
     else if (def.horse) { const r = s.self.rdy; st.blown = r < -0.5; st.stam = st.blown ? -1 - r : r; }   // (a horse's wind, as the server has it: server/net.js)   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
@@ -1115,8 +1119,9 @@ function onEvent(ev) {
     case 'swish': { const e = S.ents.get(ev.id); if (e) { e.swingAt = S.loopClock; e.swingSide = (e.swingSide || 0) ^ 1; } sfx('swing', distVol(e ? e.rx : 0, e ? e.ry : 0) * 0.5); break; }
     case 'flame': {   // the flamethrower's jet (server combat.js flame): a cone of fire out of the nozzle, the roar
       const sh = ev.id ? S.ents.get(ev.id) : null, x0 = sh && sh.rx !== undefined ? sh.rx : ev.x, y0 = sh && sh.ry !== undefined ? sh.ry : ev.y;
-      for (let k = 0; k < 7; k++) { const aa = ev.a + (Math.random() - 0.5) * 0.5, sp = 380 + Math.random() * 160, d = 14; fx.spawn(3, x0 + Math.cos(ev.a) * d, y0 + Math.sin(ev.a) * d, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.28 + Math.random() * 0.12, 3 + Math.random() * 4, Math.random() < 0.5 ? '#ff9a1a' : '#ffd23a', 18); }
-      if (sh) S.flashes.push({ x: x0 + Math.cos(ev.a) * 30, y: y0 + Math.sin(ev.a) * 30, t: 0.1, a: ev.a, r: 150, id: ev.id, off: 30 });
+      const FR = WEAPONS.flamer.range;   // (the jet reaches as far as it burns: items.js flamer range)
+      for (let k = 0; k < 9; k++) { const aa = ev.a + (Math.random() - 0.5) * 0.5, sp = 380 + Math.random() * 160, d = 14; fx.spawn(3, x0 + Math.cos(ev.a) * d, y0 + Math.sin(ev.a) * d, Math.cos(aa) * sp, Math.sin(aa) * sp, (FR / sp) * (0.75 + Math.random() * 0.3), 3 + Math.random() * 4, Math.random() < 0.5 ? '#ff9a1a' : '#ffd23a', 18); }
+      if (sh) S.flashes.push({ x: x0 + Math.cos(ev.a) * 30, y: y0 + Math.sin(ev.a) * 30, t: 0.1, a: ev.a, r: FR, id: ev.id, off: 30 });
       sfx('burner', distVol(ev.x, ev.y) * 0.5);
       break;
     }
@@ -4564,7 +4569,8 @@ function driverBlinks(v) { for (const p of S.ents.values()) if (p.kind === K.PED
 const vehSpeed = (v) => (v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x - v.buf[v.buf.length - 2].x, v.buf[v.buf.length - 1].y - v.buf[v.buf.length - 2].y) * 20 : 0);
 // (an aircraft only when it's down on the water - not every frame it flies over it at any height: the splashes and rings
 // under a helicopter at 31 m, the owner 11-06 - and a floatplane never; v._up: up in the air, no puddle splashes either)
-const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+// (a land vehicle only deeper than it can ford: shallower it splashes or wades through - shared/physics.js wade; v._wade the band)
+const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1 && (def.kind === 'air' || def.horse || (v._wade = wadeBand(S.map, v.rx, v.ry, def)) === WB.DEEP);
 const TRAIL = [];   // (trailSteps' points: reused every call)
 function vehVisual(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
@@ -4574,6 +4580,9 @@ function vehVisual(v, now, dt) {
   const sinking = vehSinking(v, def);
   v.sinkT = sinking ? (v.sinkT || 0) + dt : 0;
   if (sinking && Math.random() < 0.5) S.fx.splash(v.rx + (Math.random() - 0.5) * def.L * 0.6, v.ry + (Math.random() - 0.5) * def.W * 0.6, 1);
+  // splashing or wading through the shallows: spray off the wheels, more the faster it goes (none standing still)
+  else if (!sinking && v._wade && def.kind !== 'boat' && def.kind !== 'air' && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1) { const sp = vehSpeed(v); if (sp > 20 && Math.random() < Math.min(0.9, sp / 300)) for (const sg of [-1, 1]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, (Math.random() - 0.5) * def.L * 0.7, sg * def.W * 0.5); S.fx.splash(x, y, 1); } }
+  else v._wade = 0;
   // leaning out on corners (from how fast it turns at speed)
   const prevA = v.leanA ?? v.ra;
   let dA = v.ra - prevA; while (dA > Math.PI) dA -= Math.PI * 2; while (dA < -Math.PI) dA += Math.PI * 2;
