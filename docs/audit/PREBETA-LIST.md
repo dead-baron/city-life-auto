@@ -25,6 +25,10 @@ rooms lit at night, the console's Status tab (live 11-23).
    traffic jams at busy junctions (the gridlock test), the character creator's "My looks" strip, desktop panels with
    CSS zoom, living city events, the portrait phone layout round the thumb map, phone wires that end at nothing, NPC
    drivers shown in open vehicles.
+   - **DONE 11-27 (Opus; DEVLOG): the gridlock test passes** - both four-ways (one a car already in the box waited its
+     turn behind one at its line it stood in the way of; passers-by in the road took turns holding a taxi). Still to look
+     at: cars left driverless in the road by a chase or a mugging held a box truck in a lit box 41 s (seed 3 of
+     `tools/gridlocksim.mjs`) - traffic should get round them, or they should be cleared.
 5. **Branches to ship or drop** (E) - `neon2` (the Neon Strip's bigger rework), `inventory` (the inventory screen, the
    SNES font in menus), `ads` (the Employment Center), `director` (the Camera's clean screen), `fsrow` (Fullscreen
    at the top of Settings > Graphics), `founderpack` (held by you), the founder look mockups.

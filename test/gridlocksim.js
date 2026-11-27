@@ -145,7 +145,7 @@ export function runFourWay(M, opts = {}) {
         if (w.time > warm && d > maxStill) { maxStill = d; worst = { id: v.id, model: v.model, x: Math.round(v.x - n.x), y: Math.round(v.y - n.y), a: +v.a.toFixed(2), blk: v._blk ? w.get(v._blk)?.model : null, t: +w.time.toFixed(1) }; }
         if (w.time > warm && inBox && d > maxBox) maxBox = d;
         if (w.time > warm && Math.hypot(v.x - n.x, v.y - n.y) < R + 160 && d > maxHead) { maxHead = d; worstHead = { id: v.id, model: v.model, x: Math.round(v.x - n.x), y: Math.round(v.y - n.y), blk: v._blk ? w.get(v._blk)?.model : null, t: +w.time.toFixed(1) }; }
-        if (opts.snap && d > (opts.snapAfter || 30) && !snapped.has(v.id) && snapped.size < (opts.snapMax || 3)) { snapped.add(v.id); opts.snap(w, n, still, v); }
+        if (opts.snap && d > (opts.snapAfter || 30) && (!opts.snapBox || inBox) && !snapped.has(v.id) && snapped.size < (opts.snapMax || 3)) { snapped.add(v.id); opts.snap(w, n, still, v); }
       } else if (s) { if (w.time > warm) runs.push(w.time - s.t); still.delete(v.id); }
     }
     for (const [id, s] of still) if (!seen.has(id)) {

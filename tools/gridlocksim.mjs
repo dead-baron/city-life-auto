@@ -82,6 +82,8 @@ if (args.includes('--knot')) {
   }
   process.exit(0);
 }
+// --on-tick file.mjs: its default export called every tick (w, n, tick) - a probe watching the run as it goes
+const TICK = opt('--on-tick', '') ? (await import(new URL(opt('--on-tick', ''), 'file://' + process.cwd() + '/').href)).default : undefined;
 for (const lights of which === 'both' ? [true, false] : [which === 'lights']) {
   const SNAP = opt('--snap', '');
   let k = 0;
@@ -91,7 +93,7 @@ for (const lights of which === 'both' ? [true, false] : [which === 'lights']) {
     writeFileSync(base + '.svg', svg); writeFileSync(base + '.json', JSON.stringify(rows, null, 0).replace(/},{/g, '},\n{'));
     try { execFileSync('rsvg-convert', ['-o', base + '.png', base + '.svg']); } catch { /* (no converter: the svg) */ }
   } : null;
-  const r = runFourWay(M, { lights, seed: SEED, minutes: MIN, feedEvery: +opt('--feed', 3.5), snap, snapAfter: +opt('--snap-after', 30), ...near });
+  const r = runFourWay(M, { lights, seed: SEED, minutes: MIN, feedEvery: +opt('--feed', 3.5), snap, snapAfter: +opt('--snap-after', 30), snapBox: args.includes('--snap-box'), onTick: TICK, ...near });
   delete r.world;
   console.log(JSON.stringify(r));
 }

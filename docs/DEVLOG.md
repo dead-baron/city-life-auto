@@ -28400,3 +28400,22 @@ about a third of the walk-ups' front steps and a third of the alleys, by the wal
 looking about now and then; anyone within 70 px and it darts 80-140 px away from them and sits again; left in peace it
 pads back to its spot (`DOGRUN.cats`). Nobody's lost it (pets.js leaves strays be). The dog walkers (personas.js) out
 more: by day 2 -> 3, two round a place at most (was one). Test: `test/streetcats.test.js`.
+
+## 2026-11-27 · The busy four-ways unknot: the gridlock test passes (the pre-beta list C, "traffic jams at busy junctions") - branch `prebeta-1127`
+`test/gridlock.test.js` (ten minutes of heavy traffic at Midtown's lit and unlit four-ways) failed on main at both.
+- **The unlit four-way locked for good** (264 s at the head of a queue, 9 a minute through): a sedan already across its
+  line and in the box's books - backed off a knot onto its road in front of its line - still ran the at-the-line check,
+  and so waited its turn behind a van that had come up to its line first; the van waited for it, as one in the box
+  across its way. Now one already in the box never waits for anyone still at their line - only for one that went in
+  before it, across its way (`junctionbox.js` boxFree). The same jam: 17 s, 27 a minute.
+- **The lit one: two passers-by stood in the road took turns holding a taxi** ~50 s - it crept past the one it had waited
+  for and stopped for the other. Now a car creeping past people on foot in its way nudges every one of them aside, not
+  just the first (and puts them back in the world's spatial index as it moves them: it didn't) (`traffic.js` the creep).
+- Measured on a saved real build (`tools/gridlocksim.mjs --load`), seeds 3, 5, 7, 11, 13, 23: main jams past the test's
+  30 s at seed 7 at both junctions; now all pass but one: at seed 3 a chase and a mugging by the lit junction left three
+  cars driverless in the road, and a box truck turning out of the box stood behind one 41 s (logged in the pre-beta
+  list: traffic should get round them, or they should be cleared).
+- The tool: `--snap-box` (snapshots only of what stands still inside the box) and `--on-tick probe.mjs` (a probe called
+  every tick, on exactly the run the tool makes - a separate script setting up the same run drifted off it).
+Tests: `gridlock.test.js` (all 3), the traffic tests (trafficbox, lights, passersby, pedunstick, reroute, roadends,
+trafficwalls, airtraffic).
