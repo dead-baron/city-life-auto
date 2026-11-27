@@ -16,7 +16,7 @@ import {
   PICK_PRICES, ASSAY_PAYS, ARCADE, CRATE_PAY, EXTRACT, EVENTS, ARMORED_EVENT, DOCK_EVENT, GANGWAR_EVENT, CRACKDOWN_EVENT, RACENIGHT_EVENT, SOCCERCUP_EVENT,
   LENIENCY, COP_LEVEL, ESCAPE_LOW_MAX, BREAK_HEADSTART, BREAK_CAR, JAIL_S, BAIL_PER_STAR, PRISON, REPUTATION, CAREERS, GOALS, NEXT, POLICE_VEHICLE_RANK,
   UPKEEP, INSURANCE, COSMETICS, SEASON, SEASONS, TOW_FEE, FEES, CREW, HIDEOUT, HEIST_JOB, TRACK, BIZ_RANK, STAFF, PENTHOUSE, ARMOR, K9_UNIT, COMMERCIAL,
-  QUIT, ARMS, TRUNK, VALET, BUG_REPORT, STARTER_WARDROBE, FORAGE_FENCE_GHOSTGLASS, WADE,
+  QUIT, ARMS, TRUNK, VALET, BUG_REPORT, STARTER_WARDROBE, FORAGE_FENCE_GHOSTGLASS, WADE, SKATEBOARD_PRICE,
 } from './rules.js';
 import { GOLF_FEE, HOLE_IN_ONE_PRIZE, MAX_STROKES } from './golf.js';
 import { BOWL, BIG } from './bowling.js';
@@ -94,6 +94,7 @@ export function guideSections(map = null) {
       { id: 'map', t: 'The map and waypoints', b: '[[map]] opens the map: pick a place, or tap anywhere, for a waypoint and a route along the roads.' },
       { id: 'bus', t: 'Buses', b: 'Free, any distance. Wait at a stop and press [[action]] when the bus pulls up; [[vehicle]] gets you off at any stop. Your phone\'s Transit app shows when the next one comes.' },
       { id: 'train', t: 'Trains', b: 'Free. When a train is in, walk up to its doors and press [[action]] to board; [[vehicle]] gets you off at a station. Each platform counts down to the next train.' },
+      { id: 'skate', t: 'Skateboards', b: `A board lying about (a skate park's rack, by a skate or surf shop) or your own - ${$(SKATEBOARD_PRICE)} at a skate, surf or sports shop: [[vehicle]] by it to get on, again to step off. Roads, sidewalks and plazas only: roll onto grass, dirt or sand and you step off with it in your hand - [[vehicle]] back on smooth ground and you're on again. [[dive]] ollies, [[trick]] pops a trick. Hit a wall or a car hard and you bail, the board skidding off; it wears and in the end snaps. A park's board stays in the park.` },
       { id: 'ferry', t: 'Ferries', b: 'Free. Walk aboard at the pier while the boat is in; on a car ferry, drive up to its stern and press [[action]].' },
       { id: 'taxi', t: 'Taxis', b: 'Call one from your phone\'s Transit app: it drives to wherever your waypoint is.' },
       { id: 'boats', t: 'Boats', b: `Hire one at a boat rental dock - a kayak (${$(BOAT_RENTAL_PRICE.kayak)}), a jet ski (${$(BOAT_RENTAL_PRICE.jetski)}), a speedboat (${$(BOAT_RENTAL_PRICE.speedboat)}) - for ${mins(BOAT_RENTAL_S)}, or buy one at a marina.` },

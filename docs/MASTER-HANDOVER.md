@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-26 evening PST, the Opus 5.5 chat: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-27 PST, the Opus 5.5 chat: the gridlock fix live (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -124,7 +124,11 @@ call: `docs/tasks/NPC-REACTIONS-DESIGN-2026-11-26.md` (project copy `claude/npc-
 (`docs/tasks/RULES-TESTS-2026-11-26.txt`: every failure looked at; two the batch caused - the street race, a mock map -
 fixed before the merge). world3 b97fc68c8112, art3 5121068c96e1: the server re-bakes again (~5 h from 23:52;
 identical chunks carry over).
-**Still open from his lists (not started):** the gridlock test (traffic at a busy four-way, failing on main); the
+**LIVE 11-27 (PR #53): the gridlock test passes** (both of Midtown's four-ways: a car already in the box no longer
+waits for one at its line; the creep nudges everyone on foot in its way) - DEVLOG 11-27, tests
+`docs/tasks/GRIDLOCK-TESTS-2026-11-27.txt`. Follow-up logged in the pre-beta list: cars left driverless by a chase or a
+mugging can hold a box truck in a box ~40 s. No world or art change (no re-bake).
+**Still open from his lists (not started):** the
 portrait phone layout (his approval of a design first); phone wires; kayak paddling, the skateboard, the Rusty Spur's
 pool, the Boom Tester's throw (art); the NPC reaction ladder (his call on the design); keep the project private (the
 player-only build first); the ads branch (his call); the feature walkthrough, then the launch steps.

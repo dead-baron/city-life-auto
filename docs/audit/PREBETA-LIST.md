@@ -385,6 +385,10 @@ Design first (a plan with the owner), then build. World change for the tracks: b
   junction), world-wide. World change: batch.
 
 ## Skateboard stranded on grass (owner, 11-17 21:26; shot: attachments/082ec6a8-image.png)
+**DONE 11-27 (Opus; DEVLOG):** stepped off rough ground with the board in your hand; Act picks up a board nobody owns on
+the rough; back on smooth ground the vehicle button. The bail's stand-in board is gone (the real one skids off; a snapped
+one breaks where it stops - the "it doesn't fly apart" story, no debris art). Not done: the scooter / e-bike (no such
+small carried ride yet).
 Ride a skateboard off the pavement onto grass and it stops; you can't pick it up - "can't ride on rough ground" - so
 the board is left stranded. Fix: on rough ground the rider steps off holding the board (or Act picks it up from the
 ground), carries it (board in hand / under the arm, walking speed), and on a smooth surface Act or the vehicle button

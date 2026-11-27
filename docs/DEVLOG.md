@@ -28419,3 +28419,22 @@ more: by day 2 -> 3, two round a place at most (was one). Test: `test/streetcats
   every tick, on exactly the run the tool makes - a separate script setting up the same run drifted off it).
 Tests: `gridlock.test.js` (all 3), the traffic tests (trafficbox, lights, passersby, pedunstick, reroute, roadends,
 trafficwalls, airtraffic).
+
+## 2026-11-27 · Skateboards: carried off rough ground, never stranded; the bail's one board (the owner, 11-17 21:26 / 21:32) - branch `prebeta-1127b`
+"Ride a skateboard off the pavement onto grass and it stops; you can't pick it up ... the board is left stranded"; "a
+tiny pale placeholder board flies out ... then the board you can pick up again is a different, full-size one".
+- **Rough ground**: rolled onto grass, dirt or sand you step off with the board in your hand (any board you were on: yours,
+  a rack's, a free one) - none left lying there; back on a road, a sidewalk or a plaza the vehicle button and you're on it
+  again (`skate.js` after -> `gear.js` carry). A board nobody owns lying on rough ground: the action button picks it up
+  (on smooth ground the prompt stays "Get on the skateboard"). One that isn't yours never goes in your bag - the action
+  button sets it down ("Put the skateboard down"), so does getting into a vehicle; a park's carried out of the park goes
+  back on its rack, as when it's ridden out.
+- **The bail**: the board you were on - never a stand-in - skids off from under you at once, spinning, easing off to where
+  it stops (`skate.js` slide, over the same 1.2 s it used to wait before a second board appeared); a snapped one breaks
+  there (the page's SNAPPED as it stops) and is gone. The page's flying stand-in (`main.js` 'bail', the 22x8 board image)
+  is gone; a board still skidding can't be got on or picked up.
+- **The Guide**: a Skateboards entry (Getting around) - it had none.
+Tests: `skate.test.js` (three new: onto the grass in hand and back on; nobody's board picked up and set down, never
+bagged; the bail's one board), `ridegear.test.js` (the wear and the snap), guide, perf, core, bikes, ftue, homeups, surf,
+blades.
+
