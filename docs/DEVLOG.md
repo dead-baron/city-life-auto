@@ -28307,3 +28307,16 @@ server re-bakes (~5 h); players get a short reconnect.
   under 15% it may catch on its own (3% a second). Alight it burns 12 s at 4% of its full health a second - a healthy
   one comes through scorched and the fire goes out, a battered one's engine dies and it goes up as before. Water puts
   it out. Bicycles, horses, aircraft and car soccer's cars never catch. Test: `test/vehfire.test.js`.
+
+## 2026-11-26 · Weapons against vehicles: explosives one hit, the SAM two, a longer flamethrower; the Boom Tester as a real weapon (the owner's 11-25 notes) - branch `rules-1126`
+- **Grenades and the Boom Tester** go off beside a vehicle (its nearest part within three quarters of the blast) and it
+  is destroyed, as a rocket's always was - armored vehicles take two, the tank its own number (`size.wreck`:
+  `explosions.js` blastAt -> `combat.js` blast's rocket rule; `grenades.js`, `boomtest.js`). Before, a grenade took
+  about five to finish a sedan.
+- **The SAM** 230 -> 240: two hits for every helicopter and plane, three for the gunship (it took four).
+- **The flamethrower** reaches 340 px (was 150; "at least a quarter way across the screen"), a slightly narrower cone;
+  the page draws the jet to that length (`main.js` 'flame' reads `WEAPONS.flamer.range`).
+- **The Boom Tester as a real weapon:** a second line in the debug menu's Fire section gives it with `live` - people
+  react as to gunfire, the police are called, the blast is the shooter's (`p.boomLive`). The first line stays the dev
+  tool nobody reacts to. Not done (art, for the Fable list): the punching throw and glowing hands.
+- Test: `test/weapontune.test.js`.

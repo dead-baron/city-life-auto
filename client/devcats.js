@@ -199,6 +199,7 @@ export const DEV_SECTIONS = [
   // fire on people, the tank, the explosion tester (H58: server burning.js, tank.js, boomtest.js)
   { id: 'fire', title: '🔥 Fire, the tank & the Boom Tester', items: [
     ['🧨 Boom Tester (shoot it: the blast where it lands; reload picks the kind)', 'give', { kind: 'weapon', id: 'boomtest', n: 1 }],
+    ['🧨 Boom Tester as a real weapon (NPCs react, police come, it counts)', 'give', { kind: 'weapon', id: 'boomtest', n: 1, live: 1 }],
     ['🪖 A tank (drive; the turret follows your aim; fire the cannon)', 'car', { m: 'tank' }],
     ['🔥 Set me on fire (roll, run or find water)', 'burn', { k: 'me' }], ['🔥 People on fire ahead of me', 'burn', { k: 'crowd' }],
     ['🌧 Rain (fires go out faster)', 'rain'],

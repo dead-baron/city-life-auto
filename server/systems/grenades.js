@@ -72,7 +72,7 @@ export function update(world, dt) {
 }
 
 function boom(world, g) {
-  const G = GRENADE, by = world.get(g.by) || null, size = g.sunk ? { r: G.r * 0.6, dmg: G.dmg * 0.4, big: 0 } : { r: G.r, dmg: G.dmg, big: 1 };
+  const G = GRENADE, by = world.get(g.by) || null, size = g.sunk ? { r: G.r * 0.6, dmg: G.dmg * 0.4, big: 0 } : { r: G.r, dmg: G.dmg, big: 1, wreck: true };   // (wreck: a vehicle it goes off beside is destroyed, as by a rocket - the owner, 11-25)
   if (g.sunk) world.emit(g.x, g.y, { e: 'splash', x: g.x, y: g.y, n: 30 });
   explosions.blastAt(world, g.x, g.y, size, by && by.kind === K.PED ? by : null, undefined, g.lz || 0);
   world.remove(g);

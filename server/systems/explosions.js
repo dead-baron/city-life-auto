@@ -183,5 +183,5 @@ export function crateBoom(world, c) {
 // level).
 export function blastAt(world, x, y, size, by = null, L = newLink(), z = null) {
   world.emit(x, y, { e: 'explode', x: Math.round(x), y: Math.round(y), r: size.r, b: size.big, s: newSeed(world) });
-  combat.blast(world, x, y, size.r, size.dmg, by, 0, false, z, L, size.big);
+  combat.blast(world, x, y, size.r, size.dmg, by, 0, !!size.wreck, z, L, size.big);   // (size.wreck: a grenade's, the Boom Tester's - a vehicle beside it goes, as by a rocket)
 }
