@@ -3,7 +3,7 @@
 // solar panel, a hammock, a scooter rack and pigeons. Each maker returns a Vox, built along +x.
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
-import { F_GLASS, F_NOCAST, F_LEAF, hash } from './gbuf.js';
+import { F_GLASS, F_NOCAST, F_LEAF, F_THIN, hash } from './gbuf.js';
 
 const R = (h, n = 6, k) => ramp(h, n, k);
 const PRODUCE = ['#c8342e', '#e8a030', '#e8d040', '#5a9a3a', '#7a3a8a', '#e86a3a', '#f0eee8'];
@@ -79,6 +79,23 @@ export function chainBollards(len = 60) {
   return m;
 }
 export function solarPanel(w = 30, d = 20) { const m = new Vox(w, d, 8); const p = m.mat({ ramp: R('#2a3a6a'), k: 3, shade: (x, y) => (Math.round(x) % 6 === 0 || Math.round(y) % 5 === 0 ? 1.5 : 0) }), f = m.mat({ ramp: MAT.metal, k: 3 }); m.fill((x, y, z) => (Math.abs(z - (2 + (d - y) * 0.25)) < 1 ? p : -1)); m.box(0, 0, 0, 2, 2, 7, f); m.box(w - 2, 0, 0, w, 2, 7, f); return m; }
-export function hammock(len = 40) { const m = new Vox(len, 10, 22); const p = m.mat({ ramp: MAT.woodDark, k: 3 }), c = m.mat({ ramp: R('#e8a040'), k: 3, shade: (x) => (Math.floor(x / 4) & 1 ? -1.5 : 0) }); m.box(0, 4, 0, 3, 7, 22, p); m.box(len - 3, 4, 0, len, 7, 22, p); m.fill((x, y, z) => (Math.abs(z - (16 - 8 * Math.sin(Math.PI * x / len))) < 1.2 && y > 2 && y < 8 && x > 3 && x < len - 3 ? c : -1)); return m; }
+// A hammock (the owner, 11-23: "hammocks too long" - slung between palms 120 px apart its cloth ran the whole way): the
+// bed is a person's length whatever the span (HAMMOCK_BED), on spreader bars, and ropes go the rest of the way up to
+// what holds it - its own two posts, or over 70 px the palms it is slung between (no posts drawn).
+export const HAMMOCK_BED = 46;
+export function hammock(len = 40) {
+  const m = new Vox(len, 10, 22), bed = Math.min(HAMMOCK_BED, len - 8), x0 = (len - bed) / 2, x1 = x0 + bed, own = len <= 70;
+  const p = m.mat({ ramp: MAT.woodDark, k: 3 }), c = m.mat({ ramp: R('#e8a040'), k: 3, shade: (x) => (Math.floor(x / 4) & 1 ? -1.5 : 0) }), rope = m.mat({ ramp: R('#d8c8a0'), k: 3, flag: F_THIN });
+  if (own) { m.box(0, 4, 0, 3, 7, 22, p); m.box(len - 3, 4, 0, len, 7, 22, p); }
+  const e0 = own ? 3 : 0, e1 = own ? len - 3 : len, zEnd = 19, zBed = 15;
+  m.fill((x, y, z) => {
+    if (x >= x0 && x < x1) return Math.abs(z - (zBed - 7 * Math.sin(Math.PI * (x - x0) / bed))) < 1.2 && y > 2 && y < 8 ? c : -1;
+    if (x < e0 || x >= e1) return -1;
+    const t = x < x0 ? (x0 - x) / Math.max(1, x0 - e0) : (x - x1) / Math.max(1, e1 - x1);   // (0 at the bed's end .. 1 at the post or the palm)
+    return Math.abs(z - (zBed + (zEnd - zBed) * t)) < 0.8 && Math.abs(y - 5) < 0.8 + (1 - t) * 2.2 ? rope : -1;                // (the ropes fan out to the spreader bar)
+  });
+  m.box(x0 - 1, 2, zBed - 1, x0 + 1, 8, zBed + 1, p); m.box(x1 - 1, 2, zBed - 1, x1 + 1, 8, zBed + 1, p);
+  return m;
+}
 export function pigeon() { const m = new Vox(8, 5, 6); const b = m.mat({ ramp: R('#8a8c98'), k: 3 }), n = m.mat({ ramp: R('#4a7a7a'), k: 3 }); m.ell(3.5, 2.5, 2.5, 3, 2, 2, b); m.ell(6, 2.5, 4, 1.5, 1.4, 1.5, n); m.box(7, 2, 3.5, 8, 3, 4.5, m.mat({ ramp: R('#d8a060'), k: 3 })); return m; }
 export function canvasTent(color = '#2a3a8a') { const m = new Vox(46, 40, 36); const c = m.mat({ ramp: R(color), k: 3 }), p = m.mat({ ramp: MAT.metal, k: 3 }); for (const [x, y] of [[1, 1], [44, 1], [1, 38], [44, 38]]) m.box(x, y, 0, x + 1, y + 1, 28, p); m.fill((x, y, z) => (z >= 28 + Math.min(x, 46 - x, y, 40 - y) * 0.4 - 2 && z < 28 + Math.min(x, 46 - x, y, 40 - y) * 0.4 ? c : -1)); m.box(0, 38, 22, 46, 40, 28, c); return m; }

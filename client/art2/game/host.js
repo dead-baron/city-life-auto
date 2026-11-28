@@ -479,7 +479,8 @@ export function cutBoxOf(b) { return [b.tx * TILE - 4, b.ty * TILE - 360, (b.tx 
 // south of the room's back wall and its picture covers ROOM_OVER px of the floor each way. _fades then fades it.
 export const ROOM_OVER = 16;
 export function overRoom(r, b) {
-  const X0 = b.tx * TILE, Y0 = b.ty * TILE, X1 = (b.tx + b.tw) * TILE, Y1 = (b.ty + b.th) * TILE;
+  const W = b.walkIn && b.walkIn.x1 >= b.walkIn.x0 ? b.walkIn : null;   // (the room's own tiles - as the lint measures it - or the footprint)
+  const X0 = (W ? W.x0 : b.tx) * TILE, Y0 = (W ? W.y0 : b.ty) * TILE, X1 = (W ? W.x1 + 1 : b.tx + b.tw) * TILE, Y1 = (W ? W.y1 + 1 : b.ty + b.th) * TILE;
   return r[0] !== b.id && r[5] > Y0 + TILE && Math.min(r[3], X1) - Math.max(r[1], X0) >= ROOM_OVER && Math.min(r[4], Y1) - Math.max(r[2], Y0) >= ROOM_OVER;
 }
 // A walk-in's bakes (lower goes first; the screen's: their distance, the store's looks d - 1e6, ahead 40000 up). entryPrio:

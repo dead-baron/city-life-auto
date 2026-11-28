@@ -90,6 +90,8 @@ test('in a walk-in, a building south of it whose picture lies over the floor fad
   assert.equal(overRoom([8, 520, 300, 700, 460, 460], b), false, 'the neighbour beside it: no part over the floor');
   assert.equal(overRoom([8, 500, 300, 700, 460, 460], b), false, 'a neighbour whose eaves lap 12 px over the side: too little to fade for');
   assert.equal(overRoom([7, 300, 200, 520, 460, 448], b), false, 'never the room\'s own building (the cut-away has it)');
+  const room = { id: 7, tx: 10, ty: 10, tw: 6, th: 4, walkIn: { x0: 10, x1: 15, y0: 6, y1: 13 } };   // (a room deeper than its front's footprint)
+  assert.equal(overRoom([8, 300, 200, 520, 330, 330], room), true, 'measured on the room\'s own tiles: a block standing in the room\'s depth is over its floor');
   assert.match(src, /if \(ib\) \{[\s\S]{0,500}overRoom\(r, ib\)\) this\._roomB\.set\(r\[0\], 1\);[\s\S]{0,200}want\.set\(b, 1\)/, '_fades asks for them while you are in');
   void X0; void Y0; void X1; void Y1;
 });
@@ -103,4 +105,14 @@ test('no wall sign in a room pairs drink with riding or driving', async () => {
   for (const m of src.matchAll(/'([A-Z][A-Z0-9 &'.-]{2,40})'/g)) if (/DRINK|BOOZE|BEER|SHOTS|WHISKEY/.test(m[1]) && /\bRIDE|DRIVE|ROAD|THROTTLE|MOTOR/.test(m[1])) bad.push(m[1]);
   assert.deepEqual(bad, []);
   assert.match(src, /'LIVE TO RIDE'/);
+});
+
+test('a hammock\'s bed is a person\'s length whatever the span: ropes go the rest of the way (the owner, 11-23: "hammocks too long")', async () => {
+  const { HAMMOCK_BED } = await import('../client/art2/props-town.js');
+  const span = (len) => { const P = pixels(prop('hammock', [len])), cloth = P.filter((p) => p[2] > 190 && p[3] > 120 && p[3] < 200 && p[4] < 110), rope = P.filter((p) => p[2] > 170 && p[3] > 160 && p[4] > 120 && Math.abs(p[2] - p[3]) < 40), wood = P.filter((p) => p[2] < 110 && p[3] < 80 && p[4] < 70); return { cloth: cloth.length ? Math.max(...cloth.map((p) => p[0])) - Math.min(...cloth.map((p) => p[0])) + 1 : 0, rope: rope.length, wood: wood.length }; };
+  const a = span(40), b = span(60), c = span(120);
+  assert.ok(a.cloth >= 28 && a.cloth <= 34 && a.wood > 60, `a 40 px one between its own posts (${JSON.stringify(a)})`);
+  assert.ok(b.cloth >= HAMMOCK_BED - 3 && b.cloth <= HAMMOCK_BED + 2, `60 px: the bed its full length (${b.cloth})`);
+  assert.ok(c.cloth <= HAMMOCK_BED + 2 && c.cloth >= HAMMOCK_BED - 3, `120 px between palms: the bed no longer (${c.cloth} px of cloth)`);
+  assert.ok(c.rope > 80 && c.wood < a.wood, `ropes for the rest, no posts of its own (${JSON.stringify(c)})`);
 });
