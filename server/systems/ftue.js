@@ -206,6 +206,13 @@ const END = {
   gang: 'The Syndicate takes members, and its turf leaves them be. Your phone\'s Guide has the rest.',
   fish: 'Strike when it bites. Sell the catch at a bait shop or a fish market - your phone\'s Guide has the rest.',
 };
+// the first goal's last line (k: the goal's kind) -> { text, mark? }: honest work done, the Employment Center's desk work
+// and job computer next, on the map (the owner, 11-16: "so we can send beta players that way" - jobcenter.js)
+export function endLine(world, k) {
+  const jc = k === 'mail' || k === 'courier' ? (world.map.pois || []).find((q) => q && q.kind === 'jobcenter') : null;
+  if (!jc) return { text: END[k] };
+  return { text: END[k].replace(/ After that, .*$/, ` More steady work at the ${jc.label} - it's on your map, and your phone's Guide has the rest.`), mark: { x: Math.round(jc.x), y: Math.round(jc.y), label: jc.label } };
+}
 export const ROAM_LINE = 'Your phone\'s Guide has everything. The city\'s yours.';
 
 // ---- the page's view: me.ftue and me.job ------------------------------------------------------------------------------
@@ -376,7 +383,9 @@ function complete(world, p) {
   prof.cash += FTUE.reward;
   const xp = skills.gain(world, p, 'drive', FTUE.xp);
   send(p, { t: 'ftue', a: 'end', title: 'FIRST GOAL DONE', sub: `+$${FTUE.reward}${xp ? ` · +${Math.round(xp)} DRIVING XP` : ''}` });
-  world.notify(p, END[f.goal.k], 'good');
+  const L = endLine(world, f.goal.k);
+  world.notify(p, L.text, 'good');
+  if (L.mark) send(p, { t: 'ftue', a: 'mark', ...L.mark });
   track(world, p, 'ftue_done');
   finish(world, p, 'goal');
 }

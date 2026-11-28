@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { LIVE_WORLD } from '../shared/liveworld.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+// (ads in test mode with no publisher id of its own: the placeholder id of Google's own example - test mode shows only
+// Google's test ads, never paid ones; declared before config, which reads it: adsOf)
+export const TEST_CLIENT = 'ca-pub-123456789';
 const DATA_DIR = process.env.CLA_DATA_DIR || join(ROOT, 'data');
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
@@ -94,9 +97,21 @@ config.launch = {
   // the Ko-fi page (the owner, 11-16): "Support the game" on the title screen and in Settings (/launch.json support) - a
   // ko-fi.com page, or "off" to hide the buttons (a game portal's build that forbids outside payment links)
   supportUrl: supportOf(env('CLA_SUPPORT_URL', 'https://ko-fi.com/deadbaron')),
+  // ads (the owner, 11-16: "ready to turn on when the time is right"; opt-in rewarded ads only - the job computer's
+  // "Watch an ad", server/systems/jobcenter.js, client/ads.js): CLA_ADS off (the default: Google's script never loads),
+  // test (Google's test ads: data-adbreak-test) or on; CLA_ADSENSE_CLIENT the AdSense publisher id (ca-pub-...), set on
+  // the server with deploy/set-keys.sh - never in the repo. "on" without an id stays off. Served in /launch.json (ads).
+  ads: adsOf(env('CLA_ADS', 'off'), env('CLA_ADSENSE_CLIENT')),
   // bug reports (server/bugreports.js) posted to the Discord's #bug-reports through this webhook; none: only kept here
   bugWebhook: env('BUG_WEBHOOK_URL'),
 };
+// -> { mode: 'off' | 'test' | 'on', client: 'ca-pub-...' | '' } (test with no id of its own: TEST_CLIENT, at the top)
+export function adsOf(mode, client) {
+  const id = /^ca-pub-\d{9,20}$/.test(client) ? client : '';
+  const m = ['test', 'on'].includes(String(mode).toLowerCase()) ? String(mode).toLowerCase() : 'off';
+  if (m === 'on' && !id) return { mode: 'off', client: '' };
+  return { mode: m, client: m === 'off' ? '' : id || TEST_CLIENT };
+}
 function supportOf(v) { return /^https:\/\/ko-fi\.com\/[A-Za-z0-9_]{2,40}$/.test(v) ? v : ''; }
 function inviteOf(v) { return /^https:\/\/(discord\.gg|(www\.)?discord\.com\/invite)\/[A-Za-z0-9-]{2,32}$/.test(v) ? v : ''; }
 // Only trust X-Forwarded-For when a local proxy (Caddy) is the only thing that can reach us.

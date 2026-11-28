@@ -94,6 +94,7 @@ import { buildAirstrips3 } from './world3-airstrips.js';
 import { buildSarHqs3 } from './world3-sarhq.js';   // (v3b: the rescue pilots' bases)   // (v3b: the crop dusters' strips and Lucky Mesa's)
 import { buildNorth, NORTH_STYLES } from './world3-north.js';   // (v3b, WORLD-V3.md 9.6: the north coast's piers, the fish shack, North Point Light)
 import { arrivalLines3 } from './world3-arrivals.js';
+import { jobCenter3 } from './world3-jobcenter.js';   // (the Employment Center by Greenfield Park: office work and the job computer - laid last)
 import { parkWest3, firstCars3 } from './world3-firstcars.js';   // (the first cars: the used lots and steal alleys by the arrival stations; the city's arrival by Greenfield Park)   // (the arrival lines: a short line of its own beside each station new players choose from)
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';
 import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
@@ -370,6 +371,7 @@ export function worldOpts(asked) {
       if (H3 && city) m.world3.firstCars = firstCars3(m, H3);   // (and by the other three: a small used lot and a back alley each - world3-firstcars.js)
       if (city) { m.world3.towers = towers3(m); Object.defineProperty(m.world3, 'open', { value: openBlocks3(m, H3), enumerable: false }); if (H3) m.world3.towers.greens = streetGreens3(m, H3); }   // (then the big plain footprints opened up: buildings of their own with walkable alleys, lanes and courtyards between - their new buildings after the towers' parts: world3-openblocks.js)   // (the very last building: the big plain towers split into a tower, wings, podiums of shops, a back block - their new parts at the end of the list, so no other building's number moves: world3-towers.js; then the street trees kept off the slimmer towers' and the new shops' signs again - world3-greens.js)
       if (city) m.world3.sightlinesLate = sightlines3(m);   // (and again, for what came after the first pass: the park block's and the used lots' trees and boards, the split towers' new parts and their shops' street trees - nothing earlier moves again, as it hides nothing now)
+      if (city) m.world3.jobCenter = jobCenter3(m, H3);   // (then the Employment Center by Park East Tower, across from the park: its building, places and walk-in at the very end of their lists - world3-jobcenter.js)
       m.world3.festoons = hangLights3(m, H3);   // (last of the lights: every run of bistro bulbs or lanterns made fast at both ends, slack, over people's heads - the owner, 11-16: shared/festoon.js)
       m.world3.lowByPlatforms = lowByPlatforms(m);
       if (city) m.world3.atmsSeated = seatAtms3(m, H3);   // (last: every ATM set into a front wall or inside, none left standing on its own - the owner, 11-14: world3-shops.js)

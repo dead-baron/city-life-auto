@@ -3,7 +3,7 @@
 
 import { TILE, PED_RADIUS, T } from './constants.js';
 import { PED_BLOCK, SWIM_BLOCK, ROCK_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, HORSE_BLOCK, SURFACE } from './mapcore.js';
-import { HORSE, WADE } from './rules-base.js';
+import { HORSE, WADE, PADDLE } from './rules-base.js';
 import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
@@ -282,9 +282,18 @@ export function vehStep(s, inp, dt, map, def, env) {
   const hiSpeed = 1 - 0.35 * clamp(speed / def.max, 0, 1);
   const sliding = inp.hb || brakeSlide || drift > 0.3;
   const dirSign = sliding ? (fwd >= -20 ? 1 : -1) : (fwd >= 0 ? 1 : -1);
+  // a kayak (def.paddle): its strokes, left and right in turn (s.pph: where in a pair; the page draws the paddle by it)
+  let pull = 0;
+  if (def.paddle) {
+    const work = Math.max(Math.abs(t), Math.abs(steer));
+    if (work > 0.1) s.pph = ((s.pph || 0) + dt * PADDLE.rate * (0.55 + 0.45 * work)) % 1;
+    const h = ((s.pph || 0) * 2) % 1;
+    pull = work > 0.1 && h < PADDLE.catch ? Math.sin(Math.PI * h / PADDLE.catch) : 0;
+  }
   let turnTarget;
   if (donut) turnTarget = Math.sign(steer) * def.turn * 1.45;
   else if (burnout) turnTarget = 0;
+  else if (def.paddle) turnTarget = def.turn * PADDLE.turn * steer * (PADDLE.spin + (1 - PADDLE.spin) * speedFactor) * dirSign * (0.35 + 0.65 * pull);   // (a stroke on one side swings it round, between strokes it coasts on)
   else if (tracked || hoof) turnTarget = def.turn * steer * (1 - 0.3 * clamp(speed / def.max, 0, 1)) * (hoof ? 1 - 0.45 * clamp(speed / def.max, 0, 1) : 1);   // (one track forward, one back: round on the spot - a horse too, wider at a gallop)
   else {
     const bite = braking ? 1.12 : powering ? 0.93 : 1;                     // weight on the nose / on the tail
@@ -330,6 +339,11 @@ export function vehStep(s, inp, dt, map, def, env) {
     const r = def.L * 0.32;
     lat += (-r * s.av - lat) * Math.min(1, 8 * dt);
     fwd += (24 - fwd) * Math.min(1, 4 * dt);
+  } else if (def.paddle) {   // a surge while the blade pulls, the water's drag always: the glide between
+    if (t > 0.05) fwd += pull * PADDLE.surge * t * dt;
+    else if (t < -0.05) fwd += pull * PADDLE.surge * PADDLE.back * t * dt;   // (backpaddling: a brake, then astern)
+    fwd *= 1 - PADDLE.drag * dt;
+    if (Math.abs(fwd) < 2 && !pull) fwd = 0;
   } else if (t > 0.05) {
     if (fwd < -15) fwd = Math.min(0, fwd + def.brake * brakeMul * t * dt);
     else if (fwd > cap) fwd -= (fwd - cap) * 1.6 * dt;

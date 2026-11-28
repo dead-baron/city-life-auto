@@ -14,7 +14,7 @@
 // they failed to load (a flaky connection on the first tap), are fetched again on a later one.
 import { settings, saveSettings } from './input.js';
 
-let ctx = null, sys = null, loading = null, off = false, failed = 0, nextTry = 0, lastErr = '', noAudio = false, ahead = null;
+let ctx = null, sys = null, loading = null, off = false, hush = false, failed = 0, nextTry = 0, lastErr = '', noAudio = false, ahead = null;
 const GESTURES = ['touchstart', 'touchend', 'pointerdown', 'keydown', 'click'];
 
 // a one-sample silent sound, played in a tap: older iPhones only unlock the audio for a sound started in a gesture
@@ -25,7 +25,7 @@ function unlock() {
 // loaded. In a tap or a key this always works; outside one (the tab coming back) it may not, and the next tap does.
 function wake() {
   if (!ctx) return;
-  if (!off && ctx.state !== 'running' && ctx.state !== 'closed') {
+  if (!off && !hush && ctx.state !== 'running' && ctx.state !== 'closed') {
     try { const r = ctx.resume(); if (r && r.catch) r.catch(() => {}); } catch { /* not now */ }
     unlock();
   }
@@ -95,6 +95,9 @@ export function soundSettingsUi(el) {
   import('./sound/ui.js').then((m) => m.buildSoundUi(el, settings, saveSettings, (p) => { if (sys) sys.setPrefs(p); applyOff(p); }))
     .catch((e) => console.warn('[sound] settings', e));
 }
+// an ad on screen (client/ads.js): the game's sound sleeps till it's gone (hush); soundOn: whether the player has sound on
+export function hushFor(on) { hush = !!on; if (!ctx) return; if (hush) ctx.suspend().catch(() => {}); else if (!off) wake(); }
+export const soundOn = () => !off && !(settings.sound && settings.sound.on === false);
 export const audioReady = () => (loading || Promise.resolve()).then(() => !!sys);
 
 // The debug menu's line: is the sound on, and if not, why not.

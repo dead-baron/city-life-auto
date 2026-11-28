@@ -186,8 +186,8 @@ export function dirty(p, n) { if (p && n > 0) p.cxDirty = (p.cxDirty || 0) + n; 
 
 // Money settled (server/launch.js onMoney - server/moneywatch.js): the honest sources' takings are clean money -
 // business XP (cleanPer) and the goals' 'clean'
-const CLEAN_SYS = new Set(['jobs', 'taxijob', 'busjob', 'towjob', 'crazytaxi', 'truckjob', 'mailjob', 'forklift', 'fishboat', 'rangerjob', 'firefighter', 'paramedic', 'sar', 'charter', 'dusting', 'coastguard', 'farming', 'biz', 'fishing', 'places', 'felling', 'underground', 'nightclubs']);
-const CLEAN_SHOP = new Set(['fishmarket', 'tackle', 'market', 'fruitstand', 'farmstand', 'winery', 'salvage', 'assay', 'grocery', 'farm', 'warehouse', 'delivery', 'trapper', 'butcher', 'lodge', 'huntcamp', 'menu', 'charter']);
+const CLEAN_SYS = new Set(['jobs', 'taxijob', 'busjob', 'towjob', 'crazytaxi', 'truckjob', 'mailjob', 'forklift', 'fishboat', 'rangerjob', 'firefighter', 'paramedic', 'sar', 'charter', 'dusting', 'coastguard', 'farming', 'biz', 'fishing', 'places', 'felling', 'underground', 'nightclubs', 'jobcenter']);
+const CLEAN_SHOP = new Set(['fishmarket', 'tackle', 'market', 'fruitstand', 'farmstand', 'winery', 'salvage', 'assay', 'grocery', 'farm', 'warehouse', 'delivery', 'trapper', 'butcher', 'lodge', 'huntcamp', 'menu', 'charter', 'jobcenter']);
 export const isClean = (src) => CLEAN_SYS.has(src) || (src.startsWith('shop:') && CLEAN_SHOP.has(src.slice(5)));
 export function onMoney(world, p, src, net) {
   if (!(net > 0) || !p || !p.profile || !isClean(String(src))) return 0;

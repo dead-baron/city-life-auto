@@ -16,7 +16,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // the categories: [id, icon, title, place kinds] (a kind goes in the first that lists it)
 export const MAP_CATS = [
   { id: 'shops', icon: 'shop', title: 'Shops', kinds: ['convenience', 'gasstation', 'gunshop', 'sports', 'hardware', 'pharmacy', 'grocery', 'clothing', 'tackle', 'pawn', 'fishmarket', 'butcher', 'lodge', 'barber'] },
-  { id: 'jobs', icon: 'jobs', title: 'Jobs', kinds: ['warehouse', 'farm', 'courthouse', 'salvage', 'huntcamp', 'trapper', 'sar'] },
+  { id: 'jobs', icon: 'jobs', title: 'Jobs', kinds: ['jobcenter', 'warehouse', 'farm', 'courthouse', 'salvage', 'huntcamp', 'trapper', 'sar'] },
   { id: 'services', icon: 'services', title: 'Services', kinds: ['hospital', 'police', 'bank', 'atm', 'garage', 'paint', 'dealer'] },
   { id: 'transit', icon: 'transit', title: 'Transit', kinds: ['station', 'airport', 'marina', 'rental', 'charter'] },
   { id: 'homes', icon: 'home', title: 'Safehouses', kinds: ['home'] },
@@ -28,7 +28,7 @@ export const MAP_CATS = [
 export const KIND_ICON = {
   convenience: 'shop', gasstation: 'fuel', gunshop: 'gun', sports: 'activity', hardware: 'services', pharmacy: 'pharmacy', grocery: 'shop',
   clothing: 'shirt', tackle: 'fish', pawn: 'shop', fishmarket: 'fish', butcher: 'shop', lodge: 'tent', barber: 'shirt',
-  warehouse: 'jobs', farm: 'farm', courthouse: 'jobs', salvage: 'services', huntcamp: 'tent', trapper: 'tent', sar: 'hospital',
+  jobcenter: 'jobs', warehouse: 'jobs', farm: 'farm', courthouse: 'jobs', salvage: 'services', huntcamp: 'tent', trapper: 'tent', sar: 'hospital',
   hospital: 'hospital', police: 'police', bank: 'bank', atm: 'bank', garage: 'car', paint: 'car', dealer: 'car', usedlot: 'car',
   station: 'transit', airport: 'plane', marina: 'anchor', rental: 'anchor', charter: 'anchor',
   home: 'home', ride: 'star', race: 'car', clubhouse: 'activity', roadhouse: 'bar', winery: 'bar', market: 'shop', fruitstand: 'shop', farmstand: 'shop', snack: 'food',
@@ -39,7 +39,7 @@ export const KIND_ICON = {
 export const arenaPlaces = (map) => (map.arenas || []).map((a, i) => ({ id: `arena${i}`, kind: 'arena', label: `${a.name} (car soccer)`, x: a.gate.x, y: a.gate.y }));
 export const placesOf = (map) => [...(map.places || map.pois), ...arenaPlaces(map)].filter((p) => !racePlaceHidden(map, p));   // (a hidden race's start: not listed)
 // shown zoomed all the way out; the rest (the corner shops, the ATMs) once zoomed in
-export const MAJOR_KINDS = new Set(['hospital', 'sar', 'police', 'bank', 'gunshop', 'station', 'airport', 'garage', 'paint', 'dealer', 'clothing', 'farm', 'warehouse',
+export const MAJOR_KINDS = new Set(['jobcenter', 'hospital', 'sar', 'police', 'bank', 'gunshop', 'station', 'airport', 'garage', 'paint', 'dealer', 'clothing', 'farm', 'warehouse',
   'courthouse', 'marina', 'ride', 'race', 'clubhouse', 'roadhouse', 'gang', 'smuggler', 'winery', 'club', 'pawn', 'fence', 'salvage', 'huntcamp', 'lodge', 'bowling', 'cinema', 'bathhouse', 'arena']);
 
 export const ROLE_ICON = { citizen: '•', criminal: '☠', police: '★', hunter: '◎' };

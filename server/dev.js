@@ -4,7 +4,7 @@ import { surfaceZ } from '../shared/levels.js';
 import { PED_BLOCK, CAR_SPAWN_BLOCK } from '../shared/map.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { DAY_LOOP_S, DAY_PART_S, T, K, WEATHER, TILE } from '../shared/constants.js';
-import { STAR_HEAT, POLICE_AIR } from '../shared/rules.js';
+import { STAR_HEAT, POLICE_AIR, JOBAD } from '../shared/rules.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { blastSize } from '../shared/explosions.js';
 import { collideVehicleTiles } from '../shared/physics.js';
@@ -663,6 +663,7 @@ function run(world, p, c, msg) {
       if (best) { ped.x = best.x; ped.y = best.y; underground.goDown(world, p, best); }
       break;
     }
+    case 'adready': { const f = p.profile.ftue; if (f) f.pt = Math.max(f.pt || 0, JOBAD.playS); if (p.profile.ads) p.profile.ads.n = 0; world.notify(p, `[dev] The job computer's ad: ready (ads ${world.ads ? world.ads.mode : 'off'} on this server).`, 'info'); break; }   // (server/systems/jobcenter.js: past the first session, today's count cleared)
     case 'night': world.loopTime = DAY_PART_S + 5; break;
     case 'day': world.loopTime = 90; break;
     case 'time': { // jump the clock to a time of day: msg.m minutes after midnight

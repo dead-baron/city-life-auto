@@ -1265,6 +1265,18 @@ export const RIG = { crates: 8, haul: [25000, 140000], base: 250, perKm: 14, hit
 // a stop, bonus for the whole round in its time (limitS a stop + 120); post within postR on foot or vanR stopped in the van
 export const MAILJOB = { van: 8, walk: 5, parcels: 2, letter: 22, parcel: 48, bonus: 120, limitS: 70, hood: [1800, 7000], routeR: 900, walkR: 1300, postR: 70, vanR: 120, doorR: 80 };
 export const TOWJOB = { firstS: 8, gapS: 20, shiftS: 1800, pay: 150, perKm: 60, touch: 16, hookS: 3, yardR: 340 };
+// the Employment Center (the owner, 11-16: "office work or employment center options in the city so we can send beta
+// players that way" - server/systems/jobcenter.js): office work at its front desk, a round of `items` tasks (sorting
+// the mail, typing up invoices, putting calls through) in at most roundS s; pay a task right, bonus for a clean round;
+// a new round at most every roundS s, start to start - a modest, safe wage (about $1.9k an hour at best, under the mail
+// round's and the riskier jobs'). Its job computer (JOBAD below) has the listings - and, when ads are on, the ad.
+export const OFFICE = { roundS: 45, items: 10, pay: 2, bonus: 4, opts: 4 };
+// the job computer's rewarded ad (server/systems/jobcenter.js; the page: client/ads.js - only when the server's CLA_ADS
+// says test or on): reward $ to your wallet for an ad watched to its end, at most perDay a day (the goals' day: GOALS
+// resetUtcH) per character; offered once a character has played playS s (none in a first session - the 11-13 plan); a
+// view is paid only minS s or more after it began, on a ticket the server hands out with the menu - started within
+// maxS s of it and ended within maxS s of the start
+export const JOBAD = { reward: 150, perDay: 5, playS: 900, minS: 5, maxS: 300 };
 
 // jumping out of an aircraft: the fall (px, px/s, px/s²) - what each number is: server/systems/skydive.js
 export const SKYDIVE = { carry: 0.75, grav: 260, fall: 480, steer: 320, drag: 0.4, freeMax: 280, openS: 1.1, lowOpen: 260, chuteFall: 70, chuteEase: 2.4, chuteSteer: 360, chuteDrag: 1.3, chuteMax: 200, hurtFrom: 150, hurtPer: 0.4, splat: 400, waterHurt: 0.12, carHurt: 0.55, rollAt: 120 };
@@ -1516,6 +1528,7 @@ export const FENCE_SMASH = { low: 150, tall: 230, lowKeep: 0.85, tallKeep: 0.7 }
 
 
 export { WADE } from './rules-base.js';   // (vehicles in the water: shared/physics.js wade - its note is in rules-base.js)
+export { PADDLE } from './rules-base.js';   // (a kayak's strokes: shared/physics.js - its note is in rules-base.js)
 
 // What a vehicle smashes hurts it, by how solid it is and how fast it hit (the owner, 11-25 01:00: "you can run over
 // infinite things apparently ... after running through enough destructible objects (judging on the size and impact ...

@@ -53,6 +53,7 @@ import * as k9 from './k9.js';   // (a K9 partner from the armory: k9.js)
 import * as insurance from './insurance.js';   // (vehicle policies and claims)
 import * as rep from './reputation.js';
 import * as bathhouse from './bathhouse.js';
+import * as jobcenter from './jobcenter.js';   // (the Employment Center's front desk and job computer)
 import * as contacts from './contacts.js';   // (the lock-up a contact gave you)
 import * as arms from './arms.js';   // (your weapons: the stash, the slots, buying to the stash - arms.js)
 import * as stash from './stash.js';   // (the stash opened in the Inventory)
@@ -83,6 +84,7 @@ function baseLabel(world, p, poi) {
   if (casino.isCasino(poi)) return casino.label(poi);   // (Lucky Mesa's casinos: the slots and the tables - casino.js)
   if (arcade.isArcade(world, poi)) return arcade.label(poi);   // (the arcades: a credit, the prize counter - arcade.js)
   if (bathhouse.isBath(world, poi)) return null;   // (a bathhouse: in through its door - bathhouse.js)
+  if (jobcenter.isJobPoi(poi)) return jobcenter.label(world, p, poi);   // (the Employment Center: office work, the job computer - jobcenter.js)
   if (poi.walk && poi.kind === 'delivery') return walkCounter(poi) ? `Shop at the counter - ${poi.label}` : null;
   switch (poi.kind) {
     case 'delivery': case 'evidence': case 'reception': case 'paint': case 'ride': case 'race': return null;   // (a ride's boarding point: server/systems/rides.js; a race's start: races.js)
@@ -233,6 +235,7 @@ function menuOf(world, p, poi) {
   if (casino.isCasino(poi) || (p.menu && p.menu.poi === poi.id && p.menu.cards)) return casino.menu(world, p, poi);   // (a casino's floor; a bar's card table too, opened at it: casino.js, casinofloor.js)
   if (arcade.isArcade(world, poi)) return arcade.menu(world, p, poi);   // (an arcade's counter: arcade.js)
   if (bathhouse.isBath(world, poi)) return bathhouse.menu(world, p, poi);   // (a bathhouse's locker: bathhouse.js)
+  if (jobcenter.isJobPoi(poi)) return jobcenter.menu(world, p, poi);   // (the Employment Center's desk and computer: jobcenter.js)
   if (kind === 'delivery' && poi.walk) {   // (a walk-in shop's counter: walkCounter)
     const W = walkCounter(poi) || { items: [], sub: 'Just looking.' }, none = !(prof.homes || []).length, furn = prof.furn || {};
     for (const [id, price] of W.items) { const one = !!(ITEMS[id].tool || ITEMS[id].music) && prof.inventory[id] > 0; opts.push({ id: `i:${id}:${price}:1`, label: ITEMS[id].name, price, dis: one, note: one ? 'have one' : prof.inventory[id] ? `have ${prof.inventory[id]}` : '' }); }   // (a tape, a boombox, an instrument: one's enough)
@@ -598,6 +601,7 @@ export function handleMenu(world, p, poiId, optId) {
   if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;   // (the bed, the safe, the fridge... at home: homeinside.js)
   if (music.onMenu(world, p, poiId, String(optId || ''))) return;   // (your boombox's, your mat's: music.js)
   if (ftue.onMenu(world, p, poiId, String(optId || ''))) return;   // (the first-time experience's question: ftue.js)
+  if (jobcenter.onMenu(world, p, poiId, String(optId || ''))) return;   // (office work's picks, the job computer's rows: jobcenter.js)
   const poi = world.map.pois[poiId];
   const ped = p.ped;
   if (optId === 'cabcard' && poiId === -1 && ped && !ped.dead) { const it = taxijob.interaction(world, p); if (it && !phone.offerCard(world, p, it.card)) it.run(); return; }   // (a station's route board: its taxi rank - trains.js readRouteBoard)

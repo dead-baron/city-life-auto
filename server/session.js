@@ -42,6 +42,7 @@ import * as safety from './systems/safety.js';
 import * as cinefollow from './systems/cinefollow.js';
 import * as logoff from './systems/logoff.js';
 import * as ftue from './systems/ftue.js';
+import * as jobcenter from './systems/jobcenter.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
 // opts.hooks (server/launch.js, the online server only): the launch foundation - accounts, chat, roles, anti-cheat,
@@ -195,6 +196,7 @@ export function createSession(world, conn, opts) {
         conn.close(4017, 'deleted');
         return;
       }
+      if (msg.t === 'ad') { jobcenter.onAd(world, player, msg); return; }   // the job computer's rewarded ad: started, watched to its end, done (systems/jobcenter.js - paid only there)
       if (msg.t === 'intro') { ftue.handle(world, player, msg); return; }   // the first-time experience: skip, the arrival played, the Guide's replay and tips (systems/ftue.js)
       if (msg.t === 'safety') { safety.set(player, !!msg.on); return; }   // (Settings: Safety mode - server/systems/safety.js)
       if (msg.t === 'name') { players.rename(world, player, msg.name); return; }   // (Settings: your name - players.js rename)

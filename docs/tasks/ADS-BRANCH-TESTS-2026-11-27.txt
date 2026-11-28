@@ -1,0 +1,28 @@
+Ads + Employment Center + kayak branch (ads-1127) - test results, 2026-11-27
+
+World heavy tests, one at a time (8 GB machine):
+# pass 1 # fail 0  test/cliffs.test.js 652s rc=0
+# pass 2 # fail 0  test/calmstreets.test.js 687s rc=0
+# pass 3 # fail 0  test/gridlock.test.js 555s rc=0
+# pass 46 # fail 1  test/placementlint.test.js 593s rc=1
+# pass 2 # fail 1  test/visaudit.test.js 432s rc=1
+# pass 8 # fail 1  test/world3scenes.test.js 448s rc=1
+# pass 15 # fail 0  test/world3rail.test.js 637s rc=0
+# pass 5 # fail 0  test/world3rapids.test.js 637s rc=0
+# pass 14 # fail 0  test/world3wayside.test.js 409s rc=0
+# pass 3 # fail 0  test/world3subway.test.js 428s rc=0
+# pass 22 # fail 0  test/world3server.test.js 293s rc=0
+# pass 8 # fail 0  test/world3arrivals.test.js 283s rc=0
+# pass 3 # fail 0  test/redrock.test.js 246s rc=0
+# pass 4 # fail 0  test/flatdoors.test.js 261s rc=0
+# pass 2 # fail 0  test/townfolk.test.js 254s rc=0
+# pass 2 # fail 0  test/walkinfront.test.js 274s rc=0
+# pass 6 # fail 0  test/elplatform.test.js 265s rc=0
+# pass 1 # fail 0  test/contacts2w3.test.js 245s rc=0
+# pass 8 # fail 0  test/prison.test.js 270s rc=0
+# pass 1 # fail 0  test/world3wild.test.js 239s rc=0
+# pass 3 # fail 0  test/world3jobcenter.test.js
+
+placementlint: the 69 seen mid-run came from the worktree changing under it (a merge while it ran); re-run by the tool on this branch and on main: every row's count the same (signCovered 68 = allowed).
+visaudit, world3scenes: the same failures on main (pre-existing, not this branch).
+Light: npcreact, kayak, hidden, buildplay, guide, vehdamage, jobcenter, shoprooms, ftue - all pass.

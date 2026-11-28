@@ -38,6 +38,12 @@ export const GARDEN_CROPS = {
 
 // Vehicles in the water (the owner, 11-24; shared/physics.js waterDepth, server vehicles.js wade; DEVLOG 11-26): slope m of
 // depth a tile from the bank, cap the deepest; splash m; ford m by vehicle (def.ford wins); the engine's hold / restart s.
+// A kayak (vehicles.js def.paddle - shared/physics.js): it moves by strokes, left and right in turn - a surge while the
+// blade's in the water, a glide between; a stroke on one side alone turns it, slowly, even standing still. rate: stroke
+// pairs a second at full effort (0.55 of it at the lightest push); catch: the share of each stroke the blade pulls;
+// surge: px/s² at the pull's peak at full; drag: the water, a share a second (cruise ~ surge * catch * 2/pi / drag);
+// back: backpaddling's share; turn: a share of def.turn, spin: of that standing still.
+export const PADDLE = { rate: 0.8, catch: 0.5, surge: 240, drag: 0.45, back: 0.45, turn: 0.75, spin: 0.45 };
 export const WADE = {
   slope: { sea: { sand: 0.22, rock: 0.55 }, lake: { k: 0.32, cap: 14 }, pond: { k: 0.55, cap: 3.2 }, river: { k: 0.25, cap: 3.4 } },
   splash: 0.3,

@@ -17,9 +17,9 @@ export const SHOP_PLAN = {
   sports: 'sports', tackle: 'tackle', fishmarket: 'fishmarket', club: 'club', roadhouse: 'saloon', charter: 'office',
 };
 // (the bar trade is one of IN5's three bars, by its name: barPlan)
-export const TRADE_PLAN = { mart: 'corner', bar: 'bar', liquor: 'liquor', pawn: 'pawn', barber: 'barber', lobby: 'office', records: 'records' };
+export const TRADE_PLAN = { mart: 'corner', bar: 'bar', liquor: 'liquor', pawn: 'pawn', barber: 'barber', lobby: 'office', records: 'records', jobs: 'jobs' };
 export const BAR_PLANS = ['lounge', 'tavern', 'sportsbar'];
-export const PLANS = ['corner', 'fuel', 'grocery', 'liquor', 'gunshop', 'hardware', 'pawn', 'fence', 'bank', 'court', 'pharmacy', 'barber', 'boutique', 'sports', 'tackle', 'fishmarket', 'lounge', 'tavern', 'sportsbar', 'club', 'saloon', 'office', 'records'];
+export const PLANS = ['corner', 'fuel', 'grocery', 'liquor', 'gunshop', 'hardware', 'pawn', 'fence', 'bank', 'court', 'pharmacy', 'barber', 'boutique', 'sports', 'tackle', 'fishmarket', 'lounge', 'tavern', 'sportsbar', 'club', 'saloon', 'office', 'records', 'jobs'];
 export function planOf(u) {
   if (!u) return null;
   return (u.kind === 'convenience' && u.trade === 'liquor' ? 'liquor' : SHOP_PLAN[u.kind]) || (u.trade && TRADE_PLAN[u.trade]) || null;   // (a corner store that's a liquor store: its shelves of bottles - world3-lots.js)
@@ -900,6 +900,42 @@ function charterOffice(c) {
   ]);
   lamp(c, c.tillX, c.Ya - 6, 46, WARM, 0.8);
   waiting(c);
+}
+// the Employment Center (server/systems/jobcenter.js): the front desk, the cork job board and NOW HIRING behind it; the
+// job computers - desks with their screens (pc) - on the door's left, the first the job computer's place
+// (shared/world3-jobcenter.js stands its spot by it); the waiting chairs, the water cooler and plants on the right
+FIT.jobs = (c) => {
+  const { R, r } = c;
+  R.floor = pick(r, [['carpet', '#3a4a60', '#2e3c50'], ['tile', '#d8dce2', '#bcc2ca']]); R.wall = pick(r, W.white);
+  R.counter = { top: '#e6e4de', front: '#2e4a6e', trim: '#c8a050', k: 'plain', on: ['pens', 'bell'] };
+  wall(c, 'jobs', c.X0 + 6, Math.max(c.X0 + 40, c.tillX - 34), 6, 46);
+  wall(c, 'clock', c.tillX + 40, c.tillX + 54, 36, 50);
+  wall(c, 'files', c.tillX + 60, Math.min(c.X1 - 6, c.tillX + 126), 0, 34);
+  sign(c, ['NOW HIRING', 'JOBS'], '#ffd24a', c.tillX, 'civic');
+  const regs = [...c.regs].sort((p, q) => p.side - q.side), [a, b] = regs.length > 1 ? regs : [regs[0], null];
+  // (someone at a few of the computers - never the first, the job computer you sit at)
+  const sit = (p, k) => { if (p && k > 0 && r() < 0.45) shopper(c, p.x0 + 20, p.y1 + 4, -Math.PI / 2, 'sit'); return p; };
+  let nd = 0;
+  if (a) aisles(c, a, 18, 26, (x0, y, x1, y1) => { const w = Math.min(44, x1 - x0); const p = sit(put(c, 'desk', x0, y, x0 + w, y1, 18, { c: '#8a8e96', pc: 1, lampOn: false }), nd++); if (p && x1 - x0 >= 96) sit(put(c, 'desk', x0 + 52, y, x0 + 96, y1, 18, { c: '#8a8e96', pc: 1 }), nd++); return p; });
+  if (b) {
+    if (b.x1 - b.x0 >= 60 && b.y1 - b.y0 >= 50) { const x = b.side > 0 ? b.x1 - 62 : b.x0 + 2; put(c, 'rug', x, b.y0 + 14, x + 60, b.y0 + 44, 1, { c: '#2e4a6e', c2: '#c8a050', flat: true }); put(c, 'sofa', x + 10, b.y0 + 16, x + 50, b.y0 + 30, 16, { c: '#3a62a8' }); if (r() < 0.6) shopper(c, x + 24, b.y0 + 24, Math.PI / 2, 'sit'); }
+    put(c, 'chairs', b.side > 0 ? b.x1 - 54 : b.x0, b.y1 - 12, b.side > 0 ? b.x1 : b.x0 + 54, b.y1, 18, { c: '#3a62a8' });
+    if (r() < 0.7) shopper(c, b.side > 0 ? b.x1 - 46 : b.x0 + 8, b.y1 - 6, -Math.PI / 2, 'sit');
+    const q = corner(b, 10, 8, false); put(c, 'box', q[0], b.y0, q[2], b.y0 + 8, 24, { c: '#e2e4e6', cooler: true });
+  }
+  for (const reg of c.regs) { const q = corner(reg, 12, 10, false); put(c, 'plant', ...q, 22); }
+  fill(c, [
+    K([44, 18], (c, x0, y0, x1, y1, g) => put(c, 'desk', x0, y0, x1, y1, 18, { c: '#8a8e96', pc: 1 }, g)),
+    K([30, 30], (c, x0, y0, x1, y1, g) => put(c, 'rug', x0, y0, x1, y1, 1, { c: '#2e4a6e', c2: '#c8a050', flat: true }, g), 1),
+    K([12, 10], (c, x0, y0, x1, y1, g) => put(c, 'plant', x0, y0, x1, y1, 22, {}, g), 3),
+  ]);
+  lamp(c, c.tillX, c.Ya - 6, 50, WARM, 0.8);
+  waiting(c); waiting(c);
+};
+// the job computer's spot in the Employment Center's room (R: shopRoom's): in front of its first desk, where you sit
+export function jobDesk(R) {
+  const d = R && R.pieces.find((p) => p.t === 'desk' && p.pc);
+  return d ? { x: Math.round(d.x0 + 20), y: Math.round(d.y1 + 8) } : null;
 }
 // the record shop (its counter: server music.js): sleeves up the wall, guitars hung, crates of vinyl, a booth, a jukebox
 FIT.records = (c) => {

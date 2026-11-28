@@ -52,7 +52,7 @@ const LT = (() => { const v = [-0.6, 0.38, 0.7], l = Math.hypot(v[0], v[1], v[2]
 export const PERSON_CAM = { elevation: 35, zScale: CA };          // world px of height per model unit = zScale
 // seat heights (world px above the anchor) the seated poses sit on: motorbike / jet ski, bicycle, bench, car, the ground
 // (by a campfire, knees up)
-export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9, sitlow: 3, cartsit: 8, saddle: 37 };   // (saddle: up on a horse's back, #325 - drawn at the horse's own feet)
+export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9, sitlow: 3, cartsit: 8, saddle: 37, paddle: 4 };   // (paddle: low in a kayak's cockpit)   // (saddle: up on a horse's back, #325 - drawn at the horse's own feet)
 export const POSES = { idle: 4, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2, sitlow: 2, cuffed: 6,
   // hit reactions: a stagger (0-1 knocked back, 2-3 shoved forward), a limp, crawling on the stomach, down on the face or the
   // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
@@ -584,10 +584,21 @@ function rig(D, A, pose, f, kind, acc) {
       P.elR = [1, 0, -0.2]; P.elL = [-1, 0, -0.2]; P.openL = P.openR = 1;
     };
     P.root = rx(1.32);
-  } else if (pose === 'ride' || pose === 'pedal' || pose === 'sit' || pose === 'drive' || pose === 'sitlow' || pose === 'cartsit' || pose === 'saddle') {
+  } else if (pose === 'ride' || pose === 'pedal' || pose === 'sit' || pose === 'drive' || pose === 'sitlow' || pose === 'cartsit' || pose === 'saddle' || pose === 'paddle') {
     const seat = SEATS[pose] / CA;
-    P.acc = false; P.pel = [0, pose === 'sit' || pose === 'sitlow' ? -0.6 : -1.6, seat + 3.7];
-    if (pose === 'saddle') {   // astride a horse: the knees out round its barrel, the feet down in the stirrups, the hands low on the reins
+    P.acc = false; P.pel = [0, pose === 'sit' || pose === 'sitlow' || pose === 'paddle' ? -0.6 : -1.6, seat + 3.7];
+    if (pose === 'paddle') {   // in a kayak (shared/physics.js PADDLE): the legs out of sight in the cockpit, the double paddle across the
+      // hands - a stroke each side in turn: the blade in ahead (0 left, 2 right), pulled back past the hip (1, 3), the
+      // shoulders turning into it and the top hand pushing across high
+      const sd = f < 2 ? -1 : 1, pull = f & 1;
+      P.noLegs = true; P.paddle = true; P.lean = pull ? 0.04 : 0.22; P.headPitch = -0.08; P.twist = sd * (pull ? -0.22 : 0.26);
+      P.fL = [-D.hipX, 12, seat]; P.fR = [D.hipX, 12, seat]; P.kneeL = P.kneeR = [0, 0.3, 1];
+      P.hands = (S) => {
+        const lo = [sd * 7.4, pull ? 0.8 : 11.6, seat + 5.2], hi = [-sd * 4.2, pull ? 9.4 : 5.6, seat + 12.6];
+        if (sd < 0) { P.hL = lo; P.hR = hi; } else { P.hR = lo; P.hL = hi; }
+        P.elL = [-1, -0.3, -0.3]; P.elR = [1, -0.3, -0.3];
+      };
+    } else if (pose === 'saddle') {   // astride a horse: the knees out round its barrel, the feet down in the stirrups, the hands low on the reins
       P.lean = 0.2; P.headPitch = -0.1;
       P.fL = [-9.4, 1.6, seat - 11.5]; P.fR = [9.4, 1.6, seat - 11.5]; P.kneeL = [-1, 0.5, 0.15]; P.kneeR = [1, 0.5, 0.15];
       P.hands = (S) => { P.hL = [-2.6, 9.6, seat + 7.4]; P.hR = [2.6, 9.6, seat + 7.4]; P.elL = [-1, -0.2, -0.3]; P.elR = [1, -0.2, -0.3]; };
@@ -2608,7 +2619,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['pushup', 'situp', 'carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump', 'cue', 'cartkick', 'cartride', 'cartsit', 'surfpad', 'surf', 'surfair', 'saddle'].includes(pn)) kind = null;   // (nothing in the hands on a shopping cart)
+  if (['pushup', 'situp', 'carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'paddle', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump', 'cue', 'cartkick', 'cartride', 'cartsit', 'surfpad', 'surf', 'surfair', 'saddle'].includes(pn)) kind = null;   // (nothing in the hands on a shopping cart)
   if (pn === 'hood') kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
@@ -2630,6 +2641,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
     for (const k of ['L', 'R']) { const dz = Math.min(PL.armLiftMax || 99, PL.armLift * (X.pt(S['sh' + k])[1] - mid) * (SA / CA)); if (dz <= 0) continue; for (const j of ['el', 'ha']) S[j + k] = vadd(S[j + k], [0, 0, dz]); S['shA' + k] = vadd(S['sh' + k], [0, 0, dz]); }
   }
   const fig = buildFigure(A, D, P, S, X, kind, acc, seed);
+  if (P.noLegs) for (const p of fig.prims) if (p.g === GR.LEGL || p.g === GR.LEGR || p.g === GR.SKIRT) p.clip = () => false;   // (in a kayak's cockpit: out of sight)
   fig.dir8 = (((dir | 0) % 8) + 8) % 8; fig.pose = pn;
   // lying, rolling and swimming bodies are lowered onto the ground (or the water) as a whole
   if (P.ground || P.water) {
@@ -2667,7 +2679,7 @@ Object.assign(POSES, { skatec: 1, skateair: 3, skflip: 12, skshove: 6, sktre: 6,
 Object.assign(POSES, { surfpad: 2, surf: 2, surfair: 1 });
 // a shopping cart (shared/vehicles.js cart): cartkick (8 frames, a foot kicking the ground), cartride (up on the back
 // rail), cartsit (in the basket)
-Object.assign(POSES, { cartkick: 8, cartride: 2, cartsit: 2 });
+Object.assign(POSES, { cartkick: 8, cartride: 2, cartsit: 2, paddle: 4 });
 CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
 Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
 // the buskers (server personas.js BUSKS): sax, violin (and its stand), drums (upturned buckets), statue (a living statue
@@ -2940,6 +2952,12 @@ function figure365(B, C, E, D, P, S, acc) {
     const a = S['an' + k];
     B(vadd(a, [0, 1.4, -3.9]), S.PF, [0.75, 3.6, 0.6], GR.ACC, 'blade', M365.dark);
     for (const y of [-1.4, 1.4, 4.2]) E(vadd(a, [0, y, -4.7]), I, [0.6, 0.8, 0.8], GR.ACC, 'wheel', M365.wheel);
+  }
+  if (P.paddle) {   // a kayak's double paddle: its shaft through both hands and on past them, a blade at each end
+    const a = S.haL, b = S.haR, d = vsub(b, a), L = Math.max(1, vlen(d)), u = vmul(d, 1 / L), ext = 15;
+    const e0 = vadd(a, vmul(u, -ext)), e1 = vadd(b, vmul(u, ext));
+    C(e0, e1, 0.75, 0.75, GR.ACC, 'paddle', MAT('#5a5e66', 0.5));
+    for (const [e, k] of [[e0, 1], [e1, -1]]) C(vadd(e, vmul(u, k * 5.4)), vadd(e, vmul(u, -k * 0.8)), 2.2, 1.8, GR.ACC, 'blade', MAT('#f2c21b', 0.4));
   }
   if (P.cue) {   // the pool cue: from behind the drawing hand, through the bridge, on toward the cue ball; the chalked tip
     const a = S.haR, b = S.haL, d = vsub(b, a);

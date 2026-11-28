@@ -47,7 +47,7 @@ function optKind(o) {
   return ty === 'melee' ? 'melee' : ty === 'grenade' || ty === 'deploy' ? 'throw' : LONG.has(id) || ty === 'rocket' || ty === 'bow' || ty === 'flame' ? 'rifles' : 'pistols';
 }
 const KIND_NAME = { pistols: 'PISTOLS', rifles: 'RIFLES', melee: 'MELEE', throw: 'THROWABLES', ammo: 'AMMO', gear: 'GEAR' };
-const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', usedlot: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs' };
+const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', usedlot: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs', jobcenter: 'jobs', jobpc: 'jobs' };
 const WEAPON_BY_ID = WEAPONS;
 let QB_ART = null, QB_P = null;   // (the item pictures for the quick bar: client/itemart.js, loaded when first wanted)
 export const WQ_MS = 4000;   // the quick weapons stay this long after a switch (UI-9)
@@ -831,7 +831,7 @@ const POI_ICON = {
   charter: ['≈', '#7de0ff'], sar: ['✚', '#ff6a4a'], smuggler: ['☠', '#ff5a5a'], convenience: ['¤', '#ffd36b'], gasstation: ['⛽', '#ff9a3a'], station: ['≡', '#f0f0f0'],
   airport: ['✈', '#9fd0ff'], tackle: ['🎣', '#25b8c0'], winery: ['🍷', '#c04a7a'], clubhouse: ['⛳', '#7de07a'], roadhouse: ['🍺', '#ff7a3a'], market: ['🧺', '#e8b060'],
   fruitstand: ['🍎', '#ff6a5a'], farmstand: ['🍯', '#e0b040'], snack: ['🌭', '#ffb060'], salvage: ['⚙', '#c0c8d0'], barber: ['✂', '#f0b0d8'], ride: ['🎡', '#ff9ad0'], race: ['🏁', '#f0f0f0'],
-  bowling: ['🎳', '#ff7ad0'],
+  bowling: ['🎳', '#ff7ad0'], jobcenter: ['E', '#ffd27a'],
   cinema: ['🎬', '#ffd27a'], bathhouse: ['♨', '#9ad8f0'],   // (nat5: the bathhouses - shared/regionpack.js lists their doors as one)
   lodge: ['⛺', '#d8a860'], huntcamp: ['⛺', '#d8a860'],   // (the hunting lodges and the outfitters: World v3b's marsh outfitters among them)
 };

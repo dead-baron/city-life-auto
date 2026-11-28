@@ -10,6 +10,7 @@ const STAFF = {
   police: ['cop', 'cop'], hospital: ['medic', 'civ'], bank: ['executive', 'civ'], courthouse: ['executive', 'civ'],
   fence: ['hustler', 'civ'], pawn: ['hustler', 'civ'], gunshop: ['construction', 'civ'], club: ['hustler', 'civ'],
   roadhouse: ['biker', 'civ'],   // (the Rusty Spur's bartender: bikers.js adds the archetype)
+  jobcenter: ['executive', 'civ'],   // (the Employment Center's front desk: jobcenter.js)
 };
 
 export function update(world) {
