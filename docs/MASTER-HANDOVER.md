@@ -169,7 +169,9 @@ taller neighbour fading while you're in a room (`overRoom`), **a faded tower sho
 (`glowOf`, the neon halo), hammocks a person's length, and **hospitals that read as hospitals** (his N20: ward
 windows, pale panels, a glazed stair tower, no home's dressing, a calm light at night - DEVLOG 11-28; the lint's
 `hospitalFront` 0). DEVLOG "The street kit and the night look" and "A hospital's front"; the check list's six rows;
-tests `streetkit` (9), `nightlook` (3), `hospitalfront` (5). **A finding to keep:** the game's light pass turns a
+tests `streetkit` (9), `nightlook` (3), `hospitalfront` (5). Tests: `docs/tasks/ARTKIT-TESTS-2026-11-28.txt` - the 100 files that read what changed: 573 of 575 pass; the two
+failures are `plainblocks` ("no plan building after the parts", "the new buildings after every other") and fail on
+main's own tree too - for the Opus chat. The other ~390 files were NOT run on this branch. **A finding to keep:** the game's light pass turns a
 baked glow of 15-20 of 255 into a clear pale light; pale colours at 45 and up bloom to white - most lit windows and
 shop rooms in the city are baked at 90-180 (why they are flat blobs at night; the windows' pick below is about that). The local game server for pictures: `CLA_ART_THREADS=0 CLA_WORLD=v3
 CLA_DEV=1` (with its own bake threads it runs the container out of memory under a browser).
@@ -349,7 +351,7 @@ clean start, quiet page and Keep/Cut/Bug marks; no long shadows on water; the re
 districts; casinos kept, doors made to read; the stash holds items and weapons (clothes stay in the wardrobe); the trunk
 its own storage, at risk; cargo crates always visible; REMOVE ALL (not "take it all off") leaves underwear on; underwear
 and towels change only at home, a bathhouse or a shower.
-**Known failing on main too:** calendar's armored run "leaves from its bank" (date-dependent), gridlock, scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
+**Known failing on main too:** `plainblocks` 2 (11-28: the towers' and the open blocks' building order - since the Employment Center?), calendar's armored run "leaves from its bank" (date-dependent), gridlock, scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
 picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz, arrests (hiding in a shop: failed
 once under load, passes alone and as a file), reputation ("a crime seen", about one run in three; 11-26). Follow-ups: two
 north doors at Northshore Beaches under trees.

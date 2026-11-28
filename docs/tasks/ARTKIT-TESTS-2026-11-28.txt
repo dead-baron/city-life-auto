@@ -1,0 +1,12 @@
+The street kit, the night look and the hospitals - tests on branch fable-art-1127 (commit 0d9d54bc), 2026-11-28 01:00-02:40 PST
+Every test file that reads the changed art, bake, page or lint files (grep over test/: chunkbake, statics.js, buildings.js, signfont, props-kit, props-town, host.js, shoprooms, phonebox, atmw, hammock, facadedress, placementlint), one file at a time under the heavy lock:
+# tests 575
+# pass 573
+# fail 2
+
+The two failures are in test/plainblocks.test.js and fail the same way on main's own tree (origin/main a73ca483, run 02:45):
+not ok 350 - tall towers: a split tower is several buildings of different heights, its street side shops and lobbies
+not ok 356 - open blocks: the building keeps its door, its places and its home; the new ones come after every other building
+
+In the batch and passing: test/perf.test.js (the budgets, with the hospitals' painter in), test/placementlint.test.js (hospitalFront 0 of 8 fronts, atmStray 3, signCovered 68, interiorOverlap 24 - held at their allowances).
+Not run: the other ~390 test files (the whole suite was started once and lost to a restart of the container).
