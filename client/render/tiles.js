@@ -449,7 +449,13 @@ function drawLamp(g, p) {
   g.restore();
   void c; void s;
 }
-export function lampHead(p) { if (p.hx !== undefined) return { x: p.hx, y: p.hy }; const a = p.a ?? -Math.PI / 2; return { x: p.x + Math.cos(a) * 30, y: p.y + Math.sin(a) * 30 }; }
+// (kept on the lamp: a lamp doesn't move, and the light passes asked for every lamp round the view every frame - an object
+// each time: drivebench --alloc. A copy, so a caller moving it moves nothing of the lamp's)
+export function lampHead(p) {
+  let h = p._head;
+  if (!h || h.ax !== p.x || h.ay !== p.y) { const a = p.a ?? -Math.PI / 2; h = p._head = p.hx !== undefined ? { x: p.hx, y: p.hy, ax: p.x, ay: p.y } : { x: p.x + Math.cos(a) * 30, y: p.y + Math.sin(a) * 30, ax: p.x, ay: p.y }; }
+  return h;
+}
 
 // ---------------------------------------------------------------------------
 function tex(g, name, tx, ty, x, y, tint = null) {

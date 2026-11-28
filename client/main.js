@@ -3316,6 +3316,7 @@ function render(dt) {
   tickVisuals(F);
   F.mark('visuals');
   const v2 = !F.ug && !S.homeIn && art2Draws(F);
+  S.v2Drew = v2 && !S.homeIn && !F.ug;
   if (S.homeIn) showWorld2(false);   // (inside your home: render/homeview.js draws it all - not the city under it too)
   else if (F.ug) drawUnderground(F);
   else if (v2) S.art2.frame(F);
@@ -3614,7 +3615,8 @@ function tickVisuals(F) {
   // buildings in view: see-through while they hide you, faded while you're inside
   if (!sub) buildingFades(F);
   // lights of the frame (for the light map, the puddles and the rain; lamps warm up, flashes die away)
-  F.refl = sub ? [] : collectLights(sky, view, F.vehs, F.peds, dt);
+  S.liteDt = dt;
+  F.refl = sub ? NO_REFL : collectLights(sky, view, F.vehs, F.peds, dt, S.v2Drew === true);   // (S.v2Drew: art v2 drew the last frame - render)
   // the wet street: rain rings on open water, splashes through puddles, manhole steam, tyre spray
   if (!sub) {
     if (F.rain) S.wx.rainOnWater(view, dt);
@@ -5474,7 +5476,8 @@ function jobMarkAlpha(s) { return s <= JOB_MARK[0] ? 1 : Math.max(0, 1 - (s - JO
 // ---- lighting: every light source of the frame into the light map and the bloom pass -----------
 // (render/lighting.js does the compositing). Also returns the light sources the puddles and the rain
 // pick up, in world px.
-const reflSrc = [], selfLit = [], countryLit = [];
+const reflSrc = [], selfLit = [], countryLit = [], NO_REFL = [];
+const NOOP = () => {}, NO_LIGHT = { add: NOOP, glow: NOOP, cone: NOOP, beam: NOOP };   // (collectLights lite: art v2 lights the world itself)
 // the lights wet ground and the rain catch (reflSrc): pooled records, filled afresh each frame - a night in the rain made
 // a few hundred new objects a frame here (11-06: the page's garbage, its collector's pauses)
 const REFL_POOL = [];
@@ -5531,13 +5534,28 @@ function forCells(g, view, m, fn) {
   const gx0 = Math.floor((view.x0 - m) / GRID_CELL), gx1 = Math.floor((view.x1 + m) / GRID_CELL), gy0 = Math.floor((view.y0 - m) / GRID_CELL), gy1 = Math.floor((view.y1 + m) / GRID_CELL);
   for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) { const a = g.get(gy * 4096 + gx); if (a) for (let j = 0; j < a.length; j++) fn(a[j]); }
 }
-function collectLights(sky, view, vehs, peds, dt) {
+// lite: art v2 drew the last frame - it lights the world itself (art2/game/host.js _lights) and reads from here only the
+// lamps' levels (_lv), the flashes kept on their guns and the lights the rain's streaks catch (reflSrc: the lamps, the
+// signals, the vehicles' lamps and sirens): the classic records go to NO_LIGHT and the rest is skipped - the windows,
+// the shop doors, the props, the country's lights, the lit signs (the biggest garbage of a night drive in the rain after
+// the renderer's, drivebench --alloc: P2)
+// (lite: only the country's fires' smoke - its embers are the art's; the camp fire's and the flare stack's light the art's too)
+function liteCountry() {
+  const [cx0, cx1, cy0, cy1] = S.chunkView, view = S.viewRect, dt = S.liteDt || 0.016;
+  for (let cy = Math.max(0, cy0); cy <= cy1 + 2; cy++) for (let cx = Math.max(0, cx0 - 1); cx <= cx1 + 1; cx++) for (const p of S.ground.overhead(cx, cy)) {
+    if (p.broken || (p.t !== 'campfire' && p.t !== 'flare')) continue;
+    if (p.x < view.x0 - 260 || p.x > view.x1 + 260 || p.y < view.y0 - 260 || p.y > view.y1 + 260) continue;
+    if (p.t === 'campfire') { if (p.lit && Math.random() < dt * 1.6) S.fx.smoke(p.x + (Math.random() - 0.5) * 4, p.y - 16, false); }
+    else if (Math.random() < dt * 2) S.fx.smoke(p.x, countryLightY(p, 0.96) - 14, true);
+  }
+}
+function collectLights(sky, view, vehs, peds, dt, lite = false) {
   selfLit.length = 0; countryLit.length = 0;
-  const L = S.light;
+  const L = lite ? NO_LIGHT : S.light;
   const night = sky.night, t = S.loopTime;
   const haze = 1 + sky.fog.k * 1.4 + S.rainK * 0.7;
   reflSrc.length = 0;
-  S.flashes = S.flashes.filter((f) => (f.t -= dt) > 0);
+  { let n = 0; for (const f of S.flashes) if ((f.t -= dt) > 0) S.flashes[n++] = f; S.flashes.length = n; }   // (in place: no new array a frame)
   for (const f of S.flashes) if (f.id) { const e = S.ents.get(f.id); if (e && e.rx !== undefined) { f.x = e.rx + Math.cos(f.a) * f.off; f.y = e.ry + Math.sin(f.a) * f.off; } }   // (on the gun as it moves)
     else if (f.win) { const c = S.ents.get(f.win.car); if (c && c.rx !== undefined) { const m = windowMuzzle(c.rx, c.ry, c.ra, f.win.def.L, f.win.def.W, f.a, f.win.back); f.x = m.x; f.y = m.y; } }   // (on the car's window)
   const inV = (x, y, m) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
@@ -5561,7 +5579,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     L.glow(h.x, h.y, 130, LIGHT.sodium, 0.1 * lv * haze);       // light hanging in the air round it
     refl(h.x, h.y, LIGHT.sodium, 0.9 * lv);
   });
-  if (night > 0.05) {
+  if (night > 0.05 && !lite) {
     // lit windows and shop fronts throw light out onto the pavement
     for (const it of S.buildings.inView(view)) {
       const b = it.b;
@@ -5597,7 +5615,8 @@ function collectLights(sky, view, vehs, peds, dt) {
   }
   // out in the country: camp fires and the flare stack burn day and night; beacons, the drive-in's
   // screen and marquee and the observatory light up after dark
-  {
+  if (lite) liteCountry();
+  else {
     const [cx0, cx1, cy0, cy1] = S.chunkView;
     for (let cy = Math.max(0, cy0); cy <= cy1 + 2; cy++) for (let cx = Math.max(0, cx0 - 1); cx <= cx1 + 1; cx++) for (const p of S.ground.overhead(cx, cy)) {
       if (p.broken || !COUNTRY_TALL[p.t] || p.t === 'upole' || p.t === 'pumpjack' || p.t === 'otank') continue;
@@ -5626,7 +5645,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     }
   }
   // billboards (lit from above) and bus shelters are tall props: they live in the overhead lists
-  if (night > 0.05) {
+  if (night > 0.05 && !lite) {
     const [cx0, cx1, cy0, cy1] = S.chunkView;
     for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++) for (const p of S.ground.overhead(cx, cy)) {
       if (p.broken) continue;
@@ -5655,7 +5674,7 @@ function collectLights(sky, view, vehs, peds, dt) {
       L.cone(fx, fy, v.ra, 340, 100, LIGHT.head, 1);
       L.add(v.rx, vy, def.L * 0.9, LIGHT.head, 0.22);
       L.beam(fx, fy, v.ra, 260, 64, LIGHT.head, 0.07 * haze);
-      for (const sd of [-1, 1]) {
+      for (let sd = -1; sd <= 1; sd += 2) {
         const px = fx - sn * hw * 0.62 * sd, py = fy + c * hw * 0.62 * sd;
         L.glow(px, py, 9, LIGHT.white, 0.85);
         const tx = v.rx - c * hl - sn * hw * 0.62 * sd, ty = vy - sn * hl + c * hw * 0.62 * sd;
@@ -5665,7 +5684,7 @@ function collectLights(sky, view, vehs, peds, dt) {
       }
       refl(fx, fy, LIGHT.head, 0.9);
     } else if (v.flags & VF.BRAKE) {
-      for (const sd of [-1, 1]) { const tx = v.rx - c * hl - sn * hw * 0.62 * sd, ty = vy - sn * hl + c * hw * 0.62 * sd; L.glow(tx, ty, 8, LIGHT.red, 0.5); }
+      for (let sd = -1; sd <= 1; sd += 2) { const tx = v.rx - c * hl - sn * hw * 0.62 * sd, ty = vy - sn * hl + c * hw * 0.62 * sd; L.glow(tx, ty, 8, LIGHT.red, 0.5); }
     }
     if (v.flags & (VF.SIREN | VF.BEACON)) {
       const ph = Math.floor(S.loopClock * 6) % 2, col = ph ? LIGHT.red : LIGHT.blue;
@@ -5679,6 +5698,7 @@ function collectLights(sky, view, vehs, peds, dt) {
       L.glow(v.rx, vy, 70, LIGHT.fire, 0.3 * f);
     }
   }
+  if (lite) return reflSrc;
   // trains: lit carriages, the locomotive's headlight down the line
   for (const c of S.trainCars || []) {
     if (!(c.flags & 8)) continue;

@@ -91,6 +91,15 @@ function fogTexture() {
 
 const PUDDLE_DENS = { [T.ROAD]: 0.016, [T.SIDEWALK]: 0.008, [T.PLAZA]: 0.009, [T.LOT]: 0.03, [T.DIRT]: 0.045, [T.GRASS]: 0.004 };
 
+// a streak's colour in a light: the light's colour at one of 32 strengths, the strings made once per colour (drawRain made
+// one for every streak in a light, every frame - most of its garbage on a night drive in the rain: drivebench --alloc)
+const CATCH = new Map();
+function catchStyle(c, a) {
+  let row = CATCH.get(c);
+  if (!row) { row = new Array(33); CATCH.set(c, row); if (CATCH.size > 64) CATCH.delete(CATCH.keys().next().value); }
+  const q = Math.max(0, Math.min(32, Math.round(a * 32)));
+  return row[q] || (row[q] = `rgba(${c[0]},${c[1]},${c[2]},${(q / 32).toFixed(3)})`);
+}
 export class Weather {
   constructor(map) {
     this.map = map;
@@ -479,7 +488,7 @@ export class Weather {
           const d = Math.hypot(dx, dy);
           if (d > rr) continue;
           const a = (1 - d / rr) * 0.75 * night * L.a;
-          g.strokeStyle = `rgba(${L.c[0]},${L.c[1]},${L.c[2]},${a.toFixed(3)})`;
+          g.strokeStyle = catchStyle(L.c, a);
           const len = 8 + r.z * 16;
           g.beginPath(); g.moveTo(r.x, r.y); g.lineTo(r.x + len * wind, r.y - len); g.stroke();
           break;

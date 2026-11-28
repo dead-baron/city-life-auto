@@ -28664,3 +28664,22 @@ or overlapping). Fixed:
   the close and centres it; with a keyboard the panel is 680 wide (was 520: the key badges cut the second column's
   names, "SETT", "INVE").
 Test: the audits (`/tmp/ui4`): port pause and land pause clean.
+
+## 2026-11-27 · P2: less garbage per frame, the page's part (collectLights, the rain, the lamps, the decals)
+The step left from 11-24 ("the next step there is to skip what art v2 doesn't use"). `tools/drivebench.mjs --alloc
+--min 2 --cores 4` (a phone's portrait screen, a night drive in the rain), main vs this branch:
+- **main.js collectLights** (138 MB in the drive, 3rd biggest): when art v2 drew the last frame (`S.v2Drew`) it lights
+  the world itself (host.js _lights) and reads from here only the lamps' levels, the flashes kept on their guns and the
+  lights the rain's streaks catch - so the classic light records go to a no-op (`NO_LIGHT`) and the windows, shop doors,
+  props, country lights, lit signs, trains, carried lights and fires are skipped (the country's fires still smoke:
+  `liteCountry`). The flashes are kept in place (no new array a frame), the sides of a car walked without an array.
+  Gone from the top of the list.
+- **render/weather.js drawRain** (86 MB): a streak in a light's glow made a colour string every frame - now one of 32
+  strengths per light colour, made once (`catchStyle`): 23-55 MB over three runs.
+- **render/tiles.js lampHead**: an object for every lamp round the view every frame (both light passes) - now kept on the
+  lamp. **host.js _decals**: a decal's set name worked out once per colour and kind (v1DecalFx cut the colour string
+  apart every frame).
+The whole drive's allocation: 1,170 MB on main, 890 / 900 / 988 MB over three runs on the branch (runs vary: the
+chunks baked on the way differ). Long tasks vary too much here to claim a change (2 cores, no GPU) - the phone is the
+measure. Still the biggest: the renderer's own lights and decals (host.js _lights, _decals). No world or art change.
+Tests: drivefx, crush, perf.
