@@ -28700,3 +28700,14 @@ burn barrel - stop a little off you shouting ("You picked the wrong bar!", `REAC
 1.6 s on and every 2.2 s after (`CLUB_JOIN`, `joins`). Get away on wheels and the club mounts up and rides you down as
 before (the grudge's chase - those still on their way go for their bikes instead). Test: `motorbikes.test.js` (the
 club's fight: straight in, the next few after a moment, then the whole club).
+
+## 2026-11-27 night · Animals out of step; dancers keep their room (the owner's 11-17 notes)
+- **"Birds/animals doubled up: two moving in lockstep, same speed and timing"**: a herd's animals and the young all made
+  for their leader's middle at the one speed (`wildlife.js`), so two of them side by side walked as one. Now each keeps
+  to its own place round the leader, lets itself come its own distance and goes at its own pace (0.86-1.14 of its
+  kind's walk and trot) - `herdSpot`, by its id (no draw from the shared random sequence). Test: `wildmoves.test.js`.
+- **"Dancers bunched up, one standing in a fountain"**: a dancer's next spot round where they dance (`personas.js`
+  `danceSpot`) is clear of anything standing there - a fountain's basin, a bench, a planter: its solid circle and 16 px
+  - and 30 px from the next person (`DANCE_ROOM`). Test: `npcpeople.test.js`.
+- `test/dance.test.js` brought up to the reaction ladder (11-27): a dancer shoved on a club's floor backs off with a
+  word or runs, or - a fighter - squares up first (it failed on main since part 1).

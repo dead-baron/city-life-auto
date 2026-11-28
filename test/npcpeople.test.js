@@ -304,3 +304,26 @@ test('fishers along one shore each have their own spot: ANGLER_GAP apart, facing
     assert.ok(wet, `an angler at ${Math.round(e.x)}, ${Math.round(e.y)} facing the water`);
   }
 });
+
+// The owner, 11-17: "Dancers bunched up, one standing in a fountain". A dancer's next spot (personas.js spotNear with
+// room): clear of anything standing there and of the next person by DANCE_ROOM.
+test('dancers keep their room: never into a fountain or onto each other', async () => {
+  const { danceSpot } = await import('../server/systems/personas.js');
+  const w = makeWorld({ npcBudget: 0 });
+  const { p } = joinPlayer(w);
+  const x = p.ped.x + 400, y = p.ped.y;
+  const fountain = { t: 'fountain', x: x + 30, y, r: 26 };
+  const m = w.map, k = m.idx(Math.floor(fountain.x / TILE), Math.floor(fountain.y / TILE));
+  if (!m.solidProps.has(k)) m.solidProps.set(k, []);
+  m.solidProps.get(k).push(fountain);
+  const other = spawnNpc(w, 'casual', x - 30, y);
+  let got = 0;
+  for (let i = 0; i < 200; i++) {
+    const s2 = danceSpot(w, x, y, 0);
+    if (!s2) continue;
+    got++;
+    assert.ok(Math.hypot(s2.x - fountain.x, s2.y - fountain.y) >= fountain.r + 16, 'not into the fountain');
+    assert.ok(Math.hypot(s2.x - other.x, s2.y - other.y) >= 30, 'not onto the next dancer');
+  }
+  assert.ok(got > 50, `spots with room found (${got} of 200)`);
+});

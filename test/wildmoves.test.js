@@ -249,3 +249,18 @@ test('a mountain goat runs up onto the rock where you can\'t follow; shot up the
     for (const [i, t, r] of saved) { m.tiles[i] = t; m.reserve[i] = r; }
   }
 });
+
+// The owner, 11-17: "Birds/animals doubled up: two moving in lockstep, same speed and timing". A herd following its
+// leader: each to its own place round it at its own pace (wildlife.js herdSpot) - not all at the leader's middle at the
+// one speed, where two side by side walked as one.
+test('a herd following its leader: each its own place round it and its own pace, never two as one', () => {
+  const lead = { x: 1000, y: 1000 };
+  for (const young of [false, true]) {
+    const H = [101, 102, 103, 104, 105, 106].map((id) => wildlife.herdSpot(id, lead, young));
+    for (let i = 0; i < H.length; i++) for (let j = i + 1; j < H.length; j++) assert.ok(Math.hypot(H[i].x - H[j].x, H[i].y - H[j].y) > 3 || Math.abs(H[i].pace - H[j].pace) > 0.03, `${young ? 'young' : 'herd'} ${i} and ${j} as one`);
+    const paces = H.map((h) => h.pace);
+    assert.ok(Math.max(...paces) - Math.min(...paces) > 0.1 && Math.max(...paces) < 1.15 && Math.min(...paces) > 0.85, `their paces spread (${paces.map((v) => v.toFixed(2))})`);
+    for (const h of H) assert.ok(Math.hypot(h.x - lead.x, h.y - lead.y) < (young ? 26 : 74), 'near the leader');
+  }
+  assert.deepEqual(wildlife.herdSpot(101, lead), wildlife.herdSpot(101, lead), 'the same animal: the same place and pace each time');
+});
