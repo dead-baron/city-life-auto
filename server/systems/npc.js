@@ -27,8 +27,10 @@ import * as personas from './personas.js';
 import * as music from './music.js';
 import * as activities from './activities.js';
 import * as burning from './burning.js';
+import * as react from './react.js';   // (the reaction ladder: warn, run / hide / call, draw, fight - 11-27)
 import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS, CROWD_CAP } from '../../shared/rules.js';
 import { FLY } from '../../shared/flight.js';
+import { WEAPONS } from '../../shared/items.js';
 import { fenceCrossed } from '../../shared/fences.js';   // (an aircraft up in the air: over all this, untouched)
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
@@ -324,6 +326,8 @@ export function update(world, dt) {
         break;
       }
       case 'fight': inp = fight(world, ped, now); factor = 1; break;
+      case 'warn': inp = react.warnStep(world, ped, now); factor = 1; break;   // (backing off, hands up - or squared up: react.js)
+      case 'hide': inp = react.hideStep(world, ped, now); factor = 1; break;   // (crouched behind a car or a wall: react.js)
       case 'watch': inp = watch(world, ped, now); break;
       case 'audience': inp = personas.audience(world, ped, now); factor = 0.45; break;   // (in a busker's crowd: personas.js)
       case 'mcrowd': inp = music.crowdStep(world, ped, now); factor = 0.45; break;   // (watching a player perform: music.js)
@@ -358,6 +362,8 @@ export function update(world, dt) {
     // staggered by a hit: a moment's check - slowed right down, no swing or shot (then on they come, or on they run)
     if (now < (ped.staggerUntil || 0)) inp = { ...inp, bits: inp.bits & ~IN.FIRE & ~IN.SPRINT, mx: inp.mx * 0.25, my: inp.my * 0.25 };
     pedStep(ped, inp, dt, world.map, walkMods(world, ped, factor));
+    if (n.state === 'warn' && inp.face !== undefined) ped.a = inp.face;   // (backing away facing them: react.js warnStep)
+    if ((inp.bits & IN.AIMING) && react.armedCiv(ped)) ped.aimUntil = now + 0.3;   // (a gun up and on them: drawn and held - react.js draw, a guard sizing it up; not fists - that's a guard, combat.js)
     if (inp.bits & IN.FIRE) combat.tryAttack(world, ped, inp.aim);
     ped.umbrella = rain && n.umbrellaType && n.state === 'wander';
   }
@@ -669,6 +675,8 @@ function fight(world, ped, now) {
   }
   const armed = ped.weapon !== 'fists' && ped.weapon !== 'bat';
   if (armed) {
+    const ci = react.armedCiv(ped) ? react.coverFight(world, ped, t, d, aim, now) : null;   // (step 5: behind a car first, then firing over it - react.js)
+    if (ci) return ci;
     const inp = d > 170 ? seek(ped, t.x, t.y, true) : { bits: 0, mx: 0, my: 0, aim };
     if (d < 380 && world.map.los(ped.x, ped.y, t.x, t.y)) { inp.bits |= now < (n.holdFireUntil || 0) ? IN.AIMING : IN.FIRE | IN.AIMING; inp.aim = aim; }   // (holdFireUntil: sizing it up first, the weapon up - streetlife.js's guards)
     return inp;
@@ -718,6 +726,9 @@ export function onAttacked(world, ped, attacker) {
   if (n.warSide) { startFight(world, ped, attacker, 30); for (const e of world.query(ped.x, ped.y, 420, K.PED)) if (e.npc && e.npc.warSide === n.warSide && !e.dead && e.npc.state !== 'fight') startFight(world, e, attacker, 30); return; }   // (a gang war's fighter: their side piles in - calevents.js)
   if (n.role === 'gang') { startFight(world, ped, attacker, 30); gangAlert(world, attacker); return; }
   if (n.state === 'fight' && n.target === attacker.id) return;
+  // the ladder (react.js): a shove isn't a shooting - how bad it was sets where they start, their temperament how far they go
+  const w = attacker.weapon && WEAPONS[attacker.weapon], sev = !w || attacker.weapon === 'fists' ? 1 : w.type === 'melee' ? 2 : 3;
+  if (react.incident(world, ped, attacker, sev, 'hit')) return;
   if (rng() < n.fight) startFight(world, ped, attacker, 14);
   else flee(world, ped, attacker.x, attacker.y, 6);
 }
@@ -725,9 +736,11 @@ export function onAttacked(world, ped, attacker) {
 export function onCarjacked(world, driver, jacker) {
   if (!driver.npc) return;
   driver.npc.role = 'civ';
-  // GDD: random temperament check — 50% flee screaming, 50% fight back
-  if (rng() < 0.5) { flee(world, driver, jacker.x, jacker.y, 7); world.emit(driver.x, driver.y, { e: 'scream', x: driver.x, y: driver.y }); }
-  else startFight(world, driver, jacker, 16);
+  // the ladder (react.js) by temperament: the timid run screaming, most back off, the tough and the armed come for you;
+  // (GDD: a fight-or-flight temperament check - now the reaction ladder's, 11-27)
+  const T = react.temper(world, driver);
+  if (T === 0 || (T === 1 && rng() < 0.6)) { flee(world, driver, jacker.x, jacker.y, 7); world.emit(driver.x, driver.y, { e: 'scream', x: driver.x, y: driver.y }); }
+  else if (!react.incident(world, driver, jacker, T >= 2 ? 2 : 1, 'carjack')) startFight(world, driver, jacker, 16);
 }
 
 export function onVehicleHit(world, v, attacker) {
@@ -761,6 +774,11 @@ export function onGunfire(world, x, y, shooter, radius = 360) {
     if (n.tough && Math.hypot(e.x - x, e.y - y) > 90) { e.a = Math.atan2(y - e.y, x - e.x); continue; }   // tough guys don't back off
     // (far enough off, now and then someone films it instead of running)
     if (radius >= 360 && n.state !== 'flee' && Math.hypot(e.x - x, e.y - y) > radius * 0.7 && rng() < filmChance(e) * 0.4 && startFilming(world, e, x, y, 6 + rng() * 6, true)) continue;
+    if (n.state === 'hide') continue;   // (already down behind something)
+    // the ladder (react.js): gunfire is the worst there is - run, or get down behind something; an armed one draws on a
+    // shooter they can see (the shots aren't at them: no shot back yet)
+    const by = shooter && shooter.kind === K.PED && !shooter.dead && Math.hypot(shooter.x - e.x, shooter.y - e.y) < 380 ? shooter : null;
+    if (react.incident(world, e, react.armedCiv(e) ? by : null, 3, 'shots', x, y)) continue;
     flee(world, e, x, y, 5 + rng() * 3);
   }
   if (radius >= 360) spectacle(world, x, y, { r: radius + 260, near: radius, chance: 0.6, secs: 9 });

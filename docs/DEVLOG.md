@@ -28501,6 +28501,65 @@ Tests: `skate.test.js` (three new: onto the grass in hand and back on; nobody's 
 bagged; the bail's one board), `ridegear.test.js` (the wear and the snap), guide, perf, core, bikes, ftue, homeups, surf,
 blades.
 
+## 2026-11-27 · Ready to make the repository private (the owner's go, 11-27): a player-only page, the server's code kept in
+The owner asked what leaving the repository public risks (a reskin on a portal, cheaters reading the server's checks,
+the roadmap readable; the page itself can always be copied) and said go. What's built - making it private stays his
+switch, `docs/PRIVATE-REPO.md` has the steps:
+- **The game server stops handing out its own code** (`server/index.js` STATIC_ROOTS: no `server/` - it was served for
+  the paused offline practice worker).
+- **The player-only page** (`tools/build-play.mjs <folder>`): index.html, version.json, the manifest and service worker,
+  `client/` (not the practice worker), `shared/`, `assets/`, `about/` - 880 files, 215 MB, an all-rights-reserved
+  LICENSE and a README; copies only what changed, removes what left; fails if anything the page imports isn't in it.
+- **Published by the game server as it updates** (`deploy/publish-play.sh`, from `auto-update.sh` once
+  `~/.cla-play-repo` is set): the new commit's page pushed to the public repository, then the usual wait for Pages,
+  then the restart - page first, as today; if publishing fails the server waits too.
+- **One command on the server** (`deploy/setup-private.sh`): two keys (read the private repository, write the public
+  one), SSH aliases, the remote switched, the first publish.
+- The plan keeps the address: the development repository is renamed `city-life-auto-dev` and made private, a new public
+  `city-life-auto` holds the page - same URL, so saved logins, Google and Discord sign-in carry on. Free on GitHub Free.
+- `LICENSE` (all rights reserved) in this repository too.
+Tests: `buildplay.test.js` (what's in, what's out, every import resolved, the copy, the server's roots); publish-play.sh
+run end to end against a local bare repository (published, then nothing to do the second time).
+
+## 2026-11-27 · NPC reactions, part 1: civilians climb a ladder instead of fight-or-flee (the owner's go, 11-27)
+His note (11-25 00:33): "not just automatically attack ... sometimes take cover, react not with violence first, react
+scared and run off, react cautious". The design (docs/tasks/NPC-REACTIONS-DESIGN-2026-11-26.md) in four parts; this is
+the first - civilians on foot (`server/systems/react.js`, `REACT` in shared/rules.js):
+- **Temperament** (once per person): timid (seniors, socialites, executives), ordinary, tough (builders, athletes,
+  hustlers, the personas' tough ones), armed (carrying a gun). A rough district (tier rough / red) makes about half a
+  notch bolder, a rich one (lux) a notch more timid; each person a notch either way now and then (seeded by who they are).
+- **How bad it is** sets where they start: a shove (fists) 1, a weapon (a blade swung at them, a gun pointed at them) 2,
+  gunfire 3. The same person again within 20 s: a step further.
+- **The steps:** back off / warn - hands up (the art's 'handsup' pose: `hu` in the descriptor), backing away facing you,
+  a word ("Whoa, easy!"); a tough one squares up instead ("Back off.") and swings if you step in or hit again. Run, hide
+  or call it in - away, or down behind a parked car (round its end if it's in the way) or tucked against a wall close by
+  on the far side, crouched (`cr`: the 'kneel' pose); some on the phone as they go (the call is law.js's witness report).
+  Draw - an armed one holds the gun on you ("Drop it!"), no shot, then lowers it; again and it's a fight. Fight.
+- **Where:** hit (npc.js onAttacked - after the police, gangs, bikers, bouncers, counter staff, a gang war's and a street
+  fight's own ways, all as they were), shots near them (onGunfire: the tough stare from further off, the filming kept),
+  carjacked (onCarjacked: the timid run screaming, most back off, the tough and the armed come for you), and a gun
+  pointed at them (react.js update: a player aiming within 260 px and 0.35 rad - hands up, "Don't shoot!").
+- Word bubbles kept to two at a time within 300 px. The Guide: "How people react" (Crime).
+- **Found on the way:** an NPC knocked down or stunned on its feet slid with no walls (combat.js: the airborne slide
+  collided, this one didn't) - a punch could push someone into a building, stuck there for good (both fighters froze in
+  a street fight, `brawls.test.js`). It collides now.
+Tests: `npcreact.test.js` (7: timid / ordinary, tough, armed, gunfire and cover, a gun pointed, carjacks, temperament);
+brawls, reactions, core, streetlife, activities, crime, law, police, custody, struggle, gangs, bikers, nightclubs,
+personas and others (~280).
+
+## 2026-11-27 · NPC reactions, part 2: cover - behind a car first, then firing over it (step 5)
+The design's step 5 ("into cover first, then fire from it") for everyone who fights with a gun through npc.js `fight` -
+gang members, guards, armed civilians (`react.js coverFight`; the police keep theirs for part 3): when the one they're
+fighting has a gun too and a still car stands within 150 px, they run to its far side (round its end if it's in the
+way) and fire over it in bursts - crouched 1.1 s (the page's kneel), up and shooting 1.5 s. Their shots pass over it
+(combat.js's `coverCar`, the police's already); a crouched one is safe behind it - the car takes the shots - but up and
+firing, a shot just over the car finds them (combat.js traceTarget): cover, not a wall. Out of it when the fight is
+past 520 px, the other has no gun, the car moves or goes, or they've been flanked (the car no longer between them).
+Numbers in REACT (coverPx, coverFar, coverDuckS, coverFireS, coverRetryS).
+Tests: `npcreact.test.js` (9: + into cover and firing from it, no cover against fists; both ways - crouched the car
+takes it, up they're hit), reactions, core, brawls, streetlife, robbery, police, self-defence, weapons, people,
+happenings, grenades.
+
 ## 2026-11-27 · The `ads` branch merged, ads switched off; the Employment Center live (the owner's go, 11-27)
 The branch of 11-16/17 (DEVLOG entries of those days: the Employment Center, office work, the job computer, rewarded
 ads behind `CLA_ADS`) brought up to date with ten days of main and merged. Ads stay off - `CLA_ADS` unset - until the
@@ -28513,4 +28572,3 @@ owner's ad account is approved; then the setting (deploy/set-keys.sh) turns on G
   walk-in and the job computer (`world3jobcenter.test.js` 3/3). A world update: the world3 and art3 keys change - the
   re-bake (~5 h) carries every identical chunk over.
 Tests: docs/tasks/ADS-MERGE-TESTS-2026-11-27.txt.
-

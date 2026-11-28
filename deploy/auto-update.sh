@@ -3,7 +3,7 @@
 # If GitHub's main branch has new commits it pulls them. When server code changed it restarts
 # the game - after a 60-second in-game countdown if anyone is online (progress is saved first); if the server doesn't come back healthy it rolls
 # back to the previous version and restarts that instead. Client-only changes need no restart
-# (players get those from GitHub Pages). Log: journalctl -u cla-update
+# (players get those from GitHub Pages - from the public page repository once this one is private: publish-play.sh). Log: journalctl -u cla-update
 set -euo pipefail
 cd "${CLA_APP_DIR:-/home/ubuntu/city-life-auto}"
 
@@ -34,6 +34,13 @@ NEW=$(git rev-parse origin/main)
 [ "$OLD" = "$NEW" ] && exit 0
 BAD_FILE="${CLA_BAD_FILE:-$HOME/.cla-bad-commit}"   # a version that failed to start: don't retry it every 2 minutes
 [ -f "$BAD_FILE" ] && [ "$(cat "$BAD_FILE")" = "$NEW" ] && exit 0
+
+# The player-only page, once the development repository is private (docs/PRIVATE-REPO.md; ~/.cla-play-repo set by
+# deploy/setup-private.sh): this commit's page built and pushed to the public repository GitHub Pages serves - the wait
+# below then waits for Pages to publish it, as before. Not set up: nothing happens.
+if [ -f "$HOME/.cla-play-repo" ] && [ -f deploy/publish-play.sh ]; then
+  bash deploy/publish-play.sh "$NEW" || { note play "couldn't publish the page for ${NEW:0:7} (deploy/publish-play.sh) - trying again next run"; exit 0; }
+fi
 
 # Wait for the page. The moment the new version.json lands here the server tells every player's page about the
 # new build, and the pages wait for GitHub Pages to serve it - so don't move until Pages has published it

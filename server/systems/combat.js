@@ -442,6 +442,12 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true, wal
     }
     if (t >= 0 && t < bestT) { bestT = t; best = e; }
   }
+  // someone up behind that car, firing over it (react.js coverFight): exposed - a shot just over the car finds them
+  if (best && best.kind === K.VEH) for (const e of world.query(best.x, best.y, best.def.L / 2 + 40, K.PED)) {
+    if (e === shooter || !e.npc || e.npc.coverCar !== best.id || e.crouch || e.dead || !!e.sub !== sub || !sameLevel(e.lz, shooter.lz)) continue;
+    const t = segCircle(x1, y1, x2, y2, e.x, e.y, e.r + 2);
+    if (t >= 0 && t < tWall) { best = e; bestT = t; break; }
+  }
   // aircraft up in the air: hit where art v2 draws them (up the screen by their height - so looked for that much further
   // down the screen than the shot: a short step of a rocket's flight never came near enough to find one), or under them
   // (and anyone falling from an aircraft - a few at most, skydive.js's list - where they're drawn the same way)
@@ -743,7 +749,7 @@ export function update(world, dt) {
         collideCircle(e, PED_RADIUS, world.map, SWIM_BLOCK);
         if (world.map.levels) levelStep(world.map, e, PED_RADIUS);
         if (!e.dead) players.tumbleImpact(world, e, v0, dt, fr);
-      } else { e.vx *= 0.8; e.vy *= 0.8; e.x += e.vx * dt; e.y += e.vy * dt; if (world.map.levels) levelStep(world.map, e, PED_RADIUS); }
+      } else { e.vx *= 0.8; e.vy *= 0.8; e.x += e.vx * dt; e.y += e.vy * dt; collideCircle(e, PED_RADIUS, world.map, SWIM_BLOCK); if (world.map.levels) levelStep(world.map, e, PED_RADIUS); }   // (walls stop a punched or stunned one's stagger too: it slid them into a building, stuck there for good - 11-27)
     }
   }
 }

@@ -3215,6 +3215,8 @@ function pedPose(e) {
   if (f & PF.FISHING) return e.d && KNEELERS.has(e.d.ar) ? 'kneel' : 'fish';
   if (e.d && e.d.cf) return 'cuffed';   // (hands cuffed behind the back: server custody.js)
   if (e.d && e.d.es) return e.d.es === 2 ? 'escortL' : 'escortR';   // (an officer walking a prisoner to the car, a hand on their arm: custody.js)
+  if (e.d && e.d.hu) return 'handsup';   // (hands up: a held-up clerk, someone backing off from trouble - server react.js)
+  if (e.d && e.d.cr && !(f & PF.MOVING)) return 'kneel';   // (crouched behind a car or a wall - react.js hide)
   if (f & PF.CARRY) return 'carry';
   if (e.d && e.d.st && !(f & PF.MOVING)) return 'sitlow';   // sitting by a campfire (server campfires.js)
   if (e.bangAt !== undefined && S.loopClock - e.bangAt < BANG_S && !(f & PF.MOVING)) return e.bangK === 2 ? 'thump' : 'bang';   // (fight in a cell: rattling the bars, a fist on the wall)
