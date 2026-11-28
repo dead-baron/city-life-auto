@@ -28510,3 +28510,17 @@ how they fight on foot (`COP_LEVEL` aim / drawS / gap / cover; `GUARD_AIM`):
 Tests: `npcreact.test.js` (11: + the tiers run rookie to SWAT; a loose aim hits less than a tight one), police,
 arrests, gameplay, unlocks, struggle, custody, wanted ladder, streetlife, brawls, reactions, police air, indoor chase.
 
+
+## 2026-11-27 · NPC reactions, part 4: the road
+The ladder at the wheel (`npc.js` onVehicleHit, now called for a bump from your car too - vehicles.js's crash path - as
+well as your weapon on theirs). By the driver's temperament (react.js temper):
+- **Bumped:** a timid one honks and drives off in a panic; anyone else stops (`ai.holdUntil`, `REACT.roadArgueS`
+  3.5 s - traffic.js holds the throttle), a long honk and a word out of the window ("Hey! Watch it!", `REACT.lines.road`).
+  Bumped by you again inside `REACT.memoryS`: a tough one gets out to have it out (the foot ladder - squared up, a word,
+  then the fight); the rest drive off in a panic.
+- **Their car hit with a weapon or shot:** the timid and the ordinary floor it; a tough one gets out the second time;
+  an armed one stops, gets out and draws (step 4, not firing yet). A hot head (`npc.fight`: a biker, a drunk spoiling
+  for it) still gets out and comes for you the first time, as before.
+- One knock, one reaction (a scrape is several contacts: 1.5 s); a cop, a medic or a rail guard only drives off.
+Tests: `npcreact.test.js` (13: + bumped once and again by temperament; a tough driver out to have it out, an armed one
+out and drawn), vehdamage, slips, carhits, core, traffic box, passers-by, racers, motorbikes, bikes, carts, arrests.

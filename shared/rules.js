@@ -1584,6 +1584,7 @@ export const REACT = {
   // step 5, cover (part 2): an armed one fighting someone with a gun gets behind a still car within coverPx first, then
   // fires over it - crouched coverDuckS, up and shooting coverFireS (up, they can be hit: a shot just over the car finds
   // them - combat.js); the fight further off than coverFar, the other with no gun, the car moved: out of cover
+  roadArgueS: 3.5,           // a bump on the road (part 4): stopped this long, the horn and a word - again and they floor it, or (tough, armed) get out
   coverPx: 150, coverFar: 520, coverDuckS: 1.1, coverFireS: 1.5, coverRetryS: 4,
   sayGap: 1.6, sayNear: 300, saySame: 2,   // word bubbles: no more than this many within this many px in this many seconds
   lines: {
@@ -1592,5 +1593,6 @@ export const REACT = {
     draw: ['Drop it!', 'Back off - now!', 'Don\'t make me do this!'],
     aim: ['Don\'t shoot!', 'Please - easy!', 'Whoa whoa whoa!'],
     hide: ['Get down!', 'Somebody call the cops!'],
+    road: ['Hey! Watch it!', 'Are you blind?!', 'Learn to drive!', 'Unbelievable...'],
   },
 };
