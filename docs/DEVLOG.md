@@ -28683,3 +28683,11 @@ The whole drive's allocation: 1,170 MB on main, 890 / 900 / 988 MB over three ru
 chunks baked on the way differ). Long tasks vary too much here to claim a change (2 cores, no GPU) - the phone is the
 measure. Still the biggest: the renderer's own lights and decals (host.js _lights, _decals). No world or art change.
 Tests: drivefx, crush, perf.
+
+## 2026-11-27 · Courts in play are the players' (the owner, 11-17 21:18: "NPCs walk across the court during a game")
+The pre-beta list's class fix (section C, NPCs: "never ... on game areas while a game runs"). `server/systems/playareas.js`:
+the areas in play this tick - a tennis court with a game on it (its lines and 20 px round them) and a half court someone's
+shooting hoops on. Passers-by treat them as the skate parks: a wanderer's next waypoint is never in one nor across one
+(npc.js pickWaypoint), one who finds themselves on one - a game started where they stood or were going - heads off it
+the nearest way (wander, idle), and nobody stops to idle on one. The game's own people (the club pro) play on as ever.
+The car soccer arena is walled already; a pool table is furniture (P7: lineHits). Test: `tennis.test.js` (+1).

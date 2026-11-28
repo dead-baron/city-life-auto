@@ -71,6 +71,7 @@ export function start(world, p, c) {
   const ball = world.add({ id: world.newId(), kind: K.BALL, x: ped.x, y: ped.y, a: 0, z: 30, vx: 0, vy: 0, vz: 0, ballKind: 'tennis', cx: -1, cy: -1 });
   const G = { c: c.i, pid: p.pid, pro: pro.id, ball: ball.id, side: mine, score: [0, 0], server: 0, phase: 'serve', t: world.time, hitBy: -1, bounces: 0, aim: null };
   games(world).set(c.i, G);
+  world._playTick = -1;   // (the court in play now: playareas.js)
   p.tennis = { c: c.i };
   p.meDirty = true;
   world.notify(p, 'The pro jogs out across the net. You serve: the attack button with the ball in your hand, the way you aim. First to four points, two clear.', 'info');
@@ -129,6 +130,7 @@ export function update(world, dt) {
 
 function end(world, G, text, tone) {
   games(world).delete(G.c);
+  world._playTick = -1;   // (the court out of play: playareas.js)
   const p = world.players.get(G.pid), b = world.get(G.ball), pro = world.get(G.pro);
   if (b) world.remove(b);
   if (pro && pro.npc) { pro.npc.driven = false; pro.npc.state = 'wander'; pro.npc.keep = false; }

@@ -140,3 +140,24 @@ test('the pro knocked down, or a serve never hit: the game\'s off', () => {
   for (let i = 0; i < 20 * (TENNIS.serveWait + 1) && w.tennis.has(0); i++) step(w, p);
   assert.ok(!w.tennis.has(0) && !p.tennis, 'off when you never serve');
 });
+
+// The owner, 11-17 21:18: "NPCs walk across the court during a game (a group stands on the baseline)". A court in play is
+// the players' (server/systems/playareas.js): a passer-by on it heads off the nearest way, none picks a way onto it or
+// across it while the game's on - the club pro plays on it all the same.
+test('a court in play: passers-by keep off it and go round; the pro plays on it', async () => {
+  const { spawnNpc } = await import('../server/systems/npc.js');
+  const { playAt, playCrossed } = await import('../server/systems/playareas.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const c = court(w, 0);
+  assert.equal(playAt(w, c.cx, c.cy), null, 'no game: nothing in play');
+  teleport(w, p.ped, c.cx, c.y1 - 20);
+  tennis.start(w, p, c);
+  assert.ok(playAt(w, c.cx, c.cy), 'the court in play');
+  assert.ok(playCrossed(w, c.x0 - 100, c.cy, c.x1 + 100, c.cy) && !playCrossed(w, c.x0 - 100, c.y0 - 80, c.x1 + 100, c.y0 - 80), 'across it, not past it');
+  const walkers = [0, 1, 2].map((k) => { const e = spawnNpc(w, 'casual', c.cx - 60 + k * 60, c.cy - 120); e.npc.state = 'wander'; e.npc.until = 0; return e; });
+  const pro = w.get(w.tennis.get(0).pro);
+  for (let i = 0; i < 20 * 12 && w.tennis.has(0); i++) step(w, p);
+  for (const e of walkers) if (!e.removed) assert.ok(!playAt(w, e.x, e.y), `a passer-by off the court (${Math.round(e.x - c.cx)}, ${Math.round(e.y - c.cy)})`);
+  assert.ok(!pro.removed && pro.npc.driven, 'the pro still in the game');
+});

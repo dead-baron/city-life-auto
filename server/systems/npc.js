@@ -1,6 +1,7 @@
 // Pedestrian AI (GDD §10): demographic spawning around players, sidewalk wandering,
 // reflex dive-roll evasion, fight-or-flight temperaments, syndicate gangs in turf,
 // passed-out boozers, rain umbrellas, and the Snatch-and-Grab street event (§12).
+import { playAt, playCrossed, playOff } from './playareas.js';
 import { K, T, WEATHER, TILE } from '../../shared/constants.js';
 import { DISTRICTS } from '../../shared/mapcore.js';
 import { IN } from '../../shared/input.js';
@@ -415,8 +416,8 @@ function crawl(world, ped, now) {
 function wander(world, ped, now) {
   const n = ped.npc;
   const d = Math.hypot(n.wx - ped.x, n.wy - ped.y);
-  if (d < 10 || now > n.until) {
-    if (rng() < 0.2 && !onRoad(world, ped) && (skating(ped) || !skateAt(world.map, ped.x, ped.y))) { n.state = 'idle'; n.until = now + 2 + rng() * 5; n.lookAt = now; return NO_INPUT; }
+  if (d < 10 || now > n.until || ((world.tick + ped.id) % 10 === 0 && playAt(world, n.wx, n.wy))) {   // (a game started where they were going: somewhere else - playareas.js)
+    if (rng() < 0.2 && !onRoad(world, ped) && (skating(ped) || !skateAt(world.map, ped.x, ped.y)) && !playAt(world, ped.x, ped.y)) { n.state = 'idle'; n.until = now + 2 + rng() * 5; n.lookAt = now; return NO_INPUT; }
     pickWaypoint(world, ped);
     n.until = now + 8;
     if (Math.hypot(n.wx - ped.x, n.wy - ped.y) < 10) { n.state = 'idle'; n.until = now + 1 + rng() * 2; n.lookAt = now; return NO_INPUT; }
@@ -494,6 +495,7 @@ export function clearWay(world, v, siren) {
 function idle(world, ped, now) {
   const n = ped.npc;
   if (onRoad(world, ped)) { n.state = 'wander'; n.until = 0; return NO_INPUT; }
+  if ((world.tick + ped.id) % 10 === 0 && playAt(world, ped.x, ped.y)) { n.state = 'wander'; n.until = 0; return NO_INPUT; }   // (stood on a court a game's started on: off it - playareas.js)
   if (now >= (n.lookAt || 0)) {
     ped.a += (rng() < 0.5 ? -1 : 1) * (0.6 + rng() * 1.6);
     n.lookAt = now + 0.8 + rng() * 1.6;
@@ -529,6 +531,9 @@ function pickWaypoint(world, ped) {
   // on a skate park's ground and not a skater: off it by the nearest way (skateOff)
   const sk = skating(ped) ? null : skateAt(world.map, ped.x, ped.y);
   if (sk) { const o = skateOff(world.map, sk, ped.x, ped.y); if (o) { n.wx = o.x; n.wy = o.y; return; } }
+  // on a court in play and not in the game: off it the nearest way (playareas.js)
+  const pa = playAt(world, ped.x, ped.y);
+  if (pa) { const o = playOff(pa, ped.x, ped.y); n.wx = o.x; n.wy = o.y; return; }
   const away = n.awayFrom; n.awayFrom = undefined;
   // country folk keep round their campground / farm / filling station
   if (n.patch && Math.hypot(n.patch.x - ped.x, n.patch.y - ped.y) > 420) towards = n.patch;
@@ -545,6 +550,7 @@ function pickWaypoint(world, ped) {
     if (!pref.has(t) && rng() < 0.6) continue;
     if (!crossesRoadOk(world, ped.x, ped.y, x, y)) continue;
     if (offSk && skateCrossed(world.map, ped.x, ped.y, x, y)) continue;   // (round a skate park, not across it)
+    if (playCrossed(world, ped.x, ped.y, x, y)) continue;   // (round a court in play, not across it: playareas.js)
     if (world.map.rayTiles(ped.x, ped.y, x, y) < 1) continue;
     if (lineHits(world, ped, x, y)) continue;   // (not straight into a tree, a bench, a bin or a parked car: somewhere they can walk to)
     if (fenceCrossed(world.map, ped.x, ped.y, x, y)) continue;   // (nor through a chain-link fence: they'd walk into it and stay there - fences.js)
