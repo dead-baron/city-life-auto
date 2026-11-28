@@ -177,3 +177,33 @@ test('an NPC\'s own aim: a loose shooter hits less often than a tight one at the
   const loose = hits(COP_LEVEL[1].aim), tight = hits(COP_LEVEL[5].aim);
   assert.ok(tight > loose, `SWAT ${tight} hits of 120, a rookie ${loose}`);
 });
+
+// ---- part 4: the road ------------------------------------------------------------------------------------------------
+import { onVehicleHit } from '../server/systems/npc.js';
+function driving(w, arche, x, y, T, weapon = 'fists') {
+  const v = w.spawnVehicle('sedan', x, y, 0, {}); v.ai = { kind: 'idle' }; v.vx = v.vy = 0;   // (a driver at the wheel - not routed: the reaction is what's tested)
+  const e = civ(w, arche, x, y, T); e.weapon = weapon; v.seats[0] = e.id; e.vehId = v.id; e.seat = 0;
+  return { v, e };
+}
+test('the road: bumped, a timid driver honks and floors it; most stop, honk and have a word - again and they drive off', () => {
+  const { w, p, conn, road } = setup();
+  const a = driving(w, 'senior', road.x + 400, road.y, 0);
+  onVehicleHit(w, a.v, p.ped, 'bump');
+  assert.ok(a.v.ai.panicUntil > w.time && a.v.hornUntil > w.time, 'off in a panic, the horn');
+  const b = driving(w, 'casual', road.x + 700, road.y, 1), c0 = conn.sent.length;
+  onVehicleHit(w, b.v, p.ped, 'bump');
+  assert.ok(b.v.ai.holdUntil > w.time && !(b.v.ai.panicUntil > w.time), 'stopped to have a word');
+  w.step();
+  assert.ok(says(conn, c0).some((q) => q.id === b.e.id && REACT.lines.road.includes(q.text)), '"Hey! Watch it!"');
+  w.time += 2; onVehicleHit(w, b.v, p.ped, 'bump');
+  assert.ok(b.v.ai.panicUntil > w.time && b.e.vehId === b.v.id, 'again: off they go, still in it');
+});
+test('the road: a tough one bumped twice gets out to have it out; an armed one whose car you shoot gets out and draws', () => {
+  const { w, p, road } = setup();
+  const t = driving(w, 'construction', road.x + 400, road.y, 2);
+  onVehicleHit(w, t.v, p.ped, 'bump'); w.time += 2; onVehicleHit(w, t.v, p.ped, 'bump');
+  assert.ok(!t.e.vehId && ['warn', 'fight'].includes(t.e.npc.state), `out of the car: ${t.e.npc.state}`);
+  const g = driving(w, 'hustler', road.x + 800, road.y, 1, 'pistol');
+  onVehicleHit(w, g.v, p.ped, 'weapon');
+  assert.ok(!g.e.vehId && g.e.npc.state === 'fight' && g.e.npc.holdFireUntil > g.e.npc.until, 'out and drawn, not firing yet');
+});

@@ -38,7 +38,7 @@ export function temper(world, ped) {
 }
 
 // a word bubble - a few at a time in one place, not the whole street at once
-function say(world, ped, kind) {
+export function say(world, ped, kind) {
   const now = world.time, L = REACT.lines[kind];
   if (!L) return;
   const log = (world.reactSays ||= []).filter((q) => now - q.t < REACT.sayGap);
