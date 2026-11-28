@@ -63,7 +63,7 @@ test('what stands tall before a front: its span and how far up the wall it reach
     { t: 'bench', x: 10 * TILE + 120, y: foot + 10 },
   ], pumps: [{ x: 10 * TILE + 400, y: foot + 80 }] };
   const R = frontTall(M, 10, 20, 16).sort((a, b) => a[0] - b[0]);
-  assert.deepEqual(R, [[89, 111, 52], [197, 203, 60], [296, 304, 54], [345, 455, 11]]);
+  assert.deepEqual(R, [[89, 111, 54], [197, 203, 60], [296, 304, 54], [345, 455, 11]]);
   assert.ok(R[0][2] > FRONT_TALL.board && R[0][2] > FRONT_TALL.open, 'the phone box reaches the board');
   assert.ok(R[3][2] < FRONT_TALL.open, 'a forecourt this far out reaches neither');
   assert.deepEqual(frontTall(M, 30, 20, 8), [], 'another front: none of them');

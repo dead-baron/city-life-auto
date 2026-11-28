@@ -28784,3 +28784,37 @@ the night of 11-27, branch `tables-1127`.
   arcade, art2, art2teleport, idlepose, muzzle, guide, perf pass.
 - Left of his pool notes: the camera frozen while the pool game is open (page logic); "RIDE DRINK REPEAT" on the
   bar's wall (`shared/shoprooms.js` - a change to the world's rooms: with the next batch).
+
+## 2026-11-27 · The street kit and the night look: the phone box, ATM booths, what a faded tower shows, signs that read after dark
+A world and art change (world3 248559fadf2d: one room's wall sign; the art's hash moved) - the Fable art chat, the
+night of 11-27, branch `fable-art-1127`. **Not merged: it waits for the owner's word as one batch** (every art change
+starts a ~5 hour redraw; he asked for them batched).
+- **A faded tower shows the shops under its picture** (found this night at the Grand Neon Hotel, Civic Center: 30
+  tiles tall, its picture drawn up over the whole street and the row facing it - faded, as it is for anyone on that
+  street, the Bench & Bar and the east end of Capitol Florist were a bare dark lot seen from their own kerb; on live
+  too). The under layer held "the chunk before its buildings"; it now keeps each building's picture over its own
+  footprint where another building is on top (`chunkbake.js` `underKeep`) - the part of a building the engine never
+  fades anyway (uFoot). Looked at in the running game from the kerb by day and at night, and from inside the room.
+  Known limit: the under layer has colours only, so a front under a faded tower does not glow at night (it shows, dim).
+- **In a room, the taller neighbour fades** (the shared kit's audit #5; the lint's `interiorOverlap`, 24 rooms):
+  `host.js` `overRoom` - a building south of the room whose picture lies 16 px over the floor each way fades while
+  you are in; measured on the room's own tiles, as the lint does. Seen in the Bench & Bar from the back of the room.
+- **The phone box** redrawn (aluminium frame, the payphone seen through the glass, a lit blue header with a handset)
+  and **an ATM booth** for the cash machines that stand on their own (49 of 385: a glass booth, the machine in its
+  back, a lit ATM header; `statics.js` `atmOnItsOwn`; the lint's `atmStray` 52 -> 3, the three with no machine).
+  **An awning opens over a cash machine** in the front (`buildings.js`, the avoid list's 'atm' spans).
+- **Signs that read after dark** (the audit's #4; what the running game showed at night): signs light by their trade
+  already - but a white lightbox bloomed over its own dark letters (HOME RUN SPORTS a white bar, no words) and a
+  yellow neon name was a blob (Vinyl & More). A pale lit face glows less and throws less light (`signfont.js`
+  `glowOf`, `PALE_GLOW`); a neon tube's halo 120 -> 64.
+- **Lit windows as rooms - for the owner's pick, not on**: at night every lit sash is a flat pale pane (the room's
+  light was laid over the curtains, the blinds, the cat on the sill and the frame's bar alike). `buildings.js`
+  `ROOM_LOOK` 'rooms' lets what is in the window shape its light (a calmer pane, cloth lets part by, solid things
+  dark against the room, the lamp's shade the brightest); it stays 'flat' - the bake unchanged - until he picks
+  (picture: report-97).
+- **A hammock's bed is a person's length** (his note of 11-23, "hammocks too long": slung between palms 120 px apart
+  the cloth ran the whole way): ropes go the rest of the way; over 70 px no posts of its own.
+- **The Rusty Spur's wall sign**: RIDE DRINK REPEAT -> LIVE TO RIDE (his note of 11-17; `shared/shoprooms.js` - the
+  world's hash).
+- Tests: `test/streetkit.test.js` (9), `test/nightlook.test.js` (3); `test/signclear.test.js` (the phone box 60 px).
+- Not seen: the awning's gap over a cash machine in a bake (unit-tested); anything on a phone.

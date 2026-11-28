@@ -31,10 +31,10 @@ world has not been set against the concept audit's own test (claude/concept-audi
 | Item (audit gap) | Note |
 |---|---|
 | **Picture signs** (gap 4; the audit's #2: BF2's twelve - book, cup, ring, pole, wrench, record, washer, pretzel, burger, neon hand ...) | **Built 11-26** on his pick (A and B together, some shops): 21 pictures, 234 hanging signs (`signfont.js` `PICS`, `buildings.js` `picSign`, `statics.js` `PIC_SIGNS`). Not on one-storey shops. |
-| **Night signs** (gap 14) | Neon exists for the night districts (`neonsigns.js`); nothing that lights an ordinary shop's sign after dark by rule. |
-| **Lit rooms in windows** | Nothing. |
-| **A taller neighbour fading while you are in a room** (25 places) | Nothing; the fading of buildings round a player outside is live (PR #49). |
-| **The phone box**; **ATM booths** (52) and **ATMs under awnings** | Phone-box and ATM props exist; the plan's rows (a booth for the 52, none under an awning) have no rule. |
+| **Night signs** (gap 14) | ~~Neon exists for the night districts (`neonsigns.js`); nothing that lights an ordinary shop's sign after dark by rule.~~ **11-27: wrong as written** - every shop sign lights by its trade (`signfont.js` `TRADES` lit, `GLOW`; `statics.js` `SIGN_LIGHT`). What the running game showed at night: pale lightboxes bloomed over their words, yellow neon names were blobs. **Fixed 11-27** (`glowOf`, the neon halo; `test/nightlook.test.js`). |
+| **Lit rooms in windows** | ~~Nothing.~~ **11-27**: a sash has its curtains, blinds, plant, cat and lamp; at night the glow lay over all of them alike. Built as `ROOM_LOOK` 'rooms', **off until the owner picks** (report-97). |
+| **A taller neighbour fading while you are in a room** (25 places) | **Built 11-27** (`host.js` `overRoom`), and what a faded tower shows from outside: the shops under its picture, not bare lots (`chunkbake.js` `underKeep`). |
+| **The phone box**; **ATM booths** (52) and **ATMs under awnings** | **Built 11-27**: the phone box redrawn; a booth for the 49 that stand alone (`atmStray` 52 -> 3); the awning opens over a machine in the front. |
 | **Clinics and hospitals outside** (gap 9; N20's 31 medical places) | The emblem and the canopies are built; the fronts by N20 have not been set beside it in this chat. |
 | **The lint's open rows**: `signCovered` 68 (157 until 11-26: the hotels' names up on cloth canopies, cones, moved signs; left: trees 23, lights 9, phone boxes 7, the el's piers 7, forecourts and porches 9, lamps and poles 9, badges 3, one hospital canopy), roof billboards cut off | Held at their counts in `tools/placementlint.mjs`. (`lobbyDoor`: **done 11-26** - 391 fronts by the rule, a pier and a door of its own for each flat over a shop, held at 0: `shared/world3-flatdoors.js`.) |
 

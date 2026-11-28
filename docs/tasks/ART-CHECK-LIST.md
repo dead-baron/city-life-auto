@@ -240,6 +240,24 @@ last leap over the top of a falls; the other fish's leaps.
 - [ ] **The Boom Tester** (11-27; your note of 11-25): nothing held, an ember on each hand, a shot thrown as a punch
   with the hand flaring, the shot a ball of fire. Picture: `report-96`. Judge in the game: debug menu, Fire - the
   hands when standing, walking, aiming.
+- [ ] **Shops under a tall tower's picture** (11-27; found in the running game): walking a street with a very tall
+  building on its south side, the tower fades - and the shops it was drawn over showed as bare dark lots (the Bench &
+  Bar and half of Capitol Florist, facing the Grand Neon Hotel in Civic Center; on live today). They now show their
+  fronts. Picture: `report-98`. Judge in the game: Civic Center, the street north of the Grand Neon Hotel - by day
+  and at night (at night those fronts show but do not glow: say if that matters). Inside the Bench & Bar the hotel
+  no longer lies over the floor.
+- [ ] **Signs after dark** (11-27): a white lit sign with dark letters was a white bar at night (HOME RUN SPORTS,
+  Pier Street Shops), a yellow neon name a blob (Vinyl & More, Midtown). Both read now. Picture: `report-99`.
+  Judge in the game at night: Pier Street Shops; Midtown's high street.
+- [ ] **Lit windows at night - YOUR PICK** (11-27): A, as live - every lit window a flat pale pane; B, rooms - a
+  calmer glow with the curtains, blinds, the plant or the cat on the sill dark against it, the lamp brightest.
+  Picture: `report-97` (top A, bottom B). B is built and switched off (`buildings.js` `ROOM_LOOK`); say A or B.
+- [ ] **The phone box and the ATM booth** (11-27; the shared kit's audit): the phone box redrawn (aluminium and glass,
+  a lit blue header with a handset); the 49 cash machines that stood alone on a sidewalk now stand in a glass booth
+  with a lit ATM header; an awning leaves a gap over a cash machine in a shop's front. Judge in the game: Midtown's
+  park street (a booth by the park), any phone box by day and at night.
+- [ ] **Hammocks** (11-27; your note of 11-23, "too long"): the bed is a person's length; ropes go the rest of the
+  way to the palms. Judge in the game: Coral Cay's beach bar, the tropic resort.
 - [ ] **Signs on roofs** (11-26; your note of 11-22: "cut off through the roof"): 28 of 664 roof billboards and neon
   names had part of the board hidden - on a pitched roof, behind a smokestack or a tank, behind a taller building.
   A roof sign whose foot would be hidden is taken off (45; 619 stand). Judge in the game: Old Town's tiled roofs, the
