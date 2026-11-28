@@ -502,6 +502,10 @@ and hour it ran (an armored run, street race night). `test/gridlocksim.js` now h
 (`quietMoment`) - the same answer any day. At that moment the unlit four-way still fails: a compact stands 42.5 s at
 the head of a queue with nothing recorded in its way (t 98.5, west side, 155 px out). So two cases for the traffic
 pass: the van turned round in a box (above, with an event's cars about) and this one.
+**And 02:30:** the same pinned run in a probe gave 14 s (passing) - the server's work adapts to how long its ticks take
+(wall time), so the sim also depends on the machine's load: the test passes alone and fails beside other work (as the
+11-27 record says, "re-run alone ... gridlock 3/3"). Treat a failure under load as a flake; the van case is still a real
+shape to fix in the traffic pass.
 `test/gridlock.test.js`, the four-way without lights (seed 7): a moving van stands 100 s (the limit 30). It fails the
 same on main before the night's work (eec5ff72), so it came in with #63 or #66 (it passed 3/3 on the ads branch with
 the NPC ladder in). Reproduced with a probe (`runFourWay`'s `onTick`): the van came up from the south (edge 1360), was
