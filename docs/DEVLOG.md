@@ -28801,3 +28801,12 @@ While the 'arcade' overlay is open - the pool table, chess, air hockey, skee-bal
 instrument - the camera stays where it was when the screen opened (`main.js` `S.camHold`); it follows you again when
 the screen closes. Checked in a running game (`tools/playtest.py`, the old city): the screen opened, the player
 teleported 300 tiles - the camera stayed; Escape - it went to the player.
+
+## 2026-11-27 night · More action scenes: the races and chases in other places and times (C4 of the 11-23 notes)
+"More variants of the scenes that already work: street races and police chases in more places and times of day, gang
+fights" (the owner's cinematics notes, 11-23, C4). Eight, each the same script as one that works, in another district,
+time or sky (`shared/scenes/index.js` `variant`): a street race through Midtown at night, on the Neon Strip in the
+rain, down Lucky Mesa's Strip at golden hour; police chases through the Old Quarter at dusk, Southside at night,
+Westport Center at noon; the helicopter pursuit through Bayside Heights; the gang shootout at dawn. They sit under
+"More (unreviewed)" in the camera panel until the owner passes them (`KEPT`), ready for the reshoot on the final art.
+Tests: `scenes.test.js` (each script whole), `world3scenes.test.js` (each finds its place and cast on World v3).

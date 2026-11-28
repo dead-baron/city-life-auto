@@ -30,12 +30,30 @@ import autochase from './autochase.js';
 import autorace from './autorace.js';
 import autoshootout from './autoshootout.js';
 import autodust from './autodust.js';
-import { SHOTS } from './shots.js';
+import { SHOTS, TOD } from './shots.js';
 
 // The camera panel's shot list (client/director.js): its sections, in order - every scene is a shot in one of them (g),
 // played one tap at a time or back to back. The list is the sections' shots in this order.
 export const SECTIONS = [['city', 'City & Neon at night'], ['nature', 'Nature & Countryside'], ['coast', 'Coast & Water'], ['action', 'Action & Chases'], ['people', 'People & Life'], ['vehicles', 'Vehicles & Flight'], ['weather', 'Weather & Time-lapse']];
-const ALL = [autochase, autorace, autoshootout, tankerhideout, helipursuit, bikerbrawl, autodust, ...SHOTS];
+// More of the action scenes that work, in other places, times and weather (the owner's notes of 11-23, C4: "more variants
+// of the scenes that already work: street races and police chases in more places and times of day, gang fights"): the
+// same script, another district (place.near), time and sky - under "More (unreviewed)" until he passes them.
+const variant = (sc, id, n, o) => ({
+  ...sc, id, n, time: o.time ?? sc.time, weather: o.weather || sc.weather,
+  note: `${sc.note.split(' · ')[0]} · ${o.weather && o.weather !== 'clear' ? `${o.weather}, ` : ''}${TOD(o.time ?? sc.time)}`,
+  place: o.near ? { ...sc.place, near: o.near } : sc.place,
+});
+const VARIANTS = [
+  variant(autorace, 'racemidtown', 'Street race through Midtown at night', { near: 'Midtown', time: 1380 }),
+  variant(autorace, 'raceneonrain', 'Street race on the Neon Strip in the rain', { time: 1380, weather: 'rain' }),
+  variant(autorace, 'racestrip', 'Street race down the Strip at golden hour', { near: 'The Strip', time: 1110 }),
+  variant(autochase, 'chaseoldquarter', 'Police chase through the Old Quarter at dusk', { near: 'Old Quarter', time: 1172 }),
+  variant(autochase, 'chasesouthside', 'Police chase through Southside at night', { near: 'Southside', time: 1380 }),
+  variant(autochase, 'chasewestport', 'Police chase through Westport Center at noon', { near: 'Westport Center', time: 720 }),
+  variant(helipursuit, 'helibayside', 'Helicopter pursuit through Bayside Heights', { near: 'Bayside Heights' }),
+  variant(autoshootout, 'shootoutdawn', 'Gang shootout at a hideout at dawn', { time: 400 }),
+];
+const ALL = [autochase, autorace, autoshootout, tankerhideout, helipursuit, bikerbrawl, autodust, ...VARIANTS, ...SHOTS];
 export const SCENE_LIST = SECTIONS.flatMap(([g]) => ALL.filter((q) => q.g === g));
 export const SCENES = Object.fromEntries(SCENE_LIST.map((s) => [s.id, s]));
 // The shots kept on the list (the owner, 11-14 20:21, after the first list: "The cinematic shots really aren't good ...") -
