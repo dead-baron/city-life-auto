@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-27 night PST, the Opus 5.5 chat: PR #68 the night's batch (section 6, after 11-27 evening); PRs #53-#60 live - gridlock, skateboards, private-repo prep, the NPC ladder, ads (off) + Employment Center + kayaks (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-28 early PST, the Opus 5.5 chat: PRs #68, #70, #71 the night's batches (section 6, after 11-27 evening); PRs #53-#60 live - gridlock, skateboards, private-repo prep, the NPC ladder, ads (off) + Employment Center + kayaks (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -154,6 +154,14 @@ CSS-zoom click check (`test/csszoom.test.js`); three tests that failed on main f
 last a slip of #64: the character small upright); **the walkthrough checklist** (`docs/WALKTHROUGH.md`, the Sheet:
 https://claude.ai/artifact/6nvwNiRbn6kBRERfJF7JKD - 72 rows, OK / Problem / Skipped for desktop and phone); the pre-beta
 list's section C given a "where it stands" head. No world or art change. Tests: `docs/tasks/NIGHT-1127-TESTS.txt`.
+**Later the same night (PRs #70, #71):** the camera held while a game has its own screen (the pool table's drift);
+eight more action scenes (C4: races, chases, the pursuit and the shootout in other districts, times, weather - under
+"More (unreviewed)"); a street race / chase looks harder for a road (the world3scenes flake); `tools/playtest.py --v3
+--skip-intro` (real World v3 game pictures, ~6 min) and `tools/trafficsim.mjs --at`; Coral Cay's track checked (no
+jam); the plainblocks test allows the Employment Center last. **Branch `world-next`** (not merged - a world update, his
+word): the Rusty Spur's sign LIVE TO RIDE and `test/signwords.test.js`. **Found, not fixed:** the gridlock test fails on
+main since #63/#66 - diagnosed in PREBETA-LIST ("The gridlock test fails on main again"): a van turned round in a box
+queues at the line behind it; visaudit's counts (known); a palm's crown over a casino's room (art).
 **For the art chat:** NPC drivers in open vehicles (a first try in host.js was reverted - the riders faced and sat
 wrong; the composite at the chat's /home/claude/pl/open-car-draft.png isn't kept), tennis rackets in hand.
 **His calls, still:** phone wires; NPC robberies, streakers, prison activities, photo mode; living city events

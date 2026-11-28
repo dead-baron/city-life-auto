@@ -16,6 +16,16 @@ import { signalFor } from '../shared/signals.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import * as traffic from '../server/systems/traffic.js';
 import { performance } from 'node:perf_hooks';
+import * as calendar from '../server/systems/calendar.js';
+import { EVENTS } from '../shared/rules.js';
+
+// The event calendar runs on the wall clock (calendar.js): a run that happened to fall on an armored truck run or street
+// race night had other cars through the junction - the same seed jammed one night and not the next (11-27 night: the
+// unlit four-way's 100 s van on main, 3/3 the evening before). A run holds the calendar's clock at a quiet moment.
+export function quietMoment(from = Date.UTC(2026, 0, 5, 12)) {
+  for (let ms = from; ms < from + 864e5; ms += 30e3) if (!EVENTS.some((ev) => ev.on && calendar.due(ev, ms, new Set()))) return ms;
+  return from;
+}
 
 // what's fed in: the town's mix, the trucks and the buses three times as often (a delivery district at rush hour)
 export const HEAVY_MIX = [['sedan', 26], ['compact', 18], ['taxi', 8], ['pickup', 10], ['van', 10], ['boxtruck', 6], ['dumptruck', 3],
@@ -64,6 +74,11 @@ export function addDriven(w, model, x, y, a) {
 // Run a four-way for `minutes` of game time. opts: { lights, seed, npcBudget, feedEvery (s between tries per road),
 // nearX/nearY, onTick(w, n, tick) }. -> the report.
 export function runFourWay(M, opts = {}) {
+  const calMs = quietMoment();
+  calendar.setClock(() => calMs);
+  try { return runFourWay0(M, opts); } finally { calendar.setClock(null); }
+}
+function runFourWay0(M, opts = {}) {
   const { lights = true, seed = 7, minutes = 10, npcBudget = 300, feedEvery = 3.5, warm = 30 } = opts;
   const rnd = mulberry32(seed * 31 + (lights ? 1 : 2));
   const w = new World(M, { npcBudget, throwErrors: true, rand: mulberry32(seed + 1), loopStart: 400, day: 0 });

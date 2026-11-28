@@ -21,3 +21,79 @@ The scene variants (shared/scenes/index.js) [after LANE_TRIES: world3scenes 9/9]
 2-9 pass (every director scene, the eight new ones too, finds its place and cast on World v3); test 1 failed on the
 staged "Street race on the Neon Strip at night" ("no street to start it on") - the known flake (MASTER-HANDOVER: "flaky
 ... world3scenes' street race (laneSpot)"); the same file passed 9/9 earlier the same night.
+gridlock: fails 2/3 on main and before the night (eec5ff72, ecd7a7fe, b169062c - all with #60's server code, which
+passed 3/3 on 11-27 afternoon): wall-clock dependent (the event calendar). test/gridlocksim.js now pins the calendar
+to a quiet moment; still 2/3 there (unlit: 42.5 s). Logged in PREBETA-LIST for the traffic pass.
+
+The heavy suite (World v3; 69 files, one at a time, on 9462349e - the night's code before the scene variants):
+  # pass 6 # fail 0  test/bathhouse.test.js 12s rc=0
+  # pass 6 # fail 0  test/bathhouses2.test.js 8s rc=0
+  # pass 7 # fail 0  test/bowling.test.js 7s rc=0
+  # pass 10 # fail 0  test/carsoccer.test.js 8s rc=0
+  # pass 1 # fail 0  test/chesstables.test.js 5s rc=0
+  # pass 1 # fail 0  test/cliffs.test.js 458s rc=0
+  # pass 1 # fail 0  test/contacts2w3.test.js 194s rc=0
+  # pass 2 # fail 0  test/custodyride.test.js 434s rc=0
+  # pass 6 # fail 0  test/elplatform.test.js 197s rc=0
+  # pass 3 # fail 0  test/fenceexits.test.js 260s rc=0
+  # pass 4 # fail 0  test/flatdoors.test.js 181s rc=0
+  # pass 2 # fail 1  test/gridlock.test.js 529s rc=1
+  # pass 1 # fail 0  test/hidden.test.js 417s rc=0
+  # pass 4 # fail 0  test/loadbays.test.js 6s rc=0
+  # pass 6 # fail 0  test/neonstrip.test.js 185s rc=0
+  # pass 47 # fail 0  test/placementlint.test.js 345s rc=0
+  # pass 15 # fail 2  test/plainblocks.test.js 495s rc=1
+  # pass 8 # fail 0  test/prison.test.js 195s rc=0
+     test/rapids.test.js 193s rc=1
+  # pass 3 # fail 0  test/redrock.test.js 167s rc=0
+  # pass 6 # fail 0  test/signs.test.js 181s rc=0
+  # pass 3 # fail 0  test/undergrowth.test.js 346s rc=0
+  # pass 2 # fail 1  test/visaudit.test.js 649s rc=1
+  # pass 2 # fail 0  test/walkinfront.test.js 507s rc=0
+  # pass 5 # fail 0  test/world3.test.js 1s rc=0
+  # pass 8 # fail 0  test/world3arrivals.test.js 215s rc=0
+  # pass 5 # fail 0  test/world3b.test.js 325s rc=0
+  # pass 1 # fail 0  test/world3beach.test.js 187s rc=0
+  # pass 1 # fail 0  test/world3biomes.test.js 523s rc=0
+  # pass 3 # fail 0  test/world3caves.test.js 203s rc=0
+  # pass 4 # fail 0  test/world3city.test.js 644s rc=0
+  # pass 2 # fail 0  test/world3clearings.test.js 182s rc=0
+  # pass 4 # fail 0  test/world3clutter.test.js 0s rc=0
+  # pass 3 # fail 0  test/world3coast.test.js 183s rc=0
+  # pass 1 # fail 0  test/world3desert.test.js 184s rc=0
+  # pass 2 # fail 0  test/world3dirt.test.js 186s rc=0
+  # pass 1 # fail 0  test/world3doors.test.js 181s rc=0
+  # pass 2 # fail 0  test/world3estuary.test.js 5s rc=0
+  # pass 3 # fail 0  test/world3ferries.test.js 177s rc=0
+  # pass 2 # fail 0  test/world3fleet.test.js 187s rc=0
+  # pass 3 # fail 0  test/world3hubs.test.js 172s rc=0
+  # pass 1 # fail 0  test/world3interchanges.test.js 0s rc=0
+  # pass 3 # fail 0  test/world3jobcenter.test.js 369s rc=0
+  # pass 1 # fail 0  test/world3kestrel.test.js 181s rc=0
+  # pass 9 # fail 0  test/world3keys.test.js 5s rc=0
+  # pass 1 # fail 0  test/world3marsh.test.js 165s rc=0
+  # pass 1 # fail 0  test/world3mesa.test.js 187s rc=0
+  # pass 4 # fail 0  test/world3passes.test.js 0s rc=0
+  # pass 1 # fail 0  test/world3peaks.test.js 181s rc=0
+  # pass 15 # fail 0  test/world3rail.test.js 221s rc=0
+  # pass 5 # fail 0  test/world3rapids.test.js 200s rc=0
+  # pass 2 # fail 0  test/world3redwoods.test.js 438s rc=0
+  # pass 2 # fail 0  test/world3regions.test.js 272s rc=0
+  # pass 1 # fail 0  test/world3relief.test.js 203s rc=0
+  # pass 2 # fail 0  test/world3rivers.test.js 182s rc=0
+  # pass 1 # fail 0  test/world3roads.test.js 176s rc=0
+  # pass 3 # fail 0  test/world3shops.test.js 3s rc=0
+  # pass 3 # fail 0  test/world3subway.test.js 183s rc=0
+  # pass 1 # fail 0  test/world3townmodels.test.js 176s rc=0
+  # pass 1 # fail 0  test/world3towns.test.js 178s rc=0
+  # pass 1 # fail 0  test/world3tropic.test.js 160s rc=0
+  # pass 1 # fail 0  test/world3water.test.js 176s rc=0
+  # pass 1 # fail 0  test/world3waterbodies.test.js 191s rc=0
+  # pass 14 # fail 0  test/world3wayside.test.js 224s rc=0
+  # pass 1 # fail 0  test/world3west.test.js 191s rc=0
+  # pass 1 # fail 0  test/world3wild.test.js 196s rc=0
+  # pass 3 # fail 0  test/world3window.test.js 202s rc=0
+  # pass 1 # fail 0  test/world3woods.test.js 183s rc=0
+  # pass 1 # fail 0  test/world3world.test.js 187s rc=0
+  -> all pass but: gridlock (load / wall-clock dependent - PREBETA-LIST), plainblocks (fixed later the same night, 17/17),
+     visaudit (known on main: a door, picnic and cola counts - art), rapids (no such file any more).
