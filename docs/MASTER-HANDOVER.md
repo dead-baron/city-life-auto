@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-27 PST, the Opus 5.5 chat: the gridlock fix live (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-27 PST, the Opus 5.5 chat: PRs #53-#60 live - gridlock, skateboards, private-repo prep, the NPC ladder, ads (off) + Employment Center + kayaks (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -128,10 +128,18 @@ identical chunks carry over).
 waits for one at its line; the creep nudges everyone on foot in its way) - DEVLOG 11-27, tests
 `docs/tasks/GRIDLOCK-TESTS-2026-11-27.txt`. Follow-up logged in the pre-beta list: cars left driverless by a chase or a
 mugging can hold a box truck in a box ~40 s. No world or art change (no re-bake).
-**Still open from his lists (not started):** the
-portrait phone layout (his approval of a design first); phone wires; kayak paddling, the skateboard, the Rusty Spur's
-pool, the Boom Tester's throw (art); the NPC reaction ladder (his call on the design); keep the project private (the
-player-only build first); the ads branch (his call); the feature walkthrough, then the launch steps.
+**LIVE 11-27 (PRs #54-#60; his go of 11-27 for all four: DECISIONS 11-27):** skateboards that slide on and wait
+for you (#54); the repo ready to go private (#55 - the six steps that are his: `docs/PRIVATE-REPO.md`; LICENSE added);
+the NPC reaction ladder, all four parts (#56 civilians on foot, #57 cover, #58 police / guard skill tiers, #59 the
+road - `server/systems/react.js`, `REACT` in rules.js, `test/npcreact.test.js`); and **#60, one world update**: rewarded
+ads ready but OFF (`CLA_ADS`, default off; LAUNCH-SETUP section 10), the Employment Center by Park East Tower, kayaks
+paddled (`PADDLE`) and the River Run back. world3 ef04748631c8, art3 b07b1089bc7e: the server re-bakes (~5 h from
+#60's deploy). Tests: `docs/tasks/ADS-BRANCH-TESTS-2026-11-27.txt`.
+**Waiting on him:** pick the portrait phone layout - the mockups (Design artifact "Portrait layout",
+https://claude.ai/artifact/WhvB5uuRFxGnzBB2Zjf7dx: A corners and a right-hand arc - recommended -, B one top bar, C the
+map by the left thumb); then build it. Making the repo private (his steps).
+**Still open (not started):** phone wires (a world change - ask first); the Rusty Spur's pool, the Boom Tester's throw
+(art); cars left driverless in a box; the doorway hop (renderer); the feature walkthrough, then the launch steps.
 
 **DONE 11-26 evening (the Opus 5.5 chat): the art batch is merged to `main` and live** - the gate passed: the roofs rendered and kept (before/after on the two streets), the whole suite on c7ae6cb (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`: no failure of the batch's own), a look in a running World v3 game at 1280x720 and phone size. The server re-bakes for about five hours. Next in this chat: the remaining beta items (`docs/audit/PREBETA-LIST.md`). The block below is the record of how it was taken live.
 **TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of
