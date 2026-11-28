@@ -158,7 +158,7 @@ list's section C given a "where it stands" head. No world or art change. Tests: 
 eight more action scenes (C4: races, chases, the pursuit and the shootout in other districts, times, weather - under
 "More (unreviewed)"); a street race / chase looks harder for a road (the world3scenes flake); `tools/playtest.py --v3
 --skip-intro` (real World v3 game pictures, ~6 min) and `tools/trafficsim.mjs --at`; Coral Cay's track checked (no
-jam); the plainblocks test allows the Employment Center last. (A branch `world-next` with the same LIVE TO RIDE sign was dropped: the art chat's `fable-art-1127` has it.) **Found, not fixed:** the gridlock test - not a code change: it depends on the wall clock (the event calendar - now pinned in
+jam); the plainblocks test allows the Employment Center last. (A branch `world-next` with the same LIVE TO RIDE sign is dropped - the art chat's `fable-art-1127` has it; still on GitHub, safe to delete: the session could not.) **Found, not fixed:** the gridlock test - not a code change: it depends on the wall clock (the event calendar - now pinned in
 `test/gridlocksim.js`) and the machine's load; a van turned round in a box queues at the line behind it (PREBETA-LIST,
 "The gridlock test fails on main again"); the heavy suite's whole run (#72, NIGHT-1127-TESTS): all pass but gridlock and
  visaudit's counts (known); a palm's crown over a casino's room (art).
