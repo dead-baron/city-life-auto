@@ -795,6 +795,10 @@ export const CLUB_RIDE_EVERY_S = [150, 300]; // how often a club rides out from 
 export const CLUB_RIDE_MAX_S = 240;        // ...and turns for home after this long out
 export const CLUB_FIGHT_PX = 900;          // hurt one member and every member this close comes for you
 export const CLUB_GRUDGE_S = 180;          // ...and the club stays after you this long
+// ...not all at once (the owner, 11-17 13:38: "stagger it - the first patrons come out and yell, then fight; others join a
+// few at a time"): the one you hurt and the nearest `first` straight in; the rest come out to you shouting and join
+// `per` at a time, the first of them after yellS, the next waveS later each (bikers.js clubAttacked)
+export const CLUB_JOIN = { first: 2, per: 2, yellS: 1.6, waveS: 2.2, standPx: 90 };
 export const BIKE_THIEF_EVERY_S = [240, 420]; // how often someone tries to ride off on a club bike outside the Spur (a player near)
 export const BIKE_THIEF_REWARD = 150;      // stop the thief and the club pays you this (cash)...
 export const BIKE_THIEF_RESPECT = 6;       // ...and the Samaritan points
@@ -1601,6 +1605,7 @@ export const REACT = {
   coverPx: 150, coverFar: 520, coverDuckS: 1.1, coverFireS: 1.5, coverRetryS: 4,
   sayGap: 1.6, sayNear: 300, saySame: 2,   // word bubbles: no more than this many within this many px in this many seconds
   lines: {
+    club: ['You picked the wrong bar!', 'Hey! That\'s one of ours!', 'You\'re dead, pal!', 'Get him!', 'Nobody touches the club!'],
     warn: ['Whoa, easy!', 'Hey - I don\'t want trouble!', 'Okay, okay!', 'Take it easy!'],
     tough: ['Back off.', 'Walk away.', 'You want some?', 'Not today.'],
     draw: ['Drop it!', 'Back off - now!', 'Don\'t make me do this!'],

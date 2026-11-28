@@ -28691,3 +28691,12 @@ shooting hoops on. Passers-by treat them as the skate parks: a wanderer's next w
 (npc.js pickWaypoint), one who finds themselves on one - a game started where they stood or were going - heads off it
 the nearest way (wander, idle), and nobody stops to idle on one. The game's own people (the club pro) play on as ever.
 The car soccer arena is walled already; a pool table is furniture (P7: lineHits). Test: `tennis.test.js` (+1).
+
+## 2026-11-27 night · The biker club comes in waves, shouting first (the owner, 11-17 13:38: the Rusty Spur)
+"Bar fight reaction: stagger it - the first patrons come out and yell, then fight; others join a few at a time, not all
+at once. When you run, some grab their motorcycles and chase." Hurt a club member (`bikers.js` clubAttacked): the one
+you hurt and the nearest member are on you at once; the rest come out to you at a run - from the bar, the porch, the
+burn barrel - stop a little off you shouting ("You picked the wrong bar!", `REACT.lines.club`) and join two at a time,
+1.6 s on and every 2.2 s after (`CLUB_JOIN`, `joins`). Get away on wheels and the club mounts up and rides you down as
+before (the grudge's chase - those still on their way go for their bikes instead). Test: `motorbikes.test.js` (the
+club's fight: straight in, the next few after a moment, then the whole club).

@@ -2,6 +2,7 @@
 // (a cruiser, a tourer, a chopper, a bobber, a café racer, the sport bike, a dirt bike, a scooter, a trike, the police
 // tourer, a rat bike, a bagger), each with its own feel; where they turn up; the Rusty Spur roadhouse; the three clubs
 // riding two by two; a club that fights back together; the bike thief.
+import { CLUB_JOIN } from '../shared/rules.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport } from './helpers.js';
@@ -223,19 +224,28 @@ test('the clubs: a club rides out two by two behind its leader along the roads',
   for (const bid of c.bikes) { const v = w.get(bid); assert.ok(Math.hypot(v.x - R.slots[v.clubSlot].x, v.y - R.slots[v.clubSlot].y) < 2, `parked back along the porch (${v.def.id} ${Math.round(Math.hypot(v.x - R.slots[v.clubSlot].x, v.y - R.slots[v.clubSlot].y))} px off, ${v.seats[0] ? 'ridden' : 'empty'}, mode ${c.mode})`); }
 });
 
-test('the clubs: hurt one member and the whole club fights back together', () => {
+test('the clubs: hurt one member and the club comes for you - in waves, shouting first (the owner, 11-17)', () => {
   const { w, p } = spur();
   const c = bikers.clubsOf(w)[0], victim = w.get(c.members[1]);
   at(w, p, victim.x + 30, victim.y);
+  p.ped.hp = p.ped.maxHp = 5000;   // (on your feet long enough to see them all come)
   combat.damage(w, victim, 8, p.ped, 'fists');
-  let n = 0;
-  for (const id of c.members) { const m = w.get(id); if (m && m.npc.state === 'fight' && m.npc.target === p.ped.id) n++; }
-  assert.ok(n >= 4, `${n} of the club piled in`);
+  const on = () => c.members.filter((id) => { const m = w.get(id); return m && m.npc.state === 'fight' && m.npc.target === p.ped.id; }).length;
+  const first = on(), coming = c.members.filter((id) => w.get(id).npc.joinBy === p.ped.id).length;
+  assert.ok(first >= 1 && first <= CLUB_JOIN.first, `straight in: the one you hurt and the nearest (${first})`);
+  assert.ok(first + coming >= 4, `the rest on their way (${coming})`);
+  let mid = 0;
+  for (let i = 0; i < 20 * (CLUB_JOIN.yellS + 0.4); i++) w.step();
+  mid = on();
+  assert.ok(mid > first && mid < first + coming, `the next few in after a moment (${first} -> ${mid})`);
+  let most = mid;
+  for (let i = 0; i < 20 * (CLUB_JOIN.waveS * 2 + 0.5); i++) { w.step(); most = Math.max(most, on()); }
+  assert.ok(most >= 4, `then the whole club (${most})`);
   // the other clubs mind their own business
   for (const id of bikers.clubsOf(w)[2].members) assert.notEqual(w.get(id).npc.target, p.ped.id);
-  // they keep at it: a few seconds on, they're on the attacker
+  // they keep at it: they're on the attacker
   let closest = Infinity;
-  for (let i = 0; i < 60; i++) { w.step(); for (const id of c.members) { const m = w.get(id); if (m && !m.dead) closest = Math.min(closest, Math.hypot(m.x - p.ped.x, m.y - p.ped.y)); } }
+  for (let i = 0; i < 20; i++) { w.step(); for (const id of c.members) { const m = w.get(id); if (m && !m.dead) closest = Math.min(closest, Math.hypot(m.x - p.ped.x, m.y - p.ped.y)); } }
   assert.ok(closest < 80, `they came at you (${Math.round(closest)} px)`);
 });
 
