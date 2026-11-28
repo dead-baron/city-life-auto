@@ -183,8 +183,8 @@ export function update(world) {
     if (e.kind !== K.PED || !e.npc) continue;
     const n = e.npc;
     if (n.callUntil && now > n.callUntil) { n.callUntil = 0; if (!e.filming) e.phoneOut = false; }
-    if (e.crouch && n.state !== 'hide' && !(n.cover && n.state === 'fight')) e.crouch = false;
-    if (n.cover && n.state !== 'fight') dropCover(e);
+    if (e.crouch && n.state !== 'hide' && !n.cover) e.crouch = false;
+    if (n.cover && n.state !== 'fight' && n.role !== 'cop') dropCover(e);   // (an officer's: police.js drops it)
     if (n.squared && n.state !== 'warn') n.squared = false;
     if (e.handsUp && n.state !== 'warn' && n.state !== 'holdup' && !n.robHold && n.rx) { e.handsUp = false; n.rx = null; }
   }
@@ -197,9 +197,9 @@ export function update(world) {
 // has no gun, or the car moves or goes. Returns the input while in cover (or getting there), else null: the fight as before.
 const gunIn = (e) => { const w = !e.vehId && WEAPONS[e.weapon]; return !!w && (w.type === 'gun' || w.type === 'bow' || w.type === 'rocket'); };
 export function dropCover(ped) { const n = ped.npc; if (n.cover) { n.cover = null; n.coverCar = 0; ped.crouch = false; } }
-export function coverFight(world, ped, t, d, aim, now) {
+export function coverFight(world, ped, t, d, aim, now, cop = false) {
   const n = ped.npc;
-  if (n.role === 'cop' || n.role === 'railguard' || !gunIn(t) || d > REACT.coverFar) { dropCover(ped); return null; }
+  if ((n.role === 'cop' && !cop) || n.role === 'railguard' || !gunIn(t) || d > REACT.coverFar) { dropCover(ped); return null; }
   let c = n.cover;
   if (c) {
     const v = world.get(c.car);

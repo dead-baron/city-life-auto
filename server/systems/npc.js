@@ -28,7 +28,7 @@ import * as music from './music.js';
 import * as activities from './activities.js';
 import * as burning from './burning.js';
 import * as react from './react.js';   // (the reaction ladder: warn, run / hide / call, draw, fight - 11-27)
-import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS, CROWD_CAP } from '../../shared/rules.js';
+import { GUARD_AIM, NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS, CROWD_CAP } from '../../shared/rules.js';
 import { FLY } from '../../shared/flight.js';
 import { WEAPONS } from '../../shared/items.js';
 import { fenceCrossed } from '../../shared/fences.js';   // (an aircraft up in the air: over all this, untouched)
@@ -714,7 +714,7 @@ export function onAttacked(world, ped, attacker) {
   if (n.bouncer !== undefined && n.bouncer !== null && n.state !== 'limp') { nightclubs.bouncerHurt(world, ped, attacker); return; }   // (a nightclub's bouncer: they all come for you - nightclubs.js, task #432)
   if (n.desk) { // staff behind a counter: a desk cop fights back, everyone else runs
     n.desk = null; n.keep = false;
-    if (n.role === 'cop') { ped.weapon = 'pistol'; startFight(world, ped, attacker, 30); } else flee(world, ped, attacker.x, attacker.y, 10);
+    if (n.role === 'cop') { ped.weapon = 'pistol'; n.aimK = GUARD_AIM.mall; startFight(world, ped, attacker, 30); }   // (a desk cop: a rookie's aim - rules.js GUARD_AIM) else flee(world, ped, attacker.x, attacker.y, 10);
     return;
   }
   if (n.role === 'cop' && attacker.npc && attacker.npc.role === 'gang') { gangwar.copAttackedByGang(world, ped, attacker); return; }

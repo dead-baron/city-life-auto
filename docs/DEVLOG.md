@@ -28497,3 +28497,16 @@ Tests: `npcreact.test.js` (9: + into cover and firing from it, no cover against 
 takes it, up they're hit), reactions, core, brawls, streetlife, robbery, police, self-defence, weapons, people,
 happenings, grenades.
 
+## 2026-11-27 · NPC reactions, part 3: skill tiers for the police and guards
+The design's tiers - rookie (1-2 stars, a desk cop), regular (3), veteran (4, an armored truck's crew), SWAT (5) - in
+how they fight on foot (`COP_LEVEL` aim / drawS / gap / cover; `GUARD_AIM`):
+- **Aim:** an NPC's shots spread by `aimK` times the weapon's (combat.js) - rookies 1.6, regulars 1, veterans 0.75,
+  SWAT 0.55; an armored truck's crew 0.75, a desk cop who draws 1.5.
+- **Draw:** the weapon up and on you this long before an officer's first shot (step 4) - 1.4 s at one star, 0.3 s at
+  five - again after a second off you; then a shot every gap (0.4-0.75 s for rookies, 0.18-0.35 s for SWAT).
+- **Cover:** from three stars a share of the shooters (half at 3, 0.8 at 4, all at 5; fixed per officer) get behind a
+  car first against a gun and fire over it in bursts - part 2's cover, for the police too (react.js coverFight).
+- They already scaled with stars in their driving, their reactions, their pace on foot and the cuffs; now in a fight too.
+Tests: `npcreact.test.js` (11: + the tiers run rookie to SWAT; a loose aim hits less than a tight one), police,
+arrests, gameplay, unlocks, struggle, custody, wanted ladder, streetlife, brawls, reactions, police air, indoor chase.
+
