@@ -63,6 +63,7 @@ const glow = (G, x, y, e) => G.glow(x, y, e);
 let WALLC = null;   // a custom wall ramp for the building being made (spec.wallColor)
 let GLASSC = null;  // a glass tower's own tint (spec.glassTint: Lucky Mesa's gold towers; none: the city's blue glass)
 let BRICKC = null;  // a brick building's own tone (spec.brickTone: brown, buff, cream, painted...; none: the red brick ramp)
+let PANELS = false;    // spec.panels: the wall as pale precast panels (wallColor)
 let GLOW_ONLY = false; // spec.glowOnly: lit windows keep their glass albedo and carry the light in the emissive
                        // map only (the game bakes a chunk once for every time of day; the Lighter scales emi)
 // (big and mid: vnoise(u, v, 30, seed) and vnoise(u, v, 8, seed + 1) when the caller has them precomputed)
@@ -94,6 +95,10 @@ function wallColor(style, u, v, seed, x, y, big = vnoise(u, v, 30, seed), mid = 
     if (mull) return step(MAT.metalDark, 0.45, x, y, 0);
     return step(GLASSC || MAT.glass, 0.35 + ((u + (40 - v % 40)) % 40 < 8 ? 0.35 : 0) + (big - 0.5) * 0.2, x, y, 0.4);
   }
+  if (PANELS) {   // (spec.panels: pale precast panels, clean, a joint every 48 px and at each floor - a hospital's wall)
+    const R = WALLC || MAT.concrete, joint = u % 48 === 0 || v % FLOOR === 0;
+    return step(R, joint ? 0.52 : 0.82 + (big - 0.5) * 0.08 - (h < 0.03 ? 0.06 : 0), x, y, 0.25);
+  }
   const R = WALLC ? WALLC : style === 'diner' ? MAT.diner : style === 'purple' ? MAT.stuccoPurple : style === 'peach' ? MAT.stuccoPeach : style === 'teal' ? MAT.stuccoTeal : style === 'concrete' ? MAT.concrete : MAT.stucco;
   let t = 0.55 + (big - 0.5) * 0.22 + (mid - 0.5) * 0.12 + (h > 0.95 ? 0.1 : 0) - (h < 0.03 ? 0.12 : 0);
   if (v < 6) t -= 0.12 * (1 - v / 6);
@@ -112,7 +117,7 @@ export function roomLook(v) { if (v === 'flat' || v === 'rooms') ROOM_LOOK = v; 
 export const ROOM = { pane: 0.4, cloth: 0.2, solid: 0, lamp: 1.5, paper: 0.14 };
 // a sash window: frame, two panes with a reflection streak (or warm light when lit), a curtain
 function sash(G, x0, y0, w, h, lit, seed, opt = {}) {
-  const fr = opt.frame || MAT.metalDark, warm = hash(x0, y0, seed) > 0.22;
+  const fr = opt.frame || MAT.metalDark, warm = !opt.sober && hash(x0, y0, seed) > 0.22;
   const curtain = hash(x0, y0, seed + 3), thing = hash(x0, y0, seed + 9);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const X = x0 + x, Y = y0 + y;
@@ -129,7 +134,8 @@ function sash(G, x0, y0, w, h, lit, seed, opt = {}) {
       e = warm ? [255, 200, 120, 90 + (y / h) * 60] : [150, 210, 255, 90 + (y / h) * 60];
     } else c = step(MAT.glassDark, 0.3 + (streak ? 0.45 : 0) + (y < 3 ? 0.18 : 0), X, Y, 0.4);
     // curtains drawn to one side (or both: open in the middle)
-    if (curtain > 0.5 && (curtain > 0.93 ? x < 3 || x > w - 4 : curtain > 0.75 ? x < 3 : x > w - 4)) { c = step(curtain > 0.85 ? ramp('#c86a6a', 5, 2) : ramp('#e0d8c8', 5, 2), lit ? 0.75 : 0.45, X, Y, 0.3); ek = ROOM.cloth; if (e && ROOM_LOOK === 'rooms' && curtain > 0.85) e = [255, 150, 130, e[3]]; }
+    if (opt.sober) { if (thing < 0.4 && y < h * 0.4 && y % 3) { c = step(ramp('#e8e2d2', 5, 2), lit ? 0.8 : 0.5, X, Y, 0.3); ek = ROOM.cloth; } }   // (a hospital's: blinds or nothing)
+    else if (curtain > 0.5 && (curtain > 0.93 ? x < 3 || x > w - 4 : curtain > 0.75 ? x < 3 : x > w - 4)) { c = step(curtain > 0.85 ? ramp('#c86a6a', 5, 2) : ramp('#e0d8c8', 5, 2), lit ? 0.75 : 0.45, X, Y, 0.3); ek = ROOM.cloth; if (e && ROOM_LOOK === 'rooms' && curtain > 0.85) e = [255, 150, 130, e[3]]; }
     // what's in the window (facadedress.js has the rest of the dressing): blinds half down, a plant, a cat on the sill,
     // a lamp, a flag or a poster stuck to the glass
     else if (thing < 0.14 && y < h * 0.45 && y % 3) { c = step(ramp('#e8e2d2', 5, 2), lit ? 0.8 : 0.5, X, Y, 0.3); ek = ROOM.cloth; }
@@ -180,6 +186,45 @@ function loftWin(G, x0, y0, w, h, lit, seed) {
     G.flag[Y * G.w + X] |= F_GLASS;
   }
   for (let x = -2; x < w + 2; x++) { setC(G, x0 + x, y0 + h, step(MAT.concrete, 0.8, x0 + x, 0, 0)); setC(G, x0 + x, y0 + h + 1, MAT.concrete[1]); }
+}
+// A ward window (spec.win 'ward': a hospital's or a clinic's upper floors - the owner, 11-22: "It looks like an apartment
+// building from the outside"; the concept SC2-D): a wide three-light window in a slim pale metal frame with a transom,
+// blinds part down in some lights, no stone lintel, no flower box, no curtain - and after dark the cool even light of
+// a ward, calm enough that the frame still reads.
+const WARD_GLASS = ramp('#3d5560', 6, 3), WARD_LIT = ramp('#c9dde2', 5, 2), WARD_FRAME = ramp('#d6dadc', 5, 2), WARD_BLIND = ramp('#eef0ea', 5, 2);
+function wardWin(G, x0, y0, w, h, lit, seed) {
+  const pw = (w - 1) / 3;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const X = x0 + x, Y = y0 + y;
+    if (!G.inside(X, Y)) continue;
+    const pane = Math.min(2, Math.floor(x / pw)), px = x - Math.round(pane * pw);
+    const bar = x === 0 || y === 0 || x >= w - 1 || y === h - 1 || px === 0 || y === 6;
+    if (bar) { setC(G, X, Y, step(WARD_FRAME, x === 0 || y === 0 ? 0.35 : 0.7, X, Y, 0)); continue; }
+    const drop = hash(pane, seed, 5) < 0.5 ? Math.round(h * (0.3 + hash(pane, seed, 6) * 0.4)) : 0, blind = y < drop && y % 2 === 1;
+    const streak = ((x + (h - y)) % 11) < 2;
+    let c;
+    if (blind) c = step(WARD_BLIND, lit ? 0.8 : 0.5, X, Y, 0.2);
+    else if (lit && !GLOW_ONLY) c = step(WARD_LIT, 0.5 + (y / h) * 0.3, X, Y, 0.4);
+    else c = step(WARD_GLASS, 0.44 + (streak ? 0.32 : 0) + (y < 3 ? 0.1 : 0), X, Y, 0.4);
+    setC(G, X, Y, c);
+    if (lit) glow(G, X, Y, [206, 230, 240, blind ? 44 : 78 + (y / h) * 26]);
+    G.flag[Y * G.w + X] |= F_GLASS;
+  }
+  for (let x = -1; x < w + 1; x++) { setC(G, x0 + x, y0 + h, step(WARD_FRAME, 0.85, x0 + x, 0, 0)); setN(G, x0 + x, y0 + h, [0, 0.5, 0.86]); }
+}
+// A glazed stair tower up a hospital's front (spec.stair { x, w }; SC2-D: the emblem stands on it): a strip of glass
+// from over the ground floor to the parapet, landings showing as bars, softly lit after dark.
+function stairTower(G, x0, w, fy, v0, v1, night, seed) {
+  for (let v = v0; v < v1; v++) for (let x = 0; x < w; x++) {
+    const X = x0 + x, Y = fy(v);
+    if (!G.inside(X, Y)) continue;
+    const edge = x === 0 || x === w - 1 || v === v0 || v === v1 - 1, mull = x === (w >> 1), landing = (v - v0) % 20 === 19;
+    if (edge || mull || landing) { setC(G, X, Y, step(WARD_FRAME, edge ? 0.4 : 0.62, X, Y, 0)); continue; }
+    const streak = ((x + v) % 13) < 2, flight = ((v - v0) % 20) < 2 + (x * 16 / w) && ((v - v0) % 20) > (x * 16 / w) - 2;   // (the stair's flights behind the glass)
+    setC(G, X, Y, flight ? step(WARD_FRAME, 0.3, X, Y, 0.2) : step(WARD_GLASS, 0.34 + (streak ? 0.36 : 0), X, Y, 0.4));
+    if (night > 0 && !flight) glow(G, X, Y, [206, 230, 240, 40 + night * 30]);
+    G.flag[Y * G.w + X] |= F_GLASS;
+  }
 }
 // an oriel up the middle of the upper floors: a painted bay standing out from the wall - three windows a floor (its
 // sides in shade), panels under them, its own cornice and a lead cap
@@ -259,6 +304,7 @@ export function makeBuilding(spec) {
   GLASSC = spec.glassTint ? ramp(spec.glassTint, 6, 3, { light: 0.65 }) : null;
   BRICKC = spec.brickTone ? ramp(spec.brickTone, 6, 3, { dark: 0.55 }) : null;
   GLOW_ONLY = !!spec.glowOnly;
+  PANELS = !!spec.panels;
   const floors = spec.floors || 1, gH = (spec.groundH ?? (spec.shop ? SHOP_FLOOR : FLOOR)) + signLift(spec), cornice = style === 'brick' ? 10 : 6;
   const H = buildingH(spec);
   const G = new GBuf(w, d + H);
@@ -342,6 +388,10 @@ export function makeBuilding(spec) {
     if (WIN === 'pair') {
       const pw = 2 * ww + 4, pg = 30, n = Math.max(1, Math.floor((w - 16 + pg) / (pw + pg))), x0 = Math.floor((w - (n * pw + (n - 1) * pg)) / 2);
       for (let i = 0; i < n; i++) { L.push([x0 + i * (pw + pg), ww]); L.push([x0 + i * (pw + pg) + ww + 4, ww]); }
+    } else if (WIN === 'ward') {
+      const tw = 46, tg = 12, n = Math.max(1, Math.floor((w - 16 + tg) / (tw + tg))), x0 = Math.floor((w - (n * tw + (n - 1) * tg)) / 2);
+      for (let i = 0; i < n; i++) L.push([x0 + i * (tw + tg), tw]);
+      wh = 24;
     } else if (WIN === 'triple') {
       const tw = 40, tg = 26, n = Math.max(1, Math.floor((w - 16 + tg) / (tw + tg))), x0 = Math.floor((w - (n * tw + (n - 1) * tg)) / 2);
       for (let i = 0; i < n; i++) L.push([x0 + i * (tw + tg), tw]);
@@ -349,17 +399,24 @@ export function makeBuilding(spec) {
       const n = Math.max(1, Math.floor((w - 16) / (ww + gap))), x0 = Math.floor((w - (n * ww + (n - 1) * gap)) / 2);
       for (let i = 0; i < n; i++) L.push([x0 + i * (ww + gap), ww]);
     }
+    if (WIN === 'ward' && L.length > 1) {   // (the row tied into one ribbon: a head and a sill line from the first light to the last)
+      const xa = spec.stair ? Math.max(L[0][0], spec.stair.x + spec.stair.w + 6) : L[0][0], xb = L[L.length - 1][0] + L[L.length - 1][1], py = fy(base + 12 + wh);
+      for (let x = xa - 2; x < xb + 2; x++) { setC(G, x, py - 1, step(WARD_FRAME, 0.3, x, 0, 0)); setC(G, x, py + wh, step(WARD_FRAME, 0.85, x, 0, 0)); setC(G, x, py + wh + 1, step(WARD_FRAME, 0.3, x, 1, 0)); }
+    }
     L.forEach(([px, pw], i) => {
       if (bay && px + pw > bay[0] - 4 && px < bay[0] + bay[1] + 4) return;   // (the oriel takes the middle)
+      if (spec.stair && WIN === 'ward' && px + pw > spec.stair.x - 4 && px < spec.stair.x + spec.stair.w + 4) return;   // (the stair tower's strip)
       const py = fy(base + 12 + wh);
       const lit = hash(i, f, seed + 13) < night * 0.75 + (night > 0 ? 0.08 : 0);
       if (spec.boarded && hash(i, f, seed + 41) < spec.boarded) { boards(G, px, py, pw, wh, seed + i * 5 + f); return; }
       WL.push([px, py, pw, wh, f]);
       if (WIN === 'loft') loftWin(G, px, py, pw, wh, lit, seed + f * 7 + i);
+      else if (WIN === 'ward') { wardWin(G, px, py, pw, wh, lit, seed + f * 7 + i); return; }
       else if (WIN === 'triple') { for (let k = 0; k < 3; k++) sash(G, px + k * 13 + (k ? 1 : 0), py, 13 + (k === 1 ? 0 : 0), wh, lit, seed + f * 7 + i * 3 + k, { noLintel: k > 0 }); lintel(G, px - 2, py - 3, pw + 4); }
-      else sash(G, px, py, pw, wh, lit, seed + f * 7 + i, WIN === 'arch' || style === 'adobe' ? { noLintel: true, ...(style === 'adobe' ? { frame: MAT.woodDark } : {}) } : undefined);
+      else sash(G, px, py, pw, wh, lit, seed + f * 7 + i, WIN === 'arch' || style === 'adobe' ? { noLintel: true, ...(style === 'adobe' ? { frame: MAT.woodDark } : {}) } : spec.sober ? { sober: true } : undefined);
       if (style === 'adobe') for (let x = -2; x < pw + 2; x++) for (let k = 0; k < 3; k++) setC(G, px + x, py - 3 + k, step(MAT.woodDark, 0.6 - k * 0.15, px + x, k, 0.3));   // (a timber lintel)
       if (WIN === 'arch') archHead(G, px, py, pw, style, lit, night);
+      if (spec.sober) return;   // (a hospital in a district's own stone or brick: its windows plain - no shutters, boxes or AC units)
       if (spec.shutters && WIN !== 'loft' && WIN !== 'triple') shutters(G, px, py, pw, wh, spec.shutters);
       if (spec.balconies) balconyRail(G, px - 6, py + wh + 3, pw + 12, seed + i * 3 + f);
       else if (WIN !== 'loft' && hash(i, f, seed + 21) > 0.62) windowBox(G, px, py + wh + 2, pw, seed + i);
@@ -367,6 +424,7 @@ export function makeBuilding(spec) {
     });
   }
   if (bay) oriel(G, bay[0], bay[1], fy, gH, floors, night, seed, style);
+  if (spec.stair && WIN === 'ward' && floors > 1 && style !== 'glass') stairTower(G, spec.stair.x, spec.stair.w, fy, gH + 4, H - cornice - (spec.parapet || 0) - 2, night, seed);
   // stone band over the ground floor
   if (style === 'brick' && floors > 1 && gH > 0) for (let k = 0; k < 4; k++) for (let x = 0; x < w; x++) setC(G, x, fy(gH + 2 - k), step(MAT.stone, 0.8 - k * 0.15, x, k, 0.3));
   // ---- ground floor
@@ -382,6 +440,7 @@ export function makeBuilding(spec) {
     }
     for (const wx of spec.windows || []) {
       if (spec.boarded && hash(wx, 7, seed) < spec.boarded) { boards(G, wx, fy(42), 16, 24, seed + wx); continue; }
+      if (WIN === 'ward') { wardWin(G, wx - 4, fy(44), 24, 28, hash(wx, 0, seed) < night * 0.85, seed + wx); continue; }   // (the lobby's glazing)
       sash(G, wx, fy(42), 16, 24, hash(wx, 0, seed) < night * 0.6, seed + wx);
       if (spec.shutters) shutters(G, wx, fy(42), 16, 24, spec.shutters);
     }
@@ -406,7 +465,7 @@ export function makeBuilding(spec) {
   if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
   for (const bl of spec.blades || []) blade(G, bl, d + H, night, H);
   if (spec.picSign && !(spec.shop && spec.shop.sign && spec.shop.sign.moved)) picSign(G, spec.picSign, d + H, night);   // (a picture sign hung out over the shop)
-  if (spec.cross) medSign(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night, spec.cross.k);
+  if (spec.cross) medSign(G, spec.cross.x, spec.cross.top && spec.stair && WIN === 'ward' && floors > 1 ? fy(H - cornice - (spec.parapet || 0) - 6) : d + H - spec.cross.v, spec.cross.s || 22, night, spec.cross.k);   // (top: at the head of the stair tower)
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
   // (the boards with words last: never cut by a cross, a cup, a blade - textClipped)
   // (a plaque where the shop's sign goes: up clear of it while there's room, else none)

@@ -22,6 +22,7 @@ const AWN = ['#2e5a3e', '#8a2a2a', '#23324e', '#c8a040', '#2e6a6a', '#6a3a6a', '
 // o: { id, k (section), st (district style), tier, A (archetype), H (wall height), w, walkIn (a shop you walk into) }
 export function dressPlan(spec, o) {
   if (spec.motel || spec.style === 'glass' || spec.pitch === 'mansard') return;
+  if (o.A === 'hospital') return;   // (no awnings, washing lines, posters or dishes on a hospital: 11-27, the three hand-planned ones had them)
   const r = (n) => H32(o.id * 37 + o.k, n), { st, tier, A, H, w } = o, fl = spec.floors || 1;
   const rough = tier === 'rough', low = rough || tier === 'low' || tier === 'red' || tier === 'neon', homey = HOMEY.has(A);
   const old = st === 'oldtown' || st === 'apartments' || st === 'arts';

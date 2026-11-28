@@ -955,7 +955,7 @@ function upperOf(A, D, rnd, spec, w, d) {
   const tall = A === 'glass' || A === 'office' || A === 'hotel' || A === 'condo' || A === 'terminal' || A === 'hospital';
   const fl = tall ? 1 + Math.floor(rnd() * (D.style === 'towers' ? 5 : 3)) : 1 + (rnd() < 0.3 ? 1 : 0);
   const us = { w: uw, d: ud, seed: spec.seed + 17, glowOnly: true, night: NIGHT, floors: fl + 1, groundH: 0, blank: true, style: spec.style, wallColor: spec.wallColor, parapet: 4,
-    balconies: !!spec.balconies && rnd() < 0.5, shutters: spec.shutters || null, roof: 'flat' };
+    balconies: !!spec.balconies && rnd() < 0.5, shutters: spec.shutters || null, roof: 'flat', ...(spec.med ? { win: spec.win, panels: spec.panels, sober: spec.sober, med: 1 } : null) };   // (a hospital's upper block: its wards too)
   roofOf(A, D, rnd, us); gardenRoof(us, uw, ud);
   return { spec: us, x: inW, y: inN };
 }
@@ -963,7 +963,7 @@ function upperOf(A, D, rnd, spec, w, d) {
 function upperArt(u, A, D, rnd, spec, w, d) {
   const inW = u.w * TILE, inN = u.n * TILE, uw = w - inW - u.e * TILE, ud = d - inN - u.s * TILE;
   if (uw < 90 || ud < 70) return null;
-  const us = { w: uw, d: ud, seed: spec.seed + 17, glowOnly: true, night: NIGHT, floors: u.floors + 1, groundH: 0, blank: true, style: spec.style, wallColor: spec.wallColor, ...(spec.brickTone ? { brickTone: spec.brickTone } : {}), win: spec.win, parapet: 6, roof: 'flat' };
+  const us = { w: uw, d: ud, seed: spec.seed + 17, glowOnly: true, night: NIGHT, floors: u.floors + 1, groundH: 0, blank: true, style: spec.style, wallColor: spec.wallColor, ...(spec.brickTone ? { brickTone: spec.brickTone } : {}), win: spec.win, ...(spec.med ? { panels: spec.panels, sober: spec.sober, med: 1 } : null), parapet: 6, roof: 'flat' };
   roofOf(A, D, rnd, us);
   return { spec: us, x: inW, y: inN };
 }
@@ -1100,6 +1100,9 @@ function signTrade(c, b, A, s, spec) {
   const whole = [p && p.label, b.name].map((t) => clean(t, 99).split(' - ')[0]).find((t) => t.length > sg.text.length && t.startsWith(sg.text));
   return spec.shop.trade || tradeOf({ name: whole || sg.text, kind: p ? p.kind : u ? u.kind : null, store: (p && p.store) || (u && u.trade) || null, shop: spec.shop.kind, A });
 }
+// the red light over a hospital's doors [reach px, strength] (the owner, 11-22: the front "glows so hard that it washes
+// out whatever the name/text is" - it was 140 px at 1.2)
+const HOSP_SIGN_LIGHT = [100, 0.55];
 // how a trade's board throws its light: [strength, z above its foot]
 const SIGN_LIGHT = { neon: 1.2, panel: 0.8, ink: 0.6, flood: 0.5 };
 // a shop sign styled by its trade: the face, a sibling palette by the building (two clinics differ, neighbours differ),
@@ -1472,7 +1475,12 @@ function specOf(c, b, A, s, D) {
         spec.plaques = blind ? [] : [{ text: txt, cx: w / 2, v: 66, lit: true, trade: A === 'hospital' ? tradeOf({ name: txt, kind: 'hospital' }) : A }];   // (one name plaque: on the section with the doors, not on each)
         // (EMERGENCY over the doors, clear of the ambulance bay's canopy - its roof reaches 54 px up the wall; the name
         // above it, unstackSigns lifting it clear: the owner, 11-14, Westside Clinic's name half behind it)
-        if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', cx: dx0 + dw0 / 2, v: 58, bg: '#c8343a', fg: [250, 246, 240], lit: true, face: 'civic' }); spec.cross = { x: 14, v: 80, s: 22, k: /CLINIC|INFIRMARY/i.test(b.name || named || '') ? 'clinic' : 'hospital' }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }   // (the sign: a clinic's white cross on green, a hospital's red H)
+        // (a hospital's front, not an apartment block's - the owner, 11-22; the concept SC2-D: ward windows in bands up
+        // the front and, where there is room beside the doors, a glazed stair tower with the emblem on it)
+        if (A === 'hospital') { spec.win = 'ward'; spec.panels = true; }
+        const stair = A === 'hospital' && !blind && fl > 1 && w >= 170 && dx0 > 46;
+        if (stair) spec.stair = { x: 8, w: 26 };
+        if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', cx: dx0 + dw0 / 2, v: 58, bg: '#c8343a', fg: [250, 246, 240], lit: true, face: 'civic' }); spec.cross = { x: stair ? 10 : 14, v: 80, top: stair, s: 22, k: /CLINIC|INFIRMARY/i.test(b.name || named || '') ? 'clinic' : 'hospital' }; lights.push([w / 2, 14, 40, HOSP_SIGN_LIGHT[0], [1, 0.5, 0.5], HOSP_SIGN_LIGHT[1], 'sign']); }   // (the sign: a clinic's white cross on green, a hospital's red H)
         if (A === 'police') lights.push([w / 2, 14, 60, 120, [0.4, 0.6, 1], 1, 'sign']);
       }
       lights.push([w / 2, 12, 34, 110, [1, 0.9, 0.75], 1, 'window']); upperLights(fl, 0.4);
@@ -1570,6 +1578,15 @@ function specOf(c, b, A, s, D) {
     // (a hand-planned front's own neon - the Neon Strip's: its name, a picture sign, a blade sign, the cornice tube)
     if (spec.shop && spec.shop.sign && spec.shop.sign.text && !spec.shop.sign.face) styleSign(spec, c, b, A, s, named, lights, false);
     if (ART.neon && s.south && !s.turned) handNeon(spec, { door: spec.shop && spec.shop.door, ...ART.neon }, { w, lights, rnd: rndOf(b.id * 31 + s.k, 979) });
+  }
+  // (a hospital whatever its district's hand plan says - the three big ones are hand-planned, and came out with an
+  // apartment row's tall sashes, awnings, washing lines and posters: ward windows; in a district's own stone or brick
+  // - the Old Town Infirmary - its sashes kept but plain, no stair tower of glass)
+  if (A === 'hospital' && !s.frame && !s.vox) {
+    if (spec.style === 'stone' || spec.style === 'brick' || spec.style === 'brickDark' || spec.style === 'adobe') spec.sober = true;
+    else { spec.win = 'ward'; spec.panels = true; }
+    delete spec.shutters; delete spec.balconies; delete spec.fireEscape; delete spec.ivy;
+    spec.med = 1;   // (the lint's hospitalFront reads it)
   }
   // (a walk-in turned round, its doorway on the north - sectionsOf: its south wall a plain back, no shopfront and no
   // door on it that looks like the way in, whatever its trade or its hand plan draws there)
