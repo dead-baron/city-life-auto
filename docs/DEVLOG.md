@@ -28727,3 +28727,10 @@ quiet - requestIdleCallback), and made as before when it opens. The page's start
 - `test/gameplay.test.js` (the debug menu's "take me there" buttons): the Employment Center and its job computer are
   World v3's places, not in the old city the test plays - listed with the tennis courts, casinos and the rest (it
   failed on main since the Employment Center went in).
+
+## 2026-11-27 night · "Jump in" off a dock's edge (the Rusty Spur notes, 11-17)
+You can't walk off a dock or a pier into the water - on purpose (the railing of b1c: "fell through the bridge") - and
+only a dive roll goes over, which nobody found. Now on a dock's planks facing open water the prompt says **Jump in**:
+it sends you off the side the way the roll does (`players.js` `jumpIn` / `jumpInSpot`: water within a tile and a half
+ahead, or a little to either side; never with a crate in your arms, on a board or from a bridge's deck; a boat moored
+there and your rod in hand keep their prompts). The Guide's "On foot" says so. Test: `test/jumpin.test.js`.
