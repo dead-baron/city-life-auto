@@ -21,3 +21,6 @@ The scene variants (shared/scenes/index.js) [after LANE_TRIES: world3scenes 9/9]
 2-9 pass (every director scene, the eight new ones too, finds its place and cast on World v3); test 1 failed on the
 staged "Street race on the Neon Strip at night" ("no street to start it on") - the known flake (MASTER-HANDOVER: "flaky
 ... world3scenes' street race (laneSpot)"); the same file passed 9/9 earlier the same night.
+gridlock: fails 2/3 on main and before the night (eec5ff72, ecd7a7fe, b169062c - all with #60's server code, which
+passed 3/3 on 11-27 afternoon): wall-clock dependent (the event calendar). test/gridlocksim.js now pins the calendar
+to a quiet moment; still 2/3 there (unlit: 42.5 s). Logged in PREBETA-LIST for the traffic pass.

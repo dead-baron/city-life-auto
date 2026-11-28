@@ -496,6 +496,12 @@ bus stop, then they should go flying off while the bench or object they're on ge
   own; reopen with a film's place and time if it shows again.
 
 ## The gridlock test fails on main again (found 11-27 night; diagnosed, not fixed)
+**Update 02:40:** not a code change - the same code that passed 3/3 on the ads branch (#60's server, checked at
+b169062c and ecd7a7fe) fails now: the event calendar runs on the wall clock, so the sim's traffic depended on the day
+and hour it ran (an armored run, street race night). `test/gridlocksim.js` now holds the calendar at a quiet moment
+(`quietMoment`) - the same answer any day. At that moment the unlit four-way still fails: a compact stands 42.5 s at
+the head of a queue with nothing recorded in its way (t 98.5, west side, 155 px out). So two cases for the traffic
+pass: the van turned round in a box (above, with an event's cars about) and this one.
 `test/gridlock.test.js`, the four-way without lights (seed 7): a moving van stands 100 s (the limit 30). It fails the
 same on main before the night's work (eec5ff72), so it came in with #63 or #66 (it passed 3/3 on the ads branch with
 the NPC ladder in). Reproduced with a probe (`runFourWay`'s `onTick`): the van came up from the south (edge 1360), was
