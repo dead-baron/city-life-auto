@@ -38,6 +38,7 @@ Steps
   perf:MS                 sample frame times for MS and print avg / p95 / worst ms
 Examples
   python3 tools/playtest.py --start-server --vp 844x390 time:720 tp:21000,19000 wait:3000 shot:a.png
+  python3 tools/playtest.py --start-server --v3 --skip-intro tp:104000,53000 wait:8000 shot:v3.png   (World v3, ~5 min to start)
   python3 tools/playtest.py key:d:1500 shot:b.png eval:"__S.art2&&__S.art2.stats()"
 """
 import argparse, json, os, socket, subprocess, sys, time
@@ -63,6 +64,8 @@ def main():
     ap.add_argument('--server', default='')
     ap.add_argument('--game-port', type=int, default=8080)
     ap.add_argument('--start-server', action='store_true')
+    ap.add_argument('--v3', action='store_true', help="with --start-server: World v3's world (CLA_WORLD=v3 - a 4-5 minute build, 3 GB): waits for it")
+    ap.add_argument('--skip-intro', action='store_true', help="a new character's first-time flow skipped (the station card, the arrival, the question): straight into the city")
     ap.add_argument('--port', type=int, default=8097)
     ap.add_argument('--mobile', action='store_true')
     ap.add_argument('--ua', default='')
@@ -73,6 +76,7 @@ def main():
     ap.add_argument('steps', nargs='*')
     a = ap.parse_args()
     if not a.server: a.server = f'ws://127.0.0.1:{a.game_port}/ws'
+    if a.v3 and a.timeout < 900: a.timeout = 900   # (World v3's server answers only once its world is built)
     GP = a.game_port
     say = (lambda *x: None) if a.quiet else (lambda *x: print('[playtest]', *x, flush=True))
 
@@ -84,11 +88,13 @@ def main():
     started_game = None
     if a.server != 'practice' and a.start_server and not listening(GP):
         say(f'starting game server on {GP} (dev)')
-        env = dict(os.environ, CLA_DEV='1', PORT=str(GP), HOST='127.0.0.1', CLA_DATA_DIR=os.path.join(REPO, '.playtest-data', str(GP)))
+        env = dict(os.environ, CLA_DEV='1', PORT=str(GP), HOST='127.0.0.1', CLA_DATA_DIR=os.path.join(REPO, '.playtest-data', str(GP) + ('-v3' if a.v3 else '')))
+        # (v3: one bake thread, only what the page asks for - no background bake of the whole map)
+        if a.v3: env.update(CLA_WORLD='v3', CLA_ART_THREADS=env.get('CLA_ART_THREADS', '1'), CLA_ART_PREWARM=env.get('CLA_ART_PREWARM', 'none'), NODE_OPTIONS=(env.get('NODE_OPTIONS', '') + ' --max-old-space-size=3072').strip())
         os.makedirs(env['CLA_DATA_DIR'], exist_ok=True)
         log = open(os.path.join(env['CLA_DATA_DIR'], 'server.log'), 'w')
         started_game = subprocess.Popen(['nice', '-n', '10', 'node', 'server/index.js'], cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
-        for _ in range(240):
+        for _ in range(2400 if a.v3 else 240):
             if listening(GP): break
             if started_game.poll() is not None: print('game server exited; see', os.path.join(env['CLA_DATA_DIR'], 'server.log')); sys.exit(1)
             time.sleep(0.5)
@@ -144,6 +150,16 @@ def main():
         say(f'in the city after {time.time() - t0:.1f}s')
         if rc == 0:
             pg.wait_for_timeout(1500)
+        if rc == 0 and a.skip_intro:
+            # (the first-time flow, server/systems/ftue.js handle: 'skip' takes the station card's default, then ends
+            # the arrival, then the question - sent a few times as each comes up; harmless once it's over)
+            pg.wait_for_function('window.__S && __S.welcomed && __S.ws && __S.ws.readyState === 1', timeout=a.timeout * 1000)
+            # (and a new player's starting look: "Play as" the one picked - client/creator.js 'start')
+            # (the question is a counter's menu: closed with Escape is skipped too - ftue.js onMenu)
+            for _ in range(8):
+                open_menu = pg.evaluate("() => { const b = document.querySelector('[data-act=\"play-as\"]'); if (b && b.offsetParent) b.click(); __S.ws.send(JSON.stringify({ t: 'intro', a: 'skip' })); const m = document.getElementById('menu'); return !!m && !m.classList.contains('hidden'); }")
+                if open_menu: pg.keyboard.press('Escape')
+                pg.wait_for_timeout(1500)
 
         def js(src):
             s = src.strip()

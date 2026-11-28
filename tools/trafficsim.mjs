@@ -15,6 +15,7 @@
 // The first minute is warm-up (the traffic filling in round the players), not counted.
 //   flock /tmp/cla-heavy.lock node --expose-gc tools/trafficsim.mjs            6 in-game minutes, seed 7
 //   ... --min 10 --seed 3 --json /path/out.json --players Midtown,Northgate
+//   ... --players '' --wild '' --at 4380,3300        (players only at a tile of your choosing)
 // (the heavy lock: the build is about 100 s and 2 GB; the same seed gives the same run)
 import { joinPlayer, teleport, players } from '../test/helpers.js';
 import { World } from '../server/world.js';
@@ -67,6 +68,13 @@ if (WILD) {
   // out in the wilds a way off from the station: open ground the animals live on
   const at = st && sidewalkNear(st.at[0], st.at[1] + 60, (t, tx, ty) => (t === T.GRASS || t === T.DIRT || t === T.SAND) && !!wildStyle(M, (tx + 0.5) * TILE, (ty + 0.5) * TILE));
   if (at) spots.push({ name: `${WILD} (wilds)`, wild: true, ...at });
+}
+// (--at tx,ty;tx,ty...: players at these tiles too, on the nearest open ground - a place with no station near, such as
+// Coral Cay's jungle track: the pre-beta list's "cars jammed nose to tail", 11-24)
+for (const s of (opt('--at', '') || '').split(';').filter(Boolean)) {
+  const [tx, ty] = s.split(',').map(Number);
+  const at = sidewalkNear(tx, ty, (t) => !PED_BLOCK[t] && t !== T.WATER && t !== T.DEEP);
+  if (at) spots.push({ name: `at ${tx},${ty}`, ...at });
 }
 const ps = spots.map((s) => { const { p } = joinPlayer(w); teleport(w, p.ped, s.x, s.y); p.ped.protectUntil = 1e9; return p; });
 console.log(`[sim] players: ${spots.map((s) => `${s.name} @${Math.floor(s.x / TILE)},${Math.floor(s.y / TILE)}`).join(' | ')}`);
