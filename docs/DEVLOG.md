@@ -28716,3 +28716,14 @@ club's fight: straight in, the next few after a moment, then the whole club).
 The UI pass (11-23) saw the Inventory's frame stand empty a moment the first time it opened - its code (client/bag.js)
 came down only then. Now it's fetched a while after you're in the city (main.js `warmBag`: 12 s on, when the page is
 quiet - requestIdleCallback), and made as before when it opens. The page's start isn't touched (perf: main.js's own code).
+
+## 2026-11-27 night · Clicks inside the zoomed desktop panels; two Employment Center places in the debug test
+- **Pre-beta: "Desktop panels with CSS zoom: no broken clicks in any canvas inside them"** - checked every canvas the
+  page clicks on: the minigames (pool, air hockey, arcade, pinball, skee-ball), the debug teleport and homes maps, the
+  respawn map, the Inventory's figure, the character's turntable and the big map all place a click from clientX/Y as a
+  share of the canvas's getBoundingClientRect (right under any zoom), and nothing reads offsetX/Y any more (the
+  respawn map's fix, 11-17). New `test/csszoom.test.js` keeps it so: no page code reads offsetX / offsetY / layerX /
+  layerY.
+- `test/gameplay.test.js` (the debug menu's "take me there" buttons): the Employment Center and its job computer are
+  World v3's places, not in the old city the test plays - listed with the tennis courts, casinos and the rest (it
+  failed on main since the Employment Center went in).
