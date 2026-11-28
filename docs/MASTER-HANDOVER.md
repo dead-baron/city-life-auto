@@ -138,6 +138,11 @@ paddled (`PADDLE`) and the River Run back. world3 ef04748631c8, art3 b07b1089bc7
 **Waiting on him:** pick the portrait phone layout - the mockups (Design artifact "Portrait layout",
 https://claude.ai/artifact/WhvB5uuRFxGnzBB2Zjf7dx: A corners and a right-hand arc - recommended -, B one top bar, C the
 map by the left thumb); then build it. Making the repo private (his steps).
+**LIVE 11-27 evening (PRs #62-#66):** the portrait layout A (#62, his pick); the doorway hop and the driverless-car
+follow-up closed (#63); the UI pass's leftovers (#64: 44 px in the Inventory upright, the pause menu's close and second
+column - uishots also showed A clean in the real game); P2's page garbage (#65: collectLights lite under art v2, the
+rain's light-catch strings, lamp heads, decal names - a drive's allocation 1,170 -> ~900 MB); courts in play kept clear of
+passers-by (#66, playareas.js). None changed the world or the art.
 **Still open (not started):** phone wires (a world change - ask first); the Rusty Spur's pool, the Boom Tester's throw
 (art); the feature walkthrough, then the launch steps. (Done 11-27 evening: the doorway hop - you're drawn at the door
 until the cut-away is; cars left driverless in a box - re-measured, doesn't come back: GRIDLOCK-TESTS.)
@@ -297,10 +302,9 @@ call); **#46** the kayak races hidden, the other road in the daily goals, "bank 
 **Not looked at in a running game on a device** (the owner to try - the list in the 11-24 chat): smashing, aim and
 flash, the hoop marker, the Pixel at speed, the police ride, the stash on a big screen, My looks, P5's streets once the
 re-bake is done.
-**Left for later (non-art, not blocking the art pass):** P2's biggest garbage is page code (main.js collectLights,
-weather.js drawRain - the budget has room now); P8's cinematic scripted cars and jams; the UI pass's three findings
-(Inventory slots under 44 px on phones, its frame empty a moment on first open, the pause menu's second column in a
-narrow desktop window); PREBETA-LIST C's other items; the walkthrough (G).
+**Left for later (non-art, not blocking the art pass):** P8's cinematic scripted cars and jams; the Inventory's frame
+empty a moment on first open; PREBETA-LIST C's other items; the walkthrough (G). (Done 11-27: P2's page garbage, the
+UI pass's 44 px and pause-menu findings.)
 **Now: the Fable 5.2 chat** - package 6 above, nature first (the owner, 11-24 09:25: "We were working on the nature pass first
 ... make sure that gets prioritized"). The cinema's redesign is in its part B (world + art; the owner wants it before the beta). Then the cinematics (PREBETA-NOTES-2026-11-23 section 2: reshoot, wildlife first, new behaviour scenes) and
 C4's variants.
