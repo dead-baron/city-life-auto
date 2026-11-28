@@ -1601,6 +1601,7 @@ function startPlaying() {
 function enterCity() {
   if (!S.playing) launchCall('world');
   S.playing = true;
+  warmBag();
   // (the loading screen's one fade out at the end - client/warmup.js holdForArt: hidden once it's over)
   const tl = $('title');
   if (tl.classList.contains('t-out')) setTimeout(() => { tl.classList.add('hidden'); tl.classList.remove('t-out'); }, FADE_MS);
@@ -1842,6 +1843,15 @@ function deathPad() {
 // ---- the bag + quick wheel ----------------------------------------------------------------------
 // the bag: the hub's BAG tab (client/bag.js), loaded the first time it opens
 let bagMod = null, bagP = null;
+// (the Inventory's code fetched a while after you're in, when the page is quiet - its frame stood empty a moment the first
+// time it opened while bag.js came down: the UI pass, 11-23. Only fetched: made when it opens)
+let bagWarm = false;
+function warmBag() {
+  if (bagWarm) return;
+  bagWarm = true;
+  const go = () => { import('./bag.js').catch(() => { bagWarm = false; }); };
+  setTimeout(() => (typeof requestIdleCallback === 'function' ? requestIdleCallback(go, { timeout: 8000 }) : go()), 12000);
+}
 const bag = {
   show() {
     (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); }, stash: () => S.stash, leave: () => { if (topOverlay() === 'inv') closeHub(); },

@@ -28711,3 +28711,8 @@ club's fight: straight in, the next few after a moment, then the whole club).
   - and 30 px from the next person (`DANCE_ROOM`). Test: `npcpeople.test.js`.
 - `test/dance.test.js` brought up to the reaction ladder (11-27): a dancer shoved on a club's floor backs off with a
   word or runs, or - a fighter - squares up first (it failed on main since part 1).
+
+## 2026-11-27 night · The Inventory's first open: no empty frame
+The UI pass (11-23) saw the Inventory's frame stand empty a moment the first time it opened - its code (client/bag.js)
+came down only then. Now it's fetched a while after you're in the city (main.js `warmBag`: 12 s on, when the page is
+quiet - requestIdleCallback), and made as before when it opens. The page's start isn't touched (perf: main.js's own code).
