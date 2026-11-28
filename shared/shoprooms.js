@@ -810,7 +810,7 @@ FIT.saloon = (c) => {
   wall(c, 'skull', c.X0 + 12, c.X0 + 52, 50, 76);
   if (c.W >= 220) wall(c, 'motorbike', c.tillX - 36, c.tillX + 36, 52, 78);
   wall(c, 'chalk', c.X1 - 46, c.X1 - 14, 26, 48, { text: 'COLD BEER' });
-  sign(c, c.W >= 480 ? 'RIDE DRINK REPEAT' : pick(r, ['COLD BEER', 'RIDE', 'SALOON']), '#ffb04a', c.X1 - 70, c.W >= 480 ? 'block' : 'neon');
+  sign(c, c.W >= 480 ? 'LIVE TO RIDE' : pick(r, ['COLD BEER', 'RIDE', 'SALOON']), '#ffb04a', c.X1 - 70, c.W >= 480 ? 'block' : 'neon');
   const big = c.W - 72 >= 300 && (c.Yb - 6) - (c.cy + 44) >= 60;
   if (big) {   // (as statics.js roadhouseRoom lays it out over the unit)
     const Ya = c.cy + 44, Yb = c.Yb - 6, mid = (Ya + Yb) / 2, x0 = c.X0 + 36, W = c.W - 72, ext = (t, a, b, cc, d, h) => R.ext.push({ t, x0: Math.round(a), y0: Math.round(b), x1: Math.round(cc), y1: Math.round(d), h });

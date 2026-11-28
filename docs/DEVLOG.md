@@ -28784,3 +28784,11 @@ the night of 11-27, branch `tables-1127`.
   arcade, art2, art2teleport, idlepose, muzzle, guide, perf pass.
 - Left of his pool notes: the camera frozen while the pool game is open (page logic); "RIDE DRINK REPEAT" on the
   bar's wall (`shared/shoprooms.js` - a change to the world's rooms: with the next batch).
+
+## 2026-11-27 night · Waiting for the next world update: the Rusty Spur's sign (branch `world-next`)
+"The 'RIDE DRINK REPEAT' sign reads as drink-driving - replace with another biker-bar line (e.g. 'RIDE FREE', 'IRON &
+ASPHALT', 'LIVE TO RIDE'). Check other signs for the same." (the owner, 11-17). The bar's wall sign in a big saloon
+room now says LIVE TO RIDE (`shared/shoprooms.js` FIT.saloon). Checked the rest: no other sign's words put a drinking
+word beside a riding or driving one - and `test/signwords.test.js` keeps it so over every quoted line in capitals in
+the world's and the art's code. It's a room of the world, so it changes `world3` and re-bakes: it waits on this branch
+for the next world update (the owner's word).
