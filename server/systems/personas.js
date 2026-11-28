@@ -366,6 +366,7 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
   return ped;
 }
 // a spot with its back to a building's wall, near (x, y): { x, y, a: facing away from the wall } or null
+const LEAN_ROOM = 26;
 function wallSpot(world, x, y) {
   const m = world.map, tx0 = Math.floor(x / TILE), ty0 = Math.floor(y / TILE);
   for (let k = 0; k < 40; k++) {
@@ -374,7 +375,9 @@ function wallSpot(world, x, y) {
     for (const [dx, dy] of [[0, -1], [1, 0], [-1, 0], [0, 1]]) {
       if (!PED_BLOCK[m.tileAt(tx + dx, ty + dy)] || !m.buildingAtPx((tx + dx + 0.5) * TILE, (ty + dy + 0.5) * TILE)) continue;
       const px = (tx + 0.5) * TILE + dx * (TILE / 2 - 12), py = (ty + 0.5) * TILE + dy * (TILE / 2 - 12);
-      if (world.query(px, py, 40, K.PED).some((e) => e.npc && e.npc.persona === 'leaner')) continue;
+      // (clear of the next one leaning - a leaner or a chef on their break - and of anyone standing right there: the
+      // owner, 11-17, two pressed together by a door)
+      if (world.query(px, py, 40, K.PED).some((e) => !e.dead && (Math.hypot(e.x - px, e.y - py) < LEAN_ROOM || (e.npc && PERSONAS[e.npc.persona] && PERSONAS[e.npc.persona].lean)))) continue;
       return { x: px, y: py, a: Math.atan2(-dy, -dx) };
     }
   }
@@ -483,6 +486,7 @@ function lapRoute(world, x, y) {
 
 // ---- going about it (npc.js update: steer, for a persona wandering or standing about) ------------------------------------
 // -> { inp, factor } (factor: the walk's share of a run, as npc.js) or null: walk about like anyone
+const PAIR_STILL = 12, PAIR_NEAR = 34, PAIR_SETTLE_S = 1;   // (a couple: the first at under 12 px/s, you within 34 px of them for a second: stand - steer)
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
 export function steer(world, ped, now) {
   const n = ped.npc, P = PERSONAS[n.persona];
@@ -492,6 +496,17 @@ export function steer(world, ped, now) {
     if (!a || a.dead || a.removed || !a.npc || a.npc.state === 'flee' || a.npc.state === 'fight') { n.with = 0; return null; }
     const h = a.a, tx = a.x - Math.sin(h) * 15, ty = a.y + Math.cos(h) * 15, d = Math.hypot(tx - ped.x, ty - ped.y);
     if (d < 4) { ped.a = h; return { inp: NO_INPUT, factor: 0.55 }; }
+    // the first standing still and you close by: stand with them, turned to them - no edging at a spot you can't
+    // reach (a wall, a door, a post at their right: the owner, 11-17, "two NPCs pressed together by a door ... looping
+    // one lean forward-and-back forever" - a step's walk on and off, into the wall, for as long as they stood there)
+    // (a second to come to their side first; then, till they walk on, you stand - however they turn about)
+    if (Math.hypot(a.vx || 0, a.vy || 0) < PAIR_STILL && Math.hypot(a.x - ped.x, a.y - ped.y) < PAIR_NEAR) {
+      if (!n.pairStill) n.pairStill = now || 1e-3;
+      if (now - n.pairStill >= PAIR_SETTLE_S) {
+        ped.vx = ped.vy = 0; ped.a = Math.atan2(a.y - ped.y, a.x - ped.x);
+        return { inp: NO_INPUT, factor: 0.55 };
+      }
+    } else n.pairStill = 0;
     return { inp: seekTo(ped, tx, ty, d > 40 ? 1 : 0.9), factor: d > 60 ? 0.9 : 0.6 };
   }
   if (P.jog && n.laps) {

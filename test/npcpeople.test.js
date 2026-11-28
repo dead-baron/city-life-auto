@@ -310,10 +310,18 @@ test('fishers along one shore each have their own spot: ANGLER_GAP apart, facing
 test('dancers keep their room: never into a fountain or onto each other', async () => {
   const { danceSpot } = await import('../server/systems/personas.js');
   const w = makeWorld({ npcBudget: 0 });
-  const { p } = joinPlayer(w);
-  const x = p.ped.x + 400, y = p.ped.y;
+  joinPlayer(w);
+  const m = w.map, OPEN = new Set([T.SIDEWALK, T.PLAZA, T.GRASS, T.LOT]);
+  let at = null;   // (open ground all round, wherever the test's city put it: 7 tiles across)
+  for (let ty = m.y0 + 4; ty < m.y0 + m.h - 4 && !at; ty++) for (let tx = m.x0 + 4; tx < m.x0 + m.w - 4 && !at; tx++) {
+    let ok = true;
+    for (let dy = -3; dy <= 3 && ok; dy++) for (let dx = -3; dx <= 3 && ok; dx++) ok = OPEN.has(m.tileAt(tx + dx, ty + dy)) && !m.buildingAtPx((tx + dx + 0.5) * TILE, (ty + dy + 0.5) * TILE);
+    if (ok) at = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE };
+  }
+  assert.ok(at, 'open ground in the test city');
+  const { x, y } = at;
   const fountain = { t: 'fountain', x: x + 30, y, r: 26 };
-  const m = w.map, k = m.idx(Math.floor(fountain.x / TILE), Math.floor(fountain.y / TILE));
+  const k = m.idx(Math.floor(fountain.x / TILE), Math.floor(fountain.y / TILE));
   if (!m.solidProps.has(k)) m.solidProps.set(k, []);
   m.solidProps.get(k).push(fountain);
   const other = spawnNpc(w, 'casual', x - 30, y);
@@ -326,4 +334,19 @@ test('dancers keep their room: never into a fountain or onto each other', async 
     assert.ok(Math.hypot(s2.x - other.x, s2.y - other.y) >= 30, 'not onto the next dancer');
   }
   assert.ok(got > 50, `spots with room found (${got} of 200)`);
+});
+
+test('a couple stopped: the other half stands with them, never edging at a side they can\'t reach (the owner, 11-17)', async () => {
+  const { steer } = await import('../server/systems/personas.js');
+  const lead = { id: 1, x: 100, y: 100, a: 0, vx: 0, vy: 0, npc: { state: 'wander' } };
+  const other = { id: 2, x: 100, y: 125, a: 0, vx: 0, vy: 0, npc: { persona: 'couple', with: 1 } };   // (their side, at y 115, behind a wall)
+  const world = { get: (id) => (id === 1 ? lead : null) };
+  const moving = (r) => r && (Math.abs(r.inp.mx) + Math.abs(r.inp.my)) > 0.01;
+  assert.ok(moving(steer(world, other, 10)), 'a moment to come to their side');
+  assert.ok(!moving(steer(world, other, 11.2)), 'then stands');
+  lead.a = Math.PI;   // (they turn about where they stand: their right is now the far side)
+  assert.ok(!moving(steer(world, other, 14)), 'still stands - no walking round them as they turn');
+  assert.ok(Math.abs(other.a - Math.atan2(lead.y - other.y, lead.x - other.x)) < 1e-6, 'turned to them');
+  lead.vx = 80;   // (they walk on)
+  assert.ok(moving(steer(world, other, 15)), 'walks on with them');
 });

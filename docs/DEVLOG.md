@@ -28734,3 +28734,13 @@ only a dive roll goes over, which nobody found. Now on a dock's planks facing op
 it sends you off the side the way the roll does (`players.js` `jumpIn` / `jumpInSpot`: water within a tile and a half
 ahead, or a little to either side; never with a crate in your arms, on a board or from a bridge's deck; a boat moored
 there and your rod in hand keep their prompts). The Guide's "On foot" says so. Test: `test/jumpin.test.js`.
+
+## 2026-11-27 night · The sidewalk pair rocking by a door (the owner, 11-17 20:21, "still weird")
+Two people pressed together by a walk-up's door, rocking forward and back forever. A couple's other half
+(`personas.js` `steer`) makes for a spot a step to the first's right: with the first stopped by a door and that spot in
+the wall - or the first turning about where they stood - the other walked a step on and off at it for as long as they
+stood there. Now when the first stops, the other has a second to come to their side, then stands with them, turned
+to them, till they walk on (`PAIR_STILL`, `PAIR_NEAR`, `PAIR_SETTLE_S`). And someone leaning on a wall (a leaner, a
+chef on their break: `wallSpot`) takes a spot clear of anyone leaning within 40 px and of anyone standing right there
+(`LEAN_ROOM`) - the old check only knew the leaners, so a chef and a leaner could share a door. Test:
+`npcpeople.test.js` (the couple stopped; the dancers' test now finds its own open ground).
