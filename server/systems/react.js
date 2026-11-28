@@ -11,6 +11,7 @@
 // they start, and the same one again within REACT.memoryS a step further. Police, gangs, guards, bouncers, staff behind a
 // counter, bikers, a gang war's fighters keep their own ways (npc.js onAttacked's earlier cases).
 import { K, TILE } from '../../shared/constants.js';
+import { IN } from '../../shared/input.js';
 import { DISTRICTS } from '../../shared/mapcore.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { WEAPONS } from '../../shared/items.js';
@@ -49,10 +50,10 @@ function say(world, ped, kind) {
 }
 
 // cover close by on the far side from (fx, fy): beside a parked car, or tucked in at a wall - where to crouch, or null
-function coverFrom(world, ped, fx, fy) {
+function coverFrom(world, ped, fx, fy, R = REACT.hidePx, carsOnly = false) {
   const away = Math.atan2(ped.y - fy, ped.x - fx);
-  let best = null, bd = REACT.hidePx;
-  for (const v of world.query(ped.x, ped.y, REACT.hidePx + 30, K.VEH)) {
+  let best = null, bd = R;
+  for (const v of world.query(ped.x, ped.y, R + 30, K.VEH)) {
     if (v.ai || v.dead || v.def.kind === 'boat' || v.def.kind === 'air' || Math.hypot(v.vx, v.vy) > 5) continue;
     const off = v.def.W / 2 + 14, x = v.x + Math.cos(away) * off, y = v.y + Math.sin(away) * off, d = Math.hypot(x - ped.x, y - ped.y);
     if (d < bd && !PED_BLOCK[world.map.tileAtPx(x, y)]) {
@@ -61,10 +62,10 @@ function coverFrom(world, ped, fx, fy) {
       let blocked = false;
       for (let k = 1; k < 8 && !blocked; k++) blocked = inCar(ped.x + (x - ped.x) * k / 8, ped.y + (y - ped.y) * k / 8);
       const end = ((ped.x - v.x) * c + (ped.y - v.y) * sn) >= 0 ? 1 : -1, r = v.def.L / 2 + 14;
-      best = { x, y, via: blocked ? { x: v.x + c * r * end, y: v.y + sn * r * end } : null }; bd = d;
+      best = { x, y, via: blocked ? { x: v.x + c * r * end, y: v.y + sn * r * end } : null, car: v.id, cx: v.x, cy: v.y }; bd = d;
     }
   }
-  if (best) return best;
+  if (best || carsOnly) return best;
   for (let k = 1; k <= 4; k++) for (const da of [0, 0.6, -0.6, 1.2, -1.2]) {   // a wall: the block between them and it
     const a = away + da, x = ped.x + Math.cos(a) * k * 16, y = ped.y + Math.sin(a) * k * 16;
     if (PED_BLOCK[world.map.tileAtPx(x + Math.cos(a) * 14, y + Math.sin(a) * 14)] && !PED_BLOCK[world.map.tileAtPx(x, y)]) {
@@ -182,8 +183,47 @@ export function update(world) {
     if (e.kind !== K.PED || !e.npc) continue;
     const n = e.npc;
     if (n.callUntil && now > n.callUntil) { n.callUntil = 0; if (!e.filming) e.phoneOut = false; }
-    if (e.crouch && n.state !== 'hide') e.crouch = false;
+    if (e.crouch && n.state !== 'hide' && !(n.cover && n.state === 'fight')) e.crouch = false;
+    if (n.cover && n.state !== 'fight') dropCover(e);
     if (n.squared && n.state !== 'warn') n.squared = false;
     if (e.handsUp && n.state !== 'warn' && n.state !== 'holdup' && !n.robHold && n.rx) { e.handsUp = false; n.rx = null; }
   }
+}
+
+// Step 5, cover (part 2 - the design's "into cover first, then fire from it"): someone fighting with a gun (npc.js fight)
+// whose target has one too gets behind a still car close by - round its end if need be - and fires over it in bursts:
+// crouched (ped.crouch: the page's kneel), then up, shooting (their shots go over the car: combat.js coverCar; up, a
+// shot just over it finds them - not a wall to hide behind for good). Out of it when the fight's too far off, the other
+// has no gun, or the car moves or goes. Returns the input while in cover (or getting there), else null: the fight as before.
+const gunIn = (e) => { const w = !e.vehId && WEAPONS[e.weapon]; return !!w && (w.type === 'gun' || w.type === 'bow' || w.type === 'rocket'); };
+export function dropCover(ped) { const n = ped.npc; if (n.cover) { n.cover = null; n.coverCar = 0; ped.crouch = false; } }
+export function coverFight(world, ped, t, d, aim, now) {
+  const n = ped.npc;
+  if (n.role === 'cop' || n.role === 'railguard' || !gunIn(t) || d > REACT.coverFar) { dropCover(ped); return null; }
+  let c = n.cover;
+  if (c) {
+    const v = world.get(c.car);
+    // (the car gone or moved; or they've come round it - it isn't between them any more)
+    const side = v && ((c.x - v.x) * (t.x - v.x) + (c.y - v.y) * (t.y - v.y)) < 0;
+    if (!v || v.removed || v.wreckAt || Math.hypot(v.x - c.cx, v.y - c.cy) > 20 || !side) { dropCover(ped); c = null; n.coverTryAt = now + 1; }
+  }
+  if (!c) {
+    if (now < (n.coverTryAt || 0)) return null;
+    n.coverTryAt = now + REACT.coverRetryS;
+    const s = coverFrom(world, ped, t.x, t.y, REACT.coverPx, true);
+    if (!s) return null;
+    c = n.cover = { ...s, in: false, t0: now };
+    n.coverCar = s.car;
+  }
+  if (!c.in) {
+    if (c.via && Math.hypot(c.via.x - ped.x, c.via.y - ped.y) > 10) return npc.seek(ped, c.via.x, c.via.y, true);
+    c.via = null;
+    if (Math.hypot(c.x - ped.x, c.y - ped.y) > 14) return npc.seek(ped, c.x, c.y, true);
+    c.in = true; c.t0 = now;
+  }
+  ped.vx = 0; ped.vy = 0;
+  const up = (now - c.t0) % (REACT.coverDuckS + REACT.coverFireS) >= REACT.coverDuckS;
+  ped.crouch = !up; ped.a = aim;
+  const held = now < (n.holdFireUntil || 0);
+  return { bits: up ? (held ? IN.AIMING : IN.AIMING | IN.FIRE) : 0, mx: 0, my: 0, aim };
 }

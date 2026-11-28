@@ -28483,3 +28483,17 @@ the first - civilians on foot (`server/systems/react.js`, `REACT` in shared/rule
 Tests: `npcreact.test.js` (7: timid / ordinary, tough, armed, gunfire and cover, a gun pointed, carjacks, temperament);
 brawls, reactions, core, streetlife, activities, crime, law, police, custody, struggle, gangs, bikers, nightclubs,
 personas and others (~280).
+
+## 2026-11-27 · NPC reactions, part 2: cover - behind a car first, then firing over it (step 5)
+The design's step 5 ("into cover first, then fire from it") for everyone who fights with a gun through npc.js `fight` -
+gang members, guards, armed civilians (`react.js coverFight`; the police keep theirs for part 3): when the one they're
+fighting has a gun too and a still car stands within 150 px, they run to its far side (round its end if it's in the
+way) and fire over it in bursts - crouched 1.1 s (the page's kneel), up and shooting 1.5 s. Their shots pass over it
+(combat.js's `coverCar`, the police's already); a crouched one is safe behind it - the car takes the shots - but up and
+firing, a shot just over the car finds them (combat.js traceTarget): cover, not a wall. Out of it when the fight is
+past 520 px, the other has no gun, the car moves or goes, or they've been flanked (the car no longer between them).
+Numbers in REACT (coverPx, coverFar, coverDuckS, coverFireS, coverRetryS).
+Tests: `npcreact.test.js` (9: + into cover and firing from it, no cover against fists; both ways - crouched the car
+takes it, up they're hit), reactions, core, brawls, streetlife, robbery, police, self-defence, weapons, people,
+happenings, grenades.
+
