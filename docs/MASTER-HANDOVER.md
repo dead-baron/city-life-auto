@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-27 night PST, the Opus 5.5 chat: PR #68 the night's batch (section 6, after 11-27 evening); PRs #53-#60 live - gridlock, skateboards, private-repo prep, the NPC ladder, ads (off) + Employment Center + kayaks (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-28 01:00 PST, the Fable art chat (section 6: "11-27 night, the Fable art chat" - a world and art batch waits on branch `fable-art-1127`, three picks); before that 2026-11-27 night PST, the Opus 5.5 chat: PR #68 the night's batch (section 6, after 11-27 evening); PRs #53-#60 live - gridlock, skateboards, private-repo prep, the NPC ladder, ads (off) + Employment Center + kayaks (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -166,11 +166,15 @@ from glowing hands. **WAITING FOR HIS WORD - branch `fable-art-1127`, pushed, NO
 the phone box redrawn, ATM booths for the 49 machines that stood alone, the awning open over a cash machine, the
 taller neighbour fading while you're in a room (`overRoom`), **a faded tower showing the shops under its picture**
 (`chunkbake.js` `underKeep` - they were bare lots from their own kerb, on live too), signs that read after dark
-(`glowOf`, the neon halo), hammocks a person's length. DEVLOG "The street kit and the night look"; the check list's
-five rows; tests `streetkit` (9), `nightlook` (3). The local game server for pictures: `CLA_ART_THREADS=0 CLA_WORLD=v3
+(`glowOf`, the neon halo), hammocks a person's length, and **hospitals that read as hospitals** (his N20: ward
+windows, pale panels, a glazed stair tower, no home's dressing, a calm light at night - DEVLOG 11-28; the lint's
+`hospitalFront` 0). DEVLOG "The street kit and the night look" and "A hospital's front"; the check list's six rows;
+tests `streetkit` (9), `nightlook` (3), `hospitalfront` (5). **A finding to keep:** the game's light pass turns a
+baked glow of 15-20 of 255 into a clear pale light; pale colours at 45 and up bloom to white - most lit windows and
+shop rooms in the city are baked at 90-180 (why they are flat blobs at night; the windows' pick below is about that). The local game server for pictures: `CLA_ART_THREADS=0 CLA_WORLD=v3
 CLA_DEV=1` (with its own bake threads it runs the container out of memory under a browser).
-**His picks from that night:** (1) the batch's go; (2) **lit windows at night, A or B** (`buildings.js` `ROOM_LOOK`: B
-"rooms" is built and off; picture `report-97`); (3) **the phone wires folded into this world batch?** By the data: 10 of
+**His picks from that night:** (1) the batch's go; (2) **lit windows at night, A, B or C** (`buildings.js` `ROOM_LOOK`, `ROOM`: "rooms" is
+built and off - B at 0.4 of the live strength, C at 0.2; picture `report-97`); (3) **the phone wires folded into this world batch?** By the data: 10 of
 1,397 wires run to a spot where no pole stands (the pole they aimed at was moved or dropped by a later pass) - the
 proposal: re-aim each at the nearest pole in reach or drop the wire, a lint row held at 0. Not built.
 
