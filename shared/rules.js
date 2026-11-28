@@ -1576,6 +1576,10 @@ export const REACT = {
   callS: 6,
   drawS: [1.6, 2.6],          // armed: the weapon up and on them this long before any shot (step 4) - unless they hit again
   aimPx: 260, aimCone: 0.35,  // a gun pointed at someone within this and this many radians of them: they've seen it (sev 2)
+  // step 5, cover (part 2): an armed one fighting someone with a gun gets behind a still car within coverPx first, then
+  // fires over it - crouched coverDuckS, up and shooting coverFireS (up, they can be hit: a shot just over the car finds
+  // them - combat.js); the fight further off than coverFar, the other with no gun, the car moved: out of cover
+  coverPx: 150, coverFar: 520, coverDuckS: 1.1, coverFireS: 1.5, coverRetryS: 4,
   sayGap: 1.6, sayNear: 300, saySame: 2,   // word bubbles: no more than this many within this many px in this many seconds
   lines: {
     warn: ['Whoa, easy!', 'Hey - I don\'t want trouble!', 'Okay, okay!', 'Take it easy!'],

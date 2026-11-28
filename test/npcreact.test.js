@@ -69,6 +69,7 @@ test('armed: the weapon drawn and held on you - no shot - then lowered; the seco
 });
 test('gunfire: people get down behind a parked car close by (crouched) or run - nobody stands there', () => {
   const { w, p, road } = setup();
+  const hc = REACT.hideChance; REACT.hideChance = 1;   // (whoever has cover close by takes it: what's tested is that they can)
   const peds = [];
   for (let i = 0; i < 10; i++) {
     const x = road.x + 500 + i * 120, y = road.y + 60;
@@ -78,10 +79,11 @@ test('gunfire: people get down behind a parked car close by (crouched) or run - 
   onGunfire(w, road.x + 1040, road.y - 120, p.ped, 700);
   assert.ok(peds.every((e) => ['flee', 'hide'].includes(e.npc.state) || e.filming), peds.map((e) => e.npc.state).join(' '));
   const hid = peds.filter((e) => e.npc.state === 'hide');
-  assert.ok(hid.length >= 2, `some get down behind the cars (${hid.length})`);
+  assert.ok(hid.length >= 3, `some get down behind the cars (${hid.length})`);
   run(w, 4);
   assert.ok(hid.some((e) => e.crouch), `crouched there (${hid.map((e) => Math.round(Math.hypot(e.npc.hx - e.x, e.npc.hy - e.y))).join(' ')} px off)`);
   assert.ok(peds.some((e) => e.phoneOut), 'and someone\'s on the phone');
+  REACT.hideChance = hc;
 });
 test('a gun pointed at someone: hands up ("Don\'t shoot!") - an armed one draws back', () => {
   const { w, p, conn, road } = setup();
@@ -108,4 +110,46 @@ test('temperament: by kind of person, a notch bolder in rough districts and more
   const mean = (tx, arche) => { let s = 0; for (let id = 1; id <= 400; id++) s += react.temper(W, { id, x: tx * 32 + 8, y: 8, weapon: 'fists', npc: { archetype: arche } }); return s / 400; };
   assert.ok(mean(0, 'casual') > mean(1, 'casual') + 0.4, `rough ${mean(0, 'casual')} vs rich ${mean(1, 'casual')}`);
   assert.ok(mean(1, 'senior') < mean(1, 'construction'), 'a senior more timid than a builder');
+});
+
+// ---- part 2: cover (step 5) ----------------------------------------------------------------------------------------
+import { startFight } from '../server/systems/npc.js';
+test('cover: someone fighting with a gun gets behind a car first, crouched, and fires over it in bursts; against fists, no cover', () => {
+  const { w, p, conn, road } = setup();
+  p.ped.weapon = 'pistol';
+  const g = civ(w, 'hustler', road.x + 520, road.y + 30, 1);
+  g.weapon = 'pistol'; g.mag = { pistol: 99 };
+  const v = w.spawnVehicle('sedan', road.x + 470, road.y + 40, Math.PI / 2, {}); v.ai = null; v.vx = 0; v.vy = 0;
+  startFight(w, g, p.ped, 30);
+  let crouched = 0, up = 0;
+  const c0 = conn.sent.length;
+  for (let i = 0; i < 20 * 8; i++) { w.step(); if (g.npc.cover && g.npc.cover.in) { if (g.crouch) crouched++; else up++; } }
+  const shots = conn.sent.slice(c0).map((m) => (typeof m === 'string' ? JSON.parse(m) : m)).flatMap((m) => (m && m.t === 'ev' ? m.l : [])).filter((e) => e.e === 'shot' && e.id === g.id);
+  assert.ok(g.npc.cover && g.npc.cover.car === v.id, 'behind the car');
+  const far = ((g.x - v.x) * (p.ped.x - v.x) + (g.y - v.y) * (p.ped.y - v.y)) < 0;
+  assert.ok(far, 'on its far side from them');
+  assert.ok(crouched > 10 && up > 10, `ducking and coming up (${crouched} / ${up} ticks)`);
+  assert.ok(shots.length > 0, `firing over it when up (${shots.length} shots)`);
+  // a fight with someone with no gun: no cover, straight at them
+  const h = civ(w, 'hustler', road.x + 900, road.y + 30, 1);
+  h.weapon = 'pistol'; h.mag = { pistol: 99 };
+  w.spawnVehicle('sedan', road.x + 860, road.y + 40, Math.PI / 2, {}).ai = null;
+  const q = civ(w, 'casual', road.x + 1100, road.y, 1);
+  startFight(w, h, q, 10);
+  run(w, 1);
+  assert.ok(!h.npc.cover, 'no cover from someone unarmed');
+});
+test('cover works both ways: crouched behind the car the shots hit the car; up and firing over it, they can be hit', async () => {
+  const combat = await import('../server/systems/combat.js');
+  const { w, p, road } = setup();
+  const v = w.spawnVehicle('sedan', road.x + 400, road.y, Math.PI / 2, {}); v.ai = null; v.vx = 0; v.vy = 0;
+  const g = civ(w, 'hustler', road.x + 400 + v.def.W / 2 + 16, road.y, 1);
+  g.npc.coverCar = v.id; g.npc.cover = { car: v.id, in: true }; g.npc.keep = true; g.maxHp = g.hp = 1e6;
+  teleport(w, p.ped, road.x + 250, road.y);
+  const shoot = (n) => { for (let i = 0; i < n; i++) { p.ped.weapon = 'pistol'; p.ped.mag.pistol = 99; p.ped.nextAttack = 0; p.ped.reloadUntil = 0; p.wanted = 0; p.heat = 0; combat.tryAttack(w, p.ped, Math.atan2(g.y - p.ped.y, g.x - p.ped.x)); } };
+  g.crouch = true; const h0 = g.hp, vh0 = v.hp;
+  shoot(6);
+  assert.equal(g.hp, h0, 'crouched: not touched'); assert.ok(v.hp < vh0, 'the car took it');
+  g.crouch = false; shoot(6);
+  assert.ok(g.hp < h0, 'up: hit');
 });

@@ -675,6 +675,8 @@ function fight(world, ped, now) {
   }
   const armed = ped.weapon !== 'fists' && ped.weapon !== 'bat';
   if (armed) {
+    const ci = react.armedCiv(ped) ? react.coverFight(world, ped, t, d, aim, now) : null;   // (step 5: behind a car first, then firing over it - react.js)
+    if (ci) return ci;
     const inp = d > 170 ? seek(ped, t.x, t.y, true) : { bits: 0, mx: 0, my: 0, aim };
     if (d < 380 && world.map.los(ped.x, ped.y, t.x, t.y)) { inp.bits |= now < (n.holdFireUntil || 0) ? IN.AIMING : IN.FIRE | IN.AIMING; inp.aim = aim; }   // (holdFireUntil: sizing it up first, the weapon up - streetlife.js's guards)
     return inp;
