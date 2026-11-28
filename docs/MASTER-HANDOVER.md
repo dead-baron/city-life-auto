@@ -178,7 +178,10 @@ CLA_DEV=1` (with its own bake threads it runs the container out of memory under 
 **His picks from that night:** (1) the batch's go; (2) **lit windows at night, A, B or C** (`buildings.js` `ROOM_LOOK`, `ROOM`: "rooms" is
 built and off - B at 0.4 of the live strength, C at 0.2; picture `report-97`); (3) **the phone wires folded into this world batch?** By the data: 10 of
 1,397 wires run to a spot where no pole stands (the pole they aimed at was moved or dropped by a later pass) - the
-proposal: re-aim each at the nearest pole in reach or drop the wire, a lint row held at 0. Not built.
+fix: re-aim each at the nearest pole in reach or take the wire off. **Built 11-28 on its own branch
+`phone-wires-1128`** (off `fable-art-1127`; `world3-tidy.js` `wireEnds3`, `test/wireends.test.js`; 5 re-aimed, 5 taken
+off, none left) - in no batch until he says; on his yes merge that branch into `fable-art-1127` and run the World v3
+test files once.
 
 **DONE 11-26 evening (the Opus 5.5 chat): the art batch is merged to `main` and live** - the gate passed: the roofs rendered and kept (before/after on the two streets), the whole suite on c7ae6cb (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`: no failure of the batch's own), a look in a running World v3 game at 1280x720 and phone size. The server re-bakes for about five hours. Next in this chat: the remaining beta items (`docs/audit/PREBETA-LIST.md`). The block below is the record of how it was taken live.
 **TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of
