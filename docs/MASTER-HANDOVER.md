@@ -156,9 +156,23 @@ https://claude.ai/artifact/6nvwNiRbn6kBRERfJF7JKD - 72 rows, OK / Problem / Skip
 list's section C given a "where it stands" head. No world or art change. Tests: `docs/tasks/NIGHT-1127-TESTS.txt`.
 **For the art chat:** NPC drivers in open vehicles (a first try in host.js was reverted - the riders faced and sat
 wrong; the composite at the chat's /home/claude/pl/open-car-draft.png isn't kept), tennis rackets in hand.
-**His calls, still:** phone wires; NPC robberies, streakers, prison activities, photo mode; living city events
+**His calls, still:** phone wires (the proposal is below); NPC robberies, streakers, prison activities, photo mode; living city events
 (`DIRECTOR.live`); the casino tables (build or hide); the repo private (his steps); "RIDE DRINK REPEAT" with the next
 world update.
+**11-27 night, the Fable art chat (the owner asleep): live - PR #69** (page code only): the pool game's pixel balls, the
+balls and cards drawn on the tables as art (`poolview.js`, `casinoview.js`, `host.js` `tableSpr`), the Boom Tester thrown
+from glowing hands. **WAITING FOR HIS WORD - branch `fable-art-1127`, pushed, NOT merged: one world and art batch**
+(world3 248559fadf2d - one room's wall sign, LIVE TO RIDE; the art's hash moved; a merge starts the ~5 hour redraw):
+the phone box redrawn, ATM booths for the 49 machines that stood alone, the awning open over a cash machine, the
+taller neighbour fading while you're in a room (`overRoom`), **a faded tower showing the shops under its picture**
+(`chunkbake.js` `underKeep` - they were bare lots from their own kerb, on live too), signs that read after dark
+(`glowOf`, the neon halo), hammocks a person's length. DEVLOG "The street kit and the night look"; the check list's
+five rows; tests `streetkit` (9), `nightlook` (3). The local game server for pictures: `CLA_ART_THREADS=0 CLA_WORLD=v3
+CLA_DEV=1` (with its own bake threads it runs the container out of memory under a browser).
+**His picks from that night:** (1) the batch's go; (2) **lit windows at night, A or B** (`buildings.js` `ROOM_LOOK`: B
+"rooms" is built and off; picture `report-97`); (3) **the phone wires folded into this world batch?** By the data: 10 of
+1,397 wires run to a spot where no pole stands (the pole they aimed at was moved or dropped by a later pass) - the
+proposal: re-aim each at the nearest pole in reach or drop the wire, a lint row held at 0. Not built.
 
 **DONE 11-26 evening (the Opus 5.5 chat): the art batch is merged to `main` and live** - the gate passed: the roofs rendered and kept (before/after on the two streets), the whole suite on c7ae6cb (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`: no failure of the batch's own), a look in a running World v3 game at 1280x720 and phone size. The server re-bakes for about five hours. Next in this chat: the remaining beta items (`docs/audit/PREBETA-LIST.md`). The block below is the record of how it was taken live.
 **TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of
