@@ -258,6 +258,12 @@ last leap over the top of a falls; the other fish's leaps.
   park street (a booth by the park), any phone box by day and at night.
 - [ ] **Hammocks** (11-27; your note of 11-23, "too long"): the bed is a person's length; ropes go the rest of the
   way to the palms. Judge in the game: Coral Cay's beach bar, the tropic resort.
+- [ ] **Hospitals and clinics outside** (11-28; your note of 11-22: "It looks like an apartment building from the
+  outside"): ward windows in ribbons, pale clean panels, a glazed stair tower with the H or the cross at its head, a
+  glazed lobby; a cool even light after dark; the red light over the doors less than half as strong; no awnings,
+  washing lines or flower boxes on any. The Old Town Infirmary keeps its brick and its sashes, plain. Picture:
+  `report-100`. Judge in the game: St. Neon General (Civic Center) by day and at night - does the name read now;
+  Westport General; a town's clinic.
 - [ ] **Signs on roofs** (11-26; your note of 11-22: "cut off through the roof"): 28 of 664 roof billboards and neon
   names had part of the board hidden - on a pitched roof, behind a smokestack or a tank, behind a taller building.
   A roof sign whose foot would be hidden is taken off (45; 619 stand). Judge in the game: Old Town's tiled roofs, the

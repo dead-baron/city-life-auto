@@ -28827,3 +28827,30 @@ starts a ~5 hour redraw; he asked for them batched).
   world's hash).
 - Tests: `test/streetkit.test.js` (9), `test/nightlook.test.js` (3); `test/signclear.test.js` (the phone box 60 px).
 - Not seen: the awning's gap over a cash machine in a bake (unit-tested); anything on a phone.
+
+## 2026-11-28 · A hospital's front is a hospital's (the owner's N20; the concept SC2-D)
+An art change, on branch `fable-art-1127` with the street kit - **not merged, the same batch waiting for his word**.
+His note of 11-22: "the design of the hospital (and maybe all of them) is off. It looks like an apartment building
+from the outside. The front of the hospital is one long glowing side of the building and it glows so hard that it
+washes out whatever the name/text is." By the data: 12 front sections of the hospital kind carry the emblem - the three
+big hand-planned hospitals (St. Neon General, the Old Town Infirmary, Northshore Medical Center), six built from one
+18 x 12 plan (Westport General, Southbank Medical, Westside, Cedar Falls, Sandpiper Bay, Lucky Mesa General) and the
+towns' clinics. Every one had an apartment row's sashes - curtains, flower boxes, cats on sills; the three big ones
+also the district's awnings, washing lines, posters and AC units.
+- **Ward windows** (`buildings.js` `wardWin`, `spec.win` 'ward'): three lights in a slim pale metal frame with a
+  transom, blinds part down, each floor's row tied into a ribbon by a head and a sill line; no lintel, box or curtain.
+  After dark a cool, even light at 78-104 of 255 (a sash: 114-180, warm) - calm enough for the frames to read.
+- **Pale precast panels** (`spec.panels`): clean, a joint every 48 px and at each floor, for the stained concrete.
+- **A glazed stair tower** with the emblem at its head (`spec.stair`, `stairTower`), where there is 46 px of wall
+  beside the doors on a front of 170 px or more. **The lobby glazed**: the ground floor's sashes are ward lights.
+- **In a district's own stone or brick** (the Old Town Infirmary): the sashes stay, plain (`spec.sober`: blinds or
+  nothing, a cool light, no shutter, box or AC) - no glass tower on an old infirmary.
+- **No home's dressing on a hospital** (`facadedress.js` `dressPlan`), and a district's hand plan no longer undoes any
+  of this (`statics.js`, after the hand plan is applied); the set-back upper block has its wards too.
+- **The red light over the doors**: 140 px at 1.2 -> 100 px at 0.55 (`HOSP_SIGN_LIGHT`); the name's white panel glows
+  less since the night signs' fix.
+- The lint: `hospitalFront` 0 of 8 fronts over one storey (`tools/placementlint.mjs`). Tests:
+  `test/hospitalfront.test.js` (5). Pictures: `report-100`.
+- Not done from his note: the map's badge over the canopy's H (the page's badge rule - logged for the Opus chat);
+  see-through windows (the note's own answer: no for the beta). Not seen: a ward by a player on a phone.
+
