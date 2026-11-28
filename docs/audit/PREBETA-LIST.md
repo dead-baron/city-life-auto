@@ -487,6 +487,11 @@ bus stop, then they should go flying off while the bench or object they're on ge
   Station Road, ...)" - the stations' roads count as tracks there. It fails the same on branch `fable-art-1124` before
   its world change (commit bef7671), so it comes from the world batch, not the art. Not checked on `main` itself.
 - Cars jammed nose to tail on Coral Cay's jungle track (seen twice in the water recorder's films of the rainforest).
+  **Checked 11-27 night (Opus), not reproduced:** `tools/trafficsim.mjs --players '' --wild '' --at 4400,3452` (a
+  player on Cay Road, Coral Cay's road into the jungle; new `--at` option), seeds 7, 3, 11, 6-8 minutes each: no jam
+  cluster, no car stuck there over 20 s; a few corner cuts where Cay Road meets Harbor Street (the narrower road on
+  the wider) and at Cay Road's dead end (4456,3446: cars turning round). The films' cars may have been the recorder's
+  own; reopen with a film's place and time if it shows again.
 
 ## Vehicles in shallow water (owner, 11-24 21:40 - noted for the pre-beta; a game rule, not art)
 "I've noticed that when vehicles hit water they instantly sink ... it would be a better experience if vehicles can hit
@@ -572,6 +577,9 @@ the tools, the plans and everything unreleased.
   waiting before the v3 server is up (220 s) and does not get past the first-time question ("What brings you to
   town?"), so the art pass's pictures are offline renders. A dev switch to skip the first-time flow and a longer
   server wait would give real game pictures of any place.
+  **Done 11-27 night:** `--v3` (starts World v3's server - one bake thread, only what the page asks for - and waits
+  for it) and `--skip-intro` (the starting look, the station card, the arrival and the question): e.g.
+  `python3 tools/playtest.py --start-server --v3 --skip-intro tp:104000,53400 wait:25000 shot:v3.png` - about 6 minutes.
 - **The swimmer's water effect** (02:00): "the water fx when a playeer swims looks like a placeholder, it doesnt match
   the art style of the game or how other objects react to water" - thin smooth white rings trailing behind the
   swimmer (anti-aliased circles), where boats have pixel wakes and foam. Art: for the water pass's leftovers
