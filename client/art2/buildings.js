@@ -26,7 +26,7 @@
 import { MAT, ramp as ramp0 } from './palette.js';
 import { GBuf, hash, vnoise, bayer, step, F_GLASS, F_LEAF } from './gbuf.js';
 import { drawText, textWidth } from './font.js';
-import { layoutSign, paintBoard, paintLine, lineMask, palOf, legible, boardFor, picBitmap } from './signfont.js';
+import { layoutSign, paintBoard, paintLine, lineMask, palOf, legible, boardFor, picBitmap, glowOf } from './signfont.js';
 import { DOOR_COLS } from '../../shared/doors.js';
 import { dressFacade } from './facadedress.js';
 
@@ -97,7 +97,7 @@ function wallColor(style, u, v, seed, x, y, big = vnoise(u, v, 30, seed), mid = 
   }
   if (PANELS) {   // (spec.panels: pale precast panels, clean, a joint every 48 px and at each floor - a hospital's wall)
     const R = WALLC || MAT.concrete, joint = u % 48 === 0 || v % FLOOR === 0;
-    return step(R, joint ? 0.52 : 0.82 + (big - 0.5) * 0.08 - (h < 0.03 ? 0.06 : 0), x, y, 0.25);
+    return step(R, joint ? 0.48 : 0.74 + (big - 0.5) * 0.08 - (h < 0.03 ? 0.06 : 0), x, y, 0.25);
   }
   const R = WALLC ? WALLC : style === 'diner' ? MAT.diner : style === 'purple' ? MAT.stuccoPurple : style === 'peach' ? MAT.stuccoPeach : style === 'teal' ? MAT.stuccoTeal : style === 'concrete' ? MAT.concrete : MAT.stucco;
   let t = 0.55 + (big - 0.5) * 0.22 + (mid - 0.5) * 0.12 + (h > 0.95 ? 0.1 : 0) - (h < 0.03 ? 0.12 : 0);
@@ -191,6 +191,9 @@ function loftWin(G, x0, y0, w, h, lit, seed) {
 // building from the outside"; the concept SC2-D): a wide three-light window in a slim pale metal frame with a transom,
 // blinds part down in some lights, no stone lintel, no flower box, no curtain - and after dark the cool even light of
 // a ward, calm enough that the frame still reads.
+// (a ward's light [top of a light, its foot, through a blind] of 255: three channels high bloom to white at half a
+// sash's strength - 78-104 was a row of white blobs in the running game at night, 11-28)
+const WARD_GLOW = [14, 20, 8];
 const WARD_GLASS = ramp('#3d5560', 6, 3), WARD_LIT = ramp('#c9dde2', 5, 2), WARD_FRAME = ramp('#d6dadc', 5, 2), WARD_BLIND = ramp('#eef0ea', 5, 2);
 function wardWin(G, x0, y0, w, h, lit, seed) {
   const pw = (w - 1) / 3;
@@ -207,7 +210,7 @@ function wardWin(G, x0, y0, w, h, lit, seed) {
     else if (lit && !GLOW_ONLY) c = step(WARD_LIT, 0.5 + (y / h) * 0.3, X, Y, 0.4);
     else c = step(WARD_GLASS, 0.44 + (streak ? 0.32 : 0) + (y < 3 ? 0.1 : 0), X, Y, 0.4);
     setC(G, X, Y, c);
-    if (lit) glow(G, X, Y, [206, 230, 240, blind ? 44 : 78 + (y / h) * 26]);
+    if (lit) glow(G, X, Y, [190, 222, 236, blind ? WARD_GLOW[2] : WARD_GLOW[0] + (y / h) * (WARD_GLOW[1] - WARD_GLOW[0])]);
     G.flag[Y * G.w + X] |= F_GLASS;
   }
   for (let x = -1; x < w + 1; x++) { setC(G, x0 + x, y0 + h, step(WARD_FRAME, 0.85, x0 + x, 0, 0)); setN(G, x0 + x, y0 + h, [0, 0.5, 0.86]); }
@@ -222,7 +225,7 @@ function stairTower(G, x0, w, fy, v0, v1, night, seed) {
     if (edge || mull || landing) { setC(G, X, Y, step(WARD_FRAME, edge ? 0.4 : 0.62, X, Y, 0)); continue; }
     const streak = ((x + v) % 13) < 2, flight = ((v - v0) % 20) < 2 + (x * 16 / w) && ((v - v0) % 20) > (x * 16 / w) - 2;   // (the stair's flights behind the glass)
     setC(G, X, Y, flight ? step(WARD_FRAME, 0.3, X, Y, 0.2) : step(WARD_GLASS, 0.34 + (streak ? 0.36 : 0), X, Y, 0.4));
-    if (night > 0 && !flight) glow(G, X, Y, [206, 230, 240, 40 + night * 30]);
+    if (night > 0 && !flight) glow(G, X, Y, [190, 222, 236, 16 + night * 16]);
     G.flag[Y * G.w + X] |= F_GLASS;
   }
 }
@@ -910,7 +913,7 @@ export function liveDoor(G, x0, y0, w, h, style, night, c = 0) {
 // shop a pawnbroker's guitars, a clinic a row of bottles). A trade not here keeps its front's own window.
 export const GOODS_OF = {
   pharmacy: ['pharmacy'], gunshop: ['gunshop'], hardware: ['hardware'], barber: ['barber'], sports: ['sports'], tackle: ['tackle'], bakery: ['bakery'],
-  clinic: ['clinic', 'lobby'], jeweller: ['jeweller'], marine: ['tackle', 'lobby'], laundromat: ['laundry'], books: ['books'], records: ['records'],
+  clinic: ['clinic'], hospital: ['clinic'], jeweller: ['jeweller'], marine: ['tackle', 'lobby'], laundromat: ['laundry'], books: ['books'], records: ['records'],
   florist: ['florist'], gallery: ['gallery'], salon: ['salon'], tattoo: ['salon'], liquor: ['liquor'], pawn: ['pawn'], arcade: ['arcade'],
   boutique: ['clothes'], outdoor: ['clothes', 'mart'], street: ['clothes', 'arcade'], surf: ['clothes'],
   // (food and drink: any of their three rooms, as the front was planned - a tiki bar's counter, a sports bar that sells coffee)
@@ -1171,7 +1174,7 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     setC(G, x, y, c);
     // lit from inside: the glow carries the room's own colours (warmed), so after dark the interior reads through the
     // glass - shelves, the counter, the booths - rather than one flat bright pane (2026-10-09, R1-C/E)
-    glow(G, x, y, [Math.min(255, c[0] * 0.75 + 50), Math.min(255, c[1] * 0.7 + 36), Math.min(255, c[2] * 0.6 + 18), 22 + night * 74]);
+    glow(G, x, y, [Math.min(255, c[0] * 0.75 + 50), Math.min(255, c[1] * 0.7 + 36), Math.min(255, c[2] * 0.6 + 18), (22 + night * 74) * glowOf(c)]);   // (a pale room's light the least - a clinic's, a gallery's, a laundry's window was a white bar after dark that washed out the name over it: 11-28, St. Neon General)
     if (hot) glow(G, x, y, hot);
     G.flag[y * G.w + x] |= F_GLASS;
   }
@@ -1642,7 +1645,7 @@ function medSign(G, x0, y0, s, night, k = 'hospital') {
     const h = clinic ? (Math.abs(x + 0.5 - c) < s * 0.13 || Math.abs(y + 0.5 - c) < s * 0.13) && Math.abs(x + 0.5 - c) < s * 0.36 && Math.abs(y + 0.5 - c) < s * 0.36
       : inner && ((x + 0.5 > a && x + 0.5 < a + t) || (x + 0.5 > b - t && x + 0.5 < b) || (x + 0.5 >= a && x + 0.5 <= b && Math.abs(y + 0.5 - c) < t * 0.55));
     const col = clinic ? (h ? [246, 246, 240] : [34, 128, 84]) : h ? [212, 40, 44] : [244, 242, 236];
-    setC(G, x0 + x, y0 + y, col); G.glow(x0 + x, y0 + y, [...col, 30 + night * 120]);
+    setC(G, x0 + x, y0 + y, col); G.glow(x0 + x, y0 + y, [...col, (30 + night * 120) * glowOf(col)]);   // (its white the least: signfont.js glowOf)
   }
 }
 

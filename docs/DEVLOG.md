@@ -28839,7 +28839,9 @@ towns' clinics. Every one had an apartment row's sashes - curtains, flower boxes
 also the district's awnings, washing lines, posters and AC units.
 - **Ward windows** (`buildings.js` `wardWin`, `spec.win` 'ward'): three lights in a slim pale metal frame with a
   transom, blinds part down, each floor's row tied into a ribbon by a head and a sill line; no lintel, box or curtain.
-  After dark a cool, even light at 78-104 of 255 (a sash: 114-180, warm) - calm enough for the frames to read.
+  After dark a cool, even light at 14-20 of 255 (a sash: 114-180, warm). Tuned in the running game: at 78-104 and
+  again at 44-60 the lights were a row of white blobs - a pale colour, three channels high, blooms to white at a
+  fraction of a warm one's strength; at 14-20 a pale blue with the frames and blinds showing.
 - **Pale precast panels** (`spec.panels`): clean, a joint every 48 px and at each floor, for the stained concrete.
 - **A glazed stair tower** with the emblem at its head (`spec.stair`, `stairTower`), where there is 46 px of wall
   beside the doors on a front of 170 px or more. **The lobby glazed**: the ground floor's sashes are ward lights.
@@ -28848,7 +28850,15 @@ also the district's awnings, washing lines, posters and AC units.
 - **No home's dressing on a hospital** (`facadedress.js` `dressPlan`), and a district's hand plan no longer undoes any
   of this (`statics.js`, after the hand plan is applied); the set-back upper block has its wards too.
 - **The red light over the doors**: 140 px at 1.2 -> 100 px at 0.55 (`HOSP_SIGN_LIGHT`); the name's white panel glows
-  less since the night signs' fix.
+  less since the night signs' fix. The window lights on the pale wall 1 -> 0.55 and 0.4 -> 0.18; the emblem's white
+  field glows by `glowOf`. Seen at night in the running game: Westport General (the name reads; the wall warm under
+  the street lamps, not white).
+- **A hospital's lobby is not a hotel's**: its ground-floor window showed the hotel lobby's marble, gold light and
+  chandeliers; a hospital's and a clinic's front now shows the clinic's room (`buildings.js` `GOODS_OF`).
+- **A pale shop interior glows less** (`glowOf` on every shop window's light): a clinic's, a gallery's, a laundry's
+  white room was a white bar after dark that bled over the name above it - at St. Neon General that bar ran the
+  whole front (his "one long glowing side"). Seen there at night after the change: the band is a lit lobby, the
+  name over it reads, faintly; the wards above a pale blue.
 - The lint: `hospitalFront` 0 of 8 fronts over one storey (`tools/placementlint.mjs`). Tests:
   `test/hospitalfront.test.js` (5). Pictures: `report-100`.
 - Not done from his note: the map's badge over the canopy's H (the page's badge rule - logged for the Opus chat);

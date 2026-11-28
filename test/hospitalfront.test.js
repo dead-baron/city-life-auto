@@ -18,12 +18,12 @@ const front = (G) => { const o = []; for (let y = G.h - 4 * 56; y < G.h; y++) fo
 const wards = (G) => { const o = []; for (let y = G.h - 4 * 56; y < G.h - 62; y++) for (let x = 40; x < G.w; x++) o.push(y * G.w + x); return o; };
 
 test('ward windows: cool, calm light after dark - an apartment\'s sashes glow warm and twice as strong', () => {
-  const lit = (G) => { let n = 0, warm = 0, max = 0; for (const i of wards(G)) { const a = G.emi[i * 4 + 3]; if (a < 20) continue; if (G.emi[i * 4] === 212 && G.emi[i * 4 + 1] === 40) continue; n++; if (G.emi[i * 4] > G.emi[i * 4 + 2] + 30) warm++; max = Math.max(max, a); } return { n, warm, max }; };
+  const lit = (G) => { let n = 0, warm = 0, max = 0; for (const i of wards(G)) { const a = G.emi[i * 4 + 3]; if (a < 6) continue; if (G.emi[i * 4] === 212 && G.emi[i * 4 + 1] === 40) continue; n++; if (G.emi[i * 4] > G.emi[i * 4 + 2] + 30) warm++; max = Math.max(max, a); } return { n, warm, max }; };
   const a = lit(flat), b = lit(ward);
   assert.ok(a.warm > a.n * 0.5 && a.max >= 150, `the sashes: mostly warm, strong (${JSON.stringify(a)})`);
   assert.ok(b.n > a.n, `more glass lit (${b.n} px against ${a.n})`);
   assert.equal(b.warm, 0, 'no warm window on a ward');
-  assert.ok(b.max <= 110, `calm enough for the frames to read (the strongest ${b.max})`);
+  assert.ok(b.max <= 24, `a pale light blooms to white at a fraction of a sash's strength: 78-104 of 255 was a row of white blobs in the running game, 14-20 a pale blue with the frames showing (the strongest ${b.max})`);
 });
 
 test('no flower box, curtain or cat in a ward window; the wall clean panels', () => {

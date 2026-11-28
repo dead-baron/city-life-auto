@@ -1483,7 +1483,7 @@ function specOf(c, b, A, s, D) {
         if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', cx: dx0 + dw0 / 2, v: 58, bg: '#c8343a', fg: [250, 246, 240], lit: true, face: 'civic' }); spec.cross = { x: stair ? 10 : 14, v: 80, top: stair, s: 22, k: /CLINIC|INFIRMARY/i.test(b.name || named || '') ? 'clinic' : 'hospital' }; lights.push([w / 2, 14, 40, HOSP_SIGN_LIGHT[0], [1, 0.5, 0.5], HOSP_SIGN_LIGHT[1], 'sign']); }   // (the sign: a clinic's white cross on green, a hospital's red H)
         if (A === 'police') lights.push([w / 2, 14, 60, 120, [0.4, 0.6, 1], 1, 'sign']);
       }
-      lights.push([w / 2, 12, 34, 110, [1, 0.9, 0.75], 1, 'window']); upperLights(fl, 0.4);
+      lights.push([w / 2, 12, 34, 110, [1, 0.9, 0.75], A === 'hospital' ? 0.55 : 1, 'window']); upperLights(fl, A === 'hospital' ? 0.18 : 0.4);   // (a hospital's pale panels under the same lights washed white)
       break;
     }
     case 'church': {

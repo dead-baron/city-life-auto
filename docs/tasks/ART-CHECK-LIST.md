@@ -250,8 +250,9 @@ last leap over the top of a falls; the other fish's leaps.
   Pier Street Shops), a yellow neon name a blob (Vinyl & More, Midtown). Both read now. Picture: `report-99`.
   Judge in the game at night: Pier Street Shops; Midtown's high street.
 - [ ] **Lit windows at night - YOUR PICK** (11-27): A, as live - every lit window a flat pale pane; B, rooms - a
-  calmer glow with the curtains, blinds, the plant or the cat on the sill dark against it, the lamp brightest.
-  Picture: `report-97` (top A, bottom B). B is built and switched off (`buildings.js` `ROOM_LOOK`); say A or B.
+  calmer glow with the curtains, blinds, the plant or the cat on the sill dark against it, the lamp brightest; C,
+  the same at half B's strength - soft panes, the lamps as points, a darker street. Picture: `report-97` (A, B, C
+  from the top). Built and switched off (`buildings.js` `ROOM_LOOK`, `ROOM`); say A, B or C.
 - [ ] **The phone box and the ATM booth** (11-27; the shared kit's audit): the phone box redrawn (aluminium and glass,
   a lit blue header with a handset); the 49 cash machines that stood alone on a sidewalk now stand in a glass booth
   with a lit ATM header; an awning leaves a gap over a cash machine in a shop's front. Judge in the game: Midtown's
