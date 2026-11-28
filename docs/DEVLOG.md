@@ -28750,3 +28750,12 @@ The 44 px boxes round the figure in the Inventory upright (PR #64) stood each sl
 character - sized by the stand's width - filled only 58-66% of it on a 360-390 phone (`test/invlayout.test.js`: "at
 least 70%", the owner's 11-16 "super short"). Upright on a phone the slots' names are off now, as on a short screen
 already: each box's glyph says what goes in it. The 44 px stay.
+
+## 2026-11-27 night · The playtest tool takes pictures of World v3 in the running game
+`tools/playtest.py` gave up before World v3's server was up and stopped at the first-time question (pre-beta list,
+11-25), so the art pass's pictures were offline renders. Now `--v3` starts the server on World v3 (`CLA_WORLD=v3`,
+one bake thread and nothing baked in the background - only the chunks the page asks for) and waits for it (900 s),
+and `--skip-intro` gets a new character into the city: "Play as" the starting look, the station card, the arrival
+and the question skipped (the question's menu closed). About six minutes from nothing to the first picture; checked
+at Midtown's station. And `tools/trafficsim.mjs --at tx,ty` stands its players at any tile (Coral Cay's track checked
+with it: no jam on three seeds).

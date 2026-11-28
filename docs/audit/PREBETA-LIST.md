@@ -577,6 +577,9 @@ the tools, the plans and everything unreleased.
   waiting before the v3 server is up (220 s) and does not get past the first-time question ("What brings you to
   town?"), so the art pass's pictures are offline renders. A dev switch to skip the first-time flow and a longer
   server wait would give real game pictures of any place.
+  **Done 11-27 night:** `--v3` (starts World v3's server - one bake thread, only what the page asks for - and waits
+  for it) and `--skip-intro` (the starting look, the station card, the arrival and the question): e.g.
+  `python3 tools/playtest.py --start-server --v3 --skip-intro tp:104000,53400 wait:25000 shot:v3.png` - about 6 minutes.
 - **The swimmer's water effect** (02:00): "the water fx when a playeer swims looks like a placeholder, it doesnt match
   the art style of the game or how other objects react to water" - thin smooth white rings trailing behind the
   swimmer (anti-aliased circles), where boats have pixel wakes and foam. Art: for the water pass's leftovers
