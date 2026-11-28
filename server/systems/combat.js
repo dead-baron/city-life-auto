@@ -97,7 +97,7 @@ export function tryAttack(world, ped, aim) {
   let hitAny = false;
   const hits = new Map(); // ped -> { n pellets, dmg, a, dist }: a blast lands on each person as one hit
   for (let k = 0; k < pellets; k++) {
-    const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0) * (1 - skills.pedBonus(ped, 'shooting'));   // (a steadier aim: skills.js)
+    const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0) * (1 - skills.pedBonus(ped, 'shooting')) * (ped.npc && ped.npc.aimK || 1);   // (an NPC's own aim: COP_LEVEL, GUARD_AIM)   // (a steadier aim: skills.js)
     if (hitscan(world, ped, w, a, hits)) hitAny = true;
   }
   for (const [t, h] of hits) shotHits(world, t, ped, w, h);
@@ -295,7 +295,7 @@ function arrowDrop(world, t, w, g) {
 // A bow: the arrow flies (stepArrow), the string twangs - nobody but someone right beside you hears it, and the
 // animals don't take it for a gunshot - and the next arrow is nocked if there is one.
 function loose(world, ped, w, aim) {
-  const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0) * (1 - skills.pedBonus(ped, 'shooting'));
+  const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0) * (1 - skills.pedBonus(ped, 'shooting')) * (ped.npc && ped.npc.aimK || 1);   // (an NPC's own aim: COP_LEVEL, GUARD_AIM)
   const sx = ped.x + Math.cos(a) * 16, sy = ped.y + Math.sin(a) * 16;
   const proj = world.spawnProjectile(ped.id, sx, sy, a, w.speed || 800, w.range, w.id);
   if (proj) proj.lz = ped.lz || 0;

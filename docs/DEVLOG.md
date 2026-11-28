@@ -28592,3 +28592,31 @@ A kayak drove like a motorboat - flat out at 300, the rider standing up in it in
 - A world-graph change (physics.js): the world3 / art3 keys move - shipped with the `ads` merge's re-bake, one for both.
 Tests: `kayak.test.js` (5: the surge and glide, the glide and astern, slow turning, the stroke phase, the rider's frames),
 `hidden.test.js` (the race back, the switch still hides), bikes, boats, horses, wade, sound, people, perf, core.
+
+## 2026-11-27 · NPC reactions, part 3: skill tiers for the police and guards
+The design's tiers - rookie (1-2 stars, a desk cop), regular (3), veteran (4, an armored truck's crew), SWAT (5) - in
+how they fight on foot (`COP_LEVEL` aim / drawS / gap / cover; `GUARD_AIM`):
+- **Aim:** an NPC's shots spread by `aimK` times the weapon's (combat.js) - rookies 1.6, regulars 1, veterans 0.75,
+  SWAT 0.55; an armored truck's crew 0.75, a desk cop who draws 1.5.
+- **Draw:** the weapon up and on you this long before an officer's first shot (step 4) - 1.4 s at one star, 0.3 s at
+  five - again after a second off you; then a shot every gap (0.4-0.75 s for rookies, 0.18-0.35 s for SWAT).
+- **Cover:** from three stars a share of the shooters (half at 3, 0.8 at 4, all at 5; fixed per officer) get behind a
+  car first against a gun and fire over it in bursts - part 2's cover, for the police too (react.js coverFight).
+- They already scaled with stars in their driving, their reactions, their pace on foot and the cuffs; now in a fight too.
+Tests: `npcreact.test.js` (11: + the tiers run rookie to SWAT; a loose aim hits less than a tight one), police,
+arrests, gameplay, unlocks, struggle, custody, wanted ladder, streetlife, brawls, reactions, police air, indoor chase.
+
+
+## 2026-11-27 · NPC reactions, part 4: the road
+The ladder at the wheel (`npc.js` onVehicleHit, now called for a bump from your car too - vehicles.js's crash path - as
+well as your weapon on theirs). By the driver's temperament (react.js temper):
+- **Bumped:** a timid one honks and drives off in a panic; anyone else stops (`ai.holdUntil`, `REACT.roadArgueS`
+  3.5 s - traffic.js holds the throttle), a long honk and a word out of the window ("Hey! Watch it!", `REACT.lines.road`).
+  Bumped by you again inside `REACT.memoryS`: a tough one gets out to have it out (the foot ladder - squared up, a word,
+  then the fight); the rest drive off in a panic.
+- **Their car hit with a weapon or shot:** the timid and the ordinary floor it; a tough one gets out the second time;
+  an armed one stops, gets out and draws (step 4, not firing yet). A hot head (`npc.fight`: a biker, a drunk spoiling
+  for it) still gets out and comes for you the first time, as before.
+- One knock, one reaction (a scrape is several contacts: 1.5 s); a cop, a medic or a rail guard only drives off.
+Tests: `npcreact.test.js` (13: + bumped once and again by temperament; a tough driver out to have it out, an armed one
+out and drawn), vehdamage, slips, carhits, core, traffic box, passers-by, racers, motorbikes, bikes, carts, arrests.

@@ -206,13 +206,18 @@ export const LENIENCY = { star: 36, cop: 2, holdS: 45, fade: 0.4 };
 // long the heat cools at the faster rate (was 20 s at every level), and cools this many times faster; exitS: you made a
 // break for it out of the back of their car - the crew take this long to get out after you. Numbers, 1 -> 5 stars:
 // a 1-star car tops out near a fast sedan's cruise (520) rather than a sports car's, 0.6 s behind your turns.
+// (the NPC reaction ladder's skill tiers, part 3 - the owner's go 11-27: how they fight on foot, by stars - rookies at
+// 1-2, regulars at 3, veterans at 4, SWAT at 5. aim: their shots' spread, a share of the weapon's (combat.js aimK);
+// drawS: the weapon up before the first shot; gap: seconds between shots [min, max]; cover: the share of them who get
+// behind a car first when you have a gun - react.js coverFight; police.js)
 export const COP_LEVEL = [null,
-  { drive: 0.72, react: 0.6, ram: false, foot: 0.9, drain: 0.8, cuffS: 5.5, lostS: 8, cool: 1.8, exitS: 2.4 },
-  { drive: 0.78, react: 0.5, ram: false, foot: 0.93, drain: 0.7, cuffS: 5, lostS: 10, cool: 1.6, exitS: 2 },
-  { drive: 0.86, react: 0.35, ram: false, foot: 0.97, drain: 0.5, cuffS: 4.5, lostS: 14, cool: 1.3, exitS: 1.5 },
-  { drive: 1, react: 0, ram: true, foot: 1, drain: 0.35, cuffS: 4, lostS: 20, cool: 1, exitS: 0.8 },
-  { drive: 1, react: 0, ram: true, foot: 1, drain: 0.35, cuffS: 4, lostS: 20, cool: 1, exitS: 0.6 },
+  { drive: 0.72, react: 0.6, ram: false, foot: 0.9, drain: 0.8, cuffS: 5.5, lostS: 8, cool: 1.8, exitS: 2.4, aim: 1.6, drawS: 1.4, gap: [0.4, 0.75], cover: 0 },
+  { drive: 0.78, react: 0.5, ram: false, foot: 0.93, drain: 0.7, cuffS: 5, lostS: 10, cool: 1.6, exitS: 2, aim: 1.4, drawS: 1.2, gap: [0.35, 0.7], cover: 0 },
+  { drive: 0.86, react: 0.35, ram: false, foot: 0.97, drain: 0.5, cuffS: 4.5, lostS: 14, cool: 1.3, exitS: 1.5, aim: 1, drawS: 0.8, gap: [0.25, 0.6], cover: 0.5 },
+  { drive: 1, react: 0, ram: true, foot: 1, drain: 0.35, cuffS: 4, lostS: 20, cool: 1, exitS: 0.8, aim: 0.75, drawS: 0.5, gap: [0.22, 0.45], cover: 0.8 },
+  { drive: 1, react: 0, ram: true, foot: 1, drain: 0.35, cuffS: 4, lostS: 20, cool: 1, exitS: 0.6, aim: 0.55, drawS: 0.3, gap: [0.18, 0.35], cover: 1 },
 ];
+export const GUARD_AIM = { mall: 1.5, armored: 0.75 };   // (a shop's or mall's guard: a rookie's aim; an armored truck's crew: a veteran's)
 export const copLevel = (stars) => COP_LEVEL[Math.max(1, Math.min(5, stars | 0))];
 // Escaping custody puts you up a star (ESCAPE_STARS) - not two or three as its heat used to (CRIMES.escape's 25) - and
 // throwing an officer off before the cuffs (struggle.js) is resisting arrest, which does too; but from 1-2 stars neither
@@ -1592,6 +1597,7 @@ export const REACT = {
   // step 5, cover (part 2): an armed one fighting someone with a gun gets behind a still car within coverPx first, then
   // fires over it - crouched coverDuckS, up and shooting coverFireS (up, they can be hit: a shot just over the car finds
   // them - combat.js); the fight further off than coverFar, the other with no gun, the car moved: out of cover
+  roadArgueS: 3.5,           // a bump on the road (part 4): stopped this long, the horn and a word - again and they floor it, or (tough, armed) get out
   coverPx: 150, coverFar: 520, coverDuckS: 1.1, coverFireS: 1.5, coverRetryS: 4,
   sayGap: 1.6, sayNear: 300, saySame: 2,   // word bubbles: no more than this many within this many px in this many seconds
   lines: {
@@ -1600,5 +1606,6 @@ export const REACT = {
     draw: ['Drop it!', 'Back off - now!', 'Don\'t make me do this!'],
     aim: ['Don\'t shoot!', 'Please - easy!', 'Whoa whoa whoa!'],
     hide: ['Get down!', 'Somebody call the cops!'],
+    road: ['Hey! Watch it!', 'Are you blind?!', 'Learn to drive!', 'Unbelievable...'],
   },
 };

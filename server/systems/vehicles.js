@@ -215,8 +215,8 @@ function resolveVehicleHit(world, a, b, hit) {
     // careering off at full speed, blind to what's ahead - into the next car, the next crowd: the owner's notes, 10-22,
     // "cars jammed in a spot, fights break out")
     const pa = !!(da && da.player), pb = !!(db && db.player);
-    if (a.ai && (pa || pb)) npc.onVehicleHit(world, a, aFaster ? null : db);
-    if (b.ai && (pa || pb)) npc.onVehicleHit(world, b, aFaster ? da : null);
+    if (a.ai && (pa || pb)) npc.onVehicleHit(world, a, aFaster ? null : db, 'bump');
+    if (b.ai && (pa || pb)) npc.onVehicleHit(world, b, aFaster ? da : null, 'bump');
     if (!pa && !pb) slips.bumped(world, a, b, impact);   // (one of the city's drivers into the back of another: on, words, or blows - slips.js)
   }
 }

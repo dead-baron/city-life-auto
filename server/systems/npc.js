@@ -28,7 +28,7 @@ import * as music from './music.js';
 import * as activities from './activities.js';
 import * as burning from './burning.js';
 import * as react from './react.js';   // (the reaction ladder: warn, run / hide / call, draw, fight - 11-27)
-import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS, CROWD_CAP } from '../../shared/rules.js';
+import { REACT, GUARD_AIM, NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS, CROWD_CAP } from '../../shared/rules.js';
 import { FLY } from '../../shared/flight.js';
 import { WEAPONS } from '../../shared/items.js';
 import { fenceCrossed } from '../../shared/fences.js';   // (an aircraft up in the air: over all this, untouched)
@@ -714,7 +714,7 @@ export function onAttacked(world, ped, attacker) {
   if (n.bouncer !== undefined && n.bouncer !== null && n.state !== 'limp') { nightclubs.bouncerHurt(world, ped, attacker); return; }   // (a nightclub's bouncer: they all come for you - nightclubs.js, task #432)
   if (n.desk) { // staff behind a counter: a desk cop fights back, everyone else runs
     n.desk = null; n.keep = false;
-    if (n.role === 'cop') { ped.weapon = 'pistol'; startFight(world, ped, attacker, 30); } else flee(world, ped, attacker.x, attacker.y, 10);
+    if (n.role === 'cop') { ped.weapon = 'pistol'; n.aimK = GUARD_AIM.mall; startFight(world, ped, attacker, 30); }   // (a desk cop: a rookie's aim - rules.js GUARD_AIM) else flee(world, ped, attacker.x, attacker.y, 10);
     return;
   }
   if (n.role === 'cop' && attacker.npc && attacker.npc.role === 'gang') { gangwar.copAttackedByGang(world, ped, attacker); return; }
@@ -743,21 +743,34 @@ export function onCarjacked(world, driver, jacker) {
   else if (!react.incident(world, driver, jacker, T >= 2 ? 2 : 1, 'carjack')) startFight(world, driver, jacker, 16);
 }
 
-export function onVehicleHit(world, v, attacker) {
+export function onVehicleHit(world, v, attacker, cause = 'weapon') {
   if (!v.ai) return;
-  v.ai.panicUntil = world.time + 10; // drive frantic and panicked
-  // someone damaging the car with a weapon (combat.js: law.vehicleDamaged has made it a crime): its driver, by temperament,
-  // stops and gets out to fight them - or drives off in a panic (and, the victim, most likely calls it in: law.witnesses)
+  const now = world.time;
+  // the road's reaction ladder (react.js, part 4 - the design: "honk, swerve, stop and get out to argue; drive off in a
+  // panic; ..."): who's at the wheel, by temperament - a bump from your car, or your weapon on theirs
   const drv = v.seats[0] ? world.get(v.seats[0]) : null, n = drv && drv.npc;
-  if (!n || n.driven || drv.dead || !attacker || attacker === drv || attacker.kind !== K.PED || attacker.vehId === v.id) return;   // (n.driven: another system steers them - a scene's actor on its script, director.js)
-  if (n.role === 'cop' || n.role === 'medic' || n.role === 'railguard' || world.time - (n.vandalAt ?? -99) < 8) return;
-  n.vandalAt = world.time;
-  if (Math.hypot(v.vx, v.vy) < VEH_CRIME.stopPx && rng() < (n.fight || 0) * VEH_CRIME.fight) {
+  const panic = () => { v.ai.panicUntil = now + 10; };   // (drive frantic and panicked)
+  if (!n || n.driven || drv.dead || !attacker || attacker === drv || attacker.kind !== K.PED || attacker.vehId === v.id) { panic(); return; }   // (n.driven: another system steers them - a scene's actor on its script, director.js; no one to blame - they hit you: off in a hurry)
+  if (n.role === 'cop' || n.role === 'medic' || n.role === 'railguard') { panic(); return; }
+  const T = react.temper(world, drv), slow = Math.hypot(v.vx, v.vy) < VEH_CRIME.stopPx;
+  const again = n.roadBy === attacker.id && now - (n.roadAt ?? -99) < REACT.memoryS;
+  if (now - (n.roadAt ?? -99) < 1.5 && n.roadBy === attacker.id) return;   // (one knock: one reaction - a scrape is several contacts)
+  n.roadBy = attacker.id; n.roadAt = now;
+  v.hornUntil = now + (T === 0 ? 0.5 : 1.2);   // (a honk - a long one if they've something to say)
+  // shot at, or the car smashed with a weapon: the timid and the ordinary floor it; the tough too, unless they're stopped
+  // and it's the second time; an armed one stops and gets out to draw
+  // (a hot head - npc fight, a biker, a drunk spoiling for it - stops and gets out the first time, as ever)
+  const hot = cause === 'weapon' && slow && T < 3 && rng() < (n.fight || 0) * VEH_CRIME.fight;
+  const out = hot || (slow && (cause === 'weapon' ? T === 3 || (T === 2 && again) : T >= 2 && again));
+  if (out) {
     v.ai = null; v.despawnable = true; v.input = { throttle: 0, steer: 0, hb: true };   // (left in the road: cleared like any abandoned car)
     vehicles.ejectPed(world, drv, false);
     n.role = 'civ';
-    startFight(world, drv, attacker, 16);
+    if (hot || !react.incident(world, drv, attacker, 2, 'hit')) startFight(world, drv, attacker, 16);   // (on foot: the ladder - squared up and a word, or drawn - then the fight)
+    return;
   }
+  if (cause === 'bump' && slow && T >= 1 && !again) { v.ai.holdUntil = now + REACT.roadArgueS; react.say(world, drv, 'road'); return; }   // (step 2 on the road: stopped, the horn, a word out of the window)
+  panic();   // (step 3: off in a panic)
 }
 
 export function onGunfire(world, x, y, shooter, radius = 360) {
