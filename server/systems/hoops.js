@@ -36,6 +36,7 @@ export function start(world, p, k) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.carrying) return 'Not right now.';
   p.hoops = { k, streak: 0, made: 0, shots: 0, ball: 0, charge: -1, aim: 0 };
+  world._playTick = -1;   // (the half court in play now: playareas.js)
   world.notify(p, 'You pick up a ball. Hold the attack button and let go when the meter is in the green band - it\'s narrower further out.', 'info');
   p.meDirty = true;
   return null;
@@ -47,6 +48,7 @@ export function stop(world, p, say) {
   const b = H.ball && world.get(H.ball);
   if (b && !b.removed) world.remove(b);
   p.hoops = null;
+  world._playTick = -1;
   if (say && H.shots) world.notify(p, `You put the ball down: ${H.made} of ${H.shots}.`, 'info');
   p.meDirty = true;
 }
