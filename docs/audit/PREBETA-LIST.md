@@ -180,7 +180,7 @@ an interior, so a world update: batch it with the next one).
 - **Kayak**: sit in it, paddle strokes and the paddling feel (a stand-up paddleboard optional).
 - **Skateboard**: carry it off rough ground and hop back on; remove the stand-in "thrown board"; one story for a snap.
 - **Tennis**: rackets in hand with a swing.
-- **Pool (Rusty Spur)**: pixel balls, the banner off the table, balls/cards drawn on the table, the camera frozen.
+- **Pool (Rusty Spur)**: ~~pixel balls, the banner off the table, balls/cards drawn on the table~~ (done 11-27, the Fable art chat: DEVLOG 11-27 "The Rusty Spur's pool table"), the camera frozen (open: page logic); the wall sign RIDE DRINK REPEAT (open: `shared/shoprooms.js`, with the next world/art batch).
 - **Casino and card tables**: real table minigames with players and NPCs seated (blackjack, roulette, poker) - or
   hidden for the beta.
 - **Car soccer**: the boost flame (small); the SNES art pass (ball, pads, goals, scoreboard). Replay removed 11-17.
@@ -621,7 +621,7 @@ its something that can wait lets make note of it and revisit at the right time."
   before anything is built.
 
 **Game rules and features - logged, not for the art pass:**
-- **Boom Tester**: a punching animation, the shot leaving flaming or glowing hands; it should blow up most vehicles in
+- **Boom Tester**: ~~a punching animation, the shot leaving flaming or glowing hands~~ (done 11-27: DEVLOG); it should blow up most vehicles in
   one or two hits ("A rocket or explosive or grenade or boom tester should blow up most vehicles in a single hit,
   maybe two it's three if it's especially armored"); and two versions - today's, to which NPCs do not react and which
   earns no record, and one that "acts as a real in game weapon" with NPCs reacting as to gunfire.

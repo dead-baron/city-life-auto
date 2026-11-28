@@ -56,7 +56,9 @@ import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
 import { WEAPONS, BLADE_COLORS, hexRgb } from '../../../shared/items.js';
-import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape, parachuteSprite, fountainSprite, FOUNTAIN_FRAMES, FOUNTAIN_S, partSprite } from './liveart.js';   // (flags in the wind, umbrellas' canopies, fountains' water)
+const BOOM_I = WEAPONS.boomtest.i, BOOM_COL = [1, 0.62, 0.24], BOOM_LIFT = 6, BOOM_SIDE_Y = 0.3;   // (BOOM_SIDE_Y: seen from the side, a figure's two arms are drawn near its middle line - the far and the near hand are not a body's width apart down the screen)   // (BOOM_LIFT: the glow raised in depth only - y and z0 both - so the hand's own arm doesn't cover it)
+const BOOM_HANDS = { idle: [2, 8, 12], aim: [12, 3, 24], back: [1, 7, 18], punch: [[5, 4, 23], [12, 3, 25], [16, 2, 25]] };
+import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape, parachuteSprite, fountainSprite, FOUNTAIN_FRAMES, FOUNTAIN_S, partSprite, handGlow } from './liveart.js';   // (flags in the wind, umbrellas' canopies, fountains' water)
 const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand, _lights)
 
 export { DECK_Z };
@@ -1883,7 +1885,11 @@ export class World2 {
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
     // felling a tree (d.ch: server felling.js): the axe swung, the chainsaw held out; the lantern carried by its bail
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
-    const wpn = L.board || L.surf || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : p.d.ph === 3 ? 'phoneSelfie' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
+    let wpn = L.board || L.surf || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : p.d.ph === 3 ? 'phoneSelfie' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
+    // (the Boom Tester, shared/items.js boomtest: nothing in the hands - they glow, and a shot is thrown as a punch:
+    // main.js pedPose; _boomHands below)
+    const boomH = wpn === BOOM_I;
+    if (boomH) wpn = 0;
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined) || p.d.gt === 'emote') && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : q === 'pushup' || q === 'situp' ? repFrame(p, now) : q === 'cue' && Pd.cueFrame ? Pd.cueFrame(p, p.id) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
@@ -1922,6 +1928,7 @@ export class World2 {
     E.drawSprite(sk, (car ? car.rx + snapTo(p.rx - car.rx, ap) : p.rx) + hx, (car ? car.ry + snapTo(p.ry - car.ry, ap) : p.ry) + hy + dl, z0 + dl, o);
     o.under = 0;
     this.n.drawn++;
+    if (boomH && !lying && !car) this._boomHands(p, now, z0, ppose, pf);
     if (sky && p.chute) {   // the canopy over them, its span across the way they're drifting (liveart.js parachuteSprite)
       const q = ((Math.round(p.ra / (Math.PI / 4)) % 8) + 8) % 8, k = p.id & 1, ck = this._conv(`chute|${q}|${k}`, () => parachuteSprite(q, k), true);
       if (ck) { o.flash = 0; E.drawSprite(ck, p.rx, p.ry, z0 + 30, o); this.n.drawn++; }
@@ -1942,6 +1949,24 @@ export class World2 {
         else E.drawSprite(uk, p.rx, p.ry, z0 + 44 - drop, o);
       }
     }
+  }
+  // The Boom Tester's glowing hands: an ember on each (liveart.js handGlow), the throwing hand's a flare as the punch
+  // goes out; where the hands are, by the pose (BOOM_HANDS: [reach ahead, out to the side, height] px - the people's
+  // art, measured by eye off its idle, aim and punch poses); each lights what's round it (_lights).
+  _boomHands(p, now, z0, ppose, pf) {
+    const a = p.ra || 0, ca = Math.cos(a), sa = Math.sin(a), o = this.opts, E = this.E;
+    const punch = ppose === 'punch', fr = punch ? pf % 3 : 0, side = punch && pf >= 3 ? -1 : 1;
+    const H = punch ? BOOM_HANDS.punch[fr] : ppose === 'aim' || ppose === 'aimw' ? BOOM_HANDS.aim : BOOM_HANDS.idle;
+    const fl = Math.floor(now * 9 + p.id) & 1;
+    o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; o.air = true;
+    for (const s of [1, -1]) {
+      const thrown = punch && s === side, h = thrown ? H : punch ? BOOM_HANDS.back : H, k = thrown && fr > 0 ? 2 : fl;
+      const x = p.rx + ca * h[0] - sa * h[1] * s, y = p.ry + sa * h[0] + ca * h[1] * s * BOOM_SIDE_Y, key = this._conv(`bhand|${k}`, () => handGlow(k), true);
+      if (key) { E.drawSprite(key, x, y + BOOM_LIFT, z0 + h[2] + BOOM_LIFT, o); this.n.drawn++; }
+      const L = this.boomL[this.nBoomL] || (this.boomL[this.nBoomL] = [0, 0, 0, 0, 0]);
+      L[0] = x; L[1] = y; L[2] = z0 + h[2]; L[3] = k === 2 ? 150 : 64; L[4] = k === 2 ? 1.5 : 0.7; this.nBoomL++;
+    }
+    o.air = false; o.shadow = true;
   }
   // Someone the plasma blade cut in two: the body as it lies, in two halves a little apart, the cut edges seared
   // (peds.js pedSprite opt.cut; both halves keep the body's anchor). false while the halves are still being made (the
@@ -2319,10 +2344,24 @@ export class World2 {
     this.E.drawSprite(sk, x, y, z0, o); this.n.drawn++;
   }
 
+  // A small thing lying on a table or set in a machine's face (a pool table's balls, the casino's cards, chips, wheels
+  // and reels: client/poolview.js, casinoview.js make the sprites and say where): in the scene at its own height, so a
+  // head nearer the camera covers it and the room's light falls on it - the owner, 11-17: they "float over the scene
+  // instead of sitting on the table". tint [r, g, b] 0..1; alpha < 1 a dithered fade.
+  tableSpr(key, make, x, y, z, tint = null, alpha = 1) {
+    const k = this._conv(key, make, true);
+    if (!k) return false;
+    const o = this.opts; o.alpha = alpha; o.flash = 0; o.xray = false; o.shadow = false; o.tint = tint; o.flipX = false; o.air = false;
+    this.E.drawSprite(k, x, y, z, o); this.n.drawn++;
+    o.alpha = 1; o.tint = null; o.shadow = true;
+    return true;
+  }
+
   // ---- the moving things on screen -------------------------------------------------------------------------
   _entities(F) {
     const S = this.S, now = F.now, A = this.A && this.A.crateKey ? this.A : null;
     this.opts = this.opts || { alpha: 1, flipX: false, flash: 0, xray: false, shadow: true, tint: null };
+    this.boomL ||= []; this.nBoomL = 0;   // (the Boom Tester's hands, lit in _lights)
     const meVeh = S.pred && S.pred.kind === 'veh' ? S.ctrlId : -1;
     for (const v of F.vehs) { this.sprPrio = v.id === meVeh ? -3 : -1; this._veh(v, now, v.id === meVeh); }
     for (const p of F.peds) { this.sprPrio = p.id === S.myPedId ? -3 : -1; this._ped(p, now, p.id === S.myPedId, F); }
@@ -2330,6 +2369,7 @@ export class World2 {
     this.sprPrio = -1;
     for (const c of F.cars) this._train(c, now, F.myTrain);
     if (!F.sub) { this._rides(F, now); this._forage(F); }   // (under the city: none of the surface's rides or finds)
+    if (!F.sub && (S.poolView || S.casView)) try { if (S.poolView && S.poolView.scene) S.poolView.scene(this, F); if (S.casView && S.casView.scene) S.casView.scene(this, F); } catch (e) { if (!this._tblErr) { this._tblErr = 1; console.warn('[art2] table games', e); } }   // (the games on the tables: tableSpr)
     if (A) {
       for (const c of F.crates) {
         const st = c.flags & 3;
@@ -2940,6 +2980,7 @@ export class World2 {
     for (let j = 0; j < hs.length; j += 2) { const h = hs[j], i = hs[j + 1], c = h.L[i]; this._light(c[0] + h.nx * 8, c[1] + h.ny * 8, c[2], 56, SIG_RGB01[i], sigK); }
     for (const h of S.sigHeads || []) if (!this._liveAt(h.x, h.y)) this._light(h.x, h.y, 44, 56, h.rgb01 || (h.rgb01 = rgbOf(h.c).map((v) => v / 255)), sigK);
     for (let j = 0; j < this.nfL; j++) { const L = this.fLights[j]; this._light(L.x, L.y, L.z, L.r, L.col, L.k); }
+    for (let j = 0; j < (this.nBoomL | 0); j++) { const L = this.boomL[j]; this._light(L[0], L[1], L[2], L[3], BOOM_COL, L[4]); }   // (the Boom Tester's hands)
     // flashlights: police on foot after dark (switched on as it gets dark, eased); a player's whenever it's
     // switched on (d.fl), brightest at night
     const copK = smooth((night - 0.25) / 0.3);
