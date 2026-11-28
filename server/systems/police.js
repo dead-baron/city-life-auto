@@ -13,6 +13,7 @@ import { mulberry32, hash2 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc, seek, startFight, footWay, clearWalk, walkInAt, sidestep, flee, backOff, markBrawl, holding } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
 import * as players from './players.js';
+import * as react from './react.js';   // (cover for the regulars and up: the reaction ladder's step 5)
 import * as combat from './combat.js';
 import * as law from './law.js';
 import * as vehicles from './vehicles.js';
@@ -848,7 +849,18 @@ function runUnit(world, v, dt) {
       const los = world.map.los(c.x, c.y, t.x, t.y);
       const open = los && clearWalk(world.map, c.x, c.y, t.x, t.y);   // (a dive needs the floor clear to them: not over a shop's counter - npc.js roomWay walks round it)
       const aimAt = (q) => { q.aim = Math.atan2(t.y - c.y, t.x - c.x); q.bits |= IN.AIMING; return q; };
-      const shoot = (q) => { aimAt(q); if (now > (n.nextShot || 0)) { q.bits |= IN.FIRE; n.nextShot = now + 0.25 + rng() * 0.6; } return q; };
+      // (their tier - COP_LEVEL by stars: rookies slow to draw and loose, SWAT quick and tight; the weapon up drawS before
+      // the first shot - the reaction ladder's step 4 - then a shot every gap)
+      const L = copLevel(p.wanted);
+      n.aimK = L.aim;
+      const shoot = (q) => {
+        aimAt(q);
+        if (now - (n.aimedAt ?? -9) > 1) n.drawnAt = now;
+        n.aimedAt = now;
+        if (now - n.drawnAt >= L.drawS && now > (n.nextShot || 0)) { q.bits |= IN.FIRE; n.nextShot = now + L.gap[0] + rng() * (L.gap[1] - L.gap[0]); }
+        return q;
+      };
+      let covered = false;
       const after = (x, y) => { const wp = footWay(world, c, x, y); return seek(c, wp.x, wp.y, true); };   // (in through a door)
       // on them while they're down: they go for the cuffs - and a wanted player fights back (struggle.js; a second officer
       // joins in, a third stands by)
@@ -864,9 +876,13 @@ function runUnit(world, v, dt) {
         } else if (n.tactic === 'fire' && d < 340 && los) inp = shoot(d > 180 ? seek(c, t.x, t.y, true) : { bits: 0, mx: 0, my: 0, aim: 0 });
         else inp = seek(c, t.x, t.y, true);
       } else if (n.tactic === 'fire' && d < 340 && los && !held) {
+        // (from 3 stars a share of them - more the higher it goes - get behind a car first against a gun and fire over
+        // it: react.js coverFight; COP_LEVEL cover)
+        const ci = !down && coverShare(c.id) < L.cover ? react.coverFight(world, c, t, d, Math.atan2(t.y - c.y, t.x - c.x), now, true) : null;
+        if (ci) { covered = true; inp = ci.bits & IN.FIRE ? shoot({ ...ci, bits: ci.bits & ~IN.FIRE }) : ci; }
         // open fire - up close (not at 5 stars), still a dive to bring them down (not while a colleague's wrestling them:
         // then over to help)
-        if (p.wanted <= 4 && !down && d <= 22 && now > (n.nextDive || 0)) inp = grab(world, c, t, now);
+        else if (p.wanted <= 4 && !down && d <= 22 && now > (n.nextDive || 0)) inp = grab(world, c, t, now);
         else if (p.wanted <= 4 && !down && d < TACKLE_PX && d > 22 && open && now > (n.nextDive || 0)) inp = dive(c, t, now);
         else inp = shoot(d > 180 ? seek(c, t.x, t.y, true) : { bits: 0, mx: 0, my: 0, aim: 0 });
       } else if (n.tactic === 'taser') {
@@ -885,6 +901,7 @@ function runUnit(world, v, dt) {
           if (d < 24) { inp.mx *= 0.2; inp.my *= 0.2; }
         }
       } else inp = after(t.x, t.y);
+      if (!covered && n.cover) react.dropCover(c);   // (out of the fire tactic, or no cover to be had: out from behind it)
       // gangs open fire on cops in their turf
       if (isTurf(world.map, c.x, c.y) && world.tick % 40 === c.id % 40) {
         for (const g of world.query(c.x, c.y, 420, K.PED)) if (g.npc && g.npc.role === 'gang' && !g.dead) startFight(world, g, c, 20);
@@ -933,3 +950,6 @@ function standDown(world, v, crew, dt) {
     driveToward(world, v, v.ai.route[0].x, v.ai.route[0].y, 260, {});
   }
 }
+
+// an officer's own share for taking cover (COP_LEVEL cover: under it they do) - fixed for them, seeded by who they are
+function coverShare(id) { let h = Math.imul(id ^ 0x5bd1e995, 0x27d4eb2f); h ^= h >>> 15; return (h >>> 0) / 4294967296; }

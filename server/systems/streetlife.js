@@ -22,7 +22,7 @@ import { localToWorld } from '../../shared/math.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { IN } from '../../shared/input.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { STREET_EVERY_S, STREET_RACE_COPS, ARMORED_ESCORT, ARMORED_UNLOCK_S, ARMORED_ASSESS_S, CRATE_PAY } from '../../shared/rules.js';
+import { STREET_EVERY_S, STREET_RACE_COPS, ARMORED_ESCORT, ARMORED_UNLOCK_S, ARMORED_ASSESS_S, CRATE_PAY, GUARD_AIM } from '../../shared/rules.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, startFight } from './npc.js';
 import { enterEdge, joinTraffic } from './traffic.js';
@@ -203,7 +203,7 @@ function armoredRun(world, spot, to, opts = {}) {
   const van = driven(world, 'armored', spot, 0, 0, 'cop', { goal });
   const guard2 = spawnNpc(world, 'cop', van.x, van.y, 'driver');
   guard2.vehId = van.id; guard2.seat = 1; van.seats[1] = guard2.id; guard2.npc.keep = true;
-  for (const g of [world.get(van.seats[0]), guard2]) { g.weapon = opts.arms || (rng() < 0.5 ? 'smg' : 'pistol'); g.npc.armored = van.id; }
+  for (const g of [world.get(van.seats[0]), guard2]) { g.weapon = opts.arms || (rng() < 0.5 ? 'smg' : 'pistol'); g.npc.armored = van.id; g.npc.aimK = GUARD_AIM.armored; }   // (a veteran's aim: rules.js GUARD_AIM)
   let load = opts.load;
   if (!load) { load = []; for (let i = 3 + Math.floor(rng() * 3); i > 0; i--) { const r = rng(); load.push(r < 0.15 ? 3 : r < 0.6 ? 2 : 1); } }
   let escort = 0;
@@ -424,7 +424,7 @@ function guardsOut(world, ev, van, by) {
     ev.back = 0;
     const [x, y] = localToWorld(van.x, van.y, van.a, -van.def.L / 2 - 18, 0);
     const g = spawnNpc(world, 'cop', x, y, 'civ');
-    g.weapon = 'smg'; g.npc.keep = true; g.npc.armored = van.id;
+    g.weapon = 'smg'; g.npc.keep = true; g.npc.armored = van.id; g.npc.aimK = GUARD_AIM.armored;
     ev.guards.push(g.id);
   }
   for (const [i, g] of guards(world, ev).entries()) {
