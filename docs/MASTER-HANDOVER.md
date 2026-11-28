@@ -139,7 +139,8 @@ paddled (`PADDLE`) and the River Run back. world3 ef04748631c8, art3 b07b1089bc7
 https://claude.ai/artifact/WhvB5uuRFxGnzBB2Zjf7dx: A corners and a right-hand arc - recommended -, B one top bar, C the
 map by the left thumb); then build it. Making the repo private (his steps).
 **Still open (not started):** phone wires (a world change - ask first); the Rusty Spur's pool, the Boom Tester's throw
-(art); cars left driverless in a box; the doorway hop (renderer); the feature walkthrough, then the launch steps.
+(art); the feature walkthrough, then the launch steps. (Done 11-27 evening: the doorway hop - you're drawn at the door
+until the cut-away is; cars left driverless in a box - re-measured, doesn't come back: GRIDLOCK-TESTS.)
 
 **DONE 11-26 evening (the Opus 5.5 chat): the art batch is merged to `main` and live** - the gate passed: the roofs rendered and kept (before/after on the two streets), the whole suite on c7ae6cb (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`: no failure of the batch's own), a look in a running World v3 game at 1280x720 and phone size. The server re-bakes for about five hours. Next in this chat: the remaining beta items (`docs/audit/PREBETA-LIST.md`). The block below is the record of how it was taken live.
 **TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of

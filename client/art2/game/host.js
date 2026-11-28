@@ -30,6 +30,7 @@ const TURRET_TOP = 47;   // (_turret)
 // props that are bushes (never a tree), bucketed BUSH_CELL px; the leaves' colours (green, the desert's grey-green)
 const PUSH_N = 8;   // (engine.js PUSH_N: uPush's slots)
 const KNOCK_S = 20, BURST_GAP = 3, BUSH_CELL = 256, BUSH_PROPS = new Set(['shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c']), BUSH_LEAF = ['#5f8a3a', '#7a9a48', '#869a80', '#4e7a34'];
+export const DOOR_LIFT = 600;   // (px of depth over a walk-in's front and roof while its cut-away isn't drawn yet: _ped - taller than any walk-in)
 const VEH_XRAY_LOW = 80;   // (px over a vehicle's ground: what's no taller than this never outlines it - _veh)
 import { WorkerPool, takeWarmPool, isPhone, SPRITE_LANE, laneBudget } from './pool.js';
 import { canopyGrid } from './canopy.js';
@@ -1912,7 +1913,13 @@ export class World2 {
     const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
     const z0 = (sky ? sky * SKY_LIFT : (car ? 0 : this._z0(p, L.swimming)) + lift) + extraZ, ap = E.ap || 1;
     o.under = L.swimming && underDeckAt(this.map, p.rx, p.ry) ? UNDER_Z : 0;   // (swimming under a bridge or the highway's deck)
-    E.drawSprite(sk, (car ? car.rx + snapTo(p.rx - car.rx, ap) : p.rx) + hx, (car ? car.ry + snapTo(p.ry - car.ry, ap) : p.ry) + hy, z0, o);
+    // (stepping into a walk-in before its cut-away is drawn: the shop's front and roof are still the street's picture, and
+    // under the depth test you went behind them - an outline up over the front, then down into the shop when the cut-away
+    // landed: the hop at the door, the owner 11-25. Meanwhile you're drawn over its picture, where you stand: the sprite
+    // raised by DOOR_LIFT in depth only, its place on screen the same - y and z0 both up by it)
+    const dl = me && !car && !sky && F.insideB && F.insideB.walkIn && !this.insideReady(F.insideB) ? DOOR_LIFT : 0;
+    if (dl) { o.xray = false; o.shadow = false; }
+    E.drawSprite(sk, (car ? car.rx + snapTo(p.rx - car.rx, ap) : p.rx) + hx, (car ? car.ry + snapTo(p.ry - car.ry, ap) : p.ry) + hy + dl, z0 + dl, o);
     o.under = 0;
     this.n.drawn++;
     if (sky && p.chute) {   // the canopy over them, its span across the way they're drifting (liveart.js parachuteSprite)

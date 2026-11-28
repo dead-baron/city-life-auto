@@ -28640,3 +28640,13 @@ left thumb) the owner picked A ("For portrait phone layouts I think A works the 
   over the move stick at every width. hudlayout (every state, every size: nothing overlaps, the prompt clear of every
   button and of you), touchslots, acticons, touchair, uikit, uitokens, chat, emotes, jobway, fishing, perf, portrait.
 
+
+## 2026-11-27 · The hop at a walk-in's door, fixed (the owner, 11-25 00:22: the gun shop and the hardware store)
+Diagnosed 11-26: stepping onto a walk-in's doorway counts as inside at once, but until the shop's cut-away is baked the
+street's picture of it stays drawn - and under the depth test you went behind its front and roof: your outline up over
+the front, then down into the shop when the cut-away landed. Now, while you're inside one whose cut-away isn't drawn yet,
+your figure is drawn over the building's picture where you stand - raised in depth only (`host.js` _ped, `DOOR_LIFT`:
+y and z0 up alike, so its place on screen is the same; no outline, no shadow cast from up there). Once the cut-away is on
+screen you're drawn as ever. No world or art change (no re-bake). Test: `precut.test.js` (+1).
+Also re-measured the gridlock follow-up (cars left driverless in a box): twelve runs on main, worst 22.5 s - it doesn't
+come back; closed with the numbers (`docs/tasks/GRIDLOCK-TESTS-2026-11-27.txt`).
