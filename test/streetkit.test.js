@@ -116,3 +116,30 @@ test('a hammock\'s bed is a person\'s length whatever the span: ropes go the res
   assert.ok(c.cloth <= HAMMOCK_BED + 2 && c.cloth >= HAMMOCK_BED - 3, `120 px between palms: the bed no longer (${c.cloth} px of cloth)`);
   assert.ok(c.rope > 80 && c.wood < a.wood, `ropes for the rest, no posts of its own (${JSON.stringify(c)})`);
 });
+
+// A tower across the street drawn up over the shops facing it (found 11-27: the Grand Neon Hotel over the Bench & Bar):
+// faded, it showed the ground before any building - the shop a bare lot from its own kerb. The under layer keeps a
+// building's picture over its own footprint where another building is on top (chunkbake.js underKeep).
+test('a faded tower shows the shop under its picture, not a bare lot: the under layer keeps each building over its own footprint', async () => {
+  const { underKeep, compositeDepth } = await import('../client/art2/game/chunkbake.js');
+  const { GBuf } = await import('../client/art2/gbuf.js');
+  const W = 64, H = 64, G = new GBuf(W, H); G.z.fill(0);
+  for (let i = 0; i < W * H; i++) { G.col[i * 4] = 90; G.col[i * 4 + 1] = 90; G.col[i * 4 + 2] = 90; G.col[i * 4 + 3] = 255; }
+  const spr = (w, h, col, z) => { const s = new GBuf(w, h); for (let i = 0; i < w * h; i++) { s.col[i * 4] = col[0]; s.col[i * 4 + 1] = col[1]; s.col[i * 4 + 2] = col[2]; s.col[i * 4 + 3] = 255; s.z[i] = z; } return s; };
+  // a lamp in front of the shop (not a building), then the snapshot, then the shop (rows 10..30) and the tower over all
+  const lamp = spr(2, 6, [250, 240, 100], 30); compositeDepth(G, lamp, 30, 22, 0);
+  const under = G.col.slice(), uz = G.z.slice(), bid = new Uint8Array(W * H);
+  const shop = spr(20, 26, [200, 60, 40], 12), tower = spr(40, 60, [60, 60, 70], 200);
+  compositeDepth(G, shop, 20, 4, 0, bid, 1); compositeDepth(G, tower, 10, 0, 0, bid, 2);
+  const n = underKeep(under, uz, bid, W, H, [[shop, 20, 4, 0, 1, [20, 14, 40, 30]], [tower, 10, 0, 0, 2, [10, 40, 50, 60]]]);
+  const at = (x, y) => [...under.slice((y * W + x) * 4, (y * W + x) * 4 + 3)];
+  assert.ok(n > 200, `the shop's footprint part kept (${n} px)`);
+  assert.deepEqual(at(25, 20), [200, 60, 40], 'under the tower, inside the shop\'s footprint: the shop');
+  assert.deepEqual(at(25, 8), [90, 90, 90], 'the shop\'s picture north of its footprint: the ground, as it fades by itself');
+  assert.deepEqual(at(30, 24), [250, 240, 100], 'what stood in front of it and taller stays in front');
+  assert.deepEqual(at(15, 20), [90, 90, 90], 'beside the shop: the street');
+  assert.deepEqual(at(25, 50), [90, 90, 90], 'the tower\'s own footprint: nothing of it in the under layer (it is on top there, and stays)');
+  // the bake calls it
+  const { readFileSync } = await import('node:fs');
+  assert.match(readFileSync(new URL('../client/art2/game/chunkbake.js', import.meta.url), 'utf8'), /underKeep\(under, uz, bid, CHUNK, CHUNK, kept\)/);
+});

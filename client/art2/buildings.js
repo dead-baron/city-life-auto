@@ -101,6 +101,15 @@ function wallColor(style, u, v, seed, x, y, big = vnoise(u, v, 30, seed), mid = 
 }
 
 const GLASS_WARM = ramp('#4a4038', 6, 3);     // glass with a warm room behind it (glowOnly mode)
+// A lit window after dark (the shared kit's "lit rooms in windows"; 11-27, the running game at night: every lit sash a
+// flat pale pane - the room's light was laid over the curtains, the blinds, the cat on the sill and the frame's own bar
+// alike, and bloomed). ROOM_LOOK 'flat': that, as live. 'rooms': what is in the window shapes the light - the pane a
+// calmer glow (ROOM.pane of it), cloth lets part by (curtains, blinds), a plant, a cat, a lamp's foot none (dark shapes
+// against the room), the lamp's shade the brightest thing, paper on the glass a little. For the owner's pick (variants
+// shot 11-27); the bake's output is unchanged until it is 'rooms'.
+let ROOM_LOOK = 'flat';
+export function roomLook(v) { if (v === 'flat' || v === 'rooms') ROOM_LOOK = v; return ROOM_LOOK; }   // (set only by the tests and the variant shots)
+export const ROOM = { pane: 0.4, cloth: 0.2, solid: 0, lamp: 1.5, paper: 0.14 };
 // a sash window: frame, two panes with a reflection streak (or warm light when lit), a curtain
 function sash(G, x0, y0, w, h, lit, seed, opt = {}) {
   const fr = opt.frame || MAT.metalDark, warm = hash(x0, y0, seed) > 0.22;
@@ -111,26 +120,25 @@ function sash(G, x0, y0, w, h, lit, seed, opt = {}) {
     const edge = x === 0 || y === 0 || x === w - 1 || y === h - 1, mid = y === (h >> 1);
     if (edge || mid) { setC(G, X, Y, step(fr, (x === 0 || y === 0) ? 0.2 : 0.55, X, Y, 0)); continue; }
     const streak = ((x + (h - y)) % 9) < 2;
-    let c;
+    let c, e = null, ek = 1;   // (e: the room's light through this pixel; ek: how much of it what is in the window lets by)
     if (lit && GLOW_ONLY) {
       c = step(warm ? GLASS_WARM : MAT.glassDark, 0.34 + (streak ? 0.38 : 0) + (y < 3 ? 0.14 : 0), X, Y, 0.4);
-      const e = warm ? [255, 196, 118] : [176, 212, 244];
-      glow(G, X, Y, [e[0], e[1], e[2], 114 + (y / h) * 66]);
+      e = warm ? [255, 196, 118, 114 + (y / h) * 66] : [176, 212, 244, 114 + (y / h) * 66];
     } else if (lit) {
       c = step(warm ? ramp('#d8964e', 5, 2) : ramp('#5a8ec0', 5, 2), 0.45 + (y / h) * 0.35 + (streak ? 0.15 : 0), X, Y, 0.6);
-      const e = warm ? [255, 200, 120] : [150, 210, 255];
-      glow(G, X, Y, [e[0], e[1], e[2], 90 + (y / h) * 60]);
+      e = warm ? [255, 200, 120, 90 + (y / h) * 60] : [150, 210, 255, 90 + (y / h) * 60];
     } else c = step(MAT.glassDark, 0.3 + (streak ? 0.45 : 0) + (y < 3 ? 0.18 : 0), X, Y, 0.4);
     // curtains drawn to one side (or both: open in the middle)
-    if (curtain > 0.5 && (curtain > 0.93 ? x < 3 || x > w - 4 : curtain > 0.75 ? x < 3 : x > w - 4)) c = step(curtain > 0.85 ? ramp('#c86a6a', 5, 2) : ramp('#e0d8c8', 5, 2), lit ? 0.75 : 0.45, X, Y, 0.3);
+    if (curtain > 0.5 && (curtain > 0.93 ? x < 3 || x > w - 4 : curtain > 0.75 ? x < 3 : x > w - 4)) { c = step(curtain > 0.85 ? ramp('#c86a6a', 5, 2) : ramp('#e0d8c8', 5, 2), lit ? 0.75 : 0.45, X, Y, 0.3); ek = ROOM.cloth; if (e && ROOM_LOOK === 'rooms' && curtain > 0.85) e = [255, 150, 130, e[3]]; }
     // what's in the window (facadedress.js has the rest of the dressing): blinds half down, a plant, a cat on the sill,
     // a lamp, a flag or a poster stuck to the glass
-    else if (thing < 0.14 && y < h * 0.45 && y % 3) c = step(ramp('#e8e2d2', 5, 2), lit ? 0.8 : 0.5, X, Y, 0.3);
-    else if (thing < 0.24 && y > h - 7 && Math.abs(x - w / 2) < (y > h - 3 ? 2 : 3 + (x & 1))) c = y > h - 3 ? MAT.terracotta[3] : MAT.leaf[2 + ((x + y) & 3)];
-    else if (thing < 0.31 && y > h - 7 && x > 1 && x < 7 && !(y === h - 7 && (x === 3 || x === 4)) && !(y < h - 4 && x > 5)) c = [30, 26, 30];
-    else if (thing < 0.38 && x > w - 7 && x < w - 2 && (y > h - 4 || (y > h - 10 && y < h - 6))) c = y > h - 4 ? [60, 50, 44] : [250, 220, 160];
-    else if (thing < 0.44 && y > 2 && y < 8 && x > 1 && x < 9) c = thing < 0.41 ? [[200, 50, 50], [240, 240, 236], [50, 80, 160]][Math.floor((y - 3) / 2) % 3] : [226, 190, 80];
+    else if (thing < 0.14 && y < h * 0.45 && y % 3) { c = step(ramp('#e8e2d2', 5, 2), lit ? 0.8 : 0.5, X, Y, 0.3); ek = ROOM.cloth; }
+    else if (thing < 0.24 && y > h - 7 && Math.abs(x - w / 2) < (y > h - 3 ? 2 : 3 + (x & 1))) { c = y > h - 3 ? MAT.terracotta[3] : MAT.leaf[2 + ((x + y) & 3)]; ek = ROOM.solid; }
+    else if (thing < 0.31 && y > h - 7 && x > 1 && x < 7 && !(y === h - 7 && (x === 3 || x === 4)) && !(y < h - 4 && x > 5)) { c = [30, 26, 30]; ek = ROOM.solid; }
+    else if (thing < 0.38 && x > w - 7 && x < w - 2 && (y > h - 4 || (y > h - 10 && y < h - 6))) { c = y > h - 4 ? [60, 50, 44] : [250, 220, 160]; ek = y > h - 4 ? ROOM.solid : ROOM.lamp; }
+    else if (thing < 0.44 && y > 2 && y < 8 && x > 1 && x < 9) { c = thing < 0.41 ? [[200, 50, 50], [240, 240, 236], [50, 80, 160]][Math.floor((y - 3) / 2) % 3] : [226, 190, 80]; ek = ROOM.paper; }
     setC(G, X, Y, c);
+    if (e) glow(G, X, Y, ROOM_LOOK === 'rooms' ? [e[0], e[1], e[2], Math.min(255, e[3] * (ek === 1 ? ROOM.pane : ek))] : e);
     G.flag[Y * G.w + X] |= F_GLASS;
   }
   // stone lintel and sill (they face up: the sill catches light)

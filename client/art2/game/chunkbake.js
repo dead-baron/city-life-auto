@@ -192,6 +192,32 @@ const SCR = {};
 function scratchCopy(k, src) { let a = SCR[k]; if (!a || a.length !== src.length) a = SCR[k] = new src.constructor(src.length); a.set(src); return a; }
 function scratchZero(k, n) { let a = SCR[k]; if (!a || a.length !== n) a = SCR[k] = new Uint8Array(n); else a.fill(0); return a; }
 
+// What a faded building shows: the under layer. A building's picture over its own footprint never fades (engine.js
+// uFoot) - so where ANOTHER building's picture lies on top of it there (a tower across the street drawn up over the
+// shops facing it), the under layer keeps that part of it. Found 11-27 at the Grand Neon Hotel (30 tiles tall, its
+// picture over the whole street and the row across it): faded, as it is for anyone on that street, the Bench & Bar
+// was a bare lot seen from its own kerb. list: [sprite, sx, sy, z0, its local number, its section's footprint in
+// chunk px] for each building section placed; uz: the heights under `under` (the chunk's before its buildings).
+export function underKeep(under, uz, bid, W, H, list) {
+  let n = 0;
+  for (const [s, sx, sy, z0, k, fp] of list) {
+    const S = s.ap2 ? 2 : 1, sc = s.col, sz = s.z;
+    const x0 = Math.max(0, sx, Math.round(fp[0])), y0 = Math.max(0, sy, Math.round(fp[1])), x1 = Math.min(W, sx + s.w * S, Math.round(fp[2])), y1 = Math.min(H, sy + s.h * S, Math.round(fp[3]));
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const di = y * W + x, top = bid[di];
+      if (!top || top === k) continue;   // (itself on top: the engine keeps it; nothing built on top: under has it right)
+      const si = (S === 2 ? ((y - sy) >> 1) * s.w + ((x - sx) >> 1) : (y - sy) * s.w + x - sx), sj = si * 4;
+      if (sc[sj + 3] < 255) continue;
+      const hz = sz[si] * S + z0;
+      if (hz < uz[di]) continue;
+      const dj = di * 4;
+      under[dj] = sc[sj]; under[dj + 1] = sc[sj + 1]; under[dj + 2] = sc[sj + 2]; uz[di] = Math.min(65535, Math.max(hz, 0));
+      n++;
+    }
+  }
+  return n;
+}
+
 // ---- the bake ---------------------------------------------------------------------------------------------
 // opt: { quality 0..3, seed, cutaway (building index), lowMem, groundCol (v1 ground pixels, RGBA), artPx (2: the
 // statics land on the art grid - the engine draws the chunk at 1 art pixel = 2 world px), scratch (a bake worker:
@@ -232,7 +258,8 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
   G.ax = 0; G.ay = 0;
   const gh = groundHeights(G, ox, oy);
   const t1 = now();
-  let items = [], lights = [], n = 0, made = 0, staticErr = null, under = null, bid = null;
+  let items = [], lights = [], n = 0, made = 0, staticErr = null, under = null, bid = null, uz = null;
+  const kept = [];
   const local = new Map(), blds = [];      // building index -> local number; [b, x0, y0, x1, y1, base] per number
   const live = { heads: [], xing: [], flags: [], fnt: [], doors: [] };
   if (P.statics) {
@@ -245,7 +272,7 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
     yield 'items';
     for (const it of items) {
       if (now() - ts > SLICE_MS) { yield 'statics'; ts = now(); }
-      if (snap && isBuilding(it)) { under = opt.scratch ? scratchCopy('under', G.col) : G.col.slice(); snap = false; bid = opt.scratch ? scratchZero('bid', CHUNK * CHUNK) : new Uint8Array(CHUNK * CHUNK); }
+      if (snap && isBuilding(it)) { under = opt.scratch ? scratchCopy('under', G.col) : G.col.slice(); uz = opt.scratch ? scratchCopy('uz', G.z) : G.z.slice(); snap = false; bid = opt.scratch ? scratchZero('bid', CHUNK * CHUNK) : new Uint8Array(CHUNK * CHUNK); }
       // each building gets a local number (1..63) in this chunk: the engine fades a whole building by it
       let k = 0;
       if (bid && isBuilding(it) && it.b !== undefined) {
@@ -266,7 +293,9 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
       // (on the art grid: whole art pixels of the world, so what a sprite paints in pairs of px stays whole)
       const sx = Math.round((it.x - (s.ax || 0)) / ag) * ag - ox, sy = Math.round((it.y - z0 - (s.ay || 0)) / ag) * ag - oy;
       n += compositeDepth(G, s, sx, sy, z0, k ? bid : null, k) ? 1 : 0;
+      if (k && uz && it.fp && it.fp[0] < it.fp[2] && it.recipe && it.recipe.t === 'b') kept.push([s, sx, sy, z0, k, [it.fp[0] - ox, it.fp[1] - oy, it.fp[2] - ox, it.fp[3] - oy]]);
     }
+    if (kept.length > 1) underKeep(under, uz, bid, CHUNK, CHUNK, kept);   // (a building under another's picture: kept in the under layer)
     for (const it of items) { // (once per item: the chunk its anchor is in)
       if (it.x < ox || it.x >= ox + CHUNK || it.y < oy || it.y >= oy + CHUNK) continue;
       if (it.heads) for (const h of it.heads) live.heads.push(signalLenses(it, h));

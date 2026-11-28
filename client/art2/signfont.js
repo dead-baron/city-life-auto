@@ -431,7 +431,12 @@ export function tradeOf({ name, kind, store, shop, A } = {}) {
 // [the light part, the dark part, the halo]: whichever of panel and ink is the lighter carries the glow, the darker
 // stays dark, so the words keep their contrast after dark (a lightbox's dark letters on its lit face; lit letters on a
 // dark board; a floodlit board lit all over, softly)
-const GLOW = { panel: [96, 0, 0], ink: [150, 12, 0], neon: [200, 0, 120], flood: [56, 20, 0], none: [0, 0, 0] };
+const GLOW = { panel: [96, 0, 0], ink: [150, 12, 0], neon: [200, 0, 64], flood: [56, 20, 0], none: [0, 0, 0] };
+// A lit face that is nearly white glows less: at night's exposure a white lightbox at full strength bloomed over its own
+// dark letters (11-27, the running game after dark: HOME & SPORTS a white bar, no words). glowOf: the share of its
+// mode's strength a face of that lightness keeps - all of it up to a mid tone, PALE_GLOW of it at white.
+export const PALE_GLOW = 0.22;
+export function glowOf(c) { const l = luminance(c); return Math.max(PALE_GLOW, Math.min(1, 1.45 - 1.4 * l)); }
 // paint a laid-out board (L: layoutSign's, P: a palette, o: { lit, night 0..1, bulbs }) with its top-left at world
 // (x0, y0) - snapped to even px - each art pixel a 2 x 2 block
 export function paintBoard(put, L, P, x0, y0, o = {}) {
@@ -440,7 +445,7 @@ export function paintBoard(put, L, P, x0, y0, o = {}) {
   const art = new Array(wA * hA);
   const emi = new Array(wA * hA).fill(null);
   const k = 0.55 + night * 0.65, panelLit = luminance(P.p) >= luminance(P.i);
-  const pe = P.neon || !G[0] ? null : [...P.p, Math.min(200, Math.round((panelLit ? G[0] * (lit === 'ink' ? 0.45 : 1) : G[1]) * k))];
+  const pe = P.neon || !G[0] ? null : [...P.p, Math.min(200, Math.round((panelLit ? G[0] * (lit === 'ink' ? 0.45 : 1) * glowOf(P.p) : G[1]) * k))];
   const ie = !G[0] ? null : [...P.i, Math.min(200, Math.round((P.neon ? G[0] : panelLit ? G[1] : G[0]) * k))];
   for (let y = 0; y < hA; y++) for (let x = 0; x < wA; x++) {
     const edge = x === 0 || y === 0 || x === wA - 1 || y === hA - 1;

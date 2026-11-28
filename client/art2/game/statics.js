@@ -10,7 +10,7 @@
 import { GBuf, toppleGBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
 import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox, openSignX, openSignW, flatPier, shopSignFits, PICSIGN, goodsOf } from '../buildings.js';
-import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, boardFor, paintBoard, paintLine, lineMask, rgbOf, TRADES, PIC_OF, PICS } from '../signfont.js';   // (wave A1: the sign faces, by trade)
+import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, boardFor, paintBoard, paintLine, lineMask, rgbOf, TRADES, PIC_OF, PICS, glowOf } from '../signfont.js';   // (wave A1: the sign faces, by trade)
 import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
 import * as P from '../props.js';
@@ -1121,7 +1121,7 @@ function styleSign(spec, c, b, A, s, named, lights, hand) {
   { const g = goodsOf(st.trade, spec.shop.kind); if (g !== spec.shop.kind) spec.shop.goods = g; }
   delete sg.bg; delete sg.fg;
   const col = pal.neon ? pal.h : st.lit === 'panel' && contrast(pal.p, [0, 0, 0]) > 8 ? pal.p : pal.i;
-  lights.push([spec.w / 2, 10, 60 + signLift(spec), 90, col.map((v) => 0.4 + (v / 255) * 0.6), SIGN_LIGHT[st.lit] || 0.5, 'sign']);
+  lights.push([spec.w / 2, 10, 60 + signLift(spec), 90, col.map((v) => 0.4 + (v / 255) * 0.6), (SIGN_LIGHT[st.lit] || 0.5) * (pal.neon ? 1 : glowOf(col)), 'sign']);   // (a pale face throws less: its own light washed its words out)
 }
 // a plaque that says what the front's sign already says: the same name, or a word of it (POLICE on GULL HARBOR POLICE)
 const nameKey = (t) => String(t || '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
