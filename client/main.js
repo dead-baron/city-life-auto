@@ -3538,6 +3538,10 @@ function prepFrame(dt) {
     const mine = S.me && S.me.ride && S.me.ride.k === 'balloon' ? S.rides.get(S.me.ride.id) : null;
     if (mine) { const t = nowS - mine.at; if (t > (mine.burn ?? 9) && t < mine.d - 14) { sfx('burner', 0.6); mine.burn = t + 11 + Math.random() * 8; } }
   }
+  // a game on its own screen (the pool table, chess, air hockey, a cabinet: the 'arcade' overlay): the camera holds where
+  // it was when the screen opened - at the pool table you're walked round it as you aim, and the world drifted behind
+  // the screen (the owner's Rusty Spur notes, 11-17: "freeze the camera while the pool game is open")
+  if (overlays.includes('arcade')) { S.camHold ||= { x: S.cam.x, y: S.cam.y }; S.cam.x = S.camHold.x; S.cam.y = S.camHold.y; } else S.camHold = null;
   // keep the camera over the world: the sea runs on past the map's edge as far as you can go (shared/border.js),
   // so it follows you out there; never past where nothing can go (the world's frame: the map's m.frame, a window's too)
   if (S.map) clampCam(S.cam, S.map.frame);

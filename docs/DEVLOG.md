@@ -28793,3 +28793,11 @@ and `--skip-intro` gets a new character into the city: "Play as" the starting lo
 and the question skipped (the question's menu closed). About six minutes from nothing to the first picture; checked
 at Midtown's station. And `tools/trafficsim.mjs --at tx,ty` stands its players at any tile (Coral Cay's track checked
 with it: no jam on three seeds).
+
+## 2026-11-27 night · The camera holds still while a game has its own screen (the Rusty Spur notes, 11-17)
+"Pool: the world camera drifts behind the table while you aim - freeze the camera while the pool game is open
+(others still see you walk round the table)" - the one pool note the art chat's tables pass left for page logic.
+While the 'arcade' overlay is open - the pool table, chess, air hockey, skee-ball, a cabinet, the race book, an
+instrument - the camera stays where it was when the screen opened (`main.js` `S.camHold`); it follows you again when
+the screen closes. Checked in a running game (`tools/playtest.py`, the old city): the screen opened, the player
+teleported 300 tiles - the camera stayed; Escape - it went to the player.

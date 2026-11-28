@@ -163,7 +163,9 @@ done - NPCs off courts in play, dancers spaced and out of fountains, animals out
 with the chase, the sidewalk pair by a door, leaners apart; shadows under small things in the air; headlights keep
 a quarter of the light cap; kayaks paddled (races hidden); skateboards carried off rough ground; My looks strip;
 desktop CSS-zoom clicks (checked, `test/csszoom.test.js`); the Inventory (live; its first open prefetched); the
-dock's "Jump in" (from the Rusty Spur notes); the Camera's clean screen; cinematic sound follows the camera.
+dock's "Jump in" (from the Rusty Spur notes); the Camera's clean screen; cinematic sound follows the camera; the pool
+game's balls, its words off the table, balls and cards drawn on the tables (the art chat, #69) and the camera held while
+its screen is open.
 **Open:** tennis rackets in hand (character art - the art chat); car soccer's boost flame and SNES pass (owner:
 post-beta unless cheap); casino / card table minigames (owner: build or hide); racing beyond the current track (design
 first); the director's NPC-at-games shots and P8's scripted cars (with the cinematics reshoot); living city events
