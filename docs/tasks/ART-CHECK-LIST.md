@@ -232,6 +232,14 @@ last leap over the top of a falls; the other fish's leaps.
 - [ ] **No people painted in shop windows** (11-26; your word of 12:40): the clerk at every till and the busts in the
   booths are gone from every shop front; mannequins stay. Judge in the game: any street - a window shows goods and
   no one standing still in it. The stadium's stands still have painted spectators: say if those go too.
+- [ ] **The pool table** (11-27; your notes of 11-17): the pool game's balls are numbered pixel balls (solids with a
+  white spot, stripes with a band), the shot's words are a fading line under the table, and in the bar the balls and
+  the cards sit on their tables - a head in front covers them. Picture: `report-95`. Judge in the game: play a frame
+  at the Rusty Spur; watch a game on the table from the door; the card table. The balls on the bar's table are two
+  art pixels each - say if they should be bigger than the table's scale allows.
+- [ ] **The Boom Tester** (11-27; your note of 11-25): nothing held, an ember on each hand, a shot thrown as a punch
+  with the hand flaring, the shot a ball of fire. Picture: `report-96`. Judge in the game: debug menu, Fire - the
+  hands when standing, walking, aiming.
 - [ ] **Signs on roofs** (11-26; your note of 11-22: "cut off through the roof"): 28 of 664 roof billboards and neon
   names had part of the board hidden - on a pitched roof, behind a smokestack or a tank, behind a taller building.
   A roof sign whose foot would be hidden is taken off (45; 619 stand). Judge in the game: Old Town's tiled roofs, the

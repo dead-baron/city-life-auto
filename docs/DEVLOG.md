@@ -28691,3 +28691,37 @@ shooting hoops on. Passers-by treat them as the skate parks: a wanderer's next w
 (npc.js pickWaypoint), one who finds themselves on one - a game started where they stood or were going - heads off it
 the nearest way (wander, idle), and nobody stops to idle on one. The game's own people (the club pro) play on as ever.
 The car soccer arena is walled already; a pool table is furniture (P7: lineHits). Test: `tennis.test.js` (+1).
+
+## 2026-11-27 · The Rusty Spur's pool table and the card tables as art; the Boom Tester thrown from glowing hands
+Page code only (the art's hash did not move: world3 ef04748631c8, art3 b07b1089bc7e as on main) - the Fable art chat,
+the night of 11-27, branch `tables-1127`.
+- **The pool game's balls** (the owner, 11-17: "Pool balls look like placeholders - redraw as SNES pixel balls
+  (numbers, stripes, shading, a cue ball)"; `client/pool.js` `ballPixels`): sixteen balls drawn pixel by pixel, 9 px
+  across - the colour's tones lit from the top left, a dark rim, a white glint; 1-8 the number dark in a white spot,
+  9-15 a wide band of the colour between white caps with the number on it (white; dark on the yellow and the orange);
+  a white cue ball that stays pale in its shade. A rolling ball turns its number under on every other half turn
+  (the cue ball shows a red spot). They were 9 px shaded discs with a white dot.
+- **The shot's words off the table** (his note: the banner "covers the table"): a line in the strip under the table,
+  right of the power gauge, fading out; the watchers' count moved up beside 8-BALL. A banner is still used where there
+  is a choice to make or the game is over.
+- **Balls and cards on the tables** (his note: they "float over the scene instead of sitting on the table: draw them in
+  the table's own world space ... under people's heads / over the felt, not as a screen overlay"): under art v2 the
+  bar tables' balls (`client/poolview.js` `scene`, `ballG`: two art pixels each, a stripe white over its colour) and
+  the casino's cards, chips, pot, roulette wheels and slot reels (`client/casinoview.js` `scene`, `Pieces`: the same
+  drawing code, each little rectangle handed over as a flat piece of art pixels) are sprites in the scene at their own
+  height (`art2/game/host.js` `tableSpr`, called from `_entities`): the depth test puts a head nearer the camera over
+  them and the room's light falls on them. The page's overlay holds off while the scene draws them and still serves
+  the classic view. Guarded: an error in it is logged once and never stops a frame.
+- **The Boom Tester** (the owner, 11-25: "a punching animation, the shot leaving flaming or glowing hands"): nothing
+  is held; an ember glows on each hand, flickering (`liveart.js` `handGlow`, `host.js` `_boomHands`: where the hands
+  are by the pose, each a small light); a shot is a punch (`main.js`: the 'shot' event of a boomtest starts the swing,
+  `pedPose` gives 'punch'), the throwing hand flaring; the shot is a ball of fire with a tail (`actors.js`
+  `fireballModel`), not the rocket. No gun's flash or tracer for it.
+- `tools/playtest.py`: a `mouse:X,Y[:MS]` step (aim and fire).
+- Looked at: the pool screen in a headless page (both modes); in a running World v3 game the Rusty Spur's room with a
+  game on its table and cards on its card table, and the Boom Tester held and thrown. Not looked at: the roulette
+  wheel and the slot reels in a casino (the same path as the cards); a phone.
+- Tests: `test/tableart.test.js` (4), `test/boomhands.test.js` (2); pool, poolmatch, poolnpc, casino, casinofloor,
+  arcade, art2, art2teleport, idlepose, muzzle, guide, perf pass.
+- Left of his pool notes: the camera frozen while the pool game is open (page logic); "RIDE DRINK REPEAT" on the
+  bar's wall (`shared/shoprooms.js` - a change to the world's rooms: with the next batch).

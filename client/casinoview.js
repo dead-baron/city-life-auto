@@ -9,6 +9,37 @@
 import { floorByKey } from '../shared/cardfloors.js';
 import { TILE } from '../shared/constants.js';
 import { soundEvent } from './audio.js';
+import { GBuf, ART_PX } from './art2/gbuf.js';
+
+// Art v2: the same drawing, into the scene (11-27; the owner, 11-17: the cards "float over the scene instead of sitting
+// on the table"). The drawing below fills small rectangles at screen places; Pieces takes each one as a flat piece of
+// the art's own pixels and hands it to the host (host.js tableSpr) at its height - z over the floor for what lies on a
+// table (g.z), or just in front of a machine's face whose foot is at world y g.face (g.face = null: flat again) - so a
+// head nearer the camera covers it and the room's light falls on it. A later piece lies over an earlier one (LAYER); a
+// see-through black (the overlay's drop shadows) is left out, any other see-through colour is a dithered fade.
+const LAYER = 0.04;
+const quadG = (w, h) => { const G = new GBuf(w, h); G.ap = ART_PX; G.ax = 0; G.ay = 0; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) G.put(x, y, [255, 255, 255], [0, 0, 1], 1); return G; };
+const COLS = new Map();
+export function pieceCol(s) {
+  let c = COLS.get(s);
+  if (c) return c;
+  const m = /^rgba?\(([^)]+)\)$/.exec(s);
+  if (m) { const v = m[1].split(',').map(Number); c = [v[0] / 255, v[1] / 255, v[2] / 255, v[3] ?? 1]; }
+  else c = [parseInt(s.slice(1, 3), 16) / 255, parseInt(s.slice(3, 5), 16) / 255, parseInt(s.slice(5, 7), 16) / 255, 1];
+  COLS.set(s, c);
+  return c;
+}
+export class Pieces {
+  constructor(host) { this.host = host; this.z = 0; this.face = null; this.n = 0; this.fillStyle = '#fff'; }
+  save() {} restore() {}
+  fillRect(x, y, w, h) {
+    const c = pieceCol(this.fillStyle);
+    if (c[3] < 1 && c[0] + c[1] + c[2] < 0.2) return;
+    const aw = Math.max(1, Math.round(w / ART_PX)), ah = Math.max(1, Math.round(h / ART_PX));
+    const z = (this.face === null ? this.z : this.face + 1 - y) + this.n++ * LAYER;
+    this.host.tableSpr(`tq|${aw}|${ah}`, () => quadG(aw, ah), x, y + z, z, c, c[3]);
+  }
+}
 
 const WHEEL = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
@@ -100,7 +131,20 @@ export class CasinoView {
     }
     return P;
   }
+  // art v2: the tables' games in the scene (host.js _entities calls this each frame; draw then leaves them alone)
+  scene(host, F) {
+    this.sceneAt = performance.now() / 1000;
+    if (!this.ctx) return;
+    const g = (this.pieces ||= new Pieces(host));
+    g.host = host; g.n = 0; g.face = null;
+    this.paint(g, F, this.ctx);
+  }
   draw(g, F, ctx) {
+    this.ctx = ctx;
+    if (performance.now() / 1000 - (this.sceneAt ?? -9) < 0.5) return;   // (art v2 has them in the scene)
+    this.paint(g, F, ctx);
+  }
+  paint(g, F, ctx) {
     const b = F.sp && ctx.walkInAt(F.sp.x, F.sp.y);
     if (!b) return;
     const now = performance.now() / 1000;
@@ -116,6 +160,7 @@ export class CasinoView {
   // the wheel: turning, slowing; the ball the other way round the rim, dropping in toward its pocket and landing there
   wheel(g, T, P, now) {
     const W = T.wheel, cx = W.x, cy = W.y - T.h - 2, r = W.r, t = P ? now - P.t0 : 99;
+    g.face = null; g.z = T.h + 1;   // (Pieces: what follows lies on the table)
     const rot = (P ? P.rot : 0) + (t < SPIN ? 5 * (t - t * t / (2 * SPIN)) : 5 * SPIN / 2);
     for (let k = 0; k < 37; k++) {
       const a = rot + k * TAU / 37;
@@ -137,6 +182,7 @@ export class CasinoView {
   // the cards round a blackjack or a poker table (or a player's video poker hand in front of him)
   hand(g, T, P, now) {
     const t = (now - P.t0) / DEAL, z = T.h + 1, from = T.dealer || T.dc, D = P.d;
+    g.face = null; g.z = z;   // (Pieces: on the felt)
     if (P.end !== undefined && t > P.end + 40 / DEAL) return;   // (swept off the felt a while after)
     const spot = (c) => {
       if (c.who < 0) return D.g === 'pk' ? { x: T.dc.x - 10 + c.k * 5, y: T.dc.y } : { x: T.dc.x - 4 + c.k * 4, y: T.dc.y };
@@ -160,6 +206,7 @@ export class CasinoView {
   // a slot machine's three reels in its window: a blur while they spin, stopping one after another; the topper flashing on a win
   reels(g, M, s, now) {
     const t = now - s.t0, y = M.sy - M.sz - 3, x0 = M.x0 + 2;
+    g.face = M.sy;   // (Pieces: in the machine's face)
     for (let k = 0; k < 3; k++) {
       const stop = 0.9 + k * 0.45, x = x0 + k * 3;
       const sym = t >= stop ? s.r[k] : Math.floor((now * 14 + k * 2.3) % 6), C = REEL_C[sym];
@@ -167,6 +214,7 @@ export class CasinoView {
       g.fillStyle = C[0]; g.fillRect(x, y + 1, 2, 2); g.fillStyle = C[1]; g.fillRect(x + (sym === 0 ? 1 : 0), y + (sym === 3 || sym === 4 ? 2 : 0), 1, 1);
       if (t < stop) { g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(x, y + ((now * 30) | 0) % 5, 2, 1); }
     }
+    g.face = null; g.z = M.h;   // (the topper: on its top)
     if (s.x && t > 2 && t < 6 && ((now * 6) | 0) & 1) { g.fillStyle = 'rgba(255,230,120,.8)'; g.fillRect(M.x0, M.y1 - M.h, M.x1 - M.x0, 4); }
   }
 }

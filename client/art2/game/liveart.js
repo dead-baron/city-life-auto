@@ -294,3 +294,21 @@ export function partSprite(k, paint, r) {
   }
   return A.G;
 }
+
+// ---- the Boom Tester's hands ---------------------------------------------------------------------------------------
+// (the owner, 11-25: "a punching animation, the shot leaving flaming or glowing hands".) The glow on a hand: k 0 and 1
+// an ember flickering between two sizes while the thing is held, 2 the flare as a shot is thrown. A little ball of
+// light in the art's own pixels - white hot in the middle, yellow, then orange, its edge broken - that lights itself
+// and casts no shadow; the host puts one on each hand (host.js _boomHands).
+export const HAND_GLOW = [2.4, 3.4, 7];   // its radius, px, by k
+export function handGlow(k) {
+  const R = HAND_GLOW[k] ?? HAND_GLOW[0], A = artBuf(2 * R + 4, 2 * R + 4, R + 2, R + 2), n = [0, 0, 1];
+  for (let y = -R; y <= R; y += 0.5) for (let x = -R; x <= R; x += 0.5) {
+    const r = Math.hypot(x, y) / R;
+    if (r > 1) continue;
+    const c = r < 0.38 ? [255, 250, 224] : r < 0.7 ? [255, 214, 96] : [255, 138, 40];
+    const keep = r < 0.7 ? null : (px, py) => ((px * 7 + py * 13 + k) & 3) !== 0;   // (the edge: three art pixels in four)
+    A.dot(x, y, R - Math.abs(y), c, 1, n, F_NOCAST, [c[0], c[1], c[2], r < 0.7 ? 255 : 200], keep);
+  }
+  return A.G;
+}
