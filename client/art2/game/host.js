@@ -2837,7 +2837,8 @@ export class World2 {
       if (a <= 0.02) { d.on = false; continue; }
       let key = null;
       if (d.type === 1 && d.size < 4) key = this._genDecal(d);
-      else if (A) { const name = A.v1DecalFx(d), frm = A.v1DecalFrame(d); if (d._kn !== name || d._kf !== frm) { d._kn = name; d._kf = frm; d._kk = A.fxKey(name, frm); d._ka = [name, frm]; } key = this._spr('actors', 'fx', d._kk, d._ka); }   // (its key kept on it: built per decal per frame, a drive's garbage - drivebench --alloc, 11-24)
+      else if (A) { if (d._kc !== d.color || d._kt !== d.type) { d._kc = d.color; d._kt = d.type; d._knm = A.v1DecalFx(d); } const name = d._knm, frm = A.v1DecalFrame(d);   // (its set's name kept on it: v1DecalFx cut its colour apart each frame)
+        if (d._kn !== name || d._kf !== frm) { d._kn = name; d._kf = frm; d._kk = A.fxKey(name, frm); d._ka = [name, frm]; } key = this._spr('actors', 'fx', d._kk, d._ka); }   // (its key kept on it: built per decal per frame, a drive's garbage - drivebench --alloc, 11-24)
       if (key) E.drawDecal(key, d.x, d.y, d.a, a, 0);
     }
   }
