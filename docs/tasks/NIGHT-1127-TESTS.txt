@@ -14,3 +14,6 @@ Re-run on the branch's head after the later changes (players.js jump in, persona
 
 Heavy (World v3), one at a time: perf 6/6, townfolk 2/2, calmstreets 2/2, world3server 22/22.
 Not run: the other 70 heavy files (world builds; nothing here touches the world or the art - world3 ef04748631c8, art3 b07b1089bc7e unchanged).
+
+Later the same night: world3scenes 9/9 (it failed 8 on main before 11-27 - passes now). Coral Cay's track: trafficsim
+seeds 7 / 3 / 11 at Cay Road - no jam (PREBETA-LIST, "Found by the Fable art pass").

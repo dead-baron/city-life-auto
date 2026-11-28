@@ -487,6 +487,11 @@ bus stop, then they should go flying off while the bench or object they're on ge
   Station Road, ...)" - the stations' roads count as tracks there. It fails the same on branch `fable-art-1124` before
   its world change (commit bef7671), so it comes from the world batch, not the art. Not checked on `main` itself.
 - Cars jammed nose to tail on Coral Cay's jungle track (seen twice in the water recorder's films of the rainforest).
+  **Checked 11-27 night (Opus), not reproduced:** `tools/trafficsim.mjs --players '' --wild '' --at 4400,3452` (a
+  player on Cay Road, Coral Cay's road into the jungle; new `--at` option), seeds 7, 3, 11, 6-8 minutes each: no jam
+  cluster, no car stuck there over 20 s; a few corner cuts where Cay Road meets Harbor Street (the narrower road on
+  the wider) and at Cay Road's dead end (4456,3446: cars turning round). The films' cars may have been the recorder's
+  own; reopen with a film's place and time if it shows again.
 
 ## Vehicles in shallow water (owner, 11-24 21:40 - noted for the pre-beta; a game rule, not art)
 "I've noticed that when vehicles hit water they instantly sink ... it would be a better experience if vehicles can hit
