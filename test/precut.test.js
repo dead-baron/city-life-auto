@@ -88,3 +88,16 @@ test('the walk-in ahead: a door a few steps off on foot, or the hospital you\'ll
   assert.match(exitWords(shop, door[0] - 4 * TILE, door[1]), /The way out →/);
   assert.match(exitWords(shop, door[0], door[1] - 10), /here/);
 });
+
+// The hop at the door (the owner, 11-25 - the gun shop and the hardware store): stepping in before the cut-away is drawn
+// put you behind the shop's front and roof (an outline up over the front, then down into the shop). Until it's drawn
+// you're drawn over the building's picture where you stand: raised in depth only, the same place on screen.
+test('stepping into a walk-in before its cut-away is drawn: you stay drawn at the door, over its front', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../client/art2/game/host.js', import.meta.url), 'utf8');
+  const { DOOR_LIFT } = await import('../client/art2/game/host.js');
+  assert.ok(DOOR_LIFT >= 400 && DOOR_LIFT < 4096, 'over any walk-in, under the depth range');
+  assert.match(src, /const dl = me && !car && !sky && F\.insideB && F\.insideB\.walkIn && !this\.insideReady\(F\.insideB\) \? DOOR_LIFT : 0;/, 'only you, on foot, inside one not drawn yet');
+  assert.match(src, /hy \+ dl, z0 \+ dl, o\);/, 'y and z0 raised alike: the same place on screen (engine.js drawSprite: y - z0)');
+  assert.match(src, /if \(dl\) \{ o\.xray = false; o\.shadow = false; \}/, 'no outline, no shadow cast from up there');
+});

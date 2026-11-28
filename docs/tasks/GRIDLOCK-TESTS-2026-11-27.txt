@@ -431,3 +431,17 @@
 # pass 1 # fail 0  test/world3water.test.js 236s rc=0
 # re-run alone: staffplayers 4/4, peoplepolish-wardrobe 10/10, tunnelart 3/3 (load). gridlock 3/3.
 # world3scenes: fails alone too (8: the follow scenes - skate, hoops, chess... skipped: the rain pattern); main fails 2 others of it (1, 4) the same day; listed pre-existing 11-23 (PREBETA-TESTS.txt).
+
+---- 2026-11-27 evening: the driverless-car follow-up, re-measured on main (NPC ladder parts 1-4 and the gridlock fix in) ----
+A fresh real build saved (tools/gridlocksim.mjs --save), then 10 minutes at each of Midtown's four-ways, seeds 3 5 7 11 13 23
+(--load). maxJam is the test's measure (stuck in the box or at the head of a queue, not at a red; 30 s fails):
+  seed  lit: cars/min box jam    unlit: cars/min box jam
+   3        26.8      3   21.5          27.4     4   12
+   5        27.5   14.5   16.5          30.0     4   13.5
+   7        28.2    3.5   17.5          26.9     4   13
+  11        25.5   13.5   15.5          25.7     5   22.5
+  13        27.1      5   16.5          26.0     6   14.5
+  23        27.1      5   16.5          21.1     9   22.5
+Worst anywhere 22.5 s. The cars left driverless by a chase or a mugging that held a box truck 41 s (seed 3, this morning)
+don't come back on any of the twelve runs; the queue goes round a car left in its lane (reroute.js findWay / goRound)
+and the tow truck comes for it after TOW_STUCK_S. Closed, with these numbers; reopen if a run shows it again.
