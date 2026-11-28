@@ -17,7 +17,43 @@ export { rack, physics };
 const W = 256, H = 160;
 const BASE = ['#f2c21b', '#2350c8', '#c8262b', '#6a2ab8', '#ef7a1a', '#2f9a3a', '#8a1d24', '#1a1a1e'];
 const colOf = (n) => (n === 0 ? '#f4f2ea' : BASE[(n - 1) % 8]);   // (1 yellow .. 7 maroon, 8 black; 9-15 the same striped)
-const ballArt = (n) => ballSprite(colOf(n), R, { stripe: n > 8, dot: n > 0 && n !== 8 ? 1 : n === 8 });
+// A ball, 9 px across, drawn pixel by pixel (the owner, 11-17: "redraw as SNES pixel balls (numbers, stripes, shading, a
+// cue ball)"): lit from the top left in the colour's tones with a dark rim, a white glint; face up, its number in the
+// white spot (1-8), on the wide band of a stripe (9-15: white caps top and bottom); face down - it shows every half turn of a rolling ball - the bare
+// colour, the stripe's band, the cue ball's red spot. Made once each.
+const DIGIT = { 0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001010010', 8: '111101111101111', 9: '111101111001111' };
+const BALL_ART = new Map();
+export function ballPixels(n, face = true) {
+  const C = ramp(colOf(n), 6, 3), Wt = ramp('#f4f0e4', 6, 3), ink = [22, 20, 26], px = [];
+  const stripe = n > 8, spot = n > 0 && n < 9 && face, two = n > 9, lum = C[3][0] * 0.3 + C[3][1] * 0.59 + C[3][2] * 0.11;
+  for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) {
+    const dx = x - 5, dy = y - 5, r = Math.hypot(dx, dy);
+    if (r > 4.6) continue;
+    const band = stripe && Math.abs(dy) <= 3, white = n === 0 || (stripe && !band);
+    let l = 0.5 - (dx * 0.5 + dy * 0.62) / 9 + (r > 3.9 ? -0.3 : 0);   // (the lamp over the table's middle, a little to the left; the rim a tone down)
+    if (white) l = Math.max(0.42, l + 0.12);   // (white stays pale in its shade: the ramp's dark end is a brown)
+    let c = tone(white ? Wt : C, Math.max(0, Math.min(1, l)), x, y, 0.35);
+    if (spot && r <= 2.6) c = Math.abs(dx) === 2 ? Wt[4] : Wt[5];
+    if (!face && n === 0 && r < 1) c = [204, 52, 50];
+    if (dx === -2 && dy === -3 || dx === -3 && dy === -2) c = [255, 255, 250];
+    px.push([x, y, c]);
+  }
+  if (n > 0 && face) {   // the number: a 3 x 5 digit, dark in a solid's white spot; on a stripe's band in white (dark on the yellow and the orange), ten to fifteen a one-pixel 1 before it
+    const d = DIGIT[n % 10], x0 = two ? 5 : 4, col = stripe && lum < 130 ? [250, 248, 240] : ink;
+    for (let i = 0; i < 15; i++) if (d[i] === '1') px.push([x0 + (i % 3), 3 + Math.floor(i / 3), col]);
+    if (two) for (let i = 0; i < 5; i++) px.push([3, 3 + i, col]);
+  }
+  return px;
+}
+const ballArt = (n, face = true) => {
+  const k = n * 2 + (face ? 1 : 0);
+  let cv = BALL_ART.get(k);
+  if (!cv) BALL_ART.set(k, (cv = layer(11, 11, (put) => { for (const [x, y, c] of ballPixels(n, face)) put(x, y, c); })));
+  return cv;
+};
+// a rolling ball turns its number under and up again: face down on every other half turn (ROLL px of travel each)
+const ROLL = Math.PI * R * 0.5;
+const faceUp = (b) => { const v = Math.hypot(b.vx || 0, b.vy || 0); if (b.lx !== undefined && v > 2) b.roll = (b.roll || 0) + Math.hypot(b.x - b.lx, b.y - b.ly); else if (v <= 2) b.roll = 0; b.lx = b.x; b.ly = b.y; return !(Math.floor((b.roll || 0) / ROLL) & 1); };
 let G = null;
 
 export function start(o) {
@@ -233,7 +269,7 @@ function draw() {
   for (const b of G.balls) {
     if (b.in) continue;
     shadow(g, b.x + 1.3, b.y + 1.8, R * 0.95, R * 0.7, 0.32);
-    blit(g, ballArt(b.n), b.x - 5.5, b.y - 5.5);
+    blit(g, ballArt(b.n, faceUp(b)), b.x - 5.5, b.y - 5.5);
   }
   if (!G.moving && !G.done && !cb.in && (!G.mp || myTurn())) {
     // the aim: dots to the ghost ball, the ghost ball's ring; the cue behind the ball, drawn back by the power
@@ -249,12 +285,21 @@ function draw() {
   }
   hud(g);
 }
+// the word of a shot: a line in the strip under the table, right of the power gauge, fading as it goes (the owner,
+// 11-17: "the shot message banner covers the table - move it above/below the table or make it a small fading line")
+function line(g, s, col = '#fff') {
+  if (!s) return;
+  g.globalAlpha = Math.max(0, Math.min(1, G.msgT / 0.5));
+  text(g, s, W - 8, H - 9, col, 1, 'r');
+  g.globalAlpha = 1;
+}
 function hud(g) {
   G.btns = G.mp ? buttons() : [];
   if (G.mp) { hudMatch(g); return; }
   text(g, `SHOTS ${G.shots}`, 8, 3, '#f4f2ea');
   if (G.o.best) text(g, `BEST ${G.o.best}`, W - 8, 3, '#ffd23a', 1, 'r');
-  if (G.msgT > 0 || G.done) banner(g, W, G.done ? H / 2 - 7 : T.y1 - 24, G.done ? `${G.msg}${G.o.best && G.shots < G.o.best ? ' - a new best!' : ''}` : G.msg, G.done ? '#ffd23a' : '#fff');
+  if (G.done) banner(g, W, H / 2 - 7, `${G.msg}${G.o.best && G.shots < G.o.best ? ' - a new best!' : ''}`, '#ffd23a');
+  else if (G.msgT > 0) line(g, G.msg);
 }
 // a game's HUD: each player's name over their side - lit when it's their shot - their group's balls still on the table,
 // the word of the last shot, the choice when there is one
@@ -269,10 +314,10 @@ function hudMatch(g) {
     const left = G.balls.filter((b) => !b.in && groupOf(b.n) === gp).map((b) => b.n);
     left.forEach((n, k) => blit(g, ballSprite(colOf(n), 3, { stripe: n > 8 }), i ? x - w - 10 - k * 7 : x + w + 3 + k * 7, 1));
   });
-  text(g, '8-BALL', W / 2, 3, '#c8a050', 1, 'c');
-  if (S.watch) text(g, `${S.watch} WATCHING`, W - 8, H - 10, '#8a90b0', 1, 'r');
-  if (G.msgT > 0 || S.st !== 'play') banner(g, W, S.st === 'play' ? T.y1 - 24 : H / 2 - 22, S.st === 'wait' && S.me === 0 ? 'Waiting for a player - or:' : G.msg || S.line, S.st === 'over' ? '#ffd23a' : '#fff');
+  text(g, S.watch ? `8-BALL - ${S.watch} WATCHING` : '8-BALL', W / 2, 3, '#c8a050', 1, 'c');
+  if (S.st !== 'play') banner(g, W, H / 2 - 22, S.st === 'wait' && S.me === 0 ? 'Waiting for a player - or:' : G.msg || S.line, S.st === 'over' ? '#ffd23a' : '#fff');   // (a choice to make, a game over: across the middle)
+  else if (G.msgT > 0) line(g, G.msg);
   G.btns.forEach((b, i) => { panel(g, b.x, b.y, b.w, b.h, i === G.sel ? '#ffd23a' : '#c8a050', i === G.sel ? 'rgba(60,40,10,.92)' : undefined); text(g, b.t, b.x + 4, b.y + 4, i === G.sel ? '#ffd23a' : '#f4f2ea'); });
 }
 // (tests: the table without a screen)
-export const _test = { rack, physics, POCKETS, T, R };
+export const _test = { rack, physics, POCKETS, T, R, ballPixels };

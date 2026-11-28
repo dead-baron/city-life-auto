@@ -593,7 +593,15 @@ export const projKey = (w, hi = 0, N = 32) => `p|${w | 0}|${wrapHi(hi, N)}|${N}`
 // its exhaust glowing; an arrow (the bow, weapon 24: a cedar shaft, a steel broadhead, red and white fletching).
 // Anchor = the ground point under it.
 // (weapon 30, the fire bow: a fire arrow - a black shaft and fletching, its head wrapped and burning)
-export function projSprite(w, hi = 0, N = 32) { return (w | 0) === 24 ? objRender('arrow', arrowModel, hi, N) : (w | 0) === 30 ? objRender('firearrow', fireArrowModel, hi, N) : objRender('rocket', rocketModel, hi, N); }
+// (weapon 29, the Boom Tester - the owner, 11-25: the shot "leaving flaming or glowing hands": a ball of fire, its tail behind it)
+export function projSprite(w, hi = 0, N = 32) { return (w | 0) === 24 ? objRender('arrow', arrowModel, hi, N) : (w | 0) === 30 ? objRender('firearrow', fireArrowModel, hi, N) : (w | 0) === 29 ? objRender('fireball', fireballModel, hi, N) : objRender('rocket', rocketModel, hi, N); }
+function fireballModel() {
+  const m = objModel(24, 10, 22), cy = 5, cz = 14;
+  const core = m.mat({ ramp: RP('#fff4c8', 4, 2), k: 4, emi: [255, 246, 214, 255], flag: F_NOCAST }), fire = m.mat({ ramp: RP('#ffc040', 5, 3), k: 4, emi: [255, 196, 70, 255], flag: F_NOCAST }), tail = m.mat({ ramp: RP('#ff7a28', 5, 3), k: 4, emi: [255, 120, 40, 220], flag: F_NOCAST });
+  m.fill((x, y, z) => { const r = Math.hypot(x - 18, y - cy, z - cz); return r < 1.8 ? core : r < 3.6 ? fire : -1; }, 13, 0, 8, 23, 10, 20);
+  m.fill((x, y, z) => { const t = (15 - x) / 13; if (t < 0 || t > 1) return -1; const r = Math.hypot(y - cy, z - cz); return r < 3 * (1 - t) && ((x + (y | 0) + (z | 0)) % 3 || t < 0.4) ? (t < 0.35 ? fire : tail) : -1; }, 2, 0, 8, 16, 10, 20);
+  return m;
+}
 function fireArrowModel() {
   const m = objModel(30, 9, 20), cy = 4.5, cz = 14;
   const shaft = m.mat({ ramp: RP('#3a2a22'), k: 3 }), black = m.mat({ ramp: RP('#1e1c22'), k: 3 }), wrap = m.mat({ ramp: RP('#6a4a2a'), k: 3 });

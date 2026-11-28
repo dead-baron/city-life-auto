@@ -974,6 +974,13 @@ function onEvent(ev) {
       if (ev.tone === 'bad') sfx('bad'); else if (ev.tone === 'good') sfx('cash', 0.6); else if (ev.tone === 'warn') sfx('alert', 0.7); break;
     case 'shot': {
       const w = WEAPON_BY_INDEX[ev.w];
+      if (w && w.type === 'boomtest') {   // (the Boom Tester - the owner, 11-25: "a punching animation, the shot leaving flaming or glowing hands": a punch thrown, the hand flaring - art2 host.js _boomHands; no gun's flash or tracer)
+        const sh = ev.id ? S.ents.get(ev.id) : null;
+        if (sh) { sh.swingAt = S.loopClock; sh.swingSide = (sh.swingSide || 0) ^ 1; }
+        S.flashes.push({ x: ev.x1, y: ev.y1, z: 24, t: 0.12, r: 150 });
+        sfx('swing', distVol(ev.x1, ev.y1) * 0.7);
+        break;
+      }
       // the flash and the tracer start at the gun as it's drawn: your own character runs ahead of where the server had
       // it (prediction) and everyone else a little behind (interpolation), so the server's muzzle point trailed behind a
       // running shooter (the owner, 2026-10-09). The flash stays on the gun for its few frames (collectLights).
@@ -3235,9 +3242,9 @@ function pedPose(e) {
   if (e.d && e.d.hb && !(f & PF.MOVING)) return 'bars';   // in a cell, both hands on the bars, the arms straight out (server cells.js)
   if (e.pickAt !== undefined && S.loopClock - e.pickAt < 0.42) return 'swing';   // mining: the pickaxe coming down on the rock (server underground.js 'pick')
   const w = WEAPON_BY_INDEX[e.extra];
-  const meleeW = w && w.type === 'melee';
+  const meleeW = w && w.type === 'melee', thrown = !!w && w.type === 'boomtest';   // (the Boom Tester: its shot thrown from the hands, as a punch - the 'shot' event sets swingAt)
   // a punch or a swing thrown from the guard shows as the blow, then the guard again (server players.js GUARD.strikeS)
-  if (meleeW && e.swingAt !== undefined && S.loopClock - e.swingAt < SWING_TIME) return e.extra === 0 ? 'punch' : 'swing';
+  if ((meleeW || thrown) && e.swingAt !== undefined && S.loopClock - e.swingAt < SWING_TIME) return e.extra === 0 || thrown ? 'punch' : 'swing';
   if (S.loopClock - e.guardAt < e.guardT) return 'guard';   // guarding (the 'guard' event: server combat.js, players.js)
   if (f & PF.ATTACK) {
     if (!meleeW) return 'aim';

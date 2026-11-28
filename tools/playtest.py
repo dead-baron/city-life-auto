@@ -28,6 +28,7 @@ Steps
   key:KEY[:MS]            press a key, or hold it MS milliseconds (Playwright key names: w, a, s, d, ArrowUp, Shift...)
   keys:K1+K2[:MS]         hold several keys together
   click:SELECTOR          click an element
+  mouse:X,Y[:MS]          move the pointer there (viewport px) and press the left button, held MS ms: aim and fire
   dev:CMD[:JSON]          dev command to the server (CLA_DEV=1), e.g. dev:car:{"m":"sports"}
   time:MIN                set the server clock (minutes after midnight, e.g. 720 noon, 1380 night)
   tp:X,Y[,LZ]             teleport the player (world px; LZ 1 = up on the highway deck)
@@ -167,6 +168,11 @@ def main():
                     pg.wait_for_timeout(int(ms or 500))
                     for k in reversed(ks): pg.keyboard.up(k)
                 elif op == 'click': pg.click(arg)
+                elif op == 'mouse':
+                    # mouse:X,Y[:MS]  move the pointer to (X, Y) of the viewport and press the left button (held MS ms)
+                    xy, _, ms = arg.partition(':')
+                    x, y = [float(v) for v in xy.split(',')]
+                    pg.mouse.move(x, y); pg.wait_for_timeout(120); pg.mouse.down(); pg.wait_for_timeout(int(ms or 60)); pg.mouse.up()
                 elif op == 'dev':
                     c, _, extra = arg.partition(':')
                     msg = {'t': 'dev', 'c': c}
