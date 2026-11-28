@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-28 early PST, the Opus 5.5 chat: PRs #68, #70, #71 the night's batches (section 6, after 11-27 evening); PRs #53-#60 live - gridlock, skateboards, private-repo prep, the NPC ladder, ads (off) + Employment Center + kayaks (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-28 03:10 PST, the Opus 5.5 chat (section 6: "Later the same night" - PRs #70-#72; `plainblocks` fixed); before that 01:00 PST, the Fable art chat (section 6: "11-27 night, the Fable art chat" - a world and art batch waits on branch `fable-art-1127`, three picks); before that 2026-11-27 night PST, the Opus 5.5 chat: PR #68 the night's batch (section 6, after 11-27 evening); PRs #53-#60 live - gridlock, skateboards, private-repo prep, the NPC ladder, ads (off) + Employment Center + kayaks (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -152,21 +152,44 @@ fountains and each other (`danceSpot`); the sidewalk pair by a door (a couple's 
 stops; leaners apart); "Jump in" off a dock's edge; the Inventory's code fetched early (no empty first open); the
 CSS-zoom click check (`test/csszoom.test.js`); three tests that failed on main fixed (gameplay, dance, invlayout - the
 last a slip of #64: the character small upright); **the walkthrough checklist** (`docs/WALKTHROUGH.md`, the Sheet:
-https://claude.ai/artifact/6nvwNiRbn6kBRERfJF7JKD - 72 rows, OK / Problem / Skipped for desktop and phone); the pre-beta
+https://claude.ai/artifact/6nvwNiRbn6kBRERfJF7JKD - 73 rows, OK / Problem / Skipped for desktop and phone); the pre-beta
 list's section C given a "where it stands" head. No world or art change. Tests: `docs/tasks/NIGHT-1127-TESTS.txt`.
 **Later the same night (PRs #70, #71):** the camera held while a game has its own screen (the pool table's drift);
 eight more action scenes (C4: races, chases, the pursuit and the shootout in other districts, times, weather - under
 "More (unreviewed)"); a street race / chase looks harder for a road (the world3scenes flake); `tools/playtest.py --v3
 --skip-intro` (real World v3 game pictures, ~6 min) and `tools/trafficsim.mjs --at`; Coral Cay's track checked (no
-jam); the plainblocks test allows the Employment Center last. **Branch `world-next`** (not merged - a world update, his
-word): the Rusty Spur's sign LIVE TO RIDE and `test/signwords.test.js`. **Found, not fixed:** the gridlock test fails on
-main since #63/#66 - diagnosed in PREBETA-LIST ("The gridlock test fails on main again"): a van turned round in a box
-queues at the line behind it; visaudit's counts (known); a palm's crown over a casino's room (art).
+jam); the plainblocks test allows the Employment Center last. (A branch `world-next` with the same LIVE TO RIDE sign was dropped: the art chat's `fable-art-1127` has it.) **Found, not fixed:** the gridlock test - not a code change: it depends on the wall clock (the event calendar - now pinned in
+`test/gridlocksim.js`) and the machine's load; a van turned round in a box queues at the line behind it (PREBETA-LIST,
+"The gridlock test fails on main again"); the heavy suite's whole run (#72, NIGHT-1127-TESTS): all pass but gridlock and
+ visaudit's counts (known); a palm's crown over a casino's room (art).
 **For the art chat:** NPC drivers in open vehicles (a first try in host.js was reverted - the riders faced and sat
 wrong; the composite at the chat's /home/claude/pl/open-car-draft.png isn't kept), tennis rackets in hand.
-**His calls, still:** phone wires; NPC robberies, streakers, prison activities, photo mode; living city events
+**His calls, still:** phone wires (the proposal is below); NPC robberies, streakers, prison activities, photo mode; living city events
 (`DIRECTOR.live`); the casino tables (build or hide); the repo private (his steps); "RIDE DRINK REPEAT" with the next
 world update.
+**11-27 night, the Fable art chat (the owner asleep): live - PR #69** (page code only): the pool game's pixel balls, the
+balls and cards drawn on the tables as art (`poolview.js`, `casinoview.js`, `host.js` `tableSpr`), the Boom Tester thrown
+from glowing hands. **WAITING FOR HIS WORD - branch `fable-art-1127`, pushed, NOT merged: one world and art batch**
+(world3 248559fadf2d - one room's wall sign, LIVE TO RIDE; the art's hash moved; a merge starts the ~5 hour redraw):
+the phone box redrawn, ATM booths for the 49 machines that stood alone, the awning open over a cash machine, the
+taller neighbour fading while you're in a room (`overRoom`), **a faded tower showing the shops under its picture**
+(`chunkbake.js` `underKeep` - they were bare lots from their own kerb, on live too), signs that read after dark
+(`glowOf`, the neon halo), hammocks a person's length, and **hospitals that read as hospitals** (his N20: ward
+windows, pale panels, a glazed stair tower, no home's dressing, a calm light at night - DEVLOG 11-28; the lint's
+`hospitalFront` 0). DEVLOG "The street kit and the night look" and "A hospital's front"; the check list's six rows;
+tests `streetkit` (9), `nightlook` (3), `hospitalfront` (5). Tests: `docs/tasks/ARTKIT-TESTS-2026-11-28.txt` - the 100 files that read what changed: 573 of 575 pass; the two
+failures are `plainblocks` ("no plan building after the parts", "the new buildings after every other") and fail on
+main's own tree too - for the Opus chat. The other ~390 files were NOT run on this branch. **A finding to keep:** the game's light pass turns a
+baked glow of 15-20 of 255 into a clear pale light; pale colours at 45 and up bloom to white - most lit windows and
+shop rooms in the city are baked at 90-180 (why they are flat blobs at night; the windows' pick below is about that). The local game server for pictures: `CLA_ART_THREADS=0 CLA_WORLD=v3
+CLA_DEV=1` (with its own bake threads it runs the container out of memory under a browser).
+**His picks from that night:** (1) the batch's go; (2) **lit windows at night, A, B or C** (`buildings.js` `ROOM_LOOK`, `ROOM`: "rooms" is
+built and off - B at 0.4 of the live strength, C at 0.2; picture `report-97`); (3) **the phone wires folded into this world batch?** By the data: 10 of
+1,397 wires run to a spot where no pole stands (the pole they aimed at was moved or dropped by a later pass) - the
+fix: re-aim each at the nearest pole in reach or take the wire off. **Built 11-28 on its own branch
+`phone-wires-1128`** (off `fable-art-1127`; `world3-tidy.js` `wireEnds3`, `test/wireends.test.js`; 5 re-aimed, 5 taken
+off, none left) - in no batch until he says; on his yes merge that branch into `fable-art-1127` and run the World v3
+test files once.
 
 **DONE 11-26 evening (the Opus 5.5 chat): the art batch is merged to `main` and live** - the gate passed: the roofs rendered and kept (before/after on the two streets), the whole suite on c7ae6cb (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`: no failure of the batch's own), a look in a running World v3 game at 1280x720 and phone size. The server re-bakes for about five hours. Next in this chat: the remaining beta items (`docs/audit/PREBETA-LIST.md`). The block below is the record of how it was taken live.
 **TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of
@@ -339,7 +362,7 @@ clean start, quiet page and Keep/Cut/Bug marks; no long shadows on water; the re
 districts; casinos kept, doors made to read; the stash holds items and weapons (clothes stay in the wardrobe); the trunk
 its own storage, at risk; cargo crates always visible; REMOVE ALL (not "take it all off") leaves underwear on; underwear
 and towels change only at home, a bathhouse or a shower.
-**Known failing on main too:** calendar's armored run "leaves from its bank" (date-dependent), gridlock, scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
+**Known failing on main too:** (`plainblocks` fixed 11-28 by the Opus chat, #71: the Employment Center is the list's last - the test allows it), calendar's armored run "leaves from its bank" (date-dependent), gridlock (wall-clock and load dependent; the calendar is pinned now), scenes' live-events check, world3mesa porte-cocheres, world3wild station roads, visaudit's
 picnic/cola counts; flaky: burning, happenings, calevents, world3scenes' street race (laneSpot), biz, arrests (hiding in a shop: failed
 once under load, passes alone and as a file), reputation ("a crime seen", about one run in three; 11-26). Follow-ups: two
 north doors at Northshore Beaches under trees.
