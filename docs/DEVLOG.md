@@ -28744,3 +28744,9 @@ to them, till they walk on (`PAIR_STILL`, `PAIR_NEAR`, `PAIR_SETTLE_S`). And som
 chef on their break: `wallSpot`) takes a spot clear of anyone leaning within 40 px and of anyone standing right there
 (`LEAN_ROOM`) - the old check only knew the leaners, so a chef and a leaner could share a door. Test:
 `npcpeople.test.js` (the couple stopped; the dancers' test now finds its own open ground).
+
+## 2026-11-27 night · The character fills its stand again upright (a slip of 11-27's 44 px targets)
+The 44 px boxes round the figure in the Inventory upright (PR #64) stood each slot column some 70 px taller, and the
+character - sized by the stand's width - filled only 58-66% of it on a 360-390 phone (`test/invlayout.test.js`: "at
+least 70%", the owner's 11-16 "super short"). Upright on a phone the slots' names are off now, as on a short screen
+already: each box's glyph says what goes in it. The 44 px stay.
