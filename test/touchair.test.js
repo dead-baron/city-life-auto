@@ -17,9 +17,9 @@ test('in the air CLIMB and DOWN are two arrows, clear of the aim stick, FIRE, AC
   for (const [W, H] of [[844, 390], [740, 360], [390, 844], [360, 780], [1024, 768]]) {
     const g = slotGeometry(W, H, H > W ? { t: 47, b: 34 } : {});
     for (const c of ['c1', 'c2']) {
-      for (const k of ['stick', 'fire', 'act', 'car', 'u1', 'u4']) assert.ok(!overlap(g[c], g[k]), `${W}x${H}: ${c} clear of ${k}`);
+      for (const k of ['stick', 'fire', 'act', 'car', 'u1', 'u4']) if (g[k]) assert.ok(!overlap(g[c], g[k]), `${W}x${H}: ${c} clear of ${k}`);
       assert.ok(g[c].h >= 48 && g[c].w >= 48, `${W}x${H}: ${c} 48 px or more`);
-      if (H > W) assert.ok(g[c].x >= W / 2, `${W}x${H}: right of the middle (the move stick's half)`);
+      if (H > W) assert.ok(g[c].x >= W * 0.45, `${W}x${H}: right of 45% (the move stick's 40%, Option A 11-27)`);
     }
   }
 });

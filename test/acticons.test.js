@@ -161,12 +161,20 @@ test('FIRE ON: three bullets (auto-fire), not infinity', () => {
 // stick (centre to centre, in units of a 390-wide phone: 300, so 316 px on the owner's 411 x 891 - it was 449 px),
 // and FIRE ON beside the stick and FIRE
 const NEAR = 300, BESIDE = 110;
-test('upright: one tight cluster round the aim stick, FIRE ON beside the stick and FIRE', () => {
+// upright, Option A (the owner's pick of 11-27, "corners and a right-hand arc"): FIRE, BLOCK, ROLL, the weapon and ACT on
+// one arc round the aim stick, FIRE ON under it; the rarer ones (C2, the vehicle button, LIGHT, COP CAR) one column up the
+// right edge; no BAG on the street (the hub's MENU)
+const ARC = 125;
+test('upright: an arc round the aim stick, FIRE ON under it, the rarer ones up the right edge, no BAG', () => {
   const mid = (b) => [b.x + b.w / 2, b.y + b.h / 2], far = (a, b) => Math.hypot(mid(a)[0] - mid(b)[0], mid(a)[1] - mid(b)[1]);
   for (const [W, H, safe] of [[411, 891, {}], [390, 844, { t: 47, b: 34 }], [360, 780, {}], [430, 932, { t: 47, b: 34 }], [412, 892, { t: 36 }]]) {
     const g = slotGeometry(W, H, safe), s = Math.min(1.3, Math.max(0.86, W / 390)), tag = `${W}x${H}`;
-    for (const [k, b] of Object.entries(g)) if (k !== 'stick') assert.ok(far(b, g.stick) <= NEAR * s, `${tag}: ${k} ${Math.round(far(b, g.stick))} px from the stick (${Math.round(NEAR * s)} at most)`);
-    assert.ok(far(g.u4, g.stick) <= BESIDE * s && far(g.u4, g.fire) <= BESIDE * s, `${tag}: FIRE ON beside the stick and FIRE`);
+    for (const k of ['fire', 'c1', 'roll', 'wp', 'act']) assert.ok(far(g[k], g.stick) <= ARC * s, `${tag}: ${k} ${Math.round(far(g[k], g.stick))} px from the stick (${Math.round(ARC * s)} at most)`);
+    assert.ok(far(g.u4, g.stick) <= BESIDE * s && mid(g.u4)[1] > mid(g.stick)[1], `${tag}: FIRE ON under the stick`);
+    const col = ['c2', 'car', 'u2', 'u3'].map((k) => mid(g[k])[0]);
+    assert.ok(col.every((x) => Math.abs(x - col[0]) < 2 && W - x < 40 * s), `${tag}: one column up the right edge (${col})`);
+    assert.ok(!g.u1, `${tag}: no BAG on the street`);
+    for (const [k, b] of Object.entries(g)) if (k !== 'stick') assert.ok(far(b, g.stick) <= NEAR * s * 1.2, `${tag}: ${k} within the right thumb's reach`);
   }
   // (on its side as it was: the switches' row along the top of the arc)
   const L = slotGeometry(844, 390);

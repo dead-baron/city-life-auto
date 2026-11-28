@@ -2143,6 +2143,7 @@ function nextDot(sig) {
   S.nxSig = sig;
   const on = sig !== undefined && sig !== S.nxSeen && !(topOverlay() === 'phone' && phone.screen === 'next');
   $('b-phone').classList.toggle('dot', on);
+  $('b-menu').classList.toggle('dot', on);   // (upright on touch the phone's button is MENU's: style.css)
 }
 let phoneMod = null, phoneP = null;
 const phoneQ = new Map();

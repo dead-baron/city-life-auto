@@ -50,8 +50,9 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   // the touch controls by slots (UI-2, 2026-10-24), in every touch state on every screen: none on another, every one
   // 44 px or more, nothing of them in the left 40% (the move stick's: it comes up where the thumb lands), nor over the
   // middle of the screen (you and the space round you), nor on the HUD (the minimap, the vitals, the cash, the weapon,
-  // the round buttons); held upright all of them right of the middle; and each slot holding what shared/controls.js
-  // says it does for that state
+  // the round buttons); held upright all of them right of 45% (the owner's pick of 11-27, Option A: FIRE and ACT on the
+  // arc round the aim stick reach a little left of the middle - still clear of the move stick's 40%); and each slot
+  // holding what shared/controls.js says it does for that state (upright BAG is the hub's MENU: no slot for it)
   const ctl = [], HUDK = ['minimap', 'vitals', 'status', 'rclock', 'weapon', 'money', 'bank', 'vchip', 'stars', 'clock'];
   const on = (a, b) => a.x0 < b.x1 - 2 && b.x0 < a.x1 - 2 && a.y0 < b.y1 - 2 && b.y0 < a.y1 - 2;
   for (const r of all.filter((q) => q.sc.dev === 'touch')) {
@@ -65,12 +66,13 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
     for (const a of tb) {
       if (a.x1 - a.x0 < 44 || a.y1 - a.y0 < 44) ctl.push(`${tag}: ${a.name} ${a.x1 - a.x0}x${a.y1 - a.y0}`);
       if (a.x0 < w * 0.4) ctl.push(`${tag}: ${a.name} in the move stick's left 40% (x ${a.x0})`);
-      if (h > w && a.x0 < w / 2) ctl.push(`${tag}: ${a.name} in the left half`);
+      if (h > w && a.x0 < w * 0.45) ctl.push(`${tag}: ${a.name} left of 45%`);
       if (on(a, mid)) ctl.push(`${tag}: ${a.name} over the middle (${a.x0},${a.y0}-${a.x1},${a.y1})`);
       if (a.x0 < 0 || a.y0 < 0 || a.x1 > w || a.y1 > h) ctl.push(`${tag}: ${a.name} off the screen`);
       for (const k of r.keep.filter((q) => HUDK.includes(q.name) || q.name.startsWith('b-'))) if (on(a, k)) ctl.push(`${tag}: ${a.name} on ${k.name} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${k.x0},${k.y0}-${k.x1},${k.y1})`);
     }
-    const want = touchSlots(FLAGS[st]), got = Object.fromEntries(tb.map((k) => [k.slot, { a: k.name.slice(3), label: k.label }]));
+    const want = touchSlots(FLAGS[st]); if (h > w) delete want.slots.u1;
+    const got = Object.fromEntries(tb.map((k) => [k.slot, { a: k.name.slice(3), label: k.label }]));
     assert.equal(r.state && r.state.state, want.state, `${tag}: the state`);
     if (JSON.stringify(Object.keys(got).sort().map((k) => [k, got[k]])) !== JSON.stringify(Object.keys(want.slots).sort().map((k) => [k, want.slots[k]]))) ctl.push(`${tag}: the slots ${JSON.stringify(got)} - controls.js says ${JSON.stringify(want.slots)}`);
   }
@@ -111,21 +113,23 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
     // move stick along the bottom, on the left half: the owner, 2026-11-12). The emote button beside it (the owner,
     // 2026-11-13: emotes apart from chat) the same way - in the bottom band, on the left half, on nothing else: next to it
     // along the bottom on its side, over it upright (the right thumb's cluster starts at the middle there)
-    const touch = dev === 'touch', narrow = h > w && w < 380, sl = r.keep.find((k) => k.name === 'stick-l');   // (narrow: a 360-px phone upright - over the move stick's rest, side by side: pre-beta quick wins)
+    // (upright, Option A - the owner's pick of 11-27: chat over the emotes on the left, just over the move stick's rest)
+    const touch = dev === 'touch', narrow = h > w, sl = r.keep.find((k) => k.name === 'stick-l');   // (narrow: upright - the emotes just over the move stick's rest, chat over them)
     for (const [nm, what] of [['talk', 'chat'], ['emote', 'emote']]) {
       const b = r.keep.find((k) => k.name === nm);
       if (touch !== !!b) row.push(`${tag}: the thumb's ${what} button ${b ? 'shown' : 'missing'}`);
-      if (b && (b.x1 - b.x0 < 44 || b.y1 - b.y0 < 44 || (narrow ? !sl || b.y1 > sl.y0 - 6 || b.y1 < sl.y0 - 20 : b.y1 < h - 60) || b.x1 > w / 2)) row.push(`${tag}: the thumb's ${what} button isn't by the left thumb (${b.x0},${b.y0}-${b.x1},${b.y1})`);
+      if (b && (b.x1 - b.x0 < 44 || b.y1 - b.y0 < 44 || (narrow ? !sl || b.y1 > sl.y0 - 6 || (nm === 'emote' && b.y1 < sl.y0 - 20) : b.y1 < h - 60) || b.x1 > w / 2)) row.push(`${tag}: the thumb's ${what} button isn't by the left thumb (${b.x0},${b.y0}-${b.x1},${b.y1})`);
     }
     const talk = r.keep.find((k) => k.name === 'talk'), emo = r.keep.find((k) => k.name === 'emote');
-    if (talk && emo && !(h > w && !narrow ? Math.abs(emo.x0 - talk.x0) <= 2 && emo.y1 <= talk.y0 && talk.y0 - emo.y1 <= 12 : Math.abs(emo.y1 - talk.y1) <= 2 && emo.x0 >= talk.x1 && emo.x0 - talk.x1 <= 12)) row.push(`${tag}: the emote button isn't beside the chat button (${emo.x0},${emo.y0} by ${talk.x0},${talk.y0})`);
-    const want = touch ? 'b-phone,b-map,b-menu' : 'b-phone,b-map,b-chat,b-emo,b-bag,b-menu';   // (the bag on a desktop or a pad: pre-beta quick wins)   // (the emotes beside chat on a desktop: 11-13)
+    if (talk && emo && !(h > w ? Math.abs(emo.x0 - talk.x0) <= 2 && talk.y1 <= emo.y0 && emo.y0 - talk.y1 <= 12 : Math.abs(emo.y1 - talk.y1) <= 2 && emo.x0 >= talk.x1 && emo.x0 - talk.x1 <= 12)) row.push(`${tag}: the emote button isn't beside the chat button (${emo.x0},${emo.y0} by ${talk.x0},${talk.y0})`);
+    const up = touch && h > w;   // (upright on touch, Option A: one MENU - the hub has the map, the phone, the bag; the minimap opens the map)
+    const want = up ? 'b-menu' : touch ? 'b-phone,b-map,b-menu' : 'b-phone,b-map,b-chat,b-emo,b-bag,b-menu';   // (the bag on a desktop or a pad: pre-beta quick wins)   // (the emotes beside chat on a desktop: 11-13)
     if (nav.map((b) => b.name).join() !== want) { row.push(`${tag}: the row is ${nav.map((b) => b.name)}`); continue; }
     if (!dbg) row.push(`${tag}: no debug button`);
     if (nav.some((b) => b.label)) row.push(`${tag}: words on the buttons ${nav.map((b) => b.label)}`);
-    if (nav.map((b) => b.name2).join() !== (touch ? 'Phone,Map,Menu' : 'Phone,Map,Chat,Emotes,Bag,Menu')) row.push(`${tag}: names ${nav.map((b) => b.name2)}`);
+    if (nav.map((b) => b.name2).join() !== (up ? 'Menu' : touch ? 'Phone,Map,Menu' : 'Phone,Map,Chat,Emotes,Bag,Menu')) row.push(`${tag}: names ${nav.map((b) => b.name2)}`);
     const keys = nav.map((b) => b.key).join();
-    if (dev === 'kbm' ? keys !== 'P,M,T,B,I,ESC' : keys !== (touch ? ',,' : ',,,,,')) row.push(`${tag}: key badges ${keys}`);
+    if (dev === 'kbm' ? keys !== 'P,M,T,B,I,ESC' : keys !== (up ? '' : touch ? ',,' : ',,,,,')) row.push(`${tag}: key badges ${keys}`);
     const m = nav[nav.length - 1];
     if (w - m.x1 > 30 || m.y1 > (h > w ? h * 0.2 : h * 0.4) + (r.sc.cam || 0)) row.push(`${tag}: the menu isn't in the top-right zone (${m.x0},${m.y0}-${m.x1},${m.y1})`);
     for (const [i, a] of nav.entries()) {

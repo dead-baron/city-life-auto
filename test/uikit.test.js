@@ -123,7 +123,7 @@ test('the sizes: FIRE and ACT 64 px, ROLL and the vehicle button 52, the rest 48
   for (const g of [GEO.land, GEO.port]) {
     assert.equal(g.fire[2], 64); assert.equal(g.act[2], 64);
     assert.equal(g.roll[2], 52); assert.equal(g.car[2], 52);
-    for (const k of ['c1', 'c2', 'u1', 'u2', 'u3', 'u4']) assert.equal(g[k][2], 48, k);
+    for (const k of ['c1', 'c2', 'u1', 'u2', 'u3', 'u4']) if (g[k]) assert.equal(g[k][2], 48, k);   // (upright u1 null: BAG is the hub's - Option A, 11-27)
   }
   assert.match(CSS, /#tbtns button\.face:is\(:active, \.on\) \{ background: var\(--disc-on\); \}/, 'pressed: the disc darker');
   assert.match(CSS, /:is\(\[data-slot=fire\]\.cooling, #b-cruiser\.cooling\)::before \{[^}]*conic-gradient\(var\(--cd-c, var\(--act-disc\)\) calc\(var\(--cd, 0\) \* 1turn\)/, 'cooling: the ring');
