@@ -163,7 +163,9 @@ done - NPCs off courts in play, dancers spaced and out of fountains, animals out
 with the chase, the sidewalk pair by a door, leaners apart; shadows under small things in the air; headlights keep
 a quarter of the light cap; kayaks paddled (races hidden); skateboards carried off rough ground; My looks strip;
 desktop CSS-zoom clicks (checked, `test/csszoom.test.js`); the Inventory (live; its first open prefetched); the
-dock's "Jump in" (from the Rusty Spur notes); the Camera's clean screen; cinematic sound follows the camera.
+dock's "Jump in" (from the Rusty Spur notes); the Camera's clean screen; cinematic sound follows the camera; the pool
+game's balls, its words off the table, balls and cards drawn on the tables (the art chat, #69) and the camera held while
+its screen is open.
 **Open:** tennis rackets in hand (character art - the art chat); car soccer's boost flame and SNES pass (owner:
 post-beta unless cheap); casino / card table minigames (owner: build or hide); racing beyond the current track (design
 first); the director's NPC-at-games shots and P8's scripted cars (with the cinematics reshoot); living city events
@@ -492,6 +494,28 @@ bus stop, then they should go flying off while the bench or object they're on ge
   cluster, no car stuck there over 20 s; a few corner cuts where Cay Road meets Harbor Street (the narrower road on
   the wider) and at Cay Road's dead end (4456,3446: cars turning round). The films' cars may have been the recorder's
   own; reopen with a film's place and time if it shows again.
+
+## The gridlock test fails on main again (found 11-27 night; diagnosed, not fixed)
+`test/gridlock.test.js`, the four-way without lights (seed 7): a moving van stands 100 s (the limit 30). It fails the
+same on main before the night's work (eec5ff72), so it came in with #63 or #66 (it passed 3/3 on the ads branch with
+the NPC ladder in). Reproduced with a probe (`runFourWay`'s `onTick`): the van came up from the south (edge 1360), was
+leaving north (1359), stopped just out of the box behind the queue there, and turned round (`reroute.js` `findWay`:
+`howOut` 'turn', 3.4 rad turned, t~87) - onto edge 1359 from 1104, i.e. the road back INTO the junction it was still
+standing in, its stop line behind it. From inside the box it then queued at that line behind the sedan waiting there
+(both "at the line", arc 0 - the sedan read as its leader), and the sedan waited for the box: nobody moved till a
+sidestep at t~203. Tried: no turning round inside a box behind moving traffic (`findWay`) - the blocker wasn't moving
+traffic, no change; reverted. The fix to look at: a vehicle turned round in a box (or any vehicle whose arc on its edge
+is past the end) must not queue at that line - it is in the box: on to its next edge (`traffic.js` junctionClear / the
+lane leader), or a turn-round never leaves it on a road into the junction it stands in.
+
+## Seen in a running World v3 game, 11-27 night (Opus, `tools/playtest.py --v3`) - for the art chat
+- **A palm's crown over a casino's room while you're inside it** (The Strip, the casino the debug menu's "Casino" goes
+  to, night): the palm stands at the front, outside the south wall, and its crown covers the floor by the door - you
+  stand under it. The class: a tree (or any tall prop) beside a walk-in drawn over its open room - the cut-away should
+  take what's over the room you're in, or the tree keeps its crown clear of a walk-in's front. Picture:
+  `/tmp/s5/casino2.png` in that chat (not kept).
+- Not a fault: a casino floor teleported into shows no regulars - they come only while nobody's in the room
+  (`activities.js`: a floor's people never pop in in view); walking in from the street fills it.
 
 ## Vehicles in shallow water (owner, 11-24 21:40 - noted for the pre-beta; a game rule, not art)
 "I've noticed that when vehicles hit water they instantly sink ... it would be a better experience if vehicles can hit

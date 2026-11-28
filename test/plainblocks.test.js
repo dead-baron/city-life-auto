@@ -159,6 +159,9 @@ test('southside lots: street dice down a passage or two (the existing street dic
 const { surveyTowers } = await import('../tools/plainmeasure.mjs');
 const { TOWER3, TOWER_LANDMARKS } = await import('../shared/world3-towers.js');
 const TW = surveyTowers(M), TS = M.world3 && M.world3.towers;
+// what's built after the splits and the open blocks, at the very end of the list - added later still, so no id before it
+// moves (the Employment Center, 11-27: shared/world3-jobcenter.js, its building the list's last)
+const LATER = (b) => b.business === 'jobcenter';
 const capPx = 26 + 56 * TOWER3.cap;
 
 test('tall towers: no plain slab - big and tall with nothing but the towers\' kit - but the landmarks', () => {
@@ -215,7 +218,7 @@ test('tall towers: a split tower is several buildings of different heights, its 
     // additive: the new parts at the end of the list, after every building the plans placed
     for (const id of g.slice(1)) assert.ok(id >= firstNew, `${tw.name}: part #${id}`);
   }
-  assert.ok(M.buildings.slice(firstNew).every((b) => !b || !b.hand || b.towerPart), 'no plan building after the parts');
+  assert.ok(M.buildings.slice(firstNew).every((b) => !b || !b.hand || b.towerPart || LATER(b)), 'no plan building after the parts');
   assert.ok(groups >= 35 && shops >= 70 && podiums >= 25 && crowns >= 15, `groups ${groups}, street shops ${shops}, podiums ${podiums}, crowns ${crowns}`);
 });
 
@@ -305,7 +308,7 @@ test('open blocks: the building keeps its door, its places and its home; the new
   for (const b of M.buildings) if (b && b.openKept && b.door) assert.ok(b.door.tx >= b.tx && b.door.tx < b.tx + b.tw, `#${b.id} ${b.name}'s door on its front`);
   const made = M.buildings.filter((b) => b && b.openOf !== undefined), first = Math.min(...made.map((b) => b.id));
   assert.ok(made.length > 150, `${made.length} new buildings`);
-  assert.ok(M.buildings.every((b) => !b || b.openOf !== undefined || b.id < first), 'the new buildings after every other');
+  assert.ok(M.buildings.every((b) => !b || b.openOf !== undefined || b.id < first || LATER(b)), 'the new buildings after every other');
   for (const b of made) for (let y = b.ty; y < b.ty + b.th; y++) for (let x = b.tx; x < b.tx + b.tw; x++) if (M.bld[M.idx(x, y)] !== b.id || M.tiles[M.idx(x, y)] !== T.BUILDING) assert.fail(`#${b.id} tile ${x},${y}`);
 });
 test('open blocks: the new buildings vary - kinds and heights side by side, low in front of a lane', () => {

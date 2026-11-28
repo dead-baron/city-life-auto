@@ -28793,3 +28793,28 @@ and `--skip-intro` gets a new character into the city: "Play as" the starting lo
 and the question skipped (the question's menu closed). About six minutes from nothing to the first picture; checked
 at Midtown's station. And `tools/trafficsim.mjs --at tx,ty` stands its players at any tile (Coral Cay's track checked
 with it: no jam on three seeds).
+
+## 2026-11-27 night · The camera holds still while a game has its own screen (the Rusty Spur notes, 11-17)
+"Pool: the world camera drifts behind the table while you aim - freeze the camera while the pool game is open
+(others still see you walk round the table)" - the one pool note the art chat's tables pass left for page logic.
+While the 'arcade' overlay is open - the pool table, chess, air hockey, skee-ball, a cabinet, the race book, an
+instrument - the camera stays where it was when the screen opened (`main.js` `S.camHold`); it follows you again when
+the screen closes. Checked in a running game (`tools/playtest.py`, the old city): the screen opened, the player
+teleported 300 tiles - the camera stayed; Escape - it went to the player.
+
+## 2026-11-27 night · More action scenes: the races and chases in other places and times (C4 of the 11-23 notes)
+"More variants of the scenes that already work: street races and police chases in more places and times of day, gang
+fights" (the owner's cinematics notes, 11-23, C4). Eight, each the same script as one that works, in another district,
+time or sky (`shared/scenes/index.js` `variant`): a street race through Midtown at night, on the Neon Strip in the
+rain, down Lucky Mesa's Strip at golden hour; police chases through the Old Quarter at dusk, Southside at night,
+Westport Center at noon; the helicopter pursuit through Bayside Heights; the gang shootout at dawn. They sit under
+"More (unreviewed)" in the camera panel until the owner passes them (`KEPT`), ready for the reshoot on the final art.
+Tests: `scenes.test.js` (each script whole), `world3scenes.test.js` (each finds its place and cast on World v3).
+- (Same night) A street race or a police chase started on purpose (the scenes' 'street' step, the debug menu) now looks
+  harder for a stretch of road to start it on before it gives up - 150 tries, was 60 (`streetlife.js` `LANE_TRIES`):
+  on a busy Strip at night 60 now and then found none ("No street to start it on around here"), the flake in
+  `world3scenes.test.js`'s staged street race.
+- (Same night) `test/plainblocks.test.js` failed on main since the Employment Center went in (11-27, #60): its building
+  is the list's very last, after the towers' parts and the open blocks' new buildings, and two checks wanted those
+  last. It's added later still, so no building's id before it moves - what the checks guard; they allow it now
+  (`LATER`). 17/17.

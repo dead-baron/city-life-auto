@@ -55,7 +55,7 @@ The checklist the owner plays through on desktop and phone before the beta - als
 | 49 | Homes | Mortgage, upkeep | 20% down; upkeep from the bank each day |
 | 50 | Business | Own a business (farm, nightclub, auto shop) | A day's takings in its till each in-game day you're in town |
 | 51 | Fishing | Take the rod out, face water, hold ACT to cast, reel | A bite, the fight's meter up the right side (prompt clear of it); fish in the cooler; sell at a bait shop |
-| 52 | Activities | Pool at a bar ($1): play the computer | Eight-ball plays; (the Rusty Spur's table art is the art chat's) |
+| 52 | Activities | Pool at a bar ($1): play the computer | Eight-ball plays; the balls drawn as pixel balls on the table; the shot's words off the table; the camera holds still while the game's screen is open |
 | 53 | Activities | Bowling, golf, chess, air hockey, arcade machines | Each starts, plays and pays as its Guide says; Quit from its card works |
 | 54 | Activities | Tennis with the club pro; shoot hoops | Games run; passers-by keep off the court while you play |
 | 55 | Activities | Casino floor: roulette, blackjack, slots | Plays end to end against the house |
@@ -76,3 +76,4 @@ The checklist the owner plays through on desktop and phone before the beta - als
 | 70 | Night/weather | Play at night and in the rain | Lamps on; headlights; rain streaks catch the lights; no stutter |
 | 71 | Performance | Drive a few minutes on the phone at night in rain | Smooth enough; note any hitches |
 | 72 | Server | During a restart | "Server updating - back in a few minutes", reconnects by itself |
+| 73 | On foot | On a dock or pier, face the open water | The prompt says Jump in; ACT sends you off the side into the water (walking still stops at the edge) |
