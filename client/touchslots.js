@@ -31,9 +31,15 @@ export { iconOf } from './touchicons.js';
 export const GEO = {
   land: { stick: [88, 88, 132], fire: [196, 92, 64], act: [166, 172, 64], roll: [252, 40, 52], car: [282, 98, 52], c1: [204, 236, 48], c2: [144, 240, 48],
     wp: [70, 214, 76, 44], u4: [32, 300, 48], u3: [92, 300, 48], u2: [152, 300, 48], u1: [212, 300, 48] },
-  port: { stick: [70, 80, 116], fire: [162, 118, 64], u4: [158, 40, 48], act: [66, 198, 64], roll: [138, 186, 52], c1: [164, 244, 48], car: [34, 264, 52], c2: [98, 264, 48],
-    wp: [96, 322, 64, 48], u3: [32, 322, 48], u1: [40, 378, 48], u2: [96, 378, 48] },
+  // upright, the owner's pick of 11-27 (Option A of the portrait mockups: "corners and a right-hand arc"): the stick a
+  // little up from the corner, an arc round its left and top - FIRE, BLOCK (C1), ROLL, the weapon card - ACT (and what
+  // takes its place: GET IN, EXIT...) under FIRE, FIRE ON under the stick; the rarer ones (C2 - RELOAD, CLIMB -, the
+  // vehicle button beside ACT, LIGHT, COP CAR) in one column up the right edge; BAG off the street (the hub's MENU has
+  // it: u1 null). The prompt's one home just above the thumbs, chat and the emotes over the move stick on the left.
+  port: { stick: [72, 124, 116], fire: [179, 128, 64], c1: [154, 190, 48], roll: [103, 224, 52], wp: [39, 227, 56, 48], act: [155, 55, 64], u4: [72, 32, 48],
+    c2: [26, 284, 48], car: [26, 344, 52], u2: [26, 404, 48], u3: [26, 460, 48], u1: null },
 };
+export const CHAT_TOP = 174;   // (upright: the chat button's top over the move stick's rest - style.css #b-talk: max(84, the safe bottom + 66) + 174 px from the bottom)
 export const MIN_TAP = 48;   // (the smallest a button gets: on a 360-px phone a 52 is 48 - the room the cluster has, the middle kept clear)
 export const MIN_SW = 44;    // (the switches - ITEMS, LIGHT, COP CAR, FIRE ON - and the weapon card: the touch guideline's 44; on a 360-px phone a 48 is 44, so the cluster keeps its gaps as it scales down)
 export const LONG_MS = 450;        // (a long press: the button's name in a tip)
@@ -47,7 +53,9 @@ export function slotGeometry(W, H, safe = {}) {
   const port = H > W, G = port ? GEO.port : GEO.land;
   const R = W - (safe.r || 0), B = H - (safe.b || 0), out = {};
   const s = Math.min(1.3, Math.max(0.86, (port ? R - (safe.l || 0) : B - (safe.t || 0)) / 390));   // (by the room inside the safe areas)
-  for (const [k, [dx, dy, w, h = w]] of Object.entries(G)) {
+  for (const [k, v] of Object.entries(G)) {
+    if (!v) continue;   // (not on this screen: upright BAG is the hub's)
+    const [dx, dy, w, h = w] = v;
     const min = k[0] === 'u' || k === 'wp' ? MIN_SW : MIN_TAP, bw = Math.max(min, Math.round(w * s)), bh = Math.max(min, Math.round(h * s));
     out[k] = { x: Math.round(R - dx * s - bw / 2), y: Math.round(B - dy * s - bh / 2), w: bw, h: bh };
   }
@@ -81,20 +89,23 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
     // of the columns up the edge and its foot above every button under it - BLOCK, ROLL, FIRE - so nothing can push it onto
     // them; it grows up toward you, never down into the thumb's buttons)
     if (H > W) {
-      const r = X(['car', 'c2', 'wp', 'u1', 'u2', 'u3']) - 8, low = Object.values(geo).filter((g) => g.x < r);
-      R.setProperty('--lo-r', `${W - r}px`); R.setProperty('--lo-b', `${H - Math.min(...low.map((g) => g.y)) + 10}px`);
+      // upright (Option A, 11-27): the prompt's card just above the thumbs - left of the column up the right edge, its foot
+      // above the arc and the chat buttons over the move stick (style.css: their top CHAT_TOP px over the safe bottom);
+      // the hint strip straight above it
+      const r = X(['c2', 'car', 'u2', 'u3']) - 8;
+      const foot = Math.min(...['fire', 'c1', 'roll', 'wp', 'act', 'stick'].map((k) => geo[k].y), H - Math.max(84, (safe().b || 0) + 66) - CHAT_TOP) - 10;
+      R.setProperty('--lo-r', `${W - r}px`); R.setProperty('--lo-b', `${H - foot}px`); R.setProperty('--lo-c', `${W - r}px`);
     } else { R.setProperty('--lo-r', `${W - X(['roll', 'car', 'c1', 'c2', 'act']) + 8}px`); R.setProperty('--lo-b', `${H - Y(['roll']) + 6}px`); R.setProperty('--u-l', `${W - X(['u1', 'u2', 'u3', 'u4']) + 8}px`); R.setProperty('--lo-c', `${W - X(['c1', 'roll', 'car']) + 8}px`); }   // (--lo-c: the hint strip under it, left of C1, ROLL and the vehicle button)
-    if (H > W) R.setProperty('--lo-c', `${W - X(['u4', 'fire', 'roll', 'c1', 'c2', 'wp']) + 8}px`);   // (upright: the hint strip left of the cluster, over the move stick)
     if (cur) place();
   }
   function place() {
     const shown = new Set();
     for (const [slot, { a, label: l0 }] of Object.entries(cur.slots)) {
-      const b = btn[a];
-      if (!b) continue;
+      const b = btn[a], g = geo[slot];
+      if (!b || !g) continue;   // (no box for it on this screen: upright BAG - the hub's MENU has it)
       const label = a === 'firetog' ? `FIRE ${b.classList.contains('lit') ? 'ON' : 'OFF'}` : l0;   // (on or off: client/input.js showFireToggle)
       shown.add(a);
-      const g = geo[slot];   // (in the air CLIMB and DOWN: two discs in C2 and C1, an arrow each - one container for every button)
+      // (in the air CLIMB and DOWN: two discs in C2 and C1, an arrow each - one container for every button)
       b.dataset.slot = slot;
       const st = b.style;
       if (a === 'nextw') { for (const k of 'xywh') st.setProperty('--s' + k, g[k] + 'px'); b.dataset.lbl = label; continue; }

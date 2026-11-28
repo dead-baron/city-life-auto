@@ -397,20 +397,13 @@ body.emo-open #b-emo { box-shadow: inset 0 0 0 2px var(--pad-cream); }
 #b-talk { display: none; }
 body.touch #b-talk { position: absolute; display: grid; place-items: center; left: calc(max(20px, env(safe-area-inset-left)) + 134px); bottom: max(8px, env(safe-area-inset-bottom)); width: var(--tap-l); height: var(--tap-l); padding: 0; pointer-events: auto; touch-action: none; background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); --ic: 24px; }
 body.touch #b-talk:active { transform: scale(var(--press)); }
-body.portrait.touch #b-talk { left: calc(max(20px, env(safe-area-inset-left)) + 128px); bottom: max(8px, env(safe-area-inset-bottom)); width: 44px; height: 44px; }   /* (upright: beside the move stick's ring along the bottom, as in landscape - clear of the prompt cards over it) */
+body.portrait.touch #b-talk { left: max(16px, env(safe-area-inset-left)); bottom: calc(max(84px, calc(env(safe-area-inset-bottom) + 66px)) + 126px); width: 48px; height: 48px; }   /* (upright, Option A - the owner's pick, 11-27: chat and the emotes one over the other on the left, over the move stick's rest; their top is client/touchslots.js CHAT_TOP) */
 /* the emotes beside it (the owner, 11-13: emotes apart from chat): the same button, a tap the picker (client/emotes.js) -
    on its side next along the bottom (the first-time strip starts after it), upright over it */
 #b-emote { display: none; }
 body.touch #b-emote { position: absolute; display: grid; place-items: center; left: calc(max(20px, env(safe-area-inset-left)) + 190px); bottom: max(8px, env(safe-area-inset-bottom)); width: var(--tap-l); height: var(--tap-l); padding: 0; pointer-events: auto; touch-action: none; background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); --ic: 24px; }
 body.touch #b-emote:active { transform: scale(var(--press)); }
-body.portrait.touch #b-emote { left: calc(max(20px, env(safe-area-inset-left)) + 128px); bottom: calc(max(8px, env(safe-area-inset-bottom)) + 52px); width: 44px; height: 44px; }   /* (upright: over it - the right thumb's cluster starts at the middle along the bottom) */
-/* a narrow phone upright (360 px: a common Android): along the bottom beside the move stick they ran into FIRE and FIRE ON
-   - side by side in the free space just over the move stick's rest instead, by the left thumb still (pre-beta quick wins) */
-@media (max-width: 379px) {
-  body.portrait.touch #b-talk, body.portrait.touch #b-emote { bottom: calc(max(84px, calc(env(safe-area-inset-bottom) + 66px)) + 70px); }
-  body.portrait.touch #b-talk { left: max(20px, env(safe-area-inset-left)); }
-  body.portrait.touch #b-emote { left: calc(max(20px, env(safe-area-inset-left)) + 52px); }
-}
+body.portrait.touch #b-emote { left: max(16px, env(safe-area-inset-left)); bottom: calc(max(84px, calc(env(safe-area-inset-bottom) + 66px)) + 70px); width: 48px; height: 48px; }   /* (under chat, 8 px over the move stick's ring at rest: #stick-l) */
 /* 44 px targets on touch (pre-beta quick wins, REPORT2 B3): chat's quick lines, tabs and row buttons, the emote
    picker's tabs, What's next's skip and goal buttons */
 .touch :is(.cht-tab, .cht-chip, .emo-tab, .cs-list .srow .btn, .cm-rqb .btn, .cht-undo .btn, .wn-goal button, .wn-ssn button) { min-height: var(--tap); }
@@ -458,7 +451,9 @@ body.portrait.touch #hud-stat { width: var(--trw); grid-template-columns: 1fr; r
 @media (max-width: 380px) { body.portrait.touch #hud { --trw: 168px; } body.portrait.touch #purse { flex-wrap: wrap; row-gap: 4px; } }   /* (a 360-px phone upright: the plate a little narrower - the stars under the cash when both won't fit - so the debug button beside the minimap keeps off it) */
 /* (upright on touch the row first - three buttons, right of the top-centre band where a centred camera sits: UI-5 - and
    the plate under it, below the band) */
-body.portrait.touch #hud-tr > #hud-stat { order: 0; }
+body.portrait.touch #hud-tr > #hud-stat { order: 0; }   /* (MENU over it in the corner: a centred camera's band along the top stays clear - UI-5) */
+body.portrait.touch #hud-btns > :is(#b-phone, #b-map) { display: none; }   /* (upright, Option A: one MENU under the status - the hub has the map, the phone, the bag; a tap on the minimap opens the map) */
+body.portrait.touch #b-menu.dot::after { content: ''; position: absolute; right: 3px; top: 3px; width: 9px; height: 9px; border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 0 2px var(--ink); }   /* (the phone's new-cards dot, on MENU) */
 body.portrait.touch #purse { flex-direction: row; justify-content: space-between; align-items: center; }
 
 /* what you have: the cash (a robbery's hot money under it), the stars, the vehicle chip, what you hold */
@@ -545,7 +540,9 @@ body.touch.multi-wpn #w-swap { display: grid; position: absolute; top: 50%; righ
    a robbery's bar - bottom centre (on touch between the move stick and the cluster on its side, above the thumbs upright) */
 #hud-low { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); display: flex; flex-direction: column; align-items: center; gap: var(--s2); pointer-events: none; }
 .touch #hud-low { left: calc(max(20px, env(safe-area-inset-left)) + 190px); right: var(--lo-r, 338px); bottom: var(--lo-b, 82px); max-width: none; }   /* (client/touchslots.js sets the room) */
-body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); bottom: var(--lo-b, 300px); margin: 0; align-items: flex-end; }   /* (its foot above the buttons under it: client/touchslots.js) */
+body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 58px); bottom: var(--lo-b, 300px); margin: 0; align-items: center; }   /* (Option A, 11-27: its one home just above the thumbs - left of the column up the right edge, its foot over the arc and the chat buttons: client/touchslots.js) */
+body.portrait.touch #hud:has(#fishspot.on) #hud-low { right: calc(var(--sr) + 96px); }   /* (a line out: the fight's meter up the right - #fishspot) */
+body.portrait.touch #hud:has(#helpbox:not(.off)) #hints { visibility: hidden; }   /* (one home: the prompt first, the strip back after it - as with a keyboard) */
 #cruiser-hint { font: 700 var(--fs-3) var(--pixel); text-align: center; color: var(--info); text-shadow: var(--halo-s); }
 .touch #cruiser-hint { font-size: var(--fs-2); }
 /* the prompt: the key (its prompt tile: client/glyphs.js) then what it does; in while you're in range, out when you
@@ -602,7 +599,7 @@ body:not(.touch) #helpbox { max-width: min(560px, 60vw); }
 .touch #hints .hint { white-space: normal; }
 .touch:not(.portrait) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--lo-b, 82px) + 40px); }   /* (the first-time strip under the cards: the card over it) */
 body.portrait.touch #hints .hint { white-space: normal; }
-body.portrait.touch #hints { left: var(--sl); right: var(--lo-c, 196px); bottom: calc(var(--sb) + 150px); margin: 0; flex-direction: column; align-items: flex-start; gap: 2px; }
+body.portrait.touch #hints { left: var(--sl); right: var(--lo-c, 58px); bottom: var(--lo-b, 300px); margin: 0 auto; width: fit-content; max-height: 58px; justify-content: center; gap: 2px 10px; }   /* (Option A: in the prompt's home, the card over it) */
 /* (on a desktop the hint line bottom left - UIC-11/12 - the prompt over it only where the two would meet) */
 body:not(.touch) #hints { left: var(--sl); right: auto; margin: 0; max-width: calc(100vw - 2 * var(--sl)); flex-wrap: nowrap; overflow: hidden; justify-content: flex-start; }
 body:not(.touch) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--sb) + 52px); }

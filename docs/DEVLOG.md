@@ -28620,3 +28620,23 @@ well as your weapon on theirs). By the driver's temperament (react.js temper):
 - One knock, one reaction (a scrape is several contacts: 1.5 s); a cop, a medic or a rail guard only drives off.
 Tests: `npcreact.test.js` (13: + bumped once and again by temperament; a tough driver out to have it out, an armed one
 out and drawn), vehdamage, slips, carhits, core, traffic box, passers-by, racers, motorbikes, bikes, carts, arrests.
+
+## 2026-11-27 · The portrait phone layout: Option A (the owner's pick)
+Of the three mockups (Design artifact "Portrait layout": A corners and a right-hand arc, B one top bar, C the map by the
+left thumb) the owner picked A ("For portrait phone layouts I think A works the best"). Upright on touch:
+- **The right thumb:** the aim stick a little up from the corner, and one arc round it - FIRE (left of it), BLOCK / C1,
+  ROLL, the weapon card (over it), ACT (under FIRE: also where GET IN / EXIT go with nothing to act on); FIRE ON under the
+  stick. The rarer buttons - C2 (RELOAD, CLIMB), the vehicle button when ACT is up too, LIGHT, COP CAR - one column up
+  the right edge (`client/touchslots.js` GEO.port). No ITEMS button upright: MENU's hub has the bag (GEO.port.u1 null).
+- **The left thumb:** chat over the emotes, just over the move stick's rest (no longer along the bottom middle).
+- **The top corners only:** the minimap and the clock top left (a tap on the minimap opens the map); top right one MENU
+  over the status plate - the phone and map buttons go (the hub has both; the phone's new-cards dot is on MENU). MENU
+  stays above the status, not under it as drawn: a centred camera's band along the top stays clear (UI-5).
+- **The prompt's one home:** just above the thumbs, left of the right-edge column, its foot over the arc and the chat
+  buttons; the vehicles' hint strip in the same place, after the prompt (as with a keyboard); a line out: left of the
+  fight's meter. The job arrow keeps to the new open middle (`jobway.js`).
+- Tests moved with the owner's pick: upright the buttons keep right of 45% (FIRE and ACT reach a little left of the
+  middle; still clear of the move stick's 40%), the cluster test describes the arc and the column, the chat buttons
+  over the move stick at every width. hudlayout (every state, every size: nothing overlaps, the prompt clear of every
+  button and of you), touchslots, acticons, touchair, uikit, uitokens, chat, emotes, jobway, fishing, perf, portrait.
+

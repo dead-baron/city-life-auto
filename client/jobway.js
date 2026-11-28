@@ -99,7 +99,7 @@ function bigArrow(g, sp, j, now, u) {
 // right; upright: the round buttons down the right, the prompt over you, the sticks and the buttons below)
 function open() {
   const b = document.body.classList;
-  return !b.contains('touch') ? [94, 94, 94, 94] : b.contains('portrait') ? [40, 340, 80, 330] : [175, 110, 370, 130];
+  return !b.contains('touch') ? [94, 94, 94, 94] : b.contains('portrait') ? [40, 320, 70, 350] : [175, 110, 370, 130];
 }
 
 // a little navy plate with the text on it, centred on (x, y)

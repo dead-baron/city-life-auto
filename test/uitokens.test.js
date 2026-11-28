@@ -112,10 +112,10 @@ test('the starting looks point at a screen that exists, and no white browser scr
   assert.match(CSS, /::-webkit-scrollbar \{[^}]*background: var\(--pad-ink\)/);
 });
 
-test('touch: 44 px targets for chat, the emote tabs and What\'s next; chat and the emotes over the move stick on a 360-px phone upright (pre-beta quick wins)', () => {
+test('touch: 44 px targets for chat, the emote tabs and What\'s next; chat and the emotes over the move stick upright (Option A, 11-27)', () => {
   assert.match(CSS, /\.touch :is\(\.cht-tab, \.cht-chip, \.emo-tab, \.cs-list \.srow \.btn, \.cm-rqb \.btn, \.cht-undo \.btn, \.wn-goal button, \.wn-ssn button\) \{ min-height: var\(--tap\); \}/);
   assert.match(CSS, /\.touch \.wn-card \.skip \{[^}]*width: var\(--tap\); height: var\(--tap\); \}/);
-  assert.match(CSS, /@media \(max-width: 379px\) \{\s*body\.portrait\.touch #b-talk, body\.portrait\.touch #b-emote \{ bottom: calc\(max\(84px, calc\(env\(safe-area-inset-bottom\) \+ 66px\)\) \+ 70px\); \}/);
+  assert.match(CSS, /body\.portrait\.touch #b-emote \{ left: max\(16px, env\(safe-area-inset-left\)\); bottom: calc\(max\(84px, calc\(env\(safe-area-inset-bottom\) \+ 66px\)\) \+ 70px\);/);
 });
 
 // ---- look C (the owner, 11-26, of A today / B hard frames / C hard frames and pixel icons: "I think C looks good for
