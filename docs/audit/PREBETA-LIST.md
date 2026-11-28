@@ -495,6 +495,15 @@ bus stop, then they should go flying off while the bench or object they're on ge
   the wider) and at Cay Road's dead end (4456,3446: cars turning round). The films' cars may have been the recorder's
   own; reopen with a film's place and time if it shows again.
 
+## Seen in a running World v3 game, 11-27 night (Opus, `tools/playtest.py --v3`) - for the art chat
+- **A palm's crown over a casino's room while you're inside it** (The Strip, the casino the debug menu's "Casino" goes
+  to, night): the palm stands at the front, outside the south wall, and its crown covers the floor by the door - you
+  stand under it. The class: a tree (or any tall prop) beside a walk-in drawn over its open room - the cut-away should
+  take what's over the room you're in, or the tree keeps its crown clear of a walk-in's front. Picture:
+  `/tmp/s5/casino2.png` in that chat (not kept).
+- Not a fault: a casino floor teleported into shows no regulars - they come only while nobody's in the room
+  (`activities.js`: a floor's people never pop in in view); walking in from the street fills it.
+
 ## Vehicles in shallow water (owner, 11-24 21:40 - noted for the pre-beta; a game rule, not art)
 "I've noticed that when vehicles hit water they instantly sink ... it would be a better experience if vehicles can hit
 shallow water and manage to move a bit in the shallow water before breaking down, or going into deeper water and then
