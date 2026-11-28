@@ -28864,3 +28864,11 @@ also the district's awnings, washing lines, posters and AC units.
 - Not done from his note: the map's badge over the canopy's H (the page's badge rule - logged for the Opus chat);
   see-through windows (the note's own answer: no for the beta). Not seen: a ward by a player on a phone.
 
+## 2026-11-28 · Phone wires that end at nothing - built on a side branch, NOT in any batch (the owner's word first)
+Branch `phone-wires-1128` (off `fable-art-1127`), a world change: his note is on his list of calls ("a world change
+waiting for my OK ... propose folding them in and ask me first"). By the data: 1,672 utility poles, 1,397 with a wire
+to the pole before it; 10 wires ran to a spot where no pole stands - the pole they aimed at had been moved off a walk
+or a doorstep, or dropped, by a later pass. `shared/world3-tidy.js` `wireEnds3`, the last pass but one of the build:
+each is re-aimed at the nearest pole within 160 px of where it ran (5), or the pole stands without a wire (5); none
+left. Test: `test/wireends.test.js` (2). Not run on this branch: the World v3 test files (to run when it is folded in).
+

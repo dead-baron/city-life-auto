@@ -301,3 +301,30 @@ export function strayBags3(m) {
   if (gone.size) dropProps(m, gone);
   return gone.size;
 }
+
+// A utility pole's wire runs to the pole before it in its line ({ wx, wy }: world3-countyroad.js, world3-verges.js,
+// countryside.js). Later passes move poles off walks and doorsteps and drop some (world3-clutter.js, the plazas, the
+// door steps): the wire of the next pole then ran to the spot where that pole had stood and ended in the air - the
+// owner's "phone wires that end at nothing" (10 of 1,397 by the data, 11-28). Each such wire is re-aimed at the
+// nearest pole within WIRE_REACH px of where it ran (not its own, and none it would cross a building to reach), or the
+// pole stands without one. Returns { poles, wired, loose, reaimed, cut }.
+export const WIRE_REACH = 160, WIRE_AT = 6;
+export function wireEnds3(m) {
+  const poles = m.props.filter((p) => p && p.t === 'upole');
+  const CELL = 256, grid = new Map(), key = (x, y) => Math.floor(x / CELL) + ',' + Math.floor(y / CELL);
+  for (const p of poles) { const k = key(p.x, p.y); let l = grid.get(k); if (!l) grid.set(k, (l = [])); l.push(p); }
+  const near = (x, y, r, not) => { let best = null, bd = r + 1; for (let cy = Math.floor((y - r) / CELL); cy <= Math.floor((y + r) / CELL); cy++) for (let cx = Math.floor((x - r) / CELL); cx <= Math.floor((x + r) / CELL); cx++) for (const q of grid.get(cx + ',' + cy) || []) { if (q === not) continue; const d = Math.max(Math.abs(q.x - x), Math.abs(q.y - y)); if (d < bd) { bd = d; best = q; } } return best; };
+  const out = { poles: poles.length, wired: 0, loose: 0, reaimed: 0, cut: 0 };
+  for (const p of poles) {
+    if (p.wx === undefined) continue;
+    out.wired++;
+    if (near(p.wx, p.wy, WIRE_AT, p)) continue;
+    out.loose++;
+    const q = near(p.wx, p.wy, WIRE_REACH, p);
+    if (q) { p.wx = q.x; p.wy = q.y; out.reaimed++; } else { delete p.wx; delete p.wy; out.cut++; }
+  }
+  return out;
+}
+// (the lint's and the tests' count: wires that run to a spot where no pole stands)
+export function looseWires(m) { const poles = m.props.filter((p) => p && p.t === 'upole'); return poles.filter((p) => p.wx !== undefined && !poles.some((q) => q !== p && Math.abs(q.x - p.wx) <= WIRE_AT && Math.abs(q.y - p.wy) <= WIRE_AT)); }
+
