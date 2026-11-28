@@ -27,17 +27,60 @@ export function vendingMachine(color = '#c8242a', on = 1) {
   m.box(3, 15, 4, 16, 16, 9, dark);
   return m;
 }
-// a glazed phone booth: corner posts, glass walls, a lit band under the roof, the phone on the back wall
+// A glazed phone booth that reads as one (the owner, 11-23: "white rectangles everywhere" - the booth was a pale box
+// with a white band): an aluminium frame on a kick panel, the payphone seen through the door's glass - its dark case,
+// the chrome plate with its keys, the handset hung at its side on a cord, the shelf and a yellow directory - and a blue
+// lit header with a white handset on it. Every part on the art's own pixel (2 px).
+const HANDSET = ['.XXXXXX.', 'XX....XX', 'XX....XX'];
 export function phoneBooth(on = 1) {
-  const m = new Vox(20, 20, 58);
-  const fr = m.mat({ ramp: R('#9aa0a8'), k: 3 }), glass = m.mat({ ramp: MAT.glass, k: 3, flag: F_GLASS });
-  const band = glowMat(m, '#e8f4e8', on ? [230, 250, 220, 220] : [0, 0, 0, 0]), ph = m.mat({ ramp: R('#3a3e46'), k: 2 }), floor = m.mat({ ramp: MAT.concrete, k: 3 });
-  const lamp = glowMat(m, '#fff0c0', on ? [255, 220, 150, 160] : null);
+  const m = new Vox(20, 20, 60);
+  const fr = m.mat({ ramp: R('#aab0b8'), k: 3 }), frD = m.mat({ ramp: R('#7c838c'), k: 3 }), glass = m.mat({ ramp: MAT.glass, k: 3, flag: F_GLASS });
+  const floor = m.mat({ ramp: MAT.concrete, k: 3 }), ph = m.mat({ ramp: R('#23262c'), k: 2 }), chrome = m.mat({ ramp: MAT.chrome, k: 3 }), key = m.mat({ ramp: R('#e6e6de'), k: 3 });
+  const book = m.mat({ ramp: R('#e8c040'), k: 3 }), cord = m.mat({ ramp: R('#3a3e46'), k: 2 });
+  const head = glowMat(m, '#2a5ab0', on ? [70, 130, 255, 150] : null), mark = glowMat(m, '#f4f6fa', on ? [240, 246, 255, 230] : null), lamp = glowMat(m, '#fff0c0', on ? [255, 224, 160, 140] : null);
   m.box(0, 0, 0, 20, 20, 2, floor);
-  for (const [x, y] of [[0, 0], [18, 0], [0, 18], [18, 18]]) m.box(x, y, 2, x + 2, y + 2, 54, fr);
-  m.box(2, 0, 4, 18, 1, 50, glass); m.box(0, 2, 4, 1, 18, 50, glass); m.box(19, 2, 4, 20, 18, 50, glass); m.box(2, 19, 4, 18, 20, 50, glass);
-  m.box(0, 0, 50, 20, 20, 54, fr); m.box(1, 19, 50, 19, 20, 53, band); m.box(0, 0, 54, 20, 20, 58, fr);
-  m.box(6, 1, 26, 14, 4, 40, ph); m.box(8, 3, 34, 12, 5, 38, ph); m.box(5, 2, 48, 15, 18, 49, lamp);
+  for (const [x, y] of [[0, 0], [18, 0], [0, 18], [18, 18]]) m.box(x, y, 2, x + 2, y + 2, 46, fr);
+  m.box(2, 0, 2, 18, 1, 46, glass); m.box(0, 2, 2, 1, 18, 46, glass); m.box(19, 2, 2, 20, 18, 46, glass);
+  // the door, seen from the street: the kick panel, the glass, and through it the phone on the back wall
+  m.box(2, 19, 2, 18, 20, 12, frD); m.box(2, 19, 10, 18, 20, 12, fr);
+  m.box(2, 19, 12, 18, 20, 44, glass); m.box(2, 19, 44, 18, 20, 46, fr);
+  m.box(8, 19, 22, 16, 20, 40, ph);                                   // the payphone's case
+  m.box(10, 19, 28, 14, 20, 36, chrome); m.box(10, 19, 36, 14, 20, 38, ph);
+  for (const [x, z] of [[10, 32], [12, 32], [10, 30], [12, 30]]) m.box(x, 19, z, x + 1, 20, z + 1, key);
+  m.box(10, 19, 24, 14, 20, 26, chrome);                              // the coin return
+  m.box(4, 19, 26, 6, 20, 38, ph); m.box(6, 19, 36, 8, 20, 38, ph); m.box(6, 19, 26, 8, 20, 28, cord);   // the handset on its hook, the cord's loop
+  m.box(4, 19, 18, 16, 20, 20, frD); m.box(6, 19, 14, 12, 20, 18, book);   // the shelf, the directory under it
+  // the header: blue, lit, a white handset
+  m.box(0, 0, 46, 20, 20, 56, fr); m.box(1, 19, 46, 19, 20, 56, head);
+  HANDSET.forEach((row, r) => { for (let c = 0; c < 8; c++) if (row[c] === 'X') m.box(2 + c * 2, 19.5, 52 - r * 2, 4 + c * 2, 20, 54 - r * 2, mark); });
+  m.box(0, 0, 56, 20, 20, 60, frD); m.box(1, 1, 59, 19, 19, 60, fr);
+  m.box(5, 2, 44, 15, 18, 45, lamp);
+  return m;
+}
+// An ATM in a booth of its own, for one that no wall takes (the owner, 11-22: "Booth works for atms" - 52 of the world's
+// stood as a piece of brick wall on the pavement): a bank-blue back and roof on steel posts, glass sides, the machine set
+// in the back - its lit screen, the keys, the cash slot under a green strip - the front open, and a lit header: ATM.
+const ATM_WORD = { A: '010101111101101', T: '111010010010010', M: '101111111101101' };
+export function atmBooth(on = 1, color = '#2f4f8a') {
+  const m = new Vox(40, 24, 62);
+  const blue = m.mat({ ramp: R(color), k: 3 }), steel = m.mat({ ramp: R('#9aa0a8'), k: 3 }), dark = m.mat({ ramp: MAT.metalDark, k: 2 }), floor = m.mat({ ramp: MAT.concrete, k: 3 });
+  const glass = m.mat({ ramp: MAT.glass, k: 3, flag: F_GLASS }), keys = m.mat({ ramp: R('#d8d8d0'), k: 3 }), cap = m.mat({ ramp: R('#2f8a5a'), k: 3 }), stone = m.mat({ ramp: R('#c4c8cc'), k: 3 });
+  const scr = glowMat(m, '#6ac8f0', on ? [120, 210, 255, 230] : [60, 120, 160, 60]), head = m.mat({ ramp: R(color, 5, 3), k: 1, emi: on ? [50, 96, 220, 120] : null, flag: F_NOCAST }), word = glowMat(m, '#f4f6fa', on ? [240, 246, 255, 235] : null), mat = m.mat({ ramp: R('#4a4e58'), k: 2 });   // (the header a dark blue: the word reads on it by day too)
+  const lamp = glowMat(m, '#fff4d8', on ? [255, 236, 190, 150] : null);
+  m.box(0, 0, 0, 40, 24, 2, floor); m.box(2, 8, 1, 38, 23, 2.4, mat);                  // the slab, a rubber mat on it
+  m.box(0, 0, 2, 40, 4, 48, blue);                                                      // the back
+  for (const x of [0, 38]) { m.box(x, 22, 2, x + 2, 24, 48, steel); m.box(x, 4, 2, x + 1 + (x ? 1 : 0), 22, 10, blue); m.box(x ? 39 : 0, 4, 10, x ? 40 : 1, 22, 46, glass); }   // the posts, the sides: a kick band, glass
+  // the machine in the back wall, low enough to show under the header from the street
+  m.box(8, 4, 2, 32, 8, 34, stone); m.box(10, 7, 4, 30, 8, 32, steel); m.box(10, 7, 30, 30, 8, 34, cap);
+  m.box(14, 7.5, 20, 26, 8, 28, scr); m.box(14, 7.5, 12, 26, 8, 18, dark);
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) m.box(15 + c * 3, 7.8, 13 + r * 2, 16.5 + c * 3, 8, 14 + r * 2, keys);
+  m.box(14, 7.5, 7, 26, 8, 9, dark);
+  m.box(4, 5, 46, 36, 21, 47, lamp);
+  // the roof and the header
+  m.box(0, 0, 48, 40, 24, 52, blue); m.box(0, 0, 52, 40, 23, 53, steel);
+  m.box(0, 23, 48, 40, 24, 62, head); m.box(0, 22, 60, 40, 24, 62, steel);
+  let x = 9;
+  for (const ch of 'ATM') { const b = ATM_WORD[ch]; for (let i = 0; i < 15; i++) if (b[i] === '1') m.box(x + (i % 3) * 2, 23.5, 58 - Math.floor(i / 3) * 2 - 2, x + (i % 3) * 2 + 2, 24, 58 - Math.floor(i / 3) * 2, word); x += 8; }
   return m;
 }
 // a concrete jersey barrier, optionally painted with red and white diagonal stripes

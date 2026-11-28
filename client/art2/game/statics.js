@@ -1181,25 +1181,25 @@ export function frontAtms(M, tx, footTy, tw) {
   let I = ATM_ROWS.get(M);
   if (!I) {
     I = new Map();
-    const add = (row, x, hw) => { let l = I.get(row); if (!l) I.set(row, (l = [])); l.push([x, hw]); };
+    const add = (row, x, hw, k) => { let l = I.get(row); if (!l) I.set(row, (l = [])); l.push([x, hw, k]); };
     for (const p of M.props || []) {
       if (!p) continue;
-      if (p.t === 'atmw' && p.inside === undefined) add(Math.floor((p.y - 5) / TILE), p.x, 21);
+      if (p.t === 'atmw' && p.inside === undefined) add(Math.floor((p.y - 5) / TILE), p.x, 21, 'atm');
       // (and a flower box or a potted shrub stood in front - plantFor: a planter on the paving - within PLANTER_REACH px
       // of the wall's foot, tall enough to reach the window: the OPEN not behind it either)
-      else if (POTTED.test(p.t) || /^planter_/.test(p.t)) for (let ty = Math.floor((p.y - PLANTER_REACH) / TILE); ty <= Math.floor(p.y / TILE); ty++) if (p.y >= ty * TILE) add(ty, p.x, 26);
+      else if (POTTED.test(p.t) || /^planter_/.test(p.t)) for (let ty = Math.floor((p.y - PLANTER_REACH) / TILE); ty <= Math.floor(p.y / TILE); ty++) if (p.y >= ty * TILE) add(ty, p.x, 26, 'planter');
     }
     ATM_ROWS.set(M, I);
   }
   const out = [], X0 = tx * TILE, X1 = (tx + tw) * TILE;
-  for (const [x, hw] of I.get(footTy) || []) if (x > X0 - hw && x < X1 + hw) out.push([Math.round(x - X0 - hw), Math.round(x - X0 + hw)]);
+  for (const [x, hw, k] of I.get(footTy) || []) if (x > X0 - hw && x < X1 + hw) out.push([Math.round(x - X0 - hw), Math.round(x - X0 + hw), k]);   // ([x0, x1, 'atm' | 'planter']: buildings.js storefront opens the awning over a machine)
   return out;
 }
 // The tall street furniture standing before a front (the map's props: a phone box, a lamp post, a power pole; a filling
 // station's pumps, for the canopy over them): by the row of the wall's foot -> [[x0, x1, top]...], its span in facade px
 // from the section's west edge and how far up the wall it reaches on screen (its height less how far out it stands).
 // open / board: the wall heights of the foot of a window's OPEN and of the shop's board; least: the shortest board kept.
-export const FRONT_TALL = { open: 24, board: 48, least: 56, kinds: { phonebox: [11, 58, 10], lamp: [3, 90, 0], plamp: [3, 90, 0], upole: [4, 116, 0] }, pump: [55, 66, -25] };   // (a kind: half its width, its height, half its depth - a box's top is drawn that much further up the wall)
+export const FRONT_TALL = { open: 24, board: 48, least: 56, kinds: { phonebox: [11, 60, 10], lamp: [3, 90, 0], plamp: [3, 90, 0], upole: [4, 116, 0] }, pump: [55, 66, -25] };   // (a kind: half its width, its height, half its depth - a box's top is drawn that much further up the wall)
 const TALL_ROWS = new WeakMap();
 export function frontTall(M, tx, footTy, tw) {
   let I = TALL_ROWS.get(M);
@@ -1861,6 +1861,16 @@ function varyDecks(all) {
   return { swapped, list: secs.map((q) => [q.bi, q.tx, q.ty, q.tw, q.th, roofLook(q.r.spec.roofMat, q.r.kit), q.A]) };
 }
 
+// An ATM no wall takes (the placement lint's atmStray reads this too): a machine not in a room, with no building's wall
+// behind all three of its back's points. ATM_BOOTH.south: how far south of the machine's spot its booth is drawn (the
+// booth is 12 px deeper than the piece of wall it replaces: its front stays where that one's was - many stand at a kerb).
+export const ATM_BOOTH = { south: -6 };
+export function atmOnItsOwn(M, p) {
+  if (p.inside !== undefined) return false;
+  const wall = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); if (!M.inside(tx, ty)) return false; const t = M.tiles[M.idx(tx, ty)]; return t === T.BUILDING || t === T.WALL; };
+  return ![-12, 0, 12].every((dx) => wall(p.x + dx, p.y - 13));
+}
+
 function addBuildings(c, I) {
   const M = c.M, all = [];
   M.buildings.forEach((b, bi) => {
@@ -2063,7 +2073,7 @@ function voxModel(m, a) {
     case 'pottedPalm': return P.pottedPalm(); case 'umbrella': return P.umbrella(a[0], a[1]); case 'dumpster': return dumpster(a[0]); case 'gatePier': return gatePier(); case 'crate': return P.crate(a[0] || 1);
     case 'hotdogCart': return P.hotdogCart(a[0] || 0); case 'armLamp': return P.armLamp(a[0], a[1], a[2]); case 'streetLamp': return P.streetLamp(a[0]);
     case 'lampPost': return P.lampPost(a[0], a[1]); case 'bannerLamp': return D.bannerLamp(a[0], a[1]); case 'twinLamp': return K.twinLamp(a[0]); case 'wallLamp': return RD.wallLamp(a[0], a[1]);
-    case 'busShelter': return D.busShelter(a[0], a[1]); case 'phoneBooth': return K.phoneBooth(a[0]); case 'atmWall': return K.atmWall(a[0]); case 'vending': return K.vendingMachine(a[0], a[1]);
+    case 'busShelter': return D.busShelter(a[0], a[1]); case 'phoneBooth': return K.phoneBooth(a[0]); case 'atmWall': return K.atmWall(a[0]); case 'atmBooth': return K.atmBooth(a[0], a[1] || undefined); case 'vending': return K.vendingMachine(a[0], a[1]);
     case 'mailbox': return D.mailbox(a[0]); case 'wheelieBin': return D.wheelieBin(a[0]); case 'tires': return D.tires(a[0] || 3); case 'trashBags': return trashBags(a[0] || 3, a[1] || 1);
     case 'pallets': return pallets(a[0] || 1, a[1] || 1); case 'oilDrum': return D.oilDrum(a[0], a[1]); case 'cableSpool': return K.cableSpool(); case 'bikeRack': return X.bikeRack(a[0] || 3);
     case 'cone': return X.cone(); case 'planterBox': return D.planterBox(a[0], a[1], a[2] ?? true); case 'fountain': return D.fountain(a[0], a[1], a[2] ?? true); case 'flowerBed': return P.flowerBed(a[0]);
@@ -2138,7 +2148,7 @@ function vdim(m, a) {
     case 'bollard': return [6, 6, a[0] || 12]; case 'acUnit': return [18, 14, 12]; case 'steamVent': return [18, 14, 60]; case 'handTruck': return [14, 12, 34]; case 'planter': return [24, 14, 22]; case 'pottedPalm': return [22, 22, 40]; case 'umbrella': return [30, 30, 30];
     case 'dumpster': return [32, 18, 20]; case 'gatePier': return [12, 12, 46]; case 'crate': return [14, 14, 13]; case 'hotdogCart': return [40, 24, 56]; case 'armLamp': return [a[0] + 12, 10, 102]; case 'streetLamp': return [14, 14, 94];
     case 'lampPost': return a[0] === 'cast' || a[0] === 'iron' ? [12, 12, 84] : [30, 12, 106]; case 'bannerLamp': return [22, 12, 90]; case 'twinLamp': return [46, 12, 98]; case 'wallLamp': return [8, 12, (a[1] || 46) + 4];
-    case 'busShelter': return [(a[0] || 64) + 14, 22, 64]; case 'phoneBooth': return [20, 20, 58]; case 'atmWall': return [36, 12, 52]; case 'vending': return [24, 16, 46]; case 'mailbox': return [12, 8, 20];
+    case 'busShelter': return [(a[0] || 64) + 14, 22, 64]; case 'phoneBooth': return [20, 20, 60]; case 'atmWall': return [36, 12, 52]; case 'atmBooth': return [40, 24, 62]; case 'vending': return [24, 16, 46]; case 'mailbox': return [12, 8, 20];
     case 'tires': return [18, 18, 16]; case 'trashBags': return [30, 24, 16]; case 'pallets': return [28, 24, 6 + 6 * (a[1] || 1)]; case 'oilDrum': return [12, 12, 18]; case 'cableSpool': return [24, 18, 26];
     case 'bikeRack': return [40, 10, 14]; case 'cone': return [10, 10, 16]; case 'planterBox': return [a[0] || 34, a[1] || 34, 26]; case 'fountain': return [(a[0] || 30) * 2 + 2, (a[0] || 30) * 2 + 2, 56];
     case 'flowerBed': return [a[0] || 30, 12, 10]; case 'powerPole': return [(a[1] || 16) * 2 + 4, 10, (a[0] || 120) + 4]; case 'tent': return [40, 34, 28]; case 'domeTent': return [36, 30, 22];
@@ -2834,7 +2844,12 @@ function propItems(c, p, pi, I) {
     }
     case 'bags': V(`bags:${seed % 3}`, 'trashBags', [2 + seed % 3, seed]); return;
     case 'phonebox': V('phone', 'phoneBooth', [1]); lightAt(I, x, y + 4, 48, 70, [0.85, 1, 0.85], 0.9, 'sign'); return;
-    case 'atmw': { const col = { neon: '#e83a9a', kiosk: '#3a6ab0' }[p.v] || null; V('atm', 'atmWall', [1]); lightAt(I, x, y + 8, 32, 60, [0.5, 0.8, 1], 0.9, 'sign'); void col; return; }
+    case 'atmw': {
+      // (one no wall takes stands in a booth of its own - the owner, 11-22: "Booth works for atms": its open front where
+      // the machine's face was, toward whoever uses it)
+      if (atmOnItsOwn(c.M, p)) { put(I, vitem('atmb', 'atmBooth', [1], x, y + ATM_BOOTH.south, 0, null, { pi, ...(p.lift ? { z0: p.lift } : null) })); lightAt(I, x, y + 14, 40, 76, [0.6, 0.8, 1], 1, 'sign'); return; }
+      V('atm', 'atmWall', [1]); lightAt(I, x, y + 8, 32, 60, [0.5, 0.8, 1], 0.9, 'sign'); return;
+    }
     case 'trashpile': V(`tp:${seed % 3}`, 'trashPile', [seed % 3]); return;
     case 'mosaic': put(I, { key: `mos:${seed % 3}`, recipe: { t: 'flat', k: 'mosaic', w: 56, h: 44, s: seed % 3 }, x, y, ext: [30, 26, 30, 26], pi }); return;
     case 'patio': { const pw = Math.round((p.w || 96) / 2) * 2, ph = Math.round((p.h || 64) / 2) * 2, pk = p.k || 'flag'; put(I, { key: `pat:${pk}:${pw}:${ph}:${seed % 3}`, recipe: { t: 'flat', k: 'patio', pk, w: pw, h: ph, s: seed % 3 }, x, y, ext: [pw / 2 + 2, ph / 2 + 2, pw / 2 + 2, ph / 2 + 2], pi }); return; }

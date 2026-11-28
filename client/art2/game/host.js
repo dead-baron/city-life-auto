@@ -473,6 +473,15 @@ const glyphOf = (p, kinds) => (p.kind === 'hospital' && /HOSPITAL|MEDICAL CENTER
 // The part of the world a walk-in's cut-away covers: round the building, and up the screen over it (its roof's height)
 // (its sprites reach 2 px past its walls, 4 below its foot: statics.js ext)
 export function cutBoxOf(b) { return [b.tx * TILE - 4, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 4, (b.ty + b.th) * TILE + 8]; }
+// Does another building's picture lie over the room you are in (the owner, 11-17: "nothing drawn over a room you're in";
+// the placement lint's interiorOverlap - 24 rooms with a taller building south of them drawn up over the floor)? r: its
+// row of a chunk's buildings [index, x0, top, x1, bottom, foot] in world px; b: the walk-in. It does when it stands
+// south of the room's back wall and its picture covers ROOM_OVER px of the floor each way. _fades then fades it.
+export const ROOM_OVER = 16;
+export function overRoom(r, b) {
+  const X0 = b.tx * TILE, Y0 = b.ty * TILE, X1 = (b.tx + b.tw) * TILE, Y1 = (b.ty + b.th) * TILE;
+  return r[0] !== b.id && r[5] > Y0 + TILE && Math.min(r[3], X1) - Math.max(r[1], X0) >= ROOM_OVER && Math.min(r[4], Y1) - Math.max(r[2], Y0) >= ROOM_OVER;
+}
 // A walk-in's bakes (lower goes first; the screen's: their distance, the store's looks d - 1e6, ahead 40000 up). entryPrio:
 // inside, not drawn yet - under you, on screen, the rest - before all else. precutPrio: about to walk in - after the
 // screen's own, before the ring.
@@ -1433,6 +1442,16 @@ export class World2 {
       }
       for (const [b, sg] of this._openB) if (!want.has(b) && !(this._upZ && b >= EL_FADE && b < TREE_FADE)) want.set(b, sg);
     }
+    // in a walk-in's room: whatever stands south of it and is drawn up over its floor fades while you're in (overRoom)
+    const ib = F.insideB && F.insideB.walkIn && !F.sub && !F.spec ? F.insideB : null;
+    if (ib) {
+      const key = ib.id + this.chunkState.size * 1e7;
+      if (this._roomKey !== key) {
+        this._roomKey = key; (this._roomB ||= new Map()).clear();
+        for (const st of this.chunkState.values()) for (const r of st.blds || []) if (r[0] < EL_FADE && overRoom(r, ib)) this._roomB.set(r[0], 1);
+      }
+      for (const b of this._roomB.keys()) want.set(b, 1);
+    } else this._roomKey = -1;
     // each one's progress runs linearly (fadeP) and is shown through a smoothstep, so it eases in and out at both ends
     const dt = Math.min(0.1, F.dt || 0.016), P = this.fadeP || (this.fadeP = new Map());
     for (const [b, sg] of want) if (!P.has(b)) P.set(b, sg * 1e-3);

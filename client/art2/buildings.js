@@ -1138,12 +1138,15 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     // its true height: it leaves the wall just above the windows and slopes down as it reaches out over
     // the pavement (so people under it are covered and it casts its shadow from the right height)
     const top = winTop - 2, depth = 13, vTop = y0 - top + 2;
+    // (no awning over a cash machine set in the front - the owner, 11-22, N18: the cloth is open over it, shop.avoid's
+    // 'atm' spans)
+    const atms = (shop.avoid || []).filter((q) => q[2] === 'atm'), pierA = pier, pierB = (x) => pierA(x) || atms.some(([a, z]) => x >= a - 2 && x < z + 2);
     for (let y = 0; y < depth; y++) for (let x = 0; x < w; x++) {
-      if (pier(x)) continue;
+      if (pierB(x)) continue;
       const Y = top + y, stripe = Math.floor(x / 6) % 2 === 1;
       G.put(x, Y, step(stripe ? cb : ca, 0.8 - y / depth * 0.4, x, Y, 0.5), [0, 0.6, 0.8], vTop - y * 0.3, null, 0);
     }
-    for (let x = 0; x < w; x++) { if (pier(x)) continue; const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], vTop - depth * 0.3 - k, null, 0); } }
+    for (let x = 0; x < w; x++) { if (pierB(x)) continue; const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], vTop - depth * 0.3 - k, null, 0); } }
   }
   return { winTop };
 }

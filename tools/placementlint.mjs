@@ -72,7 +72,7 @@ import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy, parkExempt } from '../shared/parkcheck.js';
 import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
-import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf, roofSigns, roofRuns } from '../client/art2/game/statics.js';
+import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName, floraHalf, roofSigns, roofRuns, atmOnItsOwn } from '../client/art2/game/statics.js';
 import { makeBuilding, buildingH, plaqueBox, bladeBox, picSignBox, signLift, GOODS_OF, WINDOWS } from '../client/art2/buildings.js';
 import { PICS } from '../client/art2/signfont.js';
 import { textAudit } from './textaudit.mjs';
@@ -101,7 +101,7 @@ export const LINT_ALLOW = {
   // and Pine Hills' streets of houses, Gull Harbor's and Egret Point's greens, the beaches, a park), left at the back of
   // the pavement as their district's cash of its own, or where a move would leave a street out of the cash's reach
   // (shared/world3-shops.js seatAtms3; world3server.test.js): a shop front there takes one in - bring this down, never up
-  atmStray: 52,
+  atmStray: 3,          // (11-27: 49 of the 52 stand in a booth of their own - statics.js atmOnItsOwn, props-kit.js atmBooth; left: three with no machine of their own on a plaza)
   // (11-22, the world batch: shared/world3-walks.js takes up any plant whose crown stands over a house's path - egret's two
   // included)
   plantOnPath: 0,
@@ -714,6 +714,7 @@ function atmRows(M, rows, seen) {
     seen.atms++;
     const pr = props.find((p) => Math.abs(p.x - a.x) < 6 && a.y - p.y > 10 && a.y - p.y < 40);
     if (pr && pr.inside !== undefined) continue;
+    if (pr && atmOnItsOwn(M, pr)) { seen.atmBooths = (seen.atmBooths || 0) + 1; continue; }   // (in a booth of its own: statics.js atmOnItsOwn, props-kit.js atmBooth - the owner, 11-22)
     const wy = pr ? pr.y - 5 : a.y - 26;   // (a machine set in the wall: its foot 5 px out from it; a painted one: 26 px)
     if ([-12, 0, 12].every((dx) => wall(tileAt(a.x + dx, wy - 8)))) continue;
     rows.atmStray.push({ what: `an ATM${pr && pr.v ? ` (${pr.v})` : ''} on its own`, x: a.x, y: a.y, why: `behind it ${Object.keys(T).find((k) => T[k] === tileAt(a.x, wy - 8)) || 'nothing'}` });
