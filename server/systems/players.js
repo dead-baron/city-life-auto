@@ -1,6 +1,6 @@
 // Player sessions: join/leave (30-second Ghost State), input application, context
 // interactions, death + respawn, persistence sync and HUD prompts.
-import { PF, FACTION, TILE, K, WEATHER } from '../../shared/constants.js';
+import { PF, FACTION, TILE, K, WEATHER, T } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
 import * as skydive from './skydive.js';
@@ -8,7 +8,7 @@ import * as surf from './surf.js';
 import * as tennis from './tennis.js';
 import * as prison from './prison.js';
 import * as aircraft from './aircraft.js';   // (at the controls of an aircraft)
-import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared/physics.js';
+import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION, PED } from '../../shared/physics.js';
 import { PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { surfaceZ } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
@@ -868,6 +868,33 @@ function fishHere(world, p, ped) {
   if (!fishing.rodInHand(ped)) { ftue.moment(world, p, 'rod'); return null; }
   return { label: spot.boat ? 'Fish over the side (hold to cast)' : 'Fish here (hold to cast)', run: () => fishing.begin(world, p, spot) };
 }
+// On a dock's planks facing open water: jump in (PREBETA-LIST, the Rusty Spur notes of 11-17 - nobody found that a dive
+// roll goes over a dock's edge, and walking doesn't: shared/physics.js, the railing of b1c). The prompt sends you off
+// the side the way a dive roll would; never with a crate in your arms or a board under you, and a boat moored there wins.
+export function jumpInSpot(world, ped) {
+  if (ped.ug || ped.vehId || ped.board || ped.surf || ped.carrying || ped.onTrain || ped.sky) return null;
+  const m = world.map;
+  if (m.tileAtPx(ped.x, ped.y) !== T.DOCK || isSwimming(m, ped)) return null;
+  for (const off of [0, 0.6, -0.6]) {
+    const a = (ped.a || 0) + off, ux = Math.cos(a), uy = Math.sin(a);
+    for (const d of [24, 40]) {
+      const t = m.tileAtPx(ped.x + ux * d, ped.y + uy * d);
+      if (t === T.WATER || t === T.DEEP) return { a, ux, uy };
+      if (t !== T.DOCK) break;   // (land, a wall, a bridge's deck in the way: not this way)
+    }
+  }
+  return null;
+}
+function jumpIn(world, p, ped) {
+  const s = jumpInSpot(world, ped);
+  if (!s) return null;
+  return { label: 'Jump in', run: () => {
+    const q = jumpInSpot(world, ped);
+    if (!q || ped.dead || ped.cuffed || world.time < ped.downUntil) return;
+    ped.a = q.a; ped.rdx = q.ux; ped.rdy = q.uy; ped.rollT = PED.rollTime;
+    ped.vx = q.ux * PED.rollSpeed; ped.vy = q.uy * PED.rollSpeed;
+  } };
+}
 export function findInteraction(world, p) {
   const ped = p.ped;
   if (p.struggle) return null;   // (fighting an officer off: the struggle bar says what to press - client/hud.js)
@@ -1073,6 +1100,8 @@ export function findInteraction(world, p) {
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
   const v = vehicles.nearestVehicle(world, ped, 56);
   if (v) return { label: vehicles.enterLabel(world, p, v), key: 'F', crime: vehicles.entryInfo(world, p, v).crime, key2: `veh:${v.id}`, run: () => vehicles.tryEnter(world, ped) };
+  const dive = jumpIn(world, p, ped);   // (on a dock facing the water: off the side)
+  if (dive) return dive;
   const fh = !ped.board && horses.farmHorseNear(world, ped);   // a farm's horse grazing beside you: up on it bareback - the farm's, so horse theft (horses.js)
   if (fh) return { label: 'Ride the horse bareback - Horse theft', key: 'F', crime: 'horseTheft', key2: `horse:${fh.id}`, run: () => vehicles.playerEnter(world, ped) };
   const garage = homeups.garageInteraction(world, p);   // by your own garage's door: its materials and the home's upgrades (homeups.js)

@@ -185,7 +185,8 @@ test("a dancer hurt on a club's floor stops and flees or fights; the floor round
     combat.damage(w, v, 3, a.p.ped, 'melee', 0);
     assert.ok(v.gt !== 'dance' && !v.npc.dancer && !v.npc.desk, 'the hurt dancer stops and leaves their spot');
     assert.ok(!c.dancers.includes(v.id), '...off the floor');
-    assert.equal(v.npc.state, fight ? 'fight' : 'flee', `by temperament: ${fight ? 'fights back' : 'runs'}`);
+    // (the reaction ladder, 11-27 - server/systems/react.js: a shove sends an ordinary one back a step with a word, or off)
+    assert.ok(fight ? ['fight', 'warn'].includes(v.npc.state) : ['flee', 'warn', 'hide'].includes(v.npc.state), `by temperament: ${fight ? 'squares up or fights back' : 'backs off or runs'} (${v.npc.state})`);
     for (const o of near) assert.ok(o.gt !== 'dance' && o.npc.state === 'flee', 'the nearest step back out of it');
     for (const o of far) assert.equal(o.gt, 'dance', 'the far side of the floor dances on');
     assert.ok(rest.length < 2 || rest.some((o) => o.gt === 'dance'), 'most of the floor dances on');

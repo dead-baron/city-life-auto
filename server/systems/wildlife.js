@@ -47,6 +47,14 @@ import * as events from './events.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const rng = mulberry32(5150);
+// a number 0..1 of its own for each animal (k: which one) - not from the shared random sequence: no draw spent
+const idFrac = (id, k) => { let h = Math.imul((id | 0) ^ Math.imul(k, 0x9e3779b9), 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+// where one of a herd (or one of the young) keeps to round its leader, how near it lets itself be, and its pace (x its
+// kind's walk and trot): its own, by its id - so no two of them walk as one (the owner, 11-17)
+export function herdSpot(id, lead, young = false) {
+  const ia = idFrac(id, 1) * Math.PI * 2, ir = (young ? 10 : 28) + idFrac(id, 2) * (young ? 14 : 44);
+  return { x: lead.x + Math.cos(ia) * ir, y: lead.y + Math.sin(ia) * ir, keep: (young ? 26 : 62) * (0.8 + 0.4 * idFrac(id, 4)), pace: 0.86 + 0.28 * idFrac(id, 3) };
+}
 
 // ---- the farms' livestock (not game: hunting.js) -----------------------------------------------------------------
 export const LIVESTOCK = {
@@ -1345,8 +1353,10 @@ function step(world, a, dt, now, ph) {
       // the young and the flock keep near their leader (not while a fence or a wall is in the way: herdOff, giveUp)
       const lead = w.mother ? world.get(w.mother) : (!w.lead && w.herd ? herdLead(world, a) : null);
       if (lead && lead !== a && !lead.dead && now >= (w.herdOff || 0)) {
-        const dx = lead.x - a.x, dy = lead.y - a.y, d = Math.hypot(dx, dy), keep = w.young ? 34 : 90;
-        if (d > keep) { mx = dx / d; my = dy / d; speed = d > keep * 3 ? S.trot : S.walk; pose = APOSE.auto; goal = d - keep * 0.5; }
+        // (each its own place round the leader and its own pace - the owner, 11-17: "two moving in lockstep, same speed
+        // and timing": they all made for the leader's middle at the one speed, side by side as one)
+        const H = herdSpot(a.id, lead, !!w.young), dx = H.x - a.x, dy = H.y - a.y, d = Math.hypot(dx, dy) || 1;
+        if (d > H.keep) { mx = dx / d; my = dy / d; speed = (d > H.keep * 3 ? S.trot : S.walk) * H.pace; pose = APOSE.auto; goal = d - H.keep * 0.5; }
       }
     }
   }
