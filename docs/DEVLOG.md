@@ -28810,3 +28810,7 @@ rain, down Lucky Mesa's Strip at golden hour; police chases through the Old Quar
 Westport Center at noon; the helicopter pursuit through Bayside Heights; the gang shootout at dawn. They sit under
 "More (unreviewed)" in the camera panel until the owner passes them (`KEPT`), ready for the reshoot on the final art.
 Tests: `scenes.test.js` (each script whole), `world3scenes.test.js` (each finds its place and cast on World v3).
+- (Same night) A street race or a police chase started on purpose (the scenes' 'street' step, the debug menu) now looks
+  harder for a stretch of road to start it on before it gives up - 150 tries, was 60 (`streetlife.js` `LANE_TRIES`):
+  on a busy Strip at night 60 now and then found none ("No street to start it on around here"), the flake in
+  `world3scenes.test.js`'s staged street race.

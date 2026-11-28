@@ -61,11 +61,12 @@ const nobodyNear = (world, x, y, r) => { for (const p of world.players.values())
 
 // A street lane off every screen round (x, y), r0-r1 px away: a ground-level road (no alley, dirt track or ramp) long
 // enough for a pack to line up on, with nothing on it there. { e, from, s, p } or null.
+const LANE_TRIES = 150;
 function laneSpot(world, x, y, r0, r1, room = 300) {
   const net = world.map.net;
   if (!net) return null;
   const cands = net.edges.filter((e) => { const b = bbox(e); return e.lvl === 0 && e.kind !== 'alley' && e.kind !== 'dirt' && e.kind !== 'drive' && e.len > room + 160 && b.x1 > x - r1 && b.x0 < x + r1 && b.y1 > y - r1 && b.y0 < y + r1; });
-  for (let k = 0; k < 60 && cands.length; k++) {
+  for (let k = 0; k < LANE_TRIES && cands.length; k++) {   // (60 tries left a busy Strip at night with none now and then: world3scenes' street race)
     const e = cands[Math.floor(rng() * cands.length)];
     let from = e.oneway || rng() < 0.5 ? e.a : e.b;
     if (!e.oneway && deadWay(net, e.id, from)) from = from === e.a ? e.b : e.a;
