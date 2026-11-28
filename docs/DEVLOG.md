@@ -28692,6 +28692,7 @@ shooting hoops on. Passers-by treat them as the skate parks: a wanderer's next w
 the nearest way (wander, idle), and nobody stops to idle on one. The game's own people (the club pro) play on as ever.
 The car soccer arena is walled already; a pool table is furniture (P7: lineHits). Test: `tennis.test.js` (+1).
 
+<<<<<<< HEAD
 ## 2026-11-27 · The Rusty Spur's pool table and the card tables as art; the Boom Tester thrown from glowing hands
 Page code only (the art's hash did not move: world3 ef04748631c8, art3 b07b1089bc7e as on main) - the Fable art chat,
 the night of 11-27, branch `tables-1127`.
@@ -28725,3 +28726,63 @@ the night of 11-27, branch `tables-1127`.
   arcade, art2, art2teleport, idlepose, muzzle, guide, perf pass.
 - Left of his pool notes: the camera frozen while the pool game is open (page logic); "RIDE DRINK REPEAT" on the
   bar's wall (`shared/shoprooms.js` - a change to the world's rooms: with the next batch).
+=======
+## 2026-11-27 night · The biker club comes in waves, shouting first (the owner, 11-17 13:38: the Rusty Spur)
+"Bar fight reaction: stagger it - the first patrons come out and yell, then fight; others join a few at a time, not all
+at once. When you run, some grab their motorcycles and chase." Hurt a club member (`bikers.js` clubAttacked): the one
+you hurt and the nearest member are on you at once; the rest come out to you at a run - from the bar, the porch, the
+burn barrel - stop a little off you shouting ("You picked the wrong bar!", `REACT.lines.club`) and join two at a time,
+1.6 s on and every 2.2 s after (`CLUB_JOIN`, `joins`). Get away on wheels and the club mounts up and rides you down as
+before (the grudge's chase - those still on their way go for their bikes instead). Test: `motorbikes.test.js` (the
+club's fight: straight in, the next few after a moment, then the whole club).
+
+## 2026-11-27 night · Animals out of step; dancers keep their room (the owner's 11-17 notes)
+- **"Birds/animals doubled up: two moving in lockstep, same speed and timing"**: a herd's animals and the young all made
+  for their leader's middle at the one speed (`wildlife.js`), so two of them side by side walked as one. Now each keeps
+  to its own place round the leader, lets itself come its own distance and goes at its own pace (0.86-1.14 of its
+  kind's walk and trot) - `herdSpot`, by its id (no draw from the shared random sequence). Test: `wildmoves.test.js`.
+- **"Dancers bunched up, one standing in a fountain"**: a dancer's next spot round where they dance (`personas.js`
+  `danceSpot`) is clear of anything standing there - a fountain's basin, a bench, a planter: its solid circle and 16 px
+  - and 30 px from the next person (`DANCE_ROOM`). Test: `npcpeople.test.js`.
+- `test/dance.test.js` brought up to the reaction ladder (11-27): a dancer shoved on a club's floor backs off with a
+  word or runs, or - a fighter - squares up first (it failed on main since part 1).
+
+## 2026-11-27 night · The Inventory's first open: no empty frame
+The UI pass (11-23) saw the Inventory's frame stand empty a moment the first time it opened - its code (client/bag.js)
+came down only then. Now it's fetched a while after you're in the city (main.js `warmBag`: 12 s on, when the page is
+quiet - requestIdleCallback), and made as before when it opens. The page's start isn't touched (perf: main.js's own code).
+
+## 2026-11-27 night · Clicks inside the zoomed desktop panels; two Employment Center places in the debug test
+- **Pre-beta: "Desktop panels with CSS zoom: no broken clicks in any canvas inside them"** - checked every canvas the
+  page clicks on: the minigames (pool, air hockey, arcade, pinball, skee-ball), the debug teleport and homes maps, the
+  respawn map, the Inventory's figure, the character's turntable and the big map all place a click from clientX/Y as a
+  share of the canvas's getBoundingClientRect (right under any zoom), and nothing reads offsetX/Y any more (the
+  respawn map's fix, 11-17). New `test/csszoom.test.js` keeps it so: no page code reads offsetX / offsetY / layerX /
+  layerY.
+- `test/gameplay.test.js` (the debug menu's "take me there" buttons): the Employment Center and its job computer are
+  World v3's places, not in the old city the test plays - listed with the tennis courts, casinos and the rest (it
+  failed on main since the Employment Center went in).
+
+## 2026-11-27 night · "Jump in" off a dock's edge (the Rusty Spur notes, 11-17)
+You can't walk off a dock or a pier into the water - on purpose (the railing of b1c: "fell through the bridge") - and
+only a dive roll goes over, which nobody found. Now on a dock's planks facing open water the prompt says **Jump in**:
+it sends you off the side the way the roll does (`players.js` `jumpIn` / `jumpInSpot`: water within a tile and a half
+ahead, or a little to either side; never with a crate in your arms, on a board or from a bridge's deck; a boat moored
+there and your rod in hand keep their prompts). The Guide's "On foot" says so. Test: `test/jumpin.test.js`.
+
+## 2026-11-27 night · The sidewalk pair rocking by a door (the owner, 11-17 20:21, "still weird")
+Two people pressed together by a walk-up's door, rocking forward and back forever. A couple's other half
+(`personas.js` `steer`) makes for a spot a step to the first's right: with the first stopped by a door and that spot in
+the wall - or the first turning about where they stood - the other walked a step on and off at it for as long as they
+stood there. Now when the first stops, the other has a second to come to their side, then stands with them, turned
+to them, till they walk on (`PAIR_STILL`, `PAIR_NEAR`, `PAIR_SETTLE_S`). And someone leaning on a wall (a leaner, a
+chef on their break: `wallSpot`) takes a spot clear of anyone leaning within 40 px and of anyone standing right there
+(`LEAN_ROOM`) - the old check only knew the leaners, so a chef and a leaner could share a door. Test:
+`npcpeople.test.js` (the couple stopped; the dancers' test now finds its own open ground).
+
+## 2026-11-27 night · The character fills its stand again upright (a slip of 11-27's 44 px targets)
+The 44 px boxes round the figure in the Inventory upright (PR #64) stood each slot column some 70 px taller, and the
+character - sized by the stand's width - filled only 58-66% of it on a 360-390 phone (`test/invlayout.test.js`: "at
+least 70%", the owner's 11-16 "super short"). Upright on a phone the slots' names are off now, as on a short screen
+already: each box's glyph says what goes in it. The 44 px stay.
+>>>>>>> origin/main

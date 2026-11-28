@@ -249,6 +249,9 @@ function propsNear(map, x, y, r, cat) {
   for (let cx = Math.floor((x - r) / 512); cx <= Math.floor((x + r) / 512); cx++) for (let cy = Math.floor((y - r) / 512); cy <= Math.floor((y + r) / 512); cy++) for (const q of g.get((cx << 16) | cy) || []) if (Math.hypot(q.x - x, q.y - y) < r) out.push(q);
   return out;
 }
+const DANCE_ROOM = 30;   // px a dancer keeps from the next person (spotNear room)
+// a dancer's next spot round where they dance (null: none with room)
+export const danceSpot = (world, x, y, self = 0) => spotNear(world, x, y, 0, 50, DANCE_ROOM, self);
 const walkable = (map, x, y) => { const t = map.tileAtPx(x, y); return !PED_BLOCK[t] && t !== T.ROAD && t !== T.BRIDGE && t !== T.WATER && t !== T.DEEP; };
 
 // ---- spawning ---------------------------------------------------------------------------------------------------------------
@@ -363,6 +366,7 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
   return ped;
 }
 // a spot with its back to a building's wall, near (x, y): { x, y, a: facing away from the wall } or null
+const LEAN_ROOM = 26;
 function wallSpot(world, x, y) {
   const m = world.map, tx0 = Math.floor(x / TILE), ty0 = Math.floor(y / TILE);
   for (let k = 0; k < 40; k++) {
@@ -371,7 +375,9 @@ function wallSpot(world, x, y) {
     for (const [dx, dy] of [[0, -1], [1, 0], [-1, 0], [0, 1]]) {
       if (!PED_BLOCK[m.tileAt(tx + dx, ty + dy)] || !m.buildingAtPx((tx + dx + 0.5) * TILE, (ty + dy + 0.5) * TILE)) continue;
       const px = (tx + 0.5) * TILE + dx * (TILE / 2 - 12), py = (ty + 0.5) * TILE + dy * (TILE / 2 - 12);
-      if (world.query(px, py, 40, K.PED).some((e) => e.npc && e.npc.persona === 'leaner')) continue;
+      // (clear of the next one leaning - a leaner or a chef on their break - and of anyone standing right there: the
+      // owner, 11-17, two pressed together by a door)
+      if (world.query(px, py, 40, K.PED).some((e) => !e.dead && (Math.hypot(e.x - px, e.y - py) < LEAN_ROOM || (e.npc && PERSONAS[e.npc.persona] && PERSONAS[e.npc.persona].lean)))) continue;
       return { x: px, y: py, a: Math.atan2(-dy, -dx) };
     }
   }
@@ -411,9 +417,21 @@ export function filmFrom(map, px, py, x, y) {
   }
   return map.los(px, py, x, y);
 }
-function spotNear(world, x, y, r0, r1) {
-  for (let k = 0; k < 16; k++) { const a = rng() * Math.PI * 2, d = r0 + rng() * (r1 - r0), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (walkable(world.map, px, py)) return { x: px, y: py }; }
+function spotNear(world, x, y, r0, r1, room = 0, self = 0) {
+  for (let k = 0; k < 16; k++) { const a = rng() * Math.PI * 2, d = r0 + rng() * (r1 - r0), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (walkable(world.map, px, py) && (!room || roomAt(world, px, py, room, self))) return { x: px, y: py }; }
   return null;
+}
+// (room: clear of anything standing there - a fountain's basin, a bench, a planter - and of other people by this much: a
+// dancer's next spot - the owner, 11-17: "Dancers bunched up, one standing in a fountain")
+function roomAt(world, x, y, room, self = 0) {
+  const m = world.map, tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  if (m.solidProps && m.solidProps.size) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+    if (!m.inside(tx + dx, ty + dy)) continue;
+    const ps = m.solidProps.get(m.idx(tx + dx, ty + dy));
+    if (ps) for (const p of ps) if (!p.off && Math.hypot(p.x - x, p.y - y) < (p.r || 0) + 16) return false;
+  }
+  for (const q of world.query(x, y, room, K.PED)) if (q.id !== self && !q.dead && Math.hypot(q.x - x, q.y - y) < room) return false;
+  return true;
 }
 
 // dress and set up an NPC as a persona (partner: the other half of a couple, whose tracksuit they match)
@@ -468,6 +486,7 @@ function lapRoute(world, x, y) {
 
 // ---- going about it (npc.js update: steer, for a persona wandering or standing about) ------------------------------------
 // -> { inp, factor } (factor: the walk's share of a run, as npc.js) or null: walk about like anyone
+const PAIR_STILL = 12, PAIR_NEAR = 34, PAIR_SETTLE_S = 1;   // (a couple: the first at under 12 px/s, you within 34 px of them for a second: stand - steer)
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
 export function steer(world, ped, now) {
   const n = ped.npc, P = PERSONAS[n.persona];
@@ -477,6 +496,17 @@ export function steer(world, ped, now) {
     if (!a || a.dead || a.removed || !a.npc || a.npc.state === 'flee' || a.npc.state === 'fight') { n.with = 0; return null; }
     const h = a.a, tx = a.x - Math.sin(h) * 15, ty = a.y + Math.cos(h) * 15, d = Math.hypot(tx - ped.x, ty - ped.y);
     if (d < 4) { ped.a = h; return { inp: NO_INPUT, factor: 0.55 }; }
+    // the first standing still and you close by: stand with them, turned to them - no edging at a spot you can't
+    // reach (a wall, a door, a post at their right: the owner, 11-17, "two NPCs pressed together by a door ... looping
+    // one lean forward-and-back forever" - a step's walk on and off, into the wall, for as long as they stood there)
+    // (a second to come to their side first; then, till they walk on, you stand - however they turn about)
+    if (Math.hypot(a.vx || 0, a.vy || 0) < PAIR_STILL && Math.hypot(a.x - ped.x, a.y - ped.y) < PAIR_NEAR) {
+      if (!n.pairStill) n.pairStill = now || 1e-3;
+      if (now - n.pairStill >= PAIR_SETTLE_S) {
+        ped.vx = ped.vy = 0; ped.a = Math.atan2(a.y - ped.y, a.x - ped.x);
+        return { inp: NO_INPUT, factor: 0.55 };
+      }
+    } else n.pairStill = 0;
     return { inp: seekTo(ped, tx, ty, d > 40 ? 1 : 0.9), factor: d > 60 ? 0.9 : 0.6 };
   }
   if (P.jog && n.laps) {
@@ -485,7 +515,7 @@ export function steer(world, ped, now) {
     return { inp: seekTo(ped, p.x, p.y), factor: 0.7 };   // (a jog, ~90 px/s: the client's jogging stride)
   }
   if (P.dance && !n.danceOff) {   // dancing on the spot, now and then a shuffle along (danceOff: hurt - dance.js hurt)
-    if (now >= (n.moveAt || 0)) { n.moveAt = now + 6 + rng() * 10; const s = spotNear(world, n.spot.x, n.spot.y, 0, 50); if (s) { n.wx = s.x; n.wy = s.y; } }
+    if (now >= (n.moveAt || 0)) { n.moveAt = now + 6 + rng() * 10; const s = danceSpot(world, n.spot.x, n.spot.y, ped.id); if (s) { n.wx = s.x; n.wy = s.y; } }
     if (Math.hypot(n.wx - ped.x, n.wy - ped.y) > 8) return { inp: seekTo(ped, n.wx, n.wy, 0.6), factor: 0.4 };
     ped.a += Math.sin(now * 1.7 + ped.id) * 0.02;
     return { inp: NO_INPUT, factor: 0.55 };

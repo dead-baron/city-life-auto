@@ -16,7 +16,7 @@ import { K } from '../../shared/constants.js';
 import { CLUBS } from '../../shared/clubs.js';
 import { PAINTS } from '../../shared/vehicles.js';
 import {
-  CLUB_SIZE, CLUB_RIDE_EVERY_S, CLUB_RIDE_MAX_S, CLUB_FIGHT_PX, CLUB_GRUDGE_S, BIKE_THIEF_EVERY_S, BIKE_THIEF_REWARD, BIKE_THIEF_RESPECT,
+  CLUB_SIZE, CLUB_RIDE_EVERY_S, CLUB_RIDE_MAX_S, CLUB_FIGHT_PX, CLUB_GRUDGE_S, CLUB_JOIN, BIKE_THIEF_EVERY_S, BIKE_THIEF_REWARD, BIKE_THIEF_RESPECT,
 } from '../../shared/rules.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { ARCHETYPES } from '../entities.js';
@@ -27,6 +27,7 @@ import { planRoute, driveToward } from './traffic.js';
 import * as vehicles from './vehicles.js';
 import * as events from './events.js';
 import * as gangwar from './gangwar.js';
+import { say } from './react.js';
 
 let rng = mulberry32(3660);
 export function setRng(r) { rng = r; }
@@ -58,7 +59,7 @@ export function update(world, dt) {
   if (!st.up) return;
   for (const c of st.clubs) { drive(world, st, R, c, dt); paths(world, c); }
   if (st.thief) thiefStep(world, st, R);
-  if (world.tick % 10 === 7) { watchBikes(world, st, R); grudges(world, st, R); }
+  if (world.tick % 10 === 7) { watchBikes(world, st, R); grudges(world, st, R); joins(world, st); }
 }
 
 // ---- spawning ---------------------------------------------------------------------------------------------------------
@@ -299,25 +300,52 @@ function toHang(world, R, c) {
 }
 
 // ---- the club comes after someone --------------------------------------------------------------------------------------
-// npc.onAttacked hands a hurt member here: every member near fights back together, the club holds a grudge, a cop's
-// colleagues are drawn in (gangwar.js)
+// npc.onAttacked hands a hurt member here: the club comes for you - not all at once (CLUB_JOIN, the owner 11-17): the one
+// you hurt and the nearest straight in, the rest out to you shouting (from the bar, the porch, the barrel) and in a few at
+// a time (joins); the club holds a grudge, a cop's colleagues are drawn in (gangwar.js)
 export function clubAttacked(world, ped, attacker) {
-  const st = S(world), c = st.clubs.find((q) => q.id === ped.npc.club);
+  const st = S(world), c = st.clubs.find((q) => q.id === ped.npc.club), now = world.time, R = spur(world);
   if (!c || !attacker || attacker === ped || (attacker.npc && attacker.npc.club === ped.npc.club)) return;
-  let n = 0;
+  const near = [];
   for (const id of c.members) {
     const m = world.get(id);
     if (!alive(m)) continue;
     const d = Math.hypot(m.x - attacker.x, m.y - attacker.y);
-    if (d > CLUB_FIGHT_PX) continue;
+    if (d > CLUB_FIGHT_PX && m !== ped) continue;
     if (m.vehId && d < 520) { const v = world.get(m.vehId); if (!v || Math.hypot(v.vx, v.vy) < 80 || m === ped) dismount(world, m, null); }
-    if (!m.vehId) { startFight(world, m, attacker, 45); n++; }
+    if (!m.vehId) near.push([m === ped ? -1 : d, m]);
   }
-  st.grudges.set(attacker.id, { club: c.id, until: world.time + CLUB_GRUDGE_S });
+  near.sort((a, b) => a[0] - b[0]);
+  let n = 0, k = 0;
+  for (const [, m] of near) {
+    const mn = m.npc, on = mn.state === 'fight' && mn.target === attacker.id;
+    if (on || mn.joinBy === attacker.id) { n++; continue; }   // (in it already, or on the way: a second blow changes nothing)
+    if (m === ped || k < CLUB_JOIN.first) { startFight(world, m, attacker, 45); mn.joinAt = 0; n++; k++; continue; }
+    // out to you, shouting: stood a little off you, then in with the next few
+    const w = Math.floor((k - CLUB_JOIN.first) / CLUB_JOIN.per), a = Math.atan2(m.y - attacker.y, m.x - attacker.x);
+    mn.joinAt = now + CLUB_JOIN.yellS + w * CLUB_JOIN.waveS; mn.joinBy = attacker.id;
+    if (R) walkTo(world, R, m, { x: attacker.x + Math.cos(a) * CLUB_JOIN.standPx, y: attacker.y + Math.sin(a) * CLUB_JOIN.standPx, a: a + Math.PI }, true);
+    if (w === 0 || k % 2) say(world, m, 'club');
+    n++; k++;
+  }
+  st.grudges.set(attacker.id, { club: c.id, until: now + CLUB_GRUDGE_S });
   if (attacker.npc && attacker.npc.role === 'cop') gangwar.copAttackedByGang(world, attacker, ped);
   const p = attacker.player;
-  if (p && world.time - (p.clubWarnAt || -99) > 20) { p.clubWarnAt = world.time; world.notify(p, `You hurt one of the ${CLUBS[c.i].name}. The whole club is coming for you!`, 'bad'); }
+  if (p && now - (p.clubWarnAt || -99) > 20) { p.clubWarnAt = now; world.notify(p, `You hurt one of the ${CLUBS[c.i].name}. The whole club is coming for you!`, 'bad'); }
   return n;
+}
+// the ones on their way in (clubAttacked): in when their turn comes - after whoever they came out for, if still about
+function joins(world, st) {
+  const now = world.time;
+  for (const c of st.clubs) for (const id of c.members) {
+    const m = world.get(id), mn = m && m.npc;
+    if (!mn || !mn.joinBy || now < mn.joinAt) continue;
+    const t = world.get(mn.joinBy);
+    mn.joinBy = 0; mn.joinAt = 0;
+    if (!alive(m) || m.vehId || !alive(t) || mn.state === 'fight' || Math.hypot(m.x - t.x, m.y - t.y) > CLUB_FIGHT_PX + 200) continue;
+    mn.path = null; mn.guard = null;
+    startFight(world, m, t, 45);
+  }
 }
 
 // a grudge against someone who got away on wheels (or took a club bike): the club mounts up and rides them down
@@ -333,6 +361,7 @@ function grudges(world, st, R) {
 }
 export function startChase(world, st, c, target) {
   c.mode = 'chase'; c.target = target.id; c.since = world.time;
+  for (const id of c.members) { const m = world.get(id); if (m && m.npc) { m.npc.joinBy = 0; m.npc.joinAt = 0; } }   // (off after him on the bikes now, not on foot)
   // everyone on foot near their bike gets on it (the bar empties out after him)
   c.members.forEach((id, k) => {
     const m = world.get(id), v = world.get(c.bikes[k]);

@@ -1980,6 +1980,8 @@ body.touch .bc-nm { font-size: var(--fs-w2); }
    arrows 40, REMOVE ALL / SAVED LOOKS 36, the kinds 34) */
 .touch .iv-turn .btn { width: var(--tap); height: var(--tap); min-height: var(--tap); }
 .touch .bag.stack .iv-sb { width: 56px; height: var(--tap); } .touch .bag.stack .iv-slot { width: 72px; } .touch .bag.stack .iv-col { gap: 2px; }
+.touch .bag.stack .iv-slot > small { display: none; }   /* (the slots' names off upright - each box's glyph says what goes in it, as on a short screen: the 44 px
+   boxes stood the slot columns 70 px taller and the character, sized by the stand's width, filled 58-66% of it) */
 .touch .bag.stack .iv-dacts .btn { min-height: var(--tap); }
 .touch .bag.stack .bag-cats .chip { height: var(--tap); min-width: var(--tap); justify-content: center; }
 .touch .bag.stack .bag-sort select { min-height: var(--tap); }   /* (the eight quick-bar slots stay 41 wide upright: eight across a 390 phone) */

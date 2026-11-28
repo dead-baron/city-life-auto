@@ -5,7 +5,7 @@ and talks about every part of the game in it; a phase chat is restarted from thi
 what connects them: where the truth is written down, how the owner wants work done, what state the project is in, and
 what each chat must do before it ends. It is kept short on purpose; it points at the documents that hold the detail.
 
-Last updated: 2026-11-27 PST, the Opus 5.5 chat: PRs #53-#60 live - gridlock, skateboards, private-repo prep, the NPC ladder, ads (off) + Employment Center + kayaks (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
+Last updated: 2026-11-27 night PST, the Opus 5.5 chat: PR #68 the night's batch (section 6, after 11-27 evening); PRs #53-#60 live - gridlock, skateboards, private-repo prep, the NPC ladder, ads (off) + Employment Center + kayaks (section 6); 11-26 evening: the art batch merged live (the block at the top of section 6); before that 13:40 PST, the Fable chat's last update of the week - see "TAKING THIS OVER" at the top of section 6 (the Fable 5.2 art chat, still open: section 6's first block - the night of 11-25 and part B's first rows on the morning of 11-26 -, package 6's state). Update the "Where things stand" and "Work packages" sections
 at the end of every chat.
 
 ## 1. How a chat starts
@@ -146,6 +146,19 @@ passers-by (#66, playareas.js). None changed the world or the art.
 **Still open (not started):** phone wires (a world change - ask first); the Rusty Spur's pool, the Boom Tester's throw
 (art); the feature walkthrough, then the launch steps. (Done 11-27 evening: the doorway hop - you're drawn at the door
 until the cut-away is; cars left driverless in a box - re-measured, doesn't come back: GRIDLOCK-TESTS.)
+**11-27 night (the owner asleep; branch `night-1127`, one merge - PR #68):** the bar fight in waves (`CLUB_JOIN`: two
+on you at once, the rest run out shouting and join two at a time); animals out of step (`herdSpot`); dancers clear of
+fountains and each other (`danceSpot`); the sidewalk pair by a door (a couple's other half stands when the first
+stops; leaners apart); "Jump in" off a dock's edge; the Inventory's code fetched early (no empty first open); the
+CSS-zoom click check (`test/csszoom.test.js`); three tests that failed on main fixed (gameplay, dance, invlayout - the
+last a slip of #64: the character small upright); **the walkthrough checklist** (`docs/WALKTHROUGH.md`, the Sheet:
+https://claude.ai/artifact/6nvwNiRbn6kBRERfJF7JKD - 72 rows, OK / Problem / Skipped for desktop and phone); the pre-beta
+list's section C given a "where it stands" head. No world or art change. Tests: `docs/tasks/NIGHT-1127-TESTS.txt`.
+**For the art chat:** NPC drivers in open vehicles (a first try in host.js was reverted - the riders faced and sat
+wrong; the composite at the chat's /home/claude/pl/open-car-draft.png isn't kept), tennis rackets in hand.
+**His calls, still:** phone wires; NPC robberies, streakers, prison activities, photo mode; living city events
+(`DIRECTOR.live`); the casino tables (build or hide); the repo private (his steps); "RIDE DRINK REPEAT" with the next
+world update.
 
 **DONE 11-26 evening (the Opus 5.5 chat): the art batch is merged to `main` and live** - the gate passed: the roofs rendered and kept (before/after on the two streets), the whole suite on c7ae6cb (`docs/tasks/ARTPASS-TESTS-2026-11-26-live.txt`: no failure of the batch's own), a look in a running World v3 game at 1280x720 and phone size. The server re-bakes for about five hours. Next in this chat: the remaining beta items (`docs/audit/PREBETA-LIST.md`). The block below is the record of how it was taken live.
 **TAKING THIS OVER (11-26 13:40; the owner's Fable 5.2 usage for the week is spent, Opus 5.5 goes on):** his word of

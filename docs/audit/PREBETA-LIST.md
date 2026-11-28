@@ -158,6 +158,19 @@ a story, NPC life per district, checked at noon/sunset/night, the owner's review
 - Streets and alleys visible world-wide (nothing over walkable/drivable ground; alleys a car wide, dressed).
 
 ## C. Systems and features that aren't right yet
+**Where C stands (11-27 night, the Opus chat - from git and the DEVLOG; the bullets below are the list as it was):**
+done - NPCs off courts in play, dancers spaced and out of fountains, animals out of step, the bar fight in waves
+with the chase, the sidewalk pair by a door, leaners apart; shadows under small things in the air; headlights keep
+a quarter of the light cap; kayaks paddled (races hidden); skateboards carried off rough ground; My looks strip;
+desktop CSS-zoom clicks (checked, `test/csszoom.test.js`); the Inventory (live; its first open prefetched); the
+dock's "Jump in" (from the Rusty Spur notes); the Camera's clean screen; cinematic sound follows the camera.
+**Open:** tennis rackets in hand (character art - the art chat); car soccer's boost flame and SNES pass (owner:
+post-beta unless cheap); casino / card table minigames (owner: build or hide); racing beyond the current track (design
+first); the director's NPC-at-games shots and P8's scripted cars (with the cinematics reshoot); living city events
+(`DIRECTOR.live` off - the owner's call); phone wires (a world change - ask); NPC drivers in open vehicles (art chat:
+a draft composite is in the 11-27 night notes); the Rusty Spur's sign "RIDE DRINK REPEAT" (`shared/shoprooms.js` -
+an interior, so a world update: batch it with the next one).
+
 - **NPCs**: never on furniture, in fountains or on game areas while a game runs (pool table, tennis court...); dancers
   spaced; no looping lean on sidewalks; animals/birds not in lockstep; staggered bar-fight reactions with bikers
   chasing.
