@@ -29,7 +29,9 @@ export function jobCenter3(m, H3) {
   for (const tx of [dtx, dtx + 1]) if (!WALKABLE.has(m.tiles[m.idx(tx, y + h)])) { out.why = 'no pavement at the door'; return out; }
   // the ground: what stood on it cleared (and a step clear in front of the doors)
   const x0 = x * TILE, x1 = (x + w) * TILE, y0 = y * TILE, y1 = (y + h) * TILE;
-  if (H3.removeProps) H3.removeProps(m, (px, py) => (px >= x0 - 8 && px < x1 + 8 && py >= y0 - 8 && py < y1 + 8) || (px >= (dtx - 1) * TILE && px < (dtx + 3) * TILE && py >= y1 && py < y1 + TILE * 1.5));
+  // (and the street trees and poles in front of its frontage, which would stand before its sign - signCovered, world3server)
+  const tall = new Set(m.props.filter((pr) => /^(tree_|palm_|powerPole)/.test(pr.t) && pr.x >= x0 - TILE && pr.x < x1 + TILE && pr.y >= y1 && pr.y < y1 + TILE * 3).map((pr) => pr.x + ',' + pr.y));
+  if (H3.removeProps) H3.removeProps(m, (px, py) => (px >= x0 - 8 && px < x1 + 8 && py >= y0 - 8 && py < y1 + 8) || (px >= (dtx - 1) * TILE && px < (dtx + 3) * TILE && py >= y1 && py < y1 + TILE * 1.5) || tall.has(px + ',' + py));
   // the building, as the hand plans lay theirs (shared/world3-hand.js handBuilding): its lot record, tiles, art and door
   const bid = m.buildings.length, d = J.d;
   const art = {

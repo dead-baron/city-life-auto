@@ -194,13 +194,15 @@ test('World v3: the park block - the station\'s board, Park West Motors and its 
   // its buildings and places at the ends of the lists: nothing before them renumbered
   const first = Math.min(city.poi, ...M.pois.filter((q) => q.kind === 'usedlot').map((q) => q.id));
   const ours = new Set(['Greenfield Park Station', 'Lane Mart', 'Park West Coffee', 'Greenfield Flowers']);
-  for (const q of M.pois.slice(first)) assert.ok(q.kind === 'usedlot' || ours.has(q.label), `${q.kind} ${q.label} (${q.id}) is the block's or a used lot's`);
+  // (and after them, laid later still on purpose: the Employment Center's two - shared/world3-jobcenter.js)
+  for (const q of M.pois.slice(first)) assert.ok(q.kind === 'usedlot' || ours.has(q.label) || q.kind === 'jobcenter' || q.kind === 'jobpc', `${q.kind} ${q.label} (${q.id}) is the block's or a used lot's`);
   // (then only the split towers' new parts - shared/world3-towers.js, the very last buildings: appended after the block's)
   const tail = M.buildings.slice(office.id), k = tail.findIndex((b) => b.towerPart);
   const block = k < 0 ? tail : tail.slice(0, k), parts = k < 0 ? [] : tail.slice(k);
   assert.ok(block.length >= 4 && block.every((b) => b.whole && !b.towerPart && (b.business === 'usedlot' || ['Lane Mart', 'Park West Coffee', 'Greenfield Flowers'].includes(b.name))), 'the block\'s buildings last but the towers\' parts');
-  // (and the open blocks' pieces - shared/world3-openblocks.js, split off older buildings or off a tower's part, appended last)
-  assert.ok(parts.every((b) => (b.towerPart && b.towerPart.role !== 'tower' && b.towerPart.of < office.id) || (b.openOf !== undefined && (b.openOf < office.id || (M.buildings[b.openOf] && M.buildings[b.openOf].towerPart)))), 'after them only the split towers\' and open blocks\' new parts');
+  // (and the open blocks' pieces - shared/world3-openblocks.js, split off older buildings or off a tower's part, appended last;
+  // the Employment Center laid later still - shared/world3-jobcenter.js)
+  assert.ok(parts.every((b) => b.business === 'jobcenter' || (b.towerPart && b.towerPart.role !== 'tower' && b.towerPart.of < office.id) || (b.openOf !== undefined && (b.openOf < office.id || (M.buildings[b.openOf] && M.buildings[b.openOf].towerPart)))), 'after them only the split towers\' and open blocks\' new parts');
 });
 
 test('World v3: the arrival on a line - the page\'s train, the newcomer unseen by others until the doors open', () => {
