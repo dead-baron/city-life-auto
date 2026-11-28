@@ -28814,3 +28814,7 @@ Tests: `scenes.test.js` (each script whole), `world3scenes.test.js` (each finds 
   harder for a stretch of road to start it on before it gives up - 150 tries, was 60 (`streetlife.js` `LANE_TRIES`):
   on a busy Strip at night 60 now and then found none ("No street to start it on around here"), the flake in
   `world3scenes.test.js`'s staged street race.
+- (Same night) `test/plainblocks.test.js` failed on main since the Employment Center went in (11-27, #60): its building
+  is the list's very last, after the towers' parts and the open blocks' new buildings, and two checks wanted those
+  last. It's added later still, so no building's id before it moves - what the checks guard; they allow it now
+  (`LATER`). 17/17.

@@ -17,7 +17,7 @@ Not run: the other 70 heavy files (world builds; nothing here touches the world 
 
 Later the same night: world3scenes 9/9 (it failed 8 on main before 11-27 - passes now). Coral Cay's track: trafficsim
 seeds 7 / 3 / 11 at Cay Road - no jam (PREBETA-LIST, "Found by the Fable art pass").
-The scene variants (shared/scenes/index.js): scenes 10/10, director 7/7, directorcam 13/13; world3scenes 8/9 - its tests
+The scene variants (shared/scenes/index.js) [after LANE_TRIES: world3scenes 9/9]: scenes 10/10, director 7/7, directorcam 13/13; world3scenes 8/9 - its tests
 2-9 pass (every director scene, the eight new ones too, finds its place and cast on World v3); test 1 failed on the
 staged "Street race on the Neon Strip at night" ("no street to start it on") - the known flake (MASTER-HANDOVER: "flaky
 ... world3scenes' street race (laneSpot)"); the same file passed 9/9 earlier the same night.
