@@ -217,6 +217,7 @@ export class VehicleSounds {
       const ra = v.ra ?? Math.atan2(st.vy, st.vx);
       st.side = Math.abs(-Math.sin(ra) * st.vx + Math.cos(ra) * st.vy);
       st.burnT = (v.flags & VF.DRIFT) && st.spd < 40 ? (st.burnT || 0) + dt : 0;   // (how long it's been spinning on the spot)
+      if (def.paddle) { this.strokes(v, st, v.id === mine); st.on = false; st.horn = false; st.sir = null; st.flags = v.flags; st.seen = t; st.mine = v.id === mine; continue; }   // (a kayak: no engine - its paddle in the water)
       if (def.horse) { this.hooves(v, st, S, dt, v.id === mine); st.on = false; st.horn = false; st.sir = null; st.flags = v.flags; st.seen = t; st.mine = v.id === mine; continue; }   // (a horse: no engine - its hooves)
       const acc = (st.spd - st.prev) / Math.max(dt, 1e-3);
       const on = v.id === mine || engineOn(v) || (!!def.ferry && !(v.flags & (VF.WRECK | VF.DEAD)));   // (the ferries run their timetable with nobody at the wheel)
@@ -254,6 +255,12 @@ export class VehicleSounds {
   }
   // a horse's hooves (#325): the beat of its gait from how fast it's going - a walk's four even beats, a canter's three
   // and a pause, a gallop's quick four and its moment in the air - clopping on a road, thudding on grass and dirt
+  // a kayak's paddle: a soft splash as each blade goes in (the frame the page draws it at - art2/game/host.js _paddleFr)
+  strokes(v, st, mine) {
+    const f = v._pfr;
+    if (f !== st.pfr && (f === 0 || f === 2) && st.pfr !== undefined) this.E.play('splash', v.rx, v.ry, mine ? 0.3 : 0.18);
+    st.pfr = f;
+  }
   hooves(v, st, S, dt, mine) {
     const sp = st.spd;
     if (sp < 10) { st.hph = 0; return; }

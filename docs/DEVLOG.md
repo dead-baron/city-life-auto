@@ -28572,3 +28572,23 @@ owner's ad account is approved; then the setting (deploy/set-keys.sh) turns on G
   walk-in and the job computer (`world3jobcenter.test.js` 3/3). A world update: the world3 and art3 keys change - the
   re-bake (~5 h) carries every identical chunk over.
 Tests: docs/tasks/ADS-MERGE-TESTS-2026-11-27.txt.
+
+## 2026-11-27 · Kayaks are paddled (the pre-beta list C: "Kayak: sitting in it, paddle strokes"); the River Run is back
+A kayak drove like a motorboat - flat out at 300, the rider standing up in it in the 'ride' pose, no paddle.
+- **The strokes** (`shared/physics.js`, `PADDLE` in rules-base.js): left and right in turn, a surge as each blade pulls,
+  a glide between - cruising ~165 px/s flat out, easing ±10% with the strokes, a light push gently; let go and it glides
+  on (~60% after a second); backpaddling brakes it, then takes it astern, slowly. Slow to turn: a stroke on one side
+  swings it round, in pulses, even standing still (~25°/s), ~65°/s under way (a speedboat ~80). The river's flow carries
+  it as before. The stroke's phase (`s.pph`) goes in the driver's self record (the `rdy` slot, as a horse's wind does),
+  so the page predicts it as the server has it.
+- **The rider** (`client/art2/people.js` 'paddle', 4 frames): low in the cockpit, the legs out of sight (their prims
+  clipped), the double paddle across the hands - a grey shaft on past them, a yellow blade at each end: the left blade
+  in ahead, pulled through, then the right; the shoulders turn into each stroke and the top hand pushes across high.
+  Yours strokes with your own paddling (the prediction's phase), others' with how they move (`host.js _paddleFr`).
+- **Sound** (`client/sound/vehicles.js` strokes): no engine - a soft splash as each blade goes in.
+- **The River Run is back** (`shared/hidden.js` RACES_HIDDEN empty - "off until the kayaker sits in it and paddles",
+  11-24): its start in Places and on the map, the Guide's entry. ~82 s of open water at paddling pace (16 gates; races
+  stop at 330 s). The Guide's Boats entry says how a kayak paddles.
+- A world-graph change (physics.js): the world3 / art3 keys move - shipped with the `ads` merge's re-bake, one for both.
+Tests: `kayak.test.js` (5: the surge and glide, the glide and astern, slow turning, the stroke phase, the rider's frames),
+`hidden.test.js` (the race back, the switch still hides), bikes, boats, horses, wade, sound, people, perf, core.

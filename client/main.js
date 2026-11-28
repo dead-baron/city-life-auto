@@ -629,7 +629,8 @@ function reconcile(s) {
     st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), stalled: def.kind !== 'air' && !!(e.flags & VF.STALL), ug: S.ugLayer || 0 };
     S.pred = { kind, s: st, def, prev: null };
     if (def.kind === 'air') { Object.assign(st, { alt: s.self.rdy, vz: s.self.stamina, spool: s.self.rollT, bank: s.self.rdx, slip: 0, spin: 0, launch: 0 }); S.pred.air = true; }
-    else if (def.horse) { const r = s.self.rdy; st.blown = r < -0.5; st.stam = st.blown ? -1 - r : r; }   // (a horse's wind, as the server has it: server/net.js)   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
+    else if (def.horse) { const r = s.self.rdy; st.blown = r < -0.5; st.stam = st.blown ? -1 - r : r; }
+    else if (def.paddle) st.pph = s.self.rdy || 0;   // (a kayak's strokes: where in a pair - net.js)   // (a horse's wind, as the server has it: server/net.js)   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
   }
   // replay unacknowledged inputs; keep the state before the last one as `prev` so the render
   // interpolation continues exactly as fixedStep would have left it
