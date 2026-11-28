@@ -1580,13 +1580,16 @@ body.portrait .pz { width: 100%; max-width: 420px; }
 @media (max-height: 520px) {
   #hub[data-tab=pause] { padding: var(--s2) max(var(--s3), env(safe-area-inset-right)) var(--s2) max(var(--s5), env(safe-area-inset-left)); }
   .pz { width: min(520px, 100%); }
-  .pz-head { flex-direction: row; justify-content: center; gap: var(--s3); padding: var(--s1) var(--s3); }
+  .pz-head { flex-direction: row; justify-content: center; gap: var(--s3); padding: var(--s1) var(--s3); min-height: calc(var(--tap) + 2 * var(--s1)); }   /* (the close's 44 inside it: it reached 8 px over the first row - the UI pass, 11-27) */
+  .pz-head .x { top: 50%; transform: translateY(-50%); }
   .pz-head img { width: 170px; }
   .pz-head b { font-size: var(--fs-4); }
   .pz-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s2); padding: var(--s1) var(--s2); }
   .pz-row { min-height: var(--tap); font-size: var(--fs-3); }
   .pz-row small { font-size: var(--fs-1); }
   .pz-foot { padding: var(--s1); }
+  body:not(.touch) .pz { width: min(680px, 100%); }   /* (a keyboard's key badges on each row: at 520 the second column's names were cut - "SETT", "INVE" - the UI pass, 11-23) */
+  body:not(.touch) .pz-row { gap: var(--s2); padding: 0 var(--s2); }
 }
 /* the settings (UIC-06): a panel to the left of the middle; upright, a sheet from the foot */
 #hub[data-tab=settings] { justify-content: flex-start; padding-left: clamp(var(--s5), 22vw, 420px); }
@@ -1973,8 +1976,14 @@ body.touch .bc-nm { font-size: var(--fs-w2); }
 .bag.stack .bag-detail { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; max-height: 64%; display: none; padding: var(--s4) var(--s4) max(var(--s4), env(safe-area-inset-bottom)); border-radius: var(--r2) var(--r2) 0 0; border: 0; border-top: 2px solid var(--gold); box-shadow: var(--shadow); }
 .bag.stack.has-sel .bag-detail { display: block; animation: sheet-up var(--t2) var(--ease); }
 .bag.stack .bd-x { display: inline-grid; width: var(--tap); height: var(--tap); }
-/* touch: bigger things to press */
-.touch .iv-turn .btn { width: 40px; height: 40px; min-height: 40px; }
+/* touch: bigger things to press (44 px - the UI pass's audit, 11-23/11-27: upright the character's slots were 52x32, the
+   arrows 40, REMOVE ALL / SAVED LOOKS 36, the kinds 34) */
+.touch .iv-turn .btn { width: var(--tap); height: var(--tap); min-height: var(--tap); }
+.touch .bag.stack .iv-sb { width: 56px; height: var(--tap); } .touch .bag.stack .iv-slot { width: 72px; } .touch .bag.stack .iv-col { gap: 2px; }
+.touch .bag.stack .iv-dacts .btn { min-height: var(--tap); }
+.touch .bag.stack .bag-cats .chip { height: var(--tap); min-width: var(--tap); justify-content: center; }
+.touch .bag.stack .bag-sort select { min-height: var(--tap); }   /* (the eight quick-bar slots stay 41 wide upright: eight across a 390 phone) */
+/* (the slots' off ✕ stays 22 on their corner: a bigger one would cover the slot it takes off - tap the slot, then TAKE OFF) */
 
 /* the People tab: who's online, your crew */
 .people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); width: 100%; padding: var(--s4); overflow-y: auto; align-content: start; }
