@@ -28650,3 +28650,17 @@ y and z0 up alike, so its place on screen is the same; no outline, no shadow cas
 screen you're drawn as ever. No world or art change (no re-bake). Test: `precut.test.js` (+1).
 Also re-measured the gridlock follow-up (cars left driverless in a box): twelve runs on main, worst 22.5 s - it doesn't
 come back; closed with the numbers (`docs/tasks/GRIDLOCK-TESTS-2026-11-27.txt`).
+
+## 2026-11-27 · The UI pass's leftovers: 44 px in the Inventory upright, the pause menu's close and second column
+Re-run of `tools/uishots.py` on main (World v3, port / land / desk; HUD, pause, Inventory) - also the first look at the
+portrait layout A in the real game (MENU with the phone's dot, the prompt above the thumbs: clean, nothing small, cut
+or overlapping). Fixed:
+- **The Inventory upright on touch:** the character's slots 56x44 (were 52x32), the turn arrows 44 (40), REMOVE ALL /
+  SAVED LOOKS 44 (36), the kinds 44 tall and at least 44 wide (34; "All" was 42), the sort list 44 (34). Left as they
+  are: the slots' off ✕ (22 on the slot's corner - a bigger one would cover the slot it takes off: tap the slot, then
+  TAKE OFF) and the quick bar's eight slots, 41 wide upright (eight across a 390 phone). On its side (390 px tall) the
+  Inventory stays packed as it was: six slots a column don't fit at 44.
+- **The pause menu on a short screen:** its close reached 8 px over the first row (MAP) - the header is now as tall as
+  the close and centres it; with a keyboard the panel is 680 wide (was 520: the key badges cut the second column's
+  names, "SETT", "INVE").
+Test: the audits (`/tmp/ui4`): port pause and land pause clean.
